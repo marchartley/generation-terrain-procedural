@@ -1,77 +1,10 @@
 #include "VoxelGrid.h"
 
-Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize)
-    : x(x), y(y), z(z), type(type), blockSize(blockSize) {
-
-}
-
-Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0) {
-
-}
-
-void Voxel::display() {
-    glPushMatrix();
-    glTranslatef(-this->x, -this->y, -this->z);
-    glScalef(1/this->blockSize, 1/this->blockSize, 1/this->blockSize);
-
-    // Front
-    glBegin(GL_QUADS);
-    glVertex3f(0, 0, 0);
-    glVertex3f(1, 0, 0);
-    glVertex3f(1, 1, 0);
-    glVertex3f(0, 1, 0);
-    glEnd();
-
-    // Left
-    glBegin(GL_QUADS);
-    glVertex3f(1, 0, 0);
-    glVertex3f(1, 1, 0);
-    glVertex3f(1, 1, 1);
-    glVertex3f(1, 0, 1);
-    glEnd();
-
-    // Back
-    glColor3f(0.3, 1.0, 0.2);
-    glBegin(GL_QUADS);
-    glVertex3f(1, 0, 1);
-    glVertex3f(1, 1, 1);
-    glVertex3f(0, 1, 1);
-    glVertex3f(0, 0, 1);
-    glEnd();
-    glColor3f(1.0, 1.0, 1.0);
-
-    // Right
-    glBegin(GL_QUADS);
-    glVertex3f(0, 0, 1);
-    glVertex3f(0, 1, 1);
-    glVertex3f(0, 1, 0);
-    glVertex3f(0, 0, 0);
-    glEnd();
-
-    // Top
-    glBegin(GL_QUADS);
-    glVertex3f(0, 0, 0);
-    glVertex3f(0, 0, 1);
-    glVertex3f(1, 0, 1);
-    glVertex3f(1, 0, 0);
-    glEnd();
-
-    // Bottom
-    glBegin(GL_QUADS);
-    glVertex3f(0, 1, 0);
-    glVertex3f(1, 1, 0);
-    glVertex3f(1, 1, 1);
-    glVertex3f(0, 1, 1);
-    glEnd();
-    glPopMatrix();
-}
-
-
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
     : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize) {
 
 }
-VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), 100, .5) {
+VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), .5) {
     this->from2DGrid(grid);
 }
 VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
@@ -79,33 +12,59 @@ VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
 }
 void VoxelGrid::from2DGrid(Grid grid) {
     this->voxels.clear();
-    float maxi = 1.0;
-    float mini = -1.0;
+    this->sizeX = grid.getSizeX();
+    this->sizeY = grid.getSizeY();
+    this->sizeZ = grid.getMaxHeight();
+
     for (int x = 0; x < grid.getSizeX(); x++) {
         for (int y = 0; y < grid.getSizeY(); y++) {
-            this->voxels.push_back(Voxel(x, y, int((grid.getHeight(x, y) + 1)/30 * this->sizeZ/2), TerrainTypes::DIRT, this->blockSize));
-            this->voxels.push_back(Voxel(x, y, int((grid.getHeight(x, y) + 1)/30 * this->sizeZ/2)-1, TerrainTypes::DIRT, this->blockSize));
-            /*for (int z = 0; z < (grid.getHeight(x, y) + 1) * this->sizeZ/2; z++) {
-                this->voxels.push_back(Voxel(x, y, z, TerrainTypes::DIRT));
-            }*/
+            float grid_height = grid.getHeight(x, y) * (this->sizeZ / grid.getMaxHeight());
+            int z = int(grid_height)+1;
+            std::vector<TerrainTypes> data;
+            for (int i = 0; i < z; i++)
+                data.push_back(TerrainTypes::DIRT);
+            for (int i = z; i < this->getSizeZ(); i++)
+                data.push_back(TerrainTypes::AIR);
+
+            this->chunks.push_back(VoxelChunk(x, y, this->getSizeZ(), data));
+////            Voxel upperVox(x, y, z, TerrainTypes::DIRT, this->blockSize);
+////            Voxel lowerVox(x, y, z - 1, TerrainTypes::DIRT, this->blockSize);
+////            this->voxels.push_back(upperVox);
+////            this->voxels.push_back(lowerVox);
+//            for (int _z = 0; _z < z; _z++) {
+//                this->voxels.push_back(Voxel(x, y, _z, TerrainTypes::DIRT, this->blockSize));
+//            }
         }
     }
 }
 
 void VoxelGrid::display() {
     glPushMatrix();
-    glTranslatef(this->getSizeX() * this->blockSize, this->getSizeY() * this->blockSize, this->getSizeZ() * this->blockSize);
+    glScalef(this->blockSize, this->blockSize, this->blockSize);
+    glTranslatef(this->getSizeX()/2, this->getSizeY()/2, -this->getSizeZ()/2);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glColor3f(1.0, 1.0, 1.0);
-    for (Voxel& vox : this->voxels ) {
-        vox.display();
-    }
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glColor3f(0.0, 0.0, 0.0);
-    for (Voxel& vox : this->voxels ) {
-        vox.display();
+    for (VoxelChunk& vc : this->chunks) {
+        glPushMatrix();
+        glTranslatef(-vc.x, -vc.y, 0.0);
+        vc.display();
+        glPopMatrix();
     }
     glPopMatrix();
+//    glPushMatrix();
+//    glTranslatef(this->getSizeX() * this->blockSize, this->getSizeY() * this->blockSize, this->getSizeZ() * this->blockSize);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+//    glColor3f(1.0, 1.0, 1.0);
+//    for (Voxel& vox : this->voxels ) {
+//        if (vox.getZ() == this->getHeight(vox.getX(), vox.getY()))
+//            vox.display();
+//    }
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+//    glColor3f(0.0, 0.0, 0.0);
+//    for (Voxel& vox : this->voxels ) {
+//        vox.display();
+//    }
+//    glPopMatrix();
 }
 
 int VoxelGrid::getHeight(int x, int y) {

@@ -1,6 +1,8 @@
 #ifndef FASTNOISELIT_H
 #define FASTNOISELIT_H
 
+#include <iostream>
+
 // MIT License
 //
 // Copyright(c) 2020 Jordan Peck (jordan.me2@gmail.com)

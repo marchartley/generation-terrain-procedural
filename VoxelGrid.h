@@ -1,33 +1,14 @@
 #ifndef VOXELGRID_H
 #define VOXELGRID_H
 
-class Voxel;
 class VoxelGrid;
 
 #include "Grid.h"
+#include "VoxelChunk.h"
+#include "Voxel.h"
 #include <vector>
-
-enum TerrainTypes {
-    AIR = 0,
-    DIRT = 1,
-    WATER = 2
-};
-
-class Voxel {
-public:
-    Voxel();
-    Voxel(int x, int y, int z, TerrainTypes type, float blockSize);
-
-    void display();
-
-    int getX() { return this->x; }
-    int getY() { return this->y; }
-    int getZ() { return this->z; }
-protected:
-    int x, y, z;
-    TerrainTypes type;
-    float blockSize;
-};
+#include <map>
+#include <tuple>
 
 class VoxelGrid {
 public:
@@ -51,6 +32,7 @@ protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
     float blockSize;
+    std::vector<VoxelChunk> chunks;
 };
 
 #endif // VOXELGRID_H

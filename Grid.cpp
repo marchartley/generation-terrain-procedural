@@ -3,7 +3,8 @@
 #include "FastNoiseLit.h"
 
 
-Grid::Grid(int nx, int ny, float tileSize) : sizeX(nx), sizeY(ny), tileSize(tileSize) {
+Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
+    : sizeX(nx), sizeY(ny), maxHeight(maxHeight), tileSize(tileSize) {
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -13,18 +14,32 @@ Grid::Grid(int nx, int ny, float tileSize) : sizeX(nx), sizeY(ny), tileSize(tile
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(10);
 
+    // Make a first pass, to get some noise
+    float min = 1000, max = -1000;
     this->vertices = new Vector3*[this->sizeX];
     this->normals = new Vector3*[this->sizeX];
     for (int x = 0; x < this->sizeX; x++) {
         this->vertices[x] = new Vector3[this->sizeY];
         this->normals[x] = new Vector3[this->sizeY];
         for (int y = 0; y < this->sizeY; y++) {
-            this->vertices[x][y] = Vector3(x, y, 30 * noise.GetNoise((float)(x), (float)(y)));
+            float z = noise.GetNoise((float)x, (float)y);
+            this->vertices[x][y] = Vector3(x, y, z);
+            min = min < z ? min : z;
+            max = max > z ? max : z;
+        }
+    }
+    // Sadely, we need a second pass because the noise function is a little f*cked up... we don't always have values in [-1;1]
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            this->vertices[x][y].z -= min;
+            this->vertices[x][y].z /= (max - min);
+            this->vertices[x][y].z *= maxHeight;
+//            this->vertices[x][y].z = maxHeight/2;
         }
     }
     this->computeNormals();
 }
-Grid::Grid() : Grid(10, 10) {
+Grid::Grid() : Grid(10, 10, 5.0) {
 
 }
 
