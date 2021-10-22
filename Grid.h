@@ -2,7 +2,7 @@
 #define GRID_H
 
 #include <QGLViewer/qglviewer.h>
-#include "vector3.h"
+#include "Vector3.h"
 
 class Grid;
 
@@ -11,7 +11,7 @@ class Grid;
 class Grid {
 public:
     Grid();
-    Grid(int nx, int ny, float tileSize = 0.1);
+    Grid(int nx, int ny, float max_height, float tileSize = 0.1);
 
     void display(bool displayAsWires = false, bool displayNormals = false);
 
@@ -19,6 +19,7 @@ public:
     int getSizeY() {return this->sizeY;}
 
     float getHeight(int x, int y) { return this->vertices[x][y].z; }
+    float getMaxHeight() { return maxHeight; }
     Vector3 getNormal(int x, int y) { return this->normals[x][y]; }
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
@@ -27,6 +28,7 @@ protected:
     Vector3** vertices;
     Vector3** normals;
     int sizeX, sizeY;
+    float maxHeight;
     float tileSize;
 
     void computeNormals();

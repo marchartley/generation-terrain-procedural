@@ -12,8 +12,11 @@ enum ViewerMode {
 
 class Viewer : public QGLViewer {
 public:
-  Viewer(Grid g);
-  Viewer(VoxelGrid g);
+    Viewer(Grid* grid, VoxelGrid* voxelGrid, ViewerMode mode);
+  Viewer(Grid* g);
+  Viewer(VoxelGrid* g);
+
+  void setMode(ViewerMode newMode) { this->mode = newMode; }
 
 protected:
   virtual void init();
@@ -22,8 +25,8 @@ protected:
   ViewerMode mode;
 
 private:
-  Grid grid;
-  VoxelGrid voxelGrid;
+  Grid* grid;
+  VoxelGrid* voxelGrid;
 };
 
 

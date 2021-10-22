@@ -4,7 +4,7 @@
 
 #include "Viewer.h"
 
-#include "vector3.h"
+#include "Vector3.h"
 
 
 int main(int argc, char *argv[])
@@ -16,11 +16,11 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QApplication a(argc, argv);
 
-    Grid grid(100, 100, 10.0 / 100);
-    VoxelGrid vGrid(grid);
-//    grid.fromVoxelGrid(vGrid);
+    Grid* grid = new Grid(200, 200, 100, 10.0 / 100);
+    VoxelGrid* vGrid = new VoxelGrid(*grid);
+//    grid->fromVoxelGrid(*vGrid);
     glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    Viewer view(vGrid);
+    Viewer view(grid, vGrid, ViewerMode::VOXEL_MODE);
 
     view.show();
 

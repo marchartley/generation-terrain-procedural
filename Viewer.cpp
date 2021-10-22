@@ -5,12 +5,16 @@
 using namespace qglviewer;
 using namespace std;
 
-Viewer::Viewer(Grid g)
-    : QGLViewer(), grid(g), mode(GRID_MODE) {
+Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, ViewerMode mode)
+    : QGLViewer(), mode(mode), grid(grid), voxelGrid(voxelGrid) {
 
 }
-Viewer::Viewer(VoxelGrid g)
-    : QGLViewer(), voxelGrid(g), mode(VOXEL_MODE) {
+Viewer::Viewer(Grid* g)
+    : Viewer(g, NULL, GRID_MODE) {
+
+}
+Viewer::Viewer(VoxelGrid* g)
+    : Viewer(NULL, g, VOXEL_MODE) {
 
 }
     /*
@@ -79,10 +83,10 @@ void Viewer::draw() {
 //    drawLight(GL_LIGHT1);
 
 
-    switch (this->mode) {
-    case GRID_MODE:
-        this->grid.display(true, true);
-    case VOXEL_MODE:
-        this->voxelGrid.display();
+    if (this->mode == GRID_MODE) {
+        this->grid->display(true, true);
+    }
+    else if (this-> mode == VOXEL_MODE) {
+        this->voxelGrid->display();
     }
 }
