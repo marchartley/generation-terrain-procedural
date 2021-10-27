@@ -23,6 +23,10 @@ public:
     Vector3& operator*=(float o);
     Vector3 operator/(float o);
     Vector3& operator/=(float o);
+    Vector3 operator+(float o);
+    Vector3& operator+=(float o);
+    Vector3 operator-(float o);
+    Vector3& operator-=(float o);
     Vector3& operator=(const Vector3& o);
 
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);

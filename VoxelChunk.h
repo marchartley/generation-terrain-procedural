@@ -10,15 +10,20 @@ class VoxelChunk
 {
 public:
     VoxelChunk();
-    VoxelChunk(int x, int y, int height, std::vector<TerrainTypes> data, int surrounding_heights[4]);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector<TerrainTypes>>> data);
 
     void display();
+    void createMesh();
 
 //protected:
-    std::vector<TerrainTypes> data;
+    std::vector<std::vector<std::vector<TerrainTypes>>> data;
     int height;
     int x, y;
+    int sizeX, sizeY;
     int surrounding_heights[4];
+    std::vector<std::vector<std::vector<Voxel>>> voxels;
+    std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
+
 
     void draw_part(int start_height, int end_height, TerrainTypes type, bool draw_bottom);
 };

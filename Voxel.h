@@ -15,6 +15,7 @@ enum VOXEL_NEIGHBOR {
 
 #include <map>
 #include "Grid.h"
+#include "Vertex.h"
 
 
 class Voxel {
@@ -31,10 +32,14 @@ public:
     void addNeighbor(Voxel& neighbor);
     void removeNeighbor(Voxel& neighbor);
     std::map<VOXEL_NEIGHBOR, bool> has_neighbors;
+
+    operator bool() { return this->type != TerrainTypes::AIR; }
+    Vertex vertices[8];
 protected:
     int x, y, z;
     TerrainTypes type;
     float blockSize;
     std::map<VOXEL_NEIGHBOR, Voxel&> neighbors;
+
 };
 #endif // VOXEL_H

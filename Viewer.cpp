@@ -5,8 +5,8 @@
 using namespace qglviewer;
 using namespace std;
 
-Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, ViewerMode mode)
-    : QGLViewer(), mode(mode), grid(grid), voxelGrid(voxelGrid) {
+Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, int mode)
+    : QGLViewer(), viewerMode(mode), grid(grid), voxelGrid(voxelGrid) {
 
 }
 Viewer::Viewer(Grid* g)
@@ -17,24 +17,6 @@ Viewer::Viewer(VoxelGrid* g)
     : Viewer(NULL, g, VOXEL_MODE) {
 
 }
-    /*
-  setAxisIsDrawn();
-  setGridIsDrawn();*/
-    /*
-  if (type < 3) {
-    // Move camera according to viewer type (on X, Y or Z axis)
-    camera()->setPosition(Vec((type == 0) ? 1.0 : 0.0, (type == 1) ? 1.0 : 0.0,
-                              (type == 2) ? 1.0 : 0.0));
-    camera()->lookAt(sceneCenter());
-
-    camera()->setType(Camera::ORTHOGRAPHIC);
-    camera()->showEntireScene();
-
-    // Forbid rotation
-    WorldConstraint *constraint = new WorldConstraint();
-    constraint->setRotationConstraintType(AxisPlaneConstraint::FORBIDDEN);
-    camera()->frame()->setConstraint(constraint);
-  }*/
 
 void Viewer::init() {
     restoreStateFromFile();
@@ -51,7 +33,10 @@ void Viewer::init() {
 }
 
 void Viewer::draw() {
-
+    if (this->viewerMode & ViewerMode::WIRE_MODE)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Place light at camera position
     const Vec cameraPos = camera()->position();
     const GLfloat pos[4] = {(float)cameraPos[0], (float)cameraPos[1],
@@ -66,9 +51,9 @@ void Viewer::draw() {
 
 
     // Light default parameters
-    const GLfloat light_ambient[4] = {1.0, .9, .2, 100.0};
-    const GLfloat light_specular[4] = {1.0, 1.0, 1.0, 5.0};
-    const GLfloat light_diffuse[4] = {1.0, 1.0, 1.0, 10.0};
+    const GLfloat light_ambient[4] = {1.0, .9, .9, 1.0};
+    const GLfloat light_specular[4] = {1.0, 1.0, 1.0, 1.0};
+    const GLfloat light_diffuse[4] = {1.0, 1.0, 1.0, 100.0};
 
     glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 30.0);
     glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 100.0);
@@ -76,17 +61,19 @@ void Viewer::draw() {
     glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, .00003f);
     glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0003f);
     glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
+//    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
+//    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 
+    glPushMatrix();
+    glRotatef(180.0, 1.0, 0.0, 0.0);
     drawAxis();
+    glPopMatrix();
 //    drawLight(GL_LIGHT1);
 
-
-    if (this->mode == GRID_MODE) {
-        this->grid->display(true, true);
+    if (this->viewerMode & GRID_MODE) {
+        this->grid->display(true);
     }
-    else if (this-> mode == VOXEL_MODE) {
+    else if (this-> viewerMode & VOXEL_MODE) {
         this->voxelGrid->display();
     }
 }

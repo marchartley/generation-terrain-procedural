@@ -98,6 +98,28 @@ Vector3& Vector3::operator/=(float o) {
     this->z /= o;
     return *this;
 }
+Vector3 Vector3::operator+(float o) {
+    Vector3 v;
+    v += o;
+    return v;
+}
+Vector3& Vector3::operator+=(float o) {
+    this->x += o;
+    this->y += o;
+    this->z += o;
+    return *this;
+}
+Vector3 Vector3::operator-(float o) {
+    Vector3 v;
+    v -= o;
+    return v;
+}
+Vector3& Vector3::operator-=(float o) {
+    this->x -= o;
+    this->y -= o;
+    this->z -= o;
+    return *this;
+}
 Vector3& Vector3::operator=(const Vector3& o) {
     this->x = o.x;
     this->y = o.y;

@@ -6,23 +6,25 @@
 #include <QGLViewer/qglviewer.h>
 
 enum ViewerMode {
-    GRID_MODE = 0,
-    VOXEL_MODE = 1
+    GRID_MODE  = 0b0001,
+    VOXEL_MODE = 0b0010,
+    FILL_MODE  = 0b0100,
+    WIRE_MODE  = 0b1000
 };
 
 class Viewer : public QGLViewer {
 public:
-    Viewer(Grid* grid, VoxelGrid* voxelGrid, ViewerMode mode);
+    Viewer(Grid* grid, VoxelGrid* voxelGrid, int mode);
   Viewer(Grid* g);
   Viewer(VoxelGrid* g);
 
-  void setMode(ViewerMode newMode) { this->mode = newMode; }
+  void setMode(int newMode) { this->viewerMode = newMode; }
 
 protected:
   virtual void init();
   virtual void draw();
 
-  ViewerMode mode;
+  int viewerMode;
 
 private:
   Grid* grid;
