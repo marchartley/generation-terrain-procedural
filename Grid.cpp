@@ -76,10 +76,8 @@ void Grid::computeNormals() {
     }
 }
 
-void Grid::display(bool displayAsWires, bool displayNormals) {
+void Grid::display(bool displayNormals) {
     glPushMatrix();
-    if (displayAsWires)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     float maxi = -9999999, mini = 9999999;
     for (int x = 0; x < this->sizeX; x++)
@@ -89,8 +87,8 @@ void Grid::display(bool displayAsWires, bool displayNormals) {
             if (this->vertices[x][y].z < mini)
                 mini = this->vertices[x][y].z;
         }
-    glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
-    glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
+//    glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
+//    glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
     glBegin(GL_TRIANGLES);
 //    glColor4f(1.0, 0.5, 0.5, 0.0);
     for(int x = 0; x < this->sizeX - 1; x++) {

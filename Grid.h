@@ -13,7 +13,7 @@ public:
     Grid();
     Grid(int nx, int ny, float max_height, float tileSize = 0.1);
 
-    void display(bool displayAsWires = false, bool displayNormals = false);
+    void display(bool displayNormals = false);
 
     int getSizeX() {return this->sizeX;}
     int getSizeY() {return this->sizeY;}

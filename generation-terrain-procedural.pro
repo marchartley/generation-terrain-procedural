@@ -1,6 +1,6 @@
 QT += quick opengl xml
 
-INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2
+INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen
 LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5
 
 CONFIG += c++11
@@ -11,8 +11,9 @@ CONFIG += c++11
 
 SOURCES += \
         Grid.cpp \
-        Mesh.cpp \
+        MarchingCubes.cpp \
         Vector3.cpp \
+        Vertex.cpp \
         Viewer.cpp \
         Voxel.cpp \
         VoxelChunk.cpp \
@@ -35,8 +36,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     FastNoiseLit.h \
     Grid.h \
-    Mesh.h \
+    MarchingCubes.h \
     Vector3.h \
+    Vertex.h \
     Viewer.h \
     Voxel.h \
     VoxelChunk.h \
