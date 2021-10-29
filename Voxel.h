@@ -23,7 +23,7 @@ public:
     Voxel();
     Voxel(int x, int y, int z, TerrainTypes type, float blockSize);
 
-    void display();
+    void display(bool apply_marching_cubes = false, bool display_vertices = false);
 
     int getX() { return this->x; }
     int getY() { return this->y; }
@@ -35,6 +35,7 @@ public:
 
     operator bool() { return this->type != TerrainTypes::AIR; }
     Vertex vertices[8];
+    float* isosurfaces[8];
 protected:
     int x, y, z;
     TerrainTypes type;

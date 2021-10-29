@@ -20,6 +20,7 @@ public:
 
     float getHeight(int x, int y) { return this->vertices[x][y].z; }
     float getMaxHeight() { return maxHeight; }
+    float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals[x][y]; }
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
