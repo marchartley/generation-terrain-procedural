@@ -16,24 +16,28 @@ Vertex::Vertex(Vector3 v, float isosurface)
 }
 
 void Vertex::display() {
+    glPushMatrix();
+    glTranslatef(x, y, z);
+    float mini_change = 0.01; //(rand() % 100)/3000.0;
     if (isosurface > 0)
         glColor3f(1., 1., 1.);
     else
         glColor3f(0., 0., 0.);
     glBegin(GL_QUADS);
-    glVertex3f(- 0.01, - 0.01, - 0.01);
-    glVertex3f(- 0.01, - 0.01, + 0.01);
-    glVertex3f(- 0.01, + 0.01, + 0.01);
-    glVertex3f(- 0.01, + 0.01, - 0.01);
+    glVertex3f(- mini_change, - mini_change, - mini_change);
+    glVertex3f(- mini_change, - mini_change, + mini_change);
+    glVertex3f(- mini_change, + mini_change, + mini_change);
+    glVertex3f(- mini_change, + mini_change, - mini_change);
 
-    glVertex3f(- 0.01, - 0.01, - 0.01);
-    glVertex3f(+ 0.01, - 0.01, - 0.01);
-    glVertex3f(+ 0.01, + 0.01, - 0.01);
-    glVertex3f(- 0.01, + 0.01, - 0.01);
+    glVertex3f(- mini_change, - mini_change, - mini_change);
+    glVertex3f(+ mini_change, - mini_change, - mini_change);
+    glVertex3f(+ mini_change, + mini_change, - mini_change);
+    glVertex3f(- mini_change, + mini_change, - mini_change);
 
-    glVertex3f(+ 0.01, - 0.01, - 0.01);
-    glVertex3f(+ 0.01, - 0.01, + 0.01);
-    glVertex3f(- 0.01, - 0.01, + 0.01);
-    glVertex3f(- 0.01, - 0.01, - 0.01);
+    glVertex3f(+ mini_change, - mini_change, - mini_change);
+    glVertex3f(+ mini_change, - mini_change, + mini_change);
+    glVertex3f(- mini_change, - mini_change, + mini_change);
+    glVertex3f(- mini_change, - mini_change, - mini_change);
     glEnd();
+    glPopMatrix();
 }

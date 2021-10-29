@@ -18,7 +18,7 @@ public:
 
     void from2DGrid(Grid grid);
 
-    void display();
+    void display(bool apply_marching_cubes = false, bool display_vertices = false);
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }

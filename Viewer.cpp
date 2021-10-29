@@ -5,16 +5,16 @@
 using namespace qglviewer;
 using namespace std;
 
-Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, int mode)
-    : QGLViewer(), viewerMode(mode), grid(grid), voxelGrid(voxelGrid) {
+Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode)
+    : QGLViewer(), mapMode(map), viewerMode(mode), grid(grid), voxelGrid(voxelGrid) {
 
 }
 Viewer::Viewer(Grid* g)
-    : Viewer(g, NULL, GRID_MODE) {
+    : Viewer(g, NULL, GRID_MODE, FILL_MODE) {
 
 }
 Viewer::Viewer(VoxelGrid* g)
-    : Viewer(NULL, g, VOXEL_MODE) {
+    : Viewer(NULL, g, VOXEL_MODE, FILL_MODE) {
 
 }
 
@@ -26,14 +26,14 @@ void Viewer::init() {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
-    this->camera()->setType(Camera::ORTHOGRAPHIC);
+//    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
 
 
 }
 
 void Viewer::draw() {
-    if (this->viewerMode & ViewerMode::WIRE_MODE)
+    if (this->viewerMode == ViewerMode::WIRE_MODE)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -64,16 +64,50 @@ void Viewer::draw() {
 //    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
 //    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 
-    glPushMatrix();
-    glRotatef(180.0, 1.0, 0.0, 0.0);
+//    glPushMatrix();
+//    glRotatef(180.0, 1.0, 0.0, 0.0);
     drawAxis();
-    glPopMatrix();
+//    glPopMatrix();
 //    drawLight(GL_LIGHT1);
 
-    if (this->viewerMode & GRID_MODE) {
+    if (this->mapMode == GRID_MODE) {
         this->grid->display(true);
     }
-    else if (this-> viewerMode & VOXEL_MODE) {
-        this->voxelGrid->display();
+    else if (this->mapMode == VOXEL_MODE) {
+        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices);
+    }
+}
+void Viewer::keyPressEvent(QKeyEvent *e)
+{
+    // Defines the Alt+R shortcut.
+    if (e->key() == Qt::Key_Z)
+    {
+        setViewerMode(ViewerMode::WIRE_MODE);
+        update(); // Refresh display
+    } else if (e->key() == Qt::Key_S)
+    {
+        setViewerMode(ViewerMode::FILL_MODE);
+        update(); // Refresh display
+    } else if (e->key() == Qt::Key_Q)
+    {
+        setMapMode(MapMode::VOXEL_MODE);
+        update(); // Refresh display
+    } else if (e->key() == Qt::Key_D)
+    {
+        setMapMode(MapMode::GRID_MODE);
+        update(); // Refresh display
+    } else if (e->key() == Qt::Key_R) {
+        if (this->algorithm == NONE)
+            setSmoothingAlgorithm(MARCHING_CUBES);
+        else if (this->algorithm == MARCHING_CUBES)
+            setSmoothingAlgorithm(NONE);
+//        else if (this->algorithm == DUAL_CONTOURING)
+//            setSmoothingAlgorithm(NONE);
+        update();
+    } else if(e->key() == Qt::Key_V) {
+        this->display_vertices = !this->display_vertices;
+        update();
+    } else {
+        QGLViewer::keyPressEvent(e);
     }
 }

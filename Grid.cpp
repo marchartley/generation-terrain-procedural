@@ -34,7 +34,7 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
             this->vertices[x][y].z -= min;
             this->vertices[x][y].z /= (max - min);
             this->vertices[x][y].z *= maxHeight;
-//            this->vertices[x][y].z = maxHeight/2;
+            this->vertices[x][y].z = maxHeight;
         }
     }
     this->computeNormals();
@@ -87,8 +87,8 @@ void Grid::display(bool displayNormals) {
             if (this->vertices[x][y].z < mini)
                 mini = this->vertices[x][y].z;
         }
-//    glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
-//    glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
+    glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
+    glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
     glBegin(GL_TRIANGLES);
 //    glColor4f(1.0, 0.5, 0.5, 0.0);
     for(int x = 0; x < this->sizeX - 1; x++) {
