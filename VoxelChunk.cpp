@@ -174,10 +174,15 @@ void VoxelChunk::createMesh() {
 }
 void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices)
 {
-    for(int v_x = 0; v_x < sizeX; v_x++) {
-        for(int v_y = 0; v_y < sizeY; v_y++) {
-            for(int h = 0; h < height; h++) {
-                this->voxels[v_x][v_y][h]->display(apply_marching_cubes, display_vertices);
+    if (apply_marching_cubes) {
+        MarchingCubes mc = MarchingCubes(*this);
+        mc.display();
+    } else {
+        for(int v_x = 0; v_x < sizeX; v_x++) {
+            for(int v_y = 0; v_y < sizeY; v_y++) {
+                for(int h = 0; h < height; h++) {
+                    this->voxels[v_x][v_y][h]->display(apply_marching_cubes, display_vertices);
+                }
             }
         }
     }
