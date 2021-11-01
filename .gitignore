@@ -1,3 +1,6 @@
+# TEMP FIX FOR WINDOWS/UNIX SYSTEM
+*.pro*
+
 # Prerequisites
 *.d
 
