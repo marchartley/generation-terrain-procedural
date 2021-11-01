@@ -5,6 +5,7 @@ class VoxelChunk;
 
 #include "Voxel.h"
 #include <vector>
+#include "MarchingCubes.h"
 
 class VoxelChunk
 {

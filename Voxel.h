@@ -36,7 +36,7 @@ public:
     operator bool() { return this->type != TerrainTypes::AIR; }
     Vertex vertices[8];
     float* isosurfaces[8];
-protected:
+//protected:
     int x, y, z;
     TerrainTypes type;
     float blockSize;

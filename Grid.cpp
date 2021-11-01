@@ -34,7 +34,7 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
             this->vertices[x][y].z -= min;
             this->vertices[x][y].z /= (max - min);
             this->vertices[x][y].z *= maxHeight;
-            this->vertices[x][y].z = maxHeight;
+//            this->vertices[x][y].z = maxHeight;
         }
     }
     this->computeNormals();

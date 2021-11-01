@@ -7,6 +7,12 @@ class MarchingCubes
 {
 public:
     MarchingCubes();
+    MarchingCubes(VoxelChunk& grid);
+
+    void createMesh() {}
+    void display();
+
+    std::vector<std::vector<std::vector<bool>>> map;
 
     static void displayVoxel(Voxel& v);
 

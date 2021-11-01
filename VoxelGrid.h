@@ -28,7 +28,7 @@ public:
     std::vector<Voxel> getVoxels() { return this->voxels; }
     int getHeight(int x, int y);
 
-protected:
+//protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
     float blockSize;
