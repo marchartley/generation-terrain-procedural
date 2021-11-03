@@ -7,6 +7,7 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
     : sizeX(nx), sizeY(ny), maxHeight(maxHeight), tileSize(tileSize) {
     // Create and configure FastNoise object
     FastNoiseLite noise;
+    noise.SetFrequency(0.01);
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     noise.SetFractalLacunarity(2.0);

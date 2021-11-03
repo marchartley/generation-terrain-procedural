@@ -24,9 +24,7 @@ public:
     int surrounding_heights[4];
     std::vector<std::vector<std::vector<Voxel*>>> voxels;
     std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
-
-
-    void draw_part(int start_height, int end_height, TerrainTypes type, bool draw_bottom);
+    bool lastChunkOnX = false, lastChunkOnY = false;
 };
 
 #endif // VOXELCHUNK_H

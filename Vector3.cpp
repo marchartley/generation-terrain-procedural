@@ -35,7 +35,11 @@ Vector3 Vector3::cross(Vector3 o) {
 }
 
 
-Vector3 operator+(Vector3 a, Vector3&b) {
+//Vector3 operator+(Vector3 a, Vector3&b) {
+//    a += b;
+//    return a;
+//}
+Vector3 operator+(Vector3 a, Vector3 b) {
     a += b;
     return a;
 }
@@ -66,7 +70,7 @@ Vector3& Vector3::operator*=(Vector3& o) {
     return *this;
 }
 Vector3 Vector3::operator/(Vector3& o) {
-    Vector3 v;
+    Vector3 v = *this;
     v /= o;
     return v;
 }
@@ -77,7 +81,7 @@ Vector3& Vector3::operator/=(Vector3& o) {
     return *this;
 }
 Vector3 Vector3::operator*(float o) {
-    Vector3 v;
+    Vector3 v = *this;
     v *= o;
     return v;
 }
@@ -88,7 +92,7 @@ Vector3& Vector3::operator*=(float o) {
     return *this;
 }
 Vector3 Vector3::operator/(float o) {
-    Vector3 v;
+    Vector3 v = *this;
     v /= o;
     return v;
 }
@@ -99,7 +103,7 @@ Vector3& Vector3::operator/=(float o) {
     return *this;
 }
 Vector3 Vector3::operator+(float o) {
-    Vector3 v;
+    Vector3 v = *this;
     v += o;
     return v;
 }
@@ -110,7 +114,7 @@ Vector3& Vector3::operator+=(float o) {
     return *this;
 }
 Vector3 Vector3::operator-(float o) {
-    Vector3 v;
+    Vector3 v = *this;
     v -= o;
     return v;
 }

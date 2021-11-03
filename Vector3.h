@@ -11,7 +11,8 @@ public:
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
 
-    friend Vector3 operator+(Vector3 a, Vector3& b);
+//    friend Vector3 operator+(Vector3 a, Vector3& b);
+    friend Vector3 operator+(Vector3 a, Vector3 b);
     Vector3& operator+=(const Vector3& o);
     friend Vector3 operator-(Vector3 a, const Vector3& b);
     Vector3& operator-=(const Vector3& o);

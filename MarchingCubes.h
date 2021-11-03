@@ -13,6 +13,7 @@ public:
     void display();
 
     std::vector<std::vector<std::vector<bool>>> map;
+    VoxelChunk* grid;
 
     static void displayVoxel(Voxel& v);
 
