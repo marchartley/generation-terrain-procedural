@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QApplication a(argc, argv);
 
-    Grid* grid = new Grid(100, 100, 100, 1.0);
+    Grid* grid = new Grid(40, 40, 20, 1.0);
 //    VoxelGrid* vGrid = new VoxelGrid(40, 40, 20, 1.0);
     VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);

@@ -35,6 +35,12 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                 }
             }
             this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data));
+            if (xChunk == int(sizeX / chunkSize)) {
+                this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
+            }
+            if (yChunk == int(sizeY / chunkSize)) {
+                this->chunks[this->chunks.size() - 1].lastChunkOnY = true;
+            }
         }
     }
 
@@ -59,7 +65,7 @@ VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
 
 }
 void VoxelGrid::from2DGrid(Grid grid) {
-    int chunkSize = (sizeX > 40 ? 40 : sizeX);
+    int chunkSize = (sizeX > 4 ? 4 : sizeX);
     this->voxels.clear();
     this->chunks.clear();
     this->sizeX = grid.getSizeX();
@@ -82,9 +88,15 @@ void VoxelGrid::from2DGrid(Grid grid) {
             }
 //            data[1][1][0] = TerrainTypes::AIR;
             this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data));
+            if (xChunk == int(sizeX / chunkSize) - 1) {
+                this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
+            }
+            if (yChunk == int(sizeY / chunkSize) - 1) {
+                this->chunks[this->chunks.size() - 1].lastChunkOnY = true;
+            }
         }
     }
-    for(int i = 0; i < this->chunks.size() - 1; i++) {
+    for(int i = 0; i < this->chunks.size(); i++) {
         if (i > this->sizeY/chunkSize - 1) {
             this->chunks[i].neighboring_chunks[LEFT] = &this->chunks[i - int(this->sizeY / chunkSize)];
             this->chunks[i - int(this->sizeY/chunkSize)].neighboring_chunks[RIGHT] = &this->chunks[i];
@@ -100,12 +112,15 @@ void VoxelGrid::from2DGrid(Grid grid) {
 
 void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices) {
     glPushMatrix();
+//    if (apply_marching_cubes)
+//        glRotatef(180.0, 1.0, 0.0, 0.0);
     glScalef(1/this->blockSize, 1/this->blockSize, 1/this->blockSize);
     glTranslatef(-this->getSizeX()/2.0, -this->getSizeY()/2.0, -this->getSizeZ()/2.0);
     glColor3f(1.0, 1.0, 1.0);
     for (VoxelChunk& vc : this->chunks) {
         glPushMatrix();
         glTranslatef(vc.x, vc.y, 0.0);
+        glColor3f((vc.x + vc.sizeX) / (float)sizeX, (vc.y + vc.sizeY) / (float)sizeY, .5);
         vc.display(apply_marching_cubes, display_vertices);
         glPopMatrix();
     }

@@ -176,7 +176,13 @@ void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices)
 {
     if (apply_marching_cubes) {
         MarchingCubes mc = MarchingCubes(*this);
+        glPushMatrix();
+        if (this->x == 0)
+            glTranslatef(1.0, 0.0, 0.0);
+        if (this->y == 0)
+            glTranslatef(0.0, 1.0, 0.0);
         mc.display();
+        glPopMatrix();
     } else {
         for(int v_x = 0; v_x < sizeX; v_x++) {
             for(int v_y = 0; v_y < sizeY; v_y++) {
