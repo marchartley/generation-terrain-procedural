@@ -29,11 +29,17 @@ public:
     int getY() { return this->y; }
     int getZ() { return this->z; }
 
+    float getIsosurface();
+
     void addNeighbor(Voxel& neighbor);
     void removeNeighbor(Voxel& neighbor);
     std::map<VOXEL_NEIGHBOR, bool> has_neighbors;
 
     operator bool() { return this->type != TerrainTypes::AIR; }
+
+    friend std::ostream& operator<<(std::ostream& io, const Voxel& v);
+    friend std::ostream& operator<<(std::ostream& io, Voxel* v);
+
     Vertex vertices[8];
     float* isosurfaces[8];
 //protected:
@@ -41,6 +47,9 @@ public:
     TerrainTypes type;
     float blockSize;
     std::map<VOXEL_NEIGHBOR, Voxel&> neighbors;
+    float isosurface;
+    float manual_isosurface = 0.0;
+    VoxelChunk* parent;
 
 };
 #endif // VOXEL_H

@@ -10,9 +10,9 @@ public:
     MarchingCubes(VoxelChunk& grid);
 
     void createMesh() {}
-    void display();
+    void display(float isolevel = 0.0);
 
-    std::vector<std::vector<std::vector<bool>>> map;
+    std::vector<std::vector<std::vector<float>>> map;
     VoxelChunk* grid;
 
     static void displayVoxel(Voxel& v);

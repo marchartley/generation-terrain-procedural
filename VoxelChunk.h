@@ -13,7 +13,7 @@ public:
     VoxelChunk();
     VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector<TerrainTypes>>> data);
 
-    void display(bool apply_marching_cubes = false, bool display_vertices = false);
+    void display(bool apply_marching_cubes = false, bool display_vertices = false, float isolevel = 0.0);
     void createMesh();
 
 //protected:

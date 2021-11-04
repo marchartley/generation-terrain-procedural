@@ -5,6 +5,7 @@
 #include "VoxelGrid.h"
 #include <QGLViewer/qglviewer.h>
 #include <QKeyEvent>
+#include <qmessagebox.h>
 
 enum MapMode {
     GRID_MODE  = 0b01,
@@ -34,6 +35,9 @@ protected:
   virtual void init();
   virtual void draw();
 
+  virtual void drawWithNames();
+  virtual void postSelection(const QPoint &point);
+
   void keyPressEvent(QKeyEvent *e);
 
   ViewerMode viewerMode;
@@ -44,6 +48,15 @@ private:
   Grid* grid;
   VoxelGrid* voxelGrid;
   bool display_vertices = true;
+  qglviewer::Vec selectedPoint, orig, dir;
+
+  float selectionShape[5][5] = {
+      {.0, .0, .0, .0, .0},
+      {.0, .3, .5, .3, .0},
+      {.0, .5, 1., .5, .0},
+      {.0, .3, .5, .3, .0},
+      {.0, .0, .0, .0, .0}
+  };
 };
 
 

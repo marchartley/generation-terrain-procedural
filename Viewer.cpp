@@ -77,6 +77,58 @@ void Viewer::draw() {
         this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices);
     }
 }
+
+
+void Viewer::drawWithNames()
+{
+    this->draw();
+    if (selectedName() >= 0) {
+
+        glColor3f(0.9f, 0.2f, 0.1f);
+        glBegin(GL_POINTS);
+        glVertex3fv(selectedPoint);
+        glEnd();
+    }
+}
+void Viewer::postSelection(const QPoint &point)
+{
+    camera()->convertClickToLine(point, orig, dir);
+
+    // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
+    bool found;
+    selectedPoint = camera()->pointUnderPixel(point, found);
+    selectedPoint -= 0.01f * dir; // Small offset to make point clearly visible.
+    // Note that "found" is different from (selectedObjectId()>=0) because of the
+    // size of the select region.
+
+    if (selectedName() == -1) {
+        std::cout << "Nope." << std::endl;
+    }
+    else {
+        intptr_t ptr_int = selectedName();
+        if (ptr_int > 0) {
+            Voxel* main_v = reinterpret_cast<Voxel*>(ptr_int);
+            for (int x = -2; x <= 2; x++) {
+                for (int y = -2; y <= 2; y++) {
+                    for (int z = -2; z <= 2; z++){
+                        if (main_v->x + x < 0 || main_v->x + x >= main_v->parent->sizeX ||
+                                main_v->y + y < 0 || main_v->y + y >= main_v->parent->sizeY ||
+                                main_v->z + z < 0 || main_v->z + z >= main_v->parent->height ||
+                                this->selectionShape[x+2][y+2] == 0.0)
+                            continue;
+                        Voxel* v = main_v->parent->voxels[main_v->x + x][main_v->y + y][main_v->z + z];
+                        v->type = TerrainTypes::AIR;
+                        v->manual_isosurface -= this->selectionShape[x+2][y+2];
+                        v->parent->data[v->x][v->y][v->z] = TerrainTypes::AIR;
+                    }
+                }
+            }
+            main_v->parent->createMesh();
+        }
+    }
+}
+
+
 void Viewer::keyPressEvent(QKeyEvent *e)
 {
     // Defines the Alt+R shortcut.
