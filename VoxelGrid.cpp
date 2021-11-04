@@ -65,7 +65,7 @@ VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
 
 }
 void VoxelGrid::from2DGrid(Grid grid) {
-    int chunkSize = (sizeX > 4 ? 4 : sizeX);
+    int chunkSize = (sizeX > 20 ? 20 : sizeX);
     this->voxels.clear();
     this->chunks.clear();
     this->sizeX = grid.getSizeX();
@@ -110,18 +110,21 @@ void VoxelGrid::from2DGrid(Grid grid) {
         c.createMesh();
 }
 
-void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices) {
+void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {
     glPushMatrix();
 //    if (apply_marching_cubes)
 //        glRotatef(180.0, 1.0, 0.0, 0.0);
     glScalef(1/this->blockSize, 1/this->blockSize, 1/this->blockSize);
     glTranslatef(-this->getSizeX()/2.0, -this->getSizeY()/2.0, -this->getSizeZ()/2.0);
     glColor3f(1.0, 1.0, 1.0);
+    int i = 0;
     for (VoxelChunk& vc : this->chunks) {
         glPushMatrix();
         glTranslatef(vc.x, vc.y, 0.0);
-        glColor3f((vc.x + vc.sizeX) / (float)sizeX, (vc.y + vc.sizeY) / (float)sizeY, .5);
-        vc.display(apply_marching_cubes, display_vertices);
+//        glColor3f((vc.x + vc.sizeX) / (float)sizeX, (vc.y + vc.sizeY) / (float)sizeY, .5);
+//        glPushName(i++); // vc.y  * this->sizeX + vc.y);
+        vc.display(apply_marching_cubes, display_vertices, isolevel);
+//        glPopName();
         glPopMatrix();
     }
     glPopMatrix();

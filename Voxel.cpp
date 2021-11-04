@@ -29,18 +29,32 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize)
 //    this->vertices[5] = Vertex(1.0, 1.0, 1.0);
 //    this->vertices[6] = Vertex(1.0, 0.0, 1.0);
 //    this->vertices[7] = Vertex(0.0, 0.0, 1.0);
-
-    for (int i = 0; i < 8; i++)
+    this->isosurface = 0;
+    for (int i = 0; i < 8; i++) {
         this->isosurfaces[i] = &this->vertices[i].isosurface;
+        this->isosurface += *this->isosurfaces[i];
+    }
+    this->isosurface /= 8;
 }
 
 Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0) {
 
 }
 
+float Voxel::getIsosurface() {
+    this->isosurface = this->type == TerrainTypes::AIR ? -1.0 : 1.0;
+//    this->isosurface = 0;
+//    for (int i = 0; i < 8; i++) {
+//        this->isosurface += *this->isosurfaces[i];
+//    }
+//    this->isosurface /= 8;
+    return this->isosurface + manual_isosurface;
+//    return this->isosurface * this->isosurface * (this->isosurface > 0 ? 1 : -1) + this->manual_isosurface;
+}
 void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
     glPushMatrix();
     glTranslatef(this->x, this->y, this->z);
+    glPushName(reinterpret_cast<intptr_t>(this));
 
     if (apply_marching_cubes) {
         int cube_index = 0;
@@ -146,7 +160,20 @@ void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
                 glVertex3f(0, 1, 1);
                 glEnd();
             }
+            glPopName();
         }
     }
     glPopMatrix();
+}
+
+
+std::ostream& operator<<(std::ostream& io, const Voxel& v)
+{
+    io << "Voxel (" << v.x << ", " << v.y << ", " << v.z << ")";
+    return io;
+}
+std::ostream& operator<<(std::ostream& io, Voxel* v)
+{
+    io << "Voxel (" << v->x << ", " << v->y << ", " << v->z << ")";
+    return io;
 }

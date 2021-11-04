@@ -63,6 +63,7 @@ void VoxelChunk::createMesh() {
                         VoxelChunk* n = this->neighboring_chunks[BACK];
                         v->has_neighbors[BACK] = (bool)(n->data[v_x][0][h]);
                     }
+                    v->parent = this;
                     this->voxels[v_x][v_y].push_back(v);
 //                }
             }
@@ -172,7 +173,7 @@ void VoxelChunk::createMesh() {
         }
     }
 }
-void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices)
+void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices, float isolevel)
 {
     if (apply_marching_cubes) {
         MarchingCubes mc = MarchingCubes(*this);
@@ -181,7 +182,8 @@ void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices)
             glTranslatef(1.0, 0.0, 0.0);
         if (this->y == 0)
             glTranslatef(0.0, 1.0, 0.0);
-        mc.display();
+
+        mc.display(isolevel);
         glPopMatrix();
     } else {
         for(int v_x = 0; v_x < sizeX; v_x++) {
