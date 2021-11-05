@@ -35,6 +35,7 @@ public:
 
     float dot(Vector3& o);
     Vector3 cross(Vector3 o);
+    Vector3 rounded(int precision = 0);
 
     float norm();
     Vector3& normalize();

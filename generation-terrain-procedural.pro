@@ -12,6 +12,8 @@ CONFIG += c++11
 SOURCES += \
         Grid.cpp \
         MarchingCubes.cpp \
+        RockErosion.cpp \
+        UnderwaterErosion.cpp \
         Vector3.cpp \
         Vertex.cpp \
         Viewer.cpp \
@@ -37,6 +39,8 @@ HEADERS += \
     FastNoiseLit.h \
     Grid.h \
     MarchingCubes.h \
+    RockErosion.h \
+    UnderwaterErosion.h \
     Vector3.h \
     Vertex.h \
     Viewer.h \

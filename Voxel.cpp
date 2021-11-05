@@ -54,9 +54,9 @@ float Voxel::getIsosurface() {
 void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
     glPushMatrix();
     glTranslatef(this->x, this->y, this->z);
-    glPushName(reinterpret_cast<intptr_t>(this));
 
     if (apply_marching_cubes) {
+        glPushName(reinterpret_cast<intptr_t>(this));
         int cube_index = 0;
         for (int i = 0; i < 8; i++){
             if (this->vertices[i].isosurface < 0)
@@ -92,77 +92,68 @@ void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
         glEnd();
     } else {
         if (this->type != TerrainTypes::AIR) {
+            glPushName(reinterpret_cast<intptr_t>(this));
+            glBegin(GL_QUADS);
             // BOTTOM
             if (!this->has_neighbors[BOTTOM]) {
                 glColor3f(1.0, 1.0, 1.0);
-                glBegin(GL_QUADS);
                 glVertex3f(0, 0, 0);
                 glVertex3f(1, 0, 0);
                 glVertex3f(1, 1, 0);
                 glVertex3f(0, 1, 0);
-                glEnd();
                 glColor3f(1.0, 1.0, 1.0);
             }
 
             // RIGHT
             if (!this->has_neighbors[RIGHT]) {
                 glColor3f(0.8, 0.8, 0.8);
-                glBegin(GL_QUADS);
                 glVertex3f(1, 0, 0);
                 glVertex3f(1, 1, 0);
                 glVertex3f(1, 1, 1);
                 glVertex3f(1, 0, 1);
-                glEnd();
                 glColor3f(1.0, 1.0, 1.0);
             }
 
             // TOP
             if (!this->has_neighbors[TOP]) {
                 glColor3f(0.3, 0.3, 0.3);
-                glBegin(GL_QUADS);
                 glVertex3f(1, 0, 1);
                 glVertex3f(1, 1, 1);
                 glVertex3f(0, 1, 1);
                 glVertex3f(0, 0, 1);
-                glEnd();
             }
 
             // LEFT
             if (!this->has_neighbors[LEFT]) {
                 glColor3f(0.6, 0.6, 0.6);
-                glBegin(GL_QUADS);
                 glVertex3f(0, 0, 1);
                 glVertex3f(0, 1, 1);
                 glVertex3f(0, 1, 0);
                 glVertex3f(0, 0, 0);
-                glEnd();
             }
 
             // FRONT
             if (!this->has_neighbors[FRONT]) {
                 glColor3f(0.6, 0.6, 0.6);
-                glBegin(GL_QUADS);
                 glVertex3f(0, 0, 0);
                 glVertex3f(0, 0, 1);
                 glVertex3f(1, 0, 1);
                 glVertex3f(1, 0, 0);
-                glEnd();
                 glColor3f(1.0, 1.0, 1.0);
             }
 
             // BACK
             if (!this->has_neighbors[BACK]) {
                 glColor3f(0.8, 0.8, 0.8);
-                glBegin(GL_QUADS);
                 glVertex3f(0, 1, 0);
                 glVertex3f(1, 1, 0);
                 glVertex3f(1, 1, 1);
                 glVertex3f(0, 1, 1);
-                glEnd();
             }
-            glPopName();
+            glEnd();
         }
     }
+    glPopName();
     glPopMatrix();
 }
 
@@ -176,4 +167,22 @@ std::ostream& operator<<(std::ostream& io, Voxel* v)
 {
     io << "Voxel (" << v->x << ", " << v->y << ", " << v->z << ")";
     return io;
+}
+
+bool Voxel::contains(Vector3 v) {
+    return this->contains(v.x, v.y, v.z);
+}
+
+bool Voxel::contains(float x, float y, float z) {
+    return (this->globalX() <= x && x < this->globalX() + 1 && this->globalY() <= y && y < this->globalY() + 1 && this->globalZ() <= z && z < this->globalZ() + 1);
+}
+
+float Voxel::globalX()  {
+    return this->x + this->parent->x;
+}
+float Voxel::globalY()  {
+    return this->y + this->parent->y;
+}
+float Voxel::globalZ()  {
+    return this->z;
 }

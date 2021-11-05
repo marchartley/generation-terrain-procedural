@@ -1,6 +1,8 @@
 #include "Viewer.h"
 
 #include <QGLViewer/manipulatedCameraFrame.h>
+#include <chrono>
+#include "UnderwaterErosion.h"
 
 using namespace qglviewer;
 using namespace std;
@@ -28,7 +30,26 @@ void Viewer::init() {
     glEnable(GL_COLOR_MATERIAL);
 //    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
-
+    this->matter_adder = RockErosion(this->selectionSize, 1.0);
+    this->selectionShape = this->matter_adder.attackMask;
+//    std::cout.precision(2);
+//    selectionShape = new float**[selectionSize];
+//    for (int i = 0; i < selectionSize; i++) {
+//        selectionShape[i] = new float*[selectionSize];
+//        for (int j = 0; j < selectionSize; j++) {
+//            selectionShape[i][j] = new float[selectionSize];
+//            for (int k = 0; k < selectionSize; k++) {
+//                float i_i = (i - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
+//                float j_i = (j - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
+//                float k_i = (k - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
+//                selectionShape[i][j][k] = (sqrt(3) - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(sqrt(3));
+////                std::cout << selectionShape[i][j][k] << "\t" << std::flush;
+////                continue;
+//            }
+////            std::cout << std::endl;
+//        }
+////        std::cout << std::endl;
+//    }
 
 }
 
@@ -82,16 +103,10 @@ void Viewer::draw() {
 void Viewer::drawWithNames()
 {
     this->draw();
-    if (selectedName() >= 0) {
-
-        glColor3f(0.9f, 0.2f, 0.1f);
-        glBegin(GL_POINTS);
-        glVertex3fv(selectedPoint);
-        glEnd();
-    }
 }
 void Viewer::postSelection(const QPoint &point)
 {
+    auto full_start = std::chrono::system_clock::now();
     camera()->convertClickToLine(point, orig, dir);
 
     // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
@@ -107,25 +122,63 @@ void Viewer::postSelection(const QPoint &point)
     else {
         intptr_t ptr_int = selectedName();
         if (ptr_int > 0) {
+            auto total_time = std::chrono::duration<double>();
             Voxel* main_v = reinterpret_cast<Voxel*>(ptr_int);
-            for (int x = -2; x <= 2; x++) {
-                for (int y = -2; y <= 2; y++) {
-                    for (int z = -2; z <= 2; z++){
-                        if (main_v->x + x < 0 || main_v->x + x >= main_v->parent->sizeX ||
-                                main_v->y + y < 0 || main_v->y + y >= main_v->parent->sizeY ||
-                                main_v->z + z < 0 || main_v->z + z >= main_v->parent->height ||
-                                this->selectionShape[x+2][y+2] == 0.0)
+            this->matter_adder.Apply(main_v, addingMatterMode);
+            /*
+            for (int x = -(int(selectionSize/2)); x <= int(selectionSize/2); x++) {
+                for (int y = -(int(selectionSize/2)); y <= int(selectionSize/2); y++) {
+                    for (int z = -(int(selectionSize/2)); z <= int(selectionSize/2); z++){
+                        auto start = std::chrono::system_clock::now();
+                        int v_x = main_v->x + x, v_y = main_v->y + y, v_z = main_v->z + z;
+                        VoxelChunk* current_parent = main_v->parent;
+                        if ((main_v->x + x < 0 && current_parent->x == 0) || (main_v->x + x >= current_parent->sizeX && current_parent->lastChunkOnX))
                             continue;
-                        Voxel* v = main_v->parent->voxels[main_v->x + x][main_v->y + y][main_v->z + z];
-                        v->type = TerrainTypes::AIR;
-                        v->manual_isosurface -= this->selectionShape[x+2][y+2];
-                        v->parent->data[v->x][v->y][v->z] = TerrainTypes::AIR;
+                        if ((main_v->y + y < 0 && current_parent->y == 0) || (main_v->y + y >= current_parent->sizeY && current_parent->lastChunkOnY))
+                            continue;
+                        if (main_v->z + z < 0 || main_v->z + z >= current_parent->height)
+                            continue;
+
+                        if (main_v->x + x < 0) {
+                            current_parent = current_parent->neighboring_chunks[LEFT];
+                            v_x += current_parent->sizeX;
+                        }
+                        if (main_v->y + y < 0) {
+                            current_parent = current_parent->neighboring_chunks[FRONT];
+                            v_y += current_parent->sizeY;
+                        }
+                        if (main_v->x + x >= current_parent->sizeX) {
+                            current_parent = current_parent->neighboring_chunks[RIGHT];
+                            v_x -= current_parent->sizeX;
+                        }
+                        if (main_v->y + y >= current_parent->sizeY) {
+                            current_parent = current_parent->neighboring_chunks[BACK];
+                            v_y -= current_parent->sizeY;
+                        }
+                        Voxel* v = current_parent->voxels[v_x][v_y][v_z];
+//                        v->type = TerrainTypes::AIR;
+                        v->manual_isosurface += this->selectionShape[x+int(selectionSize/2)][y+int(selectionSize/2)][z+int(selectionSize/2)] * (this->addingMatterMode ? 1 : -1);
+                        if (v->getIsosurface() < 0.0)
+                            v->type = TerrainTypes::AIR;
+                        else
+                            v->type = TerrainTypes::DIRT;
+                        v->parent->data[v->x][v->y][v->z] = v->type;
+                        auto end = std::chrono::system_clock::now();
+//                        std::cout << (end - start).count() << std::endl;
+                        total_time += (end - start);
                     }
                 }
             }
+            std::cout << "Time in loop : " << total_time.count() << std::endl;
+            auto start = std::chrono::system_clock::now();
             main_v->parent->createMesh();
+            auto end = std::chrono::system_clock::now();
+            total_time = (end - start);
+            std::cout << "Remeshing : " << total_time.count() << std::endl;*/
+
         }
     }
+    std::cout << "Total duration : " << (std::chrono::duration<double>(std::chrono::system_clock::now() - full_start)).count() << std::endl;
 }
 
 
@@ -158,6 +211,13 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         update();
     } else if(e->key() == Qt::Key_V) {
         this->display_vertices = !this->display_vertices;
+        update();
+    } else if(e->key() == Qt::Key_P) {
+        this->addingMatterMode = !this->addingMatterMode;
+        update();
+    } else if(e->key() == Qt::Key_Return) {
+        UnderwaterErosion erod(this->voxelGrid, 10, 2.0, 100);
+        erod.Apply();
         update();
     } else {
         QGLViewer::keyPressEvent(e);
