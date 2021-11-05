@@ -28,11 +28,17 @@ public:
     std::vector<Voxel> getVoxels() { return this->voxels; }
     int getHeight(int x, int y);
 
+    bool contains(Vector3 v);
+    bool contains(float x, float y, float z);
+    Voxel* getVoxel(int x, int y, int z);
+
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
     float blockSize;
     std::vector<VoxelChunk> chunks;
+
+    int chunkSize = 40;
 };
 
 #endif // VOXELGRID_H

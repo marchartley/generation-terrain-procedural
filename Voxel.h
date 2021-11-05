@@ -31,6 +31,13 @@ public:
 
     float getIsosurface();
 
+    float globalX();
+    float globalY();
+    float globalZ();
+
+    bool contains(Vector3 v);
+    bool contains(float x, float y, float z);
+
     void addNeighbor(Voxel& neighbor);
     void removeNeighbor(Voxel& neighbor);
     std::map<VOXEL_NEIGHBOR, bool> has_neighbors;

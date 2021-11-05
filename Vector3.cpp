@@ -33,6 +33,14 @@ Vector3 Vector3::cross(Vector3 o) {
               this->x * o.y - this->y * o.x);
     return v;
 }
+Vector3 Vector3::rounded(int precision)
+{
+    Vector3 v = *this;
+    v.x = (int)(v.x * pow(10, precision)) / (float)(pow(10, precision));
+    v.y = (int)(v.y * pow(10, precision)) / (float)(pow(10, precision));
+    v.z = (int)(v.z * pow(10, precision)) / (float)(pow(10, precision));
+    return v;
+}
 
 
 //Vector3 operator+(Vector3 a, Vector3&b) {

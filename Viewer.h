@@ -6,6 +6,7 @@
 #include <QGLViewer/qglviewer.h>
 #include <QKeyEvent>
 #include <qmessagebox.h>
+#include "RockErosion.h"
 
 enum MapMode {
     GRID_MODE  = 0b01,
@@ -50,13 +51,10 @@ private:
   bool display_vertices = true;
   qglviewer::Vec selectedPoint, orig, dir;
 
-  float selectionShape[5][5] = {
-      {.0, .0, .0, .0, .0},
-      {.0, .3, .5, .3, .0},
-      {.0, .5, 1., .5, .0},
-      {.0, .3, .5, .3, .0},
-      {.0, .0, .0, .0, .0}
-  };
+  int selectionSize = 15;
+  float*** selectionShape;
+  bool addingMatterMode = true;
+  RockErosion matter_adder;
 };
 
 

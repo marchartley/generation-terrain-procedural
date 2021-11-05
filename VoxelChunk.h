@@ -11,13 +11,18 @@ class VoxelChunk
 {
 public:
     VoxelChunk();
-    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector<TerrainTypes>>> data);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< TerrainTypes > > > data);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data);
 
     void display(bool apply_marching_cubes = false, bool display_vertices = false, float isolevel = 0.0);
     void createMesh();
 
+    bool contains(Vector3 v);
+    bool contains(float x, float y, float z);
+
 //protected:
     std::vector<std::vector<std::vector<TerrainTypes>>> data;
+    std::vector<std::vector<std::vector<float>>> iso_data;
     int height;
     int x, y;
     int sizeX, sizeY;

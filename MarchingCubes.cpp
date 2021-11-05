@@ -117,7 +117,6 @@ MarchingCubes::MarchingCubes(VoxelChunk& grid)
 
 void MarchingCubes::display(float isolevel)
 {
-    int name = 0;
     for (int x = 0; x < map.size() - 1; x++) {
         for (int y = 0; y < map[x].size() - 1; y++) {
             for (int z = 0; z < map[x][y].size() - 1; z++) {
@@ -204,7 +203,7 @@ void MarchingCubes::display(float isolevel)
                     else {
                         secondVertex = midpoint;
                         Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
-                        glColor3f((normal.x+1)/2, (normal.y+1)/2, (normal.z+1)/2);
+//                        glColor3f((normal.x+1)/2, (normal.y+1)/2, (normal.z+1)/2);
                     }
                     glVertex3f(midpoint.x, midpoint.y, midpoint.z);
                 }
