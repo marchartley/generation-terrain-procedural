@@ -1,5 +1,5 @@
-# TEMP FIX FOR WINDOWS/UNIX SYSTEM
-*.pro*
+build-Debug/*
+.pro.user.*
 
 # Prerequisites
 *.d
@@ -35,3 +35,6 @@
 *.app
 *.pro
 *.user
+*.pro
+*.user
+*.2b2237b
