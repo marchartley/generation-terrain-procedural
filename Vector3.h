@@ -40,6 +40,8 @@ public:
     float norm();
     Vector3& normalize();
 
+    static Vector3 random();
+
 };
 
 #endif // VECTOR3_H

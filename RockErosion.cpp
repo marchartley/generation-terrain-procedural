@@ -62,6 +62,7 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
                 else
                     v->type = TerrainTypes::DIRT;
                 v->parent->data[v->x][v->y][v->z] = v->type;
+                v->parent->needRemeshing = true;
             }
         }
     }

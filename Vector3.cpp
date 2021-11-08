@@ -1,5 +1,6 @@
 #include "Vector3.h"
 #include <math.h>
+#include "Globals.h"
 
 Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {
 
@@ -39,6 +40,12 @@ Vector3 Vector3::rounded(int precision)
     v.x = (int)(v.x * pow(10, precision)) / (float)(pow(10, precision));
     v.y = (int)(v.y * pow(10, precision)) / (float)(pow(10, precision));
     v.z = (int)(v.z * pow(10, precision)) / (float)(pow(10, precision));
+    return v;
+}
+
+Vector3 Vector3::random() {
+    Vector3 v(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0));
+    v.normalize();
     return v;
 }
 

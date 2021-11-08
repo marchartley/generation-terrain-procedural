@@ -55,6 +55,7 @@ private:
   float*** selectionShape;
   bool addingMatterMode = true;
   RockErosion matter_adder;
+  std::vector<std::vector<Vector3>> lastRocksLaunched;
 };
 
 

@@ -29,6 +29,7 @@ public:
     int surrounding_heights[4];
     std::vector<std::vector<std::vector<Voxel*>>> voxels;
     std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
+    bool needRemeshing = true;
     bool lastChunkOnX = false, lastChunkOnY = false;
 };
 

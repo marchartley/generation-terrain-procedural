@@ -32,6 +32,8 @@ public:
     bool contains(float x, float y, float z);
     Voxel* getVoxel(int x, int y, int z);
 
+    void remeshAll();
+
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
