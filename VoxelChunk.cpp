@@ -33,6 +33,8 @@ VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std
 }
 
 void VoxelChunk::createMesh() {
+    if (!needRemeshing)
+        return;
     if (this->voxels.size() == 0) {
         this->voxels = std::vector<std::vector<std::vector<Voxel*>>>();
         for(int v_x = 0; v_x < sizeX; v_x++) {
@@ -103,6 +105,7 @@ void VoxelChunk::createMesh() {
             }
         }
     }
+    needRemeshing = false;
 
 
 

@@ -9,7 +9,7 @@ public:
     UnderwaterErosion();
     UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount);
 
-    void Apply();
+    std::vector<std::vector<Vector3>> Apply();
 
     VoxelGrid* grid;
     int maxRockSize, rockAmount;

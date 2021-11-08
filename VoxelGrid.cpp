@@ -95,8 +95,8 @@ void VoxelGrid::from2DGrid(Grid grid) {
     chunkSize = (sizeX > chunkSize ? chunkSize : sizeX);
     this->voxels.clear();
     this->chunks.clear();
-    this->sizeX = grid.getSizeX();
-    this->sizeY = grid.getSizeY();
+    this->sizeX = grid.getSizeX() - (grid.getSizeX() % chunkSize);
+    this->sizeY = grid.getSizeY() - (grid.getSizeY() % chunkSize);
     this->sizeZ = grid.getMaxHeight();
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
@@ -172,11 +172,20 @@ bool VoxelGrid::contains(float x, float y, float z) {
 }
 Voxel* VoxelGrid::getVoxel(int x, int y, int z) {
     int xChunk = int(x / chunkSize);
-    int voxPosX = (x+chunkSize) % chunkSize;
+    int voxPosX = x % chunkSize;
+//    int voxPosX = (x+chunkSize) % chunkSize;
     int yChunk = y / chunkSize;
-    int voxPosY = (y+chunkSize) % chunkSize;
+    int voxPosY = y % chunkSize;
+//    int voxPosY = (y+chunkSize) % chunkSize;
 
-    if (xChunk < 0 || yChunk < 0 || z < 0 || x >= getSizeX() || y >= getSizeY() || z >= this->getSizeZ())
+    if (xChunk < 0 || yChunk < 0 || z < 0 || x < 0 || y < 0 || x >= getSizeX() || y >= getSizeY() || z >= this->getSizeZ())
         return nullptr;
+//    std::cout << xChunk << " - " << yChunk << std::endl;
     return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk].voxels[voxPosX][voxPosY][z];
+}
+
+void VoxelGrid::remeshAll()
+{
+    for (VoxelChunk& vc : this->chunks)
+        vc.createMesh();
 }

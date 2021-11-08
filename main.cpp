@@ -7,6 +7,8 @@
 
 #include "Vector3.h"
 
+#include <random>
+
 
 int main(int argc, char *argv[])
 {
@@ -17,10 +19,11 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QApplication a(argc, argv);
 
-    Grid* grid = new Grid(10, 10, 10, 1.0);
+    Grid* grid = new Grid(80, 80, 40, 1.0);
     VoxelGrid* vGrid = new VoxelGrid(100, 100, 40, 1.0);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
+
     Viewer view(grid, vGrid, MapMode::VOXEL_MODE, ViewerMode::FILL_MODE);
 
     view.show();

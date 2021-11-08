@@ -31,26 +31,6 @@ void Viewer::init() {
 //    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
-    this->selectionShape = this->matter_adder.attackMask;
-//    std::cout.precision(2);
-//    selectionShape = new float**[selectionSize];
-//    for (int i = 0; i < selectionSize; i++) {
-//        selectionShape[i] = new float*[selectionSize];
-//        for (int j = 0; j < selectionSize; j++) {
-//            selectionShape[i][j] = new float[selectionSize];
-//            for (int k = 0; k < selectionSize; k++) {
-//                float i_i = (i - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
-//                float j_i = (j - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
-//                float k_i = (k - (selectionSize-1)/2.0) / ((selectionSize-1)/2.0);
-//                selectionShape[i][j][k] = (sqrt(3) - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(sqrt(3));
-////                std::cout << selectionShape[i][j][k] << "\t" << std::flush;
-////                continue;
-//            }
-////            std::cout << std::endl;
-//        }
-////        std::cout << std::endl;
-//    }
-
 }
 
 void Viewer::draw() {
@@ -91,6 +71,18 @@ void Viewer::draw() {
 //    glPopMatrix();
 //    drawLight(GL_LIGHT1);
 
+//    glPushMatrix();
+//    glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
+//    for(std::vector<Vector3> coords : this->lastRocksLaunched) {
+//        glBegin(GL_LINE_STRIP);
+//        glColor3f(1.0, 1.0, 1.0);
+//        for(Vector3 pos : coords) {
+//            glVertex3f(pos.x, pos.y, pos.z);
+//        }
+//        glEnd();
+//    }
+//    glPopMatrix();
+
     if (this->mapMode == GRID_MODE) {
         this->grid->display(true);
     }
@@ -122,59 +114,8 @@ void Viewer::postSelection(const QPoint &point)
     else {
         intptr_t ptr_int = selectedName();
         if (ptr_int > 0) {
-            auto total_time = std::chrono::duration<double>();
             Voxel* main_v = reinterpret_cast<Voxel*>(ptr_int);
             this->matter_adder.Apply(main_v, addingMatterMode);
-            /*
-            for (int x = -(int(selectionSize/2)); x <= int(selectionSize/2); x++) {
-                for (int y = -(int(selectionSize/2)); y <= int(selectionSize/2); y++) {
-                    for (int z = -(int(selectionSize/2)); z <= int(selectionSize/2); z++){
-                        auto start = std::chrono::system_clock::now();
-                        int v_x = main_v->x + x, v_y = main_v->y + y, v_z = main_v->z + z;
-                        VoxelChunk* current_parent = main_v->parent;
-                        if ((main_v->x + x < 0 && current_parent->x == 0) || (main_v->x + x >= current_parent->sizeX && current_parent->lastChunkOnX))
-                            continue;
-                        if ((main_v->y + y < 0 && current_parent->y == 0) || (main_v->y + y >= current_parent->sizeY && current_parent->lastChunkOnY))
-                            continue;
-                        if (main_v->z + z < 0 || main_v->z + z >= current_parent->height)
-                            continue;
-
-                        if (main_v->x + x < 0) {
-                            current_parent = current_parent->neighboring_chunks[LEFT];
-                            v_x += current_parent->sizeX;
-                        }
-                        if (main_v->y + y < 0) {
-                            current_parent = current_parent->neighboring_chunks[FRONT];
-                            v_y += current_parent->sizeY;
-                        }
-                        if (main_v->x + x >= current_parent->sizeX) {
-                            current_parent = current_parent->neighboring_chunks[RIGHT];
-                            v_x -= current_parent->sizeX;
-                        }
-                        if (main_v->y + y >= current_parent->sizeY) {
-                            current_parent = current_parent->neighboring_chunks[BACK];
-                            v_y -= current_parent->sizeY;
-                        }
-                        Voxel* v = current_parent->voxels[v_x][v_y][v_z];
-//                        v->type = TerrainTypes::AIR;
-                        v->manual_isosurface += this->selectionShape[x+int(selectionSize/2)][y+int(selectionSize/2)][z+int(selectionSize/2)] * (this->addingMatterMode ? 1 : -1);
-                        if (v->getIsosurface() < 0.0)
-                            v->type = TerrainTypes::AIR;
-                        else
-                            v->type = TerrainTypes::DIRT;
-                        v->parent->data[v->x][v->y][v->z] = v->type;
-                        auto end = std::chrono::system_clock::now();
-//                        std::cout << (end - start).count() << std::endl;
-                        total_time += (end - start);
-                    }
-                }
-            }
-            std::cout << "Time in loop : " << total_time.count() << std::endl;
-            auto start = std::chrono::system_clock::now();
-            main_v->parent->createMesh();
-            auto end = std::chrono::system_clock::now();
-            total_time = (end - start);
-            std::cout << "Remeshing : " << total_time.count() << std::endl;*/
 
         }
     }
@@ -216,8 +157,8 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         this->addingMatterMode = !this->addingMatterMode;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 2.0, 100);
-        erod.Apply();
+        UnderwaterErosion erod(this->voxelGrid, 10, 0.3, 1000);
+        this->lastRocksLaunched = erod.Apply();
         update();
     } else {
         QGLViewer::keyPressEvent(e);
