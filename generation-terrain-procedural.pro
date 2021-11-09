@@ -49,3 +49,7 @@ HEADERS += \
     Voxel.h \
     VoxelChunk.h \
     VoxelGrid.h
+
+RESOURCES += \
+    fragment_shader.glsl \
+    vertex_shader.glsl
