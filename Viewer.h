@@ -41,6 +41,8 @@ protected:
 
   void keyPressEvent(QKeyEvent *e);
 
+  void mouseMoveEvent(QMouseEvent* e);
+
   ViewerMode viewerMode;
   MapMode mapMode;
   SmoothingAlgorithm algorithm = MARCHING_CUBES;
@@ -51,11 +53,19 @@ private:
   bool display_vertices = true;
   qglviewer::Vec selectedPoint, orig, dir;
 
+  bool displayRockTrajectories = false;
+
   int selectionSize = 15;
   float*** selectionShape;
   bool addingMatterMode = true;
   RockErosion matter_adder;
   std::vector<std::vector<Vector3>> lastRocksLaunched;
+  bool mouseInWorld = false;
+  Vector3 mousePosWorld;
+  QPoint mousePos;
+
+  std::vector<std::vector<Vector3>> getSphereVertices(int rings, int halves);
+  void drawSphere(float radius, int rings, int halves);
 };
 
 

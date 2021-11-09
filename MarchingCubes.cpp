@@ -1,5 +1,7 @@
 #include "MarchingCubes.h"
 
+#include "Globals.h"
+
 
 
 MarchingCubes::MarchingCubes()
@@ -203,16 +205,26 @@ void MarchingCubes::display(float isolevel)
                     else {
                         secondVertex = midpoint;
                         Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
-//                        glColor3f((normal.x+1)/2, (normal.y+1)/2, (normal.z+1)/2);
+                        Vector3 groundColor(.53, .32, .01);
+                        Vector3 grassColor(.01, .42, .01);
+                        float transitionPoint = 0.5;
+                        Vector3 myColor = grassColor * (pow(normal.z - transitionPoint, 2)) + groundColor * (1 - pow(normal.z - transitionPoint, 2));
+                        glColor3f(myColor.x, myColor.y, myColor.z);
+//                        if (normal.z > transitionPoint)
+//                            glColor3f(.01, .52, .01);
+//                        else
+//                            glColor3f(.53, .32, .01);
+//                          glColor3f((normal.x+1)/2, (normal.y+1)/2, (normal.z+1)/2);
+//                        glColor3f(1.0, 1.0, 1.0);
+                        glNormal3f(-normal.x, -normal.y, -normal.z);
+                        glVertex3f(originalVertex.x, originalVertex.y, originalVertex.z);
+                        glVertex3f(firstVertex.x, firstVertex.y, firstVertex.z);
+                        glVertex3f(secondVertex.x, secondVertex.y, secondVertex.z);
                     }
-                    glVertex3f(midpoint.x, midpoint.y, midpoint.z);
                 }
                 glEnd();
                 glPopName();
             }
         }
     }
-}
-
-void MarchingCubes::displayVoxel(Voxel &v) {
 }

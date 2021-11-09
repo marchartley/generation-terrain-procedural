@@ -4,6 +4,8 @@
 #include <chrono>
 #include "UnderwaterErosion.h"
 
+#include "Globals.h"
+
 using namespace qglviewer;
 using namespace std;
 
@@ -28,7 +30,14 @@ void Viewer::init() {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
+//    glEnable(GL_AUTO_NORMAL);
 //    this->camera()->setType(Camera::ORTHOGRAPHIC);
+
+    setMouseTracking(true);
+
+    GlobalsGL::createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
+
+
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
 }
@@ -40,9 +49,9 @@ void Viewer::draw() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Place light at camera position
     const Vec cameraPos = camera()->position();
-    const GLfloat pos[4] = {(float)cameraPos[0], (float)cameraPos[1],
-                            (float)cameraPos[2], 1.0f};
-//    const GLfloat pos[4] = {0, -5.0, -5.0, 1.0};
+//    const GLfloat pos[4] = {(float)cameraPos[0], (float)cameraPos[1],
+//                            (float)cameraPos[2] + 10.f, 1.0f};
+    const GLfloat pos[4] = {0, 0.0, 50.0, 1.0};
     glLightfv(GL_LIGHT1, GL_POSITION, pos);
 
     // Orientate light along view direction
@@ -52,17 +61,17 @@ void Viewer::draw() {
 
 
     // Light default parameters
-    const GLfloat light_ambient[4] = {1.0, .9, .9, 1.0};
-    const GLfloat light_specular[4] = {1.0, 1.0, 1.0, 1.0};
-    const GLfloat light_diffuse[4] = {1.0, 1.0, 1.0, 100.0};
+    const GLfloat light_ambient[4] = {.92, .54, .20, .01};
+    const GLfloat light_specular[4] = {.8, 1.0, .8, .001};
+    const GLfloat light_diffuse[4] = {1.0, 1.0, 1.0, .01};
 
-    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 30.0);
-    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 100.0);
-//    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, .1f);
-    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, .00003f);
-    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0003f);
+//    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 30.0);
+//    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 100.0);
+//    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, .000001f);
+//    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, .003f);
+//    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.003f);
     glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-//    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
 //    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
 
 //    glPushMatrix();
@@ -71,24 +80,37 @@ void Viewer::draw() {
 //    glPopMatrix();
 //    drawLight(GL_LIGHT1);
 
-//    glPushMatrix();
-//    glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
-//    for(std::vector<Vector3> coords : this->lastRocksLaunched) {
-//        glBegin(GL_LINE_STRIP);
-//        glColor3f(1.0, 1.0, 1.0);
-//        for(Vector3 pos : coords) {
-//            glVertex3f(pos.x, pos.y, pos.z);
-//        }
-//        glEnd();
-//    }
-//    glPopMatrix();
+    if (displayRockTrajectories) {
+        glPushMatrix();
+        glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
+        for(std::vector<Vector3> coords : this->lastRocksLaunched) {
+            glBegin(GL_LINE_STRIP);
+            glColor3f(1.0, 1.0, 1.0);
+            for(Vector3 pos : coords) {
+                glVertex3f(pos.x, pos.y, pos.z);
+            }
+            glEnd();
+        }
+        glPopMatrix();
+    }
 
     if (this->mapMode == GRID_MODE) {
         this->grid->display(true);
     }
     else if (this->mapMode == VOXEL_MODE) {
-        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices);
+        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.5);
     }
+
+    /*if(this->mouseInWorld)
+    {
+        glPushMatrix();
+        glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
+        glTranslatef(mousePosWorld.x, mousePosWorld.y, mousePosWorld.z);
+        glColor4f(1., 1., 1., .5);
+        this->drawSphere(this->selectionSize, 8, 8);
+        glColor4f(1., 1., 1., 1.);
+        glPopMatrix();
+    }*/
 }
 
 
@@ -115,11 +137,12 @@ void Viewer::postSelection(const QPoint &point)
         intptr_t ptr_int = selectedName();
         if (ptr_int > 0) {
             Voxel* main_v = reinterpret_cast<Voxel*>(ptr_int);
-            this->matter_adder.Apply(main_v, addingMatterMode);
+            RockErosion rock(this->selectionSize, 1.0);
+            rock.Apply(main_v, addingMatterMode);
 
         }
     }
-    std::cout << "Total duration : " << (std::chrono::duration<double>(std::chrono::system_clock::now() - full_start)).count() << std::endl;
+    std::cout << "Total duration : " << (std::chrono::duration<double>(std::chrono::system_clock::now() - full_start)).count() << "s" << std::endl;
 }
 
 
@@ -149,18 +172,166 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             setSmoothingAlgorithm(NONE);
 //        else if (this->algorithm == DUAL_CONTOURING)
 //            setSmoothingAlgorithm(NONE);
+        std::cout << "Displaying using " << (this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") << " algorithm" << std::endl;
         update();
     } else if(e->key() == Qt::Key_V) {
         this->display_vertices = !this->display_vertices;
         update();
     } else if(e->key() == Qt::Key_P) {
         this->addingMatterMode = !this->addingMatterMode;
+        std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 0.3, 1000);
+        UnderwaterErosion erod(this->voxelGrid, 10, 0.05, 2000);
         this->lastRocksLaunched = erod.Apply();
+        std::cout << "Rocks launched" << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_Minus) {
+        this->selectionSize = max(2, this->selectionSize - 2);
+        std::cout << "Cursor size : " << this->selectionSize << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_Plus) {
+        this->selectionSize = max(2, this->selectionSize + 2);
+        std::cout << "Cursor size : " << this->selectionSize << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_Space) {
+        displayRockTrajectories = !displayRockTrajectories;
+        std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
         update();
     } else {
         QGLViewer::keyPressEvent(e);
     }
+}
+std::vector<std::vector<Vector3>> Viewer::getSphereVertices(int rings, int halves) {
+    std::vector<std::vector<Vector3>> coords;
+    std::vector<Vector3> tris;
+    for(int i = 0; i < halves - 1; i++)
+    {
+        for (int j = 0; j < rings -1 ; j++)
+        {
+            Vector3 v1(i, j, 1.0);
+            Vector3 v2(i+1, j, 1.0);
+            Vector3 v3(i+1, j+1, 1.0);
+            Vector3 v4(i, j+1, 1.0);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+
+            v1 = Vector3(i, j, -1.0);
+            v2 = Vector3(i+1, j, -1.0);
+            v3 = Vector3(i+1, j+1, -1.0);
+            v4 = Vector3(i, j+1, -1.0);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+
+            v1 = Vector3(1.0, i, j);
+            v2 = Vector3(1.0, i+1, j);
+            v3 = Vector3(1.0, i+1, j+1);
+            v4 = Vector3(1.0, i, j+1);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+
+            v1 = Vector3(-1.0, i, j);
+            v2 = Vector3(-1.0, i+1, j);
+            v3 = Vector3(-1.0, i+1, j+1);
+            v4 = Vector3(-1.0, i, j+1);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+
+            v1 = Vector3(i, 1.0, j);
+            v2 = Vector3(i+1, 1.0, j);
+            v3 = Vector3(i+1, 1.0, j+1);
+            v4 = Vector3(i, 1.0,  j+1);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+
+            v1 = Vector3(i, -1.0, j);
+            v2 = Vector3(i+1, -1.0, j);
+            v3 = Vector3(i+1, -1.0, j+1);
+            v4 = Vector3(i, -1.0,  j+1);
+            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
+
+            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
+            coords.push_back(tris);
+            tris.clear();
+        }
+    }
+    return coords;
+}
+void Viewer::drawSphere(float radius, int rings, int halves)
+{
+    std::vector<std::vector<Vector3>> coords = getSphereVertices(rings, halves);
+    glBegin(GL_TRIANGLES);
+    for (std::vector<Vector3> triangle : coords)
+    {
+        for(Vector3 vert : triangle)
+            glVertex3f(vert.x * radius, vert.y * radius, vert.z * radius);
+    }
+    glEnd();
+}
+void Viewer::mouseMoveEvent(QMouseEvent* e)
+{
+    /*qglviewer::Camera *c = camera();
+    this->mousePos = e->pos();
+    camera()->convertClickToLine(mousePos, orig, dir);
+    float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
+    maxDist *= maxDist;
+
+    bool found = false;
+    Vector3 currPos(orig.x, orig.y, orig.z);
+    currPos += Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
+    while(currPos.norm() < maxDist)
+    {
+        currPos += Vector3(dir.x, dir.y, dir.z);
+        Voxel* v = voxelGrid->getVoxel(currPos.x, currPos.y, currPos.z);
+        if (v != nullptr && v->type != TerrainTypes::AIR) {
+            found = true;
+            break;
+        }
+    }
+    this->mouseInWorld = found;
+    if (found) {
+        this->mousePosWorld = currPos; // + Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
+//        std::cout << mousePosWorld << std::endl;
+    }*/
+
+/*
+    bool found;
+    this->mousePosWorld = camera()->pointUnderPixel(mousePos, found);
+    this->mouseInWorld = found;
+    if (found)
+        std::cout << "Found" << std::endl;
+
+    if (selectedName() == -1) {
+        std::cout << "Nope." << std::endl;
+    }
+    else {
+        std::cout << "Here" << std::endl;
+    }
+
+    float depth;
+    // Qt uses upper corner for its origin while GL uses the lower corner.
+    std::cout << camera()->screenHeight() <<" " << camera()->screenWidth() << std::endl;
+    glReadPixels(mousePos.x(), camera()->screenHeight() - 1 - mousePos.y(), 1, 1,
+                 GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
+    found = static_cast<double>(depth)< 1.0;
+    Vec point(mousePos.x(), mousePos.y(), static_cast<double>(depth));
+    point = camera()->unprojectedCoordinatesOf(point);
+*/
+
+    QGLViewer::mouseMoveEvent(e);
 }

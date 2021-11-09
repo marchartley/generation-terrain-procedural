@@ -12,12 +12,25 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    noise.SetFrequency((blockSize/sizeX));
+    noise.SetFrequency(blockSize / (float) sizeX);
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     noise.SetFractalLacunarity(2.0);
     noise.SetFractalGain(0.7);
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(10);
+
+    float mean = 0.f, min = 1000.f, max = -1000.f;
+    for (int x = 0; x < this->sizeX; x++)
+        for (int y = 0; y < this->sizeY; y++)
+            for (int h = 0; h < this->sizeZ; h++) {
+                float n = noise.GetNoise((float)x, (float)y, (float)h);
+                mean += n;
+                min = std::min(min, n);
+                max = std::max(max, n);
+            }
+    mean /= (this->sizeX * this->sizeY * this->sizeZ);
+    std::cout << mean << " " << min << " " << max << std::endl;
+//    exit(0);
 
 
     int numberOfChunksX = this->sizeX / chunkSize;
@@ -36,13 +49,13 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                     data[x].push_back(std::vector<TerrainTypes>());
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
-                        float noise_val = noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h);
+                        float noise_val = ((noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h) - min) / (max - min)) * 2.0 - 1.0;
                         if (noise_val < 0.0) {
                             data[x][y].push_back(TerrainTypes::DIRT);
                         } else {
                             data[x][y].push_back(TerrainTypes::AIR);
                         }
-                        iso_data[x][y].push_back(noise_val);
+                        iso_data[x][y].push_back(noise_val * 2.0);
                     }
                 }
             }

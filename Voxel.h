@@ -54,7 +54,7 @@ public:
     TerrainTypes type;
     float blockSize;
     std::map<VOXEL_NEIGHBOR, Voxel&> neighbors;
-    float isosurface;
+    float isosurface = 0.0;
     float manual_isosurface = 0.0;
     VoxelChunk* parent;
 

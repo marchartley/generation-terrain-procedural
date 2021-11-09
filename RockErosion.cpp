@@ -9,6 +9,7 @@ RockErosion::RockErosion(int size, float maxStrength)
 {
     std::cout.precision(2);
     attackMask = new float**[size];
+    float maxVal = sqrt(3);
     for (int i = 0; i < size; i++) {
         attackMask[i] = new float*[size];
         for (int j = 0; j < size; j++) {
@@ -17,7 +18,7 @@ RockErosion::RockErosion(int size, float maxStrength)
                 float i_i = (i - (size-1)/2.0) / ((size-1)/2.0);
                 float j_i = (j - (size-1)/2.0) / ((size-1)/2.0);
                 float k_i = (k - (size-1)/2.0) / ((size-1)/2.0);
-                attackMask[i][j][k] = -(sqrt(3) - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(sqrt(3)) * maxStrength;
+                attackMask[i][j][k] = -(maxVal - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(maxVal) * maxStrength;
 //                std::cout << attackMask[i][j][k] << "\t";
             }
 //            std::cout << std::endl;
@@ -57,6 +58,8 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
                 }
                 Voxel* v = current_parent->voxels[v_x][v_y][v_z];
                 v->manual_isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
+                v->manual_isosurface = std::max(v->manual_isosurface, -1.0f);
+                v->manual_isosurface = std::min(v->manual_isosurface, 1.0f);
                 if (v->getIsosurface() < 0.0)
                     v->type = TerrainTypes::AIR;
                 else

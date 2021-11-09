@@ -15,9 +15,6 @@ public:
     std::vector<std::vector<std::vector<float>>> map;
     VoxelChunk* grid;
 
-    static void displayVoxel(Voxel& v);
-
-
     static inline int cubeEdges[256]=
     {
             0x000, 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
