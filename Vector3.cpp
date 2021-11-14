@@ -49,6 +49,24 @@ Vector3 Vector3::random() {
     return v;
 }
 
+std::vector<float> Vector3::toArray(Vector3 v)
+{
+    std::vector<float> arr;
+    arr.insert(arr.end(), {v.x, v.y, v.z});
+    return arr;
+}
+std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
+{
+    std::vector<float> arr;
+    for (Vector3& v : vs)
+        arr.insert(arr.end(), {v.x, v.y, v.z});
+    return arr;
+}
+
+
+
+
+
 
 //Vector3 operator+(Vector3 a, Vector3&b) {
 //    a += b;

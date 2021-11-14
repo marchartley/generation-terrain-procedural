@@ -1,8 +1,5 @@
-#include "MarchingCubes.h"
-
 #include "Globals.h"
-
-
+#include "MarchingCubes.h"
 
 MarchingCubes::MarchingCubes()
 {
@@ -119,17 +116,14 @@ MarchingCubes::MarchingCubes(VoxelChunk& grid)
 
 void MarchingCubes::display(float isolevel)
 {
-    for (int x = 0; x < map.size() - 1; x++) {
-        for (int y = 0; y < map[x].size() - 1; y++) {
-            for (int z = 0; z < map[x][y].size() - 1; z++) {
-//                bool vertices[8] = {map[x][y][z],
-//                                    map[x+1][y][z],
-//                                    map[x+1][y+1][z],
-//                                    map[x][y+1][z],
-//                                    map[x][y][z+1],
-//                                    map[x+1][y][z+1],
-//                                    map[x+1][y+1][z+1],
-//                                    map[x][y+1][z+1]};
+
+}
+void MarchingCubes::createMesh(float isolevel)
+{
+    this->vertexArray.clear();
+    for (unsigned int x = 0; x < map.size() - 1; x++) {
+        for (unsigned int y = 0; y < map[x].size() - 1; y++) {
+            for (unsigned int z = 0; z < map[x][y].size() - 1; z++) {
                 Vertex vertices[8] = {Vertex(x, y, z, map[x][y][z]),
                                       Vertex(x+1, y, z, map[x+1][y][z]),
                                       Vertex(x+1, y+1, z, map[x+1][y+1][z]),
@@ -183,8 +177,8 @@ void MarchingCubes::display(float isolevel)
                         cube_index ^= 1 << i;
                 }
                 int* edgesForTriangles = MarchingCubes::triangleTable[cube_index];
-                glPushName(reinterpret_cast<intptr_t>(grid->voxels[x][y][z]));
-                glBegin(GL_TRIANGLES);
+//                glPushName(reinterpret_cast<intptr_t>(grid->voxels[x][y][z]));
+//                glBegin(GL_TRIANGLES);
                 Vertex originalVertex;
                 Vertex firstVertex;
                 Vertex secondVertex;
@@ -196,6 +190,7 @@ void MarchingCubes::display(float isolevel)
 
                     float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
                     Vertex midpoint = v1 - ((v1 - v2) * interpolate);
+                    this->vertexArray.push_back(midpoint);
                     if (i % 3 == 0) {
                         originalVertex = midpoint;
                     }
@@ -205,26 +200,28 @@ void MarchingCubes::display(float isolevel)
                     else {
                         secondVertex = midpoint;
                         Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
-                        Vector3 groundColor(.53, .32, .01);
-                        Vector3 grassColor(.01, .42, .01);
-                        float transitionPoint = 0.5;
-                        Vector3 myColor = grassColor * (pow(normal.z - transitionPoint, 2)) + groundColor * (1 - pow(normal.z - transitionPoint, 2));
-                        glColor3f(myColor.x, myColor.y, myColor.z);
-//                        if (normal.z > transitionPoint)
+//                        Vector3 groundColor(.53, .32, .01);
+//                        Vector3 grassColor(.01, .42, .01);
+//                        float transitionPoint = -0.5;
+//                        Vector3 myColor = grassColor * (pow(normal.z - transitionPoint, 2)) + groundColor * (1 - pow(normal.z - transitionPoint, 2));
+//                        glColor3f(myColor.x, myColor.y, myColor.z);
+//                        if (normal.z < transitionPoint)
 //                            glColor3f(.01, .52, .01);
 //                        else
 //                            glColor3f(.53, .32, .01);
 //                          glColor3f((normal.x+1)/2, (normal.y+1)/2, (normal.z+1)/2);
 //                        glColor3f(1.0, 1.0, 1.0);
-                        glNormal3f(-normal.x, -normal.y, -normal.z);
-                        glVertex3f(originalVertex.x, originalVertex.y, originalVertex.z);
-                        glVertex3f(firstVertex.x, firstVertex.y, firstVertex.z);
-                        glVertex3f(secondVertex.x, secondVertex.y, secondVertex.z);
+//                        glNormal3f(-normal.x, -normal.y, -normal.z);
+//                        glVertex3f(originalVertex.x, originalVertex.y, originalVertex.z);
+//                        glVertex3f(firstVertex.x, firstVertex.y, firstVertex.z);
+//                        glVertex3f(secondVertex.x, secondVertex.y, secondVertex.z);
                     }
                 }
-                glEnd();
-                glPopName();
+//                glEnd();
+//                glPopName();
             }
         }
     }
+    this->vertexArrayFloat = Vector3::toArray(this->vertexArray);
+    this->update();
 }

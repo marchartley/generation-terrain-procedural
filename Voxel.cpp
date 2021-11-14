@@ -3,8 +3,8 @@
 #include "MarchingCubes.h"
 
 
-Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize)
-    : x(x), y(y), z(z), type(type), blockSize(blockSize) {
+Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface)
+    : x(x), y(y), z(z), type(type), blockSize(blockSize), isosurface(isosurface) {
     this->has_neighbors[TOP] = true;
     this->has_neighbors[BOTTOM] = true;
     this->has_neighbors[FRONT] = true;
@@ -29,20 +29,20 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize)
 //    this->vertices[5] = Vertex(1.0, 1.0, 1.0);
 //    this->vertices[6] = Vertex(1.0, 0.0, 1.0);
 //    this->vertices[7] = Vertex(0.0, 0.0, 1.0);
-    this->isosurface = 0;
-    for (int i = 0; i < 8; i++) {
-        this->isosurfaces[i] = &this->vertices[i].isosurface;
-        this->isosurface += *this->isosurfaces[i];
-    }
-    this->isosurface /= 8;
+//    this->isosurface = 0;
+//    for (int i = 0; i < 8; i++) {
+//        this->isosurfaces[i] = &this->vertices[i].isosurface;
+//        this->isosurface += *this->isosurfaces[i];
+//    }
+//    this->isosurface /= 8;
 }
 
-Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0) {
+Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0) {
 
 }
 
 float Voxel::getIsosurface() {
-    this->isosurface = this->type == TerrainTypes::AIR ? -1.0 : 1.0;
+//    this->isosurface = this->type == TerrainTypes::AIR ? -1.0 : 1.0;
 //    this->isosurface = 0;
 //    for (int i = 0; i < 8; i++) {
 //        this->isosurface += *this->isosurfaces[i];
@@ -96,7 +96,7 @@ void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
             glBegin(GL_QUADS);
             // BOTTOM
             if (!this->has_neighbors[BOTTOM]) {
-                glColor3f(1.0, 1.0, 1.0);
+                glColor3f(.9, .9, .9);
                 glVertex3f(0, 0, 0);
                 glVertex3f(1, 0, 0);
                 glVertex3f(1, 1, 0);
@@ -116,7 +116,7 @@ void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
 
             // TOP
             if (!this->has_neighbors[TOP]) {
-                glColor3f(0.3, 0.3, 0.3);
+                glColor3f(.2, .5, .2);
                 glVertex3f(1, 0, 1);
                 glVertex3f(1, 1, 1);
                 glVertex3f(0, 1, 1);

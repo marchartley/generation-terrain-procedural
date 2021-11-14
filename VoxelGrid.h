@@ -9,8 +9,9 @@ class VoxelGrid;
 #include <vector>
 #include <map>
 #include <tuple>
+#include "Mesh.h"
 
-class VoxelGrid {
+class VoxelGrid : Mesh {
 public:
     VoxelGrid();
     VoxelGrid(Grid& grid);
@@ -19,6 +20,8 @@ public:
     void from2DGrid(Grid grid);
 
     void display(bool apply_marching_cubes = false, bool display_vertices = false, float isolevel = 0.0);
+
+    void createMesh();
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }

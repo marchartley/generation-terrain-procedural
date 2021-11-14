@@ -1,6 +1,8 @@
+#include "Globals.h"
 #include "Grid.h"
 
 #include "FastNoiseLit.h"
+//#include <QtOpenGLExtensions/QtOpenGLExtensions>
 
 
 Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
@@ -35,13 +37,41 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
             this->vertices[x][y].z -= min;
             this->vertices[x][y].z /= (max - min);
             this->vertices[x][y].z *= maxHeight;
-            this->vertices[x][y].z = maxHeight;
+//            this->vertices[x][y].z = maxHeight;
         }
     }
     this->computeNormals();
 }
 Grid::Grid() : Grid(10, 10, 5.0) {
 
+}
+
+std::vector<float> Grid::createMesh()
+{
+    std::vector<Vector3> vecs;
+
+    for(int x = 0; x < this->sizeX - 1; x++) {
+        for (int y = 0; y < this->sizeY - 1; y++) {
+            vecs.push_back(Vector3(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z));
+            vecs.push_back(Vector3(this->vertices[x][y+1].x, this->vertices[x][y+1].y, this->vertices[x][y+1].z));
+            vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
+
+            vecs.push_back(Vector3(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z));
+            vecs.push_back(Vector3(this->vertices[x+1][y].x, this->vertices[x+1][y].y, this->vertices[x+1][y].z));
+            vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
+        }
+    }
+    this->vertexArrayFloat = Vector3::toArray(vecs);
+//    this->update();
+
+    GlobalsGL::f()->glGenVertexArrays(1, GlobalsGL::vao);
+    GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[0]);
+    GlobalsGL::f()->glGenBuffers(numVBOs, GlobalsGL::vbo);
+
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[0]);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
+
+    return this->vertexArrayFloat;
 }
 
 void Grid::computeNormals() {
@@ -78,6 +108,8 @@ void Grid::computeNormals() {
 }
 
 void Grid::display(bool displayNormals) {
+    Mesh::display();
+    /*
     glPushMatrix();
 
     float maxi = -9999999, mini = 9999999;
@@ -90,6 +122,7 @@ void Grid::display(bool displayNormals) {
         }
     glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
     glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
+
     glBegin(GL_TRIANGLES);
 //    glColor4f(1.0, 0.5, 0.5, 0.0);
     for(int x = 0; x < this->sizeX - 1; x++) {
@@ -116,7 +149,7 @@ void Grid::display(bool displayNormals) {
             }
         }
     }
-    glPopMatrix();
+    glPopMatrix();*/
 }
 
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {

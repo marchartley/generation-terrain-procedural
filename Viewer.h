@@ -7,6 +7,7 @@
 #include <QKeyEvent>
 #include <qmessagebox.h>
 #include "RockErosion.h"
+#include "Shader.h"
 
 enum MapMode {
     GRID_MODE  = 0b01,
@@ -66,6 +67,7 @@ private:
 
   std::vector<std::vector<Vector3>> getSphereVertices(int rings, int halves);
   void drawSphere(float radius, int rings, int halves);
+  Shader shader;
 };
 
 

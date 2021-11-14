@@ -2,6 +2,7 @@
 #define VECTOR3_H
 
 #include <iostream>
+#include <vector>
 
 class Vector3 {
 public:
@@ -10,6 +11,9 @@ public:
     Vector3(float x, float y, float z = 0.f);
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
+
+    static std::vector<float> toArray(Vector3 v);
+    static std::vector<float> toArray(std::vector<Vector3> vs);
 
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
     friend Vector3 operator+(Vector3 a, Vector3 b);

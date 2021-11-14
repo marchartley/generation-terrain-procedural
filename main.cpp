@@ -1,13 +1,13 @@
-#include <QGuiApplication>
-#include <QQmlApplicationEngine>
-#include <qapplication.h>
-#include <iostream>
-
+#include "Globals.h"
 #include "Viewer.h"
 
 #include "Vector3.h"
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
+//#include <qapplication.h>
+#include <iostream>
 
-#include "Globals.h"
+
 
 
 int main(int argc, char *argv[])

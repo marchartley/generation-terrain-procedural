@@ -21,7 +21,7 @@ enum VOXEL_NEIGHBOR {
 class Voxel {
 public:
     Voxel();
-    Voxel(int x, int y, int z, TerrainTypes type, float blockSize);
+    Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface);
 
     void display(bool apply_marching_cubes = false, bool display_vertices = false);
 
