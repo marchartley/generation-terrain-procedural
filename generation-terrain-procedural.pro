@@ -1,8 +1,13 @@
 QT += quick opengl xml
 
-INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen
-LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5
-
+unix {
+    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen
+    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5
+}
+win32 {
+    INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen
+    LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
+}
 CONFIG += c++11
 
 # You can make your code fail to compile if it uses deprecated APIs.
@@ -13,7 +18,10 @@ SOURCES += \
         Globals.cpp \
         Grid.cpp \
         MarchingCubes.cpp \
+        Matrix.cpp \
+        Mesh.cpp \
         RockErosion.cpp \
+        Shader.cpp \
         UnderwaterErosion.cpp \
         Vector3.cpp \
         Vertex.cpp \
@@ -41,7 +49,11 @@ HEADERS += \
     Globals.h \
     Grid.h \
     MarchingCubes.h \
+    Matrix.h \
+    Mesh.h \
     RockErosion.h \
+    Shader.h \
+    Shader_templates.h \
     UnderwaterErosion.h \
     Vector3.h \
     Vertex.h \
