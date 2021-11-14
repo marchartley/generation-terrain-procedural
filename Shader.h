@@ -1,6 +1,8 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+class Shader;
+
 #include <string>
 #include <vector>
 #include "Globals.h"
@@ -8,13 +10,16 @@
 class Shader
 {
 public:
+    static std::vector<Shader*> shaders;
+
     Shader();
     Shader(const char* vertexShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
            const char* geometryShaderFilename);
+    void compileShadersFromSource();
 
-    void use();
+    void use(bool update_source_files = false);
 
     void setBool(std::string pname, bool value);
     void setInt(std::string pname, int value);
@@ -22,6 +27,9 @@ public:
     static std::string readShaderSource(std::string filename);
 
     unsigned int programID;
+    const char* vertexShaderFilename;
+    const char* fragmentShaderFilename;
+    const char* geometryShaderFilename;
 
 
     template<typename T>

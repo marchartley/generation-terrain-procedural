@@ -4,7 +4,7 @@
 #include "Voxel.h"
 #include "Mesh.h"
 
-class MarchingCubes : public Mesh
+class MarchingCubes
 {
 public:
     MarchingCubes();
@@ -15,6 +15,7 @@ public:
 
     std::vector<std::vector<std::vector<float>>> map;
     VoxelChunk* grid;
+    Mesh mesh;
 
     static inline int cubeEdges[256]=
     {

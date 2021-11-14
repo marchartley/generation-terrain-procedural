@@ -1,6 +1,9 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+//class random_gen;
+//class GlobalsGL;
+
 #include <GL/glew.h>
 #include <random>
 //#include <QOpenGLContext>
@@ -8,9 +11,10 @@
 //#include <QOpenGLFunctions>
 #include <fstream>
 #include <iostream>
+//#include "Shader.h"
 
-#define numVAOs 4
-#define numVBOs 4
+#define numVAOs 4000
+#define numVBOs 4000
 
 /*
 GLuint renderingProgram;
@@ -39,14 +43,18 @@ public:
 
     static GLuint vao[numVAOs];
     static GLuint vbo[numVBOs];
+    static bool buffersGenerated;
 
     static GLuint currentBufferId;
 
     static std::string readShaderSource(std::string filename);
 
+
     static GLuint createShaderProgram(std::string vertexShaderFile = "", std::string fragmentShaderFile = "");
 
     static GLuint newBufferId();
+
+    static void generateBuffers();
 
     static bool checkOpenGLError();
     static bool printShaderErrors(GLuint shader);

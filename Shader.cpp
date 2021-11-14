@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QTextStream>
 
+std::vector<Shader*> Shader::shaders;
+
 Shader::Shader()
     : Shader(nullptr, nullptr, nullptr)
 {
@@ -20,6 +22,13 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
 }
 Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
        const char* geometryShaderFilename)
+    : vertexShaderFilename(vertexShaderFilename), fragmentShaderFilename(fragmentShaderFilename),
+      geometryShaderFilename(geometryShaderFilename)
+{
+    this->compileShadersFromSource();
+    Shader::shaders.push_back(this);
+}
+void Shader::compileShadersFromSource()
 {
     this->programID = GlobalsGL::f()->glCreateProgram();
     if (vertexShaderFilename != nullptr)
@@ -53,8 +62,12 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
     GlobalsGL::f()->glLinkProgram(this->programID);
 }
 
-void Shader::use()
+void Shader::use(bool update_source_file)
 {
+    if (update_source_file)
+    {
+        this->compileShadersFromSource();
+    }
     GlobalsGL::f()->glUseProgram(this->programID);
 }
 
@@ -76,7 +89,9 @@ void Shader::setFloat(std::string pname, float value)
 std::string Shader::readShaderSource(std::string filename)
 {
     std::string content = "";
-    QString qFilename = ":" + QString::fromStdString(filename);
+    QString qFilename = QString::fromStdString(filename);
+    if (!QFile::exists(qFilename))
+        qFilename = ":" + qFilename;
     QFile file(qFilename);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
     std::string line;

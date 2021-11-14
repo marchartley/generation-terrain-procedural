@@ -25,7 +25,7 @@ enum SmoothingAlgorithm {
 
 class Viewer : public QGLViewer {
 public:
-    Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode = FILL_MODE);
+  Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode = FILL_MODE);
   Viewer(Grid* g);
   Viewer(VoxelGrid* g);
 
