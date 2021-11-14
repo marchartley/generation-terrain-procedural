@@ -11,7 +11,7 @@ class VoxelGrid;
 #include <tuple>
 #include "Mesh.h"
 
-class VoxelGrid : Mesh {
+class VoxelGrid {
 public:
     VoxelGrid();
     VoxelGrid(Grid& grid);

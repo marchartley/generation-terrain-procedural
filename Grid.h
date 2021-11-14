@@ -8,7 +8,7 @@ class Grid;
 #include "VoxelGrid.h"
 #include "Mesh.h"
 
-class Grid : Mesh {
+class Grid {
 public:
     Grid();
     Grid(int nx, int ny, float max_height, float tileSize = 0.1);
@@ -23,7 +23,7 @@ public:
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals[x][y]; }
 
-    std::vector<float> createMesh();
+    void createMesh();
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
@@ -36,6 +36,8 @@ public:
     std::vector<float> vertexArrayFloat;
 
     void computeNormals();
+
+    Mesh mesh;
 };
 
 #endif // GRID_H

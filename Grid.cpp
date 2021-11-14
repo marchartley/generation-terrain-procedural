@@ -46,7 +46,7 @@ Grid::Grid() : Grid(10, 10, 5.0) {
 
 }
 
-std::vector<float> Grid::createMesh()
+void Grid::createMesh()
 {
     std::vector<Vector3> vecs;
 
@@ -61,17 +61,8 @@ std::vector<float> Grid::createMesh()
             vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
         }
     }
-    this->vertexArrayFloat = Vector3::toArray(vecs);
-//    this->update();
-
-    GlobalsGL::f()->glGenVertexArrays(1, GlobalsGL::vao);
-    GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[0]);
-    GlobalsGL::f()->glGenBuffers(numVBOs, GlobalsGL::vbo);
-
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[0]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
-
-    return this->vertexArrayFloat;
+    this->mesh.fromArray(vecs);
+//    return this->vertexArrayFloat;
 }
 
 void Grid::computeNormals() {
@@ -108,7 +99,7 @@ void Grid::computeNormals() {
 }
 
 void Grid::display(bool displayNormals) {
-    Mesh::display();
+    this->mesh.display();
     /*
     glPushMatrix();
 

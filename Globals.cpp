@@ -13,6 +13,7 @@ GLuint GlobalsGL::_renderingProgram;
 GLuint GlobalsGL::vao[numVAOs];
 GLuint GlobalsGL::vbo[numVBOs];
 GLuint GlobalsGL::currentBufferId = 0;
+bool GlobalsGL::buffersGenerated = false;
 
 QOpenGLContext* GlobalsGL::context() {
     if (GlobalsGL::_context == nullptr)
@@ -86,9 +87,18 @@ GLuint GlobalsGL::createShaderProgram(std::string vertexShaderFile, std::string 
     return GlobalsGL::_renderingProgram;
 }
 */
+void GlobalsGL::generateBuffers()
+{
+    if(GlobalsGL::buffersGenerated)
+        return;
+    GlobalsGL::f()->glGenVertexArrays(numVAOs, GlobalsGL::vao);
+    GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[0]);
+    GlobalsGL::f()->glGenBuffers(numVBOs, GlobalsGL::vbo);
+    GlobalsGL::buffersGenerated = true;
+}
 GLuint GlobalsGL::newBufferId()
 {
-    return GlobalsGL::currentBufferId++;
+    return GlobalsGL::currentBufferId += 3; // Gives space for vertex, texture and normals
 }
 bool GlobalsGL::checkOpenGLError()
 {

@@ -120,7 +120,7 @@ void MarchingCubes::display(float isolevel)
 }
 void MarchingCubes::createMesh(float isolevel)
 {
-    this->vertexArray.clear();
+    std::vector<Vector3> vertexArray;
     for (unsigned int x = 0; x < map.size() - 1; x++) {
         for (unsigned int y = 0; y < map[x].size() - 1; y++) {
             for (unsigned int z = 0; z < map[x][y].size() - 1; z++) {
@@ -190,7 +190,7 @@ void MarchingCubes::createMesh(float isolevel)
 
                     float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
                     Vertex midpoint = v1 - ((v1 - v2) * interpolate);
-                    this->vertexArray.push_back(midpoint);
+                    vertexArray.push_back(midpoint);
                     if (i % 3 == 0) {
                         originalVertex = midpoint;
                     }
@@ -222,6 +222,7 @@ void MarchingCubes::createMesh(float isolevel)
             }
         }
     }
-    this->vertexArrayFloat = Vector3::toArray(this->vertexArray);
-    this->update();
+    this->mesh.fromArray(vertexArray);
+//    this->vertexArrayFloat = Vector3::toArray(this->vertexArray);
+//    this->update();
 }

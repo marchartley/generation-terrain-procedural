@@ -11,6 +11,7 @@ public:
     Mesh();
     Mesh(std::vector<Vector3> _vertexArray);
     Mesh(std::vector<float> _vertexArrayFloat);
+    Mesh fromArray(std::vector<Vector3> vertices);
 
     void update();
     void pushToBuffer();
@@ -19,9 +20,13 @@ public:
     unsigned int bufferID;
     bool bufferReady = false;
 
+
 //protected:
+    void computeNormals();
     std::vector<Vector3> vertexArray;
     std::vector<float> vertexArrayFloat;
+    std::vector<Vector3> normalsArray;
+    std::vector<float> normalsArrayFloat;
 };
 
 #endif // MESH_H

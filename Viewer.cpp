@@ -31,15 +31,13 @@ void Viewer::init() {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
-//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-//    glEnable( GL_BLEND );
-//    glEnable(GL_AUTO_NORMAL);
+
 //    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     setMouseTracking(true);
 
-//    GlobalsGL::createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
-    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
+//    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
+    this->shader = Shader("C:/codes/Qt/generation-terrain-procedural/vertex_shader.glsl", "C:/codes/Qt/generation-terrain-procedural/fragment_shader.glsl");
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
@@ -51,7 +49,10 @@ void Viewer::init() {
 
 void Viewer::draw() {
     glClear(GL_DEPTH_BUFFER_BIT);
-//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    if (this->viewerMode == ViewerMode::WIRE_MODE)
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
     this->shader.use();
 
@@ -63,16 +64,16 @@ void Viewer::draw() {
     this->shader.setMatrix("proj_matrix", pMatrix);
     this->shader.setMatrix("mv_matrix", mvMatrix);
 
-    voxelGrid->display();
+    if (this->mapMode == GRID_MODE) {
+        this->grid->display(true);
+    }
+    else if (this->mapMode == VOXEL_MODE) {
+        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.0);
+    }
 //    drawAxis();
     //grid->floatArrayMesh.size()/3);
 
 /*
-
-    if (this->viewerMode == ViewerMode::WIRE_MODE)
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    else
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     // Place light at camera position
     const Vec cameraPos = camera()->position();
 //    const GLfloat pos[4] = {(float)cameraPos[0], (float)cameraPos[1],
@@ -120,12 +121,6 @@ void Viewer::draw() {
         glPopMatrix();
     }
 
-    if (this->mapMode == GRID_MODE) {
-        this->grid->display(true);
-    }
-    else if (this->mapMode == VOXEL_MODE) {
-        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.0);
-    }
 */
     /*if(this->mouseInWorld)
     {

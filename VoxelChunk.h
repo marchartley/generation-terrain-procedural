@@ -6,6 +6,7 @@ class VoxelChunk;
 #include "Voxel.h"
 #include <vector>
 #include "MarchingCubes.h"
+#include "Mesh.h"
 
 class VoxelChunk
 {
@@ -31,6 +32,8 @@ public:
     std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
     bool needRemeshing = true;
     bool lastChunkOnX = false, lastChunkOnY = false;
+
+    Mesh mesh;
 };
 
 #endif // VOXELCHUNK_H

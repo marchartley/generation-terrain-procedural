@@ -1,6 +1,8 @@
 #include "VoxelGrid.h"
 #include "FastNoiseLit.h"
 
+#include "Shader.h"
+
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
     : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize) {
     chunkSize = (nx > chunkSize ? chunkSize : nx);
@@ -146,23 +148,32 @@ void VoxelGrid::from2DGrid(Grid grid) {
             this->chunks[i - 1].neighboring_chunks[BACK] = &this->chunks[i];
         }
     }
-    for (VoxelChunk& c: this->chunks)
-        c.createMesh();
+
+    this->createMesh();
 }
 
 void VoxelGrid::createMesh()
 {
     for(VoxelChunk& vc : this->chunks)
     {
+        vc.createMesh();
+        /*
         MarchingCubes mc(vc);
         mc.createMesh();
+
         this->vertexArray.insert(this->vertexArray.end(), mc.vertexArray.begin(), mc.vertexArray.end());
         this->vertexArrayFloat.insert(this->vertexArrayFloat.end(), mc.vertexArrayFloat.begin(), mc.vertexArrayFloat.end());
+*/
     }
-    this->update();
 }
 
 void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {
+    for (VoxelChunk& vc : this->chunks)
+    {
+        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc.x);
+        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc.y);
+        vc.display(apply_marching_cubes, display_vertices, isolevel);
+    }
     /*
     glPushMatrix();
 //    if (apply_marching_cubes)
@@ -179,7 +190,6 @@ void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float 
     }
     glPopMatrix();
     */
-    Mesh::display();
 }
 
 int VoxelGrid::getHeight(int x, int y) {
