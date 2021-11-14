@@ -1,16 +1,17 @@
+#include "Globals.h"
 #include "Viewer.h"
 
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include <chrono>
 #include "UnderwaterErosion.h"
 
-#include "Globals.h"
+
 
 using namespace qglviewer;
 using namespace std;
 
 Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode)
-    : QGLViewer(), mapMode(map), viewerMode(mode), grid(grid), voxelGrid(voxelGrid) {
+    : QGLViewer(), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid) {
 
 }
 Viewer::Viewer(Grid* g)
@@ -30,19 +31,44 @@ void Viewer::init() {
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+//    glEnable( GL_BLEND );
 //    glEnable(GL_AUTO_NORMAL);
 //    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     setMouseTracking(true);
 
-    GlobalsGL::createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
+//    GlobalsGL::createShaderProgram("vertex_shader.glsl", "fragment_shader.glsl");
+    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
+    glEnable              ( GL_DEBUG_OUTPUT );
+    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
-
+    this->grid->createMesh();
+    this->voxelGrid->createMesh();
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
 }
 
 void Viewer::draw() {
+    glClear(GL_DEPTH_BUFFER_BIT);
+//    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    this->shader.use();
+
+    float pMatrix[16];
+    float mvMatrix[16];
+    camera()->getProjectionMatrix(pMatrix);
+    camera()->getModelViewMatrix(mvMatrix);
+
+    this->shader.setMatrix("proj_matrix", pMatrix);
+    this->shader.setMatrix("mv_matrix", mvMatrix);
+
+    voxelGrid->display();
+//    drawAxis();
+    //grid->floatArrayMesh.size()/3);
+
+/*
+
     if (this->viewerMode == ViewerMode::WIRE_MODE)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
@@ -85,7 +111,7 @@ void Viewer::draw() {
         glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
         for(std::vector<Vector3> coords : this->lastRocksLaunched) {
             glBegin(GL_LINE_STRIP);
-            glColor3f(1.0, 1.0, 1.0);
+            glColor4f(1.0, 1.0, 1.0, .5);
             for(Vector3 pos : coords) {
                 glVertex3f(pos.x, pos.y, pos.z);
             }
@@ -98,9 +124,9 @@ void Viewer::draw() {
         this->grid->display(true);
     }
     else if (this->mapMode == VOXEL_MODE) {
-        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.5);
+        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.0);
     }
-
+*/
     /*if(this->mouseInWorld)
     {
         glPushMatrix();
@@ -183,8 +209,15 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         update();
     } else if(e->key() == Qt::Key_Return) {
         UnderwaterErosion erod(this->voxelGrid, 10, 0.05, 2000);
-        this->lastRocksLaunched = erod.Apply();
-        std::cout << "Rocks launched" << std::endl;
+        if (e->modifiers() == Qt::ShiftModifier)
+        {
+            Vector3 pos(camera()->position().x, camera()->position().y, camera()->position().z);
+            this->lastRocksLaunched = erod.Apply(pos);
+            std::cout << "Rocks launched from camera!" << std::endl;
+        } else {
+            this->lastRocksLaunched = erod.Apply();
+            std::cout << "Rocks launched!" << std::endl;
+        }
         update();
     } else if(e->key() == Qt::Key_Minus) {
         this->selectionSize = max(2, this->selectionSize - 2);

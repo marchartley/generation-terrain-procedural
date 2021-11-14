@@ -1,14 +1,14 @@
 #ifndef GRID_H
 #define GRID_H
 
-#include <QGLViewer/qglviewer.h>
 #include "Vector3.h"
 
 class Grid;
 
 #include "VoxelGrid.h"
+#include "Mesh.h"
 
-class Grid {
+class Grid : Mesh {
 public:
     Grid();
     Grid(int nx, int ny, float max_height, float tileSize = 0.1);
@@ -23,14 +23,17 @@ public:
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals[x][y]; }
 
+    std::vector<float> createMesh();
+
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
-protected:
+//protected:
     Vector3** vertices;
     Vector3** normals;
     int sizeX, sizeY;
     float maxHeight;
     float tileSize;
+    std::vector<float> vertexArrayFloat;
 
     void computeNormals();
 };

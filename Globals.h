@@ -1,12 +1,21 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include <GL/glew.h>
 #include <random>
-#include <QOpenGLContext>
+//#include <QOpenGLContext>
 #include <QtWidgets>
-#include <QOpenGLFunctions>
+//#include <QOpenGLFunctions>
 #include <fstream>
 #include <iostream>
+
+#define numVAOs 4
+#define numVBOs 4
+
+/*
+GLuint renderingProgram;
+GLuint vao[numVAOs];
+GLuint vbo[numVBOs];*/
 
 class random_gen {
 public:
@@ -20,50 +29,79 @@ public:
 class GlobalsGL {
 public:
     static QOpenGLContext *_context;
+    static QOpenGLContext *context();
     static QOpenGLFunctions* _f;
-    static QOpenGLContext *context() {
-        if (GlobalsGL::_context == nullptr)
-            GlobalsGL::_context = QOpenGLContext::currentContext();
-        return GlobalsGL::_context;
-    }
-    static QOpenGLFunctions *f() {
-        if (GlobalsGL::_f == nullptr)
-            GlobalsGL::_f = GlobalsGL::context()->functions();
-        return GlobalsGL::_f;
-    }
+    static QOpenGLExtraFunctions *f(); // Alias for ef()
+    static QOpenGLExtraFunctions* _ef;
+    static QOpenGLExtraFunctions *ef();
+    static GLuint _renderingProgram;
+    static GLuint renderingProgram();
 
-    static std::string readShaderSource(std::string filename)
-    {
-        std::string content = "";
-        QString qFilename = QCoreApplication::applicationDirPath() + ".." + QDir::separator() + QString::fromStdString(filename);
-        QFile file(qFilename);
-        file.open(QIODevice::ReadOnly | QIODevice::Text);
-        std::string line;
-        QTextStream in(&file);
-        while (!file.atEnd()) {
-            line = in.readLine().toStdString();
-            content += line + " \n";
-        }
-        file.close();
-        return content;
-    }
+    static GLuint vao[numVAOs];
+    static GLuint vbo[numVBOs];
 
-    static GLuint createShaderProgram(std::string vertexShaderFile = "", std::string fragmentShaderFile = "")
+    static GLuint currentBufferId;
+
+    static std::string readShaderSource(std::string filename);
+
+    static GLuint createShaderProgram(std::string vertexShaderFile = "", std::string fragmentShaderFile = "");
+
+    static GLuint newBufferId();
+
+    static bool checkOpenGLError();
+    static bool printShaderErrors(GLuint shader);
+    static bool printProgramErrors(int program);
+
+    static void GLAPIENTRY
+    MessageCallback( GLenum source,
+                     GLenum type,
+                     GLuint id,
+                     GLenum severity,
+                     GLsizei length,
+                     const GLchar* message,
+                     const void* userParam )
     {
-        if (vertexShaderFile != "")
-        {
-            GLuint vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
-            std::string content = GlobalsGL::readShaderSource(vertexShaderFile);
-            const char* src = content.c_str();
-            GlobalsGL::f()->glShaderSource(vShader, 1, &src, NULL);
-        }
-        if (fragmentShaderFile != "")
-        {
-            GLuint fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
-            std::string content = GlobalsGL::readShaderSource(fragmentShaderFile);
-            const char* src = content.c_str();
-            GlobalsGL::f()->glShaderSource(fShader, 1, &src, NULL);
-        }
+        std::cout << "Error [severity=" << severity << "]: " << message << std::endl;
+//      fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
+//               ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
+//                type, severity, message );
     }
 };
+/*
+GLuint CreateShaderProgram(std::string vertexShaderFile, std::string fragmentShaderFile)
+{
+    GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
+    GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
+    if (vertexShaderFile != "")
+    {
+        std::string content = GlobalsGL::readShaderSource(vertexShaderFile);
+        const char* src = content.c_str();
+        glShaderSource(vShader, 1, &src, NULL);
+        glCompileShader(vShader);
+    }
+    if (fragmentShaderFile != "")
+    {
+        std::string content = GlobalsGL::readShaderSource(fragmentShaderFile);
+        const char* src = content.c_str();
+        glShaderSource(fShader, 1, &src, NULL);
+        glCompileShader(fShader);
+    }
+    GLuint vProgram = glCreateProgram();
+
+    if(vertexShaderFile != "")
+        glAttachShader(vProgram, vShader);
+    if(fragmentShaderFile != "")
+        glAttachShader(vProgram, fShader);
+    glLinkProgram(vProgram);
+
+    renderingProgram = vProgram;
+
+    GlobalsGL::checkOpenGLError();
+    GlobalsGL::printShaderErrors(vShader);
+    GlobalsGL::printShaderErrors(fShader);
+    GlobalsGL::printProgramErrors(vProgram);
+
+    return renderingProgram;
+}
+*/
 #endif // GLOBALS_H

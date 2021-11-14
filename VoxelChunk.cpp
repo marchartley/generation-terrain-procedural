@@ -42,7 +42,7 @@ void VoxelChunk::createMesh() {
             for(int v_y = 0; v_y < sizeY; v_y++) {
                 this->voxels[v_x].push_back(std::vector<Voxel*>());
                 for(int h = 0; h < height; h++) {
-                    Voxel* v = new Voxel(v_x, v_y, h, this->data[v_x][v_y][h], iso_data[v_x][v_y][h]);
+                    Voxel* v = new Voxel(v_x, v_y, h, this->data[v_x][v_y][h], 1.0, iso_data[v_x][v_y][h]);
                     //                    Voxel* v = new Voxel(v_x, v_y, h, this->data[v_x][v_y][h], 1.0);
                     v->parent = this;
                     this->voxels[v_x][v_y].push_back(v);

@@ -150,7 +150,20 @@ void VoxelGrid::from2DGrid(Grid grid) {
         c.createMesh();
 }
 
+void VoxelGrid::createMesh()
+{
+    for(VoxelChunk& vc : this->chunks)
+    {
+        MarchingCubes mc(vc);
+        mc.createMesh();
+        this->vertexArray.insert(this->vertexArray.end(), mc.vertexArray.begin(), mc.vertexArray.end());
+        this->vertexArrayFloat.insert(this->vertexArrayFloat.end(), mc.vertexArrayFloat.begin(), mc.vertexArrayFloat.end());
+    }
+    this->update();
+}
+
 void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {
+    /*
     glPushMatrix();
 //    if (apply_marching_cubes)
 //        glRotatef(180.0, 1.0, 0.0, 0.0);
@@ -165,6 +178,8 @@ void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float 
         glPopMatrix();
     }
     glPopMatrix();
+    */
+    Mesh::display();
 }
 
 int VoxelGrid::getHeight(int x, int y) {

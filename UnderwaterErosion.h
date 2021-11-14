@@ -10,6 +10,7 @@ public:
     UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount);
 
     std::vector<std::vector<Vector3>> Apply();
+    std::vector<std::vector<Vector3>> Apply(Vector3 startingPoint);
 
     VoxelGrid* grid;
     int maxRockSize, rockAmount;

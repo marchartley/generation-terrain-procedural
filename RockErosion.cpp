@@ -58,8 +58,8 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
                 }
                 Voxel* v = current_parent->voxels[v_x][v_y][v_z];
                 v->manual_isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
-                v->manual_isosurface = std::max(v->manual_isosurface, -1.0f);
-                v->manual_isosurface = std::min(v->manual_isosurface, 1.0f);
+                v->manual_isosurface = std::max(v->manual_isosurface, -2.0f);
+                v->manual_isosurface = std::min(v->manual_isosurface, 2.0f);
                 if (v->getIsosurface() < 0.0)
                     v->type = TerrainTypes::AIR;
                 else

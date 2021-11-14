@@ -2,14 +2,15 @@
 #define MARCHINGCUBES_H
 
 #include "Voxel.h"
+#include "Mesh.h"
 
-class MarchingCubes
+class MarchingCubes : public Mesh
 {
 public:
     MarchingCubes();
     MarchingCubes(VoxelChunk& grid);
 
-    void createMesh() {}
+    void createMesh(float isolevel = 0.0);
     void display(float isolevel = 0.0);
 
     std::vector<std::vector<std::vector<float>>> map;
