@@ -12,6 +12,14 @@ Matrix::Matrix(int n, int m, float default_value)
         this->push_back(std::vector<float>(m, default_value));
     }
 }
+Matrix::Matrix(int n, int m, float* data){
+
+    for(int i = 0; i < n; i++) {
+        this->push_back(std::vector<float>());
+        for (int j = 0; j < m; j++)
+            (*this)[i].push_back(data[i + j*n]);
+    }
+}
 Matrix::Matrix(int n, int m, float** data){
 
     for(int i = 0; i < n; i++) {
@@ -131,20 +139,11 @@ Matrix& Matrix::operator*=(const Matrix& o)
             (*this)[row][col] *= o[row][col];
     return (*this);
 }
-Matrix Matrix::operator/(const Matrix& o)
-{
-    return (*this) / o;
-}
-Matrix& Matrix::operator/=(const Matrix& o)
-{
-    for(size_t row = 0; row < o.size(); row++)
-        for(size_t col = 0; col < o[0].size(); col++)
-            (*this)[row][col] /= o[row][col];
-    return (*this);
-}
 Matrix Matrix::operator*(float o)
 {
-    return (*this) * o;
+    Matrix m(*this);
+    m *= o;
+    return m;
 }
 Matrix& Matrix::operator*=(float o)
 {
@@ -155,7 +154,9 @@ Matrix& Matrix::operator*=(float o)
 }
 Matrix Matrix::operator/(float o)
 {
-    return (*this) / o;
+    Matrix m(*this);
+    m /= o;
+    return m;
 }
 Matrix& Matrix::operator/=(float o)
 {
@@ -166,7 +167,9 @@ Matrix& Matrix::operator/=(float o)
 }
 Matrix Matrix::operator+(float o)
 {
-    return (*this) + o;
+    Matrix m(*this);
+    m += o;
+    return m;
 }
 Matrix& Matrix::operator+=(float o)
 {
@@ -177,7 +180,9 @@ Matrix& Matrix::operator+=(float o)
 }
 Matrix Matrix::operator-(float o)
 {
-    return (*this) - o;
+    Matrix m(*this);
+    m -= o;
+    return m;
 }
 Matrix& Matrix::operator-=(float o)
 {
@@ -193,7 +198,7 @@ std::ostream& operator<<(std::ostream& io, const Matrix& m) {
     for (size_t row = 0; row < m[0].size(); row ++)
     {
         for (size_t col = 0; col < m.size(); col ++) {
-            io << m[row][col] << "\t";
+            io << int(m[row][col] * 100)/100. << "\t";
         }
         io << "\n";
     }
@@ -205,7 +210,7 @@ std::ostream& operator<<(std::ostream& io, Matrix* m) {
     for (size_t row = 0; row < m[0].size(); row ++)
     {
         for (size_t col = 0; col < m->size(); col ++) {
-            io << (*m)[row][col] << "\t";
+            io << int((*m)[row][col] * 100)/100. << "\t";
         }
         io << "\n";
     }

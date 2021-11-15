@@ -27,7 +27,7 @@ uniform float offsetY;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
-//uniform mat4 norm_matrix;
+uniform mat4 norm_matrix;
 
 out vec4 varyingColor;
 

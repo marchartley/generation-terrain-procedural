@@ -4,7 +4,7 @@
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include <chrono>
 #include "UnderwaterErosion.h"
-
+#include "Matrix.h"
 
 
 using namespace qglviewer;

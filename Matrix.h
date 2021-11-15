@@ -9,6 +9,7 @@ class Matrix : public std::vector<std::vector<float>>
 public:
     Matrix();
     Matrix(int n, int m, float default_value = 0.f);
+    Matrix(int n, int m, float* data);
     Matrix(int n, int m, float** data);
     Matrix(std::vector<std::vector<float>> data);
 
