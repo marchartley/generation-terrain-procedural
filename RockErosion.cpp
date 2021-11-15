@@ -70,5 +70,5 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
         }
     }
     if (applyRemeshing)
-        main_v->parent->createMesh();
+        main_v->parent->parent->remeshAll();
 }
