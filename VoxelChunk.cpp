@@ -1,7 +1,7 @@
 #include "VoxelChunk.h"
 
-VoxelChunk::VoxelChunk(int _x, int _y, int _sizeX, int _sizeY, int _height, std::vector<std::vector<std::vector< TerrainTypes > > > _data)
-    : data(_data), height(_height), x(_x), y(_y), sizeX(_sizeX), sizeY(_sizeY) {
+VoxelChunk::VoxelChunk(int _x, int _y, int _sizeX, int _sizeY, int _height, std::vector<std::vector<std::vector< TerrainTypes > > > _data, VoxelGrid* parent)
+    : data(_data), height(_height), x(_x), y(_y), sizeX(_sizeX), sizeY(_sizeY), parent(parent) {
     iso_data.clear();
     for (int x = 0; x < sizeX; x++) {
         iso_data.push_back(std::vector<std::vector<float> >());
@@ -13,8 +13,8 @@ VoxelChunk::VoxelChunk(int _x, int _y, int _sizeX, int _sizeY, int _height, std:
         }
     }
 }
-VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data)
-    : iso_data(iso_data), height(height), x(x), y(y), sizeX(sizeX), sizeY(sizeY) {
+VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent)
+    : iso_data(iso_data), height(height), x(x), y(y), sizeX(sizeX), sizeY(sizeY), parent(parent) {
     data.clear();
     for (int x = 0; x < sizeX; x++) {
         data.push_back(std::vector<std::vector<TerrainTypes> >());
@@ -27,7 +27,7 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     }
 }
 
-VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<TerrainTypes>>>())
+VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<TerrainTypes>>>(), nullptr)
 {
 
 }
@@ -87,11 +87,104 @@ void VoxelChunk::createMesh() {
     }
     needRemeshing = false;
 
-    MarchingCubes mc = MarchingCubes(*this);
-    mc.createMesh();
-    this->mesh = mc.mesh;
+//    MarchingCubes mc = MarchingCubes(*this);
+//    mc.createMesh();
+    this->mesh.fromArray(this->applyMarchingCubes()); // = mc.mesh;
+    this->mesh.update();
 
 }
+
+std::vector<Vector3> VoxelChunk::applyMarchingCubes()
+{
+    float isolevel = 0.0;
+    std::vector<Vector3> vertexArray;
+    for (unsigned int x = 0; x < this->voxels.size() - 1; x++) {
+        for (unsigned int y = 0; y < this->voxels[x].size() - 1; y++) {
+            for (unsigned int z = 0; z < this->voxels[x][y].size() - 1; z++) {
+                Vertex vertices[8] = {Vertex(x, y, z, this->voxels[x][y][z]->getIsosurface()),
+                                      Vertex(x+1, y, z, this->voxels[x+1][y][z]->getIsosurface()),
+                                      Vertex(x+1, y+1, z, this->voxels[x+1][y+1][z]->getIsosurface()),
+                                      Vertex(x, y+1, z, this->voxels[x][y+1][z]->getIsosurface()),
+                                      Vertex(x, y, z+1, this->voxels[x][y][z+1]->getIsosurface()),
+                                      Vertex(x+1, y, z+1, this->voxels[x+1][y][z+1]->getIsosurface()),
+                                      Vertex(x+1, y+1, z+1, this->voxels[x+1][y+1][z+1]->getIsosurface()),
+                                      Vertex(x, y+1, z+1, this->voxels[x][y+1][z+1]->getIsosurface())
+                                     };
+                if (x == 0 && this->x == 0)
+                {
+                    vertices[0].isosurface = -1.0;
+                    vertices[3].isosurface = -1.0;
+                    vertices[4].isosurface = -1.0;
+                    vertices[7].isosurface = -1.0;
+                } else if (x == this->voxels.size() - (this->x > 0 ? 2 : 1) && this->lastChunkOnX)
+                {
+                    vertices[1].isosurface = -1.0;
+                    vertices[2].isosurface = -1.0;
+                    vertices[5].isosurface = -1.0;
+                    vertices[6].isosurface = -1.0;
+                }
+                if (y == 0 && this->y == 0)
+                {
+                    vertices[0].isosurface = -1.0;
+                    vertices[1].isosurface = -1.0;
+                    vertices[4].isosurface = -1.0;
+                    vertices[5].isosurface = -1.0;
+                }if (y == this->voxels[x].size() - (this->y > 0 ? 2 : 1) && this->lastChunkOnY)
+                {
+                    vertices[2].isosurface = -1.0;
+                    vertices[3].isosurface = -1.0;
+                    vertices[6].isosurface = -1.0;
+                    vertices[7].isosurface = -1.0;
+                }if (z == 0)
+                {
+                    vertices[0].isosurface = -1.0;
+                    vertices[1].isosurface = -1.0;
+                    vertices[2].isosurface = -1.0;
+                    vertices[3].isosurface = -1.0;
+                }if (z == this->voxels[x][y].size() - 2)
+                {
+                    vertices[4].isosurface = -1.0;
+                    vertices[5].isosurface = -1.0;
+                    vertices[6].isosurface = -1.0;
+                    vertices[7].isosurface = -1.0;
+                }
+                int cube_index = 0;
+                for (int i = 0; i < 8; i++){
+                    if (vertices[i].isosurface > isolevel)
+                        cube_index ^= 1 << i;
+                }
+                int* edgesForTriangles = MarchingCubes::triangleTable[cube_index];
+//                glPushName(reinterpret_cast<intptr_t>(grid->voxels[x][y][z]));
+//                glBegin(GL_TRIANGLES);
+                Vertex originalVertex;
+                Vertex firstVertex;
+                Vertex secondVertex;
+                for (int i = 0; i < 16; i++) {
+                    if (edgesForTriangles[i] == -1)
+                        continue;
+                    Vertex& v1 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][0]];
+                    Vertex& v2 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][1]];
+
+                    float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
+                    Vertex midpoint = v1 - ((v1 - v2) * interpolate);
+                    vertexArray.push_back(midpoint);
+                    if (i % 3 == 0) {
+                        originalVertex = midpoint;
+                    }
+                    else if (i % 3 == 1) {
+                        firstVertex = midpoint;
+                    }
+                    else {
+                        secondVertex = midpoint;
+                        Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
+                    }
+                }
+            }
+        }
+    }
+    return vertexArray;
+}
+
 void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices, float isolevel)
 {
     this->mesh.display();

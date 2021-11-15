@@ -7,6 +7,8 @@ class Shader;
 #include <vector>
 #include "Globals.h"
 
+#include "ShaderElement.h"
+
 class Shader
 {
 public:
@@ -24,6 +26,13 @@ public:
     void setBool(std::string pname, bool value);
     void setInt(std::string pname, int value);
     void setFloat(std::string pname, float value);
+    void setVector(std::string pname, Vector3 value);
+    void setVector(std::string pname, float* value, int n);
+    void setLightSource(std::string pname, LightSource& value);
+    void setPositionalLight(std::string pname, PositionalLight& value);
+    void setMaterial(std::string pname, Material& value);
+
+
     static std::string readShaderSource(std::string filename);
 
     unsigned int programID;

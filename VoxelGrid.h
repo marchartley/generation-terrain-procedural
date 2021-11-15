@@ -33,6 +33,7 @@ public:
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
+    Voxel* getVoxel(Vector3 pos);
     Voxel* getVoxel(int x, int y, int z);
 
     void remeshAll();

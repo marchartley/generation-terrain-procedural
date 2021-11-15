@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     qDebug() << "endstuff\n";
 
     Grid* grid = new Grid(80, 80, 40, 1.0);
-    VoxelGrid* vGrid = new VoxelGrid(100, 100, 40, 1.0);
+    VoxelGrid* vGrid = new VoxelGrid(160, 160, 40, 1.0);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
 

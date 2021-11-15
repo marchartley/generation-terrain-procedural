@@ -1,6 +1,7 @@
 #ifndef VECTOR3_H
 #define VECTOR3_H
 
+#include "Globals.h"
 #include <iostream>
 #include <vector>
 
@@ -45,6 +46,8 @@ public:
     Vector3& normalize();
 
     static Vector3 random();
+
+    operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 
 };
 

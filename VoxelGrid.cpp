@@ -61,7 +61,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                     }
                 }
             }
-            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data));
+            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this));
 //            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data));
             if (xChunk == numberOfChunksX - 1) {
                 this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
@@ -129,7 +129,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
                 }
             }
 //            data[1][1][0] = TerrainTypes::AIR;
-            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data));
+            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data, this));
             if (xChunk == int(sizeX / chunkSize) - 1) {
                 this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
             }
@@ -170,8 +170,8 @@ void VoxelGrid::createMesh()
 void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {
     for (VoxelChunk& vc : this->chunks)
     {
-        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc.x);
-        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc.y);
+        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc.x); // + (vc.lastChunkOnX ? 0 : 1 * ((float)this->sizeX/(float)vc.x)));
+        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc.y); // + (vc.lastChunkOnY ? 0 : 1 * ((float)this->sizeY/(float)vc.y)));
         vc.display(apply_marching_cubes, display_vertices, isolevel);
     }
     /*
@@ -208,6 +208,10 @@ bool VoxelGrid::contains(Vector3 v) {
 bool VoxelGrid::contains(float x, float y, float z) {
     return (0 <= x && x < this->sizeX && 0 <= y && y < this->sizeY && 0 <= z && z < this->sizeZ);
 }
+Voxel* VoxelGrid::getVoxel(Vector3 pos) {
+    return this->getVoxel(pos.x, pos.y, pos.z);
+}
+
 Voxel* VoxelGrid::getVoxel(int x, int y, int z) {
     int xChunk = int(x / chunkSize);
     int voxPosX = x % chunkSize;

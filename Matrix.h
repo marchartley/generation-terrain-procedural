@@ -17,8 +17,9 @@ public:
     Matrix adj();
     Matrix inverse();
     Matrix cofactors();
-    Matrix submatrix(int rowToIgnore, int colToIgnore);
+    Matrix submatrix(size_t rowToIgnore, size_t colToIgnore);
     Matrix transpose();
+    Matrix product(Matrix m);
 
 //    std::vector<std::vector<float>> data;
 
