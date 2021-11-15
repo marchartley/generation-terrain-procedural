@@ -32,12 +32,20 @@ void Viewer::init() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
 
-//    this->camera()->setType(Camera::ORTHOGRAPHIC);
+    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     setMouseTracking(true);
 
 //    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
-    this->shader = Shader("C:/codes/Qt/generation-terrain-procedural/vertex_shader.glsl", "C:/codes/Qt/generation-terrain-procedural/fragment_shader.glsl");
+
+#ifdef _WIN32
+    const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader.glsl";
+    const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader.glsl";
+#elif linux
+    const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader.glsl";
+    const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader.glsl";
+#endif
+    this->shader = Shader(vShader, fShader);
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
@@ -45,6 +53,13 @@ void Viewer::init() {
     this->voxelGrid->createMesh();
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
+
+    this->light = PositionalLight(
+                new float[4]{.8, .8, .8, 1.},
+                new float[4]{1., 1., 1., 1.},
+                new float[4]{1., 1., 1., 1.},
+                Vector3(100.0, 100.0, 100.0)
+                );
 }
 
 void Viewer::draw() {
@@ -54,7 +69,7 @@ void Viewer::draw() {
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    this->shader.use();
+    this->shader.use(true);
 
     float pMatrix[16];
     float mvMatrix[16];
@@ -63,6 +78,19 @@ void Viewer::draw() {
 
     this->shader.setMatrix("proj_matrix", pMatrix);
     this->shader.setMatrix("mv_matrix", mvMatrix);
+
+    Material material(
+                    new float[4]{.25, .19, .08, 1.},
+                    new float[4]{.75, .60, .22, 1.},
+                    new float[4]{.62, .56, .37, 1.},
+                    51.2f
+                    );
+    float globalAmbiant[4] = {.90, .90, .90, 1.0};
+
+    this->shader.setPositionalLight("light", this->light);
+    this->shader.setMaterial("material", material);
+    this->shader.setVector("globalAmbiant", globalAmbiant, 4);
+    this->shader.setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
 
     if (this->mapMode == GRID_MODE) {
         this->grid->display(true);
@@ -134,7 +162,7 @@ void Viewer::draw() {
     }*/
 }
 
-
+/*
 void Viewer::drawWithNames()
 {
     this->draw();
@@ -165,7 +193,23 @@ void Viewer::postSelection(const QPoint &point)
     }
     std::cout << "Total duration : " << (std::chrono::duration<double>(std::chrono::system_clock::now() - full_start)).count() << "s" << std::endl;
 }
+*/
 
+void Viewer::mousePressEvent(QMouseEvent *e)
+{
+    QGLViewer::mousePressEvent(e);
+
+    if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
+    {
+        std::cout << "With alt" << std::endl;
+        if (this->mouseInWorld)
+        {
+            Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+            RockErosion rock(this->selectionSize, 1.0);
+            rock.Apply(main_v, addingMatterMode);
+        }
+    }
+}
 
 void Viewer::keyPressEvent(QKeyEvent *e)
 {
@@ -313,7 +357,6 @@ void Viewer::drawSphere(float radius, int rings, int halves)
 }
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
-    /*qglviewer::Camera *c = camera();
     this->mousePos = e->pos();
     camera()->convertClickToLine(mousePos, orig, dir);
     float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
@@ -321,7 +364,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
-    currPos += Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
+//    currPos += Vector3(voxelGrid->getSizeX()/2 - 1, voxelGrid->getSizeY()/2 - 1, 0.0); //, voxelGrid->getSizeZ()/2 - 1);
+    currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0); //, voxelGrid->getSizeZ()/2 - 1);
     while(currPos.norm() < maxDist)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
@@ -334,8 +378,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos; // + Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
-//        std::cout << mousePosWorld << std::endl;
-    }*/
+        std::cout << mousePosWorld << std::endl;
+    }
 
 /*
     bool found;

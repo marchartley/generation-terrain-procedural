@@ -22,6 +22,7 @@ SOURCES += \
         Mesh.cpp \
         RockErosion.cpp \
         Shader.cpp \
+        ShaderElement.cpp \
         UnderwaterErosion.cpp \
         Vector3.cpp \
         Vertex.cpp \
@@ -53,6 +54,7 @@ HEADERS += \
     Mesh.h \
     RockErosion.h \
     Shader.h \
+    ShaderElement.h \
     Shader_templates.h \
     UnderwaterErosion.h \
     Vector3.h \

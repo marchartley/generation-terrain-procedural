@@ -69,10 +69,10 @@ public:
                      const GLchar* message,
                      const void* userParam )
     {
-        std::cout << "Error [severity=" << severity << "]: " << message << std::endl;
-//      fprintf( stderr, "GL CALLBACK: %s type = 0x%x, severity = 0x%x, message = %s\n",
-//               ( type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : "" ),
-//                type, severity, message );
+        if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM || severity == GL_DEBUG_SEVERITY_LOW) {
+            std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");
+            std::cout << "Error [severity=" << s_severity << "]: " << message << std::endl;
+        }
     }
 };
 /*

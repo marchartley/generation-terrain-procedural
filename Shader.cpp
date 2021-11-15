@@ -39,6 +39,7 @@ void Shader::compileShadersFromSource()
         GlobalsGL::f()->glShaderSource(vShader, 1, &src, NULL);
         GlobalsGL::f()->glCompileShader(vShader);
         GlobalsGL::f()->glAttachShader(this->programID, vShader);
+        GlobalsGL::printShaderErrors(vShader);
     }
     if (fragmentShaderFilename != nullptr)
     {
@@ -48,6 +49,7 @@ void Shader::compileShadersFromSource()
         GlobalsGL::f()->glShaderSource(fShader, 1, &src, NULL);
         GlobalsGL::f()->glCompileShader(fShader);
         GlobalsGL::f()->glAttachShader(this->programID, fShader);
+        GlobalsGL::printShaderErrors(fShader);
     }
     if (geometryShaderFilename != nullptr)
     {
@@ -57,6 +59,7 @@ void Shader::compileShadersFromSource()
         GlobalsGL::f()->glShaderSource(gShader, 1, &src, NULL);
         GlobalsGL::f()->glCompileShader(gShader);
         GlobalsGL::f()->glAttachShader(this->programID, gShader);
+        GlobalsGL::printShaderErrors(gShader);
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
@@ -68,7 +71,9 @@ void Shader::use(bool update_source_file)
     {
         this->compileShadersFromSource();
     }
+    GlobalsGL::checkOpenGLError();
     GlobalsGL::f()->glUseProgram(this->programID);
+    GlobalsGL::checkOpenGLError();
 }
 
 void Shader::setBool(std::string pname, bool value)
@@ -83,6 +88,49 @@ void Shader::setInt(std::string pname, int value)
 void Shader::setFloat(std::string pname, float value)
 {
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
+}
+
+void Shader::setVector(std::string pname, Vector3 value)
+{
+    this->setVector(pname, value, 3);
+}
+void Shader::setVector(std::string pname, float value[], int n)
+{
+    GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
+    switch (n) {
+    case 1:
+        GlobalsGL::f()->glUniform1fv(loc, 1, value);
+        break;
+    case 2:
+        GlobalsGL::f()->glUniform2fv(loc, 1, value);
+        break;
+    case 3:
+        GlobalsGL::f()->glUniform3fv(loc, 1, value);
+        break;
+    case 4:
+        GlobalsGL::f()->glUniform4fv(loc, 1, value);
+        break;
+    }
+}
+void Shader::setLightSource(std::string pname, LightSource &value)
+{
+    this->setVector((pname + ".ambiant").c_str(), value.ambiant, 4);
+    this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
+    this->setVector((pname + ".specular").c_str(), value.specular, 4);
+}
+
+void Shader::setPositionalLight(std::string pname, PositionalLight &value)
+{
+    this->setLightSource(pname, value);
+    this->setVector((pname + ".position").c_str(), value.position);
+}
+
+void Shader::setMaterial(std::string pname, Material &value)
+{
+    this->setVector((pname + ".ambiant").c_str(), value.ambiant, 4);
+    this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
+    this->setVector((pname + ".specular").c_str(), value.specular, 4);
+    this->setFloat((pname + ".shininess").c_str(), value.shininess);
 }
 
 

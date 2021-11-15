@@ -37,9 +37,10 @@ protected:
   virtual void init();
   virtual void draw();
 
-  virtual void drawWithNames();
-  virtual void postSelection(const QPoint &point);
+//  virtual void drawWithNames();
+//  virtual void postSelection(const QPoint &point);
 
+  void mousePressEvent(QMouseEvent* e);
   void keyPressEvent(QKeyEvent *e);
 
   void mouseMoveEvent(QMouseEvent* e);
@@ -68,6 +69,7 @@ private:
   std::vector<std::vector<Vector3>> getSphereVertices(int rings, int halves);
   void drawSphere(float radius, int rings, int halves);
   Shader shader;
+  PositionalLight light;
 };
 
 
