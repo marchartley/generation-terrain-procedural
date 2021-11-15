@@ -12,54 +12,6 @@
 
 int main(int argc, char *argv[])
 {
-//    float data[3][3] = {{0, 0, 1}, {2, -1, 3}, {1, 1, 4}};
-//    std::vector<std::vector<float>> data = {{0, 0, 1}, {2, -1, 3}, {1, 1, 4}};
-//    Matrix test(4, 4);
-//    test[0][0] = 0;
-//    test[0][1] = 2;
-//    test[0][2] = 1;
-//    test[0][3] = 4;
-//    test[1][0] = 5;
-//    test[1][1] = 6;
-//    test[1][2] = 7;
-//    test[1][3] = 8;
-//    test[2][0] = 9;
-//    test[2][1] = 9;
-//    test[2][2] = 8;
-//    test[2][3] = 7;
-//    test[3][0] = 6;
-//    test[3][1] = 5;
-//    test[3][2] = 4;
-//    test[3][3] = 3;
-//    Matrix test(3, 3);
-//    test[0][0] = 0;
-//    test[0][1] = 2;
-//    test[0][2] = 3;
-//    test[1][0] = 4;
-//    test[1][1] = 5;
-//    test[1][2] = 6;
-//    test[2][0] = 7;
-//    test[2][1] = 8;
-//    test[2][2] = 9;
-    Matrix test(3, 3);
-    test[0][0] = 0;
-    test[0][1] = 0;
-    test[0][2] = 1;
-    test[1][0] = 2;
-    test[1][1] = -1;
-    test[1][2] = 3;
-    test[2][0] = 1;
-    test[2][1] = 1;
-    test[2][2] = 4;
-
-    std::cout << test << std::endl;
-//    std::cout << test.det() << std::endl;
-//    std::cout << test.cofactors() << std::endl;
-    std::cout << test.inverse() << std::endl;
-
-    exit(0);
-
-
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
@@ -91,7 +43,7 @@ int main(int argc, char *argv[])
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
 
-    Viewer view(grid, vGrid, MapMode::GRID_MODE, ViewerMode::FILL_MODE);
+    Viewer view(grid, vGrid, MapMode::VOXEL_MODE, ViewerMode::FILL_MODE);
     view.show();
 
     return app.exec();
