@@ -130,7 +130,7 @@ void Shader::setMaterial(std::string pname, Material &value)
     this->setVector((pname + ".ambiant").c_str(), value.ambiant, 4);
     this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
     this->setVector((pname + ".specular").c_str(), value.specular, 4);
-    this->setFloat((pname + ".shininess").c_str(), value.shininess);
+    this->setFloat((pname + ".shininness").c_str(), value.shininess);
 }
 
 
