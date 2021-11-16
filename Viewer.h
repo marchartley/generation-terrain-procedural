@@ -70,6 +70,7 @@ private:
   void drawSphere(float radius, int rings, int halves);
   Shader shader;
   PositionalLight light;
+  GLuint rocksVBO;
 };
 
 

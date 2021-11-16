@@ -39,15 +39,17 @@ void Viewer::init() {
 //    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
 
 #ifdef _WIN32
-    const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader.glsl";
-    const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader.glsl";
+    const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
+    const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
 #elif linux
-    const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader.glsl";
-    const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader.glsl";
+    const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
+    const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
 #endif
     this->shader = Shader(vShader, fShader);
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
+
+    this->rocksVBO = GlobalsGL::newBufferId();
 
     this->grid->createMesh();
     this->voxelGrid->createMesh();
@@ -98,49 +100,20 @@ void Viewer::draw() {
     else if (this->mapMode == VOXEL_MODE) {
         this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.0);
     }
-//    drawAxis();
-    //grid->floatArrayMesh.size()/3);
-
-/*
-    // Place light at camera position
-    const Vec cameraPos = camera()->position();
-//    const GLfloat pos[4] = {(float)cameraPos[0], (float)cameraPos[1],
-//                            (float)cameraPos[2] + 10.f, 1.0f};
-    const GLfloat pos[4] = {0, 0.0, 50.0, 1.0};
-    glLightfv(GL_LIGHT1, GL_POSITION, pos);
-
-    // Orientate light along view direction
-//    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, camera()->viewDirection());
-    const GLfloat orient[4] = {0.1, 0.1, 1.0};
-    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, orient);
-
-
-    // Light default parameters
-    const GLfloat light_ambient[4] = {.92, .54, .20, .01};
-    const GLfloat light_specular[4] = {.8, 1.0, .8, .001};
-    const GLfloat light_diffuse[4] = {1.0, 1.0, 1.0, .01};
-
-//    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 30.0);
-//    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 100.0);
-//    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, .000001f);
-//    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, .003f);
-//    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.003f);
-    glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular);
-//    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse);
-
-//    glPushMatrix();
-//    glRotatef(180.0, 1.0, 0.0, 0.0);
-    drawAxis();
-//    glPopMatrix();
-//    drawLight(GL_LIGHT1);
 
     if (displayRockTrajectories) {
         glPushMatrix();
-        glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
+        GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
+        this->shader.setFloat("offsetX", 0.f);
+        glTranslatef(this->voxelGrid->getSizeX()/2.0, this->voxelGrid->getSizeY()/2.0, 0); //, -this->voxelGrid->getSizeZ()/2.0);
         for(std::vector<Vector3> coords : this->lastRocksLaunched) {
+//            std::vector<float> asFloat = Vector3::toArray(coords);
+//            GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
+//            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, asFloat.size()/sizeof(float), &asFloat.front(), GL_STATIC_DRAW);
+//            GlobalsGL::f()->glDrawArrays(GL_LINES, 0, coords.size());
+//            glDrawArrays(GL_LINES, 0, coords.size());
             glBegin(GL_LINE_STRIP);
-            glColor4f(1.0, 1.0, 1.0, .5);
+            glColor4f(0.0, 0.0, 0.0, .5);
             for(Vector3 pos : coords) {
                 glVertex3f(pos.x, pos.y, pos.z);
             }
@@ -148,52 +121,7 @@ void Viewer::draw() {
         }
         glPopMatrix();
     }
-
-*/
-    /*if(this->mouseInWorld)
-    {
-        glPushMatrix();
-        glTranslatef(-this->voxelGrid->getSizeX()/2.0, -this->voxelGrid->getSizeY()/2.0, -this->voxelGrid->getSizeZ()/2.0);
-        glTranslatef(mousePosWorld.x, mousePosWorld.y, mousePosWorld.z);
-        glColor4f(1., 1., 1., .5);
-        this->drawSphere(this->selectionSize, 8, 8);
-        glColor4f(1., 1., 1., 1.);
-        glPopMatrix();
-    }*/
 }
-
-/*
-void Viewer::drawWithNames()
-{
-    this->draw();
-}
-void Viewer::postSelection(const QPoint &point)
-{
-    auto full_start = std::chrono::system_clock::now();
-    camera()->convertClickToLine(point, orig, dir);
-
-    // Find the selectedPoint coordinates, using camera()->pointUnderPixel().
-    bool found;
-    selectedPoint = camera()->pointUnderPixel(point, found);
-    selectedPoint -= 0.01f * dir; // Small offset to make point clearly visible.
-    // Note that "found" is different from (selectedObjectId()>=0) because of the
-    // size of the select region.
-
-    if (selectedName() == -1) {
-        std::cout << "Nope." << std::endl;
-    }
-    else {
-        intptr_t ptr_int = selectedName();
-        if (ptr_int > 0) {
-            Voxel* main_v = reinterpret_cast<Voxel*>(ptr_int);
-            RockErosion rock(this->selectionSize, 1.0);
-            rock.Apply(main_v, addingMatterMode);
-
-        }
-    }
-    std::cout << "Total duration : " << (std::chrono::duration<double>(std::chrono::system_clock::now() - full_start)).count() << "s" << std::endl;
-}
-*/
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
@@ -247,7 +175,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 0.05, 2000);
+        UnderwaterErosion erod(this->voxelGrid, 10, 0.05, 200);
         if (e->modifiers() == Qt::ShiftModifier)
         {
             Vector3 pos(camera()->position().x, camera()->position().y, camera()->position().z);

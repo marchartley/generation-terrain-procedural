@@ -62,7 +62,6 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                 }
             }
             this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this));
-//            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data));
             if (xChunk == numberOfChunksX - 1) {
                 this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
             }
@@ -86,16 +85,6 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
         }
     }
 
-//    for(int i = 0; i < this->chunks.size() - 1; i++) {
-//        if (i >= this->sizeY/chunkSize - 1) {
-//            this->chunks[i].neighboring_chunks[LEFT] = &this->chunks[i - int(this->sizeY / chunkSize)];
-//            this->chunks[i - int(this->sizeY/chunkSize)].neighboring_chunks[RIGHT] = &this->chunks[i];
-//        }
-//        if (i % int(this->sizeY/chunkSize) >= 1) {
-//            this->chunks[i].neighboring_chunks[FRONT] = &this->chunks[i - 1];
-//            this->chunks[i - 1].neighboring_chunks[BACK] = &this->chunks[i];
-//        }
-//    }
     for (VoxelChunk& c: this->chunks)
         c.createMesh();
 

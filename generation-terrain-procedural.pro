@@ -65,5 +65,10 @@ HEADERS += \
     VoxelGrid.h
 
 RESOURCES += \
-    fragment_shader.glsl \
-    vertex_shader.glsl
+fragment_shader_gouraud.glsl \
+vertex_shader_gouraud.glsl \
+fragment_shader_blinn_phong.glsl \
+vertex_shader_blinn_phong.glsl
+
+DISTFILES += \
+    noise.glsl
