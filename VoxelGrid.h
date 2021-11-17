@@ -23,6 +23,8 @@ public:
 
     void createMesh();
 
+    void makeItFall(int groupId = -1);
+
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
     int getSizeZ() { return this->sizeZ; }

@@ -14,6 +14,7 @@ enum VOXEL_NEIGHBOR {
 };
 
 #include <map>
+#include <set>
 #include "Grid.h"
 #include "Vertex.h"
 
@@ -38,8 +39,12 @@ public:
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
 
-    void addNeighbor(Voxel& neighbor);
-    void removeNeighbor(Voxel& neighbor);
+    void addNeighbor(Voxel* neighbor);
+    void removeNeighbor(Voxel* neighbor);
+    void resetNeighbors();
+
+    std::vector<Vector3> getMeshVertices();
+
     std::map<VOXEL_NEIGHBOR, bool> has_neighbors;
 
     operator bool() { return this->type != TerrainTypes::AIR; }
@@ -53,10 +58,14 @@ public:
     int x, y, z;
     TerrainTypes type;
     float blockSize;
-    std::map<VOXEL_NEIGHBOR, Voxel&> neighbors;
+    std::map<VOXEL_NEIGHBOR, Voxel*> neighbors;
     float isosurface = 0.0;
     float manual_isosurface = 0.0;
     VoxelChunk* parent;
+
+    static std::vector<std::set<int>> voxelGroups;
+    static int currentLabelIndex;
+    int group = -1;
 
 };
 #endif // VOXEL_H

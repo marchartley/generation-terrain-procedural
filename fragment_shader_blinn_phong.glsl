@@ -66,7 +66,8 @@ struct Material {
 
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
-uniform Material material;
+uniform Material ground_material;
+uniform Material grass_material;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -74,7 +75,8 @@ uniform mat4 norm_matrix;
 
 void main(void)
 {
-    vec3 N = normalize(varyingNormal) * fbm3(varyingVertPos);
+    Material material = ground_material;
+    vec3 N = normalize(varyingNormal);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(N, -L);
@@ -82,8 +84,10 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-    vec4 ambiant = ((globalAmbiant * material.ambiant) + (light.ambiant * material.ambiant));
-    vec4 diffuse = light.diffuse * material.diffuse * max(cosTheta, 0.0);
+//    vec4 ambiant = ((globalAmbiant * material.ambiant) + (light.ambiant * material.ambiant));
+//    vec4 diffuse = light.diffuse * material.diffuse * max(cosTheta, 0.0);
+    vec4 ambiant = ((globalAmbiant * varyingColor) + (light.ambiant * varyingColor));
+    vec4 diffuse = light.diffuse * varyingColor * max(cosTheta, 0.0);
     vec4 specular = light.specular * material.specular * pow(max(cosPhi, 0.0), material.shininness * 3.0);
     fragColor = vec4((ambiant + diffuse + specular).xyz, 1.0);
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
