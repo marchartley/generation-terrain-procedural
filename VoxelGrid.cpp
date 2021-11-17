@@ -52,12 +52,14 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = ((noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h) - min) / (max - min)) * 2.0 - 1.0;
+                        noise_val -= .3;
+                        noise_val *= 2.0;
                         if (noise_val < 0.0) {
                             data[x][y].push_back(TerrainTypes::DIRT);
                         } else {
                             data[x][y].push_back(TerrainTypes::AIR);
                         }
-                        iso_data[x][y].push_back(noise_val * 2.0);
+                        iso_data[x][y].push_back(noise_val);
                     }
                 }
             }
@@ -154,6 +156,16 @@ void VoxelGrid::createMesh()
         this->vertexArrayFloat.insert(this->vertexArrayFloat.end(), mc.vertexArrayFloat.begin(), mc.vertexArrayFloat.end());
 */
     }
+}
+
+void VoxelGrid::makeItFall(int groupId)
+{
+    for(int i = 0; i < 10; i++)
+        for(VoxelChunk& vc : this->chunks) {
+            vc.makeItFall(groupId);
+    //        vc.mesh.update();
+        }
+    remeshAll();
 }
 
 void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {

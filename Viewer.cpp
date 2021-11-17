@@ -81,7 +81,13 @@ void Viewer::draw() {
     this->shader.setMatrix("proj_matrix", pMatrix);
     this->shader.setMatrix("mv_matrix", mvMatrix);
 
-    Material material(
+    Material ground_material(
+                    new float[4]{.25, .19, .08, 1.},
+                    new float[4]{.75, .60, .22, 1.},
+                    new float[4]{.62, .56, .37, 1.},
+                    51.2f
+                    );
+    Material grass_material(
                     new float[4]{.25, .19, .08, 1.},
                     new float[4]{.75, .60, .22, 1.},
                     new float[4]{.62, .56, .37, 1.},
@@ -90,7 +96,8 @@ void Viewer::draw() {
     float globalAmbiant[4] = {.90, .90, .90, 1.0};
 
     this->shader.setPositionalLight("light", this->light);
-    this->shader.setMaterial("material", material);
+    this->shader.setMaterial("ground_material", ground_material);
+    this->shader.setMaterial("grass_material", grass_material);
     this->shader.setVector("globalAmbiant", globalAmbiant, 4);
     this->shader.setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
 
@@ -129,13 +136,17 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
-        std::cout << "With alt" << std::endl;
         if (this->mouseInWorld)
         {
             Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-            RockErosion rock(this->selectionSize, 1.0);
+            RockErosion rock(this->selectionSize, .50);
             rock.Apply(main_v, addingMatterMode);
         }
+    }
+    if (this->mouseInWorld)
+    {
+        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+        std::cout << main_v->group << std::endl;
     }
 }
 
@@ -197,6 +208,10 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if(e->key() == Qt::Key_Space) {
         displayRockTrajectories = !displayRockTrajectories;
         std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_0) {
+        this->voxelGrid->makeItFall();
+        std::cout << "It's falling!" << std::endl;
         update();
     } else {
         QGLViewer::keyPressEvent(e);
@@ -306,32 +321,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos; // + Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
-        std::cout << mousePosWorld << std::endl;
     }
-
-/*
-    bool found;
-    this->mousePosWorld = camera()->pointUnderPixel(mousePos, found);
-    this->mouseInWorld = found;
-    if (found)
-        std::cout << "Found" << std::endl;
-
-    if (selectedName() == -1) {
-        std::cout << "Nope." << std::endl;
-    }
-    else {
-        std::cout << "Here" << std::endl;
-    }
-
-    float depth;
-    // Qt uses upper corner for its origin while GL uses the lower corner.
-    std::cout << camera()->screenHeight() <<" " << camera()->screenWidth() << std::endl;
-    glReadPixels(mousePos.x(), camera()->screenHeight() - 1 - mousePos.y(), 1, 1,
-                 GL_DEPTH_COMPONENT, GL_FLOAT, &depth);
-    found = static_cast<double>(depth)< 1.0;
-    Vec point(mousePos.x(), mousePos.y(), static_cast<double>(depth));
-    point = camera()->unprojectedCoordinatesOf(point);
-*/
 
     QGLViewer::mouseMoveEvent(e);
 }

@@ -2,15 +2,17 @@
 
 #include "MarchingCubes.h"
 
+std::vector<std::set<int>> Voxel::voxelGroups;
+int Voxel::currentLabelIndex = 0;
 
 Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface)
     : x(x), y(y), z(z), type(type), blockSize(blockSize), isosurface(isosurface) {
-    this->has_neighbors[TOP] = true;
-    this->has_neighbors[BOTTOM] = true;
-    this->has_neighbors[FRONT] = true;
-    this->has_neighbors[BACK] = true;
-    this->has_neighbors[RIGHT] = true;
-    this->has_neighbors[LEFT] = true;
+    this->has_neighbors[TOP] = false;
+    this->has_neighbors[BOTTOM] = false;
+    this->has_neighbors[FRONT] = false;
+    this->has_neighbors[BACK] = false;
+    this->has_neighbors[RIGHT] = false;
+    this->has_neighbors[LEFT] = false;
 
     this->vertices[0] = Vertex(0.1, 0.9, 0.1);
     this->vertices[1] = Vertex(0.9, 0.9, 0.1);
@@ -23,7 +25,7 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isos
 
 //    this->vertices[0] = Vertex(0.0, 1.0, 0.0);
 //    this->vertices[1] = Vertex(1.0, 1.0, 0.0);
-//    this->vertices[2] = Vertex(1.0, 0.0, 0.0);
+//    this->vertices[2] = Vestd::vector<rtex(1.0, 0.0, 0.0);
 //    this->vertices[3] = Vertex(0.0, 0.0, 0.0);
 //    this->vertices[4] = Vertex(0.0, 1.0, 1.0);
 //    this->vertices[5] = Vertex(1.0, 1.0, 1.0);
@@ -40,16 +42,104 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isos
 Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0) {
 
 }
+void Voxel::addNeighbor(Voxel* neighbor)
+{
+    if(neighbor == nullptr || neighbor->type == TerrainTypes::AIR || this->type == TerrainTypes::AIR)
+        return;
+    if (this->globalX() < neighbor->globalX()) {
+        this->neighbors[RIGHT] = neighbor;
+        this->has_neighbors[RIGHT] = true;
+        neighbor->neighbors[LEFT] = this;
+        neighbor->has_neighbors[LEFT] = true;
+    }
+    if (this->globalX() > neighbor->globalX()) {
+        this->neighbors[LEFT] = neighbor;
+        this->has_neighbors[LEFT] = true;
+        neighbor->neighbors[RIGHT] = this;
+        neighbor->has_neighbors[RIGHT] = true;
+    }
+    if (this->globalY() < neighbor->globalY()) {
+        this->neighbors[BACK] = neighbor;
+        this->has_neighbors[BACK] = true;
+        neighbor->neighbors[FRONT] = this;
+        neighbor->has_neighbors[FRONT] = true;
+    }
+    if (this->globalY() > neighbor->globalY()) {
+        this->neighbors[FRONT] = neighbor;
+        this->has_neighbors[FRONT] = true;
+        neighbor->neighbors[BACK] = this;
+        neighbor->has_neighbors[BACK] = true;
+    }
+    if (this->globalZ() < neighbor->globalZ()) {
+        this->neighbors[TOP] = neighbor;
+        this->has_neighbors[TOP] = true;
+        neighbor->neighbors[BOTTOM] = this;
+        neighbor->has_neighbors[BOTTOM] = true;
+    }
+    if (this->globalZ() > neighbor->globalZ()) {
+        this->neighbors[BOTTOM] = neighbor;
+        this->has_neighbors[BOTTOM] = true;
+        neighbor->neighbors[TOP] = this;
+        neighbor->has_neighbors[TOP] = true;
+    }
+    if (this->group == -1)
+        this->group = neighbor->group;
+    this->group = std::min(this->group, neighbor->group);
+//    if(this->group == 0)
+//        this->group = neighbor->group;
+//    if(this->group != neighbor->group)
+//    {
+//        Voxel::voxelGroups[std::max(this->group, neighbor->group)] = std::min(this->group, neighbor->group);
+//    }
+}
+void Voxel::removeNeighbor(Voxel* neighbor)
+{
+    if (neighbor == nullptr)
+        return;
+    if (this->globalX() < neighbor->globalX()) {
+        neighbor->neighbors[RIGHT] = nullptr;
+        neighbor->has_neighbors[RIGHT] = false;
+        this->neighbors[LEFT] = nullptr;
+        this->has_neighbors[LEFT] = false;
+    }
+    if (this->globalX() > neighbor->globalX()) {
+        neighbor->neighbors[LEFT] = nullptr;
+        neighbor->has_neighbors[LEFT] = false;
+        this->neighbors[RIGHT] = nullptr;
+        this->has_neighbors[RIGHT] = false;
+    }
+    if (this->globalY() < neighbor->globalY()) {
+        neighbor->neighbors[FRONT] = nullptr;
+        neighbor->has_neighbors[FRONT] = false;
+        this->neighbors[BACK] = nullptr;
+        this->has_neighbors[BACK] = false;
+    }
+    if (this->globalY() > neighbor->globalY()) {
+        neighbor->neighbors[BACK] = nullptr;
+        neighbor->has_neighbors[BACK] = false;
+        this->neighbors[FRONT] = nullptr;
+        this->has_neighbors[FRONT] = false;
+    }
+    if (this->globalZ() < neighbor->globalZ()) {
+        neighbor->neighbors[BOTTOM] = nullptr;
+        neighbor->has_neighbors[BOTTOM] = false;
+        this->neighbors[TOP] = nullptr;
+        this->has_neighbors[TOP] = false;
+    }
+    if (this->globalZ() > neighbor->globalZ()) {
+        neighbor->neighbors[TOP] = nullptr;
+        neighbor->has_neighbors[TOP] = false;
+        this->neighbors[BOTTOM] = nullptr;
+        this->has_neighbors[BOTTOM] = false;
+    }
+}
+void Voxel::resetNeighbors() {
+    for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = this->neighbors.begin(); it != this->neighbors.end(); it++)
+        removeNeighbor(it->second);
+}
 
 float Voxel::getIsosurface() {
-//    this->isosurface = this->type == TerrainTypes::AIR ? -1.0 : 1.0;
-//    this->isosurface = 0;
-//    for (int i = 0; i < 8; i++) {
-//        this->isosurface += *this->isosurfaces[i];
-//    }
-//    this->isosurface /= 8;
     return this->isosurface + manual_isosurface;
-//    return this->isosurface * this->isosurface * (this->isosurface > 0 ? 1 : -1) + this->manual_isosurface;
 }
 void Voxel::display(bool apply_marching_cubes, bool display_vertices) {
     glPushMatrix();
@@ -185,4 +275,70 @@ float Voxel::globalY()  {
 }
 float Voxel::globalZ()  {
     return this->z;
+}
+
+
+std::vector<Vector3> Voxel::getMeshVertices()
+{
+    std::vector<Vector3> vertex;
+    if (this->type != TerrainTypes::AIR) {
+        // BOTTOM
+        if (!this->has_neighbors[BOTTOM]) {
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 0 + globalZ()));
+        }
+
+        // RIGHT
+        if (!this->has_neighbors[RIGHT]) {
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 1 + globalZ()));
+        }
+
+        // TOP
+        if (!this->has_neighbors[TOP]) {
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 1 + globalZ()));
+        }
+
+        // LEFT
+        if (!this->has_neighbors[LEFT]) {
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 0 + globalZ()));
+        }
+
+        // FRONT
+        if (!this->has_neighbors[FRONT]) {
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 0 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 0 + globalY(), 0 + globalZ()));
+        }
+
+        // BACK
+        if (!this->has_neighbors[BACK]) {
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 0 + globalZ()));
+            vertex.push_back(Vector3(1 + globalX(), 1 + globalY(), 1 + globalZ()));
+            vertex.push_back(Vector3(0 + globalX(), 1 + globalY(), 1 + globalZ()));
+        }
+    }
+    std::vector<Vector3> returnArray;
+    for (size_t i = 0; i < vertex.size(); i+=4)
+    {
+        returnArray.push_back(vertex[i + 0]);
+        returnArray.push_back(vertex[i + 1]);
+        returnArray.push_back(vertex[i + 2]);
+        returnArray.push_back(vertex[i + 2]);
+        returnArray.push_back(vertex[i + 3]);
+        returnArray.push_back(vertex[i + 0]);
+    }
+    return returnArray;
 }

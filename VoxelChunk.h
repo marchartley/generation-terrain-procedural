@@ -16,7 +16,10 @@ public:
     VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent);
 
     void display(bool apply_marching_cubes = false, bool display_vertices = false, float isolevel = 0.0);
-    void createMesh();
+    void createMesh(bool updateMesh = true);
+
+    void makeItFall(int groupId = -1);
+    void computeGroups();
 
     std::vector<Vector3> applyMarchingCubes();
 

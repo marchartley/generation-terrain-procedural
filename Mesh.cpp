@@ -66,6 +66,10 @@ void Mesh::pushToBuffer()
     // Normals
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 2]);
     GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
+
+    // Random stuff
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 3]);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->randomStuff.size() * sizeof(float), &this->randomStuff.front(), GL_STATIC_DRAW);
     this->bufferReady = true;
 }
 void Mesh::display()
@@ -78,6 +82,10 @@ void Mesh::display()
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 2]);
     GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glEnableVertexAttribArray(2);
+
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 3]);
+    GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    GlobalsGL::f()->glEnableVertexAttribArray(3);
     GlobalsGL::checkOpenGLError();
 
     glEnable(GL_DEPTH_TEST);
