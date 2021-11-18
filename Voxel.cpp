@@ -11,12 +11,12 @@ std::map<TerrainTypes, bool> Voxel::isMatter = {
     {SAND, true}
 };
 
-Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface)
-    : x(x), y(y), z(z), type(type), blockSize(blockSize), isosurface(isosurface) {
+Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface, VoxelChunk* parent)
+    : x(x), y(y), z(z), type(type), blockSize(blockSize), isosurface(isosurface), parent(parent) {
 
 }
 
-Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0) {
+Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0, nullptr) {
 
 }
 void Voxel::addNeighbor(Voxel* neighbor)

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     Grid* grid = new Grid(10, 10, 40, 1.0);
-    VoxelGrid* vGrid = new VoxelGrid(50, 50, 160, 3.0);
+    VoxelGrid* vGrid = new VoxelGrid(240, 240, 80, 3.0, -0.3);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
 

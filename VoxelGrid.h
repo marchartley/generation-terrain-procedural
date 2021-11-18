@@ -15,7 +15,7 @@ class VoxelGrid {
 public:
     VoxelGrid();
     VoxelGrid(Grid& grid);
-    VoxelGrid(int nx, int ny, int nz, float blockSize);
+    VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
 
     void from2DGrid(Grid grid);
 
@@ -44,7 +44,7 @@ public:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
     float blockSize;
-    std::vector<VoxelChunk> chunks;
+    std::vector<VoxelChunk*> chunks;
 
     int chunkSize = 40;
     bool displayWithMarchingCubes = false;
