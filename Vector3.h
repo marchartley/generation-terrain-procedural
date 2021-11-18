@@ -16,6 +16,20 @@ public:
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);
 
+
+    friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
+    friend std::ostream& operator<<(std::ostream& io, Vector3* v);
+
+    float dot(Vector3& o);
+    Vector3 cross(Vector3 o);
+    Vector3 rounded(int precision = 0);
+
+    float norm();
+    Vector3& normalize();
+
+    static Vector3 random();
+
+    operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
     friend Vector3 operator+(Vector3 a, Vector3 b);
     Vector3& operator+=(const Vector3& o);
@@ -34,20 +48,6 @@ public:
     Vector3 operator-(float o);
     Vector3& operator-=(float o);
     Vector3& operator=(const Vector3& o);
-
-    friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
-    friend std::ostream& operator<<(std::ostream& io, Vector3* v);
-
-    float dot(Vector3& o);
-    Vector3 cross(Vector3 o);
-    Vector3 rounded(int precision = 0);
-
-    float norm();
-    Vector3& normalize();
-
-    static Vector3 random();
-
-    operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 
 };
 

@@ -27,7 +27,7 @@ public:
     std::vector<float> vertexArrayFloat;
     std::vector<Vector3> normalsArray;
     std::vector<float> normalsArrayFloat;
-    std::vector<float> randomStuff;
+    std::vector<float> colorArrayFloat;
 };
 
 #endif // MESH_H

@@ -20,7 +20,6 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)) / 2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     int max_iter = 1000;
-//    int update_only_every = this->rockAmount / 10.0;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
         int steps = 1000;
@@ -28,7 +27,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
 
         pos.normalize();
         pos *= starting_distance;
-        pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), this->grid->getSizeZ())/2.0;
+        pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0;
         Vector3 dir = Vector3::random();
         RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
         std::vector<Vector3> coords;
@@ -41,7 +40,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
             pos += dir;
             coords.push_back(pos);
             Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
-            if (v != nullptr && v->type != TerrainTypes::AIR) {
+            if (v != nullptr && *v) {
                 rock.Apply(v, false, false);
                 touched = true;
                 max_iter = 1000;
@@ -63,15 +62,11 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)) / 2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     int max_iter = 1000;
-//    int update_only_every = this->rockAmount / 10.0;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
         int steps = 1000;
-//        Vector3 pos(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(0.0, 1.0));
         Vector3 pos = startingPoint;
-//        pos.normalize();
-//        pos *= starting_distance;
-        pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), this->grid->getSizeZ())/2.0;
+        pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0;
         Vector3 dir = Vector3::random();
         RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
         std::vector<Vector3> coords;
@@ -84,7 +79,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint
             pos += dir;
             coords.push_back(pos);
             Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
-            if (v != nullptr && v->type != TerrainTypes::AIR) {
+            if (v != nullptr && *v) {
                 rock.Apply(v, false, false);
                 touched = true;
                 max_iter = 1000;

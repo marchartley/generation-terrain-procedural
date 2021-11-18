@@ -32,11 +32,9 @@ void Viewer::init() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
 
-    this->camera()->setType(Camera::ORTHOGRAPHIC);
+//    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     setMouseTracking(true);
-
-//    this->shader = Shader("vertex_shader.glsl", "fragment_shader.glsl");
 
 #ifdef _WIN32
     const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
@@ -52,6 +50,7 @@ void Viewer::init() {
     this->rocksVBO = GlobalsGL::newBufferId();
 
     this->grid->createMesh();
+    voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
     this->voxelGrid->createMesh();
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
@@ -100,28 +99,25 @@ void Viewer::draw() {
     this->shader.setMaterial("grass_material", grass_material);
     this->shader.setVector("globalAmbiant", globalAmbiant, 4);
     this->shader.setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->shader.setBool("display_light_source", true);
 
     if (this->mapMode == GRID_MODE) {
         this->grid->display(true);
     }
     else if (this->mapMode == VOXEL_MODE) {
-        this->voxelGrid->display((this->algorithm & MARCHING_CUBES), this->display_vertices, 0.0);
+        this->voxelGrid->display();
     }
 
     if (displayRockTrajectories) {
         glPushMatrix();
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
         this->shader.setFloat("offsetX", 0.f);
+        this->shader.setFloat("offsetY", 0.f);
         glTranslatef(this->voxelGrid->getSizeX()/2.0, this->voxelGrid->getSizeY()/2.0, 0); //, -this->voxelGrid->getSizeZ()/2.0);
-        for(std::vector<Vector3> coords : this->lastRocksLaunched) {
-//            std::vector<float> asFloat = Vector3::toArray(coords);
-//            GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
-//            GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, asFloat.size()/sizeof(float), &asFloat.front(), GL_STATIC_DRAW);
-//            GlobalsGL::f()->glDrawArrays(GL_LINES, 0, coords.size());
-//            glDrawArrays(GL_LINES, 0, coords.size());
+        for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
             glBegin(GL_LINE_STRIP);
             glColor4f(0.0, 0.0, 0.0, .5);
-            for(Vector3 pos : coords) {
+            for(Vector3& pos : coords) {
                 glVertex3f(pos.x, pos.y, pos.z);
             }
             glEnd();
@@ -134,6 +130,11 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
 
+    if (checkMouseOnVoxel())
+    {
+        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+        std::cout << main_v->group << std::endl;
+    }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
         if (this->mouseInWorld)
@@ -142,11 +143,6 @@ void Viewer::mousePressEvent(QMouseEvent *e)
             RockErosion rock(this->selectionSize, .50);
             rock.Apply(main_v, addingMatterMode);
         }
-    }
-    if (this->mouseInWorld)
-    {
-        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-        std::cout << main_v->group << std::endl;
     }
 }
 
@@ -177,6 +173,8 @@ void Viewer::keyPressEvent(QKeyEvent *e)
 //        else if (this->algorithm == DUAL_CONTOURING)
 //            setSmoothingAlgorithm(NONE);
         std::cout << "Displaying using " << (this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") << " algorithm" << std::endl;
+        voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
+        voxelGrid->createMesh();
         update();
     } else if(e->key() == Qt::Key_V) {
         this->display_vertices = !this->display_vertices;
@@ -301,6 +299,12 @@ void Viewer::drawSphere(float radius, int rings, int halves)
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
     this->mousePos = e->pos();
+
+    QGLViewer::mouseMoveEvent(e);
+}
+
+bool Viewer::checkMouseOnVoxel()
+{
     camera()->convertClickToLine(mousePos, orig, dir);
     float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
@@ -313,7 +317,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
         Voxel* v = voxelGrid->getVoxel(currPos.x, currPos.y, currPos.z);
-        if (v != nullptr && v->type != TerrainTypes::AIR) {
+        if (v != nullptr && (bool)*v) {
             found = true;
             break;
         }
@@ -322,6 +326,5 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     if (found) {
         this->mousePosWorld = currPos; // + Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
     }
-
-    QGLViewer::mouseMoveEvent(e);
+    return found;
 }

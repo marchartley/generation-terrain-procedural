@@ -1,5 +1,6 @@
 #include "VoxelGrid.h"
 #include "FastNoiseLit.h"
+#include "UnderwaterErosion.h"
 
 #include "Shader.h"
 
@@ -42,23 +43,15 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
     this->chunks.clear();
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
-            std::vector<std::vector<std::vector<TerrainTypes>>> data;
             std::vector<std::vector<std::vector<float>>> iso_data;
             for (int x = 0; x < chunkSize; x++) {
-                data.push_back(std::vector<std::vector<TerrainTypes>>());
                 iso_data.push_back(std::vector<std::vector<float>>());
                 for (int y = 0; y < chunkSize; y++) {
-                    data[x].push_back(std::vector<TerrainTypes>());
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = ((noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h) - min) / (max - min)) * 2.0 - 1.0;
                         noise_val -= .3;
                         noise_val *= 2.0;
-                        if (noise_val < 0.0) {
-                            data[x][y].push_back(TerrainTypes::DIRT);
-                        } else {
-                            data[x][y].push_back(TerrainTypes::AIR);
-                        }
                         iso_data[x][y].push_back(noise_val);
                     }
                 }
@@ -106,17 +99,17 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeZ = grid.getMaxHeight();
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
-            std::vector<std::vector<std::vector<TerrainTypes>>> data;
+            std::vector<std::vector<std::vector<float>>> data;
             for (int x = 0; x < chunkSize; x++) {
-                data.push_back(std::vector<std::vector<TerrainTypes>>());
+                data.push_back(std::vector<std::vector<float>>());
                 for (int y = 0; y < chunkSize; y++) {
-                    data[x].push_back(std::vector<TerrainTypes>());
+                    data[x].push_back(std::vector<float>());
                     float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
                     int z = int(grid_height)+1;
                     for (int i = 0; i < z; i++)
-                        data[x][y].push_back(TerrainTypes::DIRT);
+                        data[x][y].push_back(1.0); // TerrainTypes::DIRT);
                     for (int i = z; i < this->getSizeZ(); i++)
-                        data[x][y].push_back(TerrainTypes::AIR);
+                        data[x][y].push_back(-1.0); // TerrainTypes::AIR);
                 }
             }
 //            data[1][1][0] = TerrainTypes::AIR;
@@ -129,7 +122,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
             }
         }
     }
-    for(int i = 0; i < this->chunks.size(); i++) {
+    for(size_t i = 0; i < this->chunks.size(); i++) {
         if (i > this->sizeY/chunkSize - 1) {
             this->chunks[i].neighboring_chunks[LEFT] = &this->chunks[i - int(this->sizeY / chunkSize)];
             this->chunks[i - int(this->sizeY/chunkSize)].neighboring_chunks[RIGHT] = &this->chunks[i];
@@ -147,7 +140,8 @@ void VoxelGrid::createMesh()
 {
     for(VoxelChunk& vc : this->chunks)
     {
-        vc.createMesh();
+        vc.needRemeshing = true;
+        vc.createMesh(this->displayWithMarchingCubes, true);
         /*
         MarchingCubes mc(vc);
         mc.createMesh();
@@ -160,37 +154,23 @@ void VoxelGrid::createMesh()
 
 void VoxelGrid::makeItFall(int groupId)
 {
-    for(int i = 0; i < 10; i++)
+    UnderwaterErosion erod(this, 5, 2.0, 500);
+    for(int i = 0; i < 10; i++) {
         for(VoxelChunk& vc : this->chunks) {
             vc.makeItFall(groupId);
-    //        vc.mesh.update();
         }
+    }
     remeshAll();
+//    erod.Apply();
 }
 
-void VoxelGrid::display(bool apply_marching_cubes, bool display_vertices, float isolevel) {
+void VoxelGrid::display() {
     for (VoxelChunk& vc : this->chunks)
     {
         Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc.x); // + (vc.lastChunkOnX ? 0 : 1 * ((float)this->sizeX/(float)vc.x)));
         Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc.y); // + (vc.lastChunkOnY ? 0 : 1 * ((float)this->sizeY/(float)vc.y)));
-        vc.display(apply_marching_cubes, display_vertices, isolevel);
+        vc.display();
     }
-    /*
-    glPushMatrix();
-//    if (apply_marching_cubes)
-//        glRotatef(180.0, 1.0, 0.0, 0.0);
-    glScalef(1/this->blockSize, 1/this->blockSize, 1/this->blockSize);
-    glTranslatef(-this->getSizeX()/2.0, -this->getSizeY()/2.0, -this->getSizeZ()/2.0);
-    glColor3f(1.0, 1.0, 1.0);
-    for (VoxelChunk& vc : this->chunks) {
-        glPushMatrix();
-        glTranslatef(vc.x, vc.y, 0.0);
-        glColor3f((vc.x + vc.sizeX) / (float)sizeX, (vc.y + vc.sizeY) / (float)sizeY, .5);
-        vc.display(apply_marching_cubes, display_vertices, isolevel);
-        glPopMatrix();
-    }
-    glPopMatrix();
-    */
 }
 
 int VoxelGrid::getHeight(int x, int y) {
@@ -213,22 +193,22 @@ Voxel* VoxelGrid::getVoxel(Vector3 pos) {
     return this->getVoxel(pos.x, pos.y, pos.z);
 }
 
-Voxel* VoxelGrid::getVoxel(int x, int y, int z) {
-    int xChunk = int(x / chunkSize);
-    int voxPosX = x % chunkSize;
-//    int voxPosX = (x+chunkSize) % chunkSize;
-    int yChunk = y / chunkSize;
-    int voxPosY = y % chunkSize;
-//    int voxPosY = (y+chunkSize) % chunkSize;
-
-    if (xChunk < 0 || yChunk < 0 || z < 0 || x < 0 || y < 0 || x >= getSizeX() || y >= getSizeY() || z >= this->getSizeZ())
+Voxel* VoxelGrid::getVoxel(float x, float y, float z) {
+    if(z < 0 || x < 0 || y < 0)
         return nullptr;
-//    std::cout << xChunk << " - " << yChunk << std::endl;
-    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk].voxels[voxPosX][voxPosY][z];
+    int _x = x, _y = y, _z = z;
+    int xChunk = int(_x / chunkSize);
+    int voxPosX = _x % chunkSize;
+    int yChunk = _y / chunkSize;
+    int voxPosY = _y % chunkSize;
+
+    if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
+        return nullptr;
+    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk].voxels[voxPosX][voxPosY][_z];
 }
 
 void VoxelGrid::remeshAll()
 {
     for (VoxelChunk& vc : this->chunks)
-        vc.createMesh();
+        vc.createMesh(this->displayWithMarchingCubes);
 }

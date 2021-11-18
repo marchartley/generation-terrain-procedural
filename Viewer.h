@@ -71,6 +71,8 @@ private:
   Shader shader;
   PositionalLight light;
   GLuint rocksVBO;
+
+  bool checkMouseOnVoxel();
 };
 
 

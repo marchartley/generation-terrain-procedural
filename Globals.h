@@ -60,56 +60,6 @@ public:
     static bool printShaderErrors(GLuint shader);
     static bool printProgramErrors(int program);
 
-    static void GLAPIENTRY
-    MessageCallback( GLenum source,
-                     GLenum type,
-                     GLuint id,
-                     GLenum severity,
-                     GLsizei length,
-                     const GLchar* message,
-                     const void* userParam )
-    {
-        if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM || severity == GL_DEBUG_SEVERITY_LOW) {
-            std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");
-            std::cout << "Error [severity=" << s_severity << "]: " << message << std::endl;
-        }
-    }
+    static void GLAPIENTRY MessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam );
 };
-/*
-GLuint CreateShaderProgram(std::string vertexShaderFile, std::string fragmentShaderFile)
-{
-    GLuint vShader = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fShader = glCreateShader(GL_FRAGMENT_SHADER);
-    if (vertexShaderFile != "")
-    {
-        std::string content = GlobalsGL::readShaderSource(vertexShaderFile);
-        const char* src = content.c_str();
-        glShaderSource(vShader, 1, &src, NULL);
-        glCompileShader(vShader);
-    }
-    if (fragmentShaderFile != "")
-    {
-        std::string content = GlobalsGL::readShaderSource(fragmentShaderFile);
-        const char* src = content.c_str();
-        glShaderSource(fShader, 1, &src, NULL);
-        glCompileShader(fShader);
-    }
-    GLuint vProgram = glCreateProgram();
-
-    if(vertexShaderFile != "")
-        glAttachShader(vProgram, vShader);
-    if(fragmentShaderFile != "")
-        glAttachShader(vProgram, fShader);
-    glLinkProgram(vProgram);
-
-    renderingProgram = vProgram;
-
-    GlobalsGL::checkOpenGLError();
-    GlobalsGL::printShaderErrors(vShader);
-    GlobalsGL::printShaderErrors(fShader);
-    GlobalsGL::printProgramErrors(vProgram);
-
-    return renderingProgram;
-}
-*/
 #endif // GLOBALS_H

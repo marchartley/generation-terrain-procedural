@@ -84,10 +84,11 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-//    vec4 ambiant = ((globalAmbiant * material.ambiant) + (light.ambiant * material.ambiant));
-//    vec4 diffuse = light.diffuse * material.diffuse * max(cosTheta, 0.0);
-    vec4 ambiant = ((globalAmbiant * varyingColor) + (light.ambiant * varyingColor));
-    vec4 diffuse = light.diffuse * varyingColor * max(cosTheta, 0.0);
+    vec4 ambiant = ((globalAmbiant * material.ambiant) + (light.ambiant * material.ambiant));
+    vec4 diffuse = light.diffuse * material.diffuse * max(cosTheta, 0.0);
+//    vec4 ambiantColor = vec4(varyingColor.xyz * .5, 1.0);
+//    vec4 ambiant = ((globalAmbiant * ambiantColor) + (light.ambiant * ambiantColor));
+//    vec4 diffuse = light.diffuse * (varyingColor*1.1) * max(cosTheta, 0.0);
     vec4 specular = light.specular * material.specular * pow(max(cosPhi, 0.0), material.shininness * 3.0);
     fragColor = vec4((ambiant + diffuse + specular).xyz, 1.0);
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);

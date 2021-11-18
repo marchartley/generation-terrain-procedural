@@ -22,71 +22,12 @@ QOpenGLContext* GlobalsGL::context() {
 }
 QOpenGLExtraFunctions* GlobalsGL::f() {
     return GlobalsGL::ef();
-//    if (GlobalsGL::_f == nullptr)
-//        GlobalsGL::_f = GlobalsGL::context()->functions();
-//    return GlobalsGL::_f;
 }
 QOpenGLExtraFunctions* GlobalsGL::ef() {
     if (GlobalsGL::_ef == nullptr)
         GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
     return GlobalsGL::_ef;
-}/*
-GLuint GlobalsGL::renderingProgram() {
-    return GlobalsGL::_renderingProgram;
 }
-
-std::string GlobalsGL::readShaderSource(std::string filename)
-{
-    std::string content = "";
-    QString qFilename = ":" + QString::fromStdString(filename);
-    QFile file(qFilename);
-    file.open(QIODevice::ReadOnly | QIODevice::Text);
-    std::string line;
-    QTextStream in(&file);
-    while (!in.atEnd()) {
-        line = in.readLine().toStdString();
-        content += line + " \n";
-    }
-    file.close();
-    return content;
-}
-
-GLuint GlobalsGL::createShaderProgram(std::string vertexShaderFile, std::string fragmentShaderFile)
-{
-    GLuint vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
-    GLuint fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
-    if (vertexShaderFile != "")
-    {
-        std::string content = GlobalsGL::readShaderSource(vertexShaderFile);
-        const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(vShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(vShader);
-    }
-    if (fragmentShaderFile != "")
-    {
-        std::string content = GlobalsGL::readShaderSource(fragmentShaderFile);
-        const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(fShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(fShader);
-    }
-    GLuint vProgram = GlobalsGL::f()->glCreateProgram();
-
-    if(vertexShaderFile != "")
-        GlobalsGL::f()->glAttachShader(vProgram, vShader);
-    if(fragmentShaderFile != "")
-        GlobalsGL::f()->glAttachShader(vProgram, fShader);
-    GlobalsGL::f()->glLinkProgram(vProgram);
-
-    GlobalsGL::_renderingProgram = vProgram;
-
-    GlobalsGL::checkOpenGLError();
-    GlobalsGL::printShaderErrors(vShader);
-    GlobalsGL::printShaderErrors(fShader);
-    GlobalsGL::printProgramErrors(vProgram);
-
-    return GlobalsGL::_renderingProgram;
-}
-*/
 void GlobalsGL::generateBuffers()
 {
     if(GlobalsGL::buffersGenerated)
@@ -150,4 +91,11 @@ bool GlobalsGL::printProgramErrors(int program)
         free(log);
     }
     return false;
+}
+void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam )
+{
+    if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM || severity == GL_DEBUG_SEVERITY_LOW) {
+        std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");
+        std::cout << "Error [severity=" << s_severity << "]: " << message << std::endl;
+    }
 }
