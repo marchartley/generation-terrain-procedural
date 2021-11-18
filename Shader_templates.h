@@ -1,6 +1,0 @@
-#ifndef SHADER_TEMPLATES_H
-#define SHADER_TEMPLATES_H
-
-
-
-#endif // SHADER_TEMPLATES_H

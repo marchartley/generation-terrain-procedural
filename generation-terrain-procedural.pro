@@ -55,7 +55,6 @@ HEADERS += \
     RockErosion.h \
     Shader.h \
     ShaderElement.h \
-    Shader_templates.h \
     UnderwaterErosion.h \
     Vector3.h \
     Vertex.h \

@@ -69,7 +69,7 @@ void Mesh::pushToBuffer()
 
     // Random stuff
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 3]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->randomStuff.size() * sizeof(float), &this->randomStuff.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorArrayFloat.size() * sizeof(float), &this->colorArrayFloat.front(), GL_STATIC_DRAW);
     this->bufferReady = true;
 }
 void Mesh::display()

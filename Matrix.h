@@ -21,8 +21,6 @@ public:
     Matrix transpose();
     Matrix product(Matrix m);
 
-//    std::vector<std::vector<float>> data;
-
 
 //    friend Matrix operator+(Matrix a, Matrix& b);
     friend Matrix operator+(Matrix a, Matrix b);

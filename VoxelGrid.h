@@ -19,7 +19,7 @@ public:
 
     void from2DGrid(Grid grid);
 
-    void display(bool apply_marching_cubes = false, bool display_vertices = false, float isolevel = 0.0);
+    void display();
 
     void createMesh();
 
@@ -36,7 +36,7 @@ public:
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
     Voxel* getVoxel(Vector3 pos);
-    Voxel* getVoxel(int x, int y, int z);
+    Voxel* getVoxel(float x, float y, float z);
 
     void remeshAll();
 
@@ -47,6 +47,7 @@ public:
     std::vector<VoxelChunk> chunks;
 
     int chunkSize = 40;
+    bool displayWithMarchingCubes = false;
 };
 
 #endif // VOXELGRID_H

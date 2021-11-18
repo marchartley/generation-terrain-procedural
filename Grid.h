@@ -28,15 +28,13 @@ public:
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
 //protected:
+    void computeNormals();
     Vector3** vertices;
     Vector3** normals;
     int sizeX, sizeY;
     float maxHeight;
     float tileSize;
     std::vector<float> vertexArrayFloat;
-
-    void computeNormals();
-
     Mesh mesh;
 };
 

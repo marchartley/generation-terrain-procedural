@@ -1,6 +1,9 @@
 #include "VoxelChunk.h"
 
 #include <set>
+#include <unordered_set>
+#include <chrono>
+
 Vector3 HSVtoRGB(float H, float S,float V){
     H *= 360;
     float s = S;
@@ -34,44 +37,24 @@ Vector3 HSVtoRGB(float H, float S,float V){
     return Vector3(R, G, B);
 }
 
-VoxelChunk::VoxelChunk(int _x, int _y, int _sizeX, int _sizeY, int _height, std::vector<std::vector<std::vector< TerrainTypes > > > _data, VoxelGrid* parent)
-    : data(_data), height(_height), x(_x), y(_y), sizeX(_sizeX), sizeY(_sizeY), parent(parent) {
-    iso_data.clear();
-    for (int x = 0; x < sizeX; x++) {
-        iso_data.push_back(std::vector<std::vector<float> >());
-        for (int y = 0; y < sizeY; y++) {
-            iso_data[x].push_back(std::vector<float>());
-            for(int z = 0; z < height; z++) {
-                iso_data[x][y].push_back(data[x][y][z] == TerrainTypes::AIR ? -1.0 : 1.0);
-            }
-        }
-    }
-}
 VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent)
-    : iso_data(iso_data), height(height), x(x), y(y), sizeX(sizeX), sizeY(sizeY), parent(parent) {
-    data.clear();
-    for (int x = 0; x < sizeX; x++) {
-        data.push_back(std::vector<std::vector<TerrainTypes> >());
-        for (int y = 0; y < sizeY; y++) {
-            data[x].push_back(std::vector<TerrainTypes>());
-            for(int z = 0; z < height; z++) {
-                data[x][y].push_back(iso_data[x][y][z] > 0.0 ? TerrainTypes::DIRT : TerrainTypes::AIR);
-            }
-        }
-    }
+    : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
+
 }
 
-VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<TerrainTypes>>>(), nullptr)
+VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
 {
 
 }
 
-void VoxelChunk::createMesh(bool updateMesh) {
+void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     if (!needRemeshing)
         return;
+
     Voxel::currentLabelIndex = 1;
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
+
     if (this->voxels.size() == 0) {
         this->voxels = std::vector<std::vector<std::vector<Voxel*>>>();
         for(int v_x = 0; v_x < sizeX; v_x++) {
@@ -79,99 +62,85 @@ void VoxelChunk::createMesh(bool updateMesh) {
             for(int v_y = 0; v_y < sizeY; v_y++) {
                 this->voxels[v_x].push_back(std::vector<Voxel*>());
                 for(int h = 0; h < height; h++) {
-                    Voxel* v = new Voxel(v_x, v_y, h, this->data[v_x][v_y][h], 1.0, iso_data[v_x][v_y][h]);
+                    Voxel* v = new Voxel(v_x, v_y, h, iso_data[v_x][v_y][h] > 0.0 ? DIRT : AIR, 1.0, iso_data[v_x][v_y][h]);
                     v->parent = this;
                     this->voxels[v_x][v_y].push_back(v);
                 }
             }
         }
-    } else {
-        for(int v_x = 0; v_x < sizeX; v_x++) {
-            for(int v_y = 0; v_y < sizeY; v_y++) {
-                for(int h = 0; h < height; h++) {
-                    Voxel* v = this->voxels[v_x][v_y][h];
-                    v->group = -1;
-                    v->resetNeighbors();
-                }
-            }
-        }
+        this->applyToVoxels([](Voxel* v) -> void {
+            v->group = -1;
+            v->resetNeighbors();
+        });
     }
+//    this->applyToVoxels([](Voxel* v) -> void {
+//        if(!(bool)*v)
+//            return;
+//        v->group = v->getZ() == 0 ? 0 : -1; // If it's touching the ground, it's directly in first groupe
+/*
+        v->addNeighbor(v->getX() > 0 ? v->parent->voxels[v->getX()-1][v->getY()][v->getZ()] : nullptr);
+        v->addNeighbor(v->getY() > 0 ? v->parent->voxels[v->getX()][v->getY()-1][v->getZ()] : nullptr);
+        v->addNeighbor(v->getZ() > 0 ? v->parent->voxels[v->getX()][v->getY()][v->getZ()-1] : nullptr);
 
-    for(int v_x = 0; v_x < sizeX; v_x++) {
-        for(int v_y = 0; v_y < sizeY; v_y++) {
-            for(int h = 0; h < height; h++) {
-                Voxel* v = this->voxels[v_x][v_y][h];
-//                v->resetNeighbors();
-                v->type = (v->getIsosurface() > 0.0 ? TerrainTypes::DIRT : TerrainTypes::AIR);
-                if(v->type == TerrainTypes::AIR)
-                    continue;
-                v->group = h == 0 ? 0 : -1; // If it's touching the ground, it's directly in first groupe
-                v->addNeighbor(v_x > 0 ? this->voxels[v_x-1][v_y][h] : nullptr);
-                v->addNeighbor(v_y > 0 ? this->voxels[v_x][v_y-1][h] : nullptr);
-                v->addNeighbor(h > 0 ? this->voxels[v_x][v_y][h-1] : nullptr);
-
-                if(v_x == 0 && this->neighboring_chunks.find(LEFT) != this->neighboring_chunks.end())
-                {
-                    VoxelChunk* n = this->neighboring_chunks[LEFT];
-                    v->addNeighbor(n->voxels[n->sizeX-1][v_y][h]);
-                }
-                if(v_y == 0 && this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end())
-                {
-                    VoxelChunk* n = this->neighboring_chunks[FRONT];
-                    v->addNeighbor(n->voxels[v_x][n->sizeY - 1][h]);
-                }
-
-                if (v->group == -1)
-                {
-                    v->group = Voxel::currentLabelIndex;
-                    Voxel::voxelGroups.push_back({Voxel::currentLabelIndex}); //std::vector<int>());
-                    Voxel::currentLabelIndex ++;
-                } else {
-                    std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it;
-                    for(it = v->neighbors.begin(); it != v->neighbors.end(); it++) {
-                        if(it->second && it->second->type!=TerrainTypes::AIR && it->second->group != -1)
-                            Voxel::voxelGroups[v->group].insert(it->second->group);
-                    }
-                }
-            }
+        if(v->getX() == 0 && v->parent->neighboring_chunks.find(LEFT) != v->parent->neighboring_chunks.end())
+        {
+            VoxelChunk* n = v->parent->neighboring_chunks[LEFT];
+            v->addNeighbor(n->voxels[n->sizeX-1][v->getY()][v->getZ()]);
         }
-    }
+        if(v->getY() == 0 && v->parent->neighboring_chunks.find(FRONT) != v->parent->neighboring_chunks.end())
+        {
+            VoxelChunk* n = v->parent->neighboring_chunks[FRONT];
+            v->addNeighbor(n->voxels[v->getX()][n->sizeY - 1][v->getZ()]);
+        }*/
+/*
+        if (v->group == -1)
+        {
+            v->group = Voxel::currentLabelIndex;
+            Voxel::voxelGroups.push_back({Voxel::currentLabelIndex}); //std::vector<int>());
+            Voxel::currentLabelIndex ++;
+        } else {
+            std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it;
+            for(it = v->neighbors.begin(); it != v->neighbors.end(); it++) {
+                if(it->second && (bool)*it->second && it->second->group != -1)
+                    Voxel::voxelGroups[v->group].insert(it->second->group);
+            }
+        }*/
+//    });
+    auto start = std::chrono::system_clock::now();
     this->computeGroups();
+    std::cout << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << std::endl;
 
     if (!updateMesh)
         return;
     needRemeshing = false;
 
-    std::vector<Vector3> voxelVertices;
-    for (int i = 0; i < voxels.size(); i++)
-        for (int j = 0; j < voxels[i].size(); j++)
-            for (int k = 0; k < voxels[i][j].size(); k++) {
-                std::vector<Vector3> vertice = voxels[i][j][k]->getMeshVertices();
-                voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
-            }
-    this->mesh.fromArray(voxelVertices);
-
-    std::vector<Vector3> colors;
-    for (int i = 0; i < voxels.size(); i++)
-        for (int j = 0; j < voxels[i].size(); j++)
-            for (int k = 0; k < voxels[i][j].size(); k++) {
-                Voxel* v = voxels[i][j][k];
-                if (voxels[i][j][k]->type != TerrainTypes::AIR) {
-                    int X = 6;
-                    for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = v->neighbors.begin(); it != v->neighbors.end(); it++)
-                        if (it->second)
-                            X--;
-//                    X -= (i == 0 ? 1:0) + (j == 0 ? 1:0) + (k == 0 ? 1:0) + (i == voxels.size()-1 ? 1:0) + (j == voxels.size()-1 ? 1:0) + (k == voxels.size()-1 ? 1:0);
-                    X *= 6;
-                    for (int x = 0; x < X; x++) {
-                        colors.push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
-                    }
+    if (applyMarchingCubes) {
+        this->mesh.fromArray(this->applyMarchingCubes());
+    }
+    else {
+        std::vector<Vector3> voxelVertices;
+        std::vector<Vector3> colors;
+        this->applyToVoxels([voxelVertices=&voxelVertices, colors=&colors](Voxel* v) -> void {
+            if ((bool)*v) {
+                // Add the vertices to the global mesh
+                std::vector<Vector3> vertice = v->getMeshVertices();
+                voxelVertices->insert(voxelVertices->end(), vertice.begin(), vertice.end());
+                // Add the colors to each vertex
+                int X = 6; // Start with 6 faces
+                for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = v->neighbors.begin(); it != v->neighbors.end(); it++)
+                    if (it->second && (bool)*it->second)
+                        X--;    // Remove a face per neighbor
+                X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
+                for (int x = 0; x < X; x++) {
+                    colors->push_back(Vector3((v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
+//                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
                 }
             }
-    this->mesh.randomStuff = Vector3::toArray(colors);
-//    std::cout << this->mesh.normalsArrayFloat.size() << " -- " << this->mesh.randomStuff.size() << std::endl;
+        });
 
-//    this->mesh.fromArray(this->applyMarchingCubes());
+        this->mesh.fromArray(voxelVertices);
+        this->mesh.colorArrayFloat = Vector3::toArray(colors);
+    }
     this->mesh.update();
 }
 
@@ -191,7 +160,8 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
         }
     }
 
-    bool addedLeft = false, addedRight = false, addedFront = false, addedBack = false;
+    bool addedLeft = false;
+    bool addedFront = false;
     if (this->neighboring_chunks.find(LEFT) != this->neighboring_chunks.end()) {
         VoxelChunk* n = this->neighboring_chunks[LEFT];
         map.insert(map.begin(), std::vector<std::vector<float>>());
@@ -217,19 +187,11 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
         addedFront = true;
     }
 
-    if (addedLeft) {
-        if (addedBack) {
-            VoxelChunk* n = this->neighboring_chunks[LEFT]->neighboring_chunks[BACK];
-            map[0].push_back(std::vector<float>());
-            for (int z = 0; z < this->height; z++)
-                map[0][map[0].size() - 1].push_back(n->voxels[n->voxels.size() - 1][0][z]->getIsosurface());
-        }
-        if (addedFront) {
-            VoxelChunk* n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
-            map[0].insert(map[0].begin(), std::vector<float>());
-            for (int z = 0; z < this->height; z++)
-                map[0][0].push_back(n->voxels[n->voxels.size() - 1][n->voxels[0].size() - 1][z]->getIsosurface());
-        }
+    if (addedLeft && addedFront) {
+        VoxelChunk* n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
+        map[0].insert(map[0].begin(), std::vector<float>());
+        for (int z = 0; z < this->height; z++)
+            map[0][0].push_back(n->voxels[n->voxels.size() - 1][n->voxels[0].size() - 1][z]->getIsosurface());
     }
 
     float isolevel = 0.0;
@@ -255,7 +217,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
                     vertices[3].isosurface = -1.0;
                     vertices[4].isosurface = -1.0;
                     vertices[7].isosurface = -1.0;
-                } else if (x == map.size() - (this->x > 0 ? 2 : 1) && this->lastChunkOnX)
+                } else if (x == map.size() - 2 && this->lastChunkOnX) //(this->x > 0 ? 2 : 1) && this->lastChunkOnX)
                 {
                     vertices[1].isosurface = -1.0;
                     vertices[2].isosurface = -1.0;
@@ -268,7 +230,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
                     vertices[1].isosurface = -1.0;
                     vertices[4].isosurface = -1.0;
                     vertices[5].isosurface = -1.0;
-                }if (y == map[x].size() - (this->y > 0 ? 2 : 1) && this->lastChunkOnY)
+                }if (y == map[x].size() - 2 && this->lastChunkOnY) // - (this->y > 0 ? 2 : 1) && this->lastChunkOnY)
                 {
                     vertices[2].isosurface = -1.0;
                     vertices[3].isosurface = -1.0;
@@ -325,56 +287,18 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
 
 void VoxelChunk::makeItFall(int groupId)
 {
-//    if (groupId == -1) {
-//        // Don't do it for groupe 1
-//        for (size_t i = 1; i < Voxel::voxelGroups.size(); i++)
-//            this->makeItFall(i);
-//        return;
-//    }
-    for (int i = 0; i < voxels.size(); i++) {
-        for (int j = 0; j < voxels[i].size(); j++) {
-            for (int k = 0; k < voxels[i][j].size()-1; k++) {
-                Voxel* v_1 = voxels[i][j][k+1];
-                Voxel* v = voxels[i][j][k];
-//                if (v->type == TerrainTypes::AIR)
-//                    continue;
-//                if(v->group != groupId)
-//                    continue;
-//                if(v->has_neighbors[BOTTOM] || k == 0)
-//                    continue;
-//                if (k == 0)
-//                    continue;
-                if (v->group == 0 || v_1->group == 0)
-                    continue;
-                if (k+1 == this->height-1)
-                    v_1->isosurface = -1.0;
-                v->isosurface = v_1->isosurface;
-                /*
-                float tmpIso = voxels[i][j][k]->isosurface, tmpManualIso = voxels[i][j][k+1]->manual_isosurface;
-                int tmpGroup = voxels[i][j][k]->group;
-                voxels[i][j][k]->isosurface = v->isosurface;
-                voxels[i][j][k]->manual_isosurface = v->manual_isosurface;
-                voxels[i][j][k]->group = v->group;
-                if (k == this->height) {
-                    v->isosurface = -1000;
-                    v->manual_isosurface = -1000;
-                    v->group = -1;
-                } else {
-                    v->isosurface = tmpIso;// * .1;
-                    v->manual_isosurface = tmpManualIso;
-                    v->group = tmpGroup;
-                }
-                v->resetNeighbors();*/
-            }
+    this->applyToVoxels([](Voxel* v) -> void {
+        if (v->neighbors[TOP] == nullptr) {
+            v->isosurface = -1.0; // Just destroy the top voxels
+            v->manual_isosurface = 0.0;
+            return;
         }
-    }
-//    for (int i = 0; i < voxels.size(); i++) {
-//        for (int j = 0; j < voxels[i].size(); j++) {
-//            for (int k = 0; k < voxels[i][j].size(); k++) {
-//                voxels[i][j][k]->resetNeighbors();
-//            }
-//        }
-//    }
+        Voxel* v_1 = v->neighbors[TOP];
+        if (v->isOnGround || v_1->isOnGround)
+            return;
+        v->isosurface = v_1->isosurface;
+        v->manual_isosurface = v_1->manual_isosurface;
+    });
     this->needRemeshing = true;
     this->computeGroups();
 }
@@ -384,45 +308,57 @@ void VoxelChunk::computeGroups()
     Voxel::currentLabelIndex = 1;
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
-    for(int v_x = 0; v_x < sizeX; v_x++) {
-        for(int v_y = 0; v_y < sizeY; v_y++) {
-            for(int h = 0; h < height; h++) {
-                Voxel* v = this->voxels[v_x][v_y][h];
-                v->group = -1;
-                v->resetNeighbors();
-                if (v->type == AIR)
-                    continue;
-                v->group = h == 0 ? 0 : -1; // If it's touching the ground, it's directly in first groupe
-                v->addNeighbor(v_x > 0 ? this->voxels[v_x-1][v_y][h] : nullptr);
-                v->addNeighbor(v_y > 0 ? this->voxels[v_x][v_y-1][h] : nullptr);
-                v->addNeighbor(h > 0 ? this->voxels[v_x][v_y][h-1] : nullptr);
 
-                if(v_x == 0 && this->neighboring_chunks.find(LEFT) != this->neighboring_chunks.end())
-                {
-                    VoxelChunk* n = this->neighboring_chunks[LEFT];
-                    v->addNeighbor(n->voxels[n->sizeX-1][v_y][h]);
-                }
-                if(v_y == 0 && this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end())
-                {
-                    VoxelChunk* n = this->neighboring_chunks[FRONT];
-                    v->addNeighbor(n->voxels[v_x][n->sizeY - 1][h]);
-                }
-                if (v->group == -1)
-                {
-                    v->group = Voxel::currentLabelIndex;
-                    Voxel::voxelGroups.push_back({Voxel::currentLabelIndex}); //std::vector<int>());
-                    Voxel::currentLabelIndex ++;
-                } else {
-                    std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it;
-                    for(it = v->neighbors.begin(); it != v->neighbors.end(); it++) {
-                        if(it->second && it->second->type!=TerrainTypes::AIR && it->second->group != -1)
-                            Voxel::voxelGroups[v->group].insert(it->second->group);
-                    }
-                }
+    this->applyToVoxels([](Voxel* v) -> void {
+        v->group = -1;
+        v->isOnGround = false;
+    });
+
+    this->applyToVoxels([](Voxel* v) -> void {
+        if(!(bool)*v)
+            return;
+        v->group = v->getZ() == 0 ? 0 : -1; // If it's touching the ground, it's directly in first groupe
+        /*
+        v->addNeighbor(v->getX() > 0 ? v->parent->voxels[v->getX()-1][v->getY()][v->getZ()] : nullptr);
+        v->addNeighbor(v->getY() > 0 ? v->parent->voxels[v->getX()][v->getY()-1][v->getZ()] : nullptr);
+        v->addNeighbor(v->getZ() > 0 ? v->parent->voxels[v->getX()][v->getY()][v->getZ()-1] : nullptr);
+
+        if(v->getX() == 0 && v->parent->neighboring_chunks.find(LEFT) != v->parent->neighboring_chunks.end())
+        {
+            VoxelChunk* n = v->parent->neighboring_chunks[LEFT];
+            v->addNeighbor(n->voxels[n->sizeX-1][v->getY()][v->getZ()]);
+        }
+        if(v->getY() == 0 && v->parent->neighboring_chunks.find(FRONT) != v->parent->neighboring_chunks.end())
+        {
+            VoxelChunk* n = v->parent->neighboring_chunks[FRONT];
+            v->addNeighbor(n->voxels[v->getX()][n->sizeY - 1][v->getZ()]);
+        }*//*
+        if (v->group == -1)
+        {
+            v->group = Voxel::currentLabelIndex;
+            Voxel::voxelGroups.push_back({Voxel::currentLabelIndex}); //std::vector<int>());
+            Voxel::currentLabelIndex ++;
+        } else {
+            std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it;
+            for(it = v->neighbors.begin(); it != v->neighbors.end(); it++) {
+                if(it->second && it->second->getType()!=TerrainTypes::AIR && it->second->group != -1)
+                    Voxel::voxelGroups[v->group].insert(it->second->group);
+            }
+        }*/
+        if (v->getZ() == 0) {
+            std::unordered_set<Voxel*> groundNeighbors;
+            groundNeighbors.insert(v);
+            while (groundNeighbors.size() != 0) {
+                Voxel* n = (*groundNeighbors.begin());
+                n->isOnGround = true;
+                groundNeighbors.erase(groundNeighbors.begin());
+                for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = n->neighbors.begin(); it != n->neighbors.end(); it++)
+                    if(it->second && (bool)*it->second && !it->second->isOnGround)
+                        groundNeighbors.insert(it->second);
             }
         }
-    }
-
+    });
+/*
     std::vector<std::set<int>> tempVoxelGroup;
     for(int i = 0; i < Voxel::voxelGroups.size(); i++)
     {
@@ -458,11 +394,11 @@ void VoxelChunk::computeGroups()
                 }
             }
         }
-    }
+    }*/
 }
 
 
-void VoxelChunk::display(bool apply_marching_cubes, bool display_vertices, float isolevel)
+void VoxelChunk::display()
 {
     this->mesh.display();
 }

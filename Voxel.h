@@ -1,20 +1,22 @@
 #ifndef VOXEL_H
 #define VOXEL_H
 
+#include <map>
+#include <set>
+
 class Voxel;
 
 enum TerrainTypes {
     AIR = 0,
     DIRT = 1,
-    WATER = 2
+    WATER = 2,
+    SAND = 3
 };
 
 enum VOXEL_NEIGHBOR {
     TOP = 0, BOTTOM = 1, LEFT = 2, RIGHT = 3, FRONT = 4, BACK = 5
 };
 
-#include <map>
-#include <set>
 #include "Grid.h"
 #include "Vertex.h"
 
@@ -35,6 +37,7 @@ public:
     float globalX();
     float globalY();
     float globalZ();
+    Vector3 globalPos() { return Vector3(globalX(), globalY(), globalZ()); }
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
@@ -45,15 +48,14 @@ public:
 
     std::vector<Vector3> getMeshVertices();
 
-    std::map<VOXEL_NEIGHBOR, bool> has_neighbors;
-
-    operator bool() { return this->type != TerrainTypes::AIR; }
+    operator bool() { return isMatter[this->getType()]; }
+    TerrainTypes getType() { return (this->getIsosurface() > 0.0 ? DIRT : AIR); }
 
     friend std::ostream& operator<<(std::ostream& io, const Voxel& v);
     friend std::ostream& operator<<(std::ostream& io, Voxel* v);
 
-    Vertex vertices[8];
-    float* isosurfaces[8];
+    int shareGroup(Voxel* v);
+
 //protected:
     int x, y, z;
     TerrainTypes type;
@@ -61,7 +63,10 @@ public:
     std::map<VOXEL_NEIGHBOR, Voxel*> neighbors;
     float isosurface = 0.0;
     float manual_isosurface = 0.0;
+    bool isOnGround = false;
     VoxelChunk* parent;
+
+    static std::map<TerrainTypes, bool> isMatter;
 
     static std::vector<std::set<int>> voxelGroups;
     static int currentLabelIndex;
