@@ -34,6 +34,8 @@ public:
   void setMapMode(MapMode newMode) { this->mapMode = newMode; }
   void setSmoothingAlgorithm(SmoothingAlgorithm newAlgo) { this->algorithm = newAlgo; }
 
+  void saveScreenshot();
+
 protected:
   virtual void init();
   virtual void draw();
@@ -74,6 +76,10 @@ private:
   Shader shader;
   PositionalLight light;
   GLuint rocksVBO;
+
+  std::string screenshotFolder;
+  bool isTakingScreenshots = false;
+  int screenshotIndex = 0;
 
   bool checkMouseOnVoxel();
 };

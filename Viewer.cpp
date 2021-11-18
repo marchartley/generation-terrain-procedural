@@ -6,6 +6,8 @@
 #include "UnderwaterErosion.h"
 #include "Matrix.h"
 
+#include <sys/stat.h>
+
 
 using namespace qglviewer;
 using namespace std;
@@ -36,16 +38,33 @@ void Viewer::init() {
 
     setMouseTracking(true);
 
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+
 #ifdef _WIN32
     const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
     const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
+    this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
 #elif linux
     const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
     const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
+    this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
 #endif
     this->shader = Shader(vShader, fShader);
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
+
+    struct stat info;
+    if(stat(this->screenshotFolder.c_str(), &info) != 0) {
+        int file_status = mkdir(this->screenshotFolder.c_str());
+        if (file_status != 0) {
+            std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
+            exit(-1);
+        }
+    }
+    this->screenshotFolder += std::string(s_time) + "/";
 
     this->rocksVBO = GlobalsGL::newBufferId();
 
@@ -126,6 +145,9 @@ void Viewer::draw() {
         }
         glPopMatrix();
     }
+
+    if (this->isTakingScreenshots)
+        this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
 }
 
 void Viewer::mousePressEvent(QMouseEvent *e)
@@ -216,6 +238,19 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             this->startAnimation();
 //        this->voxelGrid->makeItFall();
         std::cout << "It's falling!" << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_1) {
+        this->isTakingScreenshots = !this->isTakingScreenshots;
+
+        struct stat info;
+        if(stat(this->screenshotFolder.c_str(), &info) != 0) {
+            int file_status = mkdir(this->screenshotFolder.c_str());
+            if (file_status != 0) {
+                std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
+                exit(-1);
+            }
+        }
+        std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling") << std::endl;
         update();
     } else {
         QGLViewer::keyPressEvent(e);
