@@ -40,6 +40,17 @@ Vector3 HSVtoRGB(float H, float S,float V){
 VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
+    this->voxels = std::vector<std::vector<std::vector<Voxel*>>>();
+    for(int v_x = 0; v_x < sizeX; v_x++) {
+        this->voxels.push_back(std::vector<std::vector<Voxel*>>());
+        for(int v_y = 0; v_y < sizeY; v_y++) {
+            this->voxels[v_x].push_back(std::vector<Voxel*>());
+            for(int h = 0; h < height; h++) {
+                Voxel* v = new Voxel(v_x, v_y, h, iso_data[v_x][v_y][h] > 0.0 ? DIRT : AIR, 1.0, iso_data[v_x][v_y][h], this);
+                this->voxels[v_x][v_y].push_back(v);
+            }
+        }
+    }
 }
 
 VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
@@ -54,25 +65,10 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     Voxel::currentLabelIndex = 1;
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
-
-    if (this->voxels.size() == 0) {
-        this->voxels = std::vector<std::vector<std::vector<Voxel*>>>();
-        for(int v_x = 0; v_x < sizeX; v_x++) {
-            this->voxels.push_back(std::vector<std::vector<Voxel*>>());
-            for(int v_y = 0; v_y < sizeY; v_y++) {
-                this->voxels[v_x].push_back(std::vector<Voxel*>());
-                for(int h = 0; h < height; h++) {
-                    Voxel* v = new Voxel(v_x, v_y, h, iso_data[v_x][v_y][h] > 0.0 ? DIRT : AIR, 1.0, iso_data[v_x][v_y][h]);
-                    v->parent = this;
-                    this->voxels[v_x][v_y].push_back(v);
-                }
-            }
-        }
-        this->applyToVoxels([](Voxel* v) -> void {
+        /*this->applyToVoxels([](Voxel* v) -> void {
             v->group = -1;
             v->resetNeighbors();
-        });
-    }
+        });*/
 //    this->applyToVoxels([](Voxel* v) -> void {
 //        if(!(bool)*v)
 //            return;
@@ -106,9 +102,7 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
             }
         }*/
 //    });
-    auto start = std::chrono::system_clock::now();
     this->computeGroups();
-    std::cout << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << std::endl;
 
     if (!updateMesh)
         return;

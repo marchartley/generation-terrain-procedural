@@ -4,7 +4,7 @@
 
 #include "Shader.h"
 
-VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
+VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize) {
     chunkSize = (nx > chunkSize ? chunkSize : nx);
 
@@ -50,18 +50,18 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = ((noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h) - min) / (max - min)) * 2.0 - 1.0;
-                        noise_val -= .3;
+                        noise_val += noise_shifting;
                         noise_val *= 2.0;
                         iso_data[x][y].push_back(noise_val);
                     }
                 }
             }
-            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this));
+            this->chunks.push_back(new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this));
             if (xChunk == numberOfChunksX - 1) {
-                this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
+                this->chunks[this->chunks.size() - 1]->lastChunkOnX = true;
             }
             if (yChunk == numberOfChunksY - 1) {
-                this->chunks[this->chunks.size() - 1].lastChunkOnY = true;
+                this->chunks[this->chunks.size() - 1]->lastChunkOnY = true;
             }
         }
     }
@@ -70,18 +70,20 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize)
         for (int yChunk = 0; yChunk < this->sizeY / chunkSize; yChunk++) {
             int current = xChunk * numberOfChunksY + yChunk;
             if (xChunk > 0) {
-                this->chunks[current].neighboring_chunks[LEFT] = &this->chunks[current - numberOfChunksY];
-                this->chunks[current - numberOfChunksY].neighboring_chunks[RIGHT] = &this->chunks[current];
+                this->chunks[current]->neighboring_chunks[LEFT] = this->chunks[current - numberOfChunksY];
+                this->chunks[current - numberOfChunksY]->neighboring_chunks[RIGHT] = this->chunks[current];
             }
             if (yChunk > 0) {
-                this->chunks[current].neighboring_chunks[FRONT] = &this->chunks[current - 1];
-                this->chunks[current - 1].neighboring_chunks[BACK] = &this->chunks[current];
+                this->chunks[current]->neighboring_chunks[FRONT] = this->chunks[current - 1];
+                this->chunks[current - 1]->neighboring_chunks[BACK] = this->chunks[current];
             }
         }
     }
 
-    for (VoxelChunk& c: this->chunks)
-        c.createMesh();
+    for (VoxelChunk* c: this->chunks) {
+        c->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
+        c->createMesh();
+    }
 
 }
 VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), grid.getTileSize()) {
@@ -113,23 +115,23 @@ void VoxelGrid::from2DGrid(Grid grid) {
                 }
             }
 //            data[1][1][0] = TerrainTypes::AIR;
-            this->chunks.push_back(VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data, this));
+            this->chunks.push_back(new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data, this));
             if (xChunk == int(sizeX / chunkSize) - 1) {
-                this->chunks[this->chunks.size() - 1].lastChunkOnX = true;
+                this->chunks[this->chunks.size() - 1]->lastChunkOnX = true;
             }
             if (yChunk == int(sizeY / chunkSize) - 1) {
-                this->chunks[this->chunks.size() - 1].lastChunkOnY = true;
+                this->chunks[this->chunks.size() - 1]->lastChunkOnY = true;
             }
         }
     }
     for(size_t i = 0; i < this->chunks.size(); i++) {
         if (i > this->sizeY/chunkSize - 1) {
-            this->chunks[i].neighboring_chunks[LEFT] = &this->chunks[i - int(this->sizeY / chunkSize)];
-            this->chunks[i - int(this->sizeY/chunkSize)].neighboring_chunks[RIGHT] = &this->chunks[i];
+            this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
+            this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
         }
         if (i % int(this->sizeY/chunkSize) >= 1) {
-            this->chunks[i].neighboring_chunks[FRONT] = &this->chunks[i - 1];
-            this->chunks[i - 1].neighboring_chunks[BACK] = &this->chunks[i];
+            this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
+            this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
     }
 
@@ -138,10 +140,10 @@ void VoxelGrid::from2DGrid(Grid grid) {
 
 void VoxelGrid::createMesh()
 {
-    for(VoxelChunk& vc : this->chunks)
+    for(VoxelChunk* vc : this->chunks)
     {
-        vc.needRemeshing = true;
-        vc.createMesh(this->displayWithMarchingCubes, true);
+        vc->needRemeshing = true;
+        vc->createMesh(this->displayWithMarchingCubes, true);
         /*
         MarchingCubes mc(vc);
         mc.createMesh();
@@ -154,10 +156,10 @@ void VoxelGrid::createMesh()
 
 void VoxelGrid::makeItFall(int groupId)
 {
-    UnderwaterErosion erod(this, 5, 2.0, 500);
-    for(int i = 0; i < 10; i++) {
-        for(VoxelChunk& vc : this->chunks) {
-            vc.makeItFall(groupId);
+    UnderwaterErosion erod(this, 5, 1.0, 10);
+    for(int i = 0; i < 1; i++) {
+        for(VoxelChunk* vc : this->chunks) {
+            vc->makeItFall(groupId);
         }
     }
     remeshAll();
@@ -165,11 +167,11 @@ void VoxelGrid::makeItFall(int groupId)
 }
 
 void VoxelGrid::display() {
-    for (VoxelChunk& vc : this->chunks)
+    for (VoxelChunk* vc : this->chunks)
     {
-        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc.x); // + (vc.lastChunkOnX ? 0 : 1 * ((float)this->sizeX/(float)vc.x)));
-        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc.y); // + (vc.lastChunkOnY ? 0 : 1 * ((float)this->sizeY/(float)vc.y)));
-        vc.display();
+        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc->x); // + (vc.lastChunkOnX ? 0 : 1 * ((float)this->sizeX/(float)vc.x)));
+        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc->y); // + (vc.lastChunkOnY ? 0 : 1 * ((float)this->sizeY/(float)vc.y)));
+        vc->display();
     }
 }
 
@@ -204,11 +206,13 @@ Voxel* VoxelGrid::getVoxel(float x, float y, float z) {
 
     if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
         return nullptr;
-    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk].voxels[voxPosX][voxPosY][_z];
+    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->voxels[voxPosX][voxPosY][_z];
 }
 
 void VoxelGrid::remeshAll()
 {
-    for (VoxelChunk& vc : this->chunks)
-        vc.createMesh(this->displayWithMarchingCubes);
+    for (VoxelChunk* vc : this->chunks)
+        vc->createMesh(this->displayWithMarchingCubes);
+    /*for (VoxelChunk& vc : this->chunks)
+        vc.applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });*/
 }

@@ -61,6 +61,8 @@ void Viewer::init() {
                 new float[4]{1., 1., 1., 1.},
                 Vector3(100.0, 100.0, 100.0)
                 );
+
+    this->setAnimationPeriod(0);
 }
 
 void Viewer::draw() {
@@ -208,7 +210,11 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
         update();
     } else if(e->key() == Qt::Key_0) {
-        this->voxelGrid->makeItFall();
+        if (this->animationIsStarted())
+            this->stopAnimation();
+        else
+            this->startAnimation();
+//        this->voxelGrid->makeItFall();
         std::cout << "It's falling!" << std::endl;
         update();
     } else {
@@ -301,6 +307,11 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     this->mousePos = e->pos();
 
     QGLViewer::mouseMoveEvent(e);
+}
+
+void Viewer::animate()
+{
+    this->voxelGrid->makeItFall();
 }
 
 bool Viewer::checkMouseOnVoxel()
