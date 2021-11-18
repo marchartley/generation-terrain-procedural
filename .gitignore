@@ -36,7 +36,6 @@ build-Debug/*
 *.app
 *.pro
 *.user
-*.pro
 *.user
 *.2b2237b
 build/.qglviewer.xml
