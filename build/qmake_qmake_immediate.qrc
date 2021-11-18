@@ -1,8 +1,0 @@
-<!DOCTYPE RCC><RCC version="1.0">
-<qresource prefix="/">
-<file alias="fragment_shader_gouraud.glsl">/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_gouraud.glsl</file>
-<file alias="vertex_shader_gouraud.glsl">/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_gouraud.glsl</file>
-<file alias="fragment_shader_blinn_phong.glsl">/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_blinn_phong.glsl</file>
-<file alias="vertex_shader_blinn_phong.glsl">/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_blinn_phong.glsl</file>
-</qresource>
-</RCC>
