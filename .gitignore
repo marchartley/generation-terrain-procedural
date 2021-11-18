@@ -40,3 +40,8 @@ build-Debug/*
 *.user
 *.2b2237b
 build/.qglviewer.xml
+build/.qglviewer.xml
+build/generation-terrain-procedural
+build/Makefile
+build/qrc_qmake_qmake_immediate.cpp
+generation-terrain-procedural.pro.user
