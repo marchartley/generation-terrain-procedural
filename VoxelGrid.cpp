@@ -5,7 +5,7 @@
 #include "Shader.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
-    : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize) {
+    : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize), noise_shifting(noise_shifting) {
     chunkSize = (nx > chunkSize ? chunkSize : nx);
 
 
@@ -156,14 +156,14 @@ void VoxelGrid::createMesh()
 
 void VoxelGrid::makeItFall(int groupId)
 {
-    UnderwaterErosion erod(this, 5, 1.0, 10);
+    UnderwaterErosion erod(this, 10, 0.01, 100);
     for(int i = 0; i < 1; i++) {
         for(VoxelChunk* vc : this->chunks) {
             vc->makeItFall(groupId);
         }
     }
     remeshAll();
-//    erod.Apply();
+    erod.Apply();
 }
 
 void VoxelGrid::display() {
@@ -215,4 +215,24 @@ void VoxelGrid::remeshAll()
         vc->createMesh(this->displayWithMarchingCubes);
     /*for (VoxelChunk& vc : this->chunks)
         vc.applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });*/
+}
+
+#include <sstream>
+std::string VoxelGrid::toString()
+{
+    std::ostringstream ret;
+    ret << "{";
+    ret << "\n\t\"sizeX\": \"" << sizeX << "\",\n\t\"sizeY\": \"" << sizeY << "\",\n\t\"sizeZ\": \"" << sizeZ;
+    ret << "\",\n\t\"blockSize\": \"" << blockSize << "\",\n\t\"noise_shifting\": \"" << noise_shifting;
+    ret << "\",\n\t\"chunkSize\": \"" << chunkSize << "\",\n\t\"numberOfVoxels\": \"" << sizeX*sizeY*sizeZ;
+    ret << "\",\n\t\"numberOfChunks\": \"" << chunks.size() << "\"\n}";
+    return ret.str();
+}
+std::string VoxelGrid::toShortString()
+{
+    std::ostringstream ret;
+    ret << "X" << sizeX << "Y" << sizeY << "Z" << sizeZ;
+    ret << "BS" << blockSize << "NS" << noise_shifting;
+    ret << "CS" << chunkSize;
+    return ret.str();
 }
