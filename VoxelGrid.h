@@ -40,11 +40,15 @@ public:
 
     void remeshAll();
 
+    std::string toString();
+    std::string toShortString();
+
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
     float blockSize;
     std::vector<VoxelChunk*> chunks;
+    float noise_shifting;
 
     int chunkSize = 40;
     bool displayWithMarchingCubes = false;

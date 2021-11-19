@@ -14,10 +14,10 @@ UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float max
 
 }
 
-std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
+std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(int avoidMatter)
 {
     std::vector<std::vector<Vector3>> debugLines;
-    float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)) / 2.0, 2);
+    float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)) / 1.5, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     int max_iter = 1000;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
@@ -36,9 +36,17 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
         while (!touched && steps > 0) {
             dir += Vector3::random() * 0.1;
             dir.normalize();
+            // Try to change a little bit the direction if there is matter ahead
+            for(int dist = 1; dist < avoidMatter; dist++) {
+                if (this->grid->getVoxel(pos + dir * dist) != nullptr) {
+                    dir += Vector3::random() * 0.1;
+                    dir.normalize();
+                    break;
+                }
+            }
             steps --;
             pos += dir;
-            coords.push_back(pos);
+            coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
             if (v != nullptr && *v) {
                 rock.Apply(v, false, false);
@@ -56,7 +64,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply()
     grid->remeshAll();
     return debugLines;
 }
-std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint)
+std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint, int avoidMatter)
 {
     std::vector<std::vector<Vector3>> debugLines;
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)) / 2.0, 2);
@@ -75,6 +83,14 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint
         while (!touched && steps > 0) {
             dir += Vector3::random() * 0.1;
             dir.normalize();
+            // Try to change a little bit the direction if there is matter ahead
+            for(int dist = 1; dist < avoidMatter; dist++) {
+                if (this->grid->getVoxel(pos + dir * dist) != nullptr) {
+                    dir += Vector3::random() * 0.1;
+                    dir.normalize();
+                    break;
+                }
+            }
             steps --;
             pos += dir;
             coords.push_back(pos);

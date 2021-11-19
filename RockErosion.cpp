@@ -28,10 +28,11 @@ RockErosion::RockErosion(int size, float maxStrength)
 }
 
 void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshing) {
+    std::cout << "Before : " << main_v->getIsosurface() << " " << main_v->globalPos() << std::endl;
     for (int x = -size/2; x < size/2; x++) {
         for (int y = -size/2; y < size/2; y++) {
             for (int z = -size/2; z < size/2; z++){
-                int v_x = main_v->x + x, v_y = main_v->y + y, v_z = main_v->z + z;
+                /*int v_x = main_v->x + x, v_y = main_v->y + y, v_z = main_v->z + z;
                 VoxelChunk* current_parent = main_v->parent;
                 if ((main_v->x + x < 0 && current_parent->x == 0) || (main_v->x + x >= current_parent->sizeX && current_parent->lastChunkOnX))
                     continue;
@@ -56,20 +57,26 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
                     current_parent = current_parent->neighboring_chunks[BACK];
                     v_y -= current_parent->sizeY;
                 }
-                Voxel* v = current_parent->voxels[v_x][v_y][v_z];
-                v->manual_isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
-                v->manual_isosurface = std::max(v->manual_isosurface, -2.0f);
-                v->manual_isosurface = std::min(v->manual_isosurface, 2.0f);
-                v->resetNeighbors();
+                Voxel* v = current_parent->voxels[v_x][v_y][v_z];*/
+                Voxel* v = main_v->parent->parent->getVoxel(main_v->globalPos() + Vector3(x, y, z) + Vector3(.5, .5, .5));
+                if(v != nullptr) {
+                    v->manual_isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
+                    v->manual_isosurface = std::max(v->manual_isosurface, -2.0f);
+                    v->manual_isosurface = std::min(v->manual_isosurface, 2.0f);
+                    v->isosurface = 0.0;
+//                    v->resetNeighbors();
+                    v->parent->needRemeshing = true;
+                }
                 /*if (v->getIsosurface() < 0.0)
                     v->type = TerrainTypes::AIR;
                 else
                     v->type = TerrainTypes::DIRT;*/
 //                v->parent->data[v->x][v->y][v->z] = v->type;
-                v->parent->needRemeshing = true;
             }
         }
     }
+
+    std::cout << "After : " << main_v->getIsosurface() << " " << main_v->globalPos() << "(" << this->maxStrength << ")" << std::endl;
     if (applyRemeshing)
         main_v->parent->parent->remeshAll();
 }

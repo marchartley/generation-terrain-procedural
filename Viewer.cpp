@@ -12,6 +12,49 @@
 using namespace qglviewer;
 using namespace std;
 
+std::vector<std::string> split(std::string str, char c = ' ')
+{
+    std::vector<std::string> result;
+    bool insertHeadingSlash = str.size() > 0 && str[0] == '/';
+    int pos = str.npos;
+    do {
+        pos = str.rfind(c, pos);
+        if (pos != str.npos) {
+            std::string sub = str.substr(pos + 1);
+            if(sub != "")
+                result.insert(result.begin(), sub);
+            str = str.substr(0, pos);
+        }
+    } while(pos != str.npos);
+    if(insertHeadingSlash)
+        result.insert(result.begin(), "/");// Case of the heading "/" for Linux
+    return result;
+}
+
+bool makedir(std::string path)
+{
+    std::vector<std::string> splitted = split(path, '/');
+    int result = 0;
+    std::string currentPath = "";
+    for (size_t i = 0; i < splitted.size(); i++) {
+        currentPath += splitted[i] + '/';
+        struct stat info;
+        if(stat(currentPath.c_str(), &info) != 0) { // Folder doesn't exist
+#ifdef linux
+            mode_t prevMode = umask(0011);
+            result = mkdir(currentPath.c_str(), 0666); // Create with full permission for linux
+            chmod(currentPath.c_str(), 0666);
+            umask(prevMode);
+#elif _WIN32
+            result = mkdir(currentPath.c_str()); // Create for windows
+#endif
+            if (result != 0)
+                return false;
+        }
+    }
+    return true;
+}
+
 Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode)
     : QGLViewer(), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid) {
 
@@ -38,33 +81,16 @@ void Viewer::init() {
 
     setMouseTracking(true);
 
-    time_t now = std::time(0);
-    tm *gmtm = std::gmtime(&now);
-    char s_time[80];
-    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
-
 #ifdef _WIN32
     const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
     const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
-    this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
 #elif linux
     const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
     const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
-    this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
 #endif
     this->shader = Shader(vShader, fShader);
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
-
-    struct stat info;
-    if(stat(this->screenshotFolder.c_str(), &info) != 0) {
-        int file_status = mkdir(this->screenshotFolder.c_str());
-        if (file_status != 0) {
-            std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
-            exit(-1);
-        }
-    }
-    this->screenshotFolder += std::string(s_time) + "/";
 
     this->rocksVBO = GlobalsGL::newBufferId();
 
@@ -78,10 +104,27 @@ void Viewer::init() {
                 new float[4]{.8, .8, .8, 1.},
                 new float[4]{1., 1., 1., 1.},
                 new float[4]{1., 1., 1., 1.},
-                Vector3(100.0, 100.0, 100.0)
+                Vector3(100.0, 100.0, -100.0)
                 );
 
     this->setAnimationPeriod(0);
+
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+
+#ifdef _WIN32
+    this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
+#elif linux
+    this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
+#endif
+    if(!makedir(this->screenshotFolder)) {
+        std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
+        exit(-1);
+    }
+    this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
+    std::cout << "Screenshots will be saved in folder " << this->screenshotFolder << std::endl;
 }
 
 void Viewer::draw() {
@@ -134,7 +177,7 @@ void Viewer::draw() {
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
         this->shader.setFloat("offsetX", 0.f);
         this->shader.setFloat("offsetY", 0.f);
-        glTranslatef(this->voxelGrid->getSizeX()/2.0, this->voxelGrid->getSizeY()/2.0, 0); //, -this->voxelGrid->getSizeZ()/2.0);
+//        glTranslatef(this->voxelGrid->getSizeX()/2.0, this->voxelGrid->getSizeY()/2.0, 0); //, -this->voxelGrid->getSizeZ()/2.0);
         for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
             glBegin(GL_LINE_STRIP);
             glColor4f(0.0, 0.0, 0.0, .5);
@@ -146,8 +189,20 @@ void Viewer::draw() {
         glPopMatrix();
     }
 
-    if (this->isTakingScreenshots)
+    if (this->isTakingScreenshots) {
+
+        mode_t prevMode = umask(0011);
+        if(this->screenshotIndex == 0)
+        {
+            std::ofstream outfile;
+            outfile.open(this->screenshotFolder + "grid_data.json", std::ios_base::trunc);
+            outfile << voxelGrid->toString();
+            outfile.close();
+        }
         this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
+        chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
+        umask(prevMode);
+    }
 }
 
 void Viewer::mousePressEvent(QMouseEvent *e)
@@ -157,7 +212,7 @@ void Viewer::mousePressEvent(QMouseEvent *e)
     if (checkMouseOnVoxel())
     {
         Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-        std::cout << main_v->group << std::endl;
+        std::cout << main_v->getIsosurface() << " " << main_v->globalPos() << std::endl;
     }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
@@ -208,7 +263,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 0.05, 200);
+        UnderwaterErosion erod(this->voxelGrid, 10, 20.0, 10);
         if (e->modifiers() == Qt::ShiftModifier)
         {
             Vector3 pos(camera()->position().x, camera()->position().y, camera()->position().z);
@@ -241,14 +296,9 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         update();
     } else if(e->key() == Qt::Key_1) {
         this->isTakingScreenshots = !this->isTakingScreenshots;
-
-        struct stat info;
-        if(stat(this->screenshotFolder.c_str(), &info) != 0) {
-            int file_status = mkdir(this->screenshotFolder.c_str());
-            if (file_status != 0) {
-                std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
-                exit(-1);
-            }
+        if(!makedir(this->screenshotFolder)) {
+            std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
+            exit(-1);
         }
         std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling") << std::endl;
         update();
