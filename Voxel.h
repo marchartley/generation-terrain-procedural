@@ -37,6 +37,7 @@ public:
     float globalX();
     float globalY();
     float globalZ();
+    Vector3 localPos() { return Vector3(getX(), getY(), getZ()); }
     Vector3 globalPos() { return Vector3(globalX(), globalY(), globalZ()); }
 
     bool contains(Vector3 v);

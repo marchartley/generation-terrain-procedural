@@ -29,7 +29,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(int avoidMatter)
         pos *= starting_distance;
         pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0;
         Vector3 dir = Vector3::random();
-        RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
+        RockErosion rock(random_gen::generate(3.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
         std::vector<Vector3> coords;
 
         bool touched = false;
@@ -93,7 +93,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3 startingPoint
             }
             steps --;
             pos += dir;
-            coords.push_back(pos);
+            coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
             if (v != nullptr && *v) {
                 rock.Apply(v, false, false);
