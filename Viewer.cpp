@@ -26,8 +26,9 @@ std::vector<std::string> split(std::string str, char c = ' ')
             str = str.substr(0, pos);
         }
     } while(pos != str.npos);
-    if(insertHeadingSlash)
-        result.insert(result.begin(), "/");// Case of the heading "/" for Linux
+    result.insert(result.begin(), str);
+//    if(insertHeadingSlash)
+//        result.insert(result.begin(), "/");// Case of the heading "/" for Linux
     return result;
 }
 
@@ -190,8 +191,9 @@ void Viewer::draw() {
     }
 
     if (this->isTakingScreenshots) {
-
+#ifdef linux
         mode_t prevMode = umask(0011);
+#endif
         if(this->screenshotIndex == 0)
         {
             std::ofstream outfile;
@@ -200,8 +202,10 @@ void Viewer::draw() {
             outfile.close();
         }
         this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
+#ifdef linux
         chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
         umask(prevMode);
+#endif
     }
 }
 
@@ -263,7 +267,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 20.0, 10);
+        UnderwaterErosion erod(this->voxelGrid, 10, 2.0, 10);
         if (e->modifiers() == Qt::ShiftModifier)
         {
             Vector3 pos(camera()->position().x, camera()->position().y, camera()->position().z);
