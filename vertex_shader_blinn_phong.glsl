@@ -63,7 +63,6 @@ struct Material {
 
 uniform float offsetX;
 uniform float offsetY;
-//in float waterIndex = 30.0;
 
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
@@ -80,6 +79,7 @@ out vec3 varyingHalfH;
 out vec3 varyingNormal;
 out vec3 varyingLightDir;
 out vec3 varyingVertPos;
+out vec3 realNormal;
 
 void main(void)
 {
@@ -90,6 +90,8 @@ void main(void)
     varyingLightDir = light.position - varyingVertPos;
     varyingNormal = vec4(norm_matrix * vec4(normal, 1.0)).xyz;
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
+
+    realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;
 
     gl_Position = proj_matrix * mv_matrix * vec4(position, 1.0);
 
