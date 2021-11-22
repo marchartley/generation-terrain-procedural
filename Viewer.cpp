@@ -126,6 +126,7 @@ void Viewer::init() {
 }
 
 void Viewer::draw() {
+    this->frame_num ++;
     glClear(GL_DEPTH_BUFFER_BIT);
     if (this->viewerMode == ViewerMode::WIRE_MODE)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -154,6 +155,8 @@ void Viewer::draw() {
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
+
+    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), -100.0);
     float globalAmbiant[4] = {.90, .90, .90, 1.0};
 
     this->shader.setPositionalLight("light", this->light);

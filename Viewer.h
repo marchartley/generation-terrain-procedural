@@ -84,6 +84,8 @@ private:
   int screenshotIndex = 0;
 
   bool checkMouseOnVoxel();
+
+  unsigned int frame_num = 0;
 };
 
 
