@@ -80,6 +80,7 @@ out vec3 varyingNormal;
 out vec3 varyingLightDir;
 out vec3 varyingVertPos;
 out vec3 realNormal;
+out vec3 vertEyeSpacePos;
 
 void main(void)
 {
@@ -92,6 +93,7 @@ void main(void)
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
     realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;
+    vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
 
     gl_Position = proj_matrix * mv_matrix * vec4(position, 1.0);
 
