@@ -1,0 +1,10 @@
+{
+	"sizeX": "160",
+	"sizeY": "160",
+	"sizeZ": "80",
+	"blockSize": "4",
+	"noise_shifting": "-0.3",
+	"chunkSize": "40",
+	"numberOfVoxels": "2048000",
+	"numberOfChunks": "16"
+}
