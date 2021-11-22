@@ -16,7 +16,7 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isos
 
 }
 
-Voxel::Voxel() : Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0, nullptr) {
+Voxel::Voxel() { //: Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0, nullptr) {
 
 }
 void Voxel::addNeighbor(Voxel* neighbor)
