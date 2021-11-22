@@ -41,6 +41,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
 
     this->voxels.clear();
     this->chunks.clear();
+    this->chunks.reserve((this->sizeX / this->chunkSize) * (this->sizeY / this->chunkSize));
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
             std::vector<std::vector<std::vector<float>>> iso_data;
@@ -80,10 +81,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
         }
     }
 
-    for (VoxelChunk* c: this->chunks) {
-        c->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
-        c->createMesh();
-    }
+    this->createMesh();
 
 }
 VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), grid.getTileSize()) {
@@ -98,7 +96,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->chunks.clear();
     this->sizeX = grid.getSizeX() - (grid.getSizeX() % chunkSize);
     this->sizeY = grid.getSizeY() - (grid.getSizeY() % chunkSize);
-    this->sizeZ = grid.getMaxHeight();
+    this->sizeZ = grid.getMaxHeight() + 1;
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
             std::vector<std::vector<std::vector<float>>> data;
@@ -107,11 +105,14 @@ void VoxelGrid::from2DGrid(Grid grid) {
                 for (int y = 0; y < chunkSize; y++) {
                     data[x].push_back(std::vector<float>());
                     float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
-                    int z = int(grid_height)+1;
+                    int z = int(grid_height)+2;
                     for (int i = 0; i < z; i++)
-                        data[x][y].push_back(1.0); // TerrainTypes::DIRT);
+                        data[x][y].push_back(1.0);
+//                      data[x][y].push_back(i/(float)z * 2.0); //1.0); // TerrainTypes::DIRT);
+//                    data[x][y].push_back(0.0);
                     for (int i = z; i < this->getSizeZ(); i++)
-                        data[x][y].push_back(-1.0); // TerrainTypes::AIR);
+                        data[x][y].push_back(-1.0);
+//                        data[x][y].push_back((i-(z+1))/(float)(grid.getMaxHeight() - (z+1)) * -2.0); // -1.0); // TerrainTypes::AIR);
                 }
             }
 //            data[1][1][0] = TerrainTypes::AIR;
@@ -143,6 +144,7 @@ void VoxelGrid::createMesh()
     for(VoxelChunk* vc : this->chunks)
     {
         vc->needRemeshing = true;
+        vc->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
         vc->createMesh(this->displayWithMarchingCubes, true);
         /*
         MarchingCubes mc(vc);

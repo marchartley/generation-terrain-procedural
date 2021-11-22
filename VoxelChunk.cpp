@@ -40,14 +40,14 @@ Vector3 HSVtoRGB(float H, float S,float V){
 VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
-    this->voxels = std::vector<std::vector<std::vector<Voxel*>>>();
+    this->voxels = std::vector<std::vector<std::vector<Voxel*>>>(this->sizeX);
     for(int v_x = 0; v_x < sizeX; v_x++) {
-        this->voxels.push_back(std::vector<std::vector<Voxel*>>());
+        this->voxels[v_x] = std::vector<std::vector<Voxel*>>(this->sizeY);
         for(int v_y = 0; v_y < sizeY; v_y++) {
-            this->voxels[v_x].push_back(std::vector<Voxel*>());
+            this->voxels[v_x][v_y] = std::vector<Voxel*>(this->height);
             for(int h = 0; h < height; h++) {
                 Voxel* v = new Voxel(v_x, v_y, h, iso_data[v_x][v_y][h] > 0.0 ? DIRT : AIR, 1.0, iso_data[v_x][v_y][h], this);
-                this->voxels[v_x][v_y].push_back(v);
+                this->voxels[v_x][v_y][h] = v; //.push_back(v);
             }
         }
     }
@@ -270,7 +270,11 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
                     }
                     else {
                         secondVertex = midpoint;
-                        Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
+//                        Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
+//                        normal.z *= -1.0;
+//                        Voxel* in = this->parent->getVoxel(midpoint - normal);
+//                        if(in)
+//                            std::cout << in->getIsosurface() << " ";
                     }
                 }
             }
