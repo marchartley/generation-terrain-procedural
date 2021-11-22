@@ -15,8 +15,7 @@ using namespace std;
 std::vector<std::string> split(std::string str, char c = ' ')
 {
     std::vector<std::string> result;
-    bool insertHeadingSlash = str.size() > 0 && str[0] == '/';
-    int pos = str.npos;
+    size_t pos = str.npos;
     do {
         pos = str.rfind(c, pos);
         if (pos != str.npos) {
@@ -27,8 +26,6 @@ std::vector<std::string> split(std::string str, char c = ' ')
         }
     } while(pos != str.npos);
     result.insert(result.begin(), str);
-//    if(insertHeadingSlash)
-//        result.insert(result.begin(), "/");// Case of the heading "/" for Linux
     return result;
 }
 
@@ -267,16 +264,17 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, 2.0, 10);
+        UnderwaterErosion erod(this->voxelGrid, 10, .5, 1000);
+        Vector3 *pos = nullptr;
         if (e->modifiers() == Qt::ShiftModifier)
         {
-            Vector3 pos(camera()->position().x, camera()->position().y, camera()->position().z);
-            this->lastRocksLaunched = erod.Apply(pos);
+            pos = new Vector3(camera()->position().x, camera()->position().y, camera()->position().z);
             std::cout << "Rocks launched from camera!" << std::endl;
         } else {
-            this->lastRocksLaunched = erod.Apply();
+//            this->lastRocksLaunched = erod.Apply();
             std::cout << "Rocks launched!" << std::endl;
         }
+        this->lastRocksLaunched = erod.Apply(pos, 10);
         update();
     } else if(e->key() == Qt::Key_Minus) {
         this->selectionSize = max(2, this->selectionSize - 2);
@@ -384,9 +382,9 @@ void Viewer::drawSphere(float radius, int rings, int halves)
 {
     std::vector<std::vector<Vector3>> coords = getSphereVertices(rings, halves);
     glBegin(GL_TRIANGLES);
-    for (std::vector<Vector3> triangle : coords)
+    for (std::vector<Vector3>& triangle : coords)
     {
-        for(Vector3 vert : triangle)
+        for(Vector3& vert : triangle)
             glVertex3f(vert.x * radius, vert.y * radius, vert.z * radius);
     }
     glEnd();
@@ -394,6 +392,8 @@ void Viewer::drawSphere(float radius, int rings, int halves)
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
     this->mousePos = e->pos();
+
+    drawSphere(1.0, 10, 10);
 
     QGLViewer::mouseMoveEvent(e);
 }
@@ -411,8 +411,7 @@ bool Viewer::checkMouseOnVoxel()
 
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
-//    currPos += Vector3(voxelGrid->getSizeX()/2 - 1, voxelGrid->getSizeY()/2 - 1, 0.0); //, voxelGrid->getSizeZ()/2 - 1);
-    currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0); //, voxelGrid->getSizeZ()/2 - 1);
+    currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     while(currPos.norm() < maxDist)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
@@ -424,7 +423,7 @@ bool Viewer::checkMouseOnVoxel()
     }
     this->mouseInWorld = found;
     if (found) {
-        this->mousePosWorld = currPos; // + Vector3(voxelGrid->getSizeX()/2.0, voxelGrid->getSizeY()/2.0, voxelGrid->getSizeZ()/2.0);
+        this->mousePosWorld = currPos;
     }
     return found;
 }
