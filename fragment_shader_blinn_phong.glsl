@@ -50,6 +50,8 @@ in vec3 varyingLightDir;
 in vec3 varyingVertPos;
 out vec4 fragColor;
 
+in vec3 realNormal;
+
 struct PositionalLight {
     vec4 ambiant;
     vec4 diffuse;
@@ -84,12 +86,19 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-    vec4 ambiant = ((globalAmbiant * material.ambiant) + (light.ambiant * material.ambiant));
-    vec4 diffuse = light.diffuse * material.diffuse * max(cosTheta, 0.0);
+//    float upValue = 1 - clamp(dot(3 * normalize(realNormal + .1 * vec3(random(varyingVertPos.yz), random(varyingVertPos.xz), random(varyingVertPos.xy))), normalize(vec3(0.0, 1.0, 0.0))), 0.0, 1.0);
+    float upValue = pow(clamp(dot(normalize(realNormal), normalize(vec3(0.0, 0.0, 1.0))), 0.0, 1.0), 2);
+    vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
+    vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
+    vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
+    float material_shininness = 10; //ground_material.shininness * (1 - upValue) + grass_material.shininness * upValue;
+
+    vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
+    vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
 //    vec4 ambiantColor = vec4(varyingColor.xyz * .5, 1.0);
 //    vec4 ambiant = ((globalAmbiant * ambiantColor) + (light.ambiant * ambiantColor));
 //    vec4 diffuse = light.diffuse * (varyingColor*1.1) * max(cosTheta, 0.0);
-    vec4 specular = light.specular * material.specular * pow(max(cosPhi, 0.0), material.shininness * 3.0);
+    vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 3.0);
     fragColor = vec4((ambiant + diffuse + specular).xyz, 1.0);
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
