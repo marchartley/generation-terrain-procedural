@@ -146,14 +146,14 @@ void Viewer::draw() {
     this->shader.setMatrix("mv_matrix", mvMatrix);
 
     Material ground_material(
-                    new float[4]{.25, .19, .08, 1.},
-                    new float[4]{.75, .60, .22, 1.},
+                    new float[4]{.24, .08, .02, 1.},
+                    new float[4]{.30, .10, .04, 1.},
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
     Material grass_material(
-                    new float[4]{.25, .19, .08, 1.},
-                    new float[4]{.75, .60, .22, 1.},
+                    new float[4]{.14, .52, .00, 1.},
+                    new float[4]{.16, .60, .00, 1.},
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
