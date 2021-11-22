@@ -48,6 +48,8 @@ protected:
 
   void mouseMoveEvent(QMouseEvent* e);
 
+  void closeEvent(QCloseEvent* e);
+
   void animate();
 
   ViewerMode viewerMode;

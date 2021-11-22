@@ -428,3 +428,16 @@ bool Viewer::checkMouseOnVoxel()
     }
     return found;
 }
+
+void Viewer::closeEvent(QCloseEvent *e) {
+    QGLViewer::closeEvent(e);
+
+    std::string command = "ffmpeg -f image2 -i ";
+    command += this->screenshotFolder + "%d.jpg -framerate 10 0.gif";
+    if (this->screenshotIndex > 0) {
+        int result = std::system(command.c_str());
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+        }
+    }
+}
