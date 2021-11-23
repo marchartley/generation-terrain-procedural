@@ -1,40 +1,15 @@
 #include "VoxelGrid.h"
-#include "FastNoiseLit.h"
 #include "UnderwaterErosion.h"
 
 #include "Shader.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize), noise_shifting(noise_shifting) {
-    chunkSize = (nx > chunkSize ? chunkSize : nx);
-
-
-    sizeX -= (sizeX % chunkSize);
-    sizeY -= (sizeY % chunkSize);
-
-    // Create and configure FastNoise object
-    FastNoiseLite noise;
-    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    noise.SetFrequency(blockSize / (float) sizeX);
-    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-    noise.SetFractalLacunarity(2.0);
-    noise.SetFractalGain(0.7);
-    noise.SetFractalWeightedStrength(0.5);
-    noise.SetFractalOctaves(10);
-
-    float mean = 0.f, min = 1000.f, max = -1000.f;
+    this->initMap();
     for (int x = 0; x < this->sizeX; x++)
         for (int y = 0; y < this->sizeY; y++)
-            for (int h = 0; h < this->sizeZ; h++) {
-                float n = noise.GetNoise((float)x, (float)y, (float)h);
-                mean += n;
-                min = std::min(min, n);
-                max = std::max(max, n);
-            }
-    mean /= (this->sizeX * this->sizeY * this->sizeZ);
-    std::cout << mean << " " << min << " " << max << std::endl;
-//    exit(0);
-
+            for (int h = 0; h < this->sizeZ; h++)
+                noiseMinMax.update(this->noise.GetNoise((float)x, (float)y, (float)h));
 
     int numberOfChunksX = this->sizeX / chunkSize;
     int numberOfChunksY = this->sizeY / chunkSize;
@@ -50,9 +25,8 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                 for (int y = 0; y < chunkSize; y++) {
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
-                        float noise_val = ((noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h) - min) / (max - min)) * 2.0 - 1.0;
-                        noise_val += noise_shifting;
-                        noise_val *= 2.0;
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
+                                                            -2.0 + noise_shifting, 2.0 + noise_shifting);
                         iso_data[x][y].push_back(noise_val);
                     }
                 }
@@ -91,9 +65,6 @@ VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
 
 }
 void VoxelGrid::from2DGrid(Grid grid) {
-    chunkSize = (sizeX > chunkSize ? chunkSize : sizeX);
-    this->voxels.clear();
-    this->chunks.clear();
     this->sizeX = grid.getSizeX() - (grid.getSizeX() % chunkSize);
     this->sizeY = grid.getSizeY() - (grid.getSizeY() % chunkSize);
     this->sizeZ = grid.getMaxHeight() + 1;
@@ -139,6 +110,26 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->createMesh();
 }
 
+void VoxelGrid::initMap()
+{
+    this->chunkSize = std::min(this->sizeX, this->chunkSize);
+
+    sizeX -= (sizeX % chunkSize);
+    sizeY -= (sizeY % chunkSize);
+
+    this->voxels.clear();
+    this->chunks.clear();
+
+    // Create and configure FastNoise object
+    this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    this->noise.SetFrequency(blockSize / (float) sizeX);
+    this->noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    this->noise.SetFractalLacunarity(2.0);
+    this->noise.SetFractalGain(0.7);
+    this->noise.SetFractalWeightedStrength(0.5);
+    this->noise.SetFractalOctaves(10);
+}
+
 void VoxelGrid::createMesh()
 {
     for(VoxelChunk* vc : this->chunks)
@@ -146,13 +137,6 @@ void VoxelGrid::createMesh()
         vc->needRemeshing = true;
         vc->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
         vc->createMesh(this->displayWithMarchingCubes, true);
-        /*
-        MarchingCubes mc(vc);
-        mc.createMesh();
-
-        this->vertexArray.insert(this->vertexArray.end(), mc.vertexArray.begin(), mc.vertexArray.end());
-        this->vertexArrayFloat.insert(this->vertexArrayFloat.end(), mc.vertexArrayFloat.begin(), mc.vertexArrayFloat.end());
-*/
     }
 }
 
@@ -171,8 +155,8 @@ void VoxelGrid::makeItFall(int groupId)
 void VoxelGrid::display() {
     for (VoxelChunk* vc : this->chunks)
     {
-        Shader::shaders[0]->setFloat("offsetX", -this->sizeX/2 + vc->x); // + (vc.lastChunkOnX ? 0 : 1 * ((float)this->sizeX/(float)vc.x)));
-        Shader::shaders[0]->setFloat("offsetY", -this->sizeY/2 + vc->y); // + (vc.lastChunkOnY ? 0 : 1 * ((float)this->sizeY/(float)vc.y)));
+        vc->mesh.shader->setFloat("offsetX", -this->sizeX/2 + vc->x);
+        vc->mesh.shader->setFloat("offsetY", -this->sizeY/2 + vc->y);
         vc->display();
     }
 }
