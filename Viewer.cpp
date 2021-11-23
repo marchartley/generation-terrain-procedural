@@ -284,8 +284,6 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             setSmoothingAlgorithm(MARCHING_CUBES);
         else if (this->algorithm == MARCHING_CUBES)
             setSmoothingAlgorithm(NONE);
-//        else if (this->algorithm == DUAL_CONTOURING)
-//            setSmoothingAlgorithm(NONE);
         std::cout << "Displaying using " << (this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") << " algorithm" << std::endl;
         voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
         voxelGrid->createMesh();
@@ -309,15 +307,12 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             std::cout << "Rocks launched!" << std::endl;
         }
         this->lastRocksLaunched = erod.Apply(pos, 10);
-//        this->rocksMeshes.vertexArrayFloat.clear();
+        this->rocksMeshes.vertexArrayFloat.clear();
         for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
             std::vector<float> oneThrow = Vector3::toArray(coords);
             this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
         }
         this->rocksMeshes.update();
-//        std::cout << "Size : " << vertexArrayFloat.size() << std::endl;
-//        GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
-//        GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, vertexArrayFloat.size() * sizeof(float), &vertexArrayFloat.front(), GL_STATIC_DRAW);
         update();
     } else if(e->key() == Qt::Key_Minus) {
         this->selectionSize = max(2, this->selectionSize - 2);
