@@ -65,10 +65,14 @@ HEADERS += \
 
 RESOURCES += \
 fragment_shader_gouraud.glsl \
-vertex_shader_gouraud.glsl \
-fragment_shader_blinn_phong.glsl \
-vertex_shader_blinn_phong.glsl
+    grid_fragment_shader_blinn_phong.glsl \
+    grid_vertex_shader_blinn_phong.glsl \
+vertex_shader_gouraud.glsl
 
 
 DISTFILES += \
-    noise.glsl
+    no_fragment_shader.glsl \
+    no_vertex_shader.glsl \
+    noise.glsl \
+    voxels_fragment_shader_blinn_phong.glsl \
+    voxels_vertex_shader_blinn_phong.glsl

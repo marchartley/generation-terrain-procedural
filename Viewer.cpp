@@ -80,21 +80,34 @@ void Viewer::init() {
     setMouseTracking(true);
 
 #ifdef _WIN32
-    const char* vShader = "C:/codes/Qt/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
-    const char* fShader = "C:/codes/Qt/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
+    const char* vShader_grid = "C:/codes/Qt/generation-terrain-procedural/grid_vertex_shader_blinn_phong.glsl";
+    const char* fShader_grid = "C:/codes/Qt/generation-terrain-procedural/grid_fragment_shader_blinn_phong.glsl";
+    const char* vShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
+    const char* fShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vNoShader = "C:/codes/Qt/generation-terrain-procedural/no_vertex_shader.glsl";
+    const char* fNoShader = "C:/codes/Qt/generation-terrain-procedural/no_fragment_shader.glsl";
 #elif linux
-    const char* vShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/vertex_shader_blinn_phong.glsl";
-    const char* fShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/fragment_shader_blinn_phong.glsl";
+    const char* vShader_grid = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/grid_vertex_shader_blinn_phong.glsl";
+    const char* fShader_grid = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/grid_fragment_shader_blinn_phong.glsl";
+    const char* vShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
+    const char* fShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_vertex_shader.glsl";
+    const char* fNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_fragment_shader.glsl";
 #endif
-    this->shader = Shader(vShader, fShader);
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
+    GlobalsGL::generateBuffers();
     this->rocksVBO = GlobalsGL::newBufferId();
 
     this->grid->createMesh();
     voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
     this->voxelGrid->createMesh();
+    this->grid->mesh.shader = new Shader(vShader_grid, fShader_grid);
+    for(VoxelChunk* vc : this->voxelGrid->chunks)
+        vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+    this->shader = Shader(vNoShader, fNoShader);
+    this->rocksMeshes.shader = new Shader(vNoShader, fNoShader);
 
     this->matter_adder = RockErosion(this->selectionSize, 1.0);
 
@@ -102,7 +115,7 @@ void Viewer::init() {
                 new float[4]{.8, .8, .8, 1.},
                 new float[4]{1., 1., 1., 1.},
                 new float[4]{1., 1., 1., 1.},
-                Vector3(100.0, 100.0, -100.0)
+                Vector3(100.0, 100.0, 0.0)
                 );
 
     this->setAnimationPeriod(0);
@@ -133,61 +146,79 @@ void Viewer::draw() {
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    this->shader.use(true);
+//    this->shader.use(true);
 
     float pMatrix[16];
     float mvMatrix[16];
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->shader.setMatrix("proj_matrix", pMatrix);
-    this->shader.setMatrix("mv_matrix", mvMatrix);
 
-    Material ground_material(
-                    new float[4]{.24, .08, .02, 1.},
-                    new float[4]{.30, .10, .04, 1.},
-                    new float[4]{.62, .56, .37, 1.},
-                    51.2f
-                    );
-    Material grass_material(
-                    new float[4]{.14, .52, .00, 1.},
-                    new float[4]{.16, .60, .00, 1.},
-                    new float[4]{.62, .56, .37, 1.},
-                    51.2f
-                    );
-
-    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), -100.0);
-    float globalAmbiant[4] = {.90, .90, .90, 1.0};
-
-    this->shader.setPositionalLight("light", this->light);
-    this->shader.setMaterial("ground_material", ground_material);
-    this->shader.setMaterial("grass_material", grass_material);
-    this->shader.setVector("globalAmbiant", globalAmbiant, 4);
-    this->shader.setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-    this->shader.setBool("display_light_source", true);
 
     if (this->mapMode == GRID_MODE) {
+        this->grid->mesh.shader->setMatrix("proj_matrix", pMatrix);
+        this->grid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+
+        Material ground_material(
+                        new float[4]{.24, .08, .02, 1.},
+                        new float[4]{.30, .10, .04, 1.},
+                        new float[4]{.62, .56, .37, 1.},
+                        51.2f
+                        );
+        Material grass_material(
+                        new float[4]{.14, .52, .00, 1.},
+                        new float[4]{.16, .60, .00, 1.},
+                        new float[4]{.62, .56, .37, 1.},
+                        51.2f
+                        );
+
+        this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
+        float globalAmbiant[4] = {.90, .90, .90, 1.0};
+
+        this->grid->mesh.shader->setPositionalLight("light", this->light);
+        this->grid->mesh.shader->setMaterial("ground_material", ground_material);
+        this->grid->mesh.shader->setMaterial("grass_material", grass_material);
+        this->grid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
+        this->grid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+        this->grid->mesh.shader->setBool("display_light_source", true);
         this->grid->display(true);
     }
     else if (this->mapMode == VOXEL_MODE) {
+        for(VoxelChunk* vc : this->voxelGrid->chunks) {
+            vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
+            vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+
+            Material ground_material(
+                            new float[4]{.24, .08, .02, 1.},
+                            new float[4]{.30, .10, .04, 1.},
+                            new float[4]{.62, .56, .37, 1.},
+                            51.2f
+                            );
+            Material grass_material(
+                            new float[4]{.14, .52, .00, 1.},
+                            new float[4]{.16, .60, .00, 1.},
+                            new float[4]{.62, .56, .37, 1.},
+                            51.2f
+                            );
+
+            this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
+            float globalAmbiant[4] = {.90, .90, .90, 1.0};
+
+            vc->mesh.shader->setPositionalLight("light", this->light);
+            vc->mesh.shader->setMaterial("ground_material", ground_material);
+            vc->mesh.shader->setMaterial("grass_material", grass_material);
+            vc->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
+            vc->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            vc->mesh.shader->setBool("display_light_source", true);
+        }
         this->voxelGrid->display();
     }
 
+    this->rocksMeshes.shader->setMatrix("proj_matrix", pMatrix);
+    this->rocksMeshes.shader->setMatrix("mv_matrix", mvMatrix);
+    this->rocksMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     if (displayRockTrajectories) {
-        glPushMatrix();
-        GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
-        this->shader.setFloat("offsetX", 0.f);
-        this->shader.setFloat("offsetY", 0.f);
-//        glTranslatef(this->voxelGrid->getSizeX()/2.0, this->voxelGrid->getSizeY()/2.0, 0); //, -this->voxelGrid->getSizeZ()/2.0);
-        for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
-            glBegin(GL_LINE_STRIP);
-            glColor4f(0.0, 0.0, 0.0, .5);
-            for(Vector3& pos : coords) {
-                glVertex3f(pos.x, pos.y, pos.z);
-            }
-            glEnd();
-        }
-        glPopMatrix();
+        this->rocksMeshes.display(GL_LINE_STRIP);
     }
 
     if (this->isTakingScreenshots) {
@@ -267,7 +298,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, .5, 1000);
+        UnderwaterErosion erod(this->voxelGrid, 10, .5, 100);
         Vector3 *pos = nullptr;
         if (e->modifiers() == Qt::ShiftModifier)
         {
@@ -278,6 +309,15 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             std::cout << "Rocks launched!" << std::endl;
         }
         this->lastRocksLaunched = erod.Apply(pos, 10);
+//        this->rocksMeshes.vertexArrayFloat.clear();
+        for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
+            std::vector<float> oneThrow = Vector3::toArray(coords);
+            this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
+        }
+        this->rocksMeshes.update();
+//        std::cout << "Size : " << vertexArrayFloat.size() << std::endl;
+//        GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->rocksVBO]);
+//        GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, vertexArrayFloat.size() * sizeof(float), &vertexArrayFloat.front(), GL_STATIC_DRAW);
         update();
     } else if(e->key() == Qt::Key_Minus) {
         this->selectionSize = max(2, this->selectionSize - 2);

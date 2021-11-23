@@ -86,6 +86,8 @@ private:
   bool checkMouseOnVoxel();
 
   unsigned int frame_num = 0;
+
+  Mesh rocksMeshes;
 };
 
 

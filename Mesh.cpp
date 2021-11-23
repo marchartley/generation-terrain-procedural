@@ -72,9 +72,11 @@ void Mesh::pushToBuffer()
     GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorArrayFloat.size() * sizeof(float), &this->colorArrayFloat.front(), GL_STATIC_DRAW);
     this->bufferReady = true;
 }
-void Mesh::display()
+void Mesh::display(GLenum shape)
 {
     this->update();
+    if(this->shader != nullptr)
+        this->shader->use();
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID]);
     GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glEnableVertexAttribArray(0);
@@ -90,5 +92,5 @@ void Mesh::display()
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
-    glDrawArrays(GL_TRIANGLES, 0, this->vertexArrayFloat.size()/3);
+    glDrawArrays(shape, 0, this->vertexArrayFloat.size()/3);
 }

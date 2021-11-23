@@ -3,6 +3,7 @@
 
 #include "Globals.h"
 #include "Vector3.h"
+#include "Shader.h"
 #include <vector>
 
 class Mesh
@@ -15,7 +16,7 @@ public:
 
     void update();
     void pushToBuffer();
-    void display();
+    void display(GLenum shape = GL_TRIANGLES);
 
     unsigned int bufferID;
     bool bufferReady = false;
@@ -28,6 +29,8 @@ public:
     std::vector<Vector3> normalsArray;
     std::vector<float> normalsArrayFloat;
     std::vector<float> colorArrayFloat;
+    Shader* shader;
+
 };
 
 #endif // MESH_H

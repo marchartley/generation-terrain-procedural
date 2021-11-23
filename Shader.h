@@ -73,6 +73,7 @@ public:
     template<typename T>
     void setMatrix(std::string pname, T values[], int n, int m)
     {
+        this->use();
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")
             GlobalsGL::f()->glUniformMatrix2fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
