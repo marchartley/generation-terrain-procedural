@@ -10,7 +10,8 @@ enum TerrainTypes {
     AIR = 0,
     DIRT = 1,
     WATER = 2,
-    SAND = 3
+    SAND = 3,
+    LAST
 };
 
 enum VOXEL_NEIGHBOR {

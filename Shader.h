@@ -40,6 +40,10 @@ public:
     const char* fragmentShaderFilename;
     const char* geometryShaderFilename;
 
+    unsigned int vShader = -1;
+    unsigned int fShader = -1;
+    unsigned int gShader = -1;
+
 
     template<typename T>
     void setMatrix(const char* pname, T& values)

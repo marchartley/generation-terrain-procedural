@@ -29,7 +29,7 @@ public:
     std::vector<Vector3> normalsArray;
     std::vector<float> normalsArrayFloat;
     std::vector<float> colorArrayFloat;
-    Shader* shader;
+    Shader* shader = nullptr;
 
 };
 
