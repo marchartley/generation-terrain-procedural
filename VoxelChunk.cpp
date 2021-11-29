@@ -57,6 +57,13 @@ VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std
 {
 
 }
+VoxelChunk::~VoxelChunk()
+{
+    this->applyToVoxels([](Voxel* v) -> void {
+        delete v;
+    });
+    this->voxels.clear();
+}
 
 void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     if (!needRemeshing)
@@ -121,6 +128,7 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
                 voxelVertices->insert(voxelVertices->end(), vertice.begin(), vertice.end());
                 // Add the colors to each vertex
                 int X = 6; // Start with 6 faces
+
                 for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = v->neighbors.begin(); it != v->neighbors.end(); it++)
                     if (it->second && (bool)*it->second)
                         X--;    // Remove a face per neighbor
