@@ -35,6 +35,7 @@ public:
     VoxelGrid();
     VoxelGrid(Grid& grid);
     VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
+    ~VoxelGrid();
     void from2DGrid(Grid grid);
 
     void initMap();

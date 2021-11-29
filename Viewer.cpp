@@ -65,6 +65,9 @@ Viewer::Viewer(VoxelGrid* g)
     : Viewer(NULL, g, VOXEL_MODE, FILL_MODE) {
 
 }
+Viewer::~Viewer()
+{
+}
 
 void Viewer::init() {
     restoreStateFromFile();
@@ -100,12 +103,16 @@ void Viewer::init() {
     GlobalsGL::generateBuffers();
     this->rocksVBO = GlobalsGL::newBufferId();
 
-    this->grid->createMesh();
+    if (grid != nullptr) {
+        this->grid->createMesh();
+        this->grid->mesh.shader = new Shader(vShader_grid, fShader_grid);
+    }
     voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
-    this->voxelGrid->createMesh();
-    this->grid->mesh.shader = new Shader(vShader_grid, fShader_grid);
-    for(VoxelChunk* vc : this->voxelGrid->chunks)
-        vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+    if (voxelGrid != nullptr) {
+        this->voxelGrid->createMesh();
+        for(VoxelChunk* vc : this->voxelGrid->chunks)
+            vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+    }
     this->shader = Shader(vNoShader, fNoShader);
     this->rocksMeshes.shader = new Shader(vNoShader, fNoShader);
 
@@ -477,4 +484,6 @@ void Viewer::closeEvent(QCloseEvent *e) {
             std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
+    delete this->grid;
+    delete this->voxelGrid;
 }

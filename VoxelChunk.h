@@ -15,6 +15,7 @@ public:
     VoxelChunk();
 //    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< TerrainTypes > > > data, VoxelGrid* parent);
     VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent);
+    ~VoxelChunk();
 
     void display();
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);

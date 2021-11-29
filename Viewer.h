@@ -29,6 +29,7 @@ public:
   Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode = FILL_MODE);
   Viewer(Grid* g);
   Viewer(VoxelGrid* g);
+  ~Viewer();
 
   void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; }
   void setMapMode(MapMode newMode) { this->mapMode = newMode; }

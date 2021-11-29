@@ -41,18 +41,16 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
         }
     }
 
-    for (int xChunk = 0; xChunk < this->sizeX / chunkSize; xChunk++) {
-        for (int yChunk = 0; yChunk < this->sizeY / chunkSize; yChunk++) {
-            int current = xChunk * numberOfChunksY + yChunk;
-            if (xChunk > 0) {
-                this->chunks[current]->neighboring_chunks[LEFT] = this->chunks[current - numberOfChunksY];
-                this->chunks[current - numberOfChunksY]->neighboring_chunks[RIGHT] = this->chunks[current];
-            }
-            if (yChunk > 0) {
-                this->chunks[current]->neighboring_chunks[FRONT] = this->chunks[current - 1];
-                this->chunks[current - 1]->neighboring_chunks[BACK] = this->chunks[current];
-            }
+    for(size_t i = 0; i < this->chunks.size(); i++) {
+        if (i > this->sizeY/chunkSize - 1) {
+            this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
+            this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
         }
+        if (i % int(this->sizeY/chunkSize) >= 1) {
+            this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
+            this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
+        }
+        this->chunks[i]->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
     }
 
     this->createMesh();
@@ -63,6 +61,12 @@ VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), g
 }
 VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
 
+}
+VoxelGrid::~VoxelGrid()
+{
+    for(VoxelChunk* vc : this->chunks)
+        delete vc;
+    this->chunks.clear();
 }
 void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeX = grid.getSizeX() - (grid.getSizeX() % chunkSize);
@@ -105,8 +109,8 @@ void VoxelGrid::from2DGrid(Grid grid) {
             this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
             this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
+        this->chunks[i]->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
     }
-
     this->createMesh();
 }
 
@@ -135,9 +139,9 @@ void VoxelGrid::createMesh()
     for(VoxelChunk* vc : this->chunks)
     {
         vc->needRemeshing = true;
-        vc->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
-        vc->createMesh(this->displayWithMarchingCubes, true);
+//        vc->createMesh(this->displayWithMarchingCubes, true);
     }
+    remeshAll();
 }
 
 void VoxelGrid::makeItFall(int groupId)

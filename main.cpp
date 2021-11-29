@@ -16,8 +16,8 @@ int main(int argc, char *argv[])
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
-    QGuiApplication app(argc, argv);
-    QApplication a(argc, argv);
+//    QGuiApplication app(argc, argv);
+    QApplication app(argc, argv);
 
     QGLFormat glFormat;
     glFormat.setVersion(4, 1);
@@ -37,8 +37,8 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    Grid* grid = new Grid(100, 100, 40, 1.0);
-    VoxelGrid* vGrid = new VoxelGrid(160, 40, 40, 1.0, -0.0);
+    Grid* grid = nullptr; // new Grid(100, 100, 40, 1.0);
+    VoxelGrid* vGrid = new VoxelGrid(1000, 100, 50, 1.0, -0.0);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
 
