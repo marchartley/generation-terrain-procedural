@@ -93,4 +93,12 @@ void Mesh::display(GLenum shape)
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
     glDrawArrays(shape, 0, this->vertexArrayFloat.size()/3);
+
+    if (this->shader != nullptr) {
+        GlobalsGL::printShaderErrors(this->shader->vShader);
+        GlobalsGL::printShaderErrors(this->shader->fShader);
+//        GlobalsGL::printShaderErrors(this->shader->gShader);
+        GlobalsGL::printProgramErrors(this->shader->programID);
+        GlobalsGL::checkOpenGLError();
+    }
 }

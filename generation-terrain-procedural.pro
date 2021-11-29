@@ -17,6 +17,7 @@ CONFIG += c++11
 SOURCES += \
         Globals.cpp \
         Grid.cpp \
+        LayerBasedGrid.cpp \
         MarchingCubes.cpp \
         Matrix.cpp \
         Mesh.cpp \
@@ -49,6 +50,7 @@ HEADERS += \
     FastNoiseLit.h \
     Globals.h \
     Grid.h \
+    LayerBasedGrid.h \
     MarchingCubes.h \
     Matrix.h \
     Mesh.h \

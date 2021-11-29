@@ -53,16 +53,16 @@ bool makedir(std::string path)
     return true;
 }
 
-Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode)
-    : QGLViewer(), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid) {
+Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode)
+    : QGLViewer(), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid) {
 
 }
 Viewer::Viewer(Grid* g)
-    : Viewer(g, NULL, GRID_MODE, FILL_MODE) {
+    : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE) {
 
 }
 Viewer::Viewer(VoxelGrid* g)
-    : Viewer(NULL, g, VOXEL_MODE, FILL_MODE) {
+    : Viewer(nullptr, g, nullptr, VOXEL_MODE, FILL_MODE) {
 
 }
 Viewer::~Viewer()
@@ -107,8 +107,12 @@ void Viewer::init() {
         this->grid->createMesh();
         this->grid->mesh.shader = new Shader(vShader_grid, fShader_grid);
     }
-    voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
+    if (layerGrid != nullptr) {
+        this->layerGrid->createMesh();
+        this->layerGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+    }
     if (voxelGrid != nullptr) {
+        voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
         this->voxelGrid->createMesh();
         for(VoxelChunk* vc : this->voxelGrid->chunks)
             vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
@@ -141,8 +145,10 @@ void Viewer::init() {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
         exit(-1);
     }
-    this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-    std::cout << "Screenshots will be saved in folder " << this->screenshotFolder << std::endl;
+    if (this->voxelGrid != nullptr) {
+        this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
+        std::cout << "Screenshots will be saved in folder " << this->screenshotFolder << std::endl;
+    }
 }
 
 void Viewer::draw() {
@@ -161,64 +167,67 @@ void Viewer::draw() {
     camera()->getModelViewMatrix(mvMatrix);
 
 
+    Material ground_material(
+                    new float[4]{.24, .08, .02, 1.},
+                    new float[4]{.30, .10, .04, 1.},
+                    new float[4]{.62, .56, .37, 1.},
+                    51.2f
+                    );
+    Material grass_material(
+                    new float[4]{.14, .52, .00, 1.},
+                    new float[4]{.16, .60, .00, 1.},
+                    new float[4]{.62, .56, .37, 1.},
+                    51.2f
+                    );
+    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
+    float globalAmbiant[4] = {.90, .90, .90, 1.0};
 
     if (this->mapMode == GRID_MODE) {
-        this->grid->mesh.shader->setMatrix("proj_matrix", pMatrix);
-        this->grid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-
-        Material ground_material(
-                        new float[4]{.24, .08, .02, 1.},
-                        new float[4]{.30, .10, .04, 1.},
-                        new float[4]{.62, .56, .37, 1.},
-                        51.2f
-                        );
-        Material grass_material(
-                        new float[4]{.14, .52, .00, 1.},
-                        new float[4]{.16, .60, .00, 1.},
-                        new float[4]{.62, .56, .37, 1.},
-                        51.2f
-                        );
-
-        this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
-        float globalAmbiant[4] = {.90, .90, .90, 1.0};
-
-        this->grid->mesh.shader->setPositionalLight("light", this->light);
-        this->grid->mesh.shader->setMaterial("ground_material", ground_material);
-        this->grid->mesh.shader->setMaterial("grass_material", grass_material);
-        this->grid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-        this->grid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-        this->grid->mesh.shader->setBool("display_light_source", true);
-        this->grid->display(true);
+        if (this->grid == nullptr) {
+            std::cerr << "No grid to display" << std::endl;
+        } else {
+            this->grid->mesh.shader->setMatrix("proj_matrix", pMatrix);
+            this->grid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+            this->grid->mesh.shader->setPositionalLight("light", this->light);
+            this->grid->mesh.shader->setMaterial("ground_material", ground_material);
+            this->grid->mesh.shader->setMaterial("grass_material", grass_material);
+            this->grid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
+            this->grid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            this->grid->mesh.shader->setBool("display_light_source", true);
+            this->grid->display(true);
+        }
     }
     else if (this->mapMode == VOXEL_MODE) {
-        for(VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
-            vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-
-            Material ground_material(
-                            new float[4]{.24, .08, .02, 1.},
-                            new float[4]{.30, .10, .04, 1.},
-                            new float[4]{.62, .56, .37, 1.},
-                            51.2f
-                            );
-            Material grass_material(
-                            new float[4]{.14, .52, .00, 1.},
-                            new float[4]{.16, .60, .00, 1.},
-                            new float[4]{.62, .56, .37, 1.},
-                            51.2f
-                            );
-
-            this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
-            float globalAmbiant[4] = {.90, .90, .90, 1.0};
-
-            vc->mesh.shader->setPositionalLight("light", this->light);
-            vc->mesh.shader->setMaterial("ground_material", ground_material);
-            vc->mesh.shader->setMaterial("grass_material", grass_material);
-            vc->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-            vc->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-            vc->mesh.shader->setBool("display_light_source", true);
+        if (this->voxelGrid == nullptr) {
+            std::cerr << "No voxel grid to display" << std::endl;
+        } else {
+            for(VoxelChunk* vc : this->voxelGrid->chunks) {
+                vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
+                vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+                vc->mesh.shader->setPositionalLight("light", this->light);
+                vc->mesh.shader->setMaterial("ground_material", ground_material);
+                vc->mesh.shader->setMaterial("grass_material", grass_material);
+                vc->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
+                vc->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+                vc->mesh.shader->setBool("display_light_source", true);
+            }
+            this->voxelGrid->display();
         }
-        this->voxelGrid->display();
+    }
+    else if (this->mapMode == LAYER_MODE) {
+        if (this->layerGrid == nullptr) {
+            std::cerr << "No layer based grid to display" << std::endl;
+        } else {
+            this->layerGrid->mesh.shader->setPositionalLight("light", this->light);
+            this->layerGrid->mesh.shader->setMaterial("ground_material", ground_material);
+            this->layerGrid->mesh.shader->setMaterial("grass_material", grass_material);
+            this->layerGrid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
+            this->layerGrid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            this->layerGrid->mesh.shader->setBool("display_light_source", true);
+            this->layerGrid->mesh.shader->setFloat("offsetX", 0.0);
+            this->layerGrid->mesh.shader->setFloat("offsetY", 0.0);
+            this->layerGrid->display();
+        }
     }
 
     this->rocksMeshes.shader->setMatrix("proj_matrix", pMatrix);
@@ -285,6 +294,10 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if (e->key() == Qt::Key_D)
     {
         setMapMode(MapMode::GRID_MODE);
+        update(); // Refresh display
+    } else if (e->key() == Qt::Key_F)
+    {
+        setMapMode(MapMode::LAYER_MODE);
         update(); // Refresh display
     } else if (e->key() == Qt::Key_R) {
         if (this->algorithm == NONE)
@@ -353,92 +366,9 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         QGLViewer::keyPressEvent(e);
     }
 }
-std::vector<std::vector<Vector3>> Viewer::getSphereVertices(int rings, int halves) {
-    std::vector<std::vector<Vector3>> coords;
-    std::vector<Vector3> tris;
-    for(int i = 0; i < halves - 1; i++)
-    {
-        for (int j = 0; j < rings -1 ; j++)
-        {
-            Vector3 v1(i, j, 1.0);
-            Vector3 v2(i+1, j, 1.0);
-            Vector3 v3(i+1, j+1, 1.0);
-            Vector3 v4(i, j+1, 1.0);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-
-            v1 = Vector3(i, j, -1.0);
-            v2 = Vector3(i+1, j, -1.0);
-            v3 = Vector3(i+1, j+1, -1.0);
-            v4 = Vector3(i, j+1, -1.0);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-
-            v1 = Vector3(1.0, i, j);
-            v2 = Vector3(1.0, i+1, j);
-            v3 = Vector3(1.0, i+1, j+1);
-            v4 = Vector3(1.0, i, j+1);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-
-            v1 = Vector3(-1.0, i, j);
-            v2 = Vector3(-1.0, i+1, j);
-            v3 = Vector3(-1.0, i+1, j+1);
-            v4 = Vector3(-1.0, i, j+1);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-
-            v1 = Vector3(i, 1.0, j);
-            v2 = Vector3(i+1, 1.0, j);
-            v3 = Vector3(i+1, 1.0, j+1);
-            v4 = Vector3(i, 1.0,  j+1);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-
-            v1 = Vector3(i, -1.0, j);
-            v2 = Vector3(i+1, -1.0, j);
-            v3 = Vector3(i+1, -1.0, j+1);
-            v4 = Vector3(i, -1.0,  j+1);
-            v1.normalize(); v2.normalize(); v3.normalize(); v4.normalize();
-
-            tris.push_back(v1); tris.push_back(v2); tris.push_back(v3);
-            coords.push_back(tris);
-            tris.clear();
-        }
-    }
-    return coords;
-}
-void Viewer::drawSphere(float radius, int rings, int halves)
-{
-    std::vector<std::vector<Vector3>> coords = getSphereVertices(rings, halves);
-    glBegin(GL_TRIANGLES);
-    for (std::vector<Vector3>& triangle : coords)
-    {
-        for(Vector3& vert : triangle)
-            glVertex3f(vert.x * radius, vert.y * radius, vert.z * radius);
-    }
-    glEnd();
-}
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
     this->mousePos = e->pos();
-
-    drawSphere(1.0, 10, 10);
 
     QGLViewer::mouseMoveEvent(e);
 }
@@ -450,6 +380,8 @@ void Viewer::animate()
 
 bool Viewer::checkMouseOnVoxel()
 {
+    if (voxelGrid == nullptr)
+        return false;
     camera()->convertClickToLine(mousePos, orig, dir);
     float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
@@ -486,4 +418,5 @@ void Viewer::closeEvent(QCloseEvent *e) {
     }
     delete this->grid;
     delete this->voxelGrid;
+    delete this->layerGrid;
 }

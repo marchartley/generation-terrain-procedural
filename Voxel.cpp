@@ -184,12 +184,12 @@ std::vector<Vector3> Voxel::getMeshVertices()
     std::vector<Vector3> returnArray;
     for (size_t i = 0; i < vertex.size(); i+=4)
     {
-        returnArray.push_back(localPos() + vertex[i + 0]);
-        returnArray.push_back(localPos() + vertex[i + 1]);
-        returnArray.push_back(localPos() + vertex[i + 2]);
-        returnArray.push_back(localPos() + vertex[i + 2]);
-        returnArray.push_back(localPos() + vertex[i + 3]);
-        returnArray.push_back(localPos() + vertex[i + 0]);
+        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 1]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 3]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
     }
     return returnArray;
 }

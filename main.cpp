@@ -38,11 +38,12 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     Grid* grid = nullptr; // new Grid(100, 100, 40, 1.0);
-    VoxelGrid* vGrid = new VoxelGrid(1000, 100, 50, 1.0, -0.0);
+    LayerBasedGrid* lGrid = new LayerBasedGrid(10, 10, 50);
+    VoxelGrid* vGrid = new VoxelGrid(10, 10, 50, 1.0, -0.0);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
 
-    Viewer view(grid, vGrid, MapMode::VOXEL_MODE, ViewerMode::FILL_MODE);
+    Viewer view(grid, vGrid, lGrid, MapMode::LAYER_MODE, ViewerMode::FILL_MODE);
     view.show();
 
     return app.exec();

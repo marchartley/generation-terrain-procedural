@@ -3,6 +3,7 @@
 
 #include "Grid.h"
 #include "VoxelGrid.h"
+#include "LayerBasedGrid.h"
 #include <QGLViewer/qglviewer.h>
 #include <QKeyEvent>
 #include <qmessagebox.h>
@@ -10,8 +11,9 @@
 #include "Shader.h"
 
 enum MapMode {
-    GRID_MODE  = 0b01,
-    VOXEL_MODE = 0b10
+    GRID_MODE  = 0b001,
+    VOXEL_MODE = 0b010,
+    LAYER_MODE = 0b100
 };
 enum ViewerMode {
     FILL_MODE  = 0b01,
@@ -26,7 +28,7 @@ enum SmoothingAlgorithm {
 class Viewer : public QGLViewer {
 
 public:
-  Viewer(Grid* grid, VoxelGrid* voxelGrid, MapMode map, ViewerMode mode = FILL_MODE);
+  Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode = FILL_MODE);
   Viewer(Grid* g);
   Viewer(VoxelGrid* g);
   ~Viewer();
@@ -60,6 +62,7 @@ protected:
 private:
   Grid* grid;
   VoxelGrid* voxelGrid;
+  LayerBasedGrid* layerGrid;
   bool display_vertices = true;
   qglviewer::Vec selectedPoint, orig, dir;
 
@@ -74,8 +77,6 @@ private:
   Vector3 mousePosWorld;
   QPoint mousePos;
 
-  std::vector<std::vector<Vector3>> getSphereVertices(int rings, int halves);
-  void drawSphere(float radius, int rings, int halves);
   Shader shader;
   PositionalLight light;
   GLuint rocksVBO;

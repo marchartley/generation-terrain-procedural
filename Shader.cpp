@@ -33,33 +33,33 @@ void Shader::compileShadersFromSource()
     this->programID = GlobalsGL::f()->glCreateProgram();
     if (vertexShaderFilename != nullptr)
     {
-        GLuint vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
+        this->vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
         std::string content = Shader::readShaderSource(vertexShaderFilename);
         const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(vShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(vShader);
-        GlobalsGL::f()->glAttachShader(this->programID, vShader);
-        GlobalsGL::printShaderErrors(vShader);
+        GlobalsGL::f()->glShaderSource(this->vShader, 1, &src, NULL);
+        GlobalsGL::f()->glCompileShader(this->vShader);
+        GlobalsGL::f()->glAttachShader(this->programID, this->vShader);
+        GlobalsGL::printShaderErrors(this->vShader);
     }
     if (fragmentShaderFilename != nullptr)
     {
         std::string content = Shader::readShaderSource(fragmentShaderFilename);
-        GLuint fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
+        this->fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
         const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(fShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(fShader);
-        GlobalsGL::f()->glAttachShader(this->programID, fShader);
-        GlobalsGL::printShaderErrors(fShader);
+        GlobalsGL::f()->glShaderSource(this->fShader, 1, &src, NULL);
+        GlobalsGL::f()->glCompileShader(this->fShader);
+        GlobalsGL::f()->glAttachShader(this->programID, this->fShader);
+        GlobalsGL::printShaderErrors(this->fShader);
     }
     if (geometryShaderFilename != nullptr)
     {
         std::string content = Shader::readShaderSource(geometryShaderFilename);
-        GLuint gShader = GlobalsGL::f()->glCreateShader(GL_GEOMETRY_SHADER);
+        this->gShader = GlobalsGL::f()->glCreateShader(GL_GEOMETRY_SHADER);
         const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(gShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(gShader);
-        GlobalsGL::f()->glAttachShader(this->programID, gShader);
-        GlobalsGL::printShaderErrors(gShader);
+        GlobalsGL::f()->glShaderSource(this->gShader, 1, &src, NULL);
+        GlobalsGL::f()->glCompileShader(this->gShader);
+        GlobalsGL::f()->glAttachShader(this->programID, this->gShader);
+        GlobalsGL::printShaderErrors(this->gShader);
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
@@ -73,6 +73,9 @@ void Shader::use(bool update_source_file)
     }
     GlobalsGL::checkOpenGLError();
     GlobalsGL::f()->glUseProgram(this->programID);
+    GlobalsGL::printProgramErrors(this->programID);
+    GlobalsGL::printShaderErrors(this->vShader);
+    GlobalsGL::printShaderErrors(this->fShader);
     GlobalsGL::checkOpenGLError();
 }
 
