@@ -4,11 +4,19 @@
 #include "Vector3.h"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-//#include <qapplication.h>
+#include <qapplication.h>
 #include <iostream>
 #include "Matrix.h"
 
+//#include "ui_MainWindow.h"
 
+//class ViewerInterface : public QMainWindow, public Ui::MainWindow {
+//public:
+//  ViewerInterface() {
+//      setupUi(this);
+
+//  }
+//};
 
 int main(int argc, char *argv[])
 {
@@ -37,14 +45,8 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    Grid* grid = nullptr; // new Grid(100, 100, 40, 1.0);
-    LayerBasedGrid* lGrid = new LayerBasedGrid(10, 10, 50);
-    VoxelGrid* vGrid = new VoxelGrid(10, 10, 50, 1.0, -0.0);
-//    VoxelGrid* vGrid = new VoxelGrid(*grid);
-//    grid->fromVoxelGrid(*vGrid);
-
-    Viewer view(grid, vGrid, lGrid, MapMode::LAYER_MODE, ViewerMode::FILL_MODE);
-    view.show();
+    Viewer vi;
+    vi.show();
 
     return app.exec();
 }

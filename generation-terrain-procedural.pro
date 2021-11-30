@@ -1,4 +1,5 @@
-QT += quick opengl xml
+QT *= quick opengl xml widgets gui
+CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
 unix {
     INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen
@@ -13,6 +14,8 @@ CONFIG += c++11
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+TEMPLATE = app
+TARGET = interface
 
 SOURCES += \
         Globals.cpp \
@@ -73,8 +76,12 @@ vertex_shader_gouraud.glsl
 
 
 DISTFILES += \
+    layer_based_fragment_shader.glsl \
+    layer_based_vertex_shader.glsl \
     no_fragment_shader.glsl \
     no_vertex_shader.glsl \
     noise.glsl \
     voxels_fragment_shader_blinn_phong.glsl \
     voxels_vertex_shader_blinn_phong.glsl
+
+FORMS +=

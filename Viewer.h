@@ -26,11 +26,12 @@ enum SmoothingAlgorithm {
 };
 
 class Viewer : public QGLViewer {
-
+    Q_OBJECT
 public:
-  Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode = FILL_MODE);
-  Viewer(Grid* g);
-  Viewer(VoxelGrid* g);
+    Viewer(QWidget *parent = nullptr);
+  Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
+  Viewer(Grid* g, QWidget *parent = nullptr);
+  Viewer(VoxelGrid* g, QWidget *parent = nullptr);
   ~Viewer();
 
   void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; }
@@ -84,6 +85,9 @@ private:
   std::string screenshotFolder;
   bool isTakingScreenshots = false;
   int screenshotIndex = 0;
+
+  bool applyLetItFall = false;
+  bool applyLetSandFall = false;
 
   bool checkMouseOnVoxel();
 

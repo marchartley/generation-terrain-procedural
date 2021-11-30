@@ -15,6 +15,7 @@ public:
 
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);
+    std::tuple<int, int, int> toIntTuple() {return std::make_tuple<int, int, int>(int(this->x), int(this->y), int(this->z)); }
 
 
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);

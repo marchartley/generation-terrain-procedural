@@ -81,28 +81,48 @@ void Shader::use(bool update_source_file)
 
 void Shader::setBool(std::string pname, bool value)
 {
+    if (this == nullptr) {
+        std::cerr << "No shader defined" << std::endl;
+        return;
+    }
     this->use();
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
 }
 void Shader::setInt(std::string pname, int value)
 {
+    if (this == nullptr) {
+        std::cerr << "No shader defined" << std::endl;
+        return;
+    }
     this->use();
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setFloat(std::string pname, float value)
 {
+    if (this == nullptr) {
+        std::cerr << "No shader defined" << std::endl;
+        return;
+    }
     this->use();
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setVector(std::string pname, Vector3 value)
 {
+    if (this == nullptr) {
+        std::cerr << "No shader defined" << std::endl;
+        return;
+    }
     this->use();
     this->setVector(pname, value, 3);
 }
 void Shader::setVector(std::string pname, float value[], int n)
 {
+    if (this == nullptr) {
+        std::cerr << "No shader defined" << std::endl;
+        return;
+    }
     this->use();
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
     switch (n) {

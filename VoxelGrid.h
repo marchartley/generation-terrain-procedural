@@ -18,7 +18,7 @@ struct NoiseMinMax {
 
     void update(float val) {
         min = std::min(min, val);
-        max = std::max(max, val);
+        max = std::max(max, val + 0.00001f);
     }
     float remap(float x, float newMin, float newMax) {
         float a = (x - min);
@@ -44,7 +44,8 @@ public:
 
     void createMesh();
 
-    void makeItFall(int groupId = -1);
+    void makeItFall(float erosionStrength = 0.0, int groupId = -1);
+    void letGravityMakeSandFall();
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
