@@ -135,10 +135,10 @@ std::vector<Vector3> Voxel::getMeshVertices()
     if ((bool)*this) {
         // BOTTOM
         if (!this->neighbors[BOTTOM] || !(bool)*this->neighbors[BOTTOM]) {
-            vertex.push_back(Vector3(0, 0, 0));
-            vertex.push_back(Vector3(1, 0, 0));
-            vertex.push_back(Vector3(1, 1, 0));
             vertex.push_back(Vector3(0, 1, 0));
+            vertex.push_back(Vector3(1, 1, 0));
+            vertex.push_back(Vector3(1, 0, 0));
+            vertex.push_back(Vector3(0, 0, 0));
         }
 
         // RIGHT
@@ -168,28 +168,28 @@ std::vector<Vector3> Voxel::getMeshVertices()
         // FRONT
         if (!this->neighbors[FRONT] || !(bool)*this->neighbors[FRONT]) {
             vertex.push_back(Vector3(0, 0, 0));
-            vertex.push_back(Vector3(0, 0, 1));
-            vertex.push_back(Vector3(1, 0, 1));
             vertex.push_back(Vector3(1, 0, 0));
+            vertex.push_back(Vector3(1, 0, 1));
+            vertex.push_back(Vector3(0, 0, 1));
         }
 
         // BACK
         if (!this->neighbors[BACK] || !(bool)*this->neighbors[BACK]) {
             vertex.push_back(Vector3(0, 1, 0));
-            vertex.push_back(Vector3(1, 1, 0));
-            vertex.push_back(Vector3(1, 1, 1));
             vertex.push_back(Vector3(0, 1, 1));
+            vertex.push_back(Vector3(1, 1, 1));
+            vertex.push_back(Vector3(1, 1, 0));
         }
     }
     std::vector<Vector3> returnArray;
     for (size_t i = 0; i < vertex.size(); i+=4)
     {
-        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
         returnArray.push_back((localPos() + vertex[i + 1]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 3]) * this->blockSize);
         returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 3]) * this->blockSize);
+        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
     }
     return returnArray;
 }

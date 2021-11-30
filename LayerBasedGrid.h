@@ -27,6 +27,7 @@ public:
 
     std::vector<std::vector<std::vector<std::tuple<TerrainTypes, float>>>> layers;
     int sizeX, sizeY;
+    int height;
     float sizeZ;
 
     Mesh mesh;

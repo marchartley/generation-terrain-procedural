@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <tuple>
 
 class Voxel;
 
@@ -20,14 +21,13 @@ enum VOXEL_NEIGHBOR {
 
 #include "Grid.h"
 #include "Vertex.h"
+#include "LayerBasedGrid.h"
 
 
 class Voxel {
 public:
     Voxel();
     Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface, VoxelChunk* parent);
-
-    void display(bool apply_marching_cubes = false, bool display_vertices = false);
 
     int getX() { return this->x; }
     int getY() { return this->y; }
@@ -51,7 +51,7 @@ public:
     std::vector<Vector3> getMeshVertices();
 
     operator bool() { return isMatter[this->getType()]; }
-    TerrainTypes getType() { return (this->getIsosurface() > 0.0 ? DIRT : AIR); }
+    TerrainTypes getType() { return (this->getIsosurface() > 0.0 ? (this->getIsosurface() > 0.5 ? DIRT : SAND) : (this->getIsosurface() < -0.5 ? AIR : WATER)); }
 
     friend std::ostream& operator<<(std::ostream& io, const Voxel& v);
     friend std::ostream& operator<<(std::ostream& io, Voxel* v);
@@ -66,7 +66,8 @@ public:
     float isosurface = 0.0;
     float manual_isosurface = 0.0;
     bool isOnGround = false;
-    VoxelChunk* parent;
+    VoxelChunk* parent = nullptr;
+    LayerBasedGrid* lParent = nullptr;
 
     static std::map<TerrainTypes, bool> isMatter;
 

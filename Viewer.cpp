@@ -53,16 +53,29 @@ bool makedir(std::string path)
     return true;
 }
 
-Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode)
-    : QGLViewer(), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid) {
+Viewer::Viewer(QWidget *parent):
+    QGLViewer(parent), mapMode(VOXEL_MODE), viewerMode(FILL_MODE)
+{
+    Grid* grid = nullptr; // new Grid(100, 100, 40, 1.0);
+    LayerBasedGrid* lGrid = new LayerBasedGrid(10, 10, 50);
+    VoxelGrid* vGrid = new VoxelGrid(80, 40, 40, 1.0, .5);
+//    VoxelGrid* vGrid = new VoxelGrid(*grid);
+//    grid->fromVoxelGrid(*vGrid);
+    this->grid = grid;
+    this->voxelGrid = vGrid;
+    this->layerGrid = lGrid;
+    //Viewer view(grid, vGrid, lGrid, MapMode::VOXEL_MODE, ViewerMode::FILL_MODE);
+}
+Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode, QWidget *parent)
+    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid) {
 
 }
-Viewer::Viewer(Grid* g)
-    : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE) {
+Viewer::Viewer(Grid* g, QWidget *parent)
+    : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
 
 }
-Viewer::Viewer(VoxelGrid* g)
-    : Viewer(nullptr, g, nullptr, VOXEL_MODE, FILL_MODE) {
+Viewer::Viewer(VoxelGrid* g, QWidget *parent)
+    : Viewer(nullptr, g, nullptr, VOXEL_MODE, FILL_MODE, parent) {
 
 }
 Viewer::~Viewer()
@@ -87,6 +100,8 @@ void Viewer::init() {
     const char* fShader_grid = "C:/codes/Qt/generation-terrain-procedural/grid_fragment_shader_blinn_phong.glsl";
     const char* vShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
     const char* fShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vShader_layer = "C:/codes/Qt/generation-terrain-procedural/layer_based_vertex_shader.glsl";
+    const char* fShader_layer = "C:/codes/Qt/generation-terrain-procedural/layer_based_fragment_shader.glsl";
     const char* vNoShader = "C:/codes/Qt/generation-terrain-procedural/no_vertex_shader.glsl";
     const char* fNoShader = "C:/codes/Qt/generation-terrain-procedural/no_fragment_shader.glsl";
 #elif linux
@@ -94,6 +109,8 @@ void Viewer::init() {
     const char* fShader_grid = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/grid_fragment_shader_blinn_phong.glsl";
     const char* vShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
     const char* fShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vShader_layer = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/layer_based_vertex_shader.glsl";
+    const char* fShader_layer = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/layer_based_fragment_shader.glsl";
     const char* vNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_vertex_shader.glsl";
     const char* fNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_fragment_shader.glsl";
 #endif
@@ -112,7 +129,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
+        voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
         for(VoxelChunk* vc : this->voxelGrid->chunks)
             vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
@@ -149,6 +166,9 @@ void Viewer::init() {
         this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
         std::cout << "Screenshots will be saved in folder " << this->screenshotFolder << std::endl;
     }
+
+
+    this->startAnimation();
 }
 
 void Viewer::draw() {
@@ -179,7 +199,7 @@ void Viewer::draw() {
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
-    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
+//    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
     float globalAmbiant[4] = {.90, .90, .90, 1.0};
 
     if (this->mapMode == GRID_MODE) {
@@ -223,6 +243,8 @@ void Viewer::draw() {
             this->layerGrid->mesh.shader->setMaterial("grass_material", grass_material);
             this->layerGrid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
             this->layerGrid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            this->layerGrid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+            this->layerGrid->mesh.shader->setMatrix("proj_matrix", pMatrix);
             this->layerGrid->mesh.shader->setBool("display_light_source", true);
             this->layerGrid->mesh.shader->setFloat("offsetX", 0.0);
             this->layerGrid->mesh.shader->setFloat("offsetY", 0.0);
@@ -347,12 +369,12 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
         update();
     } else if(e->key() == Qt::Key_0) {
-        if (this->animationIsStarted())
-            this->stopAnimation();
-        else
-            this->startAnimation();
-//        this->voxelGrid->makeItFall();
+        this->applyLetItFall = !this->applyLetItFall;
         std::cout << "It's falling!" << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_Comma) {
+        this->applyLetSandFall = !this->applyLetSandFall;
+        std::cout << "Sand is falling!" << std::endl;
         update();
     } else if(e->key() == Qt::Key_1) {
         this->isTakingScreenshots = !this->isTakingScreenshots;
@@ -375,7 +397,10 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
 void Viewer::animate()
 {
-    this->voxelGrid->makeItFall();
+    if (this->applyLetItFall)
+        this->voxelGrid->makeItFall((this->applyLetSandFall ? -1.0 : 0.1));
+    if (this->applyLetSandFall)
+        this->voxelGrid->letGravityMakeSandFall();
 }
 
 bool Viewer::checkMouseOnVoxel()

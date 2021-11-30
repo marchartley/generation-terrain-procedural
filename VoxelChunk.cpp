@@ -115,12 +115,33 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
         return;
     needRemeshing = false;
 
+    std::vector<Vector3> colors;
+    std::vector<Vector3> voxelVertices;
     if (applyMarchingCubes) {
-        this->mesh.fromArray(this->applyMarchingCubes());
+        voxelVertices = this->applyMarchingCubes(&colors);
+        /*
+        this->applyToVoxels([colors=&colors](Voxel* v) -> void {
+            if ((bool)*v) {
+                // The colors to each vertex
+                int X = 6; // Start with 6 faces
+
+                for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = v->neighbors.begin(); it != v->neighbors.end(); it++)
+                    if (it->second && (bool)*it->second)
+                        X--;    // Remove a face per neighbor
+                X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
+                for (int x = 0; x < X; x++) {
+                    Vector3 color;
+                    if (v->getType() == SAND)
+                        color = Vector3(224/255.0, 209/255.0, 72/255.0);
+                    else if (v->getType() == DIRT)
+                        color = Vector3(150/255.0, 100/255.0, 30/255.0);
+                    colors->push_back(color); // Vector3((v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
+//                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
+                }
+            }
+        });*/
     }
     else {
-        std::vector<Vector3> voxelVertices;
-        std::vector<Vector3> colors;
         this->applyToVoxels([voxelVertices=&voxelVertices, colors=&colors](Voxel* v) -> void {
             if ((bool)*v) {
                 // Add the vertices to the global mesh
@@ -139,15 +160,15 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
                 }
             }
         });
-
-        this->mesh.fromArray(voxelVertices);
-        this->mesh.colorArrayFloat = Vector3::toArray(colors);
     }
+    this->mesh.colorsArray = colors;
+    this->mesh.fromArray(voxelVertices);
     this->mesh.update();
 }
 
-std::vector<Vector3> VoxelChunk::applyMarchingCubes()
+std::vector<Vector3> VoxelChunk::applyMarchingCubes(std::vector<Vector3> *outColors)
 {
+    std::vector<Vector3> colors;
     std::vector<std::vector<std::vector<float> > > map;
     for (int x = 0; x < this->sizeX; x++)
     {
@@ -269,7 +290,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
 
                     float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
                     Vertex midpoint = v1 - ((v1 - v2) * interpolate);
-                    vertexArray.push_back(midpoint);
+                    colors.push_back(map[x][y][z] > 0.5 ? Vector3(150/255.0, 100/255.0, 30/255.0) : Vector3(224/255.0, 209/255.0, 72/255.0));
                     if (i % 3 == 0) {
                         originalVertex = midpoint;
                     }
@@ -278,6 +299,9 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
                     }
                     else {
                         secondVertex = midpoint;
+                        vertexArray.push_back(originalVertex);
+                        vertexArray.push_back(firstVertex);
+                        vertexArray.push_back(secondVertex);
 //                        Vector3 normal = (firstVertex - originalVertex).cross((secondVertex - originalVertex)).normalize();
 //                        normal.z *= -1.0;
 //                        Voxel* in = this->parent->getVoxel(midpoint - normal);
@@ -288,6 +312,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes()
             }
         }
     }
+    *outColors = colors;
     return vertexArray;
 }
 
@@ -304,6 +329,41 @@ void VoxelChunk::makeItFall(int groupId)
             return;
         v->isosurface = v_1->isosurface;
         v->manual_isosurface = v_1->manual_isosurface;
+    });
+    this->needRemeshing = true;
+    this->computeGroups();
+}
+void VoxelChunk::letGravityMakeSandFall()
+{
+    this->applyToVoxels([](Voxel* v) -> void {
+        Voxel* v_1 = v->neighbors[TOP];
+        if(v_1 && !*v_1) // If the top neighbor is air, don't care?
+            return;
+        float tempIso = 0.0;
+        float tempManIso = 0.0;
+        if(v->z == 0)
+            return;
+        if(v->getType() == DIRT) { // The bottom voxel is dirt
+            return;
+            if (v_1 == nullptr || v_1->getType() == DIRT)
+                return;
+            v->isosurface += v_1->isosurface;
+            v->manual_isosurface += v_1->manual_isosurface;
+        } else { // The bottom voxel is sand or air
+            if(!v_1 || v_1->getType() == DIRT) {
+                // If top voxel is dirt or air,
+                v->isosurface = -0.01;
+                v->manual_isosurface = -0.01;
+                return;
+            } else {
+                v->isosurface += v_1->isosurface;
+                v->manual_isosurface += v_1->manual_isosurface;
+            }
+        }
+        if (v_1) {
+            v_1->isosurface = -0.01;
+            v_1->manual_isosurface = -0.01;
+        }
     });
     this->needRemeshing = true;
     this->computeGroups();

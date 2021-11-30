@@ -26,7 +26,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     iso_data[x].push_back(std::vector<float>());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
-                                                            -2.0 + noise_shifting, 2.0 + noise_shifting);
+                                                            -1.0 + noise_shifting, 1.0 + noise_shifting);
                         iso_data[x][y].push_back(noise_val);
                     }
                 }
@@ -144,16 +144,26 @@ void VoxelGrid::createMesh()
     remeshAll();
 }
 
-void VoxelGrid::makeItFall(int groupId)
+void VoxelGrid::makeItFall(float erosionStrength, int groupId)
 {
-    UnderwaterErosion erod(this, 10, 0.01, 100);
     for(int i = 0; i < 1; i++) {
         for(VoxelChunk* vc : this->chunks) {
             vc->makeItFall(groupId);
         }
     }
     remeshAll();
-    erod.Apply();
+    if (erosionStrength > 0.0) {
+        UnderwaterErosion erod(this, 10, erosionStrength, 100);
+        erod.Apply();
+    }
+}
+void VoxelGrid::letGravityMakeSandFall()
+{
+    for(VoxelChunk* vc : this->chunks) {
+        vc->letGravityMakeSandFall();
+    }
+    remeshAll();
+
 }
 
 void VoxelGrid::display() {

@@ -5,6 +5,7 @@
 #include "Vector3.h"
 #include "Shader.h"
 #include <vector>
+#include <map>
 
 class Mesh
 {
@@ -24,11 +25,17 @@ public:
 
 //protected:
     void computeNormals();
+    void computeColors();
     std::vector<Vector3> vertexArray;
     std::vector<float> vertexArrayFloat;
     std::vector<Vector3> normalsArray;
+    std::vector<Vector3> normalsArrayIndex;
     std::vector<float> normalsArrayFloat;
-    std::vector<float> colorArrayFloat;
+    std::vector<Vector3> colorsArray;
+    std::vector<Vector3> colorsArrayIndex;
+    std::vector<float> colorsArrayFloat;
+    std::map<int, int> indices;
+    std::map<std::tuple<int, int, int>, int> vectorToIndex;
     Shader* shader = nullptr;
 
 };

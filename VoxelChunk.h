@@ -21,9 +21,10 @@ public:
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);
 
     void makeItFall(int groupId = -1);
+    void letGravityMakeSandFall();
     void computeGroups();
 
-    std::vector<Vector3> applyMarchingCubes();
+    std::vector<Vector3> applyMarchingCubes(std::vector<Vector3> *outColors = nullptr);
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);

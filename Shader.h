@@ -77,6 +77,10 @@ public:
     template<typename T>
     void setMatrix(std::string pname, T values[], int n, int m)
     {
+        if (this == nullptr) {
+            std::cerr << "No shader defined" << std::endl;
+            return;
+        }
         this->use();
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")

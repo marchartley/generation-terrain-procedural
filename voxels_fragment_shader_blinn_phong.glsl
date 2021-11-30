@@ -109,8 +109,9 @@ void main(void)
     float dist = length(vertEyeSpacePos);
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
+    material_color = mix(material_color, varyingColor, .9);
     fragColor = mix(fogColor, material_color, fogFactor);
-//    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
+//    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
 
 //    bool isLight = length(vec3(proj_matrix * vec4(light.position, 1.0)).yz*10 - vertEyeSpacePos.xy) < 1.0;
 //    if (isLight)
