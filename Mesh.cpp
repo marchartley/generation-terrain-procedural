@@ -80,12 +80,12 @@ void Mesh::computeColors()
     if (this->indices.size() == 0)
         return;
     int* numVertexPerIndex = new int[this->indices.size()]{0};
-    for (size_t i = 0; i < this->vertexArray.size(); i++)
+    for (size_t i = 0; i < this->colorsArray.size(); i++)
     {
         this->colorsArrayIndex[this->indices[i]] += this->colorsArray[i];
         numVertexPerIndex[this->indices[i]] ++;
     }
-    for (size_t i = 0; i < this->vertexArray.size(); i++)
+    for (size_t i = 0; i < this->colorsArray.size(); i++)
     {
         std::vector<float> meanNormal = Vector3::toArray(this->colorsArrayIndex[this->indices[i]] / (float)numVertexPerIndex[this->indices[i]]);
         this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), meanNormal.begin(), meanNormal.end());

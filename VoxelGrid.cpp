@@ -69,9 +69,11 @@ VoxelGrid::~VoxelGrid()
     this->chunks.clear();
 }
 void VoxelGrid::from2DGrid(Grid grid) {
-    this->sizeX = grid.getSizeX() - (grid.getSizeX() % chunkSize);
-    this->sizeY = grid.getSizeY() - (grid.getSizeY() % chunkSize);
-    this->sizeZ = grid.getMaxHeight() + 1;
+    this->sizeX = grid.getSizeX();
+    this->sizeY = grid.getSizeY();
+    this->sizeZ = grid.getMaxHeight();
+    this->initMap();
+
     for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
         for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
             std::vector<std::vector<std::vector<float>>> data;
@@ -80,14 +82,17 @@ void VoxelGrid::from2DGrid(Grid grid) {
                 for (int y = 0; y < chunkSize; y++) {
                     data[x].push_back(std::vector<float>());
                     float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
-                    int z = int(grid_height)+2;
-                    for (int i = 0; i < z; i++)
-                        data[x][y].push_back(1.0);
-//                      data[x][y].push_back(i/(float)z * 2.0); //1.0); // TerrainTypes::DIRT);
-//                    data[x][y].push_back(0.0);
-                    for (int i = z; i < this->getSizeZ(); i++)
-                        data[x][y].push_back(-1.0);
-//                        data[x][y].push_back((i-(z+1))/(float)(grid.getMaxHeight() - (z+1)) * -2.0); // -1.0); // TerrainTypes::AIR);
+                    int z = int(grid_height);
+                    for (int i = 0; i < z; i++) {
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
+                                                            -2.0, 2.0);
+                        data[x][y].push_back(abs(noise_val));
+                    }
+                    for (int i = z; i < this->getSizeZ()+1; i++) {
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
+                                                            -2.0, 2.0);
+                        data[x][y].push_back(-abs(noise_val));
+                    }
                 }
             }
 //            data[1][1][0] = TerrainTypes::AIR;

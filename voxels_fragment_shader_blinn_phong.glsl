@@ -109,7 +109,7 @@ void main(void)
     float dist = length(vertEyeSpacePos);
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
-    material_color = mix(material_color, varyingColor, .9);
+    material_color = mix(material_color, varyingColor, .80);
     fragColor = mix(fogColor, material_color, fogFactor);
 //    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
 
