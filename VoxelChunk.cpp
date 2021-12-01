@@ -335,12 +335,20 @@ void VoxelChunk::makeItFall(int groupId)
 }
 void VoxelChunk::letGravityMakeSandFall()
 {
+    /*
+    float *totalDensity = new float(0.0);
+    this->applyToVoxels([totalDensity=totalDensity](Voxel* v) -> void {
+        *totalDensity += v->getIsosurface();
+    });
+    std::cout << *totalDensity << std::endl;*/
     this->applyToVoxels([](Voxel* v) -> void {
         Voxel* v_1 = v->neighbors[TOP];
         if(v_1 && !*v_1) // If the top neighbor is air, don't care?
             return;
-        float tempIso = 0.0;
-        float tempManIso = 0.0;
+//        float tempIso = 0.0;
+//        float tempManIso = 0.0;
+        if (v->getIsosurface() > 1.5)
+            return;
         if(v->z == 0)
             return;
         if(v->getType() == DIRT) { // The bottom voxel is dirt
@@ -352,8 +360,8 @@ void VoxelChunk::letGravityMakeSandFall()
         } else { // The bottom voxel is sand or air
             if(!v_1 || v_1->getType() == DIRT) {
                 // If top voxel is dirt or air,
-                v->isosurface = -0.01;
-                v->manual_isosurface = -0.01;
+                v->isosurface = 0.0;
+                v->manual_isosurface = 0.0;
                 return;
             } else {
                 v->isosurface += v_1->isosurface;
@@ -418,9 +426,11 @@ void VoxelChunk::computeGroups()
                 Voxel* n = (*groundNeighbors.begin());
                 n->isOnGround = true;
                 groundNeighbors.erase(groundNeighbors.begin());
-                for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = n->neighbors.begin(); it != n->neighbors.end(); it++)
-                    if(it->second && (bool)*it->second && !it->second->isOnGround)
+                for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = n->neighbors.begin(); it != n->neighbors.end(); it++) {
+                    if(it->second != nullptr && (bool)*it->second && !it->second->isOnGround) {
                         groundNeighbors.insert(it->second);
+                    }
+                }
             }
         }
     });

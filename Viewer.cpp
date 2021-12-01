@@ -57,8 +57,9 @@ Viewer::Viewer(QWidget *parent):
     QGLViewer(parent), mapMode(VOXEL_MODE), viewerMode(FILL_MODE)
 {
     Grid* grid = nullptr; // new Grid(100, 100, 40, 1.0);
-    LayerBasedGrid* lGrid = new LayerBasedGrid(10, 10, 50);
-    VoxelGrid* vGrid = new VoxelGrid(80, 40, 40, 1.0, .5);
+    LayerBasedGrid* lGrid = nullptr; // new LayerBasedGrid(10, 10, 50);
+    VoxelGrid* vGrid = new VoxelGrid(100, 40, 40, 1.0, .30);
+//    vGrid->from2DGrid(*grid);
 //    VoxelGrid* vGrid = new VoxelGrid(*grid);
 //    grid->fromVoxelGrid(*vGrid);
     this->grid = grid;
@@ -168,7 +169,7 @@ void Viewer::init() {
     }
 
 
-    this->startAnimation();
+//    this->startAnimation();
 }
 
 void Viewer::draw() {
@@ -350,8 +351,9 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         }
         this->lastRocksLaunched = erod.Apply(pos, 10);
         this->rocksMeshes.vertexArrayFloat.clear();
+        std::vector<float> oneThrow;
         for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
-            std::vector<float> oneThrow = Vector3::toArray(coords);
+            oneThrow = Vector3::toArray(coords);
             this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
         }
         this->rocksMeshes.update();
@@ -369,10 +371,12 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
         update();
     } else if(e->key() == Qt::Key_0) {
+        this->startAnimation();
         this->applyLetItFall = !this->applyLetItFall;
         std::cout << "It's falling!" << std::endl;
         update();
     } else if(e->key() == Qt::Key_Comma) {
+        this->startAnimation();
         this->applyLetSandFall = !this->applyLetSandFall;
         std::cout << "Sand is falling!" << std::endl;
         update();
@@ -434,7 +438,7 @@ void Viewer::closeEvent(QCloseEvent *e) {
     QGLViewer::closeEvent(e);
 
     std::string command = "ffmpeg -f image2 -i ";
-    command += this->screenshotFolder + "%d.jpg -framerate 10 0.gif";
+    command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
     if (this->screenshotIndex > 0) {
         int result = std::system(command.c_str());
         if (result != 0) {
