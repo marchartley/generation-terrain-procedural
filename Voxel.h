@@ -1,9 +1,10 @@
 #ifndef VOXEL_H
 #define VOXEL_H
 
-#include <map>
+#include <unordered_map>
 #include <set>
 #include <tuple>
+#include <unordered_set>
 
 class Voxel;
 
@@ -48,7 +49,7 @@ public:
     void removeNeighbor(Voxel* neighbor);
     void resetNeighbors();
 
-    std::vector<Vector3> getMeshVertices();
+    std::vector<Vector3> getMeshVertices(bool useGlobalCoords = false);
 
     operator bool() { return isMatter[this->getType()]; }
     TerrainTypes getType() { return (this->getIsosurface() > 0.0 ? (this->getIsosurface() > 0.5 ? DIRT : SAND) : (this->getIsosurface() < -0.5 ? AIR : WATER)); }
@@ -62,18 +63,66 @@ public:
     int x, y, z;
     TerrainTypes type;
     float blockSize;
-    std::map<VOXEL_NEIGHBOR, Voxel*> neighbors;
+    std::unordered_map<VOXEL_NEIGHBOR, Voxel*> neighbors;
     float isosurface = 0.0;
     float manual_isosurface = 0.0;
     bool isOnGround = false;
     VoxelChunk* parent = nullptr;
     LayerBasedGrid* lParent = nullptr;
 
-    static std::map<TerrainTypes, bool> isMatter;
+    static std::unordered_map<TerrainTypes, bool> isMatter;
 
     static std::vector<std::set<int>> voxelGroups;
     static int currentLabelIndex;
     int group = -1;
+
+    template <typename F>
+    inline void applyToNeighbors(F func) {
+        for(auto& v : this->neighbors) {
+            func(v.second);
+        }
+    }
+    /*template <typename F>
+    inline void applyToNeighbors(F func) {
+        for(auto& v : this->neighbors) {
+            func(v.second);
+        }
+    }*/
+    /*
+    Voxel* getNeighbor(VOXEL_NEIGHBOR dir);
+    void InsertNeighborsIfNotOnGround(std::unordered_set<Voxel*>& set);
+    int CountNeighbors();
+    */
+    /*
+    enum Func {
+        InsertIfNotOnGround = 1,
+        DecrementIfIsAir = 2
+    };
+    template <typename T>
+    void applyToNeighbors(Func functionToApply, T& param) {
+        for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
+            for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
+                for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
+                    Voxel* v = this->parent->parent->getVoxel(x, y, z);
+                    if(v != this) {
+                        switch(functionToApply) {
+                        case InsertIfNotOnGround:
+                        if(v != nullptr && (bool)*v && !v->isOnGround) {
+                            param.insert(v);
+                        }
+                        break;
+                        case DecrementIfIsAir:
+                        if(v == nullptr || !(bool)*v) {
+                            param --;
+                        }
+                        break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    */
 
 };
 #endif // VOXEL_H

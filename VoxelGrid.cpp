@@ -6,43 +6,58 @@
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize), noise_shifting(noise_shifting) {
     this->initMap();
-    for (int x = 0; x < this->sizeX; x++)
-        for (int y = 0; y < this->sizeY; y++)
-            for (int h = 0; h < this->sizeZ; h++)
-                noiseMinMax.update(this->noise.GetNoise((float)x, (float)y, (float)h));
 
-    int numberOfChunksX = this->sizeX / chunkSize;
-    int numberOfChunksY = this->sizeY / chunkSize;
 
-    this->voxels.clear();
-    this->chunks.clear();
-    this->chunks.reserve((this->sizeX / this->chunkSize) * (this->sizeY / this->chunkSize));
-    for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
-        for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
-            std::vector<std::vector<std::vector<float>>> iso_data;
+
+    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    int iChunk = 0;
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
             for (int x = 0; x < chunkSize; x++) {
-                iso_data.push_back(std::vector<std::vector<float>>());
+                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
                 for (int y = 0; y < chunkSize; y++) {
-                    iso_data[x].push_back(std::vector<float>());
+                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
-                        iso_data[x][y].push_back(noise_val);
+                        data[iChunk][x][y][h] = noise_val;
                     }
                 }
             }
-            this->chunks.push_back(new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this));
-            if (xChunk == numberOfChunksX - 1) {
+            iChunk ++;
+        }
+    }
+    this->fromIsoData(data);
+    /*
+
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+
+            std::vector<std::vector<std::vector<float>>> iso_data(chunkSize);
+            for (int x = 0; x < chunkSize; x++) {
+                iso_data[x] = std::vector<std::vector<float>>(chunkSize);
+                for (int y = 0; y < chunkSize; y++) {
+                    iso_data[x][y] = std::vector<float>(this->getSizeZ());
+                    for(int h = 0; h < this->getSizeZ(); h++) {
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
+                                                            -1.0 + noise_shifting, 1.0 + noise_shifting);
+                        iso_data[x][y][h] = noise_val;
+                    }
+                }
+            }
+            this->chunks[xChunk + yChunk * this->numberOfChunksX()] =
+                    new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), iso_data, this);
+            if (xChunk == this->numberOfChunksX() - 1) {
                 this->chunks[this->chunks.size() - 1]->lastChunkOnX = true;
             }
-            if (yChunk == numberOfChunksY - 1) {
+            if (yChunk == this->numberOfChunksY() - 1) {
                 this->chunks[this->chunks.size() - 1]->lastChunkOnY = true;
             }
         }
     }
-
     for(size_t i = 0; i < this->chunks.size(); i++) {
-        if (i > this->sizeY/chunkSize - 1) {
+        if (int(i) > this->sizeY/chunkSize - 1) {
             this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
             this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
         }
@@ -50,11 +65,10 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
             this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
             this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
-        this->chunks[i]->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
+        this->chunks[i]->resetVoxelsNeighbors();
     }
-
     this->createMesh();
-
+*/
 }
 VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), grid.getTileSize()) {
     this->from2DGrid(grid);
@@ -74,49 +88,106 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeZ = grid.getMaxHeight();
     this->initMap();
 
-    for (int xChunk = 0; xChunk < sizeX / chunkSize; xChunk++) {
-        for (int yChunk = 0; yChunk < sizeY / chunkSize; yChunk++) {
-            std::vector<std::vector<std::vector<float>>> data;
+    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    int iChunk = 0;
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
             for (int x = 0; x < chunkSize; x++) {
-                data.push_back(std::vector<std::vector<float>>());
+                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
                 for (int y = 0; y < chunkSize; y++) {
-                    data[x].push_back(std::vector<float>());
+                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
                     float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
                     int z = int(grid_height);
                     for (int i = 0; i < z; i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
-                        data[x][y].push_back(abs(noise_val));
+                        data[iChunk][x][y][i] = abs(noise_val);
                     }
                     for (int i = z; i < this->getSizeZ()+1; i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
-                        data[x][y].push_back(-abs(noise_val));
+                        data[iChunk][x][y][i] = -abs(noise_val);
                     }
                 }
             }
-//            data[1][1][0] = TerrainTypes::AIR;
-            this->chunks.push_back(new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), data, this));
-            if (xChunk == int(sizeX / chunkSize) - 1) {
+            iChunk ++;
+        }
+    }
+    this->fromIsoData(data);
+/*
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+
+            std::vector<std::vector<std::vector<float>>> data(this->chunkSize);
+            for (int x = 0; x < chunkSize; x++) {
+                data[x] = std::vector<std::vector<float>>(this->chunkSize);
+                for (int y = 0; y < chunkSize; y++) {
+                    data[x][y] = std::vector<float>(this->getSizeZ());
+                    float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
+                    int z = int(grid_height);
+                    for (int i = 0; i < z; i++) {
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
+                                                            -2.0, 2.0);
+                        data[x][y][i] = abs(noise_val);
+                    }
+                    for (int i = z; i < this->getSizeZ()+1; i++) {
+                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
+                                                            -2.0, 2.0);
+                        data[x][y][i] = -abs(noise_val);
+                    }
+                }
+            }
+            this->chunks[xChunk + yChunk * this->numberOfChunksX()] =
+                    new VoxelChunk();
+            if (xChunk == this->numberOfChunksX() - 1) {
                 this->chunks[this->chunks.size() - 1]->lastChunkOnX = true;
             }
-            if (yChunk == int(sizeY / chunkSize) - 1) {
+            if (yChunk == this->numberOfChunksY() - 1) {
                 this->chunks[this->chunks.size() - 1]->lastChunkOnY = true;
             }
         }
     }
+    std::function<void(Voxel*)> resetVoxelsInChunk([](Voxel* v) -> void { v->resetNeighbors(); });
     for(size_t i = 0; i < this->chunks.size(); i++) {
-        if (i > this->sizeY/chunkSize - 1) {
+        if (i > this->numberOfChunksY() - 1) {
             this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
             this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
         }
-        if (i % int(this->sizeY/chunkSize) >= 1) {
+        if (i % this->numberOfChunksY() >= 1) {
             this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
             this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
-        this->chunks[i]->applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });
+        this->chunks[i]->applyToVoxels(resetVoxelsInChunk);
+    }
+    this->createMesh();*/
+}
+
+VoxelGrid* VoxelGrid::fromIsoData(std::vector<std::vector<std::vector<std::vector<float>>>>& isoData)
+{
+    int iChunk = 0;
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+            this->chunks[iChunk] =
+                    new VoxelChunk(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), isoData[iChunk], this);
+            this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
+            this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
+            iChunk++;
+        }
+    }
+    for(size_t i = 0; i < this->chunks.size(); i++) {
+        if (int(i) > this->numberOfChunksY() - 1) {
+            this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
+            this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
+        }
+        if (i % this->numberOfChunksY() >= 1) {
+            this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
+            this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
+        }
+        this->chunks[i]->resetVoxelsNeighbors();
     }
     this->createMesh();
+    return this;
 }
 
 void VoxelGrid::initMap()
@@ -127,6 +198,8 @@ void VoxelGrid::initMap()
     sizeY -= (sizeY % chunkSize);
 
     this->voxels.clear();
+    for(auto& chunk : this->chunks)
+        delete chunk;
     this->chunks.clear();
 
     // Create and configure FastNoise object
@@ -137,6 +210,12 @@ void VoxelGrid::initMap()
     this->noise.SetFractalGain(0.7);
     this->noise.SetFractalWeightedStrength(0.5);
     this->noise.SetFractalOctaves(10);
+    for (int x = 0; x < this->sizeX; x++)
+        for (int y = 0; y < this->sizeY; y++)
+            for (int h = 0; h < this->sizeZ; h++)
+                noiseMinMax.update(this->noise.GetNoise((float)x, (float)y, (float)h));
+
+    this->chunks = std::vector<VoxelChunk*>(this->numberOfChunksX() * this->numberOfChunksY());
 }
 
 void VoxelGrid::createMesh()
@@ -144,16 +223,15 @@ void VoxelGrid::createMesh()
     for(VoxelChunk* vc : this->chunks)
     {
         vc->needRemeshing = true;
-//        vc->createMesh(this->displayWithMarchingCubes, true);
     }
     remeshAll();
 }
 
-void VoxelGrid::makeItFall(float erosionStrength, int groupId)
+void VoxelGrid::makeItFall(float erosionStrength)
 {
     for(int i = 0; i < 1; i++) {
         for(VoxelChunk* vc : this->chunks) {
-            vc->makeItFall(groupId);
+            vc->makeItFall();
         }
     }
     remeshAll();
@@ -162,20 +240,18 @@ void VoxelGrid::makeItFall(float erosionStrength, int groupId)
         erod.Apply();
     }
 }
-void VoxelGrid::letGravityMakeSandFall()
+void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
     for(VoxelChunk* vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
-    remeshAll();
-
+    if (remesh)
+        remeshAll();
 }
 
 void VoxelGrid::display() {
     for (VoxelChunk* vc : this->chunks)
     {
-        vc->mesh.shader->setFloat("offsetX", -this->sizeX/2 + vc->x);
-        vc->mesh.shader->setFloat("offsetY", -this->sizeY/2 + vc->y);
         vc->display();
     }
 }
@@ -216,11 +292,47 @@ Voxel* VoxelGrid::getVoxel(float x, float y, float z) {
 
 void VoxelGrid::remeshAll()
 {
-    for (VoxelChunk* vc : this->chunks)
+    for (VoxelChunk* vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
-    /*for (VoxelChunk& vc : this->chunks)
-        vc.applyToVoxels([](Voxel* v) -> void { v->resetNeighbors(); });*/
+    }
 }
+
+
+std::vector<std::vector<std::vector<float>>> VoxelGrid::toFloat()
+{
+    std::vector<std::vector<std::vector<float>>> arr(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->sizeZ, 0.0)));
+    for(VoxelChunk* vc : this->chunks)
+    {
+        for(int x = 0; x < vc->sizeX; x++) {
+            for(int y = 0; y < vc->sizeY; y++) {
+                for(int z = 0; z < vc->height; z++) {
+                    arr[x + vc->x][y + vc->y][z] = vc->voxels[x][y][z]->getIsosurface();
+                }
+            }
+        }
+    }
+    return arr;
+}
+void VoxelGrid::toVoxels(std::vector<std::vector<std::vector<float>>> arr)
+{
+    for(VoxelChunk* vc : this->chunks)
+    {
+        for(int x = 0; x < vc->sizeX; x++) {
+            for(int y = 0; y < vc->sizeY; y++) {
+                vc->voxelValues[x][y] = arr[vc->x + x][vc->y + y];
+            }
+        }
+        vc->toVoxels();
+    }
+}
+void VoxelGrid::toVoxels()
+{
+    for(VoxelChunk* vc : this->chunks)
+    {
+        vc->toVoxels();
+    }
+}
+
 
 #include <sstream>
 std::string VoxelGrid::toString()

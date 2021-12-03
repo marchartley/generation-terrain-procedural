@@ -20,9 +20,44 @@ Mesh::Mesh(std::vector<float> _vertexArrayFloat)
     }
     this->fromArray(this->vertexArray); // This is time consuming, but less code to do
 }
+
+void Mesh::clear()
+{
+    this->vertexArray.clear();
+    this->colorsArray.clear();
+}
+Mesh Mesh::merge(Mesh *other, bool recomputeIndices)
+{
+    this->vertexArray.insert(this->vertexArray.end(), other->vertexArray.begin(), other->vertexArray.end());
+    this->colorsArray.insert(this->colorsArray.end(), other->colorsArray.begin(), other->colorsArray.end());
+
+    if (recomputeIndices) {
+        this->fromArray(this->vertexArray);
+    }
+    return *this;
+}
+Mesh Mesh::merge(std::vector<Mesh *> others)
+{
+    for (std::vector<Mesh*>::iterator it = others.begin(); it != others.end(); it++)
+        merge(*it, false);
+
+    this->fromArray(this->vertexArray);
+    return *this;
+}
+
 Mesh Mesh::fromArray(std::vector<Vector3> vertices)
 {
     this->vertexArray = vertices;
+    computeIndices();
+    this->vertexArrayFloat = Vector3::toArray(vertices);
+
+    this->computeNormals();
+    this->computeColors();
+    return *this;
+}
+
+void Mesh::computeIndices()
+{
     this->indices.clear();
     this->vectorToIndex.clear();
     int index = 0;
@@ -41,11 +76,6 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices)
         this->indices[index] = mainIndex;
         index++;
     }
-    this->vertexArrayFloat = Vector3::toArray(vertices);
-
-    this->computeNormals();
-    this->computeColors();
-    return *this;
 }
 
 void Mesh::computeNormals()

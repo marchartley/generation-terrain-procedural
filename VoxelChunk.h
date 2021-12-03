@@ -20,11 +20,13 @@ public:
     void display();
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);
 
-    void makeItFall(int groupId = -1);
+    void makeItFall();
     void letGravityMakeSandFall();
     void computeGroups();
 
-    std::vector<Vector3> applyMarchingCubes(std::vector<Vector3> *outColors = nullptr);
+    void resetVoxelsNeighbors();
+
+    std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
@@ -35,11 +37,13 @@ public:
     int x, y;
     int sizeX, sizeY, height;
     std::vector<std::vector<std::vector<Voxel*>>> voxels;
+    std::vector<std::vector<std::vector<float>>> voxelValues;
+
     std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
     bool lastChunkOnX = false, lastChunkOnY = false;
 
-    template<class R>
-    void applyToVoxels(std::function<R(Voxel*)> func) {
+    template<class F>
+    void applyToVoxels(F func) {
         for(int v_x = 0; v_x < sizeX; v_x++) {
             for(int v_y = 0; v_y < sizeY; v_y++) {
                 for(int h = 0; h < height; h++) {
@@ -48,10 +52,9 @@ public:
             }
         }
     }
-    template <class F>
-    void applyToVoxels(F func) {
-        this->applyToVoxels(std::function<void(Voxel*)>(func));
-    }
+
+    std::vector<std::vector<std::vector<float>>>& toFloat();
+    std::vector<std::vector<std::vector<Voxel*>>>& toVoxels();
 
     VoxelGrid* parent;
 

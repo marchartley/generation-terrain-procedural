@@ -4,7 +4,7 @@
 
 std::vector<std::set<int>> Voxel::voxelGroups;
 int Voxel::currentLabelIndex = 0;
-std::map<TerrainTypes, bool> Voxel::isMatter = {
+std::unordered_map<TerrainTypes, bool> Voxel::isMatter = {
     {AIR, false},
     {DIRT, true},
     {WATER, false},
@@ -129,7 +129,7 @@ float Voxel::globalZ()  {
 }
 
 
-std::vector<Vector3> Voxel::getMeshVertices()
+std::vector<Vector3> Voxel::getMeshVertices(bool useGlobalCoords)
 {
     std::vector<Vector3> vertex;
     if ((bool)*this) {
@@ -182,14 +182,102 @@ std::vector<Vector3> Voxel::getMeshVertices()
         }
     }
     std::vector<Vector3> returnArray;
+    Vector3 currentPos = (useGlobalCoords ? globalPos() : localPos());
     for (size_t i = 0; i < vertex.size(); i+=4)
     {
-        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 1]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 0]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 3]) * this->blockSize);
-        returnArray.push_back((localPos() + vertex[i + 2]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 2]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 1]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 0]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 3]) * this->blockSize);
+        returnArray.push_back((currentPos + vertex[i + 2]) * this->blockSize);
     }
     return returnArray;
 }
+
+
+
+
+
+/*
+Voxel* Voxel::getNeighbor(VOXEL_NEIGHBOR dir)
+{
+    if(dir == VOXEL_NEIGHBOR::RIGHT) { // X + 1
+        if (this->x == this->parent->sizeX - 1) {
+            if(this->parent->lastChunkOnX) return nullptr;
+            else return this->parent->neighboring_chunks[RIGHT]->voxels[0][this->y][this->z];
+        } else {
+            return this->parent->voxels[this->x + 1][this->y][this->z];
+        }
+    }
+    else if(dir == VOXEL_NEIGHBOR::LEFT) { // X - 1
+        if (this->x == 0) {
+            if(this->parent->x == 0) return nullptr;
+            else return this->parent->neighboring_chunks[LEFT]->voxels[this->parent->neighboring_chunks[LEFT]->sizeX - 1][this->y][this->z];
+        } else {
+            return this->parent->voxels[this->x - 1][this->y][this->z];
+        }
+    }
+    else if(dir == VOXEL_NEIGHBOR::BACK) { // Y + 1
+        if (this->y == this->parent->sizeY - 1) {
+            if(this->parent->lastChunkOnY) return nullptr;
+            else return this->parent->neighboring_chunks[BACK]->voxels[this->x][0][this->z];
+        } else {
+            return this->parent->voxels[this->x][this->y + 1][this->z];
+        }
+    }
+    else if(dir == VOXEL_NEIGHBOR::FRONT) { // Y - 1
+        if (this->y == 0) {
+            if(this->parent->y == 0) return nullptr;
+            else return this->parent->neighboring_chunks[FRONT]->voxels[this->x][this->parent->neighboring_chunks[FRONT]->sizeY - 1][this->z];
+        } else {
+            return this->parent->voxels[this->x][this->y - 1][this->z];
+        }
+    }
+    else if(dir == VOXEL_NEIGHBOR::TOP) { // Z + 1
+        if (this->z == this->parent->height - 1) {
+            return nullptr;
+//            if(this->parent->lastChunkOnY) return nullptr;
+//            else return this->parent->neighboring_chunks[FRONT]->voxels[this->x][0][this->z];
+        } else {
+            return this->parent->voxels[this->x][this->y][this->z + 1];
+        }
+    }
+    else if(dir == VOXEL_NEIGHBOR::BOTTOM) { // Z - 1
+        if (this->z == 0) {
+            return nullptr;
+//            if(this->parent->y == 0) return nullptr;
+//            else return this->parent->neighboring_chunks[BACK]->voxels[this->x][this->parent->neighboring_chunks[BACK]->sizeY - 1][this->z];
+        } else {
+            return this->parent->voxels[this->x][this->y][this->z - 1];
+        }
+    }
+    return nullptr;
+}
+
+void Voxel::InsertNeighborsIfNotOnGround(std::unordered_set<Voxel*>& set) {
+    for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
+        for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
+            for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
+                Voxel* v = this->parent->parent->getVoxel(x, y, z);
+                if(v != nullptr && (bool)*v && !v->isOnGround) {
+                    set.insert(v);
+                }
+            }
+        }
+    }
+}
+int Voxel::CountNeighbors() {
+    int numberOfNeighbors = 0;
+    for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
+        for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
+            for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
+                Voxel* v = this->parent->parent->getVoxel(x, y, z);
+                if(v != nullptr && (bool)*v) {
+                    numberOfNeighbors ++;
+                }
+            }
+        }
+    }
+    return numberOfNeighbors;
+}*/
