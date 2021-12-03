@@ -76,8 +76,8 @@ void LayerBasedGrid::createMesh() {
             // Add the colors to each vertex
             int X = 6; // Start with 6 faces
 
-            for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = v->neighbors.begin(); it != v->neighbors.end(); it++)
-                if (it->second && (bool)*it->second)
+            for(auto& n : v->neighbors)
+                if (n.second && (bool)*n.second)
                     X--;    // Remove a face per neighbor
             X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
             for (int x = 0; x < X; x++) {

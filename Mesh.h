@@ -15,15 +15,21 @@ public:
     Mesh(std::vector<float> _vertexArrayFloat);
     Mesh fromArray(std::vector<Vector3> vertices);
 
+    void clear();
+    Mesh merge(Mesh* other, bool recomputeIndices = true);
+    Mesh merge(std::vector<Mesh*> others);
+
     void update();
     void pushToBuffer();
     void display(GLenum shape = GL_TRIANGLES);
+
 
     unsigned int bufferID;
     bool bufferReady = false;
 
 
 //protected:
+    void computeIndices();
     void computeNormals();
     void computeColors();
     std::vector<Vector3> vertexArray;

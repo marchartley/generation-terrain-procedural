@@ -38,6 +38,7 @@ float fbm (in vec2 st) {
     }
     return value;
 }
+
 float fbm3 (in vec3 st) {
     return fbm(st.xy + st.z);
 }

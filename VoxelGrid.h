@@ -37,6 +37,7 @@ public:
     VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     ~VoxelGrid();
     void from2DGrid(Grid grid);
+    VoxelGrid* fromIsoData(std::vector<std::vector<std::vector<std::vector<float>>>>& isoData);
 
     void initMap();
 
@@ -44,8 +45,8 @@ public:
 
     void createMesh();
 
-    void makeItFall(float erosionStrength = 0.0, int groupId = -1);
-    void letGravityMakeSandFall();
+    void makeItFall(float erosionStrength = 0.0);
+    void letGravityMakeSandFall(bool remesh = true);
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
@@ -62,8 +63,15 @@ public:
 
     void remeshAll();
 
+    int numberOfChunksX() { return this->sizeX / this->chunkSize; }
+    int numberOfChunksY() { return this->sizeY / this->chunkSize; }
+
     std::string toString();
     std::string toShortString();
+
+    std::vector<std::vector<std::vector<float>>> toFloat();
+    void toVoxels(std::vector<std::vector<std::vector<float>>> arr);
+    void toVoxels();
 
 //protected:
     int sizeX, sizeY, sizeZ;
@@ -72,10 +80,12 @@ public:
     std::vector<VoxelChunk*> chunks;
     float noise_shifting;
 
-    int chunkSize = 40;
+    int chunkSize = 10;
     bool displayWithMarchingCubes = false;
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
+
+    Mesh mesh;
 };
 
 #endif // VOXELGRID_H

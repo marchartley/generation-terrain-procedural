@@ -1,7 +1,7 @@
 build/
 build-Debug/*
 .pro.user.*
-screenshots/*/*.jpg
+screenshots/*
 
 # Prerequisites
 *.d

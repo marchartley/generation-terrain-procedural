@@ -8,15 +8,16 @@
 #include <iostream>
 #include "Matrix.h"
 
-//#include "ui_MainWindow.h"
+//#include "ui_Test.h"
 
-//class ViewerInterface : public QMainWindow, public Ui::MainWindow {
+//class ViewerInterface : public QDialog, public Ui::Dialog {
 //public:
 //  ViewerInterface() {
 //      setupUi(this);
 
 //  }
 //};
+#define ViewerInterface Viewer
 
 int main(int argc, char *argv[])
 {
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    Viewer vi;
+    ViewerInterface vi;
     vi.show();
 
     return app.exec();
