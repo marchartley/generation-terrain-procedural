@@ -18,7 +18,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(62, 62, 31, 1.0, .30),
+        new VoxelGrid(5, 5, 2, 1.0, .30),
         nullptr, // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,

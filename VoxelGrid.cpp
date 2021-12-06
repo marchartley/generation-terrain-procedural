@@ -4,7 +4,10 @@
 #include "Shader.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
-    : sizeX(nx), sizeY(ny), sizeZ(nz), blockSize(blockSize), noise_shifting(noise_shifting) {
+    : blockSize(blockSize), noise_shifting(noise_shifting) {
+    this->sizeX = nx * (chunkSize + 1);
+    this->sizeY = ny * (chunkSize + 1);
+    this->sizeZ = nz * (chunkSize + 1);
     this->initMap();
 
 
@@ -99,6 +102,8 @@ VoxelGrid* VoxelGrid::fromIsoData(std::vector<std::vector<std::vector<std::vecto
             this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
         this->chunks[i]->resetVoxelsNeighbors();
+        this->chunks[i]->updateLoDsAvailable();
+        this->chunks[i]->LoDIndex = std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
     }
     this->createMesh();
     return this;
