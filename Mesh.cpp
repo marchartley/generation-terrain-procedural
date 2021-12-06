@@ -45,10 +45,10 @@ Mesh Mesh::merge(std::vector<Mesh *> others)
     return *this;
 }
 
-Mesh Mesh::fromArray(std::vector<Vector3> vertices)
+Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
 {
     this->vertexArray = vertices;
-    computeIndices();
+    computeIndices(indices);
     this->vertexArrayFloat = Vector3::toArray(vertices);
 
     this->computeNormals();
@@ -56,25 +56,31 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices)
     return *this;
 }
 
-void Mesh::computeIndices()
+void Mesh::computeIndices(std::vector<int> indices)
 {
-    this->indices.clear();
-    this->vectorToIndex.clear();
-    int index = 0;
-    int mainIndex = 0;
-    for (Vector3& pos : this->vertexArray) {
-        std::tuple<int, int, int> vecIndex = (pos*100).toIntTuple();
-        std::map<std::tuple<int, int, int>, int>::iterator it = this->vectorToIndex.find(vecIndex);
-        if (it == this->vectorToIndex.end()) {
-            // This index will be the main index for all points at this position
-            this->vectorToIndex[vecIndex] = index;
-            mainIndex = index;
-        } else {
-            mainIndex = it->second;
-
+    if (indices.size() > 0) {
+        for (int i = 0; i < this->vertexArray.size(); i++) {
+            this->indices[i] = indices[i];
         }
-        this->indices[index] = mainIndex;
-        index++;
+    } else {
+        this->indices.clear();
+        this->vectorToIndex.clear();
+        int index = 0;
+        int mainIndex = 0;
+        for (Vector3& pos : this->vertexArray) {
+            std::tuple<int, int, int> vecIndex = (pos*100).toIntTuple();
+            std::map<std::tuple<int, int, int>, int>::iterator it = this->vectorToIndex.find(vecIndex);
+            if (it == this->vectorToIndex.end()) {
+                // This index will be the main index for all points at this position
+                this->vectorToIndex[vecIndex] = index;
+                mainIndex = index;
+            } else {
+                mainIndex = it->second;
+
+            }
+            this->indices[index] = mainIndex;
+            index++;
+        }
     }
 }
 

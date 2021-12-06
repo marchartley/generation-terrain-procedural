@@ -13,7 +13,7 @@ public:
     Mesh();
     Mesh(std::vector<Vector3> _vertexArray);
     Mesh(std::vector<float> _vertexArrayFloat);
-    Mesh fromArray(std::vector<Vector3> vertices);
+    Mesh fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
 
     void clear();
     Mesh merge(Mesh* other, bool recomputeIndices = true);
@@ -27,9 +27,8 @@ public:
     unsigned int bufferID;
     bool bufferReady = false;
 
-
 //protected:
-    void computeIndices();
+    void computeIndices(std::vector<int> indices = std::vector<int>());
     void computeNormals();
     void computeColors();
     std::vector<Vector3> vertexArray;
