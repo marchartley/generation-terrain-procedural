@@ -1,7 +1,7 @@
 #include "Globals.h"
 #include "UnderwaterErosion.h"
 #include "RockErosion.h"
-
+#include "BSpline.h"
 
 
 UnderwaterErosion::UnderwaterErosion()
@@ -59,6 +59,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
                 }
             }
             steps --;
+            coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             pos += dir;
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
@@ -77,4 +78,28 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
     }
     grid->remeshAll();
     return debugLines;
+}
+
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(Vector3 *startingPoint, Vector3 *endingPoint, int numberPoints, bool addingMatter)
+{
+    BSpline curve = BSpline(numberPoints); // Random curve
+    BSpline width = BSpline(std::vector<Vector3>({
+                                                     Vector3(0.0, 1.0),
+                                                     Vector3(0.5, 0.5),
+                                                     Vector3(1.0, 1.0)
+                                                 }));
+
+    float resolution = 0.01;
+    std::vector<Vector3> coords;
+    for (float i = 0; i < 1.0; i += resolution)
+    {
+        Vector3 pos = ((curve.getPoint(i) + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
+        coords.push_back(pos - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+        float rockSize = width.getPoint(i).y * this->maxRockSize;
+        RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
+        rock.Apply(grid->getVoxel(pos), addingMatter, false);
+        coords.push_back((((curve.getPoint(i + resolution) + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ)) - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+    }
+    grid->remeshAll();
+    return coords;
 }

@@ -92,7 +92,7 @@ Vector3& Vector3::operator-=(const Vector3& o) {
     this->z -= o.z;
     return *this;
 }
-Vector3 operator*(Vector3 a, Vector3& b) {
+Vector3 operator*(Vector3 a, Vector3 b) {
     a *= b;
     return a;
 }
