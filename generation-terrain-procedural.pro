@@ -88,5 +88,4 @@ DISTFILES += \
     voxels_fragment_shader_blinn_phong.glsl \
     voxels_vertex_shader_blinn_phong.glsl
 
-FORMS += \
-    MainWindow.ui
+FORMS +=
