@@ -21,6 +21,7 @@ SOURCES += \
         BSpline.cpp \
         Globals.cpp \
         Grid.cpp \
+        Interface.cpp \
         LayerBasedGrid.cpp \
         MarchingCubes.cpp \
         Matrix.cpp \
@@ -55,6 +56,7 @@ HEADERS += \
     FastNoiseLit.h \
     Globals.h \
     Grid.h \
+    Interface.h \
     LayerBasedGrid.h \
     MarchingCubes.h \
     Matrix.h \
@@ -86,4 +88,5 @@ DISTFILES += \
     voxels_fragment_shader_blinn_phong.glsl \
     voxels_vertex_shader_blinn_phong.glsl
 
-FORMS +=
+FORMS += \
+    MainWindow.ui

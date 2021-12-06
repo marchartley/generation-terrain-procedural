@@ -33,7 +33,6 @@ Vector3 HSVtoRGB(float H, float S,float V){
     float R = (r+m);
     float G = (g+m);
     float B = (b+m);
-//    std::cout << Vector3(H, S, V) << " " << Vector3(R, G, B) << std::endl;
     return Vector3(R, G, B);
 }
 
@@ -57,6 +56,8 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     }
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
+    // TODO : make flow field
+    this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->height)));
     this->updateLoDsAvailable();
 }
 
@@ -70,6 +71,40 @@ VoxelChunk::~VoxelChunk()
         delete v;
     });
     this->voxels.clear();
+}
+
+void VoxelChunk::computeFlowfield(int blur_iterations)
+{
+    for(int v_x = 0; v_x < sizeX; v_x++) {
+        for(int v_y = 0; v_y < sizeY; v_y++) {
+            for(int h = 0; h < height; h++) {
+                flowField[v_x][v_y][h] = this->computeNormal(v_x, v_y, h);
+            }
+        }
+    }
+    for (int iter_blur = 0; iter_blur < blur_iterations; iter_blur++) {
+        for(int v_x = 1; v_x < sizeX - 1; v_x++) {
+            for(int v_y = 1; v_y < sizeY - 1; v_y++) {
+                for(int h = 1; h < height - 1; h++) {
+                    for(int d_x = -1; d_x <= 1; d_x++) {
+                        for(int d_y = -1; d_y <= 1; d_y++) {
+                            for(int d_h = -1; d_h <= 1; d_h++) {
+                                flowField[v_x][v_y][h] += flowField[v_x + d_x][v_y + d_y][h + d_h] * (1/27.0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for(int v_x = 0; v_x < sizeX; v_x++) {
+        for(int v_y = 0; v_y < sizeY; v_y++) {
+            for(int h = 0; h < height; h++) {
+                if (flowField[v_x][v_y][h] != Vector3())
+                    flowField[v_x][v_y][h].normalize();
+            }
+        }
+    }
 }
 
 void VoxelChunk::updateLoDsAvailable() {
@@ -122,6 +157,36 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     this->mesh.fromArray(voxelVertices);
     this->mesh.update();
 }
+
+Vector3 VoxelChunk::computeNormal(Vector3 pos)
+{
+    return this->computeNormal(pos.x, pos.y, pos.z);
+}
+Vector3 VoxelChunk::computeNormal(int x, int y, int z)
+{
+    Vertex vertices[8] = {Vertex(x    , y    , z    , this->parent->getVoxelValue(x    , y    , z    )),
+                          Vertex(x + 1, y    , z    , this->parent->getVoxelValue(x + 1, y    , z    )),
+                          Vertex(x + 1, y + 1, z    , this->parent->getVoxelValue(x + 1, y + 1, z    )),
+                          Vertex(x    , y + 1, z    , this->parent->getVoxelValue(x    , y + 1, z    )),
+                          Vertex(x    , y    , z + 1, this->parent->getVoxelValue(x    , y    , z + 1)),
+                          Vertex(x + 1, y    , z + 1, this->parent->getVoxelValue(x + 1, y    , z + 1)),
+                          Vertex(x + 1, y + 1, z + 1, this->parent->getVoxelValue(x + 1, y + 1, z + 1)),
+                          Vertex(x    , y + 1, z + 1, this->parent->getVoxelValue(x    , y + 1, z + 1))
+                         };
+    std::vector<Vector3> tris = this->computeMarchingCube(vertices, 0.0, false);
+    Vector3 normal;
+    for(size_t i = 0; i < tris.size(); i += 3)
+    {
+        normal += (tris[i+2] - tris[i]).cross((tris[i+1] - tris[i])) +
+                    (tris[i] - tris[i+1]).cross((tris[i+2] - tris[i+1])) +
+                    (tris[i+1] - tris[i+2]).cross((tris[i] - tris[i+2]));
+    }
+    if (tris.size() == 0)
+        return normal;
+    return normal.normalize();
+
+}
+
 std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords, std::vector<Vector3> *outColors)
 {
     std::vector<Vector3> vertexArray;
@@ -454,7 +519,6 @@ void VoxelChunk::computeGroups()
             }
         }
     });
-//    std::cout << calls << " out of " << this->sizeX * this->sizeY * this->height << " voxels" << std::endl;
 }
 
 

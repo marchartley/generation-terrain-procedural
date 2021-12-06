@@ -50,6 +50,8 @@ public:
     Vector3& operator-=(float o);
     Vector3& operator=(const Vector3& o);
 
+    std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
+
 };
 
 #endif // VECTOR3_H

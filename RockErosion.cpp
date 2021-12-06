@@ -19,11 +19,8 @@ RockErosion::RockErosion(int size, float maxStrength)
                 float j_i = (j - (size-1)/2.0) / ((size-1)/2.0);
                 float k_i = (k - (size-1)/2.0) / ((size-1)/2.0);
                 attackMask[i][j][k] = -(maxVal - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(maxVal) * maxStrength;
-//                std::cout << attackMask[i][j][k] << "\t";
             }
-//            std::cout << std::endl;
         }
-//        std::cout << std::endl;
     }
 }
 

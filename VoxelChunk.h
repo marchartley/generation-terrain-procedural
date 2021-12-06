@@ -28,6 +28,7 @@ public:
     void computeGroups();
 
     void resetVoxelsNeighbors();
+    void computeFlowfield(int blur_iterations);
 
     std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
 
@@ -35,6 +36,9 @@ public:
     bool contains(float x, float y, float z);
 
     std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
+
+    Vector3 computeNormal(Vector3 pos);
+    Vector3 computeNormal(int x, int y, int z);
 
 //protected:
 //    std::vector<std::vector<std::vector<TerrainTypes>>> data;
@@ -45,6 +49,7 @@ public:
     std::vector<std::vector<std::vector<float>>> voxelValues;
     std::vector<std::vector<std::vector<float>>> originalVoxelValues;
     std::vector<std::vector<std::vector<int>>> voxelGroups;
+    std::vector<std::vector<std::vector<Vector3>>> flowField;
     int LoDIndex = 1;
     std::vector<int> LoDs;
 

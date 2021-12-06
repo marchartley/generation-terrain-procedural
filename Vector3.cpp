@@ -165,12 +165,12 @@ Vector3& Vector3::operator=(const Vector3& o) {
 }
 
 std::ostream& operator<<(std::ostream& io, const Vector3& v) {
-    io << "Vector3 (" << v.x << ", " << v.y << ", " << v.z << ")";
+    io << v.toString();
     return io;
 }
 
 std::ostream& operator<<(std::ostream& io, Vector3* v) {
-    io << "Vector3 (" << v->x << ", " << v->y << ", " << v->z << ")";
+    io << v->toString();
     return io;
 }
 

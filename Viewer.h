@@ -9,6 +9,7 @@
 #include <qmessagebox.h>
 #include "RockErosion.h"
 #include "Shader.h"
+#include <QObject>
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -34,13 +35,39 @@ public:
     Viewer(VoxelGrid* g, QWidget *parent = nullptr);
     ~Viewer();
 
-    void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; }
-    void setMapMode(MapMode newMode) { this->mapMode = newMode; }
-    void setSmoothingAlgorithm(SmoothingAlgorithm newAlgo) { this->algorithm = newAlgo; }
 
-    void saveScreenshot();
+public Q_SLOTS:
+    void setErosionRocksSize(int newSize) { this->erosionSize = newSize;}
+    void setErosionRocksStrength(float newStrength) { this->erosionStrength = newStrength;}
+    void setErosionRocksQuantity(int newQtt) { this->erosionQtt = newQtt;}
+    void erodeMap(bool sendFromCam = false);
 
-protected:
+    void setManualErosionRocksSize(int newSize) { this->manualErosionSize = newSize;}
+    void setManualErosionRocksStrength(float newStrength) { this->manualErosionStrength = newStrength;}
+    void setAddingMatterMode(bool addingMode) { this->addingMatterMode = addingMode; }
+    void throwRock();
+
+    void setCurvesErosionSize(int newSize) { this->curvesErosionSize = newSize; }
+    void setCurvesErosionStrength(float newStrength) { this->curvesErosionStrength = newStrength;}
+    void setCurvesErosionAddingMatterMode(bool addingMode) { this->addingCurvesErosionMatterMode = addingMode; }
+    void createTunnel(bool removingMatter = true);
+
+    bool createGlobalGravity();
+    bool createSandGravity();
+
+    bool startStopRecording();
+
+    void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; update(); }
+    void setMapMode(MapMode newMode) { this->mapMode = newMode; update(); }
+    void setSmoothingAlgorithm(SmoothingAlgorithm newAlgo) { this->algorithm = newAlgo;
+                                                             voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
+                                                             voxelGrid->createMesh();
+                                                            update();}
+
+//    void saveScreenshot();
+
+//protected:
+public:
     virtual void init();
     virtual void draw();
 
@@ -57,7 +84,7 @@ protected:
     MapMode mapMode;
     SmoothingAlgorithm algorithm = MARCHING_CUBES;
 
-private:
+//private:
     Grid* grid;
     VoxelGrid* voxelGrid;
     LayerBasedGrid* layerGrid;
@@ -66,7 +93,17 @@ private:
 
     bool displayRockTrajectories = false;
 
-    int selectionSize = 15;
+    int erosionSize = 15;
+    float erosionStrength = .5;
+    int erosionQtt = 10;
+
+    int manualErosionSize = 15;
+    float manualErosionStrength = .5;
+
+    int curvesErosionSize = 15;
+    float curvesErosionStrength = .5;
+    bool addingCurvesErosionMatterMode = true;
+
     float*** selectionShape;
     bool addingMatterMode = true;
     RockErosion matter_adder;

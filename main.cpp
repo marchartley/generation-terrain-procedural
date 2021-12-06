@@ -7,17 +7,8 @@
 #include <qapplication.h>
 #include <iostream>
 #include "Matrix.h"
-
-//#include "ui_Test.h"
-
-//class ViewerInterface : public QDialog, public Ui::Dialog {
-//public:
-//  ViewerInterface() {
-//      setupUi(this);
-
-//  }
-//};
-#define ViewerInterface Viewer
+#include "Interface.h"
+//#define ViewerInterface Viewer
 
 int main(int argc, char *argv[])
 {
