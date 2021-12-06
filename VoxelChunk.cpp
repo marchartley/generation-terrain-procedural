@@ -57,10 +57,7 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     }
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
-
-    for (int i = 1; i < std::min(std::min(this->sizeX, this->sizeY), this->height); i++)
-        if ((this->sizeX-1) % i == 0 && (this->sizeY-1) % i == 0 && (this->height-1) % i == 0)
-            this->LoDs.push_back(i);
+    this->updateLoDsAvailable();
 }
 
 VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
@@ -75,6 +72,14 @@ VoxelChunk::~VoxelChunk()
     this->voxels.clear();
 }
 
+void VoxelChunk::updateLoDsAvailable() {
+    this->LoDs.clear();
+    int x_add = 2 - (this->x == 0 ? 1 : 0) - (!this->lastChunkOnX ? 1 : 0);
+    int y_add = 2 - (this->y == 0 ? 1 : 0) - (!this->lastChunkOnY ? 1 : 0);
+    for (int i = 1; i < std::min(std::min(this->sizeX, this->sizeY), this->height); i++)
+        if ((this->sizeX-x_add) % i == 0 && (this->sizeY-y_add) % i == 0 && this->height % i == 0)
+            this->LoDs.push_back(i);
+}
 void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     if (!needRemeshing)
         return;

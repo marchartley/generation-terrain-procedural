@@ -21,6 +21,8 @@ public:
     void display();
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);
 
+    void updateLoDsAvailable();
+
     void makeItFall();
     void letGravityMakeSandFall();
     void computeGroups();

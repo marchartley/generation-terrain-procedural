@@ -86,7 +86,7 @@ public:
     std::vector<VoxelChunk*> chunks;
     float noise_shifting;
 
-    int chunkSize = 31;
+    int chunkSize = 30;
     bool displayWithMarchingCubes = false;
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
