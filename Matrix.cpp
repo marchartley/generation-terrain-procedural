@@ -13,7 +13,6 @@ Matrix::Matrix(int n, int m, float default_value)
     }
 }
 Matrix::Matrix(int n, int m, float* data){
-
     for(int i = 0; i < n; i++) {
         this->push_back(std::vector<float>());
         for (int j = 0; j < m; j++)

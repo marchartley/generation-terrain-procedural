@@ -18,6 +18,7 @@ TEMPLATE = app
 TARGET = interface
 
 SOURCES += \
+        BSpline.cpp \
         Globals.cpp \
         Grid.cpp \
         LayerBasedGrid.cpp \
@@ -50,6 +51,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    BSpline.h \
     FastNoiseLit.h \
     Globals.h \
     Grid.h \
