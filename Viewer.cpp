@@ -18,7 +18,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(80, 80, 40, 1.0, .30),
+        new VoxelGrid(62, 62, 31, 1.0, .30),
         nullptr, // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
@@ -43,7 +43,7 @@ Viewer::~Viewer()
 }
 
 void Viewer::init() {
-    float totalTime = 0.0;
+    /*float totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
         for (VoxelChunk* vc : this->voxelGrid->chunks) {
@@ -117,7 +117,7 @@ void Viewer::init() {
         totalTime += std::chrono::duration<float>(endTime - startTime).count();
     }
     std::cout << "To voxels with premade array   : " << totalTime/10 << "s" << std::endl;
-    /*
+
     totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
@@ -128,8 +128,8 @@ void Viewer::init() {
         }
         auto endTime = std::chrono::system_clock::now();
         totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }*/
-    /*std::cout << "Fetching voxels from the grid  : " << totalTime/10 << "s" << std::endl;
+    }
+    std::cout << "Fetching voxels from the grid  : " << totalTime/10 << "s" << std::endl;
     totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
@@ -143,9 +143,7 @@ void Viewer::init() {
     totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->computeGroups();
-        }
+        this->voxelGrid->computeVoxelGroups();
         auto endTime = std::chrono::system_clock::now();
         totalTime += std::chrono::duration<float>(endTime - startTime).count();
     }
@@ -153,10 +151,8 @@ void Viewer::init() {
     totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->needRemeshing = true;
-            vc->createMesh();
-        }
+        this->voxelGrid->displayWithMarchingCubes = true;
+        this->voxelGrid->createMesh();
         auto endTime = std::chrono::system_clock::now();
         totalTime += std::chrono::duration<float>(endTime - startTime).count();
     }
@@ -168,10 +164,8 @@ void Viewer::init() {
     totalTime = 0.0;
     for (int i = 0; i < 10; i ++) {
         auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->needRemeshing = true;
-            vc->createMesh(false);
-        }
+        this->voxelGrid->displayWithMarchingCubes = false;
+        this->voxelGrid->createMesh();
         auto endTime = std::chrono::system_clock::now();
         totalTime += std::chrono::duration<float>(endTime - startTime).count();
     }
@@ -183,14 +177,14 @@ void Viewer::init() {
     exit(0);*/
 
     restoreStateFromFile();
-    setSceneRadius(200.0);
+    setSceneRadius(500.0);
     glEnable(GL_LIGHT0);
     glEnable(GL_LIGHT1);
     glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
 
-//    this->camera()->setType(Camera::ORTHOGRAPHIC);
+    this->camera()->setType(Camera::ORTHOGRAPHIC);
 
     setMouseTracking(true);
 
@@ -368,7 +362,7 @@ void Viewer::draw() {
     this->rocksMeshes.shader->setMatrix("mv_matrix", mvMatrix);
     this->rocksMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     if (displayRockTrajectories) {
-        this->rocksMeshes.display(GL_LINE_STRIP);
+        this->rocksMeshes.display(GL_LINES);
     }
 
     if (this->isTakingScreenshots) {
@@ -506,6 +500,25 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             exit(-1);
         }
         std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling") << std::endl;
+        update();
+    } else if(e->key() == Qt::Key_2) {
+        for(VoxelChunk* vc : this->voxelGrid->chunks) {
+            vc->LoDIndex++;
+            vc->needRemeshing = true;
+        }
+        this->voxelGrid->remeshAll();
+        update();
+    } else if(e->key() == Qt::Key_3) {
+        UnderwaterErosion erod(this->voxelGrid, 10, .8, 100);
+        std::cout << "Removing matter to create a tunnel" << std::endl;
+        this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, false));
+        this->rocksMeshes.update();
+        update();
+    } else if(e->key() == Qt::Key_4) {
+        UnderwaterErosion erod(this->voxelGrid, 10, .8, 100);
+        std::cout << "Adding matter to create a tunnel" << std::endl;
+        this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, true));
+        this->rocksMeshes.update();
         update();
     } else {
         QGLViewer::keyPressEvent(e);

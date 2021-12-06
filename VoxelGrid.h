@@ -73,6 +73,12 @@ public:
     void toVoxels(std::vector<std::vector<std::vector<float>>> arr);
     void toVoxels();
 
+    void computeVoxelGroups();
+
+    float getVoxelValue(Vector3 pos);
+    float getVoxelValue(float x, float y, float z);
+    float getOriginalVoxelValue(Vector3 pos);
+    float getOriginalVoxelValue(float x, float y, float z);
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;
@@ -80,7 +86,7 @@ public:
     std::vector<VoxelChunk*> chunks;
     float noise_shifting;
 
-    int chunkSize = 10;
+    int chunkSize = 31;
     bool displayWithMarchingCubes = false;
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
