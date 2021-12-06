@@ -33,11 +33,13 @@ void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshin
             for (int z = -size/2; z < size/2; z++){
                 Voxel* v = main_v->parent->parent->getVoxel(main_v->globalPos() + Vector3(x, y, z) + Vector3(.5, .5, .5));
                 if(v != nullptr) {
-                    v->manual_isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
-                    v->manual_isosurface = std::max(v->manual_isosurface, -2.0f);
-                    v->manual_isosurface = std::min(v->manual_isosurface, 2.0f);
+                    /*v->isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
+                    v->isosurface = std::max(v->isosurface, -2.0f);
+                    v->isosurface = std::min(v->isosurface, 2.0f);*/
+                    v->parent->voxelValues[v->x][v->y][v->z] += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
                     v->parent->needRemeshing = true;
                 }
+
             }
         }
     }

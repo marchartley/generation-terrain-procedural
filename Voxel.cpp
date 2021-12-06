@@ -128,69 +128,50 @@ float Voxel::globalZ()  {
     return this->z;
 }
 
-
 std::vector<Vector3> Voxel::getMeshVertices(bool useGlobalCoords)
 {
     std::vector<Vector3> vertex;
     if ((bool)*this) {
         // BOTTOM
         if (!this->neighbors[BOTTOM] || !(bool)*this->neighbors[BOTTOM]) {
-            vertex.push_back(Vector3(0, 1, 0));
-            vertex.push_back(Vector3(1, 1, 0));
-            vertex.push_back(Vector3(1, 0, 0));
-            vertex.push_back(Vector3(0, 0, 0));
+            vertex.insert(vertex.end(), {Vector3(0, 1, 0), Vector3(1, 1, 0), Vector3(1, 0, 0),  Vector3(0, 0, 0)});
         }
 
         // RIGHT
         if (!this->neighbors[RIGHT] || !(bool)*this->neighbors[RIGHT]) {
-            vertex.push_back(Vector3(1, 0, 0));
-            vertex.push_back(Vector3(1, 1, 0));
-            vertex.push_back(Vector3(1, 1, 1));
-            vertex.push_back(Vector3(1, 0, 1));
+            vertex.insert(vertex.end(), {Vector3(1, 0, 0), Vector3(1, 1, 0), Vector3(1, 1, 1),  Vector3(1, 0, 1)});
         }
 
         // TOP
         if (!this->neighbors[TOP] || !(bool)*this->neighbors[TOP]) {
-            vertex.push_back(Vector3(1, 0, 1));
-            vertex.push_back(Vector3(1, 1, 1));
-            vertex.push_back(Vector3(0, 1, 1));
-            vertex.push_back(Vector3(0, 0, 1));
+            vertex.insert(vertex.end(), {Vector3(1, 0, 1), Vector3(1, 1, 1), Vector3(0, 1, 1),  Vector3(0, 0, 1)});
         }
 
         // LEFT
         if (!this->neighbors[LEFT] || !(bool)*this->neighbors[LEFT]) {
-            vertex.push_back(Vector3(0, 0, 1));
-            vertex.push_back(Vector3(0, 1, 1));
-            vertex.push_back(Vector3(0, 1, 0));
-            vertex.push_back(Vector3(0, 0, 0));
+            vertex.insert(vertex.end(), {Vector3(0, 0, 1), Vector3(0, 1, 1), Vector3(0, 1, 0),  Vector3(0, 0, 0)});
         }
 
         // FRONT
         if (!this->neighbors[FRONT] || !(bool)*this->neighbors[FRONT]) {
-            vertex.push_back(Vector3(0, 0, 0));
-            vertex.push_back(Vector3(1, 0, 0));
-            vertex.push_back(Vector3(1, 0, 1));
-            vertex.push_back(Vector3(0, 0, 1));
+            vertex.insert(vertex.end(), {Vector3(0, 0, 0), Vector3(1, 0, 0), Vector3(1, 0, 1),  Vector3(0, 0, 1)});
         }
 
         // BACK
         if (!this->neighbors[BACK] || !(bool)*this->neighbors[BACK]) {
-            vertex.push_back(Vector3(0, 1, 0));
-            vertex.push_back(Vector3(0, 1, 1));
-            vertex.push_back(Vector3(1, 1, 1));
-            vertex.push_back(Vector3(1, 1, 0));
+            vertex.insert(vertex.end(), {Vector3(0, 1, 0), Vector3(0, 1, 1), Vector3(1, 1, 1),  Vector3(1, 1, 0)});
         }
     }
-    std::vector<Vector3> returnArray;
     Vector3 currentPos = (useGlobalCoords ? globalPos() : localPos());
+    for(Vector3& coord : vertex) {
+        coord = (currentPos + coord) * this->blockSize;
+    }
+//    return vertex;
+    std::vector<Vector3> returnArray;
     for (size_t i = 0; i < vertex.size(); i+=4)
     {
-        returnArray.push_back((currentPos + vertex[i + 2]) * this->blockSize);
-        returnArray.push_back((currentPos + vertex[i + 1]) * this->blockSize);
-        returnArray.push_back((currentPos + vertex[i + 0]) * this->blockSize);
-        returnArray.push_back((currentPos + vertex[i + 0]) * this->blockSize);
-        returnArray.push_back((currentPos + vertex[i + 3]) * this->blockSize);
-        returnArray.push_back((currentPos + vertex[i + 2]) * this->blockSize);
+        returnArray.insert(returnArray.end(), {vertex[i + 2], vertex[i + 1], vertex[i + 0],
+                                               vertex[i + 0], vertex[i + 3], vertex[i + 2]});
     }
     return returnArray;
 }

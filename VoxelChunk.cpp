@@ -41,16 +41,26 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
     this->voxels = std::vector<std::vector<std::vector<Voxel*>>>(this->sizeX);
+    this->voxelGroups = std::vector<std::vector<std::vector<int>>>(this->sizeX);
     for(int v_x = 0; v_x < sizeX; v_x++) {
         this->voxels[v_x] = std::vector<std::vector<Voxel*>>(this->sizeY);
+        this->voxelGroups[v_x] = std::vector<std::vector<int>>(this->sizeY);
         for(int v_y = 0; v_y < sizeY; v_y++) {
             this->voxels[v_x][v_y] = std::vector<Voxel*>(this->height);
+            this->voxelGroups[v_x][v_y] = std::vector<int>(this->height);
             for(int h = 0; h < height; h++) {
                 Voxel* v = new Voxel(v_x, v_y, h, iso_data[v_x][v_y][h] > 0.0 ? DIRT : AIR, 1.0, iso_data[v_x][v_y][h], this);
                 this->voxels[v_x][v_y][h] = v; //.push_back(v);
+                this->voxelGroups[v_x][v_y][h] = -1;
             }
         }
     }
+    this->voxelValues = iso_data;
+    this->originalVoxelValues = this->voxelValues;
+
+    for (int i = 1; i < std::min(std::min(this->sizeX, this->sizeY), this->height); i++)
+        if ((this->sizeX-1) % i == 0 && (this->sizeY-1) % i == 0 && (this->height-1) % i == 0)
+            this->LoDs.push_back(i);
 }
 
 VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
@@ -59,21 +69,19 @@ VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std
 }
 VoxelChunk::~VoxelChunk()
 {
-    std::function<void(Voxel* v)> destruction([](Voxel* v) -> void {
+    this->applyToVoxels([](Voxel* v) -> void {
         delete v;
     });
-    this->applyToVoxels(destruction);
     this->voxels.clear();
 }
 
 void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     if (!needRemeshing)
         return;
-
+    this->toVoxels();
     Voxel::currentLabelIndex = 1;
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
-    this->computeGroups();
 
     if (!updateMesh)
         return;
@@ -85,7 +93,9 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
         voxelVertices = this->applyMarchingCubes(true, &colors);
     }
     else {
-        std::function<void(Voxel*)> createVoxels([&voxelVertices, &colors](Voxel* v) -> void {
+        colors.reserve(this->sizeX * this->sizeY * this->height * 6);
+        voxelVertices.reserve(this->sizeX * this->sizeY * this->height * 6);
+        this->applyToVoxels([&voxelVertices, &colors](Voxel* v) -> void {
             if ((bool)*v) {
                 // Add the vertices to the global mesh
                 std::vector<Vector3> vertice = v->getMeshVertices(true);
@@ -102,29 +112,60 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
                 }
             }
         });
-        this->applyToVoxels(createVoxels);
     }
     this->mesh.colorsArray = colors;
     this->mesh.fromArray(voxelVertices);
     this->mesh.update();
 }
+std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords, std::vector<Vector3> *outColors)
+{
+    std::vector<Vector3> vertexArray;
+    int cube_index = 0;
+    for (int i = 0; i < 8; i++){
+        if (vertices[i].isosurface > isolevel)
+            cube_index ^= 1 << i;
+    }
+    int* edgesForTriangles = MarchingCubes::triangleTable[cube_index];
+    Vertex originalVertex;
+    Vertex firstVertex;
+    Vertex secondVertex;
+    for (int i = 0; i < 16; i++) {
+        if (edgesForTriangles[i] == -1)
+            continue;
+        Vertex& v1 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][0]];
+        Vertex& v2 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][1]];
 
+        float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
+        Vertex midpoint = v1 - ((v1 - v2) * interpolate);
+        if (outColors != nullptr) {
+//            float blueVal = this->parent->getVoxelValue(v1) - this->parent->getOriginalVoxelValue(v1) + this->parent->getVoxelValue(v2) - this->parent->getOriginalVoxelValue(v2);
+//            blueVal = abs(blueVal / 2.0);$
+            float blueVal = 30/255.0;
+            outColors->push_back(vertices[0].isosurface > 0.5 ?  //map[x][y][z] > 0.5 ?
+                                 Vector3(150/255.0, 100/255.0, blueVal) : //30/255.0) :
+                                 Vector3(224/255.0, 209/255.0, blueVal)); //72/255.0));
+        }
+        if (i % 3 == 0) {
+            originalVertex = midpoint;
+        }
+        else if (i % 3 == 1) {
+            firstVertex = midpoint;
+        }
+        else {
+            secondVertex = midpoint;
+            Vector3 mapOffset = (useGlobalCoords ? Vector3(this->x, this->y, 0.0) : Vector3(0.0, 0.0, 0.0));
+            vertexArray.insert(vertexArray.end(), {originalVertex + mapOffset,
+                                                   firstVertex + mapOffset,
+                                                   secondVertex + mapOffset});
+        }
+    }
+    return vertexArray;
+}
 std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::vector<Vector3> *outColors)
 {
+    int LoD = this->LoDs[this->LoDIndex % this->LoDs.size()];//std::max(0, std::min(LoD, std::min(std::min(this->sizeX, this->sizeY), this->height)));
     std::vector<Vector3> colors;
-    std::vector<std::vector<std::vector<float> > > map = this->toFloat();
-    /*for (int x = 0; x < this->sizeX; x++)
-    {
-        map.push_back(std::vector<std::vector<float>>());
-        for (int y = 0; y < this->sizeY; y++)
-        {
-            map[x].push_back(std::vector<float>());
-            for (int z = 0; z < this->height; z++)
-            {
-                map[x][y].push_back(this->voxels[x][y][z]->getIsosurface());
-            }
-        }
-    }*/
+    std::vector<std::vector<std::vector<float> > > map = this->voxelValues;
 
     bool addedLeft = false;
     bool addedFront = false;
@@ -135,11 +176,12 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
             map[0].push_back(std::vector<float>());
             for (int z = 0; z < this->height; z++)
             {
-                map[0][y].push_back(n->voxels[n->sizeX - 1][y][z]->getIsosurface());
+                map[0][y].push_back(n->voxelValues[n->sizeX - 1][y][z]);
             }
         }
         addedLeft = true;
     }
+
     if (this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end()) {
         VoxelChunk* n = this->neighboring_chunks[FRONT];
         int offset = addedLeft ? 1 : 0;
@@ -147,107 +189,122 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
             map[x + offset].insert(map[x + offset].begin(), std::vector<float>());
             for (int z = 0; z < this->height; z++)
             {
-                map[x + offset][0].push_back(n->voxels[x][n->voxels[x].size() - 1][z]->getIsosurface());
+                map[x + offset][0].push_back(n->voxelValues[x][n->voxels[x].size() - 1][z]);
             }
         }
         addedFront = true;
     }
 
+
     if (addedLeft && addedFront) {
         VoxelChunk* n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
         map[0].insert(map[0].begin(), std::vector<float>());
         for (int z = 0; z < this->height; z++)
-            map[0][0].push_back(n->voxels[n->voxels.size() - 1][n->voxels[0].size() - 1][z]->getIsosurface());
+            map[0][0].push_back(n->voxelValues[n->voxels.size() - 1][n->voxels[0].size() - 1][z]);
+    }
+
+    if (this->x == 0) {
+        for (size_t y = 0; y < map[0].size(); y++)
+            for (int z = 0; z < this->height; z++)
+                map[0][y][z] = -1;
+    }
+    if (this->lastChunkOnX)
+        for (size_t y = 0; y < map[0].size(); y++)
+            for (int z = 0; z < this->height; z++)
+                map[map.size() - 1][y][z] = -1;
+    if (this->y == 0) {
+        for (size_t x = 0; x < map.size(); x++)
+            for (int z = 0; z < this->height; z++)
+                map[x][0][z] = -1;
+    }
+    if (this->lastChunkOnY)
+        for (size_t x = 0; x < map.size(); x++)
+            for (int z = 0; z < this->height; z++)
+                map[x][map[x].size() - 1][z] = -1;
+
+    for (size_t x = 0; x < map.size(); x++) {
+        for (size_t y = 0; y < map[0].size(); y++) {
+            map[x][y][0] = -1;
+            map[x][y][map[x][y].size() - 1] = -1;
+        }
     }
 
     float isolevel = 0.0;
     std::vector<Vector3> vertexArray;
-    for (unsigned int x = 0; x < map.size() - 1; x++) {
-        for (unsigned int y = 0; y < map[x].size() - 1; y++) {
-            for (unsigned int z = 0; z < map[x][y].size() - 1; z++) {
-                float x_offset = x - (addedLeft ? 1.0 : 0.0);
-                float y_offset = y - (addedFront ? 1.0 : 0.0);
-                Vertex vertices[8] = {Vertex(x_offset  , y_offset  , z  , map[x  ][y  ][z  ]),
-                                      Vertex(x_offset+1, y_offset  , z  , map[x+1][y  ][z  ]),
-                                      Vertex(x_offset+1, y_offset+1, z  , map[x+1][y+1][z  ]),
-                                      Vertex(x_offset  , y_offset+1, z  , map[x  ][y+1][z  ]),
-                                      Vertex(x_offset  , y_offset  , z+1, map[x  ][y  ][z+1]),
-                                      Vertex(x_offset+1, y_offset  , z+1, map[x+1][y  ][z+1]),
-                                      Vertex(x_offset+1, y_offset+1, z+1, map[x+1][y+1][z+1]),
-                                      Vertex(x_offset  , y_offset+1, z+1, map[x  ][y+1][z+1])
+/*
+    if(addedLeft) {
+        for (int y = 0; y < int(map[0].size() - 1 - (addedFront ? 1 : 0)); y++) {
+            for (int z = 0; z < int(map[0][y].size() - 1); z++) {
+                Vertex vertices[8] = {Vertex(0, y    , z    , map[0][y    ][z    ]),
+                                      Vertex(1, y    , z    , map[1][y    ][z    ]),
+                                      Vertex(1, y + 1, z    , map[1][y + 1][z    ]),
+                                      Vertex(0, y + 1, z    , map[0][y + 1][z    ]),
+                                      Vertex(0, y    , z + 1, map[0][y    ][z + 1]),
+                                      Vertex(1, y    , z + 1, map[1][y    ][z + 1]),
+                                      Vertex(1, y + 1, z + 1, map[1][y + 1][z + 1]),
+                                      Vertex(0, y + 1, z + 1, map[0][y + 1][z + 1])
+                                     };
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+            }
+        }
+    }
+    if(addedFront) {
+        for (int x = 0; y < int(map.size() - 1 - (addedLeft ? 1 : 0)); y++) {
+            for (int z = 0; z < int(map[x][0].size() - 1); z++) {
+                Vertex vertices[8] = {Vertex(x    , 0, z    , map[x    ][0][z    ]),
+                                      Vertex(x + 1, 0, z    , map[x + 1][0][z    ]),
+                                      Vertex(x + 1, 1, z    , map[x + 1][1][z    ]),
+                                      Vertex(x    , 1, z    , map[x    ][1][z    ]),
+                                      Vertex(x    , 0, z + 1, map[x    ][0][z + 1]),
+                                      Vertex(x + 1, 0, z + 1, map[x + 1][0][z + 1]),
+                                      Vertex(x + 1, 1, z + 1, map[x + 1][1][z + 1]),
+                                      Vertex(x    , 1, z + 1, map[x    ][1][z + 1])
+                                     };
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+            }
+        }
+    }*/
+    size_t x = 0, y = 0, z = 0;
+    for (x = 0; x < map.size() - LoD; x += LoD) {
+        for (y = 0; y < map[x].size() - LoD; y += LoD) {
+            for (z = 0; z < map[x][y].size() - LoD; z += LoD) {
+                float x_offset = x - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                float y_offset = y - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                Vertex vertices[8] = {Vertex(x_offset      , y_offset      , z      , map[x      ][y      ][z      ]),
+                                      Vertex(x_offset + LoD, y_offset      , z      , map[x + LoD][y      ][z      ]),
+                                      Vertex(x_offset + LoD, y_offset + LoD, z      , map[x + LoD][y + LoD][z      ]),
+                                      Vertex(x_offset      , y_offset + LoD, z      , map[x      ][y + LoD][z      ]),
+                                      Vertex(x_offset      , y_offset      , z + LoD, map[x      ][y      ][z + LoD]),
+                                      Vertex(x_offset + LoD, y_offset      , z + LoD, map[x + LoD][y      ][z + LoD]),
+                                      Vertex(x_offset + LoD, y_offset + LoD, z + LoD, map[x + LoD][y + LoD][z + LoD]),
+                                      Vertex(x_offset      , y_offset + LoD, z + LoD, map[x      ][y + LoD][z + LoD])
                                      };
 
-                if (x == 0 && this->x == 0)
-                {
-                    vertices[0].isosurface = -1.0;
-                    vertices[3].isosurface = -1.0;
-                    vertices[4].isosurface = -1.0;
-                    vertices[7].isosurface = -1.0;
-                } else if (x == map.size() - 2 && this->lastChunkOnX) //(this->x > 0 ? 2 : 1) && this->lastChunkOnX)
-                {
-                    vertices[1].isosurface = -1.0;
-                    vertices[2].isosurface = -1.0;
-                    vertices[5].isosurface = -1.0;
-                    vertices[6].isosurface = -1.0;
-                }
-                if (y == 0 && this->y == 0)
-                {
-                    vertices[0].isosurface = -1.0;
-                    vertices[1].isosurface = -1.0;
-                    vertices[4].isosurface = -1.0;
-                    vertices[5].isosurface = -1.0;
-                }if (y == map[x].size() - 2 && this->lastChunkOnY) // - (this->y > 0 ? 2 : 1) && this->lastChunkOnY)
-                {
-                    vertices[2].isosurface = -1.0;
-                    vertices[3].isosurface = -1.0;
-                    vertices[6].isosurface = -1.0;
-                    vertices[7].isosurface = -1.0;
-                }if (z == 0)
-                {
-                    vertices[0].isosurface = -1.0;
-                    vertices[1].isosurface = -1.0;
-                    vertices[2].isosurface = -1.0;
-                    vertices[3].isosurface = -1.0;
-                }if (z == map[x][y].size() - 2)
-                {
-                    vertices[4].isosurface = -1.0;
-                    vertices[5].isosurface = -1.0;
-                    vertices[6].isosurface = -1.0;
-                    vertices[7].isosurface = -1.0;
-                }
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+            }
+        }
+    }
+    size_t initX = x, initY = y, initZ = z;
+    for (x = initX; x < map.size() - 1; x ++) {
+        for (y = initY; y < map[x].size() - 1; y ++) {
+            for (z = initZ; z < map[x][y].size() - 1; z ++) {
+                float x_offset = x;// - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                float y_offset = y;// - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                Vertex vertices[8] = {Vertex(x_offset      , y_offset      , z      , map[x      ][y      ][z      ]),
+                                      Vertex(x_offset + 1, y_offset      , z      , map[x + 1][y      ][z      ]),
+                                      Vertex(x_offset + 1, y_offset + 1, z      , map[x + 1][y + 1][z      ]),
+                                      Vertex(x_offset      , y_offset + 1, z      , map[x      ][y + 1][z      ]),
+                                      Vertex(x_offset      , y_offset      , z + 1, map[x      ][y      ][z + 1]),
+                                      Vertex(x_offset + 1, y_offset      , z + 1, map[x + 1][y      ][z + 1]),
+                                      Vertex(x_offset + 1, y_offset + 1, z + 1, map[x + 1][y + 1][z + 1]),
+                                      Vertex(x_offset      , y_offset + 1, z + 1, map[x      ][y + 1][z + 1])
+                                     };
 
-                int cube_index = 0;
-                for (int i = 0; i < 8; i++){
-                    if (vertices[i].isosurface > isolevel)
-                        cube_index ^= 1 << i;
-                }
-                int* edgesForTriangles = MarchingCubes::triangleTable[cube_index];
-                Vertex originalVertex;
-                Vertex firstVertex;
-                Vertex secondVertex;
-                for (int i = 0; i < 16; i++) {
-                    if (edgesForTriangles[i] == -1)
-                        continue;
-                    Vertex& v1 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][0]];
-                    Vertex& v2 = vertices[MarchingCubes::edgeToCorner[edgesForTriangles[i]][1]];
-
-                    float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
-                    Vertex midpoint = v1 - ((v1 - v2) * interpolate);
-                    colors.push_back(map[x][y][z] > 0.5 ? Vector3(150/255.0, 100/255.0, 30/255.0) : Vector3(224/255.0, 209/255.0, 72/255.0));
-                    if (i % 3 == 0) {
-                        originalVertex = midpoint;
-                    }
-                    else if (i % 3 == 1) {
-                        firstVertex = midpoint;
-                    }
-                    else {
-                        secondVertex = midpoint;
-                        Vector3 mapOffset = (useGlobalCoords ? Vector3(this->x, this->y, 0.0) : Vector3(0.0, 0.0, 0.0));
-                        vertexArray.push_back(originalVertex + mapOffset);
-                        vertexArray.push_back(firstVertex + mapOffset);
-                        vertexArray.push_back(secondVertex + mapOffset);
-                    }
-                }
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
             }
         }
     }
@@ -258,7 +315,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 
 void VoxelChunk::makeItFall()
 {
-    this->applyToVoxels([](Voxel* v) -> void {
+    /*this->applyToVoxels([](Voxel* v) -> void {
         Voxel* v_1 = v->neighbors[TOP];
         if (v_1 == nullptr) {
             v->isosurface = -0.01; // Just destroy the top voxels
@@ -269,12 +326,23 @@ void VoxelChunk::makeItFall()
             return;
         v->isosurface = v_1->isosurface;
         v->manual_isosurface = v_1->manual_isosurface;
-    });
+    });*/
+    for (int x = 0; x < this->sizeX; x++) {
+        for(int y = 0; y < this->sizeY; y++) {
+            for(int z = 0; z < this->height - 1; z++) {
+                if(this->voxelGroups[x][y][z] == 0 || this->voxelGroups[x][y][z+1] == 0)
+                    continue;
+                this->voxelValues[x][y][z] = this->voxelValues[x][y][z+1];
+            }
+            this->voxelValues[x][y][this->height - 1] = -1.0;
+        }
+    }
+//    toFloat();
     this->needRemeshing = true;
-    this->computeGroups();
 }
 void VoxelChunk::letGravityMakeSandFall()
 {
+    /*
     bool sandHadAction = false;
     this->applyToVoxels([&](Voxel* v) -> void {
         Voxel* v_1 = v->neighbors[TOP];
@@ -310,7 +378,25 @@ void VoxelChunk::letGravityMakeSandFall()
         }
     });
     this->needRemeshing = sandHadAction;
-//    this->computeGroups();
+//    this->computeGroups();*/
+    for (int x = 0; x < this->sizeX; x++) {
+        for(int y = 0; y < this->sizeY; y++) {
+            for(int z = 0; z < this->height - 1; z++) {
+//                if(this->voxelValues[x][y][z+1] <= 0.0) // If it's air, don't mind
+//                    continue;
+                if(this->voxelValues[x][y][z+1] >= 1.0) // If top is dirt, don't
+                    continue;
+                if(this->voxelValues[x][y][z] >= 1.0) // If the block is staturated, skip.
+                    continue;
+
+                this->voxelValues[x][y][z] += 1 + (this->voxelValues[x][y][z+1]);
+                this->voxelValues[x][y][z+1] = -1.0;
+            }
+            this->voxelValues[x][y][this->height - 1] = -1.0;
+        }
+    }
+//    toFloat();
+    this->needRemeshing = true;
 }
 
 void VoxelChunk::resetVoxelsNeighbors() {
@@ -319,33 +405,51 @@ void VoxelChunk::resetVoxelsNeighbors() {
 
 void VoxelChunk::computeGroups()
 {
+    // Not clean, to refactor in VoxelGrid
+    if(this->x == 0 && this->y == 0) { // First chunk, reset all the voxels of all chunks
+        for(VoxelChunk* vc : this->parent->chunks) {
+            vc->applyToVoxels([](Voxel* v) -> void {
+                v->group = -1;
+            });
+        }
+    }
+    /*
     Voxel::currentLabelIndex = 1;
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
 
+    this->applyTo(this->voxelGroups, [](int& grp) -> void {
+        grp = -1;
+    });
     this->applyToVoxels([](Voxel* v) -> void {
         v->group = -1;
         v->isOnGround = false;
-    });
-    this->applyToVoxels([](Voxel* v) -> void {
+    });*/
+    int calls = 0;
+    std::unordered_set<Voxel*> groundNeighbors;
+    this->applyToVoxels([&calls, &groundNeighbors](Voxel* v) -> void {
         if(!(bool)*v)
             return;
-        v->group = v->getZ() == 0 ? 0 : -1; // If it's touching the ground, it's directly in first groupe
+        if(v->group == 0)
+            return;
+        v->group = v->getZ() == 0 ? 0 : -1; // If it's touching the ground, it's directly in first group
         if (v->getZ() == 0) {
-            std::unordered_set<Voxel*> groundNeighbors;
             groundNeighbors.insert(v);
             while (groundNeighbors.size() != 0) {
                 Voxel* n = (*groundNeighbors.begin());
+                calls ++;
                 n->isOnGround = true;
+                n->group = 0;
                 groundNeighbors.erase(groundNeighbors.begin());
-                n->applyToNeighbors([&groundNeighbors](Voxel* v) -> void {
-                    if(v != nullptr && !v->isOnGround && (bool)*v) {
-                        groundNeighbors.insert(v);
+                n->applyToNeighbors([&groundNeighbors](Voxel* v_2) -> void {
+                    if(v_2 != nullptr && !v_2->isOnGround && (bool)*v_2) {
+                        groundNeighbors.insert(v_2);
                     }
                 });
             }
         }
     });
+//    std::cout << calls << " out of " << this->sizeX * this->sizeY * this->height << " voxels" << std::endl;
 }
 
 
