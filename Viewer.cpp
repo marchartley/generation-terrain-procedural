@@ -18,7 +18,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(5, 5, 2, 1.0, .30),
+        new VoxelGrid(3, 3, 3, 1.0, .30),
         nullptr, // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
@@ -186,6 +186,7 @@ void Viewer::init() {
 
     this->camera()->setType(Camera::ORTHOGRAPHIC);
 
+    setTextIsEnabled(true);
     setMouseTracking(true);
 
 #ifdef _WIN32
@@ -231,7 +232,7 @@ void Viewer::init() {
     this->shader = Shader(vNoShader, fNoShader);
     this->rocksMeshes.shader = new Shader(vNoShader, fNoShader);
 
-    this->matter_adder = RockErosion(this->selectionSize, 1.0);
+    this->matter_adder = RockErosion(this->erosionSize, 1.0);
 
     this->light = PositionalLight(
                 new float[4]{.8, .8, .8, 1.},
@@ -258,7 +259,7 @@ void Viewer::init() {
     }
     if (this->voxelGrid != nullptr) {
         this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-        std::cout << "Screenshots will be saved in folder " << this->screenshotFolder << std::endl;
+        this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
     }
 
 
@@ -391,16 +392,11 @@ void Viewer::mousePressEvent(QMouseEvent *e)
     if (checkMouseOnVoxel())
     {
         Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-        std::cout << main_v->getIsosurface() << " " << main_v->globalPos() << " " << main_v->isOnGround << std::endl;
+        this->displayMessage(QString::fromStdString(std::to_string( main_v->getIsosurface()) + " " + main_v->globalPos().toString() + " " + std::to_string( main_v->isOnGround) ));
     }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
-        if (this->mouseInWorld)
-        {
-            Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-            RockErosion rock(this->selectionSize, .50);
-            rock.Apply(main_v, addingMatterMode);
-        }
+        this->throwRock();
     }
 }
 
@@ -432,75 +428,35 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             setSmoothingAlgorithm(MARCHING_CUBES);
         else if (this->algorithm == MARCHING_CUBES)
             setSmoothingAlgorithm(NONE);
-        std::cout << "Displaying using " << (this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") << " algorithm" << std::endl;
-        voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
-        voxelGrid->createMesh();
+        this->displayMessage(QString::fromStdString("Displaying using " + std::string(this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") + " algorithm") );
         update();
     } else if(e->key() == Qt::Key_V) {
         this->display_vertices = !this->display_vertices;
         update();
     } else if(e->key() == Qt::Key_P) {
-        this->addingMatterMode = !this->addingMatterMode;
-        std::cout << (addingMatterMode ? "Construction mode" : "Destruction mode") << std::endl;
+        this->setAddingMatterMode(!this->addingMatterMode);
+        this->displayMessage( (addingMatterMode ? "Construction mode" : "Destruction mode") );
         update();
     } else if(e->key() == Qt::Key_Return) {
-        UnderwaterErosion erod(this->voxelGrid, 10, .5, 100);
-        Vector3 *pos = nullptr;
-        Vector3* dir = nullptr;
-        if (e->modifiers() == Qt::ShiftModifier)
-        {
-//            pos = new Vector3(camera()->position().x, camera()->position().y, camera()->position().z);
-            Vec a;
-            Vec b;
-            camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
-            pos = new Vector3(a.x, a.y, a.z);
-            dir = new Vector3(b.x, b.y, b.z);
-            std::cout << "Rocks launched from camera!" << std::endl;
-        } else {
-//            this->lastRocksLaunched = erod.Apply();
-            pos = nullptr;
-            dir = new Vector3(0.0, 0.0, 0.0);
-            std::cout << "Rocks launched!" << std::endl;
-        }
-        this->lastRocksLaunched = erod.Apply(pos, dir, 10);
-        this->rocksMeshes.vertexArrayFloat.clear();
-        std::vector<float> oneThrow;
-        for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
-            oneThrow = Vector3::toArray(coords);
-            this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
-        }
-        this->rocksMeshes.update();
-        update();
+        erodeMap(e->modifiers() == Qt::ShiftModifier);
     } else if(e->key() == Qt::Key_Minus) {
-        this->selectionSize = max(2, this->selectionSize - 2);
-        std::cout << "Cursor size : " << this->selectionSize << std::endl;
+        this->setManualErosionRocksSize(max(2, this->erosionSize - 2));
+        this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Plus) {
-        this->selectionSize = max(2, this->selectionSize + 2);
-        std::cout << "Cursor size : " << this->selectionSize << std::endl;
+        this->setManualErosionRocksSize(max(2, this->erosionSize + 2));
+        this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Space) {
         displayRockTrajectories = !displayRockTrajectories;
-        std::cout << "Rock trajectories are : " << (displayRockTrajectories ? "ON" : "OFF") << std::endl;
+        this->displayMessage(QString::fromStdString("Rock trajectories are : " + std::string(displayRockTrajectories ? "ON" : "OFF") ));
         update();
     } else if(e->key() == Qt::Key_0) {
-        this->startAnimation();
-        this->applyLetItFall = !this->applyLetItFall;
-        std::cout << "It's falling!" << std::endl;
-        update();
+        this->createGlobalGravity();
     } else if(e->key() == Qt::Key_Comma) {
-        this->startAnimation();
-        this->applyLetSandFall = !this->applyLetSandFall;
-        std::cout << "Sand is falling!" << std::endl;
-        update();
+        this->createSandGravity();
     } else if(e->key() == Qt::Key_1) {
-        this->isTakingScreenshots = !this->isTakingScreenshots;
-        if(!makedir(this->screenshotFolder)) {
-            std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
-            exit(-1);
-        }
-        std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling") << std::endl;
-        update();
+        this->startStopRecording();
     } else if(e->key() == Qt::Key_2) {
         for(VoxelChunk* vc : this->voxelGrid->chunks) {
             vc->LoDIndex++;
@@ -509,17 +465,11 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         this->voxelGrid->remeshAll();
         update();
     } else if(e->key() == Qt::Key_3) {
-        UnderwaterErosion erod(this->voxelGrid, 10, .8, 100);
-        std::cout << "Removing matter to create a tunnel" << std::endl;
-        this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, false));
-        this->rocksMeshes.update();
-        update();
+        this->displayMessage( "Removing matter to create a tunnel" );
+        createTunnel(true);
     } else if(e->key() == Qt::Key_4) {
-        UnderwaterErosion erod(this->voxelGrid, 10, .8, 100);
-        std::cout << "Adding matter to create a tunnel" << std::endl;
-        this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, true));
-        this->rocksMeshes.update();
-        update();
+        this->displayMessage( "Adding matter to create a tunnel" );
+        createTunnel(false);
     } else {
         QGLViewer::keyPressEvent(e);
     }
@@ -537,6 +487,53 @@ void Viewer::animate()
         this->voxelGrid->makeItFall((this->applyLetSandFall ? -1.0 : 0.1));
     if (this->applyLetSandFall)
         this->voxelGrid->letGravityMakeSandFall();
+}
+
+void Viewer::erodeMap(bool sendFromCam)
+{
+    UnderwaterErosion erod(this->voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
+    Vector3 *pos = nullptr;
+    Vector3* dir = nullptr;
+    if (sendFromCam)
+    {
+        Vec a;
+        Vec b;
+        camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
+        pos = new Vector3(a.x, a.y, a.z);
+        dir = new Vector3(b.x, b.y, b.z);
+        this->displayMessage( "Rocks launched from camera!" );
+    } else {
+        pos = nullptr;
+        dir = new Vector3(0.0, 0.0, 0.0);
+        this->displayMessage( "Rocks launched!" );
+    }
+    this->lastRocksLaunched = erod.Apply(pos, dir, 10);
+    this->rocksMeshes.vertexArrayFloat.clear();
+    std::vector<float> oneThrow;
+    for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
+        oneThrow = Vector3::toArray(coords);
+        this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
+    }
+    this->rocksMeshes.update();
+    update();
+}
+
+void Viewer::throwRock()
+{
+    if (this->mouseInWorld)
+    {
+        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+        RockErosion rock(this->manualErosionSize, this->manualErosionStrength);
+        rock.Apply(main_v, addingMatterMode);
+    }
+    update();
+}
+void Viewer::createTunnel(bool removingMatter)
+{
+    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
+    this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, !removingMatter));
+    this->rocksMeshes.update();
+    update();
 }
 
 bool Viewer::checkMouseOnVoxel()
@@ -582,7 +579,42 @@ void Viewer::closeEvent(QCloseEvent *e) {
     delete this->layerGrid;
 }
 
+bool Viewer::createGlobalGravity()
+{
+    this->startAnimation();
+    this->applyLetItFall = !this->applyLetItFall;
+    if (this->applyLetItFall)
+        this->displayMessage( "Gravity is making his job!" );
+    else
+        this->displayMessage( "Gravity stopped caring" );
+    update();
+    return this->applyLetItFall;
+}
 
+bool Viewer::createSandGravity()
+{
+    this->startAnimation();
+    this->applyLetSandFall = !this->applyLetSandFall;
+    if (this->applyLetSandFall)
+        this->displayMessage( "Sand is falling!" );
+    else
+        this->displayMessage( "Sand stopped falling" );
+    update();
+    return this->applyLetSandFall;
+}
+
+bool Viewer::startStopRecording()
+{
+    this->isTakingScreenshots = !this->isTakingScreenshots;
+    if(!makedir(this->screenshotFolder)) {
+        this->isTakingScreenshots = false;
+        this->displayMessage(QString::fromStdString("Not possible to create folder " + this->screenshotFolder ));
+        exit(-1);
+    }
+    this->displayMessage(this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling");
+    update();
+    return this->isTakingScreenshots;
+}
 
 std::vector<std::string> split(std::string str, char c)
 {

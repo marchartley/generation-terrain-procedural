@@ -79,6 +79,8 @@ public:
     float getVoxelValue(float x, float y, float z);
     float getOriginalVoxelValue(Vector3 pos);
     float getOriginalVoxelValue(float x, float y, float z);
+    Vector3 getFlowfield(Vector3 pos);
+    Vector3 getFlowfield(float x, float y, float z);
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;

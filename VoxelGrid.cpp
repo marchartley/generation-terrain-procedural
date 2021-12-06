@@ -24,6 +24,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
+//                        noise_val = (xChunk == 1 && yChunk == 1 && (h > chunkSize && h < 2*chunkSize)? noise_val : -1.0); // To remove
                         data[iChunk][x][y][h] = noise_val;
                     }
                 }
@@ -104,6 +105,8 @@ VoxelGrid* VoxelGrid::fromIsoData(std::vector<std::vector<std::vector<std::vecto
         this->chunks[i]->resetVoxelsNeighbors();
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
+
+        this->chunks[i]->computeFlowfield(5);
     }
     this->createMesh();
     return this;
@@ -325,6 +328,23 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
     if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
         return -1;
     return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->originalVoxelValues[voxPosX][voxPosY][_z];
+}
+Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
+    return this->getFlowfield(pos.x, pos.y, pos.z);
+}
+
+Vector3 VoxelGrid::getFlowfield(float x, float y, float z) {
+    if(z < 0 || x < 0 || y < 0)
+        return Vector3();
+    int _x = x, _y = y, _z = z;
+    int xChunk = int(_x / chunkSize);
+    int voxPosX = _x % chunkSize;
+    int yChunk = _y / chunkSize;
+    int voxPosY = _y % chunkSize;
+
+    if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
+        return Vector3();
+    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->flowField[voxPosX][voxPosY][_z];
 }
 
 #include <sstream>
