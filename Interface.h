@@ -44,6 +44,8 @@ public:
 
     QHBoxLayout* randomRocksLayout;
     QGroupBox* randomRocksBox;
+    QHBoxLayout* currentSimulationLayout;
+    QGroupBox* currentSimulationBox;
     QHBoxLayout* manualRocksLayout;
     QGroupBox* manualRocksBox;
     QHBoxLayout* curvesErosionLayout;
@@ -64,6 +66,8 @@ public:
     QPushButton* sendRandomRocksFromCam;
     QPushButton* sendRandomRocks;
     QCheckBox* displayRandomRocks;
+    FancySlider* currentSimulationFlowfieldStrengthSlider;
+    FancySlider* currentSimulationStrengthSlider;
     FancySlider* manualRocksSizeSlider;
     FancySlider* manualRocksStrengthSlider;
     QRadioButton* addingMode;

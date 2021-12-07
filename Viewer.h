@@ -63,6 +63,7 @@ public Q_SLOTS:
                                                              voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
                                                              voxelGrid->createMesh();
                                                             update();}
+    void setErosionFlowfieldFactor(float newVal) { this->erosionFlowfieldFactor = newVal; }
 
 //    void saveScreenshot();
 
@@ -96,6 +97,7 @@ public:
     int erosionSize = 15;
     float erosionStrength = .5;
     int erosionQtt = 10;
+    float erosionFlowfieldFactor = 0.1;
 
     int manualErosionSize = 15;
     float manualErosionStrength = .5;

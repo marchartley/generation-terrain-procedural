@@ -14,7 +14,7 @@ UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float max
 
 }
 
-std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter)
+std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, bool returnEvenLostRocks)
 {
     for (VoxelChunk* vc : this->grid->chunks)
         vc->computeFlowfield(15);
@@ -46,29 +46,21 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
 
         bool touched = false;
         while (!touched && steps > 0) {
-            if(this->grid->contains(pos))
-            {
-//                if (grid->getFlowfield(pos).norm() > 0)
-//                    std::cout << "Not null!" << std::endl;
-                dir += grid->getFlowfield(pos) * 0.1;
-                dir += Vector3::random() * 0.1;
-                dir.normalize();
-            } else {
-                dir += Vector3::random() * 0.1;
-                dir.normalize();
-                // Try to change a little bit the direction if there is matter ahead
-                if (avoidMatter > 0) {
-                    for(int tries = 0; tries < avoidMatter/5; tries ++) {
-                        for(int dist = 1; dist < avoidMatter; dist++) {
-                            Voxel* v = this->grid->getVoxel(pos + dir * dist);
-                            if (v != nullptr && *v) {
-                                dir += Vector3::random() * 0.3;
-                                dir.normalize();
-                                break;
-                            }
-                        }
+            bool matterIsClose = false;
+            if (avoidMatter > 0) {
+                for(int dist = 0; dist < avoidMatter; dist++) {
+                    if (this->grid->contains(pos + dir * dist)) {
+//                        dir += Vector3::random() * 0.05;
+                        dir += grid->getFlowfield(pos + dir * dist) * flowfieldFactor;
+                        dir.normalize();
+                        matterIsClose = true;
+                        break;
                     }
                 }
+            }
+            if (!matterIsClose) {
+                dir += Vector3::random() * flowfieldFactor/2.0;
+                dir.normalize();
             }
             steps --;
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
@@ -84,6 +76,8 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
             if (pos.norm() > 4 * starting_distance) {
                 i--;
                 max_iter --;
+                if (returnEvenLostRocks)
+                    debugLines.push_back(coords);
                 break;
             }
         }
