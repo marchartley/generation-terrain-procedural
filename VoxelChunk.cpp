@@ -78,10 +78,11 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
     for(int v_x = 0; v_x < sizeX; v_x++) {
         for(int v_y = 0; v_y < sizeY; v_y++) {
             for(int h = 0; h < height; h++) {
-                flowField[v_x][v_y][h] = this->computeNormal(v_x, v_y, h);
+                flowField[v_x][v_y][h] = this->computeNormal(v_x + this->x, v_y + this->y, h);
             }
         }
     }
+    std::vector<std::vector<std::vector<Vector3>>> originalFlowField = this->flowField;
     for (int iter_blur = 0; iter_blur < blur_iterations; iter_blur++) {
         for(int v_x = 1; v_x < sizeX - 1; v_x++) {
             for(int v_y = 1; v_y < sizeY - 1; v_y++) {
@@ -89,7 +90,7 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
                     for(int d_x = -1; d_x <= 1; d_x++) {
                         for(int d_y = -1; d_y <= 1; d_y++) {
                             for(int d_h = -1; d_h <= 1; d_h++) {
-                                flowField[v_x][v_y][h] += flowField[v_x + d_x][v_y + d_y][h + d_h] * (1/27.0);
+                                flowField[v_x][v_y][h] += originalFlowField[v_x + d_x][v_y + d_y][h + d_h] * (1/27.0);
                             }
                         }
                     }
@@ -100,7 +101,6 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
     for(int v_x = 0; v_x < sizeX; v_x++) {
         for(int v_y = 0; v_y < sizeY; v_y++) {
             for(int h = 0; h < height; h++) {
-                if (flowField[v_x][v_y][h] != Vector3())
                     flowField[v_x][v_y][h].normalize();
             }
         }
@@ -173,6 +173,7 @@ Vector3 VoxelChunk::computeNormal(int x, int y, int z)
                           Vertex(x + 1, y + 1, z + 1, this->parent->getVoxelValue(x + 1, y + 1, z + 1)),
                           Vertex(x    , y + 1, z + 1, this->parent->getVoxelValue(x    , y + 1, z + 1))
                          };
+
     std::vector<Vector3> tris = this->computeMarchingCube(vertices, 0.0, false);
     Vector3 normal;
     for(size_t i = 0; i < tris.size(); i += 3)
