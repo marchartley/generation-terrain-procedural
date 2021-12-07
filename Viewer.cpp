@@ -18,7 +18,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(3, 3, 3, 1.0, .30),
+        new VoxelGrid(5, 3, 3, 1.0, .30),
         nullptr, // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
@@ -263,7 +263,7 @@ void Viewer::init() {
         this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
     }
 
-/*
+
     std::vector<Vector3> normals;
     for (int x = 0; x < this->voxelGrid->sizeX; x++) {
         for (int y = 0; y < this->voxelGrid->sizeY; y++) {
@@ -274,7 +274,7 @@ void Viewer::init() {
         }
     }
     this->flowDebugMeshes.fromArray(normals);
-    this->flowDebugMeshes.update();*/
+    this->flowDebugMeshes.update();
 }
 
 void Viewer::draw() {
@@ -377,7 +377,7 @@ void Viewer::draw() {
     this->flowDebugMeshes.shader->setMatrix("mv_matrix", mvMatrix);
     this->flowDebugMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     if (displayRockTrajectories) {
-        this->flowDebugMeshes.display(GL_LINES);
+//        this->flowDebugMeshes.display(GL_LINES);
         this->rocksMeshes.display(GL_LINES);
     }
 
@@ -523,7 +523,7 @@ void Viewer::erodeMap(bool sendFromCam)
         dir = new Vector3(0.0, 0.0, 0.0);
         this->displayMessage( "Rocks launched!" );
     }
-    this->lastRocksLaunched = erod.Apply(pos, dir, 10);
+    this->lastRocksLaunched = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, true);
     this->rocksMeshes.vertexArrayFloat.clear();
     std::vector<float> oneThrow;
     for(std::vector<Vector3>& coords : this->lastRocksLaunched) {

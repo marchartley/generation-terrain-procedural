@@ -56,7 +56,6 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     }
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
-    // TODO : make flow field
     this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->height)));
     this->updateLoDsAvailable();
 }
@@ -82,15 +81,15 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
             }
         }
     }
-    std::vector<std::vector<std::vector<Vector3>>> originalFlowField = this->flowField;
     for (int iter_blur = 0; iter_blur < blur_iterations; iter_blur++) {
+        std::vector<std::vector<std::vector<Vector3>>> originalFlowField = this->flowField;
         for(int v_x = 1; v_x < sizeX - 1; v_x++) {
             for(int v_y = 1; v_y < sizeY - 1; v_y++) {
                 for(int h = 1; h < height - 1; h++) {
                     for(int d_x = -1; d_x <= 1; d_x++) {
                         for(int d_y = -1; d_y <= 1; d_y++) {
                             for(int d_h = -1; d_h <= 1; d_h++) {
-                                flowField[v_x][v_y][h] += originalFlowField[v_x + d_x][v_y + d_y][h + d_h] * (1/27.0);
+                                flowField[v_x][v_y][h] += originalFlowField[v_x + d_x][v_y + d_y][h + d_h] / 27.0;
                             }
                         }
                     }
@@ -98,10 +97,10 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
             }
         }
     }
-    for(int v_x = 0; v_x < sizeX; v_x++) {
-        for(int v_y = 0; v_y < sizeY; v_y++) {
-            for(int h = 0; h < height; h++) {
-                    flowField[v_x][v_y][h].normalize();
+    for(int v_x = 1; v_x < sizeX-1; v_x++) {
+        for(int v_y = 1; v_y < sizeY-1; v_y++) {
+            for(int h = 1; h < height-1; h++) {
+                    flowField[v_x][v_y][h] /= (blur_iterations + 1);
             }
         }
     }
@@ -109,10 +108,11 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
 
 void VoxelChunk::updateLoDsAvailable() {
     this->LoDs.clear();
-    int x_add = 2 - (this->x == 0 ? 1 : 0) - (!this->lastChunkOnX ? 1 : 0);
-    int y_add = 2 - (this->y == 0 ? 1 : 0) - (!this->lastChunkOnY ? 1 : 0);
+    int x_add = 1; //(this->x == 0 ? 0 : 0);
+    int y_add = 1; //(this->y == 0 ? 0 : 0);
+    int z_add = 1;
     for (int i = 1; i < std::min(std::min(this->sizeX, this->sizeY), this->height); i++)
-        if ((this->sizeX-x_add) % i == 0 && (this->sizeY-y_add) % i == 0 && this->height % i == 0)
+        if ((this->sizeX-x_add) % i == 0 && (this->sizeY-y_add) % i == 0 && (this->height-z_add) % i == 0)
             this->LoDs.push_back(i);
 }
 void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
@@ -265,8 +265,6 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
         }
         addedFront = true;
     }
-
-
     if (addedLeft && addedFront) {
         VoxelChunk* n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
         map[0].insert(map[0].begin(), std::vector<float>());
@@ -302,83 +300,130 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 
     float isolevel = 0.0;
     std::vector<Vector3> vertexArray;
-/*
-    if(addedLeft) {
-        for (int y = 0; y < int(map[0].size() - 1 - (addedFront ? 1 : 0)); y++) {
-            for (int z = 0; z < int(map[0][y].size() - 1); z++) {
-                Vertex vertices[8] = {Vertex(0, y    , z    , map[0][y    ][z    ]),
-                                      Vertex(1, y    , z    , map[1][y    ][z    ]),
-                                      Vertex(1, y + 1, z    , map[1][y + 1][z    ]),
-                                      Vertex(0, y + 1, z    , map[0][y + 1][z    ]),
-                                      Vertex(0, y    , z + 1, map[0][y    ][z + 1]),
-                                      Vertex(1, y    , z + 1, map[1][y    ][z + 1]),
-                                      Vertex(1, y + 1, z + 1, map[1][y + 1][z + 1]),
-                                      Vertex(0, y + 1, z + 1, map[0][y + 1][z + 1])
+    size_t x = 0, y = 0, z = 0;
+    for (x = 0; x < map.size() - 1; x += LoD) {
+        for (y = 0; y < map[x].size() - 1; y += LoD) {
+            for (z = 0; z < map[x][y].size() - 1; z += LoD) {
+                int LoDX = std::min(LoD, int(map.size() - x - 1));
+                int LoDY = std::min(LoD, int(map[x].size() - y - 1));
+                int LoDZ = std::min(LoD, int(map[x][y].size() - z - 1));
+                float x_offset = x - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                float y_offset = y - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                Vertex vertices[8] = {Vertex(x_offset       , y_offset       , z       , map[x       ][y       ][z       ]),
+                                      Vertex(x_offset + LoDX, y_offset       , z       , map[x + LoDX][y       ][z       ]),
+                                      Vertex(x_offset + LoDX, y_offset + LoDY, z       , map[x + LoDX][y + LoDY][z       ]),
+                                      Vertex(x_offset       , y_offset + LoDY, z       , map[x       ][y + LoDY][z       ]),
+                                      Vertex(x_offset       , y_offset       , z + LoDZ, map[x       ][y       ][z + LoDZ]),
+                                      Vertex(x_offset + LoDX, y_offset       , z + LoDZ, map[x + LoDX][y       ][z + LoDZ]),
+                                      Vertex(x_offset + LoDX, y_offset + LoDY, z + LoDZ, map[x + LoDX][y + LoDY][z + LoDZ]),
+                                      Vertex(x_offset       , y_offset + LoDY, z + LoDZ, map[x       ][y + LoDY][z + LoDZ])
                                      };
+
                 std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
                 vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
             }
         }
     }
-    if(addedFront) {
-        for (int x = 0; y < int(map.size() - 1 - (addedLeft ? 1 : 0)); y++) {
-            for (int z = 0; z < int(map[x][0].size() - 1); z++) {
-                Vertex vertices[8] = {Vertex(x    , 0, z    , map[x    ][0][z    ]),
-                                      Vertex(x + 1, 0, z    , map[x + 1][0][z    ]),
-                                      Vertex(x + 1, 1, z    , map[x + 1][1][z    ]),
-                                      Vertex(x    , 1, z    , map[x    ][1][z    ]),
-                                      Vertex(x    , 0, z + 1, map[x    ][0][z + 1]),
-                                      Vertex(x + 1, 0, z + 1, map[x + 1][0][z + 1]),
-                                      Vertex(x + 1, 1, z + 1, map[x + 1][1][z + 1]),
-                                      Vertex(x    , 1, z + 1, map[x    ][1][z + 1])
+    /*
+        if(addedLeft) {
+            for (int y = 0; y < int(map[0].size() - 1 - (addedFront ? 1 : 0)); y++) {
+                for (int z = 0; z < int(map[0][y].size() - 1); z++) {
+                    Vertex vertices[8] = {Vertex(0, y    , z    , map[0][y    ][z    ]),
+                                          Vertex(1, y    , z    , map[1][y    ][z    ]),
+                                          Vertex(1, y + 1, z    , map[1][y + 1][z    ]),
+                                          Vertex(0, y + 1, z    , map[0][y + 1][z    ]),
+                                          Vertex(0, y    , z + 1, map[0][y    ][z + 1]),
+                                          Vertex(1, y    , z + 1, map[1][y    ][z + 1]),
+                                          Vertex(1, y + 1, z + 1, map[1][y + 1][z + 1]),
+                                          Vertex(0, y + 1, z + 1, map[0][y + 1][z + 1])
+                                         };
+                    std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                    vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+                }
+            }
+        }
+        if(addedFront) {
+            for (int x = 0; y < int(map.size() - 1 - (addedLeft ? 1 : 0)); y++) {
+                for (int z = 0; z < int(map[x][0].size() - 1); z++) {
+                    Vertex vertices[8] = {Vertex(x    , 0, z    , map[x    ][0][z    ]),
+                                          Vertex(x + 1, 0, z    , map[x + 1][0][z    ]),
+                                          Vertex(x + 1, 1, z    , map[x + 1][1][z    ]),
+                                          Vertex(x    , 1, z    , map[x    ][1][z    ]),
+                                          Vertex(x    , 0, z + 1, map[x    ][0][z + 1]),
+                                          Vertex(x + 1, 0, z + 1, map[x + 1][0][z + 1]),
+                                          Vertex(x + 1, 1, z + 1, map[x + 1][1][z + 1]),
+                                          Vertex(x    , 1, z + 1, map[x    ][1][z + 1])
+                                         };
+                    std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                    vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+                }
+            }
+        }*/
+/*
+    size_t initX = x, initY = y, initZ = z;
+
+    for (x = initX; x < map.size() - 1; x ++) {
+        for (y = 0; y < map[x].size() - LoD; y += LoD) {
+            for (z = 0; z < map[x][y].size() - LoD; z += LoD) {
+                float x_offset = x;// - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                float y_offset = y;// - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                Vertex vertices[8] = {Vertex(x_offset    , y_offset      , z      , map[x    ][y      ][z      ]),
+                                      Vertex(x_offset + 1, y_offset      , z      , map[x + 1][y      ][z      ]),
+                                      Vertex(x_offset + 1, y_offset + LoD, z      , map[x + 1][y + LoD][z      ]),
+                                      Vertex(x_offset    , y_offset + LoD, z      , map[x    ][y + LoD][z      ]),
+                                      Vertex(x_offset    , y_offset      , z + LoD, map[x    ][y      ][z + LoD]),
+                                      Vertex(x_offset + 1, y_offset      , z + LoD, map[x + 1][y      ][z + LoD]),
+                                      Vertex(x_offset + 1, y_offset + LoD, z + LoD, map[x + 1][y + LoD][z + LoD]),
+                                      Vertex(x_offset    , y_offset + LoD, z + LoD, map[x    ][y + LoD][z + LoD])
                                      };
+                for(int i = 0; i < 8; i++){vertices[i] -=  Vector3(1, (this->y > 0 ? 1 : 0), 0);}
                 std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
                 vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+            }
+        }
+    }
+    for (x = 0; x < map.size() - LoD; x += LoD) {
+        for (y = initY; y < map[x].size() - 1; y ++) {
+            for (z = 0; z < map[x][y].size() - LoD; z += LoD) {
+                float x_offset = x;// - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                float y_offset = y;// - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                Vertex vertices[8] = {Vertex(x_offset      , y_offset    , z      , map[x      ][y    ][z      ]),
+                                      Vertex(x_offset + LoD, y_offset    , z      , map[x + LoD][y    ][z      ]),
+                                      Vertex(x_offset + LoD, y_offset + 1, z      , map[x + LoD][y + 1][z      ]),
+                                      Vertex(x_offset      , y_offset + 1, z      , map[x      ][y + 1][z      ]),
+                                      Vertex(x_offset      , y_offset    , z + LoD, map[x      ][y    ][z + LoD]),
+                                      Vertex(x_offset + LoD, y_offset    , z + LoD, map[x + LoD][y    ][z + LoD]),
+                                      Vertex(x_offset + LoD, y_offset + 1, z + LoD, map[x + LoD][y + 1][z + LoD]),
+                                      Vertex(x_offset      , y_offset + 1, z + LoD, map[x      ][y + 1][z + LoD])
+                                     };
+                for(int i = 0; i < 8; i++){vertices[i] -=  Vector3((this->x > 0 ? 1 : 0), 1, 0);}
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+            }
+        }
+    }
+    if (addedLeft && addedFront) {
+        for (x = 0; x < map.size() - LoD; x += LoD) {
+            for (y = 0; y < map[x].size() - LoD; y += LoD) {
+                for (z = initZ; z < map[x][y].size() - 1; z ++) {
+                    float x_offset = x;// - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
+                    float y_offset = y;// - (addedFront ? 1.0 : 0.0);//-LoDIndex);
+                    Vertex vertices[8] = {Vertex(x_offset      , y_offset      , z      , map[x      ][y    ][z      ]),
+                                          Vertex(x_offset + LoD, y_offset      , z      , map[x + LoD][y    ][z      ]),
+                                          Vertex(x_offset + LoD, y_offset + LoD, z      , map[x + LoD][y + LoD][z      ]),
+                                          Vertex(x_offset      , y_offset + LoD, z      , map[x      ][y + LoD][z      ]),
+                                          Vertex(x_offset      , y_offset      , z + 1, map[x      ][y    ][z + 1]),
+                                          Vertex(x_offset + LoD, y_offset      , z + 1, map[x + LoD][y    ][z + 1]),
+                                          Vertex(x_offset + LoD, y_offset + LoD, z + 1, map[x + LoD][y + LoD][z + 1]),
+                                          Vertex(x_offset      , y_offset + LoD, z + 1, map[x      ][y + LoD][z + 1])
+                                         };
+//                    for(int i = 0; i < 8; i++){vertices[i] -=  Vector3((this->x > 0 ? 1 : 0), 1, 0);}
+                    std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                    vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
+                }
             }
         }
     }*/
-    size_t x = 0, y = 0, z = 0;
-    for (x = 0; x < map.size() - LoD; x += LoD) {
-        for (y = 0; y < map[x].size() - LoD; y += LoD) {
-            for (z = 0; z < map[x][y].size() - LoD; z += LoD) {
-                float x_offset = x - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
-                float y_offset = y - (addedFront ? 1.0 : 0.0);//-LoDIndex);
-                Vertex vertices[8] = {Vertex(x_offset      , y_offset      , z      , map[x      ][y      ][z      ]),
-                                      Vertex(x_offset + LoD, y_offset      , z      , map[x + LoD][y      ][z      ]),
-                                      Vertex(x_offset + LoD, y_offset + LoD, z      , map[x + LoD][y + LoD][z      ]),
-                                      Vertex(x_offset      , y_offset + LoD, z      , map[x      ][y + LoD][z      ]),
-                                      Vertex(x_offset      , y_offset      , z + LoD, map[x      ][y      ][z + LoD]),
-                                      Vertex(x_offset + LoD, y_offset      , z + LoD, map[x + LoD][y      ][z + LoD]),
-                                      Vertex(x_offset + LoD, y_offset + LoD, z + LoD, map[x + LoD][y + LoD][z + LoD]),
-                                      Vertex(x_offset      , y_offset + LoD, z + LoD, map[x      ][y + LoD][z + LoD])
-                                     };
-
-                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
-                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
-            }
-        }
-    }
-    size_t initX = x, initY = y, initZ = z;
-    for (x = initX; x < map.size() - 1; x ++) {
-        for (y = initY; y < map[x].size() - 1; y ++) {
-            for (z = initZ; z < map[x][y].size() - 1; z ++) {
-                float x_offset = x;// - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
-                float y_offset = y;// - (addedFront ? 1.0 : 0.0);//-LoDIndex);
-                Vertex vertices[8] = {Vertex(x_offset      , y_offset      , z      , map[x      ][y      ][z      ]),
-                                      Vertex(x_offset + 1, y_offset      , z      , map[x + 1][y      ][z      ]),
-                                      Vertex(x_offset + 1, y_offset + 1, z      , map[x + 1][y + 1][z      ]),
-                                      Vertex(x_offset      , y_offset + 1, z      , map[x      ][y + 1][z      ]),
-                                      Vertex(x_offset      , y_offset      , z + 1, map[x      ][y      ][z + 1]),
-                                      Vertex(x_offset + 1, y_offset      , z + 1, map[x + 1][y      ][z + 1]),
-                                      Vertex(x_offset + 1, y_offset + 1, z + 1, map[x + 1][y + 1][z + 1]),
-                                      Vertex(x_offset      , y_offset + 1, z + 1, map[x      ][y + 1][z + 1])
-                                     };
-
-                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
-                vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
-            }
-        }
-    }
     if (outColors != nullptr)
         *outColors = colors;
     return vertexArray;

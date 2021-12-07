@@ -5,9 +5,11 @@
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : blockSize(blockSize), noise_shifting(noise_shifting) {
-    this->sizeX = nx * (chunkSize + 1);
-    this->sizeY = ny * (chunkSize + 1);
-    this->sizeZ = nz * (chunkSize + 1);
+
+    this->sizeZ = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
+    chunkSize += 1; // More useful for the LoDs
+    this->sizeX = nx * (chunkSize);
+    this->sizeY = ny * (chunkSize);
     this->initMap();
 
 
@@ -24,7 +26,8 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
-                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
+//                        noise_val = 1.0; // To remove
+//                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
                         data[iChunk][x][y][h] = noise_val;
                     }
                 }
@@ -145,7 +148,7 @@ void VoxelGrid::createMesh()
     for(VoxelChunk* vc : this->chunks)
     {
         vc->needRemeshing = true;
-        vc->LoDIndex = vc->LoDs.size() - 1;
+//        vc->LoDIndex = vc->LoDs.size() - 1; // To remove
     }
     remeshAll();
 }

@@ -86,6 +86,8 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     // Create the controls layouts
     this->randomRocksLayout = new QHBoxLayout;
     this->randomRocksBox = new QGroupBox("Erosion");
+    this->currentSimulationLayout = new QHBoxLayout;
+    this->currentSimulationBox = new QGroupBox("Simulation de courants");
     this->manualRocksLayout = new QHBoxLayout;
     this->manualRocksBox = new QGroupBox("Modifs manuelles");
     this->curvesErosionLayout = new QHBoxLayout;
@@ -116,6 +118,15 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     randomRocksLayout->addWidget(displayRandomRocks);
     randomRocksBox->setLayout(randomRocksLayout);
     controlLayout->addWidget(randomRocksBox);
+
+
+    // Manual rock erosion layout
+    this->currentSimulationFlowfieldStrengthSlider= new FancySlider(Qt::Orientation::Horizontal, -1.0, 1.0, 0.01);
+    this->currentSimulationStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
+    currentSimulationLayout->addWidget(createSliderGroup("Facteur d'esquive des collisions", currentSimulationFlowfieldStrengthSlider));
+    currentSimulationLayout->addWidget(createSliderGroup("Force du courant", currentSimulationStrengthSlider));
+    currentSimulationBox->setLayout(currentSimulationLayout);
+    controlLayout->addWidget(currentSimulationBox);
 
 
     // Manual rock erosion layout
@@ -203,6 +214,9 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(sendRandomRocks, &QPushButton::pressed, this, [=](){this->viewer->erodeMap(false); } );
     QObject::connect(displayRandomRocks, &QPushButton::toggled, this, [=](bool display){this->viewer->displayRockTrajectories = display;} );
 
+    QObject::connect(currentSimulationFlowfieldStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionFlowfieldFactor(float)));
+//    QObject::connect(currentSimulationStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
+
     QObject::connect(manualRocksSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setManualErosionRocksSize(int)));
     QObject::connect(manualRocksStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
     QObject::connect(addingMode, &QRadioButton::clicked, this, [=](){this->viewer->setAddingMatterMode(true); } );
@@ -242,6 +256,9 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
     randomRocksSizeSlider->setValue(viewer->erosionSize);
     randomRocksStrengthSlider->setfValue(viewer->erosionStrength);
     randomRocksQuantitySlider->setValue(viewer->erosionQtt);
+
+    currentSimulationFlowfieldStrengthSlider->setfValue(viewer->erosionFlowfieldFactor);
+//    manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
 
     manualRocksSizeSlider->setValue(viewer->manualErosionSize);
     manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
