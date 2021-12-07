@@ -42,6 +42,8 @@ public Q_SLOTS:
     void setErosionRocksQuantity(int newQtt) { this->erosionQtt = newQtt;}
     void erodeMap(bool sendFromCam = false);
 
+    void recomputeFlowfield();
+
     void setManualErosionRocksSize(int newSize) { this->manualErosionSize = newSize;}
     void setManualErosionRocksStrength(float newStrength) { this->manualErosionStrength = newStrength;}
     void setAddingMatterMode(bool addingMode) { this->addingMatterMode = addingMode; }
@@ -64,6 +66,7 @@ public Q_SLOTS:
                                                              voxelGrid->createMesh();
                                                             update();}
     void setErosionFlowfieldFactor(float newVal) { this->erosionFlowfieldFactor = newVal; }
+    void setErosionFlowfieldRandomness(float newVal) { this->erosionFlowfieldRandomness = newVal; }
 
 //    void saveScreenshot();
 
@@ -101,6 +104,7 @@ public:
     float erosionStrength = .5;
     int erosionQtt = 10;
     float erosionFlowfieldFactor = 0.1;
+    float erosionFlowfieldRandomness = 0.05;
 
     int manualErosionSize = 15;
     float manualErosionStrength = .5;

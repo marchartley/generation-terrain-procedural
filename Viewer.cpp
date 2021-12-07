@@ -235,6 +235,16 @@ void Viewer::init() {
     this->flowDebugMeshes.shader = new Shader(vNoShader, fNoShader);
     this->tunnelsMesh.shader = new Shader(vNoShader, fNoShader);
 
+    float rocksColor[4] = {86/255., 176/255., 12/255., 1.0};
+    float failedRocksColor[4] = {176/255., 72/255., 12/255., 1.0};
+    float flowfieldColor[4] = {143/255., 212/255., 255/255., 1.0};
+    float tunnelsColor[4] = {152/255., 94/255., 209/255., 1.0};
+    this->rocksMeshes.shader->setVector("color", rocksColor, 4);
+    this->failedRocksMeshes.shader->setVector("color", failedRocksColor, 4);
+    this->flowDebugMeshes.shader->setVector("color", flowfieldColor, 4);
+    this->tunnelsMesh.shader->setVector("color", tunnelsColor, 4);
+
+
     this->matter_adder = RockErosion(this->erosionSize, 1.0);
 
     this->light = PositionalLight(
@@ -531,7 +541,7 @@ void Viewer::erodeMap(bool sendFromCam)
         dir = new Vector3(0.0, 0.0, 0.0);
         this->displayMessage( "Rocks launched!" );
     }
-    std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, true);
+    std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, this->erosionFlowfieldRandomness, true);
     delete dir;
     delete pos;
     std::vector<Vector3> asOneVector;
@@ -541,7 +551,7 @@ void Viewer::erodeMap(bool sendFromCam)
     this->rocksMeshes.fromArray(asOneVector);
     this->rocksMeshes.update();
     asOneVector.clear();
-    for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
+    for(std::vector<Vector3>& coords : this->lastFailedRocksLaunched) {
         asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
     }
     this->failedRocksMeshes.fromArray(asOneVector);
@@ -559,6 +569,14 @@ void Viewer::erodeMap(bool sendFromCam)
     this->flowDebugMeshes.fromArray(normals);
     this->flowDebugMeshes.update();
     update();
+}
+
+void Viewer::recomputeFlowfield()
+{
+    for (VoxelChunk* vc : this->voxelGrid->chunks) {
+        vc->needRemeshing = true;
+        vc->computeFlowfield();
+    }
 }
 
 void Viewer::throwRock()

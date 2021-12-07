@@ -124,10 +124,13 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     // Manual rock erosion layout
     this->currentSimulationFlowfieldStrengthSlider= new FancySlider(Qt::Orientation::Horizontal, -1.0, 1.0, 0.01);
     this->currentSimulationStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
+    this->currentSimulationRandomDirectionSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 0.5, 0.01);
     this->displayFlowfield = new QCheckBox("Afficher le courant");
+    this->recomputeFlowfieldButton = new QPushButton("Recalculer le courant");
     currentSimulationLayout->addWidget(createSliderGroup("Facteur d'esquive des collisions", currentSimulationFlowfieldStrengthSlider));
     currentSimulationLayout->addWidget(createSliderGroup("Force du courant", currentSimulationStrengthSlider));
-    currentSimulationLayout->addWidget(displayFlowfield);
+    currentSimulationLayout->addWidget(createSliderGroup("Aleatoire", currentSimulationRandomDirectionSlider));
+    currentSimulationLayout->addWidget(createVerticalGroup({displayFlowfield, recomputeFlowfieldButton}));
     currentSimulationBox->setLayout(currentSimulationLayout);
     controlLayout->addWidget(currentSimulationBox);
 
@@ -218,10 +221,13 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(sendRandomRocksFromCam, &QPushButton::pressed, this, [=](){this->viewer->erodeMap(true); } );
     QObject::connect(sendRandomRocks, &QCheckBox::pressed, this, [=](){this->viewer->erodeMap(false); } );
     QObject::connect(displayRandomRocks, &QCheckBox::toggled, this, [=](bool display){this->viewer->displayRockTrajectories = display; viewer->update(); } );
+    QObject::connect(displayFailedRandomRocks, &QCheckBox::toggled, this, [=](bool display){this->viewer->displayFailedRockTrajectories = display; viewer->update(); } );
 
     QObject::connect(currentSimulationFlowfieldStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionFlowfieldFactor(float)));
 //    QObject::connect(currentSimulationStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
+    QObject::connect(currentSimulationRandomDirectionSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionFlowfieldRandomness(float)));
     QObject::connect(displayFlowfield, &QCheckBox::toggled, this, [=](bool display){this->viewer->displayFlowfield = display; viewer->update(); } );
+    QObject::connect(recomputeFlowfieldButton, &QPushButton::pressed, this, [=](){this->viewer->recomputeFlowfield(); } );
 
     QObject::connect(manualRocksSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setManualErosionRocksSize(int)));
     QObject::connect(manualRocksStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
@@ -268,12 +274,15 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
 
     currentSimulationFlowfieldStrengthSlider->setfValue(viewer->erosionFlowfieldFactor);
 //    manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
+    currentSimulationRandomDirectionSlider->setfValue(viewer->erosionFlowfieldRandomness);
+    displayFlowfield->setChecked(viewer->displayFlowfield);
 
     manualRocksSizeSlider->setValue(viewer->manualErosionSize);
     manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
 
     curvesErosionSizeSlider->setValue(viewer->curvesErosionSize);
     curvesErosionStrengthSlider->setfValue(viewer->curvesErosionStrength);
+    displayCurvesErosion->setChecked(viewer->displayTunnelsPath);
 
     wireModeButton->setChecked(viewer->viewerMode == WIRE_MODE);
     fillModeButton->setChecked(viewer->viewerMode == FILL_MODE);

@@ -109,7 +109,7 @@ VoxelGrid* VoxelGrid::fromIsoData(std::vector<std::vector<std::vector<std::vecto
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
-        this->chunks[i]->computeFlowfield(5);
+        this->chunks[i]->computeFlowfield();
     }
     this->createMesh();
     return this;
