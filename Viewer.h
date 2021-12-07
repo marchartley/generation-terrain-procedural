@@ -93,6 +93,9 @@ public:
     qglviewer::Vec selectedPoint, orig, dir;
 
     bool displayRockTrajectories = false;
+    bool displayFailedRockTrajectories = false;
+    bool displayFlowfield = false;
+    bool displayTunnelsPath = false;
 
     int erosionSize = 15;
     float erosionStrength = .5;
@@ -110,6 +113,8 @@ public:
     bool addingMatterMode = true;
     RockErosion matter_adder;
     std::vector<std::vector<Vector3>> lastRocksLaunched;
+    std::vector<std::vector<Vector3>> lastFailedRocksLaunched;
+    std::vector<Vector3> tunnelPath;
     bool mouseInWorld = false;
     Vector3 mousePosWorld;
     QPoint mousePos;
@@ -130,7 +135,9 @@ public:
     unsigned int frame_num = 0;
 
     Mesh rocksMeshes;
+    Mesh failedRocksMeshes;
     Mesh flowDebugMeshes;
+    Mesh tunnelsMesh;
 };
 
 

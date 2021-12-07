@@ -18,7 +18,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(5, 3, 3, 1.0, .30),
+        new VoxelGrid(3, 3, 3, 1.0, .30),
         nullptr, // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
@@ -231,7 +231,9 @@ void Viewer::init() {
     }
     this->shader = Shader(vNoShader, fNoShader);
     this->rocksMeshes.shader = new Shader(vNoShader, fNoShader);
+    this->failedRocksMeshes.shader = new Shader(vNoShader, fNoShader);
     this->flowDebugMeshes.shader = new Shader(vNoShader, fNoShader);
+    this->tunnelsMesh.shader = new Shader(vNoShader, fNoShader);
 
     this->matter_adder = RockErosion(this->erosionSize, 1.0);
 
@@ -264,17 +266,19 @@ void Viewer::init() {
     }
 
 
-    std::vector<Vector3> normals;
-    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
-        for (int y = 0; y < this->voxelGrid->sizeY; y++) {
-            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
-                normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z)) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+    if (this->voxelGrid) {
+        std::vector<Vector3> normals;
+        for (int x = 0; x < this->voxelGrid->sizeX; x++) {
+            for (int y = 0; y < this->voxelGrid->sizeY; y++) {
+                for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
+                    normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                    normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z)) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                }
             }
         }
+        this->flowDebugMeshes.fromArray(normals);
+        this->flowDebugMeshes.update();
     }
-    this->flowDebugMeshes.fromArray(normals);
-    this->flowDebugMeshes.update();
 }
 
 void Viewer::draw() {
@@ -339,16 +343,6 @@ void Viewer::draw() {
                 vc->mesh.shader->setFloat("offsetX", -this->voxelGrid->sizeX/2);
                 vc->mesh.shader->setFloat("offsetY", -this->voxelGrid->sizeY/2);
             }
-//            this->voxelGrid->mesh.shader->setMatrix("proj_matrix", pMatrix);
-//            this->voxelGrid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-//            this->voxelGrid->mesh.shader->setPositionalLight("light", this->light);
-//            this->voxelGrid->mesh.shader->setMaterial("ground_material", ground_material);
-//            this->voxelGrid->mesh.shader->setMaterial("grass_material", grass_material);
-//            this->voxelGrid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-//            this->voxelGrid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-//            this->voxelGrid->mesh.shader->setBool("display_light_source", true);
-//            this->voxelGrid->mesh.shader->setFloat("offsetX", -this->voxelGrid->sizeX/2);
-//            this->voxelGrid->mesh.shader->setFloat("offsetY", -this->voxelGrid->sizeY/2);
             this->voxelGrid->display();
         }
     }
@@ -373,12 +367,26 @@ void Viewer::draw() {
     this->rocksMeshes.shader->setMatrix("proj_matrix", pMatrix);
     this->rocksMeshes.shader->setMatrix("mv_matrix", mvMatrix);
     this->rocksMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->failedRocksMeshes.shader->setMatrix("proj_matrix", pMatrix);
+    this->failedRocksMeshes.shader->setMatrix("mv_matrix", mvMatrix);
+    this->failedRocksMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     this->flowDebugMeshes.shader->setMatrix("proj_matrix", pMatrix);
     this->flowDebugMeshes.shader->setMatrix("mv_matrix", mvMatrix);
     this->flowDebugMeshes.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->tunnelsMesh.shader->setMatrix("proj_matrix", pMatrix);
+    this->tunnelsMesh.shader->setMatrix("mv_matrix", mvMatrix);
+    this->tunnelsMesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     if (displayRockTrajectories) {
-//        this->flowDebugMeshes.display(GL_LINES);
         this->rocksMeshes.display(GL_LINES);
+    }
+    if (displayFailedRockTrajectories) {
+        this->failedRocksMeshes.display(GL_LINES);
+    }
+    if (displayFlowfield) {
+        this->flowDebugMeshes.display(GL_LINES);
+    }
+    if (displayTunnelsPath) {
+        this->tunnelsMesh.display(GL_LINES);
     }
 
 
@@ -386,7 +394,7 @@ void Viewer::draw() {
 #ifdef linux
         mode_t prevMode = umask(0011);
 #endif
-        if(this->screenshotIndex == 0)
+        if(this->screenshotIndex == 0 && voxelGrid)
         {
             std::ofstream outfile;
             outfile.open(this->screenshotFolder + "grid_data.json", std::ios_base::trunc);
@@ -523,15 +531,22 @@ void Viewer::erodeMap(bool sendFromCam)
         dir = new Vector3(0.0, 0.0, 0.0);
         this->displayMessage( "Rocks launched!" );
     }
-    this->lastRocksLaunched = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, true);
-    this->rocksMeshes.vertexArrayFloat.clear();
-    std::vector<float> oneThrow;
+    std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, true);
+    delete dir;
+    delete pos;
+    std::vector<Vector3> asOneVector;
     for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
-        oneThrow = Vector3::toArray(coords);
-        this->rocksMeshes.vertexArrayFloat.insert(this->rocksMeshes.vertexArrayFloat.end(), oneThrow.begin(), oneThrow.end());
+        asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
     }
+    this->rocksMeshes.fromArray(asOneVector);
     this->rocksMeshes.update();
-/*
+    asOneVector.clear();
+    for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
+        asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
+    }
+    this->failedRocksMeshes.fromArray(asOneVector);
+    this->failedRocksMeshes.update();
+
     std::vector<Vector3> normals;
     for (int x = 0; x < this->voxelGrid->sizeX; x++) {
         for (int y = 0; y < this->voxelGrid->sizeY; y++) {
@@ -543,7 +558,7 @@ void Viewer::erodeMap(bool sendFromCam)
     }
     this->flowDebugMeshes.fromArray(normals);
     this->flowDebugMeshes.update();
-    update();*/
+    update();
 }
 
 void Viewer::throwRock()
@@ -559,8 +574,8 @@ void Viewer::throwRock()
 void Viewer::createTunnel(bool removingMatter)
 {
     UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    this->rocksMeshes.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, !removingMatter));
-    this->rocksMeshes.update();
+    this->tunnelsMesh.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, !removingMatter));
+    this->tunnelsMesh.update();
     update();
 }
 
