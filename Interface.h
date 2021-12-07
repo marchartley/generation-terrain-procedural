@@ -66,8 +66,10 @@ public:
     QPushButton* sendRandomRocksFromCam;
     QPushButton* sendRandomRocks;
     QCheckBox* displayRandomRocks;
+    QCheckBox* displayFailedRandomRocks;
     FancySlider* currentSimulationFlowfieldStrengthSlider;
     FancySlider* currentSimulationStrengthSlider;
+    QCheckBox* displayFlowfield;
     FancySlider* manualRocksSizeSlider;
     FancySlider* manualRocksStrengthSlider;
     QRadioButton* addingMode;
@@ -76,6 +78,7 @@ public:
     FancySlider* curvesErosionStrengthSlider;
     QPushButton* curvesErosionCreateMatter;
     QPushButton* curvesErosionRemoveMatter;
+    QCheckBox* displayCurvesErosion;
     QPushButton* gravityGlobalButton;
     QPushButton* gravitySandButton;
     QPushButton* startStopRecording;

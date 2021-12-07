@@ -14,13 +14,18 @@ UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float max
 
 }
 
-std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, bool returnEvenLostRocks)
+std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, bool returnEvenLostRocks)
 {
+    auto start = std::chrono::system_clock::now();
     for (VoxelChunk* vc : this->grid->chunks)
-        vc->computeFlowfield(15);
-    std::vector<std::vector<Vector3>> debugLines;
-    float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)), 2);
+        vc->computeFlowfield(5);
+    auto end = std::chrono::system_clock::now();
+    std::cout << std::chrono::duration<float>(end - start).count() << std::endl;
+    std::vector<std::vector<Vector3>> debugFinishingLines;
+    std::vector<std::vector<Vector3>> debugFailingLines;
+    float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ))/2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
+    starting_distance *= 2.0; // Leave a little bit of gap
     int max_iter = 1000;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
@@ -71,19 +76,19 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
                 rock.Apply(v, false, false);
                 touched = true;
                 max_iter = 1000;
-                debugLines.push_back(coords);
+                debugFinishingLines.push_back(coords);
             }
             if (pos.norm() > 4 * starting_distance) {
                 i--;
                 max_iter --;
                 if (returnEvenLostRocks)
-                    debugLines.push_back(coords);
+                    debugFailingLines.push_back(coords);
                 break;
             }
         }
     }
     grid->remeshAll();
-    return debugLines;
+    return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
 
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(Vector3 *startingPoint, Vector3 *endingPoint, int numberPoints, bool addingMatter)
