@@ -24,7 +24,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
-//                        noise_val = (xChunk == 1 && yChunk == 1 && (h > chunkSize && h < 2*chunkSize)? noise_val : -1.0); // To remove
+                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
                         data[iChunk][x][y][h] = noise_val;
                     }
                 }

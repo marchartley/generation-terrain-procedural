@@ -17,7 +17,7 @@ UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float max
 std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter)
 {
     for (VoxelChunk* vc : this->grid->chunks)
-        vc->computeFlowfield(5);
+        vc->computeFlowfield(15);
     std::vector<std::vector<Vector3>> debugLines;
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ)), 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
@@ -48,7 +48,10 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
         while (!touched && steps > 0) {
             if(this->grid->contains(pos))
             {
+//                if (grid->getFlowfield(pos).norm() > 0)
+//                    std::cout << "Not null!" << std::endl;
                 dir += grid->getFlowfield(pos) * 0.1;
+                dir += Vector3::random() * 0.1;
                 dir.normalize();
             } else {
                 dir += Vector3::random() * 0.1;
@@ -78,7 +81,7 @@ std::vector<std::vector<Vector3>> UnderwaterErosion::Apply(Vector3* startingPoin
                 max_iter = 1000;
                 debugLines.push_back(coords);
             }
-            if (pos.norm() > 2 * starting_distance) {
+            if (pos.norm() > 4 * starting_distance) {
                 i--;
                 max_iter --;
                 break;

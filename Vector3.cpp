@@ -16,10 +16,13 @@ Vector3::Vector3(Vector3* copy) : Vector3(copy->x, copy->y, copy->z) {
 }
 
 float Vector3::norm() {
+    if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 }
 
 Vector3& Vector3::normalize() {
+    if(this->norm() == 0)
+        return *this;
     float norm = this->norm();
     *this /= norm;
     return *this;
