@@ -69,7 +69,9 @@ public:
     QCheckBox* displayFailedRandomRocks;
     FancySlider* currentSimulationFlowfieldStrengthSlider;
     FancySlider* currentSimulationStrengthSlider;
+    FancySlider* currentSimulationRandomDirectionSlider;
     QCheckBox* displayFlowfield;
+    QPushButton* recomputeFlowfieldButton;
     FancySlider* manualRocksSizeSlider;
     FancySlider* manualRocksStrengthSlider;
     QRadioButton* addingMode;

@@ -28,7 +28,7 @@ public:
     void computeGroups();
 
     void resetVoxelsNeighbors();
-    void computeFlowfield(int blur_iterations);
+    void computeFlowfield(int blur_iterations = 5);
 
     std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
 

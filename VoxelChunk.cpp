@@ -102,8 +102,8 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
     for(int v_x = 1; v_x < sizeX-1; v_x++) {
         for(int v_y = 1; v_y < sizeY-1; v_y++) {
             for(int h = 1; h < height-1; h++) {
-//                    flowField[v_x][v_y][h] /= (blur_iterations + 1);
-                flowField[v_x][v_y][h].normalize();
+                    flowField[v_x][v_y][h] /= (blur_iterations + 1);
+//                flowField[v_x][v_y][h].normalize();
             }
         }
     }

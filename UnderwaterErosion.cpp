@@ -14,22 +14,24 @@ UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float max
 
 }
 
-std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>> UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, bool returnEvenLostRocks)
+std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
+UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, float randomnessFactor, bool returnEvenLostRocks)
 {
-    auto start = std::chrono::system_clock::now();
-    for (VoxelChunk* vc : this->grid->chunks)
-        vc->computeFlowfield(5);
-    auto end = std::chrono::system_clock::now();
-    std::cout << std::chrono::duration<float>(end - start).count() << std::endl;
+    /*for (VoxelChunk* vc : this->grid->chunks)
+        vc->computeFlowfield();*/
     std::vector<std::vector<Vector3>> debugFinishingLines;
     std::vector<std::vector<Vector3>> debugFailingLines;
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ))/2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     starting_distance *= 2.0; // Leave a little bit of gap
     int max_iter = 1000;
+    int total_iterations = 0;
+    int cpt = 0;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
-        int steps = 1000;
+        float weaknessAgainstFlowfield = 1.0;
+        cpt ++;
+        int steps = 10 * starting_distance; // An estimation of how many step we need
         Vector3 pos;
         if (startingPoint == nullptr) {
             pos = Vector3(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(0.0, 1.0));
@@ -50,23 +52,25 @@ std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
         std::vector<Vector3> coords;
 
         bool touched = false;
-        while (!touched && steps > 0) {
-            bool matterIsClose = false;
+        while (!touched) {
+            total_iterations ++;
             if (avoidMatter > 0) {
                 for(int dist = 0; dist < avoidMatter; dist++) {
                     if (this->grid->contains(pos + dir * dist)) {
 //                        dir += Vector3::random() * 0.05;
-                        dir += grid->getFlowfield(pos + dir * dist) * flowfieldFactor;
+                        Vector3 flowfield = grid->getFlowfield(pos + dir * dist);
+                        dir += flowfield * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
                         dir.normalize();
-                        matterIsClose = true;
+                        if (dist == 0 && flowfield.norm() > 0.1)
+                            weaknessAgainstFlowfield *= .999f;//std::max(.95f, (1 - std::min(1.0f, flowfield.norm())));
                         break;
                     }
                 }
             }
-            if (!matterIsClose) {
-                dir += Vector3::random() * flowfieldFactor/2.0;
+//            if (!matterIsClose) {
+                dir += Vector3::random() * randomnessFactor;
                 dir.normalize();
-            }
+//            }
             steps --;
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             pos += dir;
@@ -78,7 +82,7 @@ std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
                 max_iter = 1000;
                 debugFinishingLines.push_back(coords);
             }
-            if (pos.norm() > 4 * starting_distance) {
+            if (pos.norm() > 4 * starting_distance || steps <= 0 || pos.z < -100) {
                 i--;
                 max_iter --;
                 if (returnEvenLostRocks)
@@ -87,6 +91,8 @@ std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
             }
         }
     }
+    std::cout << total_iterations << " iterations (" << cpt << " rocks lauched, " << debugFinishingLines.size() << " who hit)";
+    std::cout << " check : " << debugFinishingLines.size() << "+" << debugFailingLines.size() << std::endl;
     grid->remeshAll();
     return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
