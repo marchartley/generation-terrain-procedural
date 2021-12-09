@@ -20,6 +20,7 @@ public:
     Matrix submatrix(size_t rowToIgnore, size_t colToIgnore);
     Matrix transpose();
     Matrix product(Matrix m);
+    float trace();
 
 
 //    friend Matrix operator+(Matrix a, Matrix& b);

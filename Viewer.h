@@ -68,6 +68,9 @@ public Q_SLOTS:
     void setErosionFlowfieldFactor(float newVal) { this->erosionFlowfieldFactor = newVal; }
     void setErosionFlowfieldRandomness(float newVal) { this->erosionFlowfieldRandomness = newVal; }
 
+    void setLoD(int newLoD) { this->LoD = newLoD; }
+    void computeLoD();
+
 //    void saveScreenshot();
 
 //protected:
@@ -112,6 +115,11 @@ public:
     int curvesErosionSize = 15;
     float curvesErosionStrength = .5;
     bool addingCurvesErosionMatterMode = true;
+
+    int LoD = 0;
+
+
+    int getMaxLoDAvailable() { return this->voxelGrid->getMaxLoD(); }
 
     float*** selectionShape;
     bool addingMatterMode = true;

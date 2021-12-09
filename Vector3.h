@@ -5,6 +5,13 @@
 #include <iostream>
 #include <vector>
 
+#define GRID1D_float std::vector<float>
+#define GRID1D_vec3 std::vector<Vector3>
+#define GRID2D_float std::vector<std::vector<float>>
+#define GRID2D_vec3 std::vector<std::vector<Vector3>>
+#define GRID3D_float std::vector<std::vector<std::vector<float>>>
+#define GRID3D_vec3 std::vector<std::vector<std::vector<Vector3>>>
+
 class Vector3 {
 public:
     float x, y, z;
@@ -28,7 +35,21 @@ public:
     float norm();
     Vector3& normalize();
 
+    float divergence() { return x + y + z; }
+
+    static GRID3D_vec3 gradient(GRID3D_float field);
+    static GRID3D_vec3 grad(GRID3D_float field);
+    static GRID3D_float divergence(GRID3D_vec3 field);
+    static GRID3D_float div(GRID3D_vec3 field);
+    static GRID3D_vec3 curl(GRID3D_vec3 field);
+    static GRID3D_vec3 rot(GRID3D_vec3 field);
+    static GRID3D_float laplacian(GRID3D_float field);
+    static GRID3D_vec3 laplacian(GRID3D_vec3 field);
+
+
     static Vector3 random();
+
+    static Vector3 nabla;
 
     operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);

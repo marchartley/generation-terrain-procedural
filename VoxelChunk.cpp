@@ -58,6 +58,7 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
     this->originalVoxelValues = this->voxelValues;
     this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->height)));
     this->updateLoDsAvailable();
+    this->computeDistanceField();
 }
 
 VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
@@ -72,10 +73,11 @@ VoxelChunk::~VoxelChunk()
     this->voxels.clear();
 }
 
-void VoxelChunk::computeFlowfield(int blur_iterations)
+void VoxelChunk::computeFlowfield(Vector3 sea_current) //int blur_iterations)
 {
-    if (!needRemeshing)
-        return;
+//    if (!needRemeshing)
+//        return;
+    /*
     for(int v_x = 0; v_x < sizeX; v_x++) {
         for(int v_y = 0; v_y < sizeY; v_y++) {
             for(int h = 0; h < height; h++) {
@@ -104,6 +106,108 @@ void VoxelChunk::computeFlowfield(int blur_iterations)
             for(int h = 1; h < height-1; h++) {
                     flowField[v_x][v_y][h] /= (blur_iterations + 1);
 //                flowField[v_x][v_y][h].normalize();
+            }
+        }
+    }*/
+    computeDistanceField();
+    std::vector<std::vector<std::vector<Vector3>>> pressionGradient = Vector3::grad(this->pressureField);
+    this->flowField = pressionGradient;
+//    if(sea_current.norm() == 0)
+//        return;
+    for (size_t x = 0; x < flowField.size(); x++) {
+        for (size_t y = 0; y < flowField[x].size(); y++) {
+            for (size_t z = 0; z < flowField[x][y].size(); z++) {
+                flowField[x][y][z] *= -1.0; // Inverse the gradient
+                flowField[x][y][z] += sea_current;
+            }
+        }
+    }
+}
+
+void VoxelChunk::computeDistanceField()
+{
+    this->distanceField = std::vector<std::vector<std::vector<int>>>(this->sizeX, std::vector<std::vector<int>>(this->sizeY, std::vector<int>(this->height, 9999999)));
+    this->pressureField = std::vector<std::vector<std::vector<float>>>(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->height, 0)));
+    // Check left
+    for (int x = 1; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->height; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x - 1][y][z] + 1);
+                }
+            }
+        }
+    }
+    // Check right
+    for (int x = 0; x < this->sizeX - 1; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->height; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x + 1][y][z] + 1);
+                }
+            }
+        }
+    }
+    // Check front
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 1; y < this->sizeY; y++) {
+            for (int z = 0; z < this->height; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y - 1][z] + 1);
+                }
+            }
+        }
+    }
+    // Check back
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY - 1; y++) {
+            for (int z = 0; z < this->height; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y + 1][z] + 1);
+                }
+            }
+        }
+    }
+    // Check down
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 1; z < this->height; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y][z - 1] + 1);
+                }
+            }
+        }
+    }
+    // Check up
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->height - 1; z++) {
+                if (this->voxelValues[x][y][z] > 0) {
+                    distanceField[x][y][z] = 0;
+                } else {
+                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y][z + 1] + 1);
+                }
+            }
+        }
+    }
+    // compute pressure ( 1 / distance^2 ?)
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->height; z++) {
+                if (distanceField[x][y][z] > 0) // Works better with 1/dist than 1/dist^2
+                    this->pressureField[x][y][z] = 1 / (float)this->distanceField[x][y][z]; //std::min(1.f , 1 / ((float)std::pow(this->distanceField[x][y][z], 2)));
+                else
+                    this->pressureField[x][y][z] = 1.0;
             }
         }
     }

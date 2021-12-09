@@ -58,8 +58,10 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
 
 void Mesh::computeIndices(std::vector<int> indices)
 {
+    if (!useIndices)
+        return;
     if (indices.size() > 0) {
-        for (int i = 0; i < this->vertexArray.size(); i++) {
+        for (size_t i = 0; i < this->vertexArray.size(); i++) {
             this->indices[i] = indices[i];
         }
     } else {
@@ -98,35 +100,54 @@ void Mesh::computeNormals()
                     (this->vertexArray[i+2] - this->vertexArray[i+1]));
         Vector3 normal2 = (this->vertexArray[i+1] - this->vertexArray[i+2]).cross(
                     (this->vertexArray[i] - this->vertexArray[i+2]));
-        this->normalsArrayIndex[this->indices[i  ]] += normal0;
-        this->normalsArrayIndex[this->indices[i+1]] += normal1;
-        this->normalsArrayIndex[this->indices[i+2]] += normal2;
+        if(useIndices) {
+            this->normalsArrayIndex[this->indices[i  ]] += normal0;
+            this->normalsArrayIndex[this->indices[i+1]] += normal1;
+            this->normalsArrayIndex[this->indices[i+2]] += normal2;
+        } else {
+            std::vector<float> n0 = Vector3::toArray(normal0);
+            std::vector<float> n1 = Vector3::toArray(normal1);
+            std::vector<float> n2 = Vector3::toArray(normal2);
+            this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), n0.begin(), n0.end());
+            this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), n1.begin(), n1.end());
+            this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), n2.begin(), n2.end());
+        }
     }
-    for (size_t i = 0; i < this->vertexArray.size(); i++)
-    {
-        std::vector<float> meanNormal = Vector3::toArray(this->normalsArrayIndex[this->indices[i]].normalize());
-        this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
+    if(useIndices) {
+        for (size_t i = 0; i < this->vertexArray.size(); i++)
+        {
+            std::vector<float> meanNormal = Vector3::toArray(this->normalsArrayIndex[this->indices[i]].normalize());
+            this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
+        }
     }
 }
 void Mesh::computeColors()
 {
     this->colorsArrayIndex.clear();
     this->colorsArrayFloat.clear();
-    this->colorsArrayIndex.resize(this->indices.size());
-    if (this->indices.size() == 0)
-        return;
-    int* numVertexPerIndex = new int[this->indices.size()]{0};
-    for (size_t i = 0; i < this->colorsArray.size(); i++)
-    {
-        this->colorsArrayIndex[this->indices[i]] += this->colorsArray[i];
-        numVertexPerIndex[this->indices[i]] ++;
+    if (!useIndices) {
+        for (size_t i = 0; i < this->colorsArray.size(); i++)
+        {
+            std::vector<float> color = Vector3::toArray(this->colorsArrayIndex[i]);
+            this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), color.begin(), color.end());
+        }
+    } else {
+        this->colorsArrayIndex.resize(this->indices.size());
+        if (this->indices.size() == 0)
+            return;
+        int* numVertexPerIndex = new int[this->indices.size()]{0};
+        for (size_t i = 0; i < this->colorsArray.size(); i++)
+        {
+            this->colorsArrayIndex[this->indices[i]] += this->colorsArray[i];
+            numVertexPerIndex[this->indices[i]] ++;
+        }
+        for (size_t i = 0; i < this->colorsArray.size(); i++)
+        {
+            std::vector<float> meanNormal = Vector3::toArray(this->colorsArrayIndex[this->indices[i]] / (float)numVertexPerIndex[this->indices[i]]);
+            this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
+        }
+        delete[] numVertexPerIndex;
     }
-    for (size_t i = 0; i < this->colorsArray.size(); i++)
-    {
-        std::vector<float> meanNormal = Vector3::toArray(this->colorsArrayIndex[this->indices[i]] / (float)numVertexPerIndex[this->indices[i]]);
-        this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
-    }
-    delete[] numVertexPerIndex;
 }
 
 void Mesh::update()

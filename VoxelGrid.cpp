@@ -28,6 +28,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
 //                        noise_val = 1.0; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
+                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
                         data[iChunk][x][y][h] = noise_val;
                     }
                 }
@@ -107,7 +108,7 @@ VoxelGrid* VoxelGrid::fromIsoData(std::vector<std::vector<std::vector<std::vecto
         }
         this->chunks[i]->resetVoxelsNeighbors();
         this->chunks[i]->updateLoDsAvailable();
-        this->chunks[i]->LoDIndex = std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
+        this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
         this->chunks[i]->computeFlowfield();
     }
@@ -348,6 +349,15 @@ Vector3 VoxelGrid::getFlowfield(float x, float y, float z) {
     if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
         return Vector3();
     return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->flowField[voxPosX][voxPosY][_z];
+}
+
+int VoxelGrid::getMaxLoD()
+{
+    int maxLoD = this->sizeX;
+    for (VoxelChunk* vc : this->chunks)
+        if (int(vc->LoDs.size() - 1) < maxLoD)
+            maxLoD = vc->LoDs.size() - 1;
+    return maxLoD;
 }
 
 #include <sstream>
