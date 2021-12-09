@@ -102,6 +102,8 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->algorithmBox = new QGroupBox("Algorithme de mesh");
     this->displayTypeLayout = new QHBoxLayout;
     this->displayTypeBox = new QGroupBox("Type de terrain");
+    this->LoDChooserLayout = new QHBoxLayout;
+    this->LoDChooserBox = new QGroupBox("Niveau de détail");
 
 
     // random rocks layout
@@ -203,6 +205,14 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     displayTypeBox->setLayout(displayTypeLayout);
     controlLayout->addWidget(displayTypeBox);
 
+    // Display Level of Detail controls
+    this->LoDChooserSlider = new FancySlider(Qt::Orientation::Horizontal, 0, this->viewer->getMaxLoDAvailable(), 1);
+    this->LoDChooserConfirmButton = new QPushButton("Regénérer");
+    LoDChooserLayout->addWidget(createSliderGroup("Niveau de détail", LoDChooserSlider));
+    LoDChooserLayout->addWidget(LoDChooserConfirmButton);
+    LoDChooserBox->setLayout(LoDChooserLayout);
+    controlLayout->addWidget(LoDChooserBox); // TODO : Connect the slider and button
+
     mainLayout->addLayout(controlLayout, 0, 1);
 
     Dialog->setLayout(mainLayout);
@@ -254,6 +264,9 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(gridModeButton, &QRadioButton::clicked, this, [=](){this->viewer->setMapMode(MapMode::GRID_MODE); } );
     QObject::connect(voxelsModeButton, &QRadioButton::clicked, this, [=](){this->viewer->setMapMode(MapMode::VOXEL_MODE); } );
     QObject::connect(layerModeButton, &QRadioButton::clicked, this, [=](){this->viewer->setMapMode(MapMode::LAYER_MODE); } );
+
+    QObject::connect(LoDChooserSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setLoD(int)));
+    QObject::connect(LoDChooserConfirmButton, &QPushButton::pressed, viewer, &Viewer::computeLoD);
 
     QMetaObject::connectSlotsByName(Dialog);
 } //setupBindings

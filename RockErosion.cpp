@@ -25,6 +25,8 @@ RockErosion::RockErosion(int size, float maxStrength)
 }
 
 void RockErosion::Apply(Voxel* main_v, bool addingMatterMode, bool applyRemeshing) {
+    if (!main_v)
+        return;
     for (int x = -size/2; x < size/2; x++) {
         for (int y = -size/2; y < size/2; y++) {
             for (int z = -size/2; z < size/2; z++){

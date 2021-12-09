@@ -60,6 +60,8 @@ public:
     QGroupBox* algorithmBox;
     QHBoxLayout* displayTypeLayout;
     QGroupBox* displayTypeBox;
+    QHBoxLayout* LoDChooserLayout;
+    QGroupBox* LoDChooserBox;
     FancySlider* randomRocksSizeSlider;
     FancySlider* randomRocksStrengthSlider;
     FancySlider* randomRocksQuantitySlider;
@@ -91,6 +93,8 @@ public:
     QRadioButton* gridModeButton;
     QRadioButton* voxelsModeButton;
     QRadioButton* layerModeButton;
+    FancySlider* LoDChooserSlider;
+    QPushButton* LoDChooserConfirmButton;
 
     std::map<QWidget*, QWidget*> widgetsMapping;
 };

@@ -81,6 +81,8 @@ public:
     float getOriginalVoxelValue(float x, float y, float z);
     Vector3 getFlowfield(Vector3 pos);
     Vector3 getFlowfield(float x, float y, float z);
+
+    int getMaxLoD();
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;

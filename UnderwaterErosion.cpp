@@ -61,8 +61,8 @@ UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int
                         Vector3 flowfield = grid->getFlowfield(pos + dir * dist);
                         dir += flowfield * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
                         dir.normalize();
-                        if (dist == 0 && flowfield.norm() > 0.1)
-                            weaknessAgainstFlowfield *= .999f;//std::max(.95f, (1 - std::min(1.0f, flowfield.norm())));
+//                        if (dist == 0 && flowfield.norm() > 0.1)
+//                            weaknessAgainstFlowfield *= .999f;//std::max(.95f, (1 - std::min(1.0f, flowfield.norm())));
                         break;
                     }
                 }
@@ -100,6 +100,9 @@ UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(Vector3 *startingPoint, Vector3 *endingPoint, int numberPoints, bool addingMatter)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
+    curve.points[0].z = -1.0;
+    curve.points[1].z =  0.9;
+    curve.points[2].z = -1.0;
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),

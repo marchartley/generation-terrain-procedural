@@ -114,6 +114,13 @@ Matrix Matrix::product(Matrix m)
     return temp;
 }
 
+float Matrix::trace()
+{
+    float trace = 0.0;
+    for (size_t i = 0; i < this->size(); i++)
+        trace += (*this)[i][i];
+    return trace;
+}
 
 
 Matrix operator+(Matrix a, Matrix b)

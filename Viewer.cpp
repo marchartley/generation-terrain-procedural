@@ -244,6 +244,12 @@ void Viewer::init() {
     this->flowDebugMeshes.shader->setVector("color", flowfieldColor, 4);
     this->tunnelsMesh.shader->setVector("color", tunnelsColor, 4);
 
+    // Don't compute the indices for this meshes, there's no chance any two vertex are the same
+    this->rocksMeshes.useIndices = false;
+    this->failedRocksMeshes.useIndices = false;
+    this->flowDebugMeshes.useIndices = false;
+    this->tunnelsMesh.useIndices = false;
+
 
     this->matter_adder = RockErosion(this->erosionSize, 1.0);
 
@@ -577,6 +583,19 @@ void Viewer::recomputeFlowfield()
         vc->needRemeshing = true;
         vc->computeFlowfield();
     }
+
+    std::vector<Vector3> normals;
+    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
+        for (int y = 0; y < this->voxelGrid->sizeY; y++) {
+            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
+                normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z)) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+            }
+        }
+    }
+    this->flowDebugMeshes.fromArray(normals);
+    this->flowDebugMeshes.update();
+    update();
 }
 
 void Viewer::throwRock()
@@ -589,6 +608,17 @@ void Viewer::throwRock()
     }
     update();
 }
+
+void Viewer::computeLoD()
+{
+    for(VoxelChunk* vc : this->voxelGrid->chunks) {
+        vc->LoDIndex = this->LoD;
+        vc->needRemeshing = true;
+    }
+    this->voxelGrid->remeshAll();
+    this->update();
+}
+
 void Viewer::createTunnel(bool removingMatter)
 {
     UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);

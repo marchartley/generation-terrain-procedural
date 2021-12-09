@@ -27,6 +27,8 @@ public:
     unsigned int bufferID;
     bool bufferReady = false;
 
+    bool useIndices = true;
+
 //protected:
     void computeIndices(std::vector<int> indices = std::vector<int>());
     void computeNormals();
