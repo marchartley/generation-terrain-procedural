@@ -9,11 +9,11 @@ public:
     RockErosion();
     RockErosion(int size, float maxStrength);
 
-    void Apply(Voxel* v, bool addingMatterMode = false, bool applyRemeshing = true);
+    void Apply(std::shared_ptr<Voxel> v, bool addingMatterMode = false, bool applyRemeshing = true);
 
     int size;
     float maxStrength;
-    float*** attackMask;
+    std::vector<std::vector<std::vector<float>>> attackMask;
 };
 
 #endif // ROCKEROSION_H

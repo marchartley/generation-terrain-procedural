@@ -3,8 +3,6 @@
 #include <QFile>
 #include <QTextStream>
 
-std::vector<Shader*> Shader::shaders;
-
 Shader::Shader()
     : Shader(nullptr, nullptr, nullptr)
 {
@@ -26,7 +24,6 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
       geometryShaderFilename(geometryShaderFilename)
 {
     this->compileShadersFromSource();
-    Shader::shaders.push_back(this);
 }
 void Shader::compileShadersFromSource()
 {

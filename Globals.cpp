@@ -3,6 +3,8 @@
 #include <string>
 #include <fstream>
 
+#define UNUSED(expr) (void)(expr)
+
 std::default_random_engine random_gen::random_generator;
 
 
@@ -92,8 +94,15 @@ bool GlobalsGL::printProgramErrors(int program)
     }
     return false;
 }
-void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam )
+void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type,
+                                            GLuint id, GLenum severity,
+                                            GLsizei length, const GLchar* message,
+                                            const void* userParam )
 {
+    UNUSED(source);
+    UNUSED(type);
+    UNUSED(length);
+    UNUSED(userParam);
     if (id == 131154) return; // Ignore "Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering." due to screenshots
     if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM || severity == GL_DEBUG_SEVERITY_LOW) {
         std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");

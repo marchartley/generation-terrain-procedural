@@ -25,13 +25,13 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
     noise.SetFractalOctaves(10);
 
     std::vector<std::vector<std::vector<std::tuple<TerrainTypes, float>>>> data(nx);
-    std::vector<std::vector<std::vector<Voxel*>>> voxs(nx);
+    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxs(nx);
     for (int x = 0; x < nx; x++) {
         data[x] = std::vector<std::vector<std::tuple<TerrainTypes, float>>>(ny);
-        voxs[x] = std::vector<std::vector<Voxel*>>(ny);
+        voxs[x] = std::vector<std::vector<std::shared_ptr<Voxel>>>(ny);
         for (int y = 0; y < ny; y++) {
             data[x][y] = std::vector<std::tuple<TerrainTypes, float>>();
-            voxs[x][y] = std::vector<Voxel*>(int(nz));
+            voxs[x][y] = std::vector<std::shared_ptr<Voxel>>(int(nz));
             float remainingZ = nz;
             while (remainingZ > 0) {
                 TerrainTypes type = static_cast<TerrainTypes>(int(random_gen::generate(0, TerrainTypes::LAST)));
@@ -48,10 +48,10 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
             }
             float current_height = 0.0;
             int current_level = 0;
-            for (int i = 0; i < data[x][y].size(); i++) {
+            for (size_t i = 0; i < data[x][y].size(); i++) {
                 for (int j = 0; j < std::get<1>(data[x][y][i]); j++) {
                     float iso = Voxel::isMatter[std::get<0>(data[x][y][i])] ? 1.0 : -1.0;
-                    Voxel* v = new Voxel(x, y, current_height, iso > 0 ? DIRT : AIR, 1.0, iso * std::get<1>(data[x][y][i]), nullptr);
+                    std::shared_ptr<Voxel> v(new Voxel(x, y, current_height, iso > 0 ? DIRT : AIR, 1.0, iso * std::get<1>(data[x][y][i]), nullptr));
                     voxs[x][y][current_level++] = v;
                     current_height += 1.0;
                 }
@@ -68,11 +68,11 @@ void LayerBasedGrid::createMesh() {
 
     std::vector<Vector3> voxelVertices;
     std::vector<Vector3> colors;
-    this->applyToVoxels([voxelVertices=&voxelVertices, colors=&colors](Voxel* v) -> void {
+    this->applyToVoxels([&](std::shared_ptr<Voxel> v) -> void {
         if ((bool)*v) {
             // Add the vertices to the global mesh
             std::vector<Vector3> vertice = v->getMeshVertices();
-            voxelVertices->insert(voxelVertices->end(), vertice.begin(), vertice.end());
+            voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
             // Add the colors to each vertex
             int X = 6; // Start with 6 faces
 
@@ -81,7 +81,7 @@ void LayerBasedGrid::createMesh() {
                     X--;    // Remove a face per neighbor
             X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
             for (int x = 0; x < X; x++) {
-                colors->push_back(Vector3(random_gen::generate(), random_gen::generate(), random_gen::generate())); //(v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
+                colors.push_back(Vector3(random_gen::generate(), random_gen::generate(), random_gen::generate())); //(v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
 //                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
             }
         }
@@ -107,13 +107,13 @@ void LayerBasedGrid::display() {
     noise.SetFractalOctaves(10);
 
     std::vector<std::vector<std::vector<std::tuple<TerrainTypes, float>>>> data(nx);
-    std::vector<std::vector<std::vector<Voxel*>>> voxs(nx);
+    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxs(nx);
     for (int x = 0; x < nx; x++) {
         data[x] = std::vector<std::vector<std::tuple<TerrainTypes, float>>>(ny);
-        voxs[x] = std::vector<std::vector<Voxel*>>(ny);
+        voxs[x] = std::vector<std::vector<std::shared_ptr<Voxel>>>(ny);
         for (int y = 0; y < ny; y++) {
             data[x][y] = std::vector<std::tuple<TerrainTypes, float>>();
-            voxs[x][y] = std::vector<Voxel*>(int(nz));
+            voxs[x][y] = std::vector<std::shared_ptr<Voxel>>(int(nz));
             float remainingZ = nz;
             while (remainingZ > 0) {
                 TerrainTypes type = static_cast<TerrainTypes>(int(random_gen::generate(0, TerrainTypes::LAST)));
@@ -129,7 +129,7 @@ void LayerBasedGrid::display() {
                 }
             }
             for (int i = 0; i < nz; i++) {
-                Voxel* v = new Voxel(x, y, i, DIRT, 10.0, 1.0, nullptr);
+                std::shared_ptr<Voxel> v(new Voxel(x, y, i, DIRT, 10.0, 1.0, nullptr));
                 voxs[x][y][i] = v;
             }
         }

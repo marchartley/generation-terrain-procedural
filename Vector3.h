@@ -26,7 +26,7 @@ public:
 
 
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
-    friend std::ostream& operator<<(std::ostream& io, Vector3* v);
+    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v);
 
     float dot(Vector3& o);
     Vector3 cross(Vector3 o);
@@ -70,9 +70,35 @@ public:
     Vector3 operator-(float o);
     Vector3& operator-=(float o);
     Vector3& operator=(const Vector3& o);
+    bool operator==(Vector3 o);
 
     std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
+//    const char* toHashString() const {return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z); }
 
 };
+
+/*class Vector3Hash
+{
+
+};*/
+
+template <class T>
+inline void hash_combine(std::size_t& seed, T const& v)
+{
+    seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+}
+namespace std {
+  template <> struct hash<Vector3>
+  {
+    size_t operator()(const Vector3 & x) const
+    {
+        size_t seed = 0;
+        hash_combine(seed, int(x.x * 100));
+        hash_combine(seed, int(x.y * 100));
+        hash_combine(seed, int(x.z * 100));
+        return seed;
+    }
+  };
+}
 
 #endif // VECTOR3_H

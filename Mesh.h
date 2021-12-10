@@ -16,8 +16,8 @@ public:
     Mesh fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
 
     void clear();
-    Mesh merge(Mesh* other, bool recomputeIndices = true);
-    Mesh merge(std::vector<Mesh*> others);
+    Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);
+    Mesh merge(std::vector<std::shared_ptr<Mesh>> others);
 
     void update();
     void pushToBuffer();
@@ -43,7 +43,7 @@ public:
     std::vector<float> colorsArrayFloat;
     std::map<int, int> indices;
     std::map<std::tuple<int, int, int>, int> vectorToIndex;
-    Shader* shader = nullptr;
+    std::shared_ptr<Shader> shader = nullptr;
 
 };
 

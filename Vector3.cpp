@@ -292,13 +292,17 @@ Vector3& Vector3::operator=(const Vector3& o) {
     this->z = o.z;
     return *this;
 }
+bool Vector3::operator==(Vector3 o)
+{
+    return this->x == o.x && this->y == o.y && this->z == z;
+}
 
 std::ostream& operator<<(std::ostream& io, const Vector3& v) {
     io << v.toString();
     return io;
 }
 
-std::ostream& operator<<(std::ostream& io, Vector3* v) {
+std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v) {
     io << v->toString();
     return io;
 }

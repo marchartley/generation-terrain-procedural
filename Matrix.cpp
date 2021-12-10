@@ -81,7 +81,7 @@ Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore)
           // element row and column
           if (row != rowToIgnore && col != colToIgnore) {
              temp[i][j++] = (*this)[row][col];
-             if (j == this->size() - 1) {
+             if (j == int(this->size() - 1)) {
                 j = 0;
                 i++;
              }
