@@ -22,6 +22,10 @@ void FancySlider::setfValue(float val)
     int a = int(std::round(val / multiplier));
     this->setValue(a);
 }
+void FancySlider::setfRange(float min, float max)
+{
+    this->setRange(int(std::round(min / multiplier)), int(std::round(max / multiplier)));
+}
 void FancySlider::notifyValueChanged(int value) {
     double doubleValue = value * multiplier;
     Q_EMIT floatValueChanged(doubleValue);
@@ -84,6 +88,8 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     controlLayout = new QVBoxLayout;
 
     // Create the controls layouts
+    this->loadSaveLayout = new QHBoxLayout;
+    this->loadSaveBox = new QGroupBox("Enregistrer / Charger");
     this->randomRocksLayout = new QHBoxLayout;
     this->randomRocksBox = new QGroupBox("Erosion");
     this->currentSimulationLayout = new QHBoxLayout;
@@ -104,6 +110,15 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->displayTypeBox = new QGroupBox("Type de terrain");
     this->LoDChooserLayout = new QHBoxLayout;
     this->LoDChooserBox = new QGroupBox("Niveau de détail");
+
+
+    // random rocks layout
+    this->saveButton = new QPushButton("Sauvegarder...");
+    this->loadButton = new QPushButton("Charger...");
+    loadSaveLayout->addWidget(saveButton);
+    loadSaveLayout->addWidget(loadButton);
+    loadSaveBox->setLayout(loadSaveLayout);
+    controlLayout->addWidget(loadSaveBox);
 
 
     // random rocks layout
@@ -225,6 +240,9 @@ void ViewerInterface::setupUi(QDialog *Dialog)
 void ViewerInterface::setupBindings(QDialog* Dialog)
 {
 
+    QObject::connect(loadButton, &QCheckBox::pressed, this, [=](){this->viewer->loadMapUI(); } );
+    QObject::connect(saveButton, &QCheckBox::pressed, this, [=](){this->viewer->saveMapUI(); } );
+
     QObject::connect(randomRocksSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setErosionRocksSize(int)));
     QObject::connect(randomRocksStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionRocksStrength(float)));
     QObject::connect(randomRocksQuantitySlider, SIGNAL(valueChanged(int)), viewer, SLOT(setErosionRocksQuantity(int)));
@@ -306,4 +324,9 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
     gridModeButton->setChecked(viewer->mapMode == MapMode::GRID_MODE);
     voxelsModeButton->setChecked(viewer->mapMode == MapMode::VOXEL_MODE);
     layerModeButton->setChecked(viewer->mapMode == MapMode::LAYER_MODE);
+}
+
+void ViewerInterface::closeEvent(QCloseEvent *e)
+{
+    viewer->closeEvent(e);
 }
