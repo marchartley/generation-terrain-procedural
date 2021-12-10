@@ -12,8 +12,6 @@ class Shader;
 class Shader
 {
 public:
-    static std::vector<Shader*> shaders;
-
     Shader();
     Shader(const char* vertexShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);

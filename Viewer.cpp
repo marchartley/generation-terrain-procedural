@@ -17,24 +17,28 @@ bool makedir(std::string path);
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
-        nullptr, // new Grid(100, 100, 40, 1.0),
-        new VoxelGrid(3, 3, 3, 1.0, .30),
-        nullptr, // new LayerBasedGrid(10, 10, 50),
+        std::shared_ptr<Grid>(nullptr), // new Grid(100, 100, 40, 1.0),
+        std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
+        std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
         parent
         )
 {
 }
-Viewer::Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map, ViewerMode mode, QWidget *parent)
-    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid) {
-
+Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
+               std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
+               ViewerMode mode, QWidget *parent)
+    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid),
+      mapSavingFilename(""), mapSavingFolder("")
+{
+    std::cout << std::endl;
 }
-Viewer::Viewer(Grid* g, QWidget *parent)
+Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
 
 }
-Viewer::Viewer(VoxelGrid* g, QWidget *parent)
+Viewer::Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent)
     : Viewer(nullptr, g, nullptr, VOXEL_MODE, FILL_MODE, parent) {
 
 }
@@ -43,139 +47,6 @@ Viewer::~Viewer()
 }
 
 void Viewer::init() {
-    /*float totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->applyToVoxels([](Voxel* v){});
-        }
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Empty loop                     : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->toFloat();
-        }
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "To float                       : " << totalTime/10 << "s" << std::endl;
-    std::vector<std::vector<std::vector<float>>> arr = voxelGrid->toFloat();
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for(int x = 0; x < voxelGrid->sizeX; x++)
-            for(int y = 0; y < voxelGrid->sizeY; y++)
-                for(int z = 0; z < voxelGrid->sizeZ; z++) {
-                    Voxel* v = voxelGrid->getVoxel(x, y, z);
-                    if(v) float a = v->getIsosurface();
-                }
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "For on voxelGrid               : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for(int x = 0; x < voxelGrid->sizeX; x++)
-            for(int y = 0; y < voxelGrid->sizeY; y++)
-                for(int z = 0; z < voxelGrid->sizeZ; z++)
-                    float a = arr[x][y][z];
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "For on float array             : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        voxelGrid->toFloat();
-        for(int x = 0; x < voxelGrid->sizeX; x++)
-            for(int y = 0; y < voxelGrid->sizeY; y++)
-                for(int z = 0; z < voxelGrid->sizeZ; z++)
-                    float a = arr[x][y][z];
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "For on float array + computing : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        voxelGrid->toVoxels();
-        voxelGrid->toFloat();
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "To voxels + to array           : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        voxelGrid->toVoxels(arr);
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "To voxels with premade array   : " << totalTime/10 << "s" << std::endl;
-
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->applyToVoxels([](Voxel* v){
-                v->parent->parent->getVoxel(v->globalPos());
-            });
-        }
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Fetching voxels from the grid  : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        for (VoxelChunk* vc : this->voxelGrid->chunks) {
-            vc->applyMarchingCubes();
-        }
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Marching cubes                 : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        this->voxelGrid->computeVoxelGroups();
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Computing groups               : " << totalTime/10 << "s" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        this->voxelGrid->displayWithMarchingCubes = true;
-        this->voxelGrid->createMesh();
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Meshing with marching cubes    : " << totalTime/10 << "s" << std::endl;
-    int nbTris = 0;
-    for(VoxelChunk* vc : voxelGrid->chunks)
-        nbTris += vc->mesh.vertexArray.size();
-    std::cout << "(number of triangles = " << nbTris/3 << ")" << std::endl;
-    totalTime = 0.0;
-    for (int i = 0; i < 10; i ++) {
-        auto startTime = std::chrono::system_clock::now();
-        this->voxelGrid->displayWithMarchingCubes = false;
-        this->voxelGrid->createMesh();
-        auto endTime = std::chrono::system_clock::now();
-        totalTime += std::chrono::duration<float>(endTime - startTime).count();
-    }
-    std::cout << "Meshing without marching cubes : " << totalTime/10 << "s" << std::endl;
-    nbTris = 0;
-        for(VoxelChunk* vc : voxelGrid->chunks)
-            nbTris += vc->mesh.vertexArray.size();
-        std::cout << "(number of triangles = " << nbTris/3 << ")" << std::endl;
-    exit(0);*/
-
     restoreStateFromFile();
     setSceneRadius(500.0);
     glEnable(GL_LIGHT0);
@@ -216,24 +87,25 @@ void Viewer::init() {
 
     if (grid != nullptr) {
         this->grid->createMesh();
-        this->grid->mesh.shader = new Shader(vShader_grid, fShader_grid);
+        this->grid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
     }
     if (layerGrid != nullptr) {
         this->layerGrid->createMesh();
-        this->layerGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+        this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
+        voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
-        for(VoxelChunk* vc : this->voxelGrid->chunks)
-            vc->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+        for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks)
+            vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
 //        this->voxelGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
     }
-    this->shader = Shader(vNoShader, fNoShader);
-    this->rocksMeshes.shader = new Shader(vNoShader, fNoShader);
-    this->failedRocksMeshes.shader = new Shader(vNoShader, fNoShader);
-    this->flowDebugMeshes.shader = new Shader(vNoShader, fNoShader);
-    this->tunnelsMesh.shader = new Shader(vNoShader, fNoShader);
+    this->shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    this->rocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    this->failedRocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    this->flowDebugMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    this->tunnelsMesh.shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
     float rocksColor[4] = {86/255., 176/255., 12/255., 1.0};
     float failedRocksColor[4] = {176/255., 72/255., 12/255., 1.0};
@@ -269,8 +141,10 @@ void Viewer::init() {
 
 #ifdef _WIN32
     this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
+//    this->mapSavingFolder = "C:/codes/Qt/generation-terrain-procedural/saved_maps/";
 #elif linux
     this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
+//    this->mapSavingFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/";
 #endif
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
@@ -347,7 +221,7 @@ void Viewer::draw() {
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            for(VoxelChunk* vc : this->voxelGrid->chunks) {
+            for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
                 vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
                 vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
                 vc->mesh.shader->setPositionalLight("light", this->light);
@@ -431,7 +305,7 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 
     if (checkMouseOnVoxel())
     {
-        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+        std::shared_ptr<Voxel> main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
         this->displayMessage(QString::fromStdString(std::to_string( main_v->getIsosurface()) + " " + main_v->globalPos().toString() + " " + std::to_string( main_v->isOnGround) ));
     }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
@@ -498,7 +372,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if(e->key() == Qt::Key_1) {
         this->startStopRecording();
     } else if(e->key() == Qt::Key_2) {
-        for(VoxelChunk* vc : this->voxelGrid->chunks) {
+        for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
             vc->LoDIndex++;
             vc->needRemeshing = true;
         }
@@ -532,24 +406,23 @@ void Viewer::animate()
 void Viewer::erodeMap(bool sendFromCam)
 {
     UnderwaterErosion erod(this->voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
-    Vector3 *pos = nullptr;
-    Vector3* dir = nullptr;
+    std::shared_ptr<Vector3> pos = nullptr;
+    std::shared_ptr<Vector3> dir = nullptr;
     if (sendFromCam)
     {
         Vec a;
         Vec b;
         camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
-        pos = new Vector3(a.x, a.y, a.z);
-        dir = new Vector3(b.x, b.y, b.z);
+        pos = std::make_shared<Vector3>(a.x, a.y, a.z);
+        dir = std::make_shared<Vector3>(b.x, b.y, b.z);
         this->displayMessage( "Rocks launched from camera!" );
     } else {
         pos = nullptr;
-        dir = new Vector3(0.0, 0.0, 0.0);
+        dir = std::make_shared<Vector3>(new Vector3(0.0, 0.0, 0.0));
         this->displayMessage( "Rocks launched!" );
     }
     std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, this->erosionFlowfieldRandomness, true);
-    delete dir;
-    delete pos;
+
     std::vector<Vector3> asOneVector;
     for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
         asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
@@ -579,7 +452,7 @@ void Viewer::erodeMap(bool sendFromCam)
 
 void Viewer::recomputeFlowfield()
 {
-    for (VoxelChunk* vc : this->voxelGrid->chunks) {
+    for (std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
         vc->needRemeshing = true;
         vc->computeFlowfield();
     }
@@ -602,7 +475,7 @@ void Viewer::throwRock()
 {
     if (this->mouseInWorld)
     {
-        Voxel* main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
+        std::shared_ptr<Voxel> main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
         RockErosion rock(this->manualErosionSize, this->manualErosionStrength);
         rock.Apply(main_v, addingMatterMode);
     }
@@ -611,7 +484,7 @@ void Viewer::throwRock()
 
 void Viewer::computeLoD()
 {
-    for(VoxelChunk* vc : this->voxelGrid->chunks) {
+    for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
         vc->LoDIndex = this->LoD;
         vc->needRemeshing = true;
     }
@@ -641,7 +514,7 @@ bool Viewer::checkMouseOnVoxel()
     while(currPos.norm() < maxDist)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
-        Voxel* v = voxelGrid->getVoxel(currPos.x, currPos.y, currPos.z);
+        std::shared_ptr<Voxel> v = voxelGrid->getVoxel(currPos.x, currPos.y, currPos.z);
         if (v != nullptr && (bool)*v) {
             found = true;
             break;
@@ -665,9 +538,6 @@ void Viewer::closeEvent(QCloseEvent *e) {
             std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
-    delete this->grid;
-    delete this->voxelGrid;
-    delete this->layerGrid;
 }
 
 bool Viewer::createGlobalGravity()

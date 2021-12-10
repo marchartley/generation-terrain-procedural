@@ -26,7 +26,7 @@ void Mesh::clear()
     this->vertexArray.clear();
     this->colorsArray.clear();
 }
-Mesh Mesh::merge(Mesh *other, bool recomputeIndices)
+Mesh Mesh::merge(std::shared_ptr<Mesh> other, bool recomputeIndices)
 {
     this->vertexArray.insert(this->vertexArray.end(), other->vertexArray.begin(), other->vertexArray.end());
     this->colorsArray.insert(this->colorsArray.end(), other->colorsArray.begin(), other->colorsArray.end());
@@ -36,9 +36,9 @@ Mesh Mesh::merge(Mesh *other, bool recomputeIndices)
     }
     return *this;
 }
-Mesh Mesh::merge(std::vector<Mesh *> others)
+Mesh Mesh::merge(std::vector<std::shared_ptr<Mesh>> others)
 {
-    for (std::vector<Mesh*>::iterator it = others.begin(); it != others.end(); it++)
+    for (std::vector<std::shared_ptr<Mesh>>::iterator it = others.begin(); it != others.end(); it++)
         merge(*it, false);
 
     this->fromArray(this->vertexArray);
@@ -135,7 +135,7 @@ void Mesh::computeColors()
         this->colorsArrayIndex.resize(this->indices.size());
         if (this->indices.size() == 0)
             return;
-        int* numVertexPerIndex = new int[this->indices.size()]{0};
+        std::vector<int> numVertexPerIndex(this->indices.size(), 0);
         for (size_t i = 0; i < this->colorsArray.size(); i++)
         {
             this->colorsArrayIndex[this->indices[i]] += this->colorsArray[i];
@@ -146,7 +146,6 @@ void Mesh::computeColors()
             std::vector<float> meanNormal = Vector3::toArray(this->colorsArrayIndex[this->indices[i]] / (float)numVertexPerIndex[this->indices[i]]);
             this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
         }
-        delete[] numVertexPerIndex;
     }
 }
 

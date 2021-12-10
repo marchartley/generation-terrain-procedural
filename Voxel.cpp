@@ -11,7 +11,7 @@ std::unordered_map<TerrainTypes, bool> Voxel::isMatter = {
     {SAND, true}
 };
 
-Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface, VoxelChunk* parent)
+Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isosurface, std::shared_ptr<VoxelChunk> parent)
     : x(x), y(y), z(z), type(type), blockSize(blockSize), isosurface(isosurface), parent(parent) {
 
 }
@@ -19,44 +19,45 @@ Voxel::Voxel(int x, int y, int z, TerrainTypes type, float blockSize, float isos
 Voxel::Voxel() { //: Voxel(0, 0, 0, TerrainTypes::AIR, 1.0, 0.0, nullptr) {
 
 }
-void Voxel::addNeighbor(Voxel* neighbor)
+void Voxel::addNeighbor(std::shared_ptr<Voxel> neighbor)
 {
     if(neighbor == nullptr || !(bool)*neighbor || !(bool)*this)
         return;
     if (this->globalX() < neighbor->globalX()) {
         this->neighbors[RIGHT] = neighbor;
-        neighbor->neighbors[LEFT] = this;
+        neighbor->neighbors[LEFT] = this->shared_from_this();
     }
     if (this->globalX() > neighbor->globalX()) {
         this->neighbors[LEFT] = neighbor;
-        neighbor->neighbors[RIGHT] = this;
+        neighbor->neighbors[RIGHT] = this->shared_from_this();
     }
     if (this->globalY() < neighbor->globalY()) {
         this->neighbors[BACK] = neighbor;
-        neighbor->neighbors[FRONT] = this;
+        neighbor->neighbors[FRONT] = this->shared_from_this();
     }
     if (this->globalY() > neighbor->globalY()) {
         this->neighbors[FRONT] = neighbor;
-        neighbor->neighbors[BACK] = this;
+        neighbor->neighbors[BACK] = this->shared_from_this();
     }
     if (this->globalZ() < neighbor->globalZ()) {
         this->neighbors[TOP] = neighbor;
-        neighbor->neighbors[BOTTOM] = this;
+        neighbor->neighbors[BOTTOM] = this->shared_from_this();
     }
     if (this->globalZ() > neighbor->globalZ()) {
         this->neighbors[BOTTOM] = neighbor;
-        neighbor->neighbors[TOP] = this;
+        neighbor->neighbors[TOP] = this->shared_from_this();
     }
     this->shareGroup(neighbor);
 }
-int Voxel::shareGroup(Voxel *v)
+int Voxel::shareGroup(std::shared_ptr<Voxel> v)
 {
     if (this->group == -1)
         this->group = v->group;
     this->group = std::min(this->group, v->group);
     this->isOnGround = this->isOnGround || v->isOnGround;
+    return this->group;
 }
-void Voxel::removeNeighbor(Voxel* neighbor)
+void Voxel::removeNeighbor(std::shared_ptr<Voxel> neighbor)
 {
     if (neighbor == nullptr)
         return;
@@ -92,7 +93,7 @@ void Voxel::resetNeighbors() {
     this->neighbors[LEFT]   = this->parent->parent->getVoxel(this->globalPos() + Vector3(-1,  0,  0) + Vector3(.5, .5, .5));
     this->neighbors[FRONT]  = this->parent->parent->getVoxel(this->globalPos() + Vector3( 0, -1,  0) + Vector3(.5, .5, .5));
     this->neighbors[BACK]   = this->parent->parent->getVoxel(this->globalPos() + Vector3( 0,  1,  0) + Vector3(.5, .5, .5));
-//    for(std::map<VOXEL_NEIGHBOR, Voxel*>::iterator it = this->neighbors.begin(); it != this->neighbors.end(); it++)
+//    for(std::map<VOXEL_NEIGHBOR, std::shared_ptr<Voxel>>::iterator it = this->neighbors.begin(); it != this->neighbors.end(); it++)
 //        removeNeighbor(it->second);
 }
 
@@ -104,7 +105,7 @@ std::ostream& operator<<(std::ostream& io, const Voxel& v)
     io << "Voxel (" << v.x << ", " << v.y << ", " << v.z << ")";
     return io;
 }
-std::ostream& operator<<(std::ostream& io, Voxel* v)
+std::ostream& operator<<(std::ostream& io, std::shared_ptr<Voxel> v)
 {
     io << "Voxel (" << v->x << ", " << v->y << ", " << v->z << ")";
     return io;
@@ -181,7 +182,7 @@ std::vector<Vector3> Voxel::getMeshVertices(bool useGlobalCoords)
 
 
 /*
-Voxel* Voxel::getNeighbor(VOXEL_NEIGHBOR dir)
+std::shared_ptr<Voxel> Voxel::getNeighbor(VOXEL_NEIGHBOR dir)
 {
     if(dir == VOXEL_NEIGHBOR::RIGHT) { // X + 1
         if (this->x == this->parent->sizeX - 1) {
@@ -236,11 +237,11 @@ Voxel* Voxel::getNeighbor(VOXEL_NEIGHBOR dir)
     return nullptr;
 }
 
-void Voxel::InsertNeighborsIfNotOnGround(std::unordered_set<Voxel*>& set) {
+void Voxel::InsertNeighborsIfNotOnGround(std::unordered_set<std::shared_ptr<Voxel>>& set) {
     for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
         for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
             for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
-                Voxel* v = this->parent->parent->getVoxel(x, y, z);
+                std::shared_ptr<Voxel> v = this->parent->parent->getVoxel(x, y, z);
                 if(v != nullptr && (bool)*v && !v->isOnGround) {
                     set.insert(v);
                 }
@@ -253,7 +254,7 @@ int Voxel::CountNeighbors() {
     for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
         for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
             for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
-                Voxel* v = this->parent->parent->getVoxel(x, y, z);
+                std::shared_ptr<Voxel> v = this->parent->parent->getVoxel(x, y, z);
                 if(v != nullptr && (bool)*v) {
                     numberOfNeighbors ++;
                 }

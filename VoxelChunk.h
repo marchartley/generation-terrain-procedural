@@ -9,16 +9,19 @@ class VoxelChunk;
 #include "Mesh.h"
 #include "Vertex.h"
 #include <functional>
+#include <memory>
+#include <optional>
 
-class VoxelChunk
+class VoxelChunk : public std::enable_shared_from_this<VoxelChunk>
 {
 public:
     VoxelChunk();
-//    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< TerrainTypes > > > data, VoxelGrid* parent);
-    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data, VoxelGrid* parent);
+//    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< TerrainTypes > > > data, std::shared_ptr<VoxelGrid> parent);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data, std::shared_ptr<VoxelGrid> parent);
     ~VoxelChunk();
 
     void display();
+    void createVoxels();
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);
 
     void updateLoDsAvailable();
@@ -30,12 +33,12 @@ public:
     void resetVoxelsNeighbors();
     void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
 
-    std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
+    std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr);
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
 
-    std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3> *outColors = nullptr);
+    std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr);
 
     Vector3 computeNormal(Vector3 pos);
     Vector3 computeNormal(int x, int y, int z);
@@ -48,7 +51,7 @@ public:
     std::vector<std::vector<std::vector<float>>> iso_data;
     int x, y;
     int sizeX, sizeY, height;
-    std::vector<std::vector<std::vector<Voxel*>>> voxels;
+    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxels;
     std::vector<std::vector<std::vector<float>>> voxelValues;
     std::vector<std::vector<std::vector<float>>> originalVoxelValues;
     std::vector<std::vector<std::vector<int>>> voxelGroups;
@@ -58,7 +61,7 @@ public:
     int LoDIndex = 1;
     std::vector<int> LoDs;
 
-    std::map<VOXEL_NEIGHBOR, VoxelChunk*> neighboring_chunks;
+    std::map<VOXEL_NEIGHBOR, std::shared_ptr<VoxelChunk>> neighboring_chunks;
     bool lastChunkOnX = false, lastChunkOnY = false;
 
     template<class F>
@@ -84,9 +87,9 @@ public:
     }
 
     std::vector<std::vector<std::vector<float>>>& toFloat();
-    std::vector<std::vector<std::vector<Voxel*>>>& toVoxels();
+    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>>& toVoxels();
 
-    VoxelGrid* parent;
+    std::shared_ptr<VoxelGrid> parent;
 
     Mesh mesh;
     bool needRemeshing = true;

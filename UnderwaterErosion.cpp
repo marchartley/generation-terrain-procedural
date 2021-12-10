@@ -8,16 +8,16 @@ UnderwaterErosion::UnderwaterErosion()
 {
 
 }
-UnderwaterErosion::UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount)
+UnderwaterErosion::UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRockSize, float maxRockStrength, int rockAmount)
     : grid(grid), maxRockSize(maxRockSize), rockAmount(rockAmount), maxRockStrength(maxRockStrength)
 {
 
 }
 
 std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
-UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int avoidMatter, float flowfieldFactor, float randomnessFactor, bool returnEvenLostRocks)
+UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr<Vector3> originalDirection, int avoidMatter, float flowfieldFactor, float randomnessFactor, bool returnEvenLostRocks)
 {
-    /*for (VoxelChunk* vc : this->grid->chunks)
+    /*for (std::shared_ptr<VoxelChunk>& vc : this->grid->chunks)
         vc->computeFlowfield();*/
     std::vector<std::vector<Vector3>> debugFinishingLines;
     std::vector<std::vector<Vector3>> debugFailingLines;
@@ -42,7 +42,7 @@ UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int
         }
         Vector3 dir = Vector3::random();
         if (startingPoint == nullptr && originalDirection != nullptr)
-            dir = (originalDirection - pos).normalize();
+            dir = (*originalDirection - pos).normalize();
         else if (startingPoint != nullptr && originalDirection != nullptr)
             dir = originalDirection->normalize();
 
@@ -75,7 +75,7 @@ UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             pos += dir;
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
-            Voxel* v = this->grid->getVoxel(pos.x, pos.y, pos.z);
+            std::shared_ptr<Voxel> v = this->grid->getVoxel(pos.x, pos.y, pos.z);
             if (v != nullptr && *v) {
                 rock.Apply(v, false, false);
                 touched = true;
@@ -97,7 +97,7 @@ UnderwaterErosion::Apply(Vector3* startingPoint, Vector3* originalDirection, int
     return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
 
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(Vector3 *startingPoint, Vector3 *endingPoint, int numberPoints, bool addingMatter)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(std::shared_ptr<Vector3> startingPoint, std::shared_ptr<Vector3> endingPoint, int numberPoints, bool addingMatter)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
     curve.points[0].z = -1.0;

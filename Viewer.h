@@ -30,9 +30,9 @@ class Viewer : public QGLViewer {
     Q_OBJECT
 public:
     Viewer(QWidget *parent = nullptr);
-    Viewer(Grid* grid, VoxelGrid* voxelGrid, LayerBasedGrid* layerGrid, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
-    Viewer(Grid* g, QWidget *parent = nullptr);
-    Viewer(VoxelGrid* g, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Grid> g, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
 
 
@@ -92,9 +92,9 @@ public:
     SmoothingAlgorithm algorithm = MARCHING_CUBES;
 
 //private:
-    Grid* grid;
-    VoxelGrid* voxelGrid;
-    LayerBasedGrid* layerGrid;
+    std::shared_ptr<Grid> grid;
+    std::shared_ptr<VoxelGrid> voxelGrid;
+    std::shared_ptr<LayerBasedGrid> layerGrid;
     bool display_vertices = true;
     qglviewer::Vec selectedPoint, orig, dir;
 
@@ -121,7 +121,6 @@ public:
 
     int getMaxLoDAvailable() { return this->voxelGrid->getMaxLoD(); }
 
-    float*** selectionShape;
     bool addingMatterMode = true;
     RockErosion matter_adder;
     std::vector<std::vector<Vector3>> lastRocksLaunched;
@@ -131,7 +130,7 @@ public:
     Vector3 mousePosWorld;
     QPoint mousePos;
 
-    Shader shader;
+    std::shared_ptr<Shader> shader;
     PositionalLight light;
     GLuint rocksVBO;
 
@@ -150,6 +149,9 @@ public:
     Mesh failedRocksMeshes;
     Mesh flowDebugMeshes;
     Mesh tunnelsMesh;
+
+    std::string mapSavingFilename;
+    std::string mapSavingFolder;
 };
 
 

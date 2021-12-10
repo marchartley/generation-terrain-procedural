@@ -31,11 +31,11 @@ public:
     float sizeZ;
 
     Mesh mesh;
-    std::vector<std::vector<std::vector<Voxel*>>> voxels;
+    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxels;
 
 
     template<class R>
-    void applyToVoxels(std::function<R(Voxel*)> func) {
+    void applyToVoxels(std::function<R(std::shared_ptr<Voxel>)> func) {
         for(int v_x = 0; v_x < sizeX; v_x++) {
             for(int v_y = 0; v_y < sizeY; v_y++) {
                 for(int h = 0; h < sizeZ; h++) {
@@ -46,7 +46,7 @@ public:
     }
     template <class F>
     void applyToVoxels(F func) {
-        this->applyToVoxels(std::function<void(Voxel*)>(func));
+        this->applyToVoxels(std::function<void(std::shared_ptr<Voxel>)>(func));
     }
 };
 /*
@@ -87,8 +87,8 @@ public:
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
-    Voxel* getVoxel(Vector3 pos);
-    Voxel* getVoxel(float x, float y, float z);
+    std::shared_ptr<Voxel> getVoxel(Vector3 pos);
+    std::shared_ptr<Voxel> getVoxel(float x, float y, float z);
 
     void remeshAll();
 
