@@ -22,24 +22,27 @@ RockErosion::RockErosion(int size, float maxStrength)
     }
 }
 
-void RockErosion::Apply(std::shared_ptr<Voxel> main_v, bool addingMatterMode, bool applyRemeshing) {
-    if (!main_v)
-        return;
+void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode, bool applyRemeshing) {
     for (int x = -size/2; x < size/2; x++) {
         for (int y = -size/2; y < size/2; y++) {
             for (int z = -size/2; z < size/2; z++){
-                std::shared_ptr<Voxel> v = main_v->parent->parent->getVoxel(main_v->globalPos() + Vector3(x, y, z) + Vector3(.5, .5, .5));
+                float currentIsovalue = grid->getVoxelValue(pos + Vector3(x, y, z) + Vector3(.5, .5, .5));
+//                if (currentIsovalue > 0.0) {
+                    grid->setVoxelValue(pos + Vector3(x, y, z) + Vector3(.5, .5, .5), currentIsovalue + (this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1)));
+
+//                }
+                /*
                 if(v != nullptr) {
-                    /*v->isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
+                    v->isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
                     v->isosurface = std::max(v->isosurface, -2.0f);
-                    v->isosurface = std::min(v->isosurface, 2.0f);*/
+                    v->isosurface = std::min(v->isosurface, 2.0f);
                     v->parent->voxelValues[v->x][v->y][v->z] += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
                     v->parent->needRemeshing = true;
-                }
+                }*/
 
             }
         }
     }
     if (applyRemeshing)
-        main_v->parent->parent->remeshAll();
+        grid->remeshAll();
 }

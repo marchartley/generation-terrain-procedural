@@ -29,8 +29,7 @@ Viewer::Viewer(QWidget *parent):
 Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
                ViewerMode mode, QWidget *parent)
-    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid),
-      mapSavingFilename(""), mapSavingFolder("")
+    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
     std::cout << std::endl;
 }
@@ -85,22 +84,6 @@ void Viewer::init() {
     GlobalsGL::generateBuffers();
     this->rocksVBO = GlobalsGL::newBufferId();
 
-    if (grid != nullptr) {
-        this->grid->createMesh();
-        this->grid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
-    }
-    if (layerGrid != nullptr) {
-        this->layerGrid->createMesh();
-        this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-    }
-    if (voxelGrid != nullptr) {
-        voxelGrid->fromIsoData();
-        voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
-        this->voxelGrid->createMesh();
-        for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks)
-            vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-//        this->voxelGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
-    }
     this->shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->rocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->failedRocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
@@ -141,21 +124,40 @@ void Viewer::init() {
 
 #ifdef _WIN32
     this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
-//    this->mapSavingFolder = "C:/codes/Qt/generation-terrain-procedural/saved_maps/";
+    this->mapSavingFolder = "C:/codes/Qt/generation-terrain-procedural/saved_maps/";
 #elif linux
     this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
-//    this->mapSavingFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/";
+    this->mapSavingFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/";
 #endif
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
         exit(-1);
     }
+    if(!makedir(this->mapSavingFolder)) {
+        std::cerr << "Not possible to create folder " << this->mapSavingFolder << std::endl;
+        exit(-1);
+    }
     if (this->voxelGrid != nullptr) {
         this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-        this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
+//        // this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
     }
 
-
+    if (grid != nullptr) {
+        this->grid->createMesh();
+        this->grid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
+    }
+    if (layerGrid != nullptr) {
+        this->layerGrid->createMesh();
+        this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
+    }
+    if (voxelGrid != nullptr) {
+        voxelGrid->fromIsoData();
+        voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
+        this->voxelGrid->createMesh();
+        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
+            vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
+//        this->voxelGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
+    }
     if (this->voxelGrid) {
         std::vector<Vector3> normals;
         for (int x = 0; x < this->voxelGrid->sizeX; x++) {
@@ -221,7 +223,7 @@ void Viewer::draw() {
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
+            for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
                 vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
                 vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
                 vc->mesh.shader->setPositionalLight("light", this->light);
@@ -302,12 +304,7 @@ void Viewer::draw() {
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
-
-    if (checkMouseOnVoxel())
-    {
-        std::shared_ptr<Voxel> main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
-        this->displayMessage(QString::fromStdString(std::to_string( main_v->getIsosurface()) + " " + main_v->globalPos().toString() + " " + std::to_string( main_v->isOnGround) ));
-    }
+    checkMouseOnVoxel();
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
         this->throwRock();
@@ -342,28 +339,28 @@ void Viewer::keyPressEvent(QKeyEvent *e)
             setSmoothingAlgorithm(MARCHING_CUBES);
         else if (this->algorithm == MARCHING_CUBES)
             setSmoothingAlgorithm(NONE);
-        this->displayMessage(QString::fromStdString("Displaying using " + std::string(this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") + " algorithm") );
+        // this->displayMessage(QString::fromStdString("Displaying using " + std::string(this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") + " algorithm") );
         update();
     } else if(e->key() == Qt::Key_V) {
         this->display_vertices = !this->display_vertices;
         update();
     } else if(e->key() == Qt::Key_P) {
         this->setAddingMatterMode(!this->addingMatterMode);
-        this->displayMessage( (addingMatterMode ? "Construction mode" : "Destruction mode") );
+        // this->displayMessage( (addingMatterMode ? "Construction mode" : "Destruction mode") );
         update();
     } else if(e->key() == Qt::Key_Return) {
         erodeMap(e->modifiers() == Qt::ShiftModifier);
     } else if(e->key() == Qt::Key_Minus) {
         this->setManualErosionRocksSize(max(2, this->erosionSize - 2));
-        this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
+        // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Plus) {
         this->setManualErosionRocksSize(max(2, this->erosionSize + 2));
-        this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
+        // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Space) {
         displayRockTrajectories = !displayRockTrajectories;
-        this->displayMessage(QString::fromStdString("Rock trajectories are : " + std::string(displayRockTrajectories ? "ON" : "OFF") ));
+        // this->displayMessage(QString::fromStdString("Rock trajectories are : " + std::string(displayRockTrajectories ? "ON" : "OFF") ));
         update();
     } else if(e->key() == Qt::Key_0) {
         this->createGlobalGravity();
@@ -372,17 +369,17 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if(e->key() == Qt::Key_1) {
         this->startStopRecording();
     } else if(e->key() == Qt::Key_2) {
-        for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
+        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->LoDIndex++;
             vc->needRemeshing = true;
         }
         this->voxelGrid->remeshAll();
         update();
     } else if(e->key() == Qt::Key_3) {
-        this->displayMessage( "Removing matter to create a tunnel" );
+        // this->displayMessage( "Removing matter to create a tunnel" );
         createTunnel(true);
     } else if(e->key() == Qt::Key_4) {
-        this->displayMessage( "Adding matter to create a tunnel" );
+        // this->displayMessage( "Adding matter to create a tunnel" );
         createTunnel(false);
     } else {
         QGLViewer::keyPressEvent(e);
@@ -415,11 +412,11 @@ void Viewer::erodeMap(bool sendFromCam)
         camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
         pos = std::make_shared<Vector3>(a.x, a.y, a.z);
         dir = std::make_shared<Vector3>(b.x, b.y, b.z);
-        this->displayMessage( "Rocks launched from camera!" );
+        // this->displayMessage( "Rocks launched from camera!" );
     } else {
         pos = nullptr;
         dir = std::make_shared<Vector3>(new Vector3(0.0, 0.0, 0.0));
-        this->displayMessage( "Rocks launched!" );
+        // this->displayMessage( "Rocks launched!" );
     }
     std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, this->erosionFlowfieldRandomness, true);
 
@@ -452,7 +449,7 @@ void Viewer::erodeMap(bool sendFromCam)
 
 void Viewer::recomputeFlowfield()
 {
-    for (std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
+    for (std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
         vc->needRemeshing = true;
         vc->computeFlowfield();
     }
@@ -475,16 +472,15 @@ void Viewer::throwRock()
 {
     if (this->mouseInWorld)
     {
-        std::shared_ptr<Voxel> main_v = this->voxelGrid->getVoxel(this->mousePosWorld);
         RockErosion rock(this->manualErosionSize, this->manualErosionStrength);
-        rock.Apply(main_v, addingMatterMode);
+        rock.Apply(this->voxelGrid, this->mousePosWorld, addingMatterMode);
     }
     update();
 }
 
 void Viewer::computeLoD()
 {
-    for(std::shared_ptr<VoxelChunk> vc : this->voxelGrid->chunks) {
+    for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
         vc->LoDIndex = this->LoD;
         vc->needRemeshing = true;
     }
@@ -511,14 +507,12 @@ bool Viewer::checkMouseOnVoxel()
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
     currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
-    while(currPos.norm() < maxDist)
+    while(currPos.norm() < maxDist && !found)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
-        std::shared_ptr<Voxel> v = voxelGrid->getVoxel(currPos.x, currPos.y, currPos.z);
-        if (v != nullptr && (bool)*v) {
+        float isoval = voxelGrid->getVoxelValue(currPos);
+        if (isoval > 0.0)
             found = true;
-            break;
-        }
     }
     this->mouseInWorld = found;
     if (found) {
@@ -538,16 +532,17 @@ void Viewer::closeEvent(QCloseEvent *e) {
             std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
+
 }
 
 bool Viewer::createGlobalGravity()
 {
     this->startAnimation();
     this->applyLetItFall = !this->applyLetItFall;
-    if (this->applyLetItFall)
-        this->displayMessage( "Gravity is making his job!" );
-    else
-        this->displayMessage( "Gravity stopped caring" );
+//    if (this->applyLetItFall)
+        // this->displayMessage( "Gravity is making his job!" );
+//    else
+        // this->displayMessage( "Gravity stopped caring" );
     update();
     return this->applyLetItFall;
 }
@@ -556,10 +551,10 @@ bool Viewer::createSandGravity()
 {
     this->startAnimation();
     this->applyLetSandFall = !this->applyLetSandFall;
-    if (this->applyLetSandFall)
-        this->displayMessage( "Sand is falling!" );
-    else
-        this->displayMessage( "Sand stopped falling" );
+//    if (this->applyLetSandFall)
+        // this->displayMessage( "Sand is falling!" );
+//    else
+        // this->displayMessage( "Sand stopped falling" );
     update();
     return this->applyLetSandFall;
 }
@@ -569,10 +564,10 @@ bool Viewer::startStopRecording()
     this->isTakingScreenshots = !this->isTakingScreenshots;
     if(!makedir(this->screenshotFolder)) {
         this->isTakingScreenshots = false;
-        this->displayMessage(QString::fromStdString("Not possible to create folder " + this->screenshotFolder ));
+        // this->displayMessage(QString::fromStdString("Not possible to create folder " + this->screenshotFolder ));
         exit(-1);
     }
-    this->displayMessage(this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling");
+    // this->displayMessage(this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling");
     update();
     return this->isTakingScreenshots;
 }

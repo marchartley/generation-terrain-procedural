@@ -9,7 +9,7 @@ public:
     RockErosion();
     RockErosion(int size, float maxStrength);
 
-    void Apply(std::shared_ptr<Voxel> v, bool addingMatterMode = false, bool applyRemeshing = true);
+    void Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode = false, bool applyRemeshing = true);
 
     int size;
     float maxStrength;
