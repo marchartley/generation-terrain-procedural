@@ -110,7 +110,7 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
 
         this->chunks[i]->computeFlowfield();
     }
-    this->createMesh();
+//    this->createMesh();
     return this->shared_from_this();
 }
 
@@ -142,7 +142,7 @@ void VoxelGrid::initMap()
 
 void VoxelGrid::createMesh()
 {
-    for(std::shared_ptr<VoxelChunk> vc : this->chunks)
+    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->needRemeshing = true;
 //        vc->LoDIndex = vc->LoDs.size() - 1; // To remove
@@ -154,7 +154,7 @@ void VoxelGrid::makeItFall(float erosionStrength)
 {
     computeVoxelGroups();
     for(int i = 0; i < 1; i++) {
-        for(std::shared_ptr<VoxelChunk> vc : this->chunks) {
+        for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
             vc->makeItFall();
         }
     }
@@ -167,7 +167,7 @@ void VoxelGrid::makeItFall(float erosionStrength)
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
     computeVoxelGroups();
-    for(std::shared_ptr<VoxelChunk> vc : this->chunks) {
+    for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
     if (remesh)
@@ -175,7 +175,7 @@ void VoxelGrid::letGravityMakeSandFall(bool remesh)
 }
 
 void VoxelGrid::display() {
-    for (std::shared_ptr<VoxelChunk> vc : this->chunks)
+    for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->display();
     }
@@ -218,7 +218,7 @@ std::shared_ptr<Voxel> VoxelGrid::getVoxel(float x, float y, float z) {
 void VoxelGrid::remeshAll()
 {
     this->computeVoxelGroups();
-    for (std::shared_ptr<VoxelChunk> vc : this->chunks) {
+    for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
     }
 }
@@ -227,7 +227,7 @@ void VoxelGrid::remeshAll()
 std::vector<std::vector<std::vector<float>>> VoxelGrid::toFloat()
 {
     std::vector<std::vector<std::vector<float>>> arr(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->sizeZ, 0.0)));
-    for(std::shared_ptr<VoxelChunk> vc : this->chunks)
+    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         for(int x = 0; x < vc->sizeX; x++) {
             for(int y = 0; y < vc->sizeY; y++) {
@@ -241,7 +241,7 @@ std::vector<std::vector<std::vector<float>>> VoxelGrid::toFloat()
 }
 void VoxelGrid::toVoxels(std::vector<std::vector<std::vector<float>>> arr)
 {
-    for(std::shared_ptr<VoxelChunk> vc : this->chunks)
+    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         for(int x = 0; x < vc->sizeX; x++) {
             for(int y = 0; y < vc->sizeY; y++) {
@@ -253,7 +253,7 @@ void VoxelGrid::toVoxels(std::vector<std::vector<std::vector<float>>> arr)
 }
 void VoxelGrid::toVoxels()
 {
-    for(std::shared_ptr<VoxelChunk> vc : this->chunks)
+    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->toVoxels();
     }
@@ -332,8 +332,10 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
 {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
-    if (iChunk != -1)
+    if (iChunk != -1) {
         this->chunks[iChunk]->voxelValues[voxPosX][voxPosY][_z] = newVal;
+        this->chunks[iChunk]->needRemeshing = true;
+    }
 }
 
 float VoxelGrid::getOriginalVoxelValue(Vector3 pos) {
@@ -415,13 +417,59 @@ void VoxelGrid::setVoxelIsOnGround(float x, float y, float z, bool newVal)
 
 int VoxelGrid::getMaxLoD()
 {
-    return 5;
-//    int maxLoD = this->sizeX;
-//    for (std::shared_ptr<VoxelChunk> vc : this->chunks)
-//        if (int(vc->LoDs.size() - 1) < maxLoD)
-//            maxLoD = vc->LoDs.size() - 1;
-//    return maxLoD;
+    if (chunks.size() > 0 && chunks[0]) {
+        int maxLoD = this->sizeX;
+        for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
+            if (int(vc->LoDs.size() - 1) < maxLoD)
+                maxLoD = vc->LoDs.size() - 1;
+        return maxLoD;
+    } else {
+        return 0;
+    }
 }
+
+void VoxelGrid::saveMap(std::string filename)
+{
+    std::ofstream out;
+    out.open(filename);
+    out << this->sizeX << " " << this->sizeY << " " << this->sizeZ << " " << this->chunkSize << "\n";
+    for (auto& vc : chunks) {
+        for (int x = 0; x < vc->sizeX; x++)
+            for (int y = 0; y < vc->sizeY; y++)
+                for (int z = 0; z < vc->height; z++)
+                    out << vc->voxelValues[x][y][z] << " ";
+    }
+    out.close();
+}
+void VoxelGrid::retrieveMap(std::string filename)
+{
+    std::ifstream in;
+    in.open(filename);
+    in >> this->sizeX >> this->sizeY >> this->sizeZ >> this->chunkSize;
+
+    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    int iChunk = 0;
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
+            for (int x = 0; x < chunkSize; x++) {
+                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
+                for (int y = 0; y < chunkSize; y++) {
+                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
+                    for(int h = 0; h < this->getSizeZ(); h++) {
+                        float map_val;
+                        in >> map_val;
+                        data[iChunk][x][y][h] = map_val;
+                    }
+                }
+            }
+            iChunk ++;
+        }
+    }
+    this->tempData = data;
+}
+
+
 
 #include <sstream>
 std::string VoxelGrid::toString()

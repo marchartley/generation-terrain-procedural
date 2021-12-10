@@ -150,7 +150,7 @@ public:
     Mesh flowDebugMeshes;
     Mesh tunnelsMesh;
 
-    std::string mapSavingFilename;
+    std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;
 };
 

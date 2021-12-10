@@ -98,6 +98,10 @@ public:
     void setVoxelIsOnGround(float x, float y, float z, bool newVal);
 
     int getMaxLoD();
+
+    void saveMap(std::string filename);
+    void retrieveMap(std::string filename);
+
 //protected:
     int sizeX, sizeY, sizeZ;
     std::vector<Voxel> voxels;

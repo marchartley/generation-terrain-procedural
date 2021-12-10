@@ -365,7 +365,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
             map[x + offset].insert(map[x + offset].begin(), std::vector<float>());
             for (int z = 0; z < this->height; z++)
             {
-                map[x + offset][0].push_back(n->voxelValues[x][n->voxels[x].size() - 1][z]);
+                map[x + offset][0].push_back(n->voxelValues[x][n->voxelValues[x].size() - 1][z]);
             }
         }
         addedFront = true;
@@ -374,7 +374,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
         map[0].insert(map[0].begin(), std::vector<float>());
         for (int z = 0; z < this->height; z++)
-            map[0][0].push_back(n->voxelValues[n->voxels.size() - 1][n->voxels[0].size() - 1][z]);
+            map[0][0].push_back(n->voxelValues[n->voxelValues.size() - 1][n->voxelValues[0].size() - 1][z]);
     }
 
     if (this->x == 0) {
@@ -528,7 +528,7 @@ void VoxelChunk::computeGroups()
 {
     // Not clean, to refactor in VoxelGrid
     if(this->x == 0 && this->y == 0) { // First chunk, reset all the voxels of all chunks
-        for(std::shared_ptr<VoxelChunk> vc : this->parent->chunks) {
+        for(std::shared_ptr<VoxelChunk>& vc : this->parent->chunks) {
             vc->applyToVoxels([](std::shared_ptr<Voxel> v) -> void {
                 v->group = -1;
             });

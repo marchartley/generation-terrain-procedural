@@ -75,9 +75,10 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
             pos += dir;
             coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
-            std::shared_ptr<Voxel> v = this->grid->getVoxel(pos.x, pos.y, pos.z);
-            if (v != nullptr && *v) {
-                rock.Apply(v, false, false);
+//            std::shared_ptr<Voxel> v = this->grid->getVoxel(pos.x, pos.y, pos.z);
+//            if (v != nullptr && *v) {
+            if (this->grid->getVoxelValue(pos) > 0.0) {
+                rock.Apply(this->grid, pos, false, false);
                 touched = true;
                 max_iter = 1000;
                 debugFinishingLines.push_back(coords);
@@ -117,7 +118,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(std::shared_ptr<Vector3> st
         coords.push_back(pos - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
         float rockSize = width.getPoint(i).y * this->maxRockSize;
         RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
-        rock.Apply(grid->getVoxel(pos), addingMatter, false);
+        rock.Apply(grid, pos, addingMatter, false);
         coords.push_back((((curve.getPoint(i + resolution) + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ)) - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
     }
     grid->remeshAll();
