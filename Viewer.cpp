@@ -572,6 +572,34 @@ bool Viewer::startStopRecording()
     return this->isTakingScreenshots;
 }
 
+void Viewer::loadMapUI()
+{
+    QString filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
+
+#ifdef _WIN32
+    const char* vShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
+    const char* fShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+#elif linux
+    const char* vShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
+    const char* fShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
+#endif
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>();
+    voxelGrid->retrieveMap(filename.toStdString());
+    voxelGrid->fromIsoData();
+    voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
+    this->voxelGrid->createMesh();
+    for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
+        vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
+}
+void Viewer::saveMapUI()
+{
+    QString filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
+    if (this->voxelGrid)
+        voxelGrid->saveMap(filename.toStdString());
+}
+
+
 std::vector<std::string> split(std::string str, char c)
 {
     std::vector<std::string> result;

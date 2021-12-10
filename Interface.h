@@ -14,6 +14,7 @@ public:
     virtual ~FancySlider();
 
     void setfValue(float val);
+    void setfRange(float min, float max);
 
 Q_SIGNALS:
     void floatValueChanged(float value);
@@ -37,11 +38,15 @@ public:
 
     void setAllValuesToFitViewerDefaults(Viewer* viewer);
 
+    void closeEvent(QCloseEvent* e);
+
     QGridLayout* mainLayout;
     QVBoxLayout* controlLayout;
     Viewer* viewer;
 
 
+    QHBoxLayout* loadSaveLayout;
+    QGroupBox* loadSaveBox;
     QHBoxLayout* randomRocksLayout;
     QGroupBox* randomRocksBox;
     QHBoxLayout* currentSimulationLayout;
@@ -62,6 +67,8 @@ public:
     QGroupBox* displayTypeBox;
     QHBoxLayout* LoDChooserLayout;
     QGroupBox* LoDChooserBox;
+    QPushButton* loadButton;
+    QPushButton* saveButton;
     FancySlider* randomRocksSizeSlider;
     FancySlider* randomRocksStrengthSlider;
     FancySlider* randomRocksQuantitySlider;

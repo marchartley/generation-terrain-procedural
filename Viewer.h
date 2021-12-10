@@ -71,6 +71,9 @@ public Q_SLOTS:
     void setLoD(int newLoD) { this->LoD = newLoD; }
     void computeLoD();
 
+    void loadMapUI();
+    void saveMapUI();
+
 //    void saveScreenshot();
 
 //protected:
