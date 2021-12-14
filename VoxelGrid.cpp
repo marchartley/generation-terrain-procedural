@@ -3,6 +3,77 @@
 
 #include "Shader.h"
 
+
+
+typedef std::vector<float> DoubleVec;
+
+int findNearestNeighbourIndex(const float ac_dfValue, DoubleVec x)
+{
+  float lv_dfDistance = 10000;
+  int lv_nIndex = -1;
+
+  for (unsigned int i = 0; i < x.size(); i++) {
+    float newDist = ac_dfValue - x[i];
+    if (newDist >= 0 && newDist < lv_dfDistance) {
+      lv_dfDistance = newDist;
+      lv_nIndex = i;
+    }
+  }
+
+  return lv_nIndex;
+}
+
+DoubleVec interpolation(DoubleVec x, DoubleVec y,
+  DoubleVec xx)
+{
+  float dx, dy;
+  DoubleVec slope, intercept, result;
+  slope.resize(x.size());
+  intercept.resize(x.size());
+  result.resize(xx.size());
+  int indiceEnVector;
+
+  for (unsigned i = 0; i < x.size(); i++) {
+    if (i < x.size() - 1) {
+      dx = x[i + 1] - x[i];
+      dy = y[i + 1] - y[i];
+      slope[i] = dy / dx;
+      intercept[i] = y[i] - x[i] * slope[i];
+    }
+    else {
+      slope[i] = slope[i - 1];
+      intercept[i] = intercept[i - 1];
+    }
+  }
+
+  for (unsigned i = 0; i < xx.size(); i++) {
+    indiceEnVector = findNearestNeighbourIndex(xx[i], x);
+    if (indiceEnVector != -1) {
+      result[i] = slope[indiceEnVector] *
+        xx[i] + intercept[indiceEnVector];
+    }
+    else
+      result[i] = 10000;
+  }
+  return result;
+}
+
+std::vector<std::vector<std::vector<Vector3>>> resizeArray(std::vector<std::vector<std::vector<Vector3>>> arr, int newX, int newY, int newZ)
+{
+    /*int oldX = int(arr.size()), oldY = int(arr[0].size()), oldZ = int(arr[0][0].size());
+    float resX = newX/(float)oldX, resY = newY/(float)oldY, resZ = newZ/(float)oldZ;
+    float invX = 1/resX, invY = 1/resY, invZ = 1/resZ;
+    for (int x = 0; x < newX; x++)
+    {
+        Vector3 newVal = arr[x/invX] * () + arr[x/invX + 1] * (1 - (x%invX));
+    }*/
+}
+
+
+
+
+
+
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : blockSize(blockSize), noise_shifting(noise_shifting) {
     this->sizeZ = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
@@ -27,7 +98,8 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
 //                        noise_val = 1.0; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
-                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
+//                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
+                        noise_val = 0.5;
                         data[iChunk][x][y][h] = noise_val;
                     }
                 }
@@ -108,10 +180,130 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
-        this->chunks[i]->computeFlowfield();
+//        this->chunks[i]->computeFlowfield();
     }
+    this->computeFlowfield();
 //    this->createMesh();
     return this->shared_from_this();
+}
+
+void VoxelGrid::computeFlowfield(Vector3 sea_current)
+{
+    /*
+    this->distanceField = std::vector<std::vector<std::vector<int>>>(this->sizeX, std::vector<std::vector<int>>(this->sizeY, std::vector<int>(this->sizeZ, 9999999)));
+    this->pressureField = std::vector<std::vector<std::vector<float>>>(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->sizeZ, 0)));
+    this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->sizeZ)));
+
+    for (auto& vc : this->chunks) {
+        vc->computeDistanceField();
+        for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
+            for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
+                for (int z = 0; z < vc->height; z++) {
+                    distanceField[x][y][z] = vc->distanceField[x - vc->x][y - vc->y][z - 0];
+                    pressureField[x][y][z] = vc->pressureField[x - vc->x][y - vc->y][z - 0];
+//                    pressureField[x][y][z] = 0.0;
+                }
+            }
+        }
+    }
+    std::vector<std::vector<std::vector<Vector3>>> pressionGradient = Vector3::grad(this->pressureField);
+    this->flowField = pressionGradient;
+    for (size_t x = 0; x < flowField.size(); x++) {
+        for (size_t y = 0; y < flowField[x].size(); y++) {
+            for (size_t z = 0; z < flowField[x][y].size(); z++) {
+                flowField[x][y][z] *= -1.0; // Inverse the gradient
+                flowField[x][y][z] += sea_current;
+            }
+        }
+    }*/
+    std::vector<std::vector<std::vector<bool>>> obstacleMap = std::vector<std::vector<std::vector<bool>>>(this->sizeX, std::vector<std::vector<bool>>(this->sizeY, std::vector<bool>(this->sizeZ, false)));
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                obstacleMap[x][y][z] = (this->getVoxelValue(x, y, z) <= 0.0);
+            }
+        }
+    }
+    this->fluidSimulation.setObstacles(obstacleMap);
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                this->fluidSimulation.addDensity(5 + dx, 28 + dy, 60 + dz, 1000.0);
+            }
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        this->fluidSimulation.addVelocity(5, 28, 60, (this->sea_current + Vector3::random()).normalized() * 1.0);
+    }
+    /*
+    this->fluidSimulation.addDensity(5, 28, 60, 10.0);
+    this->fluidSimulation.addVelocity(5, 28, 60, this->sea_current);*/
+    /*
+    for (int x = 0; x < this->sizeX; x++)
+        for (int y = 0; y < this->sizeY; y++)
+            for (int z = 0; z < this->sizeZ; z++)
+                if (this->getVoxelValue(x, y, z) > 0.0) {
+                    this->fluidSimulation.addVelocity(x, y, z, this->sea_current);
+                    this->fluidSimulation.addDensity(x, y,z, 100.0);
+                }*/
+    for (int i = 0; i < 1; i++)
+        this->fluidSimulation.step();
+    this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
+
+    for (auto& vc : this->chunks) {
+        for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
+            for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
+                for (int z = 0; z < vc->height; z++) {
+                    vc->flowField[x - vc->x][y - vc->y][z - 0] = flowField[x][y][z];
+                }
+            }
+        }
+    }
+}
+
+void VoxelGrid::affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize)
+{
+    this->affectFlowfieldAround(pos.x, pos.y, pos.z, newVal, kernelSize);
+}
+void VoxelGrid::affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize)
+{
+//    this->setFlowfield(x, y, z, this->getFlowfield(x, y, z) + newVal);
+
+    Vector3 pos(x, y, z);
+    for (int dx = -(kernelSize/2); dx <= (kernelSize/2); dx++) {
+        for (int dy = -(kernelSize/2); dy <= (kernelSize/2); dy++) {
+            for (int dz = -(kernelSize/2); dz <= (kernelSize/2); dz++) {
+                Vector3 offset(dx, dy, dz);
+                Vector3 currFlow = this->getFlowfield(pos + offset);
+
+//                currFlow += ((offset * -1.0) + newVal) * (1.0 - (offset.norm() / (kernelSize/2.0)));
+                currFlow += (newVal * (1.0 - (offset.norm() / (kernelSize/2.0)))); // Change proportionnal to distance
+                this->setFlowfield(pos + offset, currFlow); // / 2.0); // Store the mean of the previous and new value
+            }
+        }
+    }
+}
+void VoxelGrid::affectFlowfieldAround(Vector3 pos, float alphaEffect, int kernelSize)
+{
+    this->affectFlowfieldAround(pos.x, pos.y, pos.z, alphaEffect, kernelSize);
+}
+void VoxelGrid::affectFlowfieldAround(float x, float y, float z, float alphaEffect, int kernelSize)
+{
+//    this->setFlowfield(x, y, z, this->getFlowfield(x, y, z) + newVal);
+
+    Vector3 pos(x, y, z);
+    for (int dx = -(kernelSize/2); dx <= (kernelSize/2); dx++) {
+        for (int dy = -(kernelSize/2); dy <= (kernelSize/2); dy++) {
+            for (int dz = -(kernelSize/2); dz <= (kernelSize/2); dz++) {
+                Vector3 offset(dx, dy, dz);
+                Vector3 currFlow = this->getFlowfield(pos + offset);
+
+                currFlow += ((offset * -1.0) * alphaEffect);
+//                currFlow += (newVal * (1.0 - (offset.norm() / (kernelSize/2.0)))); // Change proportionnal to distance
+                this->setFlowfield(pos + offset, currFlow / 2.0); // Store the mean of the previous and new value
+            }
+        }
+    }
 }
 
 void VoxelGrid::initMap()
@@ -138,6 +330,8 @@ void VoxelGrid::initMap()
                 noiseMinMax.update(this->noise.GetNoise((float)x, (float)y, (float)h));
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
+
+    this->fluidSimulation = FluidSimulation(this->sizeX / 4, this->sizeY / 4, this->sizeZ / 4, 0.1, 0.1, 0.0, 5);
 }
 
 void VoxelGrid::createMesh()
@@ -424,7 +618,7 @@ int VoxelGrid::getMaxLoD()
                 maxLoD = vc->LoDs.size() - 1;
         return maxLoD;
     } else {
-        return 0;
+        return 8;
     }
 }
 

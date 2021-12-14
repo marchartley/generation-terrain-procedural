@@ -28,12 +28,14 @@ public:
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
     friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v);
 
-    float dot(Vector3& o);
+    float dot(Vector3 o);
     Vector3 cross(Vector3 o);
     Vector3 rounded(int precision = 0);
 
     float norm();
+    float norm2();
     Vector3& normalize();
+    Vector3 normalized();
 
     float divergence() { return x + y + z; }
 

@@ -21,6 +21,10 @@ float Vector3::norm() {
     if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 }
+float Vector3::norm2() {
+    if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
+    return this->x * this->x + this->y * this->y + this->z * this->z;
+}
 
 Vector3& Vector3::normalize() {
     if(this->norm() == 0)
@@ -29,8 +33,12 @@ Vector3& Vector3::normalize() {
     *this /= norm;
     return *this;
 }
+Vector3 Vector3::normalized() {
+    Vector3 a = *this;
+    return a.normalize();
+}
 
-float Vector3::dot(Vector3& o) {
+float Vector3::dot(Vector3 o) {
     return (this->x + o.x) + (this->y * o.y) + (this->z * o.z);
 }
 Vector3 Vector3::cross(Vector3 o) {
@@ -75,24 +83,37 @@ GRID3D_vec3 Vector3::gradient(GRID3D_float field)
         for (size_t y = 0; y < field[x].size(); y++) {
             for (size_t z = 0; z < field[x][y].size(); z++) {
                 Vector3 vec = Vector3();
+                Vector3 allDirections;
                 if (x == 0 || x == field.size() - 1 || y == 0 || y == field[x].size() - 1
                         || z == 0 || z == field[x][y].size() - 1) {
                     returningGrid[x][y][z] = vec;
                 } else {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        for (int dy = -1; dy <= 1; dy++) {
-                            for (int dz = -1; dz <= 1; dz++) {
-                                if(dx != 0 && dy != 0 && dz != 0)
-                                    vec += Vector3(dx, dy, dz) * field[x + dx][y + dy][z + dz];
+                    for (int dx = std::max(int(x-1), 0); dx <= std::min(int(x+1), int(field.size() - 1)); dx++) {
+                        for (int dy = std::max(int(y-1), 0); dy <= std::min(int(y+1), int(field[x].size() - 1)); dy++) {
+                            for (int dz = std::max(int(z-1), 0); dz <= std::min(int(z+1), int(field[x][y].size() - 1)); dz++) {
+                                if(dx != int(x) || dy != int(y) || dz != int(z)) {
+                                    Vector3 a = Vector3(dx - int(x), dy - int(y), dz - int(z));
+//                                    allDirections += a;
+                                    float f = field[dx][dy][dz];
+                                    vec += a * f; //Vector3(dx - x, dy - y, dz - z) * field[dx][dy][dz];
+                                }
                             }
                         }
                     }
                 }
+
                 returningGrid[x][y][z] = vec;
 
             }
         }
     }
+    /*for (size_t x = 0; x < field.size(); x++) {
+        for (size_t y = 0; y < field[x].size(); y++) {
+            for (size_t z = 0; z < field[x][y].size(); z++) {
+                if (x == 0)
+            }
+        }
+    }*/
     return returningGrid;
 }
 

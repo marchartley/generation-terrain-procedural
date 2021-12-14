@@ -19,6 +19,7 @@ TARGET = interface
 
 SOURCES += \
         BSpline.cpp \
+        FluidSimulation.cpp \
         Globals.cpp \
         Grid.cpp \
         Interface.cpp \
@@ -54,6 +55,7 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 HEADERS += \
     BSpline.h \
     FastNoiseLit.h \
+    FluidSimulation.h \
     Globals.h \
     Grid.h \
     Interface.h \

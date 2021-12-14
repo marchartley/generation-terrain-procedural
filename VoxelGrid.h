@@ -12,6 +12,8 @@ class VoxelGrid;
 #include "Mesh.h"
 #include "FastNoiseLit.h"
 
+#include "FluidSimulation.h"
+
 struct NoiseMinMax {
     float min;
     float max;
@@ -21,11 +23,6 @@ struct NoiseMinMax {
         max = std::max(max, val + 0.00001f);
     }
     float remap(float x, float newMin, float newMax) {
-        /*float a = (x - min);
-        float b = a / (max - min);
-        float c = b - .0;
-        float d = c * (newMax - newMin);
-        float e = d + newMin;*/
         return (((x - min) / (max - min)) * (newMax - newMin) + newMin);
     }
 };
@@ -97,6 +94,13 @@ public:
     void setVoxelIsOnGround(Vector3 pos, bool newVal);
     void setVoxelIsOnGround(float x, float y, float z, bool newVal);
 
+    void computeFlowfield(Vector3 sea_current = Vector3());
+
+    void affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize = 3);
+    void affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize = 3);
+    void affectFlowfieldAround(Vector3 pos, float alphaEffect, int kernelSize = 3);
+    void affectFlowfieldAround(float x, float y, float z, float alphaEffect, int kernelSize = 3);
+
     int getMaxLoD();
 
     void saveMap(std::string filename);
@@ -115,6 +119,15 @@ public:
     NoiseMinMax noiseMinMax;
 
     Mesh mesh;
+    FluidSimulation fluidSimulation;
+
+
+
+    std::vector<std::vector<std::vector<Vector3>>> flowField;
+    std::vector<std::vector<std::vector<int>>> distanceField;
+    std::vector<std::vector<std::vector<float>>> pressureField;
+
+    Vector3 sea_current = Vector3(5.0, 0.0, 0.0);
 };
 
 #endif // VOXELGRID_H

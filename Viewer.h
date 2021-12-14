@@ -106,10 +106,10 @@ public:
     bool displayFlowfield = false;
     bool displayTunnelsPath = false;
 
-    int erosionSize = 15;
-    float erosionStrength = .5;
-    int erosionQtt = 10;
-    float erosionFlowfieldFactor = 0.1;
+    int erosionSize = 1;
+    float erosionStrength = .0;
+    int erosionQtt = 1000;
+    float erosionFlowfieldFactor = 1.0;
     float erosionFlowfieldRandomness = 0.05;
 
     int manualErosionSize = 15;

@@ -14,6 +14,23 @@ UnderwaterErosion::UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRoc
 
 }
 
+void retroChangeFlowfield(std::vector<Vector3>& coords, std::vector<Vector3>& dirs, std::shared_ptr<VoxelGrid> grid)
+{
+    if (coords.size() == 0)
+        return;
+    Vector3& impactZone = coords[coords.size() - 1];
+    for (size_t i = 0; i < coords.size(); i++)
+    {
+        Vector3& coord = coords[i];
+        Vector3& dir = dirs[i];
+        float alpha_effect = 0.5 * ((coord - impactZone).norm2() < 20.0 ? -2.0 : 1.0); // Inverse and double if it's a choc (last coord)
+        grid->affectFlowfieldAround(coord, dir * alpha_effect, 3);
+//        grid->affectFlowfieldAround(coord, alpha_effect, 10);
+    }
+}
+
+//void updateParticle(Vector3& pos, Vector3& dir)
+
 std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
 UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr<Vector3> originalDirection, int avoidMatter, float flowfieldFactor, float randomnessFactor, bool returnEvenLostRocks)
 {
@@ -27,8 +44,11 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
     int max_iter = 1000;
     int total_iterations = 0;
     int cpt = 0;
+    std::vector<std::tuple<Vector3, Vector3>> usefulStartingPositions;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
+        std::vector<Vector3> allCoords;
+        std::vector<Vector3> allDirs;
         float weaknessAgainstFlowfield = 1.0;
         cpt ++;
         int steps = 10 * starting_distance; // An estimation of how many step we need
@@ -41,60 +61,83 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
             pos = *startingPoint;
         }
         Vector3 dir = Vector3::random();
-        if (startingPoint == nullptr && originalDirection != nullptr)
+        /*if (startingPoint == nullptr && originalDirection != nullptr)
             dir = (*originalDirection - pos).normalize();
-        else if (startingPoint != nullptr && originalDirection != nullptr)
+        else */if (/*startingPoint != nullptr &&*/ originalDirection != nullptr)
             dir = originalDirection->normalize();
+//        dir += Vector3::random() * .1;
 
 
         pos += Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0;
         RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
         std::vector<Vector3> coords;
 
+        Vector3 lastSavedPos = pos - 10.0;
+        bool firstPosSave = true;
         bool touched = false;
+        bool hasBeenAtLeastOnceInside = false;
+        float dist = 0;
+        std::tuple<Vector3, Vector3> possibleUsefulPosition = std::make_tuple(pos, dir);
         while (!touched) {
             total_iterations ++;
-            if (avoidMatter > 0) {
-                for(int dist = 0; dist < avoidMatter; dist++) {
-                    if (this->grid->contains(pos + dir * dist)) {
-//                        dir += Vector3::random() * 0.05;
-                        Vector3 flowfield = grid->getFlowfield(pos + dir * dist);
-                        dir += flowfield * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
-                        dir.normalize();
-//                        if (dist == 0 && flowfield.norm() > 0.1)
-//                            weaknessAgainstFlowfield *= .999f;//std::max(.95f, (1 - std::min(1.0f, flowfield.norm())));
-                        break;
-                    }
-                }
+            if (this->grid->contains(pos + dir * dist)) {
+                Vector3 flowfield = grid->getFlowfield(pos + dir * dist);
+                float dirDotGrad = 1.0; // dir.dot(flowfield);
+                dir += flowfield * dirDotGrad * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
+                hasBeenAtLeastOnceInside = true;
+//                break;
             }
-//            if (!matterIsClose) {
+            else {
                 dir += Vector3::random() * randomnessFactor;
                 dir.normalize();
-//            }
+            }
             steps --;
-            coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
-            pos += dir;
-            coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
-//            std::shared_ptr<Voxel> v = this->grid->getVoxel(pos.x, pos.y, pos.z);
-//            if (v != nullptr && *v) {
-            if (this->grid->getVoxelValue(pos) > 0.0) {
-                rock.Apply(this->grid, pos, false, false);
+            pos += dir.normalized();
+            if (firstPosSave) {
+                firstPosSave = false;
+                coords.push_back((pos - dir.normalized()) - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
+                lastSavedPos = pos;
+            }
+            else if ((lastSavedPos - pos).norm2() > 1.0) {
+                coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
+                coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
+                lastSavedPos = pos;
+            }
+            allCoords.push_back(pos);
+            allDirs.push_back(dir);
+            if (this->grid->getVoxelValue(pos) > 0.0) { // Hit a wall
+                if (hasBeenAtLeastOnceInside) {
+                    rock.Apply(this->grid, pos, false, false);
+                    coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
+                    debugFinishingLines.push_back(coords);
+                    // Set a little bit the flowfield to avoid other particles going in same wall (increase of pressure)
+//                    retroChangeFlowfield(allCoords, allDirs, this->grid);
+//                    this->grid->affectFlowfieldAround(pos, dir.normalized() * -1.0f, 3);
+                    usefulStartingPositions.push_back(possibleUsefulPosition);
+                } else {
+//                    i --;
+                }
                 touched = true;
                 max_iter = 1000;
-                debugFinishingLines.push_back(coords);
             }
-            if (pos.norm() > 4 * starting_distance || steps <= 0 || pos.z < -100) {
+            else if ((!hasBeenAtLeastOnceInside && (pos + dir).norm2() > pos.norm2()) || pos.norm2() > 16 * starting_distance * starting_distance || steps <= 0 || pos.z < -100 || pos.z > this->grid->getSizeZ()) {
+                // Failed to hit, is now gone
                 i--;
                 max_iter --;
-                if (returnEvenLostRocks)
+                if (returnEvenLostRocks && hasBeenAtLeastOnceInside) {
+                    coords.push_back(pos - Vector3(this->grid->getSizeX(), this->grid->getSizeY(), 0.0)/2.0);
                     debugFailingLines.push_back(coords);
+                }
                 break;
+            } else { // Particle still running
+                // Set a little bit the flowfield to bring other particles in the same path
+//                this->grid->affectFlowfieldAround(pos, dir.normalized() * 1.0f, 3);
             }
         }
     }
-    std::cout << total_iterations << " iterations (" << cpt << " rocks lauched, " << debugFinishingLines.size() << " who hit)";
-    std::cout << " check : " << debugFinishingLines.size() << "+" << debugFailingLines.size() << std::endl;
+    std::cout << total_iterations << " iterations (" << cpt << " rocks lauched, " << debugFinishingLines.size() << " who hit)" << std::flush;
     grid->remeshAll();
+    std::cout << " check : " << debugFinishingLines.size() << "+" << debugFailingLines.size() << std::endl;
     return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
 
