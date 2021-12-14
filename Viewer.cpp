@@ -151,6 +151,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
+        voxelGrid->retrieveMap(this->mapSavingFolder + "map1.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
@@ -402,6 +403,7 @@ void Viewer::animate()
 
 void Viewer::erodeMap(bool sendFromCam)
 {
+    this->voxelGrid->computeFlowfield();
     UnderwaterErosion erod(this->voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
     std::shared_ptr<Vector3> pos = nullptr;
     std::shared_ptr<Vector3> dir = nullptr;
@@ -410,7 +412,7 @@ void Viewer::erodeMap(bool sendFromCam)
         Vec a;
         Vec b;
         camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
-        pos = std::make_shared<Vector3>(a.x, a.y, a.z);
+//        pos = std::make_shared<Vector3>(a.x, a.y, a.z);
         dir = std::make_shared<Vector3>(b.x, b.y, b.z);
         // this->displayMessage( "Rocks launched from camera!" );
     } else {
@@ -449,10 +451,11 @@ void Viewer::erodeMap(bool sendFromCam)
 
 void Viewer::recomputeFlowfield()
 {
-    for (std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
+    /*for (std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
         vc->needRemeshing = true;
         vc->computeFlowfield();
-    }
+    }*/
+    this->voxelGrid->computeFlowfield();
 
     std::vector<Vector3> normals;
     for (int x = 0; x < this->voxelGrid->sizeX; x++) {
@@ -516,6 +519,7 @@ bool Viewer::checkMouseOnVoxel()
     }
     this->mouseInWorld = found;
     if (found) {
+        std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
     }
     return found;

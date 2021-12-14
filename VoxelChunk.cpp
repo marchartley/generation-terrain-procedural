@@ -51,6 +51,7 @@ void VoxelChunk::createVoxels()
 }
 void VoxelChunk::computeFlowfield(Vector3 sea_current) //int blur_iterations)
 {
+    return;
 //    if (!needRemeshing)
 //        return;
     /*
