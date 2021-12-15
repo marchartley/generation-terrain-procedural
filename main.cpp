@@ -10,16 +10,11 @@
 #include "Interface.h"
 //#define ViewerInterface Viewer
 
+//#include <openvdb/openvdb.h>
+
 int main(int argc, char *argv[])
 {
-//    Vector3 a (0, 0, 0);
-//    Vector3 b (1, 1, 1);
-//    Vector3 c (0, 0, 0);
-//    std::hash<Vector3> x;
-//    std::cout << x(a) << std::endl;
-//    std::cout << x(b) << std::endl;
-//    std::cout << x(c) << std::endl;
-//    exit(0);
+//    openvdb::initialize();
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);

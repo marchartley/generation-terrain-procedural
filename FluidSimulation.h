@@ -56,47 +56,53 @@ public:
         this->solve_linear(arr, arr2, a, 1 + 6 * a, inverseOnBounds);
     }
     template<typename T>
-    void set_bounds(std::vector<std::vector<std::vector<T> > >& arr, bool inverseOnBounds = false)
+    void set_bounds(std::vector<std::vector<std::vector<T> > >& arr, bool inverseOnBounds = false, bool nullifyOnBounds = true)
     {
+        std::vector<std::vector<std::vector<T> > > tmpArray = arr;
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {
                     if(this->obstacles[x][y][z]) {
+                        bool freeCellFound = false;
                         for (int dx = -1; dx <= 1; dx++) {
                             for (int dy = -1; dy <= 1; dy++) {
                                 for (int dz = -1; dz <= 1; dz++) {
                                     if (dx != 0 || dy != 0 || dz != 0) {
                                         if (!obstacles[x + dx][y + dy][z + dz]) {
-                                            arr[x][y][z] = arr[x + dx][y + dy][z + dz] * (inverseOnBounds ? -1.0 : 1.0);
+                                            tmpArray[x][y][z] = arr[x + dx][y + dy][z + dz] * (inverseOnBounds ? -1.0 : 1.0);
+                                            freeCellFound = true;
                                         }
                                     }
                                 }
                             }
                         }
+                        if (!freeCellFound)
+                            tmpArray[x][y][z] = T();
                     }
                 }
             }
         }
+        arr = tmpArray;
 
         int xSize = arr.size(), ySize = arr[0].size(), zSize = arr[0][0].size();
         int X1 = xSize - 1, Y1 = ySize - 1, Z1 = zSize - 1;
         int X2 = xSize - 2, Y2 = ySize - 2, Z2 = zSize - 2;
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
-                arr[x][y][0] = arr[x][y][1] * (inverseOnBounds ? -1.0 : 1.0);
-                arr[x][y][zSize - 1] = arr[x][y][zSize - 2] * (inverseOnBounds ? -1.0 : 1.0);
+                arr[x][y][0] = arr[x][y][1] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
+                arr[x][y][zSize - 1] = arr[x][y][zSize - 2] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
             }
         }
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int z = 1; z < this->sizeZ - 1; z++) {
-                arr[x][0][z] = arr[x][1][z] * (inverseOnBounds ? -1.0 : 1.0);
-                arr[x][ySize - 1][z] = arr[x][ySize - 2][z] * (inverseOnBounds ? -1.0 : 1.0);
+                arr[x][0][z] = arr[x][1][z] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
+                arr[x][ySize - 1][z] = arr[x][ySize - 2][z] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
             }
         }
         for (int y = 1; y < this->sizeY - 1; y++) {
             for (int z = 1; z < this->sizeZ - 1; z++) {
-                arr[0][y][z] = arr[1][y][z] * (inverseOnBounds ? -1.0 : 1.0);
-                arr[xSize - 1][y][z] = arr[xSize - 2][y][z] * (inverseOnBounds ? -1.0 : 1.0);
+                arr[0][y][z] = arr[1][y][z] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
+                arr[xSize - 1][y][z] = arr[xSize - 2][y][z] * ((inverseOnBounds ? -1.0 : 1.0) * (nullifyOnBounds ? 0.0 : 1.0));
             }
         }
 
@@ -129,6 +135,7 @@ public:
     template<typename T>
     void solve_linear(std::vector<std::vector<std::vector<T> > >& arr1, std::vector<std::vector<std::vector<T> > >& arr0, float a, float c, bool inverseOnBounds = false)
     {
+        return;
         // TODO : check cRecip
         float cRecip = 1.0 / c;
         for (int k = 0; k < this->iterations; k++) {
