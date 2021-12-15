@@ -120,6 +120,7 @@ public:
 
     Mesh mesh;
     FluidSimulation fluidSimulation;
+    int fluidSimRescale = 2;
 
 
 

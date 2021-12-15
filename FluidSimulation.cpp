@@ -28,21 +28,25 @@ void FluidSimulation::setObstacles(std::vector<std::vector<std::vector<bool> > >
     float rx = int(new_obstacles.size()) / (float)sizeX, ry = int(new_obstacles[0].size()) / (float)sizeY, rz = int(new_obstacles[0][0].size()) / (float)sizeZ;
     std::vector<std::vector<std::vector<float> > > obstacleRate = std::vector<std::vector<std::vector<float>>>(sizeX, std::vector<std::vector<float>>(sizeY, std::vector<float>(sizeZ)));
     std::vector<std::vector<std::vector<int> > > obstacleNumbers = std::vector<std::vector<std::vector<int>>>(sizeX, std::vector<std::vector<int>>(sizeY, std::vector<int>(sizeZ)));
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->scaleY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                int _x = std::max(0, std::min(this->sizeX - 1, x)), _x_resized = std::max(0, std::min(int(new_obstacles.size() - 1), int(x * rx)));
-                int _y = std::max(0, std::min(this->sizeY - 1, y)), _y_resized = std::max(0, std::min(int(new_obstacles[0].size() - 1), int(y * ry)));
-                int _z = std::max(0, std::min(this->sizeZ - 1, z)), _z_resized = std::max(0, std::min(int(new_obstacles[0][0].size() - 1), int(z * rz)));
-                obstacleRate[_x][_y][_z] += (new_obstacles[_x_resized][_y_resized][_z_resized] ? 1.0 : 0.0);
-                obstacleNumbers[_x][_y][_z] ++;
+    for (int x = 0; x < int(new_obstacles.size()); x++) {
+        for (int y = 0; y < int(new_obstacles[0].size()); y++) {
+            for (int z = 0; z < int(new_obstacles[0][0].size()); z++) {
+                int _x = std::max(0, std::min(int(new_obstacles.size() - 1), x)), _x_resized = std::max(0, std::min(this->sizeX - 1, int(x / rx)));
+                int _y = std::max(0, std::min(int(new_obstacles[0].size() - 1), y)), _y_resized = std::max(0, std::min(this->sizeY - 1, int(y / ry)));
+                int _z = std::max(0, std::min(int(new_obstacles[0][0].size() - 1), z)), _z_resized = std::max(0, std::min(this->sizeZ - 1, int(z / rz)));
+                obstacleRate[_x_resized][_y_resized][_z_resized] += (new_obstacles[_x][_y][_z] ? 1.0 : 0.0);
+                obstacleNumbers[_x_resized][_y_resized][_z_resized] ++;
+//                float rate = obstacleRate[_x_resized][_y_resized][_z_resized] / (float)obstacleNumbers[_x_resized][_y_resized][_z_resized];
+//                std::cout << rate << std::endl;
             }
         }
     }
     for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->scaleY; y++) {
+        for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                this->obstacles[x][y][z] = (obstacleRate[x][y][z] / (float)obstacleNumbers[x][y][z] > .5f);
+                if (obstacleRate[x][y][z] != obstacleNumbers[x][y][z])
+                    int w = 0;
+                this->obstacles[x][y][z] = (obstacleRate[x][y][z] / (float)obstacleNumbers[x][y][z]) > .5f;
             }
         }
     }
@@ -92,6 +96,8 @@ void FluidSimulation::step()
     this->diffuse();*/
     this->velocityStep();
     this->densityStep();
+    this->set_bounds(this->velocity, true, false);
+    this->set_bounds(this->density, false, true);
 }
 
 void FluidSimulation::velocityStep()
