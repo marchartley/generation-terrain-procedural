@@ -85,6 +85,7 @@ public:
     FancySlider* manualRocksStrengthSlider;
     QRadioButton* addingMode;
     QRadioButton* suppressMode;
+    QPushButton* curvesAddControlPointButton;
     FancySlider* curvesErosionSizeSlider;
     FancySlider* curvesErosionStrengthSlider;
     QPushButton* curvesErosionCreateMatter;

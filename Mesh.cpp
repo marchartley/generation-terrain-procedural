@@ -55,6 +55,15 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
     this->computeColors();
     return *this;
 }
+Mesh Mesh::fromArray(std::vector<float> vertices, std::vector<int> indices)
+{
+    std::vector<Vector3> vecVertices;
+    for (size_t i = 0; i < vertices.size(); i += 3)
+    {
+        vecVertices.push_back(Vector3(vertices[i], vertices[i+1], vertices[i+2]));
+    }
+    return this->fromArray(vecVertices, indices);
+}
 
 void Mesh::computeIndices(std::vector<int> indices)
 {

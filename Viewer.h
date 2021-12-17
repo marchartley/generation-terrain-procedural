@@ -9,6 +9,7 @@
 #include <qmessagebox.h>
 #include "RockErosion.h"
 #include "Shader.h"
+#include "Sphere.h"
 #include <QObject>
 
 enum MapMode {
@@ -52,6 +53,8 @@ public Q_SLOTS:
     void setCurvesErosionSize(int newSize) { this->curvesErosionSize = newSize; }
     void setCurvesErosionStrength(float newStrength) { this->curvesErosionStrength = newStrength;}
     void setCurvesErosionAddingMatterMode(bool addingMode) { this->addingCurvesErosionMatterMode = addingMode; }
+    void addCurvesControlPoint(Vector3 pos);
+    void setCurvesErosionConstructionMode(bool isConstructing) {this->curvesErosionConstructionMode = isConstructing; }
     void createTunnel(bool removingMatter = true);
 
     bool createGlobalGravity();
@@ -128,6 +131,8 @@ public:
     RockErosion matter_adder;
     std::vector<std::vector<Vector3>> lastRocksLaunched;
     std::vector<std::vector<Vector3>> lastFailedRocksLaunched;
+    bool curvesErosionConstructionMode = false;
+    std::vector<Vector3> currentTunnelPoints;
     std::vector<Vector3> tunnelPath;
     bool mouseInWorld = false;
     Vector3 mousePosWorld;
@@ -147,6 +152,8 @@ public:
     bool checkMouseOnVoxel();
 
     unsigned int frame_num = 0;
+
+    Sphere grabber;
 
     Mesh rocksMeshes;
     Mesh failedRocksMeshes;

@@ -14,6 +14,7 @@ public:
     Mesh(std::vector<Vector3> _vertexArray);
     Mesh(std::vector<float> _vertexArrayFloat);
     Mesh fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
+    Mesh fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
 
     void clear();
     Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);

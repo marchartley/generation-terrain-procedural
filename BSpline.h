@@ -11,6 +11,7 @@ public:
     BSpline(int numberOfPoints);
     BSpline(std::vector<Vector3> points);
 
+    std::vector<Vector3> getPath(float resolution);
     Vector3 getPoint(float x);
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
 
