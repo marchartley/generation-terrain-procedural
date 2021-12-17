@@ -2,14 +2,14 @@ QT *= quick opengl xml widgets gui
 CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
 unix {
-    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen
-    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5
+    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
+    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 -ltbb -ltbbmalloc
 }
 win32 {
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
 }
-CONFIG += c++11
+CONFIG += c++14
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.
@@ -26,10 +26,12 @@ SOURCES += \
         LayerBasedGrid.cpp \
         MarchingCubes.cpp \
         Matrix.cpp \
+        Matrix3.cpp \
         Mesh.cpp \
         RockErosion.cpp \
         Shader.cpp \
         ShaderElement.cpp \
+        Sphere.cpp \
         UnderwaterErosion.cpp \
         Vector3.cpp \
         Vertex.cpp \
@@ -62,10 +64,12 @@ HEADERS += \
     LayerBasedGrid.h \
     MarchingCubes.h \
     Matrix.h \
+    Matrix3.h \
     Mesh.h \
     RockErosion.h \
     Shader.h \
     ShaderElement.h \
+    Sphere.h \
     UnderwaterErosion.h \
     Vector3.h \
     Vertex.h \
@@ -82,6 +86,8 @@ vertex_shader_gouraud.glsl
 
 
 DISTFILES += \
+    grabber_fragment_shader.glsl \
+    grabber_vertex_shader.glsl \
     layer_based_fragment_shader.glsl \
     layer_based_vertex_shader.glsl \
     no_fragment_shader.glsl \

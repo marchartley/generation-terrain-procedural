@@ -14,6 +14,14 @@ BSpline::BSpline(int numberOfPoints) {
     }
 }
 
+std::vector<Vector3> BSpline::getPath(float resolution)
+{
+    std::vector<Vector3> path;
+    for (float x = 0.0; x <= 1.0; x += resolution)
+        path.push_back(this->getPoint(x));
+    return path;
+}
+
 Vector3 BSpline::getPoint(float x)
 {
     if(points.size() == 0)

@@ -141,12 +141,16 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
     return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
 
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(std::shared_ptr<Vector3> startingPoint, std::shared_ptr<Vector3> endingPoint, int numberPoints, bool addingMatter)
+
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
-    curve.points[0].z = -1.0;
-    curve.points[1].z =  0.9;
-    curve.points[2].z = -1.0;
+    for (Vector3& coord : curve.points)
+        coord = ((coord + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
+    return CreateTunnel(curve, addingMatter);
+}
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter)
+{
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),
@@ -157,12 +161,12 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(std::shared_ptr<Vector3> st
     std::vector<Vector3> coords;
     for (float i = 0; i < 1.0; i += resolution)
     {
-        Vector3 pos = ((curve.getPoint(i) + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
+        Vector3 pos = (path.getPoint(i));
         coords.push_back(pos - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
         float rockSize = width.getPoint(i).y * this->maxRockSize;
         RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
         rock.Apply(grid, pos, addingMatter, false);
-        coords.push_back((((curve.getPoint(i + resolution) + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ)) - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+        coords.push_back(path.getPoint(i + resolution) - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
     }
     grid->remeshAll();
     return coords;

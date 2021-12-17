@@ -1,3 +1,5 @@
+#define OPENVDB_9_ABI_COMPATIBLE
+
 #include "Globals.h"
 #include "Viewer.h"
 
@@ -11,7 +13,7 @@
 //#define ViewerInterface Viewer
 
 //#include <openvdb/openvdb.h>
-
+#include "Matrix3.h"
 int main(int argc, char *argv[])
 {
 //    openvdb::initialize();

@@ -5,6 +5,7 @@
 #include <chrono>
 #include "UnderwaterErosion.h"
 #include "Matrix.h"
+#include "BSpline.h"
 
 #include <sys/stat.h>
 
@@ -66,6 +67,8 @@ void Viewer::init() {
     const char* fShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
     const char* vShader_layer = "C:/codes/Qt/generation-terrain-procedural/layer_based_vertex_shader.glsl";
     const char* fShader_layer = "C:/codes/Qt/generation-terrain-procedural/layer_based_fragment_shader.glsl";
+//    const char* vGrabberShader = "C:/codes/Qt/generation-terrain-procedural/grabber_vertex_shader.glsl";
+//    const char* fGrabberShader = "C:/codes/Qt/generation-terrain-procedural/grabber_fragment_shader.glsl";
     const char* vNoShader = "C:/codes/Qt/generation-terrain-procedural/no_vertex_shader.glsl";
     const char* fNoShader = "C:/codes/Qt/generation-terrain-procedural/no_fragment_shader.glsl";
 #elif linux
@@ -75,6 +78,8 @@ void Viewer::init() {
     const char* fShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
     const char* vShader_layer = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/layer_based_vertex_shader.glsl";
     const char* fShader_layer = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/layer_based_fragment_shader.glsl";
+//    const char* vGrabberShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/grabber_vertex_shader.glsl";
+//    const char* fGrabberShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/grabber_fragment_shader.glsl";
     const char* vNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_vertex_shader.glsl";
     const char* fNoShader = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/no_fragment_shader.glsl";
 #endif
@@ -84,20 +89,25 @@ void Viewer::init() {
     GlobalsGL::generateBuffers();
     this->rocksVBO = GlobalsGL::newBufferId();
 
+    this->grabber = Sphere();
+
     this->shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->rocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->failedRocksMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->flowDebugMeshes.shader = std::make_shared<Shader>(vNoShader, fNoShader);
     this->tunnelsMesh.shader = std::make_shared<Shader>(vNoShader, fNoShader);
+    this->grabber.mesh.shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
     float rocksColor[4] = {86/255., 176/255., 12/255., 1.0};
     float failedRocksColor[4] = {176/255., 72/255., 12/255., 1.0};
     float flowfieldColor[4] = {143/255., 212/255., 255/255., 1.0};
     float tunnelsColor[4] = {152/255., 94/255., 209/255., 1.0};
+    float grabberColor[4] = {160/255., 5/255., 0/255., 1.0};
     this->rocksMeshes.shader->setVector("color", rocksColor, 4);
     this->failedRocksMeshes.shader->setVector("color", failedRocksColor, 4);
     this->flowDebugMeshes.shader->setVector("color", flowfieldColor, 4);
     this->tunnelsMesh.shader->setVector("color", tunnelsColor, 4);
+    this->grabber.mesh.shader->setVector("color", grabberColor, 4);
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
     this->rocksMeshes.useIndices = false;
@@ -269,6 +279,9 @@ void Viewer::draw() {
     this->tunnelsMesh.shader->setMatrix("proj_matrix", pMatrix);
     this->tunnelsMesh.shader->setMatrix("mv_matrix", mvMatrix);
     this->tunnelsMesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->grabber.mesh.shader->setMatrix("proj_matrix", pMatrix);
+    this->grabber.mesh.shader->setMatrix("mv_matrix", mvMatrix);
+    this->grabber.mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     if (displayRockTrajectories) {
         this->rocksMeshes.display(GL_LINES);
     }
@@ -280,6 +293,9 @@ void Viewer::draw() {
     }
     if (displayTunnelsPath) {
         this->tunnelsMesh.display(GL_LINES);
+    }
+    if (this->curvesErosionConstructionMode) {
+        this->grabber.display();
     }
 
 
@@ -306,6 +322,10 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
     checkMouseOnVoxel();
+    this->grabber.buildVerticesFlat();
+    if (curvesErosionConstructionMode && this->mouseInWorld) {
+        this->addCurvesControlPoint(this->mousePosWorld);
+    }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
         this->throwRock();
@@ -490,11 +510,31 @@ void Viewer::computeLoD()
     this->voxelGrid->remeshAll();
     this->update();
 }
+void Viewer::addCurvesControlPoint(Vector3 pos)
+{
+    this->currentTunnelPoints.push_back(pos);
+    BSpline path(this->currentTunnelPoints);
 
+    std::vector<Vector3> vertices = path.getPath(0.1);
+    std::vector<Vector3> meshVertices;
+    for (size_t i = 0; i < vertices.size() - 1; i++)
+    {
+        meshVertices.push_back(vertices[i] - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
+        meshVertices.push_back(vertices[i+1] - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
+    }
+    this->tunnelsMesh.fromArray(meshVertices);
+    this->tunnelsMesh.update();
+    update();
+}
 void Viewer::createTunnel(bool removingMatter)
 {
+    this->curvesErosionConstructionMode = false;
     UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    this->tunnelsMesh.fromArray(erod.CreateTunnel(nullptr, nullptr, 3, !removingMatter));
+    if (this->currentTunnelPoints.empty())
+        this->tunnelsMesh.fromArray(erod.CreateTunnel(3, !removingMatter));
+    else
+        this->tunnelsMesh.fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter));
+    this->currentTunnelPoints.clear();
     this->tunnelsMesh.update();
     update();
 }
@@ -521,6 +561,7 @@ bool Viewer::checkMouseOnVoxel()
     if (found) {
         std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
+        this->grabber.position = currPos - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
     return found;
 }
