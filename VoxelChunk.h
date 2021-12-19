@@ -8,6 +8,7 @@ class VoxelChunk;
 #include "MarchingCubes.h"
 #include "Mesh.h"
 #include "Vertex.h"
+#include "Matrix3.h"
 #include <functional>
 #include <memory>
 #include <optional>
@@ -16,8 +17,8 @@ class VoxelChunk : public std::enable_shared_from_this<VoxelChunk>
 {
 public:
     VoxelChunk();
-//    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< TerrainTypes > > > data, std::shared_ptr<VoxelGrid> parent);
-    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, std::vector<std::vector<std::vector< float > > > iso_data, std::shared_ptr<VoxelGrid> parent);
+//    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<TerrainTypes> data, std::shared_ptr<VoxelGrid> parent);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<float> iso_data, std::shared_ptr<VoxelGrid> parent);
     ~VoxelChunk();
 
     void display();
@@ -47,17 +48,17 @@ public:
 
 
 //protected:
-//    std::vector<std::vector<std::vector<TerrainTypes>>> data;
-    std::vector<std::vector<std::vector<float>>> iso_data;
+//    Matrix3<TerrainTypes> data;
+    Matrix3<float> iso_data;
     int x, y;
     int sizeX, sizeY, height;
-    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxels;
-    std::vector<std::vector<std::vector<float>>> voxelValues;
-    std::vector<std::vector<std::vector<float>>> originalVoxelValues;
-    std::vector<std::vector<std::vector<int>>> voxelGroups;
-    std::vector<std::vector<std::vector<Vector3>>> flowField;
-    std::vector<std::vector<std::vector<int>>> distanceField;
-    std::vector<std::vector<std::vector<float>>> pressureField;
+    Matrix3<std::shared_ptr<Voxel>> voxels;
+    Matrix3<float> voxelValues;
+    Matrix3<float> originalVoxelValues;
+    Matrix3<int> voxelGroups;
+    Matrix3<Vector3> flowField;
+    Matrix3<int> distanceField;
+    Matrix3<float> pressureField;
     int LoDIndex = 1;
     std::vector<int> LoDs;
 
@@ -76,18 +77,18 @@ public:
         this->applyTo(this->voxels, func);
     }
     template<class F, class T>
-    void applyTo(std::vector<std::vector<std::vector<T>>>& array, F func) {
+    void applyTo(Matrix3<T>& array, F func) {
         for(int v_x = 0; v_x < sizeX; v_x++) {
             for(int v_y = 0; v_y < sizeY; v_y++) {
                 for(int h = 0; h < height; h++) {
-                    func(array[v_x][v_y][h]);
+                    func(array(v_x, v_y, h));
                 }
             }
         }
     }
 
-    std::vector<std::vector<std::vector<float>>>& toFloat();
-    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>>& toVoxels();
+    Matrix3<float>& toFloat();
+    Matrix3<std::shared_ptr<Voxel>>& toVoxels();
 
     std::shared_ptr<VoxelGrid> parent;
 

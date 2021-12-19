@@ -5,13 +5,6 @@
 #include <iostream>
 #include <vector>
 
-#define GRID1D_float std::vector<float>
-#define GRID1D_vec3 std::vector<Vector3>
-#define GRID2D_float std::vector<std::vector<float>>
-#define GRID2D_vec3 std::vector<std::vector<Vector3>>
-#define GRID3D_float std::vector<std::vector<std::vector<float>>>
-#define GRID3D_vec3 std::vector<std::vector<std::vector<Vector3>>>
-
 class Vector3 {
 public:
     float x, y, z;
@@ -38,16 +31,16 @@ public:
     Vector3 normalized();
 
     float divergence() { return x + y + z; }
-
-    static GRID3D_vec3 gradient(GRID3D_float field);
-    static GRID3D_vec3 grad(GRID3D_float field);
-    static GRID3D_float divergence(GRID3D_vec3 field);
-    static GRID3D_float div(GRID3D_vec3 field);
-    static GRID3D_vec3 curl(GRID3D_vec3 field);
-    static GRID3D_vec3 rot(GRID3D_vec3 field);
-    static GRID3D_float laplacian(GRID3D_float field);
-    static GRID3D_vec3 laplacian(GRID3D_vec3 field);
-
+/*
+    static Matrix3<Vector3> gradient(Matrix3<float> field);
+    static Matrix3<Vector3> grad(Matrix3<float> field);
+    static Matrix3<float> divergence(Matrix3<Vector3> field);
+    static Matrix3<float> div(Matrix3<Vector3> field);
+    static Matrix3<Vector3> curl(Matrix3<Vector3> field);
+    static Matrix3<Vector3> rot(Matrix3<Vector3> field);
+    static Matrix3<float> laplacian(Matrix3<float> field);
+    static Matrix3<Vector3> laplacian(Matrix3<Vector3> field);
+*/
 
     static Vector3 random();
 

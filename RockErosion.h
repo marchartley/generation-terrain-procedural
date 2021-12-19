@@ -2,6 +2,7 @@
 #define ROCKEROSION_H
 
 #include "Voxel.h"
+#include "Matrix3.h"
 
 class RockErosion
 {
@@ -13,7 +14,7 @@ public:
 
     int size;
     float maxStrength;
-    std::vector<std::vector<std::vector<float>>> attackMask;
+    Matrix3<float> attackMask;
 };
 
 #endif // ROCKEROSION_H

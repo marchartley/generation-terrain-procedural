@@ -6,28 +6,26 @@
 
 Vector3 HSVtoRGB(float H, float S,float V);
 
-VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vector<std::vector<std::vector< float > > > iso_data, std::shared_ptr<VoxelGrid> parent)
+VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<float> iso_data, std::shared_ptr<VoxelGrid> parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
-    this->voxelGroups = std::vector<std::vector<std::vector<int>>>(this->sizeX);
+    this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->height);
     for(int v_x = 0; v_x < sizeX; v_x++) {
-        this->voxelGroups[v_x] = std::vector<std::vector<int>>(this->sizeY);
         for(int v_y = 0; v_y < sizeY; v_y++) {
-            this->voxelGroups[v_x][v_y] = std::vector<int>(this->height);
             for(int h = 0; h < height; h++) {
-                this->voxelGroups[v_x][v_y][h] = -1;
+                this->voxelGroups(v_x, v_y, h) = -1;
             }
         }
     }
     this->mesh.useIndices = false;
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
-    this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->height)));
+    this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->height);
     this->updateLoDsAvailable();
     this->computeDistanceField();
 }
 
-VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, std::vector<std::vector<std::vector<float>>>(), nullptr)
+VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, Matrix3<float>(), nullptr)
 {
 
 }
@@ -40,11 +38,11 @@ void VoxelChunk::createVoxels()
 {
     if (needRemeshing)
     {
-        this->voxels = std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>>(this->sizeX, std::vector<std::vector<std::shared_ptr<Voxel>>>(this->sizeY, std::vector<std::shared_ptr<Voxel>>(this->height)));
+        this->voxels = Matrix3<std::shared_ptr<Voxel>>(this->sizeX, this->sizeY, this->height);
         for(int x = 0; x < this->sizeX; x++) {
             for(int y = 0; y < this->sizeY; y++) {
                 for(int z = 0; z < this->height; z++) {
-                    std::shared_ptr<Voxel> v(new Voxel(x, y, z, voxelValues[x][y][z] > 0.0 ? DIRT : AIR, 1.0, voxelValues[x][y][z], this->shared_from_this()));
+                    std::shared_ptr<Voxel> v(new Voxel(x, y, z, voxelValues(x, y, z) > 0.0 ? DIRT : AIR, 1.0, voxelValues(x, y, z), this->shared_from_this()));
                 }
             }
         }
@@ -59,19 +57,19 @@ void VoxelChunk::computeFlowfield(Vector3 sea_current) //int blur_iterations)
     for(int v_x = 0; v_x < sizeX; v_x++) {
         for(int v_y = 0; v_y < sizeY; v_y++) {
             for(int h = 0; h < height; h++) {
-                flowField[v_x][v_y][h] = this->computeNormal(v_x + this->x, v_y + this->y, h);
+                flowField(v_x, v_y, h) = this->computeNormal(v_x + this->x, v_y + this->y, h);
             }
         }
     }
     for (int iter_blur = 0; iter_blur < blur_iterations; iter_blur++) {
-        std::vector<std::vector<std::vector<Vector3>>> originalFlowField = this->flowField;
+        Matrix3<Vector3> originalFlowField = this->flowField;
         for(int v_x = 1; v_x < sizeX - 1; v_x++) {
             for(int v_y = 1; v_y < sizeY - 1; v_y++) {
                 for(int h = 1; h < height - 1; h++) {
                     for(int d_x = -1; d_x <= 1; d_x++) {
                         for(int d_y = -1; d_y <= 1; d_y++) {
                             for(int d_h = -1; d_h <= 1; d_h++) {
-                                flowField[v_x][v_y][h] += originalFlowField[v_x + d_x][v_y + d_y][h + d_h] / 27.0;
+                                flowField(v_x, v_y, h) += originalFlowField(v_x + d_x, v_y + d_y, h + d_h) / 27.0;
                             }
                         }
                     }
@@ -82,38 +80,39 @@ void VoxelChunk::computeFlowfield(Vector3 sea_current) //int blur_iterations)
     for(int v_x = 1; v_x < sizeX-1; v_x++) {
         for(int v_y = 1; v_y < sizeY-1; v_y++) {
             for(int h = 1; h < height-1; h++) {
-                    flowField[v_x][v_y][h] /= (blur_iterations + 1);
-//                flowField[v_x][v_y][h].normalize();
+                    flowField(v_x, v_y, h) /= (blur_iterations + 1);
+//                flowField(v_x, v_y, h).normalize();
             }
         }
     }*/
     computeDistanceField();
-    std::vector<std::vector<std::vector<Vector3>>> pressionGradient = Vector3::grad(this->pressureField);
-    this->flowField = pressionGradient;
+    Matrix3<Vector3> pressionGradient = this->pressureField.gradient();
+    this->flowField = pressionGradient * (-1.f) + sea_current;
 //    if(sea_current.norm() == 0)
 //        return;
+    /*
     for (size_t x = 0; x < flowField.size(); x++) {
-        for (size_t y = 0; y < flowField[x].size(); y++) {
-            for (size_t z = 0; z < flowField[x][y].size(); z++) {
-                flowField[x][y][z] *= -1.0; // Inverse the gradient
-                flowField[x][y][z] += sea_current;
+        for (size_t y = 0; y < flowField(x).size(); y++) {
+            for (size_t z = 0; z < flowField(x, y).size(); z++) {
+                flowField(x, y, z) *= -1.0; // Inverse the gradient
+                flowField(x, y, z) += sea_current;
             }
         }
-    }
+    }*/
 }
 
 void VoxelChunk::computeDistanceField()
 {
-    this->distanceField = std::vector<std::vector<std::vector<int>>>(this->sizeX, std::vector<std::vector<int>>(this->sizeY, std::vector<int>(this->height, 9999999)));
-    this->pressureField = std::vector<std::vector<std::vector<float>>>(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->height, 0)));
+    this->distanceField = Matrix3<int>(this->sizeX, this->sizeY, this->height, 9999999);
+    this->pressureField = Matrix3<float>(this->sizeX, this->sizeY, this->height, 0);
     // Check left
     for (int x = 1; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->height; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x - 1][y][z] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x - 1, y, z) + 1);
                 }
             }
         }
@@ -122,10 +121,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX - 1; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->height; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x + 1][y][z] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x + 1, y, z) + 1);
                 }
             }
         }
@@ -134,10 +133,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 1; y < this->sizeY; y++) {
             for (int z = 0; z < this->height; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y - 1][z] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x, y - 1, z) + 1);
                 }
             }
         }
@@ -146,10 +145,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY - 1; y++) {
             for (int z = 0; z < this->height; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y + 1][z] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x, y + 1, z) + 1);
                 }
             }
         }
@@ -158,10 +157,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 1; z < this->height; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y][z - 1] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x, y, z - 1) + 1);
                 }
             }
         }
@@ -170,10 +169,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->height - 1; z++) {
-                if (this->voxelValues[x][y][z] > 0) {
-                    distanceField[x][y][z] = 0;
+                if (this->voxelValues(x, y, z) > 0) {
+                    distanceField(x, y, z) = 0;
                 } else {
-                    distanceField[x][y][z] = std::min(distanceField[x][y][z], distanceField[x][y][z + 1] + 1);
+                    distanceField(x, y, z) = std::min(distanceField(x, y, z), distanceField(x, y, z + 1) + 1);
                 }
             }
         }
@@ -182,10 +181,10 @@ void VoxelChunk::computeDistanceField()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->height; z++) {
-                if (distanceField[x][y][z] > 0) // Works better with 1/dist than 1/dist^2
-                    this->pressureField[x][y][z] = 1 / (float)this->distanceField[x][y][z]; //std::min(1.f , 1 / ((float)std::pow(this->distanceField[x][y][z], 2)));
+                if (distanceField(x, y, z) > 0) // Works better with 1/dist than 1/dist^2
+                    this->pressureField(x, y, z) = 1 / (float)this->distanceField(x, y, z); //std::min(1.f , 1 / ((float)std::pow(this->distanceField(x, y, z), 2)));
                 else
-                    this->pressureField[x][y][z] = 1.0;
+                    this->pressureField(x, y, z) = 1.0;
             }
         }
     }
@@ -215,7 +214,9 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     std::vector<Vector3> colors;
     std::vector<Vector3> voxelVertices;
     if (applyMarchingCubes) {
+        std::cout << "Apply MC" << std::endl;
         voxelVertices = this->applyMarchingCubes(true, &colors);
+        std::cout << "End MC" << std::endl;
     }
     else {
         colors.reserve(this->sizeX * this->sizeY * this->height * 6);
@@ -223,8 +224,8 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
         for (int x = 0; x < this->sizeX; x++) {
             for (int y = 0; y < this->sizeY; y++) {
                 for (int z = 0; z < this->height; z++) {
-                    if (this->voxelValues[x][y][z] > 0.0) {
-                        Voxel v(x, y, z, TerrainTypes::DIRT, 1.0, this->voxelValues[x][y][z], this->shared_from_this());
+                    if (this->voxelValues(x, y, z) > 0.0) {
+                        Voxel v(x, y, z, TerrainTypes::DIRT, 1.0, this->voxelValues(x, y, z), this->shared_from_this());
                         // Add the vertices to the global mesh
                         std::vector<Vector3> vertice = v.getMeshVertices(true);
                         voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
@@ -235,14 +236,14 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
 //                                X--;    // Remove a face per neighbor
                         X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
                         for (int xx = 0; xx < X; xx++) {
-                            colors.push_back(Vector3((this->voxelGroups[x][y][z] == 0 ? 1.0 : 0.0), (this->voxelGroups[x][y][z] == 0 ? 0.0 : 1.0), 1.0));
-        //                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
+                            colors.push_back(Vector3((this->voxelGroups(x, y, z) == 0 ? 1.0 : 0.0), (this->voxelGroups(x, y, z) == 0 ? 0.0 : 1.0), 1.0));
+        //                        colors->push_back(HSVtoRGB((voxels(i, j, k)->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
                         }
                     }
                 }
             }
         }
-        /*this->applyToVoxels([&](std::shared_ptr<Voxel> v) -> void {
+        /*this->applyToVoxels((&)(std::shared_ptr<Voxel> v) -> void {
             if ((bool)*v) {
                 // Add the vertices to the global mesh
                 std::vector<Vector3> vertice = v->getMeshVertices(true);
@@ -255,14 +256,17 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
                 X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
                 for (int x = 0; x < X; x++) {
                     colors.push_back(Vector3((v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
-//                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
+//                        colors->push_back(HSVtoRGB((voxels(i, j, k)->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
                 }
             }
         });*/
     }
     this->mesh.colorsArray = colors;
+    std::cout << "creating mesh" << std::endl;
     this->mesh.fromArray(voxelVertices);
+    std::cout << "Updating" << std::endl;
     this->mesh.update();
+    std::cout << "End" << std::endl;
 }
 
 Vector3 VoxelChunk::computeNormal(Vector3 pos)
@@ -319,7 +323,7 @@ std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float i
 //            float blueVal = this->parent->getVoxelValue(v1) - this->parent->getOriginalVoxelValue(v1) + this->parent->getVoxelValue(v2) - this->parent->getOriginalVoxelValue(v2);
 //            blueVal = abs(blueVal / 2.0);$
             float blueVal = 30/255.0;
-            outColors->push_back(vertices[0].isosurface > 0.5 ?  //map[x][y][z] > 0.5 ?
+            outColors->push_back(vertices[0].isosurface > 0.5 ?  //map(x, y, z) > 0.5 ?
                                  Vector3(150/255.0, 100/255.0, blueVal) : //30/255.0) :
                                  Vector3(224/255.0, 209/255.0, blueVal)); //72/255.0));
         }
@@ -343,18 +347,17 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 {
     int LoD = this->LoDs[this->LoDIndex % this->LoDs.size()];//std::max(0, std::min(LoD, std::min(std::min(this->sizeX, this->sizeY), this->height)));
     std::vector<Vector3> colors;
-    std::vector<std::vector<std::vector<float> > > map = this->voxelValues;
+    Matrix3<float> map = this->voxelValues;
 
     bool addedLeft = false;
     bool addedFront = false;
     if (this->neighboring_chunks.find(LEFT) != this->neighboring_chunks.end()) {
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[LEFT];
-        map.insert(map.begin(), std::vector<std::vector<float>>());
+        map.insertRow(0, 0); // Insert column at the begining of the X-axis
         for (int y = 0; y < this->sizeY; y++) {
-            map[0].push_back(std::vector<float>());
             for (int z = 0; z < this->height; z++)
             {
-                map[0][y].push_back(n->voxelValues[n->sizeX - 1][y][z]);
+                map(0, y, z) = n->voxelValues(n->sizeX - 1, y, z);
             }
         }
         addedLeft = true;
@@ -363,67 +366,66 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
     if (this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end()) {
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[FRONT];
         int offset = addedLeft ? 1 : 0;
+        map.insertRow(offset, 1);
         for (int x = 0; x < this->sizeX; x++) {
-            map[x + offset].insert(map[x + offset].begin(), std::vector<float>());
             for (int z = 0; z < this->height; z++)
             {
-                map[x + offset][0].push_back(n->voxelValues[x][n->voxelValues[x].size() - 1][z]);
+                map(x + offset, 0, z) = n->voxelValues(x, n->voxelValues.sizeY - 1, z);
             }
         }
         addedFront = true;
     }
     if (addedLeft && addedFront) {
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[LEFT]->neighboring_chunks[FRONT];
-        map[0].insert(map[0].begin(), std::vector<float>());
         for (int z = 0; z < this->height; z++)
-            map[0][0].push_back(n->voxelValues[n->voxelValues.size() - 1][n->voxelValues[0].size() - 1][z]);
+            map(0, 0, z) = n->voxelValues(n->voxelValues.sizeX - 1, n->voxelValues.sizeY - 1, z);
     }
 
     if (this->x == 0) {
-        for (size_t y = 0; y < map[0].size(); y++)
+        for (int y = 0; y < map.sizeY; y++)
             for (int z = 0; z < this->height; z++)
-                map[0][y][z] = -1;
+                map(0, y, z) = -1;
     }
     if (this->lastChunkOnX)
-        for (size_t y = 0; y < map[0].size(); y++)
+        for (int y = 0; y < map.sizeY; y++)
             for (int z = 0; z < this->height; z++)
-                map[map.size() - 1][y][z] = -1;
+                map(map.sizeX - 1, y, z) = -1;
     if (this->y == 0) {
-        for (size_t x = 0; x < map.size(); x++)
+        for (int x = 0; x < map.sizeX; x++)
             for (int z = 0; z < this->height; z++)
-                map[x][0][z] = -1;
+                map(x, 0, z) = -1;
     }
     if (this->lastChunkOnY)
-        for (size_t x = 0; x < map.size(); x++)
+        for (int x = 0; x < map.sizeX; x++)
             for (int z = 0; z < this->height; z++)
-                map[x][map[x].size() - 1][z] = -1;
+                map(x, map.sizeY - 1, z) = -1;
 
-    for (size_t x = 0; x < map.size(); x++) {
-        for (size_t y = 0; y < map[0].size(); y++) {
-            map[x][y][0] = -1;
-            map[x][y][map[x][y].size() - 1] = -1;
+    for (int x = 0; x < map.sizeX; x++) {
+        for (int y = 0; y < map.sizeY; y++) {
+            map(x, y, 0) = -1;
+            map(x, y, map.sizeZ - 1) = -1;
         }
     }
 
     float isolevel = 0.0;
     std::vector<Vector3> vertexArray;
-    size_t x = 0, y = 0, z = 0;
-    for (x = 0; x < map.size() - 1; x += LoD) {
-        for (y = 0; y < map[x].size() - 1; y += LoD) {
-            for (z = 0; z < map[x][y].size() - 1; z += LoD) {
-                int LoDX = std::min(LoD, int(map.size() - x - 1));
-                int LoDY = std::min(LoD, int(map[x].size() - y - 1));
-                int LoDZ = std::min(LoD, int(map[x][y].size() - z - 1));
+    int x = 0, y = 0, z = 0;
+    for (x = 0; x < map.sizeX - 1; x += LoD) {
+        for (y = 0; y < map.sizeY - 1; y += LoD) {
+            for (z = 0; z < map.sizeZ - 1; z += LoD) {
+                int LoDX = std::min(LoD, int(map.sizeX - x - 1));
+                int LoDY = std::min(LoD, int(map.sizeY - y - 1));
+                int LoDZ = std::min(LoD, int(map.sizeZ - z - 1));
                 float x_offset = x - (addedLeft ? 1.0 : 0.0);//-LoDIndex);
                 float y_offset = y - (addedFront ? 1.0 : 0.0);//-LoDIndex);
-                Vertex vertices[8] = {Vertex(x_offset       , y_offset       , z       , map[x       ][y       ][z       ]),
-                                      Vertex(x_offset + LoDX, y_offset       , z       , map[x + LoDX][y       ][z       ]),
-                                      Vertex(x_offset + LoDX, y_offset + LoDY, z       , map[x + LoDX][y + LoDY][z       ]),
-                                      Vertex(x_offset       , y_offset + LoDY, z       , map[x       ][y + LoDY][z       ]),
-                                      Vertex(x_offset       , y_offset       , z + LoDZ, map[x       ][y       ][z + LoDZ]),
-                                      Vertex(x_offset + LoDX, y_offset       , z + LoDZ, map[x + LoDX][y       ][z + LoDZ]),
-                                      Vertex(x_offset + LoDX, y_offset + LoDY, z + LoDZ, map[x + LoDX][y + LoDY][z + LoDZ]),
-                                      Vertex(x_offset       , y_offset + LoDY, z + LoDZ, map[x       ][y + LoDY][z + LoDZ])
+                Vertex vertices[8] = {Vertex(x_offset       , y_offset       , z       , map(x       , y       , z       )),
+                                      Vertex(x_offset + LoDX, y_offset       , z       , map(x + LoDX, y       , z       )),
+                                      Vertex(x_offset + LoDX, y_offset + LoDY, z       , map(x + LoDX, y + LoDY, z       )),
+                                      Vertex(x_offset       , y_offset + LoDY, z       , map(x       , y + LoDY, z       )),
+                                      Vertex(x_offset       , y_offset       , z + LoDZ, map(x       , y       , z + LoDZ)),
+                                      Vertex(x_offset + LoDX, y_offset       , z + LoDZ, map(x + LoDX, y       , z + LoDZ)),
+                                      Vertex(x_offset + LoDX, y_offset + LoDY, z + LoDZ, map(x + LoDX, y + LoDY, z + LoDZ)),
+                                      Vertex(x_offset       , y_offset + LoDY, z + LoDZ, map(x       , y + LoDY, z + LoDZ))
                                      };
 
                 std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
@@ -438,8 +440,8 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 
 void VoxelChunk::makeItFall()
 {
-    /*this->applyToVoxels([](std::shared_ptr<Voxel> v) -> void {
-        std::shared_ptr<Voxel> v_1 = v->neighbors[TOP];
+    /*this->applyToVoxels(()(std::shared_ptr<Voxel> v) -> void {
+        std::shared_ptr<Voxel> v_1 = v->neighbors(TOP);
         if (v_1 == nullptr) {
             v->isosurface = -0.01; // Just destroy the top voxels
             v->manual_isosurface = 0.0;
@@ -453,11 +455,11 @@ void VoxelChunk::makeItFall()
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->height - 1; z++) {
-                if(this->voxelGroups[x][y][z] == 0 || this->voxelGroups[x][y][z+1] == 0)
+                if(this->voxelGroups(x, y, z) == 0 || this->voxelGroups(x, y, z+1) == 0)
                     continue;
-                this->voxelValues[x][y][z] = this->voxelValues[x][y][z+1];
+                this->voxelValues(x, y, z) = this->voxelValues(x, y, z+1);
             }
-            this->voxelValues[x][y][this->height - 1] = -1.0;
+            this->voxelValues(x, y, this->height - 1) = -1.0;
         }
     }
 //    toFloat();
@@ -467,8 +469,8 @@ void VoxelChunk::letGravityMakeSandFall()
 {
     /*
     bool sandHadAction = false;
-    this->applyToVoxels([&](std::shared_ptr<Voxel> v) -> void {
-        std::shared_ptr<Voxel> v_1 = v->neighbors[TOP];
+    this->applyToVoxels((&)(std::shared_ptr<Voxel> v) -> void {
+        std::shared_ptr<Voxel> v_1 = v->neighbors(TOP);
         if(v_1 && !*v_1) // If the top neighbor is air, don't care?
             return;
         if (v->getIsosurface() > 1.5)
@@ -506,17 +508,17 @@ void VoxelChunk::letGravityMakeSandFall()
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->height - 1; z++) {
-//                if(this->voxelValues[x][y][z+1] <= 0.0) // If it's air, don't mind
+//                if(this->voxelValues(x, y, z+1) <= 0.0) // If it's air, don't mind
 //                    continue;
-                if(this->voxelValues[x][y][z+1] >= 1.0) // If top is dirt, don't
+                if(this->voxelValues(x, y, z+1) >= 1.0) // If top is dirt, don't
                     continue;
-                if(this->voxelValues[x][y][z] >= 1.0) // If the block is staturated, skip.
+                if(this->voxelValues(x, y, z) >= 1.0) // If the block is staturated, skip.
                     continue;
 
-                this->voxelValues[x][y][z] += 1 + (this->voxelValues[x][y][z+1]);
-                this->voxelValues[x][y][z+1] = -1.0;
+                this->voxelValues(x, y, z) += 1 + (this->voxelValues(x, y, z+1));
+                this->voxelValues(x, y, z+1) = -1.0;
             }
-            this->voxelValues[x][y][this->height - 1] = -1.0;
+            this->voxelValues(x, y, this->height - 1) = -1.0;
         }
     }
     */
@@ -569,10 +571,10 @@ void VoxelChunk::computeGroups()
     Voxel::voxelGroups.clear();
     Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
 
-    this->applyTo(this->voxelGroups, [](int& grp) -> void {
+    this->applyTo(this->voxelGroups, ()(int& grp) -> void {
         grp = -1;
     });
-    this->applyToVoxels([](std::shared_ptr<Voxel> v) -> void {
+    this->applyToVoxels(()(std::shared_ptr<Voxel> v) -> void {
         v->group = -1;
         v->isOnGround = false;
     });*/
@@ -615,26 +617,24 @@ bool VoxelChunk::contains(Vector3 v) {
 bool VoxelChunk::contains(float x, float y, float z) {
     return (this->x <= x && x < this->x + this->sizeX && this->y <= y && y < this->y + this->sizeY && 0 <= z && z < this->height);
 }
-std::vector<std::vector<std::vector<float>>>& VoxelChunk::toFloat() {
-    this->voxelValues = std::vector<std::vector<std::vector<float>>>(this->sizeX);
+Matrix3<float>& VoxelChunk::toFloat() {
+    this->voxelValues = Matrix3<float>(this->sizeX, this->sizeY, this->height);
     for(int x = 0; x < this->sizeX; x++) {
-        this->voxelValues[x] = std::vector<std::vector<float>>(this->sizeY);
         for(int y = 0; y < this->sizeY; y++) {
-            this->voxelValues[x][y] = std::vector<float>(this->height);
             for(int z = 0; z < this->height; z++) {
-                this->voxelValues[x][y][z] = this->voxels[x][y][z]->getIsosurface();
+                this->voxelValues(x, y, z) = this->voxels(x, y, z)->getIsosurface();
             }
         }
     }
     return this->voxelValues;
 }
-std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>>& VoxelChunk::toVoxels() {
+Matrix3<std::shared_ptr<Voxel>>& VoxelChunk::toVoxels() {
     return this->voxels; // Remove the function
     createVoxels();
     for(int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->height; z++) {
-                this->voxels[x][y][z]->isosurface = this->voxelValues[x][y][z];
+                this->voxels(x, y, z)->isosurface = this->voxelValues(x, y, z);
             }
         }
     }

@@ -75,141 +75,134 @@ std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
         arr.insert(arr.end(), {v.x, v.y, v.z});
     return arr;
 }
-
-GRID3D_vec3 Vector3::gradient(GRID3D_float field)
+/*
+Matrix3<Vector3> Vector3::gradient(Matrix3<float> field)
 {
-    GRID3D_vec3 returningGrid = GRID3D_vec3(field.size(), GRID2D_vec3(field[0].size(), GRID1D_vec3(field[0][0].size())));
-    for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
+    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 vec = Vector3();
                 Vector3 allDirections;
-                if (x == 0 || x == field.size() - 1 || y == 0 || y == field[x].size() - 1
-                        || z == 0 || z == field[x][y].size() - 1) {
-                    returningGrid[x][y][z] = vec;
+                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
+                        || z == 0 || z == field.sizeZ - 1) {
+                    returningGrid(x, y, z) = vec;
                 } else {
-                    for (int dx = std::max(int(x-1), 0); dx <= std::min(int(x+1), int(field.size() - 1)); dx++) {
-                        for (int dy = std::max(int(y-1), 0); dy <= std::min(int(y+1), int(field[x].size() - 1)); dy++) {
-                            for (int dz = std::max(int(z-1), 0); dz <= std::min(int(z+1), int(field[x][y].size() - 1)); dz++) {
-                                if(dx != int(x) || dy != int(y) || dz != int(z)) {
-                                    Vector3 a = Vector3(dx - int(x), dy - int(y), dz - int(z));
+                    for (int dx = std::max(x-1, 0); dx <= std::min(x+1, field.sizeX - 1); dx++) {
+                        for (int dy = std::max(y-1, 0); dy <= std::min(y+1, field.sizeY - 1); dy++) {
+                            for (int dz = std::max(z-1, 0); dz <= std::min(z+1, field.sizeZ - 1); dz++) {
+                                if(dx != x || dy != y || dz != z) {
+                                    Vector3 a = Vector3(dx - x, dy - y, dz - z);
 //                                    allDirections += a;
-                                    float f = field[dx][dy][dz];
-                                    vec += a * f; //Vector3(dx - x, dy - y, dz - z) * field[dx][dy][dz];
+                                    float f = field(dx, dy, dz);
+                                    vec += a * f; //Vector3(dx - x, dy - y, dz - z) * field(dx, dy, dz);
                                 }
                             }
                         }
                     }
                 }
 
-                returningGrid[x][y][z] = vec;
+                returningGrid(x, y, z) = vec;
 
             }
         }
     }
-    /*for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
-                if (x == 0)
-            }
-        }
-    }*/
     return returningGrid;
 }
 
-GRID3D_vec3 Vector3::grad(GRID3D_float field) {
+Matrix3<Vector3> Vector3::grad(Matrix3<float> field) {
     return Vector3::gradient(field);
 }
 
-GRID3D_float Vector3::divergence(GRID3D_vec3 field)
+Matrix3<float> Vector3::divergence(Matrix3<Vector3> field)
 {
-    GRID3D_float returningGrid = GRID3D_float(field.size(), GRID2D_float(field[0].size(), GRID1D_float(field[0][0].size())));
-    for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
-                returningGrid[x][y][z] = field[x][y][z].divergence();
+    Matrix3<float> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
+                returningGrid(x, y, z) = field(x, y, z).divergence();
             }
         }
     }
     return returningGrid;
 }
 
-GRID3D_float Vector3::div(GRID3D_vec3 field)
+Matrix3<float> Vector3::div(Matrix3<Vector3> field)
 {
     return Vector3::divergence(field);
 }
 
-GRID3D_vec3 Vector3::curl(GRID3D_vec3 field)
+Matrix3<Vector3> Vector3::curl(Matrix3<Vector3> field)
 {
-    GRID3D_vec3 returningGrid = GRID3D_vec3(field.size(), GRID2D_vec3(field[0].size(), GRID1D_vec3(field[0][0].size())));
-    for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
-                Vector3& vec = field[x][y][z];
-                returningGrid[x][y][z] = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
+    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
+                Vector3& vec = field(x, y, z);
+                returningGrid(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
             }
         }
     }
     return returningGrid;
 }
 
-GRID3D_vec3 Vector3::rot(GRID3D_vec3 field)
+Matrix3<Vector3> Vector3::rot(Matrix3<Vector3> field)
 {
     return Vector3::curl(field);
 }
 
-GRID3D_vec3 Vector3::laplacian(GRID3D_vec3 field)
+Matrix3<Vector3> Vector3::laplacian(Matrix3<Vector3> field)
 {
-    GRID3D_vec3 returningGrid = GRID3D_vec3(field.size(), GRID2D_vec3(field[0].size(), GRID1D_vec3(field[0][0].size())));
-    for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
+    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 vec = Vector3();
-                if (x == 0 || x == field.size() - 1 || y == 0 || y == field[x].size() - 1
-                        || z == 0 || z == field[x][y].size() - 1) {
-                    returningGrid[x][y][z] = vec;
+                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
+                        || z == 0 || z == field.sizeZ - 1) {
+                    returningGrid(x, y, z) = vec;
                 } else {
-                    vec += field[x    ][y    ][z + 1];
-                    vec += field[x    ][y    ][z - 1];
-                    vec += field[x    ][y + 1][z    ];
-                    vec += field[x    ][y - 1][z    ];
-                    vec += field[x + 1][y    ][z    ];
-                    vec += field[x - 1][y    ][z    ];
-                    vec -= field[x    ][y    ][z    ] * 6;
+                    vec += field(x    , y    , z + 1);
+                    vec += field(x    , y    , z - 1);
+                    vec += field(x    , y + 1, z    );
+                    vec += field(x    , y - 1, z    );
+                    vec += field(x + 1, y    , z    );
+                    vec += field(x - 1, y    , z    );
+                    vec -= field(x    , y    , z    ) * 6;
                 }
-                returningGrid[x][y][z] = vec;
+                returningGrid(x, y, z) = vec;
             }
         }
     }
     return returningGrid;
 }
 
-GRID3D_float Vector3::laplacian(GRID3D_float field)
+Matrix3<float> Vector3::laplacian(Matrix3<float> field)
 {
-    GRID3D_float returningGrid = GRID3D_float(field.size(), GRID2D_float(field[0].size(), GRID1D_float(field[0][0].size())));
-    for (size_t x = 0; x < field.size(); x++) {
-        for (size_t y = 0; y < field[x].size(); y++) {
-            for (size_t z = 0; z < field[x][y].size(); z++) {
+    Matrix3<float> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
                 float laplace = 0;
-                if (x == 0 || x == field.size() - 1 || y == 0 || y == field[x].size() - 1
-                        || z == 0 || z == field[x][y].size() - 1) {
+                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
+                        || z == 0 || z == field.sizeZ - 1) {
                     // Keep laplacian value to 0
                 } else {
-                    laplace += field[x    ][y    ][z + 1];
-                    laplace += field[x    ][y    ][z - 1];
-                    laplace += field[x    ][y + 1][z    ];
-                    laplace += field[x    ][y - 1][z    ];
-                    laplace += field[x + 1][y    ][z    ];
-                    laplace += field[x - 1][y    ][z    ];
-                    laplace -= field[x    ][y    ][z    ] * 6;
+                    laplace += field(x    , y    , z + 1);
+                    laplace += field(x    , y    , z - 1);
+                    laplace += field(x    , y + 1, z    );
+                    laplace += field(x    , y - 1, z    );
+                    laplace += field(x + 1, y    , z    );
+                    laplace += field(x - 1, y    , z    );
+                    laplace -= field(x    , y    , z    ) * 6;
                 }
-                returningGrid[x][y][z] = laplace;
+                returningGrid(x, y, z) = laplace;
             }
         }
     }
     return returningGrid;
 }
-
+*/
 
 
 
