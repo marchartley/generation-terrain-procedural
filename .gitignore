@@ -1,4 +1,6 @@
 build/
+build-Release/
+build-Release/*
 build-Debug/*
 .pro.user.*
 screenshots/*

@@ -137,7 +137,7 @@ void Mesh::computeColors()
     if (!useIndices) {
         for (size_t i = 0; i < this->colorsArray.size(); i++)
         {
-            std::vector<float> color = Vector3::toArray(this->colorsArrayIndex[i]);
+            std::vector<float> color = Vector3::toArray(this->colorsArray[i]);
             this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), color.begin(), color.end());
         }
     } else {

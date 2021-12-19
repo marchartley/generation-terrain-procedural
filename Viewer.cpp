@@ -582,6 +582,10 @@ void Viewer::closeEvent(QCloseEvent *e) {
 
 bool Viewer::createGlobalGravity()
 {
+    this->voxelGrid->makeItFall();
+    update();
+    return false;
+    /*
     this->startAnimation();
     this->applyLetItFall = !this->applyLetItFall;
 //    if (this->applyLetItFall)
@@ -589,11 +593,15 @@ bool Viewer::createGlobalGravity()
 //    else
         // this->displayMessage( "Gravity stopped caring" );
     update();
-    return this->applyLetItFall;
+    return this->applyLetItFall;*/
 }
 
 bool Viewer::createSandGravity()
 {
+    this->voxelGrid->letGravityMakeSandFall(true);
+    update();
+    return false;
+    /*
     this->startAnimation();
     this->applyLetSandFall = !this->applyLetSandFall;
 //    if (this->applyLetSandFall)
@@ -601,7 +609,7 @@ bool Viewer::createSandGravity()
 //    else
         // this->displayMessage( "Sand stopped falling" );
     update();
-    return this->applyLetSandFall;
+    return this->applyLetSandFall;*/
 }
 
 bool Viewer::startStopRecording()

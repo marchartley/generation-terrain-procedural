@@ -365,12 +365,15 @@ void VoxelGrid::makeItFall(float erosionStrength)
 }
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
-    computeVoxelGroups();
+    auto start = std::chrono::system_clock::now();
+//    computeVoxelGroups();
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
     if (remesh)
         remeshAll();
+    auto duration = std::chrono::duration<float>(std::chrono::system_clock::now() - start);
+    std::cout << duration.count() << " s for making sand fall once" << std::endl;
 }
 
 void VoxelGrid::display() {
