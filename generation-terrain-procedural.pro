@@ -6,10 +6,20 @@ unix {
     LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 -ltbb -ltbbmalloc
 }
 win32 {
-    INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen
+    # I installed the sources of:
+    # glew : https://github.com/nigels-com/glew
+    # libqglviewer : http://www.libqglviewer.com/src/libQGLViewer-2.7.2.zip
+    # eigen : https://gitlab.com/libeigen/eigen
+    # OpenVDB : https://github.com/AcademySoftwareFoundation/openvdb
+    # Boost and TBB are installed by VCPKG (https://github.com/microsoft/vcpkg) at the location C:\Programs_installations\vcpkg
+    # For TBB on Windows, do everything on Release...
+    INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen "C:/Program Files/OpenVDB/include" C:\Programs_installations\vcpkg\installed\x64-windows\include
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
+    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug
+    LIBS *= -L"C:\Program Files\OpenVDB\bin" -lopenvdb
+    DEFINES += "OPENVDB_DLL"
 }
-CONFIG += c++14
+CONFIG += c++17
 
 # You can make your code fail to compile if it uses deprecated APIs.
 # In order to do so, uncomment the following line.

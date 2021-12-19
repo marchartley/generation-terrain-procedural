@@ -19,6 +19,7 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, std::vect
             }
         }
     }
+    this->mesh.useIndices = false;
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
     this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->height)));
@@ -501,6 +502,7 @@ void VoxelChunk::letGravityMakeSandFall()
     });
     this->needRemeshing = sandHadAction;
 //    this->computeGroups();*/
+    /*
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->height - 1; z++) {
@@ -517,7 +519,34 @@ void VoxelChunk::letGravityMakeSandFall()
             this->voxelValues[x][y][this->height - 1] = -1.0;
         }
     }
-//    toFloat();
+    */
+    float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
+    for (int x = 0; x < this->sizeX; x++) {
+        for(int y = 0; y < this->sizeY; y++) {
+            int lastSandyUnsaturatedHeight = 0;
+            for(int z = 0; z < this->height; z++) {
+                float cellValue = this->parent->getVoxelValue(this->x + x, this->y + y, z);
+                if(cellValue < sandLowerLimit) continue;
+                else if (cellValue > sandUpperLimit) {
+                    lastSandyUnsaturatedHeight = z;
+                } else // If it's not dirt nor air
+                {
+                    // Make sand fall until the cell is empty
+                    while (cellValue > 0 && lastSandyUnsaturatedHeight != z) {
+                        float lastSandyCellValue = this->parent->getVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight);
+                        float d_transported = std::min(cellValue, sandUpperLimit - lastSandyCellValue);
+                        lastSandyCellValue += d_transported;
+                        cellValue -= d_transported;
+                        this->parent->setVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight, lastSandyCellValue);
+                        if(lastSandyCellValue >= sandUpperLimit) {
+                            lastSandyUnsaturatedHeight ++;
+                        }
+                    }
+                    this->parent->setVoxelValue(this->x + x, this->y + y, z, cellValue);
+                }
+            }
+        }
+    }
     this->needRemeshing = true;
 }
 

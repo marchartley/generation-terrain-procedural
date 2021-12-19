@@ -1,4 +1,4 @@
-#define OPENVDB_9_ABI_COMPATIBLE
+//#define OPENVDB_DLL
 
 #include "Globals.h"
 #include "Viewer.h"

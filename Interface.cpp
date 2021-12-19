@@ -181,9 +181,9 @@ void ViewerInterface::setupUi(QDialog *Dialog)
 
     // Gravity controls
     this->gravityGlobalButton = new QPushButton("Chutes de pierres");
-    this->gravityGlobalButton->setCheckable(true);
+//    this->gravityGlobalButton->setCheckable(true);
     this->gravitySandButton = new QPushButton("Chutes de sable");
-    this->gravitySandButton->setCheckable(true);
+//    this->gravitySandButton->setCheckable(true);
     gravityLayout->addWidget(gravityGlobalButton);
     gravityLayout->addWidget(gravitySandButton);
     gravityBox->setLayout(gravityLayout);
