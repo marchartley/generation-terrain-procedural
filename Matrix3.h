@@ -1,6 +1,7 @@
 #ifndef MATRIX3_H
 #define MATRIX3_H
 
+#include <iostream>
 #include <vector>
 #include <tuple>
 #include <memory>
@@ -8,19 +9,25 @@
 #include <math.h>
 #include "Vector3.h"
 
+// Warning : don't use bool type...
+// This class is based on a std::vector, which has specifications on bools
+// the [] operator won't work ...
 template <class T>
 class Matrix3
 {
 public:
     Matrix3();
-    Matrix3(int sizeX, int szeY, int sizeZ = 1);
+    Matrix3(int sizeX, int szeY, int sizeZ = 1, T initValue = T());
     Matrix3(std::vector<std::vector<std::vector<T>>> data);
     Matrix3(std::vector<std::vector<T>> data);
     Matrix3(std::vector<T> data, int sizeX, int sizeY, int sizeZ = -1);
 
     T& at(int i, int j, int k = 0);
+    T& operator()(int x, int y, int z);
     int getIndex(int x, int y, int z);
     std::tuple<int, int, int> getCoord(int index);
+
+    Matrix3<T> resize(int newX, int newY, int newZ);
 
 
     Matrix3<T> rounded(int precision = 0);
@@ -36,29 +43,32 @@ public:
     Matrix3<T> rot();
     Matrix3<T> laplacian();
 
+    Matrix3<T>& insertRow(int indexToInsert, int affectedDimension, T newData = T());
+
+    void clear() {return this->data.clear(); }
+
 
     static Matrix3<T> random(int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<T> identity(int sizeX, int sizeY, int sizeZ = 1);
 
-//    operator float*() const { return new float[3]{this->x, this->y, this->z}; }
-    // friend Matrix3<T> operator+(Matrix3<T> a, Matrix3<T> b);
-    Matrix3<T>& operator+=(const Matrix3<T>& o);
-    // friend Matrix3<T> operator-(Matrix3<T> a, const Matrix3<T>& b);
-    Matrix3<T>& operator-=(const Matrix3<T>& o);
-    // friend Matrix3<T> operator*(Matrix3<T> a, Matrix3<T> o);
-    Matrix3<T>& operator*=(Matrix3<T>& o);
-    // friend Matrix3<T> operator/(Matrix3<T> a, Matrix3<T> o);
-    Matrix3<T>& operator/=(Matrix3<T>& o);
-    // friend Matrix3<T> operator*(Matrix3<T> a, float o);
-    Matrix3<T>& operator*=(float o);
-    // friend Matrix3<T> operator/(Matrix3<T> a, float o);
-    Matrix3<T>& operator/=(float o);
-    // friend Matrix3<T> operator+(Matrix3<T> a, float o);
-    Matrix3<T>& operator+=(float o);
-    // friend Matrix3<T> operator-(Matrix3<T> a, float o);
-    Matrix3<T>& operator-=(float o);
-//    Matrix3<T>& operator=(const Matrix3<T>& o);
-    bool operator==(Matrix3<T> o);
+    template<typename U>
+    Matrix3<T>& operator+=(const Matrix3<U>& o);
+    template<typename U>
+    Matrix3<T>& operator-=(const Matrix3<U>& o);
+    template<typename U>
+    Matrix3<T>& operator*=(Matrix3<U>& o);
+    template<typename U>
+    Matrix3<T>& operator/=(Matrix3<U>& o);
+    template<typename U>
+    Matrix3<T>& operator*=(U o);
+    template<typename U>
+    Matrix3<T>& operator/=(U o);
+    template<typename U>
+    Matrix3<T>& operator+=(U o);
+    template<typename U>
+    Matrix3<T>& operator-=(U o);
+    template<typename U>
+    bool operator==(Matrix3<U> o);
 
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
 
@@ -66,8 +76,28 @@ public:
     int sizeX, sizeY, sizeZ;
 
     Matrix3& init(std::vector<T> data, int sizeX, int sizeY, int sizeZ);
+
+    std::string displayValues();
+
+    static T tmpReturnVal;
 };
 
+#include <sstream>
+template<class T>
+std::string Matrix3<T>::displayValues()
+{
+    std::stringstream out;
+    for (int z = 0; z < this->sizeZ; z++) {
+        out << "[Z-level = " << z << "] : \n";
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int x = 0; x < this->sizeX; x++) {
+                out << at(x, y, z) << "\t";
+            }
+            out << "\n";
+        }
+    }
+    return out.str();
+}
 
 
 
@@ -76,9 +106,9 @@ Matrix3<T>::Matrix3()
 {
 }
 template<class T>
-Matrix3<T>::Matrix3(int sizeX, int sizeY, int sizeZ)
+Matrix3<T>::Matrix3(int sizeX, int sizeY, int sizeZ, T initValue)
 {
-    std::vector<T> data(sizeX * sizeY * sizeZ);
+    std::vector<T> data(sizeX * sizeY * sizeZ, initValue);
     init(data, sizeX, sizeY, sizeZ);
 }
 template<class T>
@@ -113,10 +143,15 @@ Matrix3<T>::Matrix3(std::vector<std::vector<std::vector<T>>> data)
 template<class T>
 T &Matrix3<T>::at(int i, int j, int k)
 {
-    if (i >= 0 && i < this->sizeX && j >= 0 && j < this->sizeY && k >= 0 && k < this->sizeZ)
+    if (i >= 0 && i < this->sizeX && j >= 0 && j < this->sizeY && k >= 0 && k < this->sizeZ) {
         return this->data[getIndex(i, j, k)];
+    }
     throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
         + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+template<typename T>
+T& Matrix3<T>::operator()(int x, int y, int z) {
+    return this->at(x, y, z);
 }
 
 template<class T>
@@ -246,6 +281,45 @@ Matrix3<T> Matrix3<T>::laplacian()
 }
 
 template<typename T>
+Matrix3<T>& Matrix3<T>::insertRow(int indexToInsert, int affectedDimension, T newData)
+{
+    auto it = this->data.begin();
+    int jumps = 0;
+    switch(affectedDimension) {
+    case 0:
+        jumps = sizeX;
+        if (indexToInsert < 0) indexToInsert = sizeX; // If default value, it's last X-index
+        it += indexToInsert;
+        for (; it <= this->data.end() - (indexToInsert == 0 ? 1 : 0); it += jumps) {
+            it = this->data.insert(it, newData) + 1; // Set "it" to the value next to the inserted value
+        }
+        this->sizeX++;
+        break;
+    case 1:
+        jumps = sizeX * sizeY;
+        if (indexToInsert < 0) indexToInsert = sizeY; // If default value, it's last Y-index
+        it += (indexToInsert * sizeX);
+        for (; it <= this->data.end() - (indexToInsert == 0 ? 1 : 0); it += jumps) {
+            for (int i = 0; i < sizeX; i++) {
+                it = this->data.insert(it, newData) + 1;
+            }
+        }
+        this->sizeY++;
+        break;
+    case 2:
+        if (indexToInsert < 0) indexToInsert = sizeZ; // If default value, it's last Z-index
+        it += (sizeX * sizeY) * indexToInsert;
+        for (int i = 0; i < sizeX * sizeY; i++)
+            it = this->data.insert(it, newData) + 1;
+        this->sizeZ++;
+        break;
+    default:
+        throw std::out_of_range("insertRow can only be processed on dim 0, 1 or 2 (resp. X, Y, Z)");
+    }
+    return *this;
+}
+
+template<typename T>
 Matrix3<T> Matrix3<T>::identity(int sizeX, int sizeY, int sizeZ)
 {
     static_assert(std::is_arithmetic<T>::value, "");
@@ -269,8 +343,8 @@ Matrix3<T> operator+(Matrix3<T> a, Matrix3<T> b) {
     a += b;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<T>& o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
@@ -278,13 +352,13 @@ Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<T>& o) {
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator-(Matrix3<T> a, const Matrix3<T>& b) {
+template<typename T, typename U>
+Matrix3<T> operator-(Matrix3<T> a, const Matrix3<U>& b) {
     a -= b;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<T>& o)  {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<U>& o)  {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
@@ -292,13 +366,13 @@ Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<T>& o)  {
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator*(Matrix3<T> a, Matrix3<T> o) {
+template<typename T, typename U>
+Matrix3<T> operator*(Matrix3<T> a, Matrix3<U> o) {
     a *= o;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator*=(Matrix3<T>& o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
@@ -306,13 +380,13 @@ Matrix3<T>& Matrix3<T>::operator*=(Matrix3<T>& o) {
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator/(Matrix3<T>& a, const Matrix3<T>& b) {
+template<typename T, typename U>
+Matrix3<T> operator/(Matrix3<T>& a, const Matrix3<U>& b) {
     a /= b;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator/=(Matrix3<T>& o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator/=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
@@ -320,57 +394,57 @@ Matrix3<T>& Matrix3<T>::operator/=(Matrix3<T>& o) {
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator*(Matrix3<T> a, float o) {
+template<typename T, typename U>
+Matrix3<T> operator*(Matrix3<T> a, U o) {
     a *= o;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator*=(float o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator*=(U o) {
     for (size_t i = 0; i < data.size(); i++) {
         data[i] *= o;
     }
     return *this;
 }
 
-template<typename T>
-Matrix3<T> operator/(Matrix3<T> a, float o) {
+template<typename T, typename U>
+Matrix3<T> operator/(Matrix3<T> a, U o) {
     a /= o;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator/=(float o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator/=(U o) {
     for (size_t i = 0; i < data.size(); i++) {
         data[i] /= o;
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator+(Matrix3<T> a, float o) {
+template<typename T, typename U>
+Matrix3<T> operator+(Matrix3<T> a, U o) {
     a += o;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator+=(float o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator+=(U o) {
     for (size_t i = 0; i < data.size(); i++) {
         data[i] += o;
     }
     return *this;
 }
-template<typename T>
-Matrix3<T> operator-(Matrix3<T> a, float o) {
+template<typename T, typename U>
+Matrix3<T> operator-(Matrix3<T> a, U o) {
     a -= o;
     return a;
 }
-template<typename T>
-Matrix3<T>& Matrix3<T>::operator-=(float o) {
+template<typename T> template<typename U>
+Matrix3<T>& Matrix3<T>::operator-=(U o) {
     for (size_t i = 0; i < data.size(); i++) {
         data[i] -= o;
     }
     return *this;
 }
-template<typename T>
-bool Matrix3<T>::operator==(Matrix3<T> o) {
+template<typename T> template<typename U>
+bool Matrix3<T>::operator==(Matrix3<U> o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         return false;
     for (size_t i = 0; i < this->data.size(); i++)
@@ -378,4 +452,56 @@ bool Matrix3<T>::operator==(Matrix3<T> o) {
             return false;
     return true;
 }
+
+template<typename T>
+Matrix3<T> Matrix3<T>::resize(int newX, int newY, int newZ)
+{
+    Matrix3<T> newMat(newX, newY, newZ);
+    float rx = this->sizeX / (float)newX, ry = this->sizeY / (float)newY, rz = this->sizeZ / (float)newZ;
+    // Put all extrem values (000), (001), (010), (011), (100), (101), (110), (111)
+    /*
+    newMat.at(0, 0, 0) = this->at(0, 0, 0);
+    newMat.at(0, 0, newZ - 1) = this->at(0, 0, this->sizeZ - 1);
+    newMat.at(0, newY - 1, 0) = this->at(0, this->sizeY - 1, 0);
+    newMat.at(0, newY - 1, newZ - 1) = this->at(0, this->sizeY - 1, this->sizeZ - 1);
+    newMat.at(newX - 1, 0, 0) = this->at(this->sizeX - 1, 0, 0);
+    newMat.at(newX - 1, 0, newZ - 1) = this->at(this->sizeX - 1, 0, this->sizeZ - 1);
+    newMat.at(newX - 1, newY - 1, 0) = this->at(this->sizeX - 1, this->sizeY - 1, 0);
+    newMat.at(newX - 1, newY - 1, newZ - 1) = this->at(this->sizeX - 1, this->sizeY - 1, this->sizeZ - 1);*/
+
+    // Apply interpolations
+    for (int x = 0; x < newX; x++) {
+        int x_original = int(x * rx);
+        int x_plus_1 = (x_original >= this->sizeZ - 2 ? x_original : x_original + 1);
+        float d_x = (x * rx) - x_original;
+        for (int y = 0; y < newY; y++) {
+            int y_original = int(y * ry);
+            int y_plus_1 = (y_original >= this->sizeZ - 2 ? y_original : y_original + 1);
+            float d_y = (y * ry) - y_original;
+            for (int z = 0; z < newZ; z++) {
+                int z_original = int(z * rz);
+                int z_plus_1 = (z_original >= this->sizeZ - 2 ? z_original : z_original + 1);
+                float d_z = (z * rz) - z_original;
+
+                T f000 = this->at(x_original    , y_original    , z_original    );
+                T f100 = this->at(x_plus_1, y_original    , z_original    );
+                T f010 = this->at(x_original    , y_plus_1, z_original    );
+                T f110 = this->at(x_plus_1, y_plus_1, z_original    );
+                T f001 = this->at(x_original    , y_original    , z_plus_1);
+                T f101 = this->at(x_plus_1, y_original    , z_plus_1);
+                T f011 = this->at(x_original    , y_plus_1, z_plus_1);
+                T f111 = this->at(x_plus_1, y_plus_1, z_plus_1);
+                // Interpolation
+                newMat.at(x, y, z) = ((
+                                          f000 * (1-d_x) + f100 * d_x) * (1-d_y) + (
+                                          f010 * (1-d_x) + f110 * d_x) * d_y) * (1 - d_z) +
+                                    ((
+                                         f001 * (1-d_x) + f101 * d_x) * (1-d_y) + (
+                                         f011 * (1-d_x) + f111 * d_x) * d_y) * d_z;
+            }
+        }
+    }
+    return newMat;
+}
+
 #endif // MATRIX3_H

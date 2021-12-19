@@ -51,7 +51,7 @@ public:
     float getBlockSize() { return this->blockSize; }
 
     std::vector<Voxel> getVoxels() { return this->voxels; }
-    std::vector<std::vector<std::vector<std::vector<float>>>> tempData;
+    std::vector<Matrix3<float>> tempData;
     int getHeight(int x, int y);
 
     bool contains(Vector3 v);
@@ -67,8 +67,8 @@ public:
     std::string toString();
     std::string toShortString();
 
-    std::vector<std::vector<std::vector<float>>> toFloat();
-    void toVoxels(std::vector<std::vector<std::vector<float>>> arr);
+    Matrix3<float> toFloat();
+    void toVoxels(Matrix3<float> arr);
     void toVoxels();
 
     void computeVoxelGroups();
@@ -124,9 +124,9 @@ public:
 
 
 
-    std::vector<std::vector<std::vector<Vector3>>> flowField;
-    std::vector<std::vector<std::vector<int>>> distanceField;
-    std::vector<std::vector<std::vector<float>>> pressureField;
+    Matrix3<Vector3> flowField;
+    Matrix3<int> distanceField;
+    Matrix3<float> pressureField;
 
     Vector3 sea_current = Vector3(5.0, 0.0, 0.0);
 };

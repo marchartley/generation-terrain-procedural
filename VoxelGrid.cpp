@@ -3,77 +3,6 @@
 
 #include "Shader.h"
 
-
-
-typedef std::vector<float> DoubleVec;
-
-int findNearestNeighbourIndex(const float ac_dfValue, DoubleVec x)
-{
-  float lv_dfDistance = 10000;
-  int lv_nIndex = -1;
-
-  for (unsigned int i = 0; i < x.size(); i++) {
-    float newDist = ac_dfValue - x[i];
-    if (newDist >= 0 && newDist < lv_dfDistance) {
-      lv_dfDistance = newDist;
-      lv_nIndex = i;
-    }
-  }
-
-  return lv_nIndex;
-}
-
-DoubleVec interpolation(DoubleVec x, DoubleVec y,
-  DoubleVec xx)
-{
-  float dx, dy;
-  DoubleVec slope, intercept, result;
-  slope.resize(x.size());
-  intercept.resize(x.size());
-  result.resize(xx.size());
-  int indiceEnVector;
-
-  for (unsigned i = 0; i < x.size(); i++) {
-    if (i < x.size() - 1) {
-      dx = x[i + 1] - x[i];
-      dy = y[i + 1] - y[i];
-      slope[i] = dy / dx;
-      intercept[i] = y[i] - x[i] * slope[i];
-    }
-    else {
-      slope[i] = slope[i - 1];
-      intercept[i] = intercept[i - 1];
-    }
-  }
-
-  for (unsigned i = 0; i < xx.size(); i++) {
-    indiceEnVector = findNearestNeighbourIndex(xx[i], x);
-    if (indiceEnVector != -1) {
-      result[i] = slope[indiceEnVector] *
-        xx[i] + intercept[indiceEnVector];
-    }
-    else
-      result[i] = 10000;
-  }
-  return result;
-}
-
-std::vector<std::vector<std::vector<Vector3>>> resizeArray(std::vector<std::vector<std::vector<Vector3>>> arr, int newX, int newY, int newZ)
-{
-    /*int oldX = int(arr.size()), oldY = int(arr[0].size()), oldZ = int(arr[0][0].size());
-    float resX = newX/(float)oldX, resY = newY/(float)oldY, resZ = newZ/(float)oldZ;
-    float invX = 1/resX, invY = 1/resY, invZ = 1/resZ;
-    for (int x = 0; x < newX; x++)
-    {
-        Vector3 newVal = arr[x/invX] * () + arr[x/invX + 1] * (1 - (x%invX));
-    }*/
-}
-
-
-
-
-
-
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : blockSize(blockSize), noise_shifting(noise_shifting) {
     this->sizeZ = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
@@ -84,23 +13,20 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
 
 
 
-    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(chunkSize, chunkSize, this->sizeZ));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
             for (int x = 0; x < chunkSize; x++) {
-                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
                 for (int y = 0; y < chunkSize; y++) {
-                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
 //                        noise_val = 1.0; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
 //                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
-                        noise_val = 0.5;
-                        data[iChunk][x][y][h] = noise_val;
+//                        noise_val = 0.5; // To remove
+                        data[iChunk].at(x, y, h) = noise_val;
                     }
                 }
             }
@@ -125,26 +51,23 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeZ = grid.getMaxHeight();
     this->initMap();
 
-    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeY));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
             for (int x = 0; x < chunkSize; x++) {
-                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
                 for (int y = 0; y < chunkSize; y++) {
-                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
                     float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
                     int z = int(grid_height);
                     for (int i = 0; i < z; i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
-                        data[iChunk][x][y][i] = abs(noise_val);
+                        data[iChunk].at(x, y, i) = abs(noise_val);
                     }
                     for (int i = z; i < this->getSizeZ()+1; i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
-                        data[iChunk][x][y][i] = -abs(noise_val);
+                        data[iChunk].at(x, y, i) = -abs(noise_val);
                     }
                 }
             }
@@ -157,7 +80,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
 
 std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
 {
-    std::vector<std::vector<std::vector<std::vector<float>>>> isoData = this->tempData;
+    std::vector<Matrix3<float>> isoData = this->tempData;
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -184,6 +107,7 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
     }
     this->computeFlowfield();
 //    this->createMesh();
+    std::cout << "HERE1" << std::endl;
     return this->shared_from_this();
 }
 
@@ -199,9 +123,9 @@ void VoxelGrid::computeFlowfield(Vector3 sea_current)
         for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
             for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
                 for (int z = 0; z < vc->height; z++) {
-                    distanceField[x][y][z] = vc->distanceField[x - vc->x][y - vc->y][z - 0];
-                    pressureField[x][y][z] = vc->pressureField[x - vc->x][y - vc->y][z - 0];
-//                    pressureField[x][y][z] = 0.0;
+                    distanceField(x, y, z) = vc->distanceField[x - vc->x][y - vc->y][z - 0];
+                    pressureField(x, y, z) = vc->pressureField[x - vc->x][y - vc->y][z - 0];
+//                    pressureField(x, y, z) = 0.0;
                 }
             }
         }
@@ -211,46 +135,28 @@ void VoxelGrid::computeFlowfield(Vector3 sea_current)
     for (size_t x = 0; x < flowField.size(); x++) {
         for (size_t y = 0; y < flowField[x].size(); y++) {
             for (size_t z = 0; z < flowField[x][y].size(); z++) {
-                flowField[x][y][z] *= -1.0; // Inverse the gradient
-                flowField[x][y][z] += sea_current;
+                flowField(x, y, z) *= -1.0; // Inverse the gradient
+                flowField(x, y, z) += sea_current;
             }
         }
     }*/
-    std::vector<std::vector<std::vector<bool>>> obstacleMap = std::vector<std::vector<std::vector<bool>>>(this->sizeX, std::vector<std::vector<bool>>(this->sizeY, std::vector<bool>(this->sizeZ, false)));
+    Matrix3<int> obstacleMap(this->sizeX, this->sizeY, this->sizeZ, false);
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                obstacleMap[x][y][z] = (this->getVoxelValue(x, y, z) > 0.0);
+                obstacleMap(x, y, z) = (this->getVoxelValue(x, y, z) > 0.0 ? 1 : 0);
             }
         }
     }
+
     Vector3 center (5, 45, 45);
-    this->fluidSimulation.setObstacles(obstacleMap);/*
-    for (int dx = -1; dx <= 1; dx++) {
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dz = -1; dz <= 1; dz++) {
-    float dx = 0.0, dy = 0.0, dz = 0.0;
-                this->fluidSimulation.addDensity((center.x + dx)/this->fluidSimRescale, (center.y + dy)/this->fluidSimRescale, (center.z + dz)/this->fluidSimRescale, 100.0);
-            }
-        }
-    }*/
+    this->fluidSimulation.setObstacles(obstacleMap);
     for (int y = 0; y < this->sizeY-1; y++) {
         for (int z = 0; z < this->sizeZ-1; z++) {
             this->fluidSimulation.addDensity (1, y/this->fluidSimRescale, z/this->fluidSimRescale, 2.0/(float)(this->sizeY * this->sizeZ));
             this->fluidSimulation.addVelocity(1, y/this->fluidSimRescale, z/this->fluidSimRescale, this->sea_current.normalized()/(float)(this->sizeY * this->sizeZ)); //(this->sea_current + Vector3::random()).normalized() * 1.0);
         }
     }
-    /*
-    this->fluidSimulation.addDensity(5, 28, 60, 10.0);
-    this->fluidSimulation.addVelocity(5, 28, 60, this->sea_current);*/
-    /*
-    for (int x = 0; x < this->sizeX; x++)
-        for (int y = 0; y < this->sizeY; y++)
-            for (int z = 0; z < this->sizeZ; z++)
-                if (this->getVoxelValue(x, y, z) > 0.0) {
-                    this->fluidSimulation.addVelocity(x, y, z, this->sea_current);
-                    this->fluidSimulation.addDensity(x, y,z, 100.0);
-                }*/
     for (int i = 0; i < 2; i++)
         this->fluidSimulation.step();
     this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
@@ -259,7 +165,7 @@ void VoxelGrid::computeFlowfield(Vector3 sea_current)
         for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
             for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
                 for (int z = 0; z < vc->height; z++) {
-                    vc->flowField[x - vc->x][y - vc->y][z - 0] = flowField[x][y][z];
+                    vc->flowField(x - vc->x, y - vc->y, z - 0) = flowField(x, y, z);
                 }
             }
         }
@@ -414,40 +320,42 @@ std::shared_ptr<Voxel> VoxelGrid::getVoxel(float x, float y, float z) {
 
     if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
         return nullptr;
-    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->voxels[voxPosX][voxPosY][_z];
+    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->voxels.at(voxPosX, voxPosY, _z);
 }
 
 void VoxelGrid::remeshAll()
 {
-    this->computeVoxelGroups();
+//    this->computeVoxelGroups();
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
     }
 }
 
 
-std::vector<std::vector<std::vector<float>>> VoxelGrid::toFloat()
+Matrix3<float> VoxelGrid::toFloat()
 {
-    std::vector<std::vector<std::vector<float>>> arr(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->sizeZ, 0.0)));
+    Matrix3<float> arr(this->sizeX, this->sizeY, this->sizeZ, 0.0);
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         for(int x = 0; x < vc->sizeX; x++) {
             for(int y = 0; y < vc->sizeY; y++) {
                 for(int z = 0; z < vc->height; z++) {
-                    arr[x + vc->x][y + vc->y][z] = vc->voxels[x][y][z]->getIsosurface();
+                    arr(x + vc->x, y + vc->y, z) = vc->voxels(x, y, z)->getIsosurface();
                 }
             }
         }
     }
     return arr;
 }
-void VoxelGrid::toVoxels(std::vector<std::vector<std::vector<float>>> arr)
+void VoxelGrid::toVoxels(Matrix3<float> arr)
 {
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         for(int x = 0; x < vc->sizeX; x++) {
             for(int y = 0; y < vc->sizeY; y++) {
-                vc->voxelValues[x][y] = arr[vc->x + x][vc->y + y];
+                for (int z = 0; z < vc->height; z++) {
+                    vc->voxelValues(x, y, z) = arr(vc->x + x, vc->y + y, z);
+                }
             }
         }
         vc->toVoxels();
@@ -463,15 +371,13 @@ void VoxelGrid::toVoxels()
 
 void VoxelGrid::computeVoxelGroups()
 {
-    std::vector<std::vector<std::vector<Vector3*>>> vecs =
-            std::vector<std::vector<std::vector<Vector3*>>>(this->sizeX,
-            std::vector<std::vector<Vector3*>>(this->sizeY, std::vector<Vector3*>(this->sizeZ)));
+    Matrix3<Vector3*> vecs(this->sizeX, this->sizeY, this->sizeZ);
     for (int x = 0; x < this->sizeX; x ++) {
         for(int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
                 if (z > 0)
                     setVoxelGroup(x, y, z, -1);
-                vecs[x][y][z] = new Vector3(x, y, z);
+                vecs(x, y, z) = new Vector3(x, y, z);
             }
         }
     }
@@ -482,7 +388,7 @@ void VoxelGrid::computeVoxelGroups()
             int group = getVoxelValue(x, y, 0) > 0.0 ? 0 : -1;
             if (group == 0) {
                 setVoxelGroup(x, y, 0, group); // If it's touching the ground, it's directly in first group
-                groundNeighbors.insert(vecs[x][y][0]);
+                groundNeighbors.insert(vecs(x, y, 0));
                 while (groundNeighbors.size() != 0) {
                     Vector3* n = (*groundNeighbors.begin());
                     setVoxelIsOnGround(n, true);
@@ -492,11 +398,14 @@ void VoxelGrid::computeVoxelGroups()
                         for (int n_y = -1; n_y <= 1; n_y++)
                             for (int n_z = -1; n_z <= 1; n_z++)
                                 if (getVoxelGroup(n->x + n_x, n->y + n_y, n->z + n_z) != 0 && getVoxelValue(n->x + n_x, n->y + n_y, n->z + n_z) > 0.0)
-                                    groundNeighbors.insert(vecs[n->x + n_x][n->y + n_y][n->z + n_z]);
+                                    groundNeighbors.insert(vecs(n->x + n_x, n->y + n_y, n->z + n_z));
                 }
             }
         }
     }
+    for (Vector3* vec : vecs.data)
+        delete vec;
+    vecs.clear();
 }
 
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {
@@ -524,7 +433,7 @@ float VoxelGrid::getVoxelValue(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->voxelValues[voxPosX][voxPosY][_z];
+        return this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z);
     return -1;
 }
 void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
@@ -535,7 +444,7 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1) {
-        this->chunks[iChunk]->voxelValues[voxPosX][voxPosY][_z] = newVal;
+        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
         this->chunks[iChunk]->needRemeshing = true;
     }
 }
@@ -548,7 +457,7 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->originalVoxelValues[voxPosX][voxPosY][_z];
+        return this->chunks[iChunk]->originalVoxelValues(voxPosX, voxPosY, _z);
     return -1;
 }
 Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
@@ -559,7 +468,7 @@ Vector3 VoxelGrid::getFlowfield(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->flowField[voxPosX][voxPosY][_z];
+        return this->chunks[iChunk]->flowField(voxPosX, voxPosY, _z);
     return Vector3();
 }
 void VoxelGrid::setFlowfield(Vector3 pos, Vector3 newVal) {
@@ -570,7 +479,7 @@ void VoxelGrid::setFlowfield(float x, float y, float z, Vector3 newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        this->chunks[iChunk]->flowField[voxPosX][voxPosY][_z] = newVal;
+        this->chunks[iChunk]->flowField(voxPosX, voxPosY, _z) = newVal;
 }
 
 int VoxelGrid::getVoxelGroup(Vector3 pos) {
@@ -580,7 +489,7 @@ int VoxelGrid::getVoxelGroup(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->voxelGroups[voxPosX][voxPosY][_z];
+        return this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z);
     return -1;
 }
 void VoxelGrid::setVoxelGroup(Vector3 pos, int newVal) {
@@ -591,7 +500,7 @@ void VoxelGrid::setVoxelGroup(float x, float y, float z, int newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        this->chunks[iChunk]->voxelGroups[voxPosX][voxPosY][_z] = newVal;
+        this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z) = newVal;
 }
 bool VoxelGrid::getVoxelIsOnGround(Vector3 pos) {
     return getVoxelIsOnGround(pos.x, pos.y, pos.z);
@@ -600,7 +509,7 @@ bool VoxelGrid::getVoxelIsOnGround(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->voxelGroups[voxPosX][voxPosY][_z] == 0;
+        return this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z) == 0;
     return -1;
 }
 void VoxelGrid::setVoxelIsOnGround(Vector3 pos, bool newVal) {
@@ -611,7 +520,7 @@ void VoxelGrid::setVoxelIsOnGround(float x, float y, float z, bool newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        this->chunks[iChunk]->voxelGroups[voxPosX][voxPosY][_z] = (newVal ? 0 : -1);
+        this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z) = (newVal ? 0 : -1);
 }
 
 
@@ -639,7 +548,7 @@ void VoxelGrid::saveMap(std::string filename)
         for (int x = 0; x < vc->sizeX; x++)
             for (int y = 0; y < vc->sizeY; y++)
                 for (int z = 0; z < vc->height; z++)
-                    out << vc->voxelValues[x][y][z] << " ";
+                    out << vc->voxelValues(x, y, z) << " ";
     }
     out.close();
 }
@@ -649,19 +558,16 @@ void VoxelGrid::retrieveMap(std::string filename)
     in.open(filename);
     in >> this->sizeX >> this->sizeY >> this->sizeZ >> this->chunkSize;
 
-    std::vector<std::vector<std::vector<std::vector<float>>>> data(this->chunks.size());
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            data[iChunk] = std::vector<std::vector<std::vector<float>>>(this->chunkSize);
             for (int x = 0; x < chunkSize; x++) {
-                data[iChunk][x] = std::vector<std::vector<float>>(this->chunkSize);
                 for (int y = 0; y < chunkSize; y++) {
-                    data[iChunk][x][y] = std::vector<float>(this->getSizeZ());
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float map_val;
                         in >> map_val;
-                        data[iChunk][x][y][h] = map_val;
+                        data[iChunk].at(x, y, h) = map_val;
                     }
                 }
             }
