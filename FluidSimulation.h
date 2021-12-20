@@ -4,13 +4,14 @@
 #include "Vector3.h"
 #include "Matrix3.h"
 
+// The process is only partially understood in my head, see Josh Stam's paper for more understanding (Real-Time Fluid Dynamics for Games, 2003)
 class FluidSimulation
 {
 public:
     FluidSimulation();
     FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations);
 
-    void setObstacles(Matrix3<int> new_obstacles);
+    void setObstacles(Matrix3<float> new_obstacles);
     void addDensity(int x, int y, int z, float amount);
     void addVelocity(int x, int y, int z, Vector3 amount);
 
@@ -21,8 +22,9 @@ public:
     void densityStep();
     void project();
 
+    void setVelocityBounds();
+
     int sizeX, sizeY, sizeZ;
-    int scaleX, scaleY, scaleZ;
     float dt;
     float diffusionAmount;
     float viscosity;
@@ -38,7 +40,7 @@ public:
     Matrix3<float> divergence;
     Matrix3<float> pressure;
 
-    Matrix3<int> obstacles;
+    Matrix3<float> obstacles;
 
 
     template<typename T>
@@ -53,23 +55,25 @@ public:
     void diffuse(Matrix3<T>& arr, Matrix3<T>& arr2, float diff, bool inverseOnBounds = false)
     {
         // TODO : check "a"
-        float a = dt * diff * (arr.sizeX - 2) * (arr2.sizeX - 2);
-        this->solve_linear(arr, arr2, a, 1 + 6 * a, inverseOnBounds);
+        float a = dt * diff * (arr.sizeX - 2) * (arr.sizeY - 2) * (arr.sizeZ - 2);
+        this->solve_linear(arr, arr2, a, inverseOnBounds);
     }
     template<typename T>
     void set_bounds(Matrix3<T>& arr, bool inverseOnBounds = false, bool nullifyOnBounds = true)
     {
+        nullifyOnBounds = false;
+        inverseOnBounds = false;
         Matrix3<T> tmpArray = arr;
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {
-                    if(this->obstacles(x, y, z)) {
+                    if(this->obstacles(x, y, z) > .5) {
                         bool freeCellFound = false;
                         for (int dx = -1; dx <= 1; dx++) {
                             for (int dy = -1; dy <= 1; dy++) {
                                 for (int dz = -1; dz <= 1; dz++) {
                                     if (dx != 0 || dy != 0 || dz != 0) {
-                                        if (!obstacles(x + dx, y + dy, z + dz)) {
+                                        if (obstacles(x + dx, y + dy, z + dz) < .5) {
                                             tmpArray(x, y, z) = arr(x + dx, y + dy, z + dz) * (inverseOnBounds ? -1.0 : 1.0);
                                             freeCellFound = true;
                                         }
@@ -134,11 +138,8 @@ public:
     }
 
     template<typename T>
-    void solve_linear(Matrix3<T>& arr1, Matrix3<T>& arr0, float a, float c, bool inverseOnBounds = false)
+    void solve_linear(Matrix3<T>& arr1, Matrix3<T>& arr0, float a, bool inverseOnBounds = false)
     {
-        return;
-        // TODO : check cRecip
-        float cRecip = 1.0 / c;
         for (int k = 0; k < this->iterations; k++) {
             for (int x = 1; x < this->sizeX - 1; x++) {
                 for (int y = 1; y < this->sizeY - 1; y++) {
@@ -149,7 +150,7 @@ public:
                                 + arr1(x  , y+1, z  )
                                 + arr1(x  , y-1, z  )
                                 + arr1(x  , y  , z+1)
-                                + arr1(x  , y  , z-1)) * a) * cRecip;
+                                + arr1(x  , y  , z-1)) * a) / (1 + 6*a);
                     }
                 }
             }
@@ -163,9 +164,10 @@ public:
     {
         float x0, y0, z0, x1, y1, z1;
 
-        float dtx = this->dt * (this->sizeX - 2);
-        float dty = this->dt * (this->sizeY - 2);
-        float dtz = this->dt * (this->sizeZ - 2);
+//        float dtx = this->dt * (this->sizeX - 2);
+//        float dty = this->dt * (this->sizeY - 2);
+//        float dtz = this->dt * (this->sizeZ - 2);
+        Vector3 dtVector = Vector3(this->sizeX, this->sizeY, this->sizeZ) * this->dt;
 
         float s0, s1, t0, t1, u0, u1;
         Vector3 tmpVec;
@@ -173,7 +175,7 @@ public:
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {
-                    tmpVec = Vector3(x, y, z) - (velocity_array(x, y, z) * Vector3(dtx, dty, dtz));
+                    tmpVec = Vector3(x, y, z) - (velocity_array(x, y, z) * dtVector); // Vector3(dtx, dty, dtz));
 
                     tmpVec.x = std::min(std::max(tmpVec.x, .5f), float(this->sizeX) + .5f);
                     x0 = std::floor(tmpVec.x);
@@ -205,10 +207,6 @@ public:
                                     (old_array(x0i, y1i, z0i) * u0 + old_array(x0i, y1i, z1i) * u1) * t1) * s0 +
                                    ((old_array(x1i, y0i, z0i) * u0 + old_array(x1i, y0i, z1i) * u1) * t0 +
                                     (old_array(x1i, y1i, z0i) * u0 + old_array(x1i, y1i, z1i) * u1) * t1) * s1;
-//                    arr(x, y, z) = s0 * ( t0 * (u0 * arr2(x0i, y0i, z0i) + u1 * arr2(x0i, y0i, z1i))
-//                                        + t1 * (u0 * arr2(x0i, y1i, z0i) + u1 * arr2(x0i, y1i, z1i)))
-//                                 + s1 * ( t0 * (u0 * arr2(x1i, y0i, z0i) + u1 * arr2(x1i, y0i, z1i))
-//                                        + t1 * (u0 * arr2(x1i, y1i, z0i) + u1 * arr2(x1i, y1i, z1i)));
                 }
             }
         }
