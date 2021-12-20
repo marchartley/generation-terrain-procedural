@@ -17,7 +17,6 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<f
             }
         }
     }
-    this->mesh.useIndices = false;
     this->voxelValues = iso_data;
     this->originalVoxelValues = this->voxelValues;
     this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->height);
@@ -48,57 +47,11 @@ void VoxelChunk::createVoxels()
         }
     }
 }
-void VoxelChunk::computeFlowfield(Vector3 sea_current) //int blur_iterations)
+void VoxelChunk::computeFlowfield(Vector3 sea_current)
 {
-    return;
-//    if (!needRemeshing)
-//        return;
-    /*
-    for(int v_x = 0; v_x < sizeX; v_x++) {
-        for(int v_y = 0; v_y < sizeY; v_y++) {
-            for(int h = 0; h < height; h++) {
-                flowField(v_x, v_y, h) = this->computeNormal(v_x + this->x, v_y + this->y, h);
-            }
-        }
-    }
-    for (int iter_blur = 0; iter_blur < blur_iterations; iter_blur++) {
-        Matrix3<Vector3> originalFlowField = this->flowField;
-        for(int v_x = 1; v_x < sizeX - 1; v_x++) {
-            for(int v_y = 1; v_y < sizeY - 1; v_y++) {
-                for(int h = 1; h < height - 1; h++) {
-                    for(int d_x = -1; d_x <= 1; d_x++) {
-                        for(int d_y = -1; d_y <= 1; d_y++) {
-                            for(int d_h = -1; d_h <= 1; d_h++) {
-                                flowField(v_x, v_y, h) += originalFlowField(v_x + d_x, v_y + d_y, h + d_h) / 27.0;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    for(int v_x = 1; v_x < sizeX-1; v_x++) {
-        for(int v_y = 1; v_y < sizeY-1; v_y++) {
-            for(int h = 1; h < height-1; h++) {
-                    flowField(v_x, v_y, h) /= (blur_iterations + 1);
-//                flowField(v_x, v_y, h).normalize();
-            }
-        }
-    }*/
     computeDistanceField();
     Matrix3<Vector3> pressionGradient = this->pressureField.gradient();
     this->flowField = pressionGradient * (-1.f) + sea_current;
-//    if(sea_current.norm() == 0)
-//        return;
-    /*
-    for (size_t x = 0; x < flowField.size(); x++) {
-        for (size_t y = 0; y < flowField(x).size(); y++) {
-            for (size_t z = 0; z < flowField(x, y).size(); z++) {
-                flowField(x, y, z) *= -1.0; // Inverse the gradient
-                flowField(x, y, z) += sea_current;
-            }
-        }
-    }*/
 }
 
 void VoxelChunk::computeDistanceField()
@@ -214,9 +167,7 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     std::vector<Vector3> colors;
     std::vector<Vector3> voxelVertices;
     if (applyMarchingCubes) {
-        std::cout << "Apply MC" << std::endl;
         voxelVertices = this->applyMarchingCubes(true, &colors);
-        std::cout << "End MC" << std::endl;
     }
     else {
         colors.reserve(this->sizeX * this->sizeY * this->height * 6);
@@ -262,11 +213,8 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
         });*/
     }
     this->mesh.colorsArray = colors;
-    std::cout << "creating mesh" << std::endl;
     this->mesh.fromArray(voxelVertices);
-    std::cout << "Updating" << std::endl;
     this->mesh.update();
-    std::cout << "End" << std::endl;
 }
 
 Vector3 VoxelChunk::computeNormal(Vector3 pos)

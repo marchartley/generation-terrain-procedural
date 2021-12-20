@@ -107,39 +107,11 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
     }
     this->computeFlowfield();
 //    this->createMesh();
-    std::cout << "HERE1" << std::endl;
     return this->shared_from_this();
 }
 
 void VoxelGrid::computeFlowfield(Vector3 sea_current)
 {
-    /*
-    this->distanceField = std::vector<std::vector<std::vector<int>>>(this->sizeX, std::vector<std::vector<int>>(this->sizeY, std::vector<int>(this->sizeZ, 9999999)));
-    this->pressureField = std::vector<std::vector<std::vector<float>>>(this->sizeX, std::vector<std::vector<float>>(this->sizeY, std::vector<float>(this->sizeZ, 0)));
-    this->flowField = std::vector<std::vector<std::vector<Vector3>>>(this->sizeX, std::vector<std::vector<Vector3>>(this->sizeY, std::vector<Vector3>(this->sizeZ)));
-
-    for (auto& vc : this->chunks) {
-        vc->computeDistanceField();
-        for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
-            for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
-                for (int z = 0; z < vc->height; z++) {
-                    distanceField(x, y, z) = vc->distanceField[x - vc->x][y - vc->y][z - 0];
-                    pressureField(x, y, z) = vc->pressureField[x - vc->x][y - vc->y][z - 0];
-//                    pressureField(x, y, z) = 0.0;
-                }
-            }
-        }
-    }
-    std::vector<std::vector<std::vector<Vector3>>> pressionGradient = Vector3::grad(this->pressureField);
-    this->flowField = pressionGradient;
-    for (size_t x = 0; x < flowField.size(); x++) {
-        for (size_t y = 0; y < flowField[x].size(); y++) {
-            for (size_t z = 0; z < flowField[x][y].size(); z++) {
-                flowField(x, y, z) *= -1.0; // Inverse the gradient
-                flowField(x, y, z) += sea_current;
-            }
-        }
-    }*/
     Matrix3<int> obstacleMap(this->sizeX, this->sizeY, this->sizeZ, false);
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
@@ -178,8 +150,6 @@ void VoxelGrid::affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSiz
 }
 void VoxelGrid::affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize)
 {
-//    this->setFlowfield(x, y, z, this->getFlowfield(x, y, z) + newVal);
-
     Vector3 pos(x, y, z);
     for (int dx = -(kernelSize/2); dx <= (kernelSize/2); dx++) {
         for (int dy = -(kernelSize/2); dy <= (kernelSize/2); dy++) {
@@ -200,8 +170,6 @@ void VoxelGrid::affectFlowfieldAround(Vector3 pos, float alphaEffect, int kernel
 }
 void VoxelGrid::affectFlowfieldAround(float x, float y, float z, float alphaEffect, int kernelSize)
 {
-//    this->setFlowfield(x, y, z, this->getFlowfield(x, y, z) + newVal);
-
     Vector3 pos(x, y, z);
     for (int dx = -(kernelSize/2); dx <= (kernelSize/2); dx++) {
         for (int dy = -(kernelSize/2); dy <= (kernelSize/2); dy++) {
