@@ -15,8 +15,8 @@ class VoxelGrid;
 #include "FluidSimulation.h"
 
 struct NoiseMinMax {
-    float min;
-    float max;
+    float min = MAXFLOAT;
+    float max = -MAXFLOAT;
 
     void update(float val) {
         min = std::min(min, val);
@@ -120,7 +120,7 @@ public:
 
     Mesh mesh;
     FluidSimulation fluidSimulation;
-    int fluidSimRescale = 2;
+    int fluidSimRescale = 4;
 
 
 
@@ -128,7 +128,7 @@ public:
     Matrix3<int> distanceField;
     Matrix3<float> pressureField;
 
-    Vector3 sea_current = Vector3(5.0, 0.0, 0.0);
+    Vector3 sea_current = Vector3(.10, 0.0, 0.0);
 };
 
 #endif // VOXELGRID_H

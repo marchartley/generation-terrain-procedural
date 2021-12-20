@@ -23,6 +23,7 @@ public:
     Matrix3(std::vector<T> data, int sizeX, int sizeY, int sizeZ = -1);
 
     T& at(int i, int j, int k = 0);
+    T& at(int i);
     T& operator()(int x, int y, int z);
     int getIndex(int x, int y, int z);
     std::tuple<int, int, int> getCoord(int index);
@@ -147,6 +148,17 @@ T &Matrix3<T>::at(int i, int j, int k)
         return this->data[getIndex(i, j, k)];
     }
     throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
+        + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+template<class T>
+T &Matrix3<T>::at(int i)
+{
+    if (i >= 0 && i < sizeX * sizeY * sizeZ) {
+        return this->data[i];
+    }
+    int x, y, z;
+    std::tie(x, y, z) = this->getCoord(i);
+    throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
         + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
 }
 template<typename T>

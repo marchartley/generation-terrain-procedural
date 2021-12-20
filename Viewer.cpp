@@ -482,7 +482,7 @@ void Viewer::recomputeFlowfield()
         for (int y = 0; y < this->voxelGrid->sizeY; y++) {
             for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
                 normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z).normalized()*.5) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
         }
     }
