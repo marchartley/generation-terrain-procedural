@@ -110,7 +110,7 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
     return this->shared_from_this();
 }
 
-void VoxelGrid::computeFlowfield(Vector3 sea_current)
+void VoxelGrid::computeFlowfield()
 {
     Matrix3<float> obstacleMap(this->sizeX, this->sizeY, this->sizeZ, false);
     for (int x = 0; x < this->sizeX; x++) {
@@ -125,7 +125,7 @@ void VoxelGrid::computeFlowfield(Vector3 sea_current)
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < this->fluidSimulation.sizeY; y++) {
             for (int z = 0; z < this->fluidSimulation.sizeZ; z++) {
-                this->fluidSimulation.velocity(x, y, z) = this->sea_current / (this->fluidSimRescale / this->fluidSimulation.dt);
+                this->fluidSimulation.velocity(x, y, z) += this->sea_current / (this->fluidSimRescale / this->fluidSimulation.dt);
             }
         }
     }
@@ -219,7 +219,7 @@ void VoxelGrid::initMap()
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
 
-    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.01, 0.00001, 0.0001, 10);
+    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.01, 0.00001, 0.0001, 20);
 }
 
 void VoxelGrid::createMesh()

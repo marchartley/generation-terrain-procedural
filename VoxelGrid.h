@@ -94,7 +94,7 @@ public:
     void setVoxelIsOnGround(Vector3 pos, bool newVal);
     void setVoxelIsOnGround(float x, float y, float z, bool newVal);
 
-    void computeFlowfield(Vector3 sea_current = Vector3());
+    void computeFlowfield();
 
     void affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize = 3);
     void affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize = 3);
@@ -120,7 +120,7 @@ public:
 
     Mesh mesh;
     FluidSimulation fluidSimulation;
-    int fluidSimRescale = 2;
+    int fluidSimRescale = 4;
 
 
 

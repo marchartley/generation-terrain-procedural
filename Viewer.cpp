@@ -532,9 +532,9 @@ bool Viewer::checkMouseOnVoxel()
 void Viewer::updateFlowfieldDebugMesh()
 {
     std::vector<Vector3> normals;
-    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
-        for (int y = this->voxelGrid->sizeY / 2; y < this->voxelGrid->sizeY / 2 + 1; y++) {
-            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
+    for (int x = 0; x < this->voxelGrid->sizeX; x+= this->voxelGrid->fluidSimRescale) {
+        for (int y = 0; y < this->voxelGrid->sizeY; y+= this->voxelGrid->fluidSimRescale) {
+            for (int z = 0; z < this->voxelGrid->sizeZ; z+= this->voxelGrid->fluidSimRescale) {
                 normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
                 normals.push_back(Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
