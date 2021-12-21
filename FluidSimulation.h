@@ -14,6 +14,7 @@ public:
     void setObstacles(Matrix3<float> new_obstacles);
     void addDensity(int x, int y, int z, float amount);
     void addVelocity(int x, int y, int z, Vector3 amount);
+    void setMaxSpeed(float speed);
 
     Matrix3<Vector3> getVelocities(int rescaleX = -1, int rescaleY = -1, int rescaleZ = -1);
 
@@ -28,6 +29,8 @@ public:
     float dt;
     float diffusionAmount;
     float viscosity;
+    float maxSpeed = 1.0;
+    float maxSpeedSquared;
 
     int iterations;
 
@@ -64,6 +67,7 @@ public:
         nullifyOnBounds = false;
         inverseOnBounds = false;
         Matrix3<T> tmpArray = arr;
+
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {

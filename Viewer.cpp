@@ -170,17 +170,7 @@ void Viewer::init() {
 //        this->voxelGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
     }
     if (this->voxelGrid) {
-        std::vector<Vector3> normals;
-        for (int x = 0; x < this->voxelGrid->sizeX; x++) {
-            for (int y = 0; y < this->voxelGrid->sizeY; y++) {
-                for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
-                    normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                    normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z)) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                }
-            }
-        }
-        this->flowDebugMeshes.fromArray(normals);
-        this->flowDebugMeshes.update();
+        updateFlowfieldDebugMesh();
     }
 }
 
@@ -455,40 +445,13 @@ void Viewer::erodeMap(bool sendFromCam)
     this->failedRocksMeshes.fromArray(asOneVector);
     this->failedRocksMeshes.update();
 
-    std::vector<Vector3> normals;
-    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
-        for (int y = 0; y < this->voxelGrid->sizeY; y++) {
-            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
-                normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back((Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z)) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-            }
-        }
-    }
-    this->flowDebugMeshes.fromArray(normals);
-    this->flowDebugMeshes.update();
-    update();
+    updateFlowfieldDebugMesh();
 }
 
 void Viewer::recomputeFlowfield()
 {
-    /*for (std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-        vc->needRemeshing = true;
-        vc->computeFlowfield();
-    }*/
     this->voxelGrid->computeFlowfield();
-
-    std::vector<Vector3> normals;
-    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
-        for (int y = 0; y < this->voxelGrid->sizeY; y++) {
-            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
-                normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back(Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-            }
-        }
-    }
-    this->flowDebugMeshes.fromArray(normals);
-    this->flowDebugMeshes.update();
-    update();
+    updateFlowfieldDebugMesh();
 }
 
 void Viewer::throwRock()
@@ -564,6 +527,22 @@ bool Viewer::checkMouseOnVoxel()
         this->grabber.position = currPos - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
     return found;
+}
+
+void Viewer::updateFlowfieldDebugMesh()
+{
+    std::vector<Vector3> normals;
+    for (int x = 0; x < this->voxelGrid->sizeX; x++) {
+        for (int y = this->voxelGrid->sizeY / 2; y < this->voxelGrid->sizeY / 2 + 1; y++) {
+            for (int z = 0; z < this->voxelGrid->sizeZ; z++) {
+                normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+            }
+        }
+    }
+    this->flowDebugMeshes.fromArray(normals);
+    this->flowDebugMeshes.update();
+    update();
 }
 
 void Viewer::closeEvent(QCloseEvent *e) {

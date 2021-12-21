@@ -17,6 +17,8 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, floa
 
     divergence = Matrix3<float>(sizeX, sizeY, sizeZ);
     pressure = Matrix3<float>(sizeX, sizeY, sizeZ);
+
+    maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
 void FluidSimulation::setObstacles(Matrix3<float> new_obstacles)
@@ -40,6 +42,12 @@ void FluidSimulation::addDensity(int x, int y, int z, float amount)
 void FluidSimulation::addVelocity(int x, int y, int z, Vector3 amount)
 {
     this->velocity(x, y, z) += amount;
+}
+
+void FluidSimulation::setMaxSpeed(float speed)
+{
+    this->maxSpeed = speed;
+    this->maxSpeedSquared = speed * speed;
 }
 
 Matrix3<Vector3> FluidSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
@@ -112,34 +120,49 @@ void FluidSimulation::project()
 
     Matrix3<Vector3> pressureGradient = this->pressure.gradient() / h;
     this->velocity -= pressureGradient / 2.f;
-    /*
-    for (int x = 1; x < this->sizeX - 1; x++) {
-        for (int y = 1; y < this->sizeY - 1; y++) {
-            for (int z = 1; z < this->sizeZ - 1; z++) {
-                this->velocity(x, y, z).x -= .5 * (pressure(x-1, y  , z  ) - pressure(x+1, y  , z  )) * this->sizeX;
-                this->velocity(x, y, z).y -= .5 * (pressure(x  , y-1, z  ) - pressure(x  , y+1, z  )) * this->sizeY;
-                this->velocity(x, y, z).z -= .5 * (pressure(x  , y  , z-1) - pressure(x  , y  , z+1)) * this->sizeZ;
-            }
-        }
-    }*/
-    this->set_bounds(this->velocity, true);
+//    this->set_bounds(this->velocity, true);
+    this->setVelocityBounds();
 }
 
 void FluidSimulation::setVelocityBounds()
 {
+
+    bool nullifyOnBounds = false;
+    bool inverseOnBounds = false;
+    Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
+
+    for (int x = 1; x < this->sizeX - 1; x++) {
+        for (int y = 1; y < this->sizeY - 1; y++) {
+            for (int z = 1; z < this->sizeZ - 1; z++) {
+                Vector3 origin(x, y, z);
+                if (velocity(x, y, z).norm2() > this->maxSpeedSquared) velocity(x, y, z) = velocity(x, y, z).normalized() * this->maxSpeed;
+                bool isGoingThroughObstable = (velocity.checkCoord(origin + boundariesGradient.at(origin)) ? obstacles.at(origin + boundariesGradient.at(origin)) > .5 : false);
+                if (isGoingThroughObstable) {
+                    if (inverseOnBounds)
+                        velocity.at(x, y, z) = velocity.at(x, y, z) - boundariesGradient(x, y, z) * (velocity.at(x, y, z).dot(boundariesGradient(x, y, z))) * 2.f;
+                    if (nullifyOnBounds)
+                        velocity.at(x, y, z) *= 0.f;
+                }
+            }
+        }
+    }
+    return;
+
+
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
                 Vector3 origin = Vector3(x, y, z);
                 Vector3 vel = velocity(x, y, z);
+                if (vel.norm2() > this->maxSpeedSquared) vel = vel.normalized() * this->maxSpeed;
                 // This is not the best way, but it's quite fast
-                if ((origin + vel).x < 0) vel.x = -origin.x;
+                /*if ((origin + vel).x < 0) vel.x = -origin.x;
                 if ((origin + vel).x >= sizeX) vel.x = sizeX-origin.x;
                 if ((origin + vel).y < 0) vel.y = -origin.y;
                 if ((origin + vel).y >= sizeY) vel.y = sizeY-origin.y;
                 if ((origin + vel).z < 0) vel.z = -origin.z;
                 if ((origin + vel).z >= sizeZ) vel.z = sizeZ-origin.z;
-                velocity(x, y, z) = vel;
+                velocity(x, y, z) = vel;*/
             }
         }
     }
