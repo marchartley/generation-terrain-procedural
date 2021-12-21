@@ -70,18 +70,78 @@ void FluidSimulation::step()
     this->diffuse();*/
     this->velocityStep();
 //    this->densityStep(); // This is actually useless right now. Maybe we could use it to erod the walls depending on the density, but that's not for now.
-    this->set_bounds(this->velocity, true, false);
-//    this->set_bounds(this->density, false, true);
+//    this->set_bounds(this->velocity, true, false);
+    //    this->set_bounds(this->density, false, true);
+}
+
+void FluidSimulation::diffuseVelocity()
+{
+    this->velocity_old.raiseErrorOnBadCoord = false;
+
+    float a = dt * viscosity * sizeX * sizeY * sizeZ;
+    for (int i = 0; i < this->iterations; i++) {
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
+                for (int z = 0; z < sizeZ; z++) {
+                    this->velocity_old(x, y, z) = (this->velocity(x, y, z) + (
+                                velocity_old(x    , y    , z - 1) +
+                                velocity_old(x    , y    , z + 1) +
+                                velocity_old(x    , y - 1, z    ) +
+                                velocity_old(x    , y + 1, z    ) +
+                                velocity_old(x - 1, y    , z    ) +
+                                velocity_old(x + 1, y    , z    )
+                                ) * a) / (float)(1 + velocity.getNumberNeighbors(x, y, z) * a);
+                }
+            }
+        }
+        this->setVelocityBounds();
+    }
+    this->velocity_old.raiseErrorOnBadCoord = true;
+}
+
+template<class T>
+T clamp(T val, T min, T max) {
+    val = std::min(std::max(val, min), max);
+    return val;
+}
+
+void FluidSimulation::advectVelocity()
+{
+    Vector3 dt0 = Vector3(sizeX, sizeY, sizeZ) * dt;
+
+    velocity_old.raiseErrorOnBadCoord = false;
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                Vector3 emittingCell = Vector3(x, y, z) - (velocity_old(x, y, z) * dt0);
+                float xCell = clamp(emittingCell.x, 0.f, (float)sizeX - 0.0001f);
+                float yCell = clamp(emittingCell.y, 0.f, (float)sizeY - 0.0001f);
+                float zCell = clamp(emittingCell.z, 0.f, (float)sizeZ - 0.0001f);
+
+                // Just computing some linear interpolation between the bounds of the emitting cell
+                int xFloor = int(xCell); int xCeil = xFloor + 1; float xAlpha = xCeil - x;
+                int yFloor = int(yCell); int yCeil = yFloor + 1; float yAlpha = yCeil - y;
+                int zFloor = int(zCell); int zCeil = zFloor + 1; float zAlpha = zCeil - z;
+
+                velocity(x, y, z) = ((velocity_old(xFloor, yFloor, zFloor) * zAlpha + velocity_old(xFloor, yFloor, zCeil) * (1 - zAlpha)) * yAlpha +
+                                     (velocity_old(xFloor,  yCeil, zFloor) * zAlpha + velocity_old(xFloor,  yCeil, zCeil) * (1 - zAlpha)) * (1 - yAlpha)) * xAlpha +
+                                    ((velocity_old( xCeil, yFloor, zFloor) * zAlpha + velocity_old( xCeil, yFloor, zCeil) * (1 - zAlpha)) * yAlpha +
+                                     (velocity_old( xCeil,  yCeil, zFloor) * zAlpha + velocity_old( xCeil,  yCeil, zCeil) * (1 - zAlpha)) * (1 - yAlpha)) * (1 - xAlpha);
+            }
+        }
+    }
+    velocity_old.raiseErrorOnBadCoord = true;
+    this->setVelocityBounds();
 }
 
 void FluidSimulation::velocityStep()
 {
-    swapArrays(this->velocity, this->velocity_old); // Originally was on first line
-    this->diffuse(this->velocity, this->velocity_old, this->viscosity);
-    this->project();
-    swapArrays(this->velocity_old, this->velocity);
-    this->advect(this->velocity, this->velocity_old, this->velocity_old);
-    this->project();
+//    swapArrays(this->velocity, this->velocity_old); // Originally was on first line
+    this->diffuseVelocity();
+    this->projectVelocity();
+//    swapArrays(this->velocity_old, this->velocity);
+    this->advectVelocity();
+    this->projectVelocity();
     this->setVelocityBounds();
 }
 
@@ -93,34 +153,38 @@ void FluidSimulation::densityStep()
     this->advect(this->density, this->density_old, this->velocity);
 }
 
-void FluidSimulation::project()
+void FluidSimulation::projectVelocity()
 {
     this->pressure = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
 
     // What is "h"??? In Josh Stam's code, it's just 1/N
     float h = 1/std::sqrt(this->sizeX * this->sizeY * this->sizeZ);
     this->divergence = velocity.divergence() * (-h/2.0);
-    /*
-    for (int x = 1; x < this->sizeX - 1; x++) {
-        for (int y = 1; y < this->sizeY - 1; y++) {
-            for (int z = 1; z < this->sizeZ - 1; z++) {
-                this->divergence(x, y, z) = -.5 * (
-                          velocity(x+1, y  , z  ).x
-                        - velocity(x-1, y  , z  ).x
-                        + velocity(x  , y+1, z  ).y
-                        - velocity(x  , y-1, z  ).y
-                        + velocity(x  , y  , z+1).z
-                        - velocity(x  , y  , z-1).z) * h;
-            }
-        }
-    }*/
+
     this->set_bounds(this->divergence);
     this->set_bounds(this->pressure);
-    this->solve_linear(this->pressure, this->divergence, 1, false);
 
-    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / h;
-    this->velocity -= pressureGradient / 2.f;
-//    this->set_bounds(this->velocity, true);
+    this->pressure.raiseErrorOnBadCoord = false;
+    for (int i = 0; i < this->iterations; i++) {
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
+                for (int z = 0; z < sizeZ; z++) {
+                    this->pressure(x, y, z) = (this->divergence(x, y, z) +
+                                                pressure(x    , y    , z - 1) +
+                                                pressure(x    , y    , z + 1) +
+                                                pressure(x    , y - 1, z    ) +
+                                                pressure(x    , y + 1, z    ) +
+                                                pressure(x - 1, y    , z    ) +
+                                                pressure(x + 1, y    , z    )
+                                ) / (float)(pressure.getNumberNeighbors(x, y, z));
+                }
+            }
+        }
+    }
+    this->pressure.raiseErrorOnBadCoord = true;
+
+    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / (-h * 2.0);
+    this->velocity += pressureGradient;
     this->setVelocityBounds();
 }
 
@@ -128,7 +192,7 @@ void FluidSimulation::setVelocityBounds()
 {
 
     bool nullifyOnBounds = false;
-    bool inverseOnBounds = false;
+    bool inverseOnBounds = true;
     Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
 
     for (int x = 1; x < this->sizeX - 1; x++) {
@@ -139,30 +203,10 @@ void FluidSimulation::setVelocityBounds()
                 bool isGoingThroughObstable = (velocity.checkCoord(origin + boundariesGradient.at(origin)) ? obstacles.at(origin + boundariesGradient.at(origin)) > .5 : false);
                 if (isGoingThroughObstable) {
                     if (inverseOnBounds)
-                        velocity.at(x, y, z) = velocity.at(x, y, z) - boundariesGradient(x, y, z) * (velocity.at(x, y, z).dot(boundariesGradient(x, y, z))) * 2.f;
+                        velocity.at(x, y, z) *= -1.0f; //  = velocity.at(x, y, z) - boundariesGradient(x, y, z) * (velocity.at(x, y, z).dot(boundariesGradient(x, y, z))) * 2.f;
                     if (nullifyOnBounds)
                         velocity.at(x, y, z) *= 0.f;
                 }
-            }
-        }
-    }
-    return;
-
-
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                Vector3 origin = Vector3(x, y, z);
-                Vector3 vel = velocity(x, y, z);
-                if (vel.norm2() > this->maxSpeedSquared) vel = vel.normalized() * this->maxSpeed;
-                // This is not the best way, but it's quite fast
-                /*if ((origin + vel).x < 0) vel.x = -origin.x;
-                if ((origin + vel).x >= sizeX) vel.x = sizeX-origin.x;
-                if ((origin + vel).y < 0) vel.y = -origin.y;
-                if ((origin + vel).y >= sizeY) vel.y = sizeY-origin.y;
-                if ((origin + vel).z < 0) vel.z = -origin.z;
-                if ((origin + vel).z >= sizeZ) vel.z = sizeZ-origin.z;
-                velocity(x, y, z) = vel;*/
             }
         }
     }

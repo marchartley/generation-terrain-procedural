@@ -32,6 +32,9 @@ public:
     bool checkCoord(Vector3 pos);
     bool checkIndex(int i);
 
+    int getNumberNeighbors(int x, int y, int z, bool using4connect = true);
+    int getNumberNeighbors(Vector3 pos, bool using4connect = true);
+
     Matrix3<T> resize(int newX, int newY, int newZ);
 
 
@@ -79,6 +82,9 @@ public:
 
     std::vector<T> data;
     int sizeX, sizeY, sizeZ;
+
+    bool raiseErrorOnBadCoord = true;
+    T defaultValueOnBadCoord = T();
 
     auto begin() { return data.begin(); }
     auto end() { return data.end(); }
@@ -149,16 +155,6 @@ Matrix3<T>::Matrix3(std::vector<std::vector<std::vector<T>>> data)
 }
 
 template<class T>
-T &Matrix3<T>::at(int i, int j, int k)
-{
-    if (i >= 0 && i < this->sizeX && j >= 0 && j < this->sizeY && k >= 0 && k < this->sizeZ) {
-        return this->data[getIndex(i, j, k)];
-    }
-    throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
-        + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
-}
-
-template<class T>
 T &Matrix3<T>::at(Vector3 pos)
 {
     return this->at(pos.x, pos.y, pos.z);
@@ -167,7 +163,7 @@ T &Matrix3<T>::at(Vector3 pos)
 template<class T>
 bool Matrix3<T>::checkCoord(int x, int y, int z)
 {
-    return ((0 <= x && x < sizeX) && (0 <= y && y < sizeY) && (0 <= z && z < sizeY));
+    return ((0 <= x && x < sizeX) && (0 <= y && y < sizeY) && (0 <= z && z < sizeZ));
 }
 
 template<class T>
@@ -182,11 +178,25 @@ bool Matrix3<T>::checkIndex(int i)
     return (0 <= i && i < sizeX * sizeY * sizeZ);
 }
 template<class T>
+T &Matrix3<T>::at(int i, int j, int k)
+{
+    if (checkCoord(i, j, k)) {
+        return this->data[getIndex(i, j, k)];
+    }
+    if (!raiseErrorOnBadCoord)
+        return defaultValueOnBadCoord;
+    throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
+        + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+
+template<class T>
 T &Matrix3<T>::at(int i)
 {
     if (i >= 0 && i < sizeX * sizeY * sizeZ) {
         return this->data[i];
     }
+    if (!raiseErrorOnBadCoord)
+        return defaultValueOnBadCoord;
     int x, y, z;
     std::tie(x, y, z) = this->getCoord(i);
     throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
@@ -494,6 +504,34 @@ bool Matrix3<T>::operator==(Matrix3<U> o) {
         if (this->data[i] != o.data[i])
             return false;
     return true;
+}
+
+
+template<class T>
+int Matrix3<T>::getNumberNeighbors(int x, int y, int z, bool using4connect)
+{
+    int neighbors = 0;
+    if (using4connect) {
+        if (x > 0) neighbors++;
+        if (x < sizeX-1) neighbors++;
+        if (y > 0) neighbors++;
+        if (y < sizeY - 1) neighbors++;
+        if (z > 0) neighbors++;
+        if (z < sizeZ - 1) neighbors++;
+    }
+    else {
+        for (int dx = -1; dx <= 1; dx++)
+            for (int dy = -1; dy <= 1; dy++)
+                for (int dz = -1; dz <= 1; dz++)
+                    if (dx != 0 || dy != 0 || dz != 0)
+                        neighbors += (checkCoord(x + dx, y + dy, z + dz) ? 1 : 0);
+    }
+    return neighbors;
+}
+template<class T>
+int Matrix3<T>::getNumberNeighbors(Vector3 pos, bool using4connect)
+{
+    return getNumberNeighbors(pos.x, pos.y, pos.z, using4connect);
 }
 
 template<typename T>

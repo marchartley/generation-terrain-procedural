@@ -19,9 +19,11 @@ public:
     Matrix3<Vector3> getVelocities(int rescaleX = -1, int rescaleY = -1, int rescaleZ = -1);
 
     void step();
+    void diffuseVelocity();
+    void advectVelocity();
     void velocityStep();
     void densityStep();
-    void project();
+    void projectVelocity();
 
     void setVelocityBounds();
 
