@@ -159,6 +159,7 @@ public:
     Mesh failedRocksMeshes;
     Mesh flowDebugMeshes;
     Mesh tunnelsMesh;
+    void updateFlowfieldDebugMesh();
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;

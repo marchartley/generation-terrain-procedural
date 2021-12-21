@@ -23,10 +23,14 @@ public:
     Matrix3(std::vector<T> data, int sizeX, int sizeY, int sizeZ = -1);
 
     T& at(int i, int j, int k = 0);
+    T& at(Vector3 pos);
     T& at(int i);
     T& operator()(int x, int y, int z);
     int getIndex(int x, int y, int z);
     std::tuple<int, int, int> getCoord(int index);
+    bool checkCoord(int x, int y, int z = 0);
+    bool checkCoord(Vector3 pos);
+    bool checkIndex(int i);
 
     Matrix3<T> resize(int newX, int newY, int newZ);
 
@@ -76,11 +80,14 @@ public:
     std::vector<T> data;
     int sizeX, sizeY, sizeZ;
 
+    auto begin() { return data.begin(); }
+    auto end() { return data.end(); }
+    std::size_t size() const { return end()-begin(); }
+    bool empty() const { return begin()==end(); }
+
     Matrix3& init(std::vector<T> data, int sizeX, int sizeY, int sizeZ);
 
     std::string displayValues();
-
-    static T tmpReturnVal;
 };
 
 #include <sstream>
@@ -149,6 +156,30 @@ T &Matrix3<T>::at(int i, int j, int k)
     }
     throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
         + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+
+template<class T>
+T &Matrix3<T>::at(Vector3 pos)
+{
+    return this->at(pos.x, pos.y, pos.z);
+}
+
+template<class T>
+bool Matrix3<T>::checkCoord(int x, int y, int z)
+{
+    return ((0 <= x && x < sizeX) && (0 <= y && y < sizeY) && (0 <= z && z < sizeY));
+}
+
+template<class T>
+bool Matrix3<T>::checkCoord(Vector3 pos)
+{
+    return checkCoord(pos.x, pos.y, pos.z);
+}
+
+template<class T>
+bool Matrix3<T>::checkIndex(int i)
+{
+    return (0 <= i && i < sizeX * sizeY * sizeZ);
 }
 template<class T>
 T &Matrix3<T>::at(int i)
