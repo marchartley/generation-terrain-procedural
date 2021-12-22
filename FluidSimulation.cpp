@@ -71,7 +71,7 @@ void FluidSimulation::step()
     this->velocityStep();
 //    this->densityStep(); // This is actually useless right now. Maybe we could use it to erod the walls depending on the density, but that's not for now.
 //    this->set_bounds(this->velocity, true, false);
-    //    this->set_bounds(this->density, false, true);
+//    this->set_bounds(this->density, false, true);
 }
 
 void FluidSimulation::diffuseVelocity()
@@ -94,7 +94,9 @@ void FluidSimulation::diffuseVelocity()
                 }
             }
         }
-        this->setVelocityBounds();
+//        swapArrays(velocity, velocity_old);
+//        this->setVelocityBounds();
+//        swapArrays(velocity, velocity_old);
     }
     this->velocity_old.raiseErrorOnBadCoord = true;
 }
@@ -107,7 +109,7 @@ T clamp(T val, T min, T max) {
 
 void FluidSimulation::advectVelocity()
 {
-    Vector3 dt0 = Vector3(sizeX, sizeY, sizeZ) * dt;
+    Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(sizeX, sizeY, sizeZ) * dt;
 
     velocity_old.raiseErrorOnBadCoord = false;
     for (int x = 0; x < sizeX; x++) {
@@ -118,6 +120,10 @@ void FluidSimulation::advectVelocity()
                 float yCell = clamp(emittingCell.y, 0.f, (float)sizeY - 0.0001f);
                 float zCell = clamp(emittingCell.z, 0.f, (float)sizeZ - 0.0001f);
 
+//                if (!velocity.checkCoord(emittingCell)) {
+//                    velocity.at(emittingCell) -= velocity_old.at(x, y, z);
+//                    continue;
+//                }
                 // Just computing some linear interpolation between the bounds of the emitting cell
                 int xFloor = int(xCell); int xCeil = xFloor + 1; float xAlpha = xCeil - x;
                 int yFloor = int(yCell); int yCeil = yFloor + 1; float yAlpha = yCeil - y;
@@ -136,13 +142,26 @@ void FluidSimulation::advectVelocity()
 
 void FluidSimulation::velocityStep()
 {
+    this->velocity += this->velocity_old * this->dt;
 //    swapArrays(this->velocity, this->velocity_old); // Originally was on first line
-    this->diffuseVelocity();
+//    this->diffuseVelocity(); // Removed for now (considering viscosity = 0)
+    velocity_old = velocity; // Replaced by a simple affectation
+
     this->projectVelocity();
+
 //    swapArrays(this->velocity_old, this->velocity);
     this->advectVelocity();
     this->projectVelocity();
     this->setVelocityBounds();
+
+    for (int x = sizeX / 3; x < 2 * sizeX / 3; x++) {
+        for (int y = sizeY / 3; y < 2 * sizeY / 3; y++) {
+            for (int z = sizeZ / 3; z < 2 * sizeZ / 3; z++) {
+                meanVel += velocity(x, y, z);
+            }
+        }
+    }
+    std::cout << meanVel.normalized() << std::endl;
 }
 
 void FluidSimulation::densityStep()
@@ -158,18 +177,19 @@ void FluidSimulation::projectVelocity()
     this->pressure = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
 
     // What is "h"??? In Josh Stam's code, it's just 1/N
-    float h = 1/std::sqrt(this->sizeX * this->sizeY * this->sizeZ);
-    this->divergence = velocity.divergence() * (-h/2.0);
+    float h = 1.f / (float)std::sqrt(this->sizeX * this->sizeY * this->sizeZ);
+    this->divergence = velocity.divergence() * (h/2.0);
 
     this->set_bounds(this->divergence);
     this->set_bounds(this->pressure);
 
     this->pressure.raiseErrorOnBadCoord = false;
+    Matrix3<float> tmp = pressure;
     for (int i = 0; i < this->iterations; i++) {
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
                 for (int z = 0; z < sizeZ; z++) {
-                    this->pressure(x, y, z) = (this->divergence(x, y, z) +
+                    tmp(x, y, z) = (this->divergence(x, y, z) +
                                                 pressure(x    , y    , z - 1) +
                                                 pressure(x    , y    , z + 1) +
                                                 pressure(x    , y - 1, z    ) +
@@ -180,6 +200,8 @@ void FluidSimulation::projectVelocity()
                 }
             }
         }
+        pressure = tmp;
+        set_bounds(pressure);
     }
     this->pressure.raiseErrorOnBadCoord = true;
 
@@ -190,20 +212,19 @@ void FluidSimulation::projectVelocity()
 
 void FluidSimulation::setVelocityBounds()
 {
-
     bool nullifyOnBounds = false;
-    bool inverseOnBounds = true;
+    bool inverseOnBounds = false;
     Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
 
-    for (int x = 1; x < this->sizeX - 1; x++) {
-        for (int y = 1; y < this->sizeY - 1; y++) {
-            for (int z = 1; z < this->sizeZ - 1; z++) {
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
                 Vector3 origin(x, y, z);
                 if (velocity(x, y, z).norm2() > this->maxSpeedSquared) velocity(x, y, z) = velocity(x, y, z).normalized() * this->maxSpeed;
                 bool isGoingThroughObstable = (velocity.checkCoord(origin + boundariesGradient.at(origin)) ? obstacles.at(origin + boundariesGradient.at(origin)) > .5 : false);
                 if (isGoingThroughObstable) {
                     if (inverseOnBounds)
-                        velocity.at(x, y, z) *= -1.0f; //  = velocity.at(x, y, z) - boundariesGradient(x, y, z) * (velocity.at(x, y, z).dot(boundariesGradient(x, y, z))) * 2.f;
+                        velocity.at(x, y, z) = velocity.at(x, y, z) - boundariesGradient(x, y, z) * (velocity.at(x, y, z).dot(boundariesGradient(x, y, z))) * 2.f;
                     if (nullifyOnBounds)
                         velocity.at(x, y, z) *= 0.f;
                 }
