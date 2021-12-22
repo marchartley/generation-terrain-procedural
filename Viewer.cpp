@@ -161,7 +161,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->retrieveMap(this->mapSavingFolder + "straight_tube.data");
+//        voxelGrid->retrieveMap(this->mapSavingFolder + "just_floor.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
@@ -536,7 +536,7 @@ void Viewer::updateFlowfieldDebugMesh()
         for (int y = 0; y < this->voxelGrid->sizeY; y+= this->voxelGrid->fluidSimRescale) {
             for (int z = 0; z < this->voxelGrid->sizeZ; z+= this->voxelGrid->fluidSimRescale) {
                 normals.push_back(Vector3(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back(Vector3(x, y, z) + this->voxelGrid->getFlowfield(x, y, z) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + (this->voxelGrid->getFlowfield(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5 - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
         }
     }

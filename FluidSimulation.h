@@ -47,6 +47,8 @@ public:
 
     Matrix3<float> obstacles;
 
+    Vector3 meanVel;
+
 
     template<typename T>
     void swapArrays(Matrix3<T>& arr, Matrix3<T>& arr2)
@@ -66,7 +68,7 @@ public:
     template<typename T>
     void set_bounds(Matrix3<T>& arr, bool inverseOnBounds = false, bool nullifyOnBounds = true)
     {
-        nullifyOnBounds = false;
+        nullifyOnBounds = true;
         inverseOnBounds = false;
         Matrix3<T> tmpArray = arr;
 

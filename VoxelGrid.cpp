@@ -26,6 +26,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
 //                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
 //                        noise_val = 0.5; // To remove
+                        noise_val = (h < getSizeZ()/4 ? 1.0 : -1.0); // To remove
                         data[iChunk].at(x, y, h) = noise_val;
                     }
                 }
@@ -125,14 +126,15 @@ void VoxelGrid::computeFlowfield()
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < this->fluidSimulation.sizeY; y++) {
             for (int z = 0; z < this->fluidSimulation.sizeZ; z++) {
-                this->fluidSimulation.velocity(x, y, z) += this->sea_current / (this->fluidSimRescale / this->fluidSimulation.dt);
+                this->fluidSimulation.velocity(x, y, z) = this->sea_current * (this->fluidSimulation.dt / (float)this->fluidSimRescale);
             }
         }
     }
-//    for (int i = 0; i < 2; i++)
+    for (int i = 0; i < 3; i++)
         this->fluidSimulation.step();
     this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
-//    for (auto& val : this->flowField.data)
+//    flowField = (this->fluidSimulation.divergence.gradient() * -1.f).resize(sizeX, sizeY, sizeZ);
+//    for (auto& val : this->flowField)
 //        val.normalize();
 
     NoiseMinMax mm;
@@ -219,7 +221,7 @@ void VoxelGrid::initMap()
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
 
-    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.01, 0.00001, 0.0001, 20);
+    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.01f, 0.0f, 0.0f, 10);
 }
 
 void VoxelGrid::createMesh()
