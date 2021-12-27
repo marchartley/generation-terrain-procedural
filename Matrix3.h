@@ -26,6 +26,15 @@ public:
     T& at(Vector3 pos);
     T& at(int i);
     T& operator()(int x, int y, int z);
+    T& operator[](int i);
+    T& operator[](Vector3 pos);
+
+    const T& at(int i, int j, int k = 0) const;
+    const T& at(Vector3 pos) const;
+    const T& at(int i) const;
+    const T& operator()(int x, int y, int z) const;
+    const T& operator[](int i) const;
+    const T& operator[](Vector3 pos) const;
     int getIndex(int x, int y, int z);
     std::tuple<int, int, int> getCoord(int index);
     bool checkCoord(int x, int y, int z = 0);
@@ -88,8 +97,8 @@ public:
 
     auto begin() { return data.begin(); }
     auto end() { return data.end(); }
-    std::size_t size() const { return end()-begin(); }
-    bool empty() const { return begin()==end(); }
+    std::size_t size() const { return end() - begin(); }
+    bool empty() const { return begin() == end(); }
 
     Matrix3& init(std::vector<T> data, int sizeX, int sizeY, int sizeZ);
 
@@ -155,12 +164,6 @@ Matrix3<T>::Matrix3(std::vector<std::vector<std::vector<T>>> data)
 }
 
 template<class T>
-T &Matrix3<T>::at(Vector3 pos)
-{
-    return this->at(pos.x, pos.y, pos.z);
-}
-
-template<class T>
 bool Matrix3<T>::checkCoord(int x, int y, int z)
 {
     return ((0 <= x && x < sizeX) && (0 <= y && y < sizeY) && (0 <= z && z < sizeZ));
@@ -176,6 +179,12 @@ template<class T>
 bool Matrix3<T>::checkIndex(int i)
 {
     return (0 <= i && i < sizeX * sizeY * sizeZ);
+}
+
+template<class T>
+T &Matrix3<T>::at(Vector3 pos)
+{
+    return this->at(pos.x, pos.y, pos.z);
 }
 template<class T>
 T &Matrix3<T>::at(int i, int j, int k)
@@ -205,6 +214,19 @@ T &Matrix3<T>::at(int i)
 template<typename T>
 T& Matrix3<T>::operator()(int x, int y, int z) {
     return this->at(x, y, z);
+}
+template<typename T>
+T& Matrix3<T>::operator[](int i) {
+    return this->at(i);
+}
+template<typename T>
+T& Matrix3<T>::operator[](Vector3 pos) {
+    return this->at(pos);
+}
+
+template<typename T>
+const T& Matrix3<T>::operator[](Vector3 pos) const {
+    return this->at(pos);
 }
 
 template<class T>
@@ -271,7 +293,7 @@ Matrix3<T> Matrix3<T>::normalized() {
     Matrix3 mat = *this;
     return mat.normalize();
 }
-
+/*
 template<class T>
 Matrix3<Vector3> Matrix3<T>::gradient() {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
@@ -301,6 +323,22 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
             }
         }
     }
+    return returningGrid;
+}*/
+template<class T>
+Matrix3<Vector3> Matrix3<T>::gradient() {
+    Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
+    this->raiseErrorOnBadCoord = false;
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                returningGrid.at(x, y, z) = Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
+                                                    (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
+                                                    (at(x, y, z + 1) - at(x, y, z - 1)) * .5f);
+            }
+        }
+    }
+    this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 template<class T>
@@ -553,11 +591,11 @@ Matrix3<T> Matrix3<T>::resize(int newX, int newY, int newZ)
     // Apply interpolations
     for (int x = 0; x < newX; x++) {
         int x_original = int(x * rx);
-        int x_plus_1 = (x_original >= this->sizeZ - 2 ? x_original : x_original + 1);
+        int x_plus_1 = (x_original >= this->sizeX - 2 ? x_original : x_original + 1);
         float d_x = (x * rx) - x_original;
         for (int y = 0; y < newY; y++) {
             int y_original = int(y * ry);
-            int y_plus_1 = (y_original >= this->sizeZ - 2 ? y_original : y_original + 1);
+            int y_plus_1 = (y_original >= this->sizeY - 2 ? y_original : y_original + 1);
             float d_y = (y * ry) - y_original;
             for (int z = 0; z < newZ; z++) {
                 int z_original = int(z * rz);

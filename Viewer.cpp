@@ -19,7 +19,7 @@ bool makedir(std::string path);
 Viewer::Viewer(QWidget *parent):
     Viewer(
         std::shared_ptr<Grid>(nullptr), // new Grid(100, 100, 40, 1.0),
-        std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
+        std::make_shared<VoxelGrid>(3, 1, 3, 1.0, .30),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
@@ -161,7 +161,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-//        voxelGrid->retrieveMap(this->mapSavingFolder + "just_floor.data");
+        voxelGrid->retrieveMap(this->mapSavingFolder + "natural_tube.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
@@ -172,6 +172,7 @@ void Viewer::init() {
     if (this->voxelGrid) {
         updateFlowfieldDebugMesh();
     }
+    startAnimation();
 }
 
 void Viewer::draw() {
@@ -405,6 +406,10 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
 void Viewer::animate()
 {
+    if (voxelGrid) {
+        voxelGrid->computeFlowfield();
+        this->updateFlowfieldDebugMesh();
+    }
     if (this->applyLetItFall)
         this->voxelGrid->makeItFall((this->applyLetSandFall ? -1.0 : 0.1));
     if (this->applyLetSandFall)

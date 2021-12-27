@@ -9,14 +9,17 @@ class VoxelGrid;
 #include <vector>
 #include <map>
 #include <tuple>
+#include <limits>
 #include "Mesh.h"
 #include "FastNoiseLit.h"
+#include "Matrix3.h"
 
 #include "FluidSimulation.h"
+#include "src/sim-fluid-ethanjli/fluidsystem.h"
 
 struct NoiseMinMax {
-    float min = MAXFLOAT;
-    float max = -MAXFLOAT;
+    float min = std::numeric_limits<float>::max();
+    float max = std::numeric_limits<float>::min();
 
     void update(float val) {
         min = std::min(min, val);
@@ -120,6 +123,9 @@ public:
 
     Mesh mesh;
     FluidSimulation fluidSimulation;
+    std::unique_ptr<FluidSystem> fluidSystem;
+    std::unique_ptr<VelocityField> constantFlowSource;
+
     int fluidSimRescale = 4;
 
 
@@ -128,7 +134,7 @@ public:
     Matrix3<int> distanceField;
     Matrix3<float> pressureField;
 
-    Vector3 sea_current = Vector3(.10, 0.0, 0.0);
+    Vector3 sea_current = Vector3(1.0, 0.0, 0.0);
 };
 
 #endif // VOXELGRID_H
