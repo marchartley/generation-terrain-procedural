@@ -1,5 +1,12 @@
 #include "FluidSimulation.h"
 
+template<class T>
+T clamp(T val, T min, T max) {
+    val = std::min(std::max(val, min), max);
+    return val;
+}
+
+
 FluidSimulation::FluidSimulation()
 {
 
@@ -24,14 +31,12 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, floa
 void FluidSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
     this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ);
-/*
-    for(int i = 0; i < this->obstacles.data.size(); i++) {
-        if (this->obstacles.data[i] < 0.5) {
-            int x, y, z;
-            std::tie(x, y, z) = this->obstacles.getCoord(i);
-            std::cout << x << " " << y << " " << z << " | " << std::endl;
+    for(size_t i = 0; i < this->obstacles.data.size(); i++) {
+        if (this->obstacles[i] > 0.5) {
+            this->velocity[i] = Vector3();
+            this->velocity_old[i] = Vector3();
         }
-    }*/
+    }
 }
 
 void FluidSimulation::addDensity(int x, int y, int z, float amount)
@@ -74,11 +79,35 @@ void FluidSimulation::step()
 //    this->set_bounds(this->density, false, true);
 }
 
+void FluidSimulation::velocityStep()
+{
+    this->velocity += this->velocity_old * this->dt;
+//    swapArrays(this->velocity, this->velocity_old); // Originally was on first line
+    this->diffuseVelocity(); // Removed for now (considering viscosity = 0)
+//    velocity_old = velocity; // Replaced by a simple affectation
+
+    this->projectVelocity();
+
+//    swapArrays(this->velocity_old, this->velocity);
+    this->advectVelocity();
+    this->projectVelocity();
+    this->setVelocityBounds();
+
+//    for (int x = sizeX / 3; x < 2 * sizeX / 3; x++) {
+//        for (int y = sizeY / 3; y < 2 * sizeY / 3; y++) {
+//            for (int z = sizeZ / 3; z < 2 * sizeZ / 3; z++) {
+//                meanVel += velocity(x, y, z);
+//            }
+//        }
+//    }
+//    std::cout << meanVel.normalized() << std::endl;
+}
+
 void FluidSimulation::diffuseVelocity()
 {
     this->velocity_old.raiseErrorOnBadCoord = false;
 
-    float a = dt * viscosity * sizeX * sizeY * sizeZ;
+    float a = dt * viscosity; // * sizeX * sizeY * sizeZ; // Removing "N^3" following ethanjli code
     for (int i = 0; i < this->iterations; i++) {
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
@@ -99,12 +128,6 @@ void FluidSimulation::diffuseVelocity()
 //        swapArrays(velocity, velocity_old);
     }
     this->velocity_old.raiseErrorOnBadCoord = true;
-}
-
-template<class T>
-T clamp(T val, T min, T max) {
-    val = std::min(std::max(val, min), max);
-    return val;
 }
 
 void FluidSimulation::advectVelocity()
@@ -140,30 +163,6 @@ void FluidSimulation::advectVelocity()
     this->setVelocityBounds();
 }
 
-void FluidSimulation::velocityStep()
-{
-    this->velocity += this->velocity_old * this->dt;
-//    swapArrays(this->velocity, this->velocity_old); // Originally was on first line
-//    this->diffuseVelocity(); // Removed for now (considering viscosity = 0)
-    velocity_old = velocity; // Replaced by a simple affectation
-
-    this->projectVelocity();
-
-//    swapArrays(this->velocity_old, this->velocity);
-    this->advectVelocity();
-    this->projectVelocity();
-    this->setVelocityBounds();
-
-    for (int x = sizeX / 3; x < 2 * sizeX / 3; x++) {
-        for (int y = sizeY / 3; y < 2 * sizeY / 3; y++) {
-            for (int z = sizeZ / 3; z < 2 * sizeZ / 3; z++) {
-                meanVel += velocity(x, y, z);
-            }
-        }
-    }
-    std::cout << meanVel.normalized() << std::endl;
-}
-
 void FluidSimulation::densityStep()
 {
     swapArrays(this->density, this->density_old);
@@ -177,12 +176,18 @@ void FluidSimulation::projectVelocity()
     this->pressure = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
 
     // What is "h"??? In Josh Stam's code, it's just 1/N
-    float h = 1.f / (float)std::sqrt(this->sizeX * this->sizeY * this->sizeZ);
-    this->divergence = velocity.divergence() * (h/2.0);
+    // So I think that if "h" is big (.5 < h < 1.), there are alternating attraction/repulsion "poles"
+    // These poles are having a distance of N/h between them, so if we set h to 1/N, this effect looks canceleld
+//    float h = 1.f / (float)(sizeX * sizeY * sizeZ); // (float)std::sqrt(this->sizeX * this->sizeY * this->sizeZ);
+//    this->divergence = velocity.divergence() * (h/2.f);
+    // In ethanjli's code, the divergence is *= -1, so we try that here
+    float h = 1.f/(float)std::max(this->sizeX, std::max(this->sizeY, this->sizeZ));
+    this->divergence = velocity.divergence() * -h;
 
     this->set_bounds(this->divergence);
-    this->set_bounds(this->pressure);
+//    this->set_bounds(this->pressure);
 
+    this->pressure = divergence;
     this->pressure.raiseErrorOnBadCoord = false;
     Matrix3<float> tmp = pressure;
     for (int i = 0; i < this->iterations; i++) {
@@ -205,7 +210,9 @@ void FluidSimulation::projectVelocity()
     }
     this->pressure.raiseErrorOnBadCoord = true;
 
-    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / (-h * 2.0);
+//    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / (-h * 2.f);
+    // Following ethanjli code :
+    Matrix3<Vector3> pressureGradient = this->pressure.gradient() * -h;
     this->velocity += pressureGradient;
     this->setVelocityBounds();
 }

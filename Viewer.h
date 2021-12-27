@@ -106,7 +106,7 @@ public:
 
     bool displayRockTrajectories = false;
     bool displayFailedRockTrajectories = false;
-    bool displayFlowfield = false;
+    bool displayFlowfield = true;
     bool displayTunnelsPath = false;
 
     int erosionSize = 1;

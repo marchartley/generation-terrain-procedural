@@ -49,7 +49,9 @@ SOURCES += \
         Voxel.cpp \
         VoxelChunk.cpp \
         VoxelGrid.cpp \
-        main.cpp
+        main.cpp \
+        src/sim-fluid-ethanjli/fluidsystem.cpp \
+        src/sim-fluid-ethanjli/math.cpp
 
 RESOURCES += qml.qrc
 
@@ -86,7 +88,13 @@ HEADERS += \
     Viewer.h \
     Voxel.h \
     VoxelChunk.h \
-    VoxelGrid.h
+    VoxelGrid.h \
+    src/sim-fluid-ethanjli/fluidsystem.h \
+    src/sim-fluid-ethanjli/fluidsystem.tpp \
+    src/sim-fluid-ethanjli/math.h \
+    src/sim-fluid-ethanjli/math.tpp \
+    src/sim-fluid-ethanjli/vectorfield.h \
+    src/sim-fluid-ethanjli/vectorfield.tpp
 
 RESOURCES += \
 fragment_shader_gouraud.glsl \
