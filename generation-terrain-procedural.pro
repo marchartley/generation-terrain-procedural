@@ -1,6 +1,8 @@
 QT *= quick opengl xml widgets gui
 CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
+INCLUDEPATH *= src/
+
 unix {
     INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
     LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
@@ -28,28 +30,39 @@ TEMPLATE = app
 TARGET = interface
 
 SOURCES += \
-        BSpline.cpp \
-        FluidSimulation.cpp \
-        Globals.cpp \
-        Grid.cpp \
-        Interface.cpp \
-        LayerBasedGrid.cpp \
-        MarchingCubes.cpp \
-        Matrix.cpp \
-        Matrix3.cpp \
-        Mesh.cpp \
-        RockErosion.cpp \
-        Shader.cpp \
-        ShaderElement.cpp \
-        Sphere.cpp \
-        UnderwaterErosion.cpp \
-        Vector3.cpp \
-        Vertex.cpp \
-        Viewer.cpp \
-        Voxel.cpp \
-        VoxelChunk.cpp \
-        VoxelGrid.cpp \
-        main.cpp \
+        src/DataStructure/Matrix.cpp \
+        src/DataStructure/Matrix3.cpp \
+        src/DataStructure/Vector3.cpp \
+        src/DataStructure/Vertex.cpp \
+        src/DataStructure/Voxel.cpp \
+        src/FluidSimulation/FluidSimulation.cpp \
+        src/Graph/Graph.cpp \
+        src/Graph/FastPoissonGraph.cpp \
+        src/Graph/GraphNode.cpp \
+        src/Graph/Pathfinding.cpp \
+        src/Graphics/DebugShader.cpp \
+        src/Graphics/MarchingCubes.cpp \
+        src/Graphics/Mesh.cpp \
+        src/Graphics/Shader.cpp \
+        src/Graphics/ShaderElement.cpp \
+        src/Graphics/Sphere.cpp \
+        src/Interface/FancySlider.cpp \
+        src/Interface/Interface.cpp \
+        src/Interface/RangeSlider.cpp \
+        src/Interface/Spoiler.cpp \
+        src/Interface/Viewer.cpp \
+        src/Karts/KarstPathsGeneration.cpp \
+        src/TerrainGen/Grid.cpp \
+        src/TerrainGen/LayerBasedGrid.cpp \
+        src/TerrainGen/VoxelChunk.cpp \
+        src/TerrainGen/VoxelGrid.cpp \
+        src/TerrainModification/RockErosion.cpp \
+        src/TerrainModification/UnderwaterErosion.cpp \
+        src/TreeColonisation/TreeColonisation.cpp \
+        src/Utils/BSpline.cpp \
+        src/Utils/Globals.cpp \
+        src/Utils/Utils.cpp \
+        src/main.cpp \
         src/sim-fluid-ethanjli/fluidsystem.cpp \
         src/sim-fluid-ethanjli/math.cpp
 
@@ -67,28 +80,39 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
-    BSpline.h \
-    FastNoiseLit.h \
-    FluidSimulation.h \
-    Globals.h \
-    Grid.h \
-    Interface.h \
-    LayerBasedGrid.h \
-    MarchingCubes.h \
-    Matrix.h \
-    Matrix3.h \
-    Mesh.h \
-    RockErosion.h \
-    Shader.h \
-    ShaderElement.h \
-    Sphere.h \
-    UnderwaterErosion.h \
-    Vector3.h \
-    Vertex.h \
-    Viewer.h \
-    Voxel.h \
-    VoxelChunk.h \
-    VoxelGrid.h \
+    src/DataStructure/Matrix.h \
+    src/DataStructure/Matrix3.h \
+    src/DataStructure/Vector3.h \
+    src/DataStructure/Vertex.h \
+    src/DataStructure/Voxel.h \
+    src/FluidSimulation/FluidSimulation.h \
+    src/Graph/Graph.h \
+    src/Graph/FastPoissonGraph.h \
+    src/Graph/GraphNode.h \
+    src/Graph/Pathfinding.h \
+    src/Graphics/DebugShader.h \
+    src/Graphics/MarchingCubes.h \
+    src/Graphics/Mesh.h \
+    src/Graphics/Shader.h \
+    src/Graphics/ShaderElement.h \
+    src/Graphics/Sphere.h \
+    src/Interface/FancySlider.h \
+    src/Interface/Interface.h \
+    src/Interface/RangeSlider.h \
+    src/Interface/Spoiler.h \
+    src/Interface/Viewer.h \
+    src/TerrainGen/Grid.h \
+    src/TerrainGen/LayerBasedGrid.h \
+    src/TerrainGen/VoxelChunk.h \
+    src/TerrainGen/VoxelGrid.h \
+    src/TerrainModification/RockErosion.h \
+    src/TerrainModification/UnderwaterErosion.h \
+    src/TreeColonisation/TreeColonisation.h \
+    src/Utils/BSpline.h \
+    src/Utils/FastNoiseLit.h \
+    src/Utils/Globals.h \
+    src/Karts/KarstPathsGeneration.h \
+    src/Utils/Utils.h \
     src/sim-fluid-ethanjli/fluidsystem.h \
     src/sim-fluid-ethanjli/fluidsystem.tpp \
     src/sim-fluid-ethanjli/math.h \
@@ -96,22 +120,23 @@ HEADERS += \
     src/sim-fluid-ethanjli/vectorfield.h \
     src/sim-fluid-ethanjli/vectorfield.tpp
 
-RESOURCES += \
-fragment_shader_gouraud.glsl \
-    grid_fragment_shader_blinn_phong.glsl \
-    grid_vertex_shader_blinn_phong.glsl \
-vertex_shader_gouraud.glsl
+RESOURCES +=\
+    src/Shaders/grabber_fragment_shader.glsl \
+    src/Shaders/grabber_vertex_shader.glsl \
+    src/Shaders/layer_based_fragment_shader.glsl \
+    src/Shaders/layer_based_vertex_shader.glsl \
+    src/Shaders/no_fragment_shader.glsl \
+    src/Shaders/no_vertex_shader.glsl \
+    src/Shaders/noise.glsl \
+    src/assets/handle.png \
+    src/Shaders/voxels_fragment_shader_blinn_phong.glsl \
+    src/Shaders/voxels_vertex_shader_blinn_phong.glsl\
+    src/Shaders/fragment_shader_gouraud.glsl \
+    src/Shaders/grid_fragment_shader_blinn_phong.glsl \
+    src/Shaders/grid_vertex_shader_blinn_phong.glsl \
+    src/Shaders/vertex_shader_gouraud.glsl
 
 
-DISTFILES += \
-    grabber_fragment_shader.glsl \
-    grabber_vertex_shader.glsl \
-    layer_based_fragment_shader.glsl \
-    layer_based_vertex_shader.glsl \
-    no_fragment_shader.glsl \
-    no_vertex_shader.glsl \
-    noise.glsl \
-    voxels_fragment_shader_blinn_phong.glsl \
-    voxels_vertex_shader_blinn_phong.glsl
+#DISTFILES +=
 
 FORMS +=
