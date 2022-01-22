@@ -37,11 +37,21 @@ void ControlPoint::setState(GrabberState newState)
     this->state = newState;
 }
 
+void ControlPoint::onUpdate(std::function<void ()> func)
+{
+    this->onUpdateCallback = func;
+}
+
 void ControlPoint::updateSphere()
 {
     if (this->useManipFrame)
         this->position = Vector3(this->manipFrame.position().x, this->manipFrame.position().y, this->manipFrame.position().z);
+
+    if(this->onUpdateCallback)
+        this->onUpdateCallback();
+
     this->shape.position = this->position;
+    this->shape.radius = this->radius;
     this->shape.buildVerticesFlat();
     this->fromArray(this->shape.mesh.vertexArrayFloat);
     this->update();
@@ -50,10 +60,14 @@ void ControlPoint::updateSphere()
 void ControlPoint::display()
 {
     if (this->state == HIDDEN) return;
-    else
+    else {
+        if (this->useManipFrame)
+            this->setState(this->manipFrame.isManipulated() ? ACTIVE : INACTIVE);
+
         this->shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
-    this->updateSphere();
-    Mesh::display();
+        this->updateSphere();
+        Mesh::display();
+    }
 }
 
 void ControlPoint::move(Vector3 newPos)
