@@ -53,7 +53,7 @@ void Viewer::init() {
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
-    this->camera()->setType(Camera::ORTHOGRAPHIC);
+    this->camera()->setType(Camera::PERSPECTIVE);
 
     setTextIsEnabled(true);
     setMouseTracking(true);
@@ -87,15 +87,21 @@ void Viewer::init() {
     GlobalsGL::generateBuffers();
     this->rocksVBO = GlobalsGL::newBufferId();
 
-    this->grabber = Sphere();
+    ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
     this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
     this->debugMeshes[FAILED_ROCKS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
     this->debugMeshes[FLOW_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
     this->debugMeshes[TUNNEL_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[GRABBER] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
     this->debugMeshes[KARST_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
     this->debugMeshes[SPACE_COLONI] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
+
+    this->debugControlPoints[ROCK_TRAILS] = std::vector<ControlPoint>();
+    this->debugControlPoints[FAILED_ROCKS] = std::vector<ControlPoint>();
+    this->debugControlPoints[FLOW_TRAILS] = std::vector<ControlPoint>();
+    this->debugControlPoints[TUNNEL_PATHS] = std::vector<ControlPoint>();
+    this->debugControlPoints[KARST_PATHS] = std::vector<ControlPoint>();
+    this->debugControlPoints[SPACE_COLONI] = std::vector<ControlPoint>();
 
     float rocksColor[4] = {86/255.f, 176/255.f, 12/255.f, .5f};
     float failedRocksColor[4] = {176/255.f, 72/255.f, 12/255.f, .4f};
@@ -108,9 +114,10 @@ void Viewer::init() {
     this->debugMeshes[FAILED_ROCKS].shader->setVector("color", failedRocksColor, 4);
     this->debugMeshes[FLOW_TRAILS].shader->setVector("color", flowfieldColor, 4);
     this->debugMeshes[TUNNEL_PATHS].shader->setVector("color", tunnelsColor, 4);
-    this->debugMeshes[GRABBER].shader->setVector("color", grabberColor, 4);
     this->debugMeshes[KARST_PATHS].shader->setVector("color", karstsColors, 4);
     this->debugMeshes[SPACE_COLONI].shader->setVector("color", colonizerColors, 4);
+    ControlPoint::base_shader->setVector("color", grabberColor, 4);
+    this->mainGrabber = ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
     for (auto& debugMesh : this->debugMeshes)
@@ -119,10 +126,10 @@ void Viewer::init() {
     this->matter_adder = RockErosion(this->erosionSize, 1.0);
 
     this->light = PositionalLight(
-                new float[4]{.8, .8, .8, 1.},
-                new float[4]{1., 1., 1., 1.},
-                new float[4]{1., 1., 1., 1.},
-                Vector3(100.0, 100.0, 0.0)
+                new float[4]{.5, .5, .5, 1.},
+                new float[4]{.2, .2, .2, 1.},
+                new float[4]{.5, .5, .5, 1.},
+                Vector3(0.0, 0.0, 100.0)
                 );
 
     this->setAnimationPeriod(0);
@@ -167,8 +174,7 @@ void Viewer::init() {
         this->voxelGrid->createMesh();
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-//        this->voxelGrid->mesh.shader = new Shader(vShader_voxels, fShader_voxels);
-//        this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
+        this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
         this->initKarstPathCreator();
         this->initSpaceColonizer();
     }
@@ -185,8 +191,6 @@ void Viewer::draw() {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-//    this->shader.use(true);
 
     float pMatrix[16];
     float mvMatrix[16];
@@ -207,7 +211,7 @@ void Viewer::draw() {
                     51.2f
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
-    float globalAmbiant[4] = {.50, .50, .50, 1.0};
+    float globalAmbiant[4] = {.10, .10, .10, 1.0};
 
     if (this->viewerMode != NO_DISPLAY)
     {
@@ -276,36 +280,23 @@ void Viewer::draw() {
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(5.f);
     for (auto& debugMesh : this->debugMeshes) {
-        std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
         std::get<1>(debugMesh).display();
+    }
+    for (auto& controlPointsArray : this->debugControlPoints) {
+        for (auto& grabber : std::get<1>(controlPointsArray)) {
+            grabber.shader->setMatrix("proj_matrix", pMatrix);
+            grabber.shader->setMatrix("mv_matrix", mvMatrix);
+            grabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            grabber.display();
+        }
     }
     //    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
     glLineWidth(previousLineWidth[0]);
-/*
-    if (displayRockTrajectories) {
-        this->rocksMeshes.display(GL_LINES);
-    }
-    if (displayFailedRockTrajectories) {
-        this->debugMeshes[FAILED_ROCKS].display(GL_LINES);
-    }
-    if (displayFlowfield) {
-        this->debugMeshes[FLOW_TRAILS].display(GL_LINES);
-    }
-    if (displayTunnelsPath) {
-        this->debugMeshes[TUNNEL_PATHS].display(GL_LINES);
-    }
-    if (this->curvesErosionConstructionMode) {
-        this->grabber.display();
-    }
-    if (this->displayKarstPaths) {
-        this->debugMeshes[KARST_PATHS].display(GL_LINES);
-    }
-    if (this->displaySpaceColonizerPaths) {
-        this->debugMeshes[SPACE_COLONI].display(GL_LINES);
-    }
-*/
+
+    this->mainGrabber.shader->setMatrix("proj_matrix", pMatrix);
+    this->mainGrabber.shader->setMatrix("mv_matrix", mvMatrix);
+    this->mainGrabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->mainGrabber.display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -329,9 +320,7 @@ void Viewer::draw() {
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
-    checkMouseOnVoxel();
-    this->grabber.buildVerticesFlat();
-    if (curvesErosionConstructionMode && this->mouseInWorld) {
+    if (curvesErosionConstructionMode && checkMouseOnVoxel()) {
         this->addCurvesControlPoint(this->mousePosWorld);
     }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
@@ -388,7 +377,7 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Space) {
-        displayRockTrajectories = !displayRockTrajectories;
+//        displayRockTrajectories = !displayRockTrajectories;
         // this->displayMessage(QString::fromStdString("Rock trajectories are : " + std::string(displayRockTrajectories ? "ON" : "OFF") ));
         update();
     } else if(e->key() == Qt::Key_0) {
@@ -418,6 +407,14 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
     this->mousePos = e->pos();
 
+    if (this->checkMouseOnVoxel())
+    {
+        this->mainGrabber.move(this->mousePosWorld);
+        this->mainGrabber.setState(ACTIVE);
+    } else {
+        this->mainGrabber.setState(HIDDEN);
+    }
+    update();
     QGLViewer::mouseMoveEvent(e);
 }
 
@@ -650,8 +647,12 @@ void Viewer::createTunnelFromSpaceColonizer()
 
 void Viewer::addCurvesControlPoint(Vector3 pos)
 {
+    for (auto& controls : this->debugControlPoints[TUNNEL_PATHS])
+        if (controls.manipFrame.isManipulated())
+            return;
     if (!this->currentTunnelPoints.empty() && pos == this->currentTunnelPoints.back()) return;
     this->currentTunnelPoints.push_back(pos);
+    this->debugControlPoints[TUNNEL_PATHS].push_back(ControlPoint(pos, 5.f, INACTIVE));
     BSpline path(this->currentTunnelPoints);
 
     std::vector<Vector3> vertices = path.getPath(0.01);
@@ -663,6 +664,7 @@ void Viewer::addCurvesControlPoint(Vector3 pos)
     }
     this->debugMeshes[TUNNEL_PATHS].fromArray(meshVertices);
     this->debugMeshes[TUNNEL_PATHS].update();
+
     update();
 }
 void Viewer::createTunnel(bool removingMatter)
@@ -682,6 +684,15 @@ bool Viewer::checkMouseOnVoxel()
 {
     if (voxelGrid == nullptr)
         return false;
+/*
+    bool isFound = false;
+    qglviewer::Vec pos = camera()->pointUnderPixel(mousePos, isFound);
+    this->mousePosWorld = Vector3(pos.x, pos.y, pos.z);
+    this->mouseInWorld = isFound;
+    return isFound;
+
+
+*/
     camera()->convertClickToLine(mousePos, orig, dir);
     float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
@@ -690,11 +701,12 @@ bool Viewer::checkMouseOnVoxel()
 
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
+//    std::cout << "Click from " << currPos << " to ... ";
 //    currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
-    while(currPos.norm2() < maxDist && !found)
+    while((currPos / 2.f).norm2() < maxDist && !found)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
-        if (minPos.x <= currPos.x <= maxPos.x && minPos.y <= currPos.y <= maxPos.y && minPos.z <= currPos.z <= maxPos.z) {
+        if (minPos.x <= currPos.x && currPos.x <= maxPos.x && minPos.y <= currPos.y && currPos.y <= maxPos.y && minPos.z <= currPos.z && currPos.z <= maxPos.z) {
             float isoval = voxelGrid->getVoxelValue(currPos);
             if (isoval > 0.0)
                 found = true;
@@ -704,8 +716,9 @@ bool Viewer::checkMouseOnVoxel()
     if (found) {
         std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
-        this->grabber.position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
+        this->mainGrabber.position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
+//    std::cout << currPos << " (length=" << currPos.norm() << " over " << std::sqrt(maxDist) << ")" << std::endl;
     return found;
 }
 

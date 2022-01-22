@@ -487,6 +487,7 @@ void Sphere::buildInterleavedVertices()
     std::vector<int> verticeIndices;
     for(i = 0, j = 0; i < count; i += 3, j += 2)
     {
+        /*
         interleavedVertices.push_back(vertices[i]);
         interleavedVertices.push_back(vertices[i+1]);
         interleavedVertices.push_back(vertices[i+2]);
@@ -497,7 +498,7 @@ void Sphere::buildInterleavedVertices()
 
         interleavedVertices.push_back(texCoords[j]);
         interleavedVertices.push_back(texCoords[j+1]);
-
+*/
         translated_vertices.push_back(Vector3(vertices[i], vertices[i+1], vertices[i+2]) + this->position);
 //        verticeIndices.push_back(this->indices[i]);
 //        verticeIndices.push_back(this->indices[i+1]);

@@ -42,14 +42,14 @@ QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets)
 }
 
 ViewerInterface::ViewerInterface() {
+    this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
+    this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
+    this->viewer = new Viewer(this);
     setupUi(this);
 }
 
 void ViewerInterface::setupUi(QDialog *Dialog)
 {
-    this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
-    this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
-    this->viewer = new Viewer();
     this->viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     // Add the viewer

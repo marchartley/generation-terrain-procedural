@@ -46,6 +46,7 @@ SOURCES += \
         src/Graphics/Shader.cpp \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
+        src/Interface/ControlPoint.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/Interface.cpp \
         src/Interface/RangeSlider.cpp \
@@ -96,6 +97,7 @@ HEADERS += \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
+    src/Interface/ControlPoint.h \
     src/Interface/FancySlider.h \
     src/Interface/Interface.h \
     src/Interface/RangeSlider.h \
