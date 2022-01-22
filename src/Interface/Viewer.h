@@ -59,7 +59,7 @@ public Q_SLOTS:
 
     void recomputeFlowfield();
 
-    void setManualErosionRocksSize(int newSize) { this->manualErosionSize = newSize;}
+    void setManualErosionRocksSize(int newSize);
     void setManualErosionRocksStrength(float newStrength) { this->manualErosionStrength = newStrength;}
     void setAddingMatterMode(bool addingMode) { this->addingMatterMode = addingMode; }
     void throwRock();
@@ -67,7 +67,7 @@ public Q_SLOTS:
     void setCurvesErosionSize(int newSize) { this->curvesErosionSize = newSize; }
     void setCurvesErosionStrength(float newStrength) { this->curvesErosionStrength = newStrength;}
     void setCurvesErosionAddingMatterMode(bool addingMode) { this->addingCurvesErosionMatterMode = addingMode; }
-    void addCurvesControlPoint(Vector3 pos);
+    void addCurvesControlPoint(Vector3 pos, bool justUpdatePath = false);
     void setCurvesErosionConstructionMode(bool isConstructing) {this->curvesErosionConstructionMode = isConstructing; }
     void createTunnel(bool removingMatter = true);
 

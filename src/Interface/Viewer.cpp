@@ -89,12 +89,12 @@ void Viewer::init() {
 
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
-    this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[FAILED_ROCKS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[FLOW_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[TUNNEL_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[KARST_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
-    this->debugMeshes[SPACE_COLONI] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), false, GL_LINES);
+    this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->debugMeshes[FAILED_ROCKS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->debugMeshes[FLOW_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->debugMeshes[TUNNEL_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->debugMeshes[KARST_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->debugMeshes[SPACE_COLONI] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
 
     this->debugControlPoints[ROCK_TRAILS] = std::vector<ControlPoint>();
     this->debugControlPoints[FAILED_ROCKS] = std::vector<ControlPoint>();
@@ -103,20 +103,13 @@ void Viewer::init() {
     this->debugControlPoints[KARST_PATHS] = std::vector<ControlPoint>();
     this->debugControlPoints[SPACE_COLONI] = std::vector<ControlPoint>();
 
-    float rocksColor[4] = {86/255.f, 176/255.f, 12/255.f, .5f};
-    float failedRocksColor[4] = {176/255.f, 72/255.f, 12/255.f, .4f};
-    float flowfieldColor[4] = {143/255.f, 212/255.f, 255/255.f, .5f};
-    float tunnelsColor[4] = {152/255.f, 94/255.f, 209/255.f, 1.0};
-    float grabberColor[4] = {160/255.f, 5/255.f, 0/255.f, 1.0};
-    float karstsColors[4] = {255/255.f, 0/255.f, 0/255.f, 1.0};
-    float colonizerColors[4] = {255/255.f, 0/255.f, 0/255.f, 1.0};
-    this->debugMeshes[ROCK_TRAILS].shader->setVector("color", rocksColor, 4);
-    this->debugMeshes[FAILED_ROCKS].shader->setVector("color", failedRocksColor, 4);
-    this->debugMeshes[FLOW_TRAILS].shader->setVector("color", flowfieldColor, 4);
-    this->debugMeshes[TUNNEL_PATHS].shader->setVector("color", tunnelsColor, 4);
-    this->debugMeshes[KARST_PATHS].shader->setVector("color", karstsColors, 4);
-    this->debugMeshes[SPACE_COLONI].shader->setVector("color", colonizerColors, 4);
-    ControlPoint::base_shader->setVector("color", grabberColor, 4);
+    this->debugMeshes[ROCK_TRAILS].shader->setVector("color", std::vector<float>({86/255.f, 176/255.f, 12/255.f, .5f}));
+    this->debugMeshes[FAILED_ROCKS].shader->setVector("color", std::vector<float>({176/255.f, 72/255.f, 12/255.f, .4f}));
+    this->debugMeshes[FLOW_TRAILS].shader->setVector("color", std::vector<float>({143/255.f, 212/255.f, 255/255.f, .5f}));
+    this->debugMeshes[TUNNEL_PATHS].shader->setVector("color", std::vector<float>({152/255.f, 94/255.f, 209/255.f, 1.0}));
+    this->debugMeshes[KARST_PATHS].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
+    this->debugMeshes[SPACE_COLONI].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
+    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.0}));
     this->mainGrabber = ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
@@ -280,6 +273,9 @@ void Viewer::draw() {
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(5.f);
     for (auto& debugMesh : this->debugMeshes) {
+        std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
+        std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
+        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
         std::get<1>(debugMesh).display();
     }
     for (auto& controlPointsArray : this->debugControlPoints) {
@@ -287,6 +283,7 @@ void Viewer::draw() {
             grabber.shader->setMatrix("proj_matrix", pMatrix);
             grabber.shader->setMatrix("mv_matrix", mvMatrix);
             grabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            grabber.isDisplayed = this->debugMeshes[std::get<0>(controlPointsArray)].isDisplayed;
             grabber.display();
         }
     }
@@ -486,6 +483,12 @@ void Viewer::recomputeFlowfield()
     updateFlowfieldDebugMesh();
 }
 
+void Viewer::setManualErosionRocksSize(int newSize)
+{
+    this->manualErosionSize = newSize;
+    this->mainGrabber.radius = newSize / 2.f;
+}
+
 void Viewer::throwRock()
 {
     if (this->mouseInWorld)
@@ -645,22 +648,35 @@ void Viewer::createTunnelFromSpaceColonizer()
     update();
 }
 
-void Viewer::addCurvesControlPoint(Vector3 pos)
+void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
 {
-    for (auto& controls : this->debugControlPoints[TUNNEL_PATHS])
-        if (controls.manipFrame.isManipulated())
-            return;
-    if (!this->currentTunnelPoints.empty() && pos == this->currentTunnelPoints.back()) return;
-    this->currentTunnelPoints.push_back(pos);
-    this->debugControlPoints[TUNNEL_PATHS].push_back(ControlPoint(pos, 5.f, INACTIVE));
+    if (!justUpdatePath)
+    {
+        bool addTheNewPoint = true;
+        for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
+            if (controls.manipFrame.isManipulated()) {
+                addTheNewPoint = false;
+                break;
+            }
+        }
+    //    if (!this->currentTunnelPoints.empty() && pos == this->currentTunnelPoints.back()) return;
+    //    this->currentTunnelPoints.push_back(pos);
+        if (addTheNewPoint)
+            this->debugControlPoints[TUNNEL_PATHS].push_back(ControlPoint(pos, 5.f, INACTIVE));
+    }
+    this->currentTunnelPoints.clear();
+    for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
+        this->currentTunnelPoints.push_back(controls.position);
+        controls.onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
+    }
     BSpline path(this->currentTunnelPoints);
 
     std::vector<Vector3> vertices = path.getPath(0.01);
     std::vector<Vector3> meshVertices;
     for (size_t i = 0; i < vertices.size() - 1; i++)
     {
-        meshVertices.push_back(vertices[i]); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
-        meshVertices.push_back(vertices[i+1]); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
+        meshVertices.push_back(vertices[i]);
+        meshVertices.push_back(vertices[i+1]);
     }
     this->debugMeshes[TUNNEL_PATHS].fromArray(meshVertices);
     this->debugMeshes[TUNNEL_PATHS].update();
