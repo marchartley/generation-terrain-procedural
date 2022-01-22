@@ -163,11 +163,11 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     for (float i = 0; i < 1.0; i += resolution)
     {
         Vector3 pos = (path.getPoint(i));
-        coords.push_back(pos - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+        coords.push_back(pos); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
         float rockSize = width.getPoint(i).y * this->maxRockSize;
         RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
         rock.Apply(grid, pos, addingMatter, false);
-        coords.push_back(path.getPoint(i + resolution) - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+        coords.push_back(path.getPoint(i + resolution)); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
     }
     grid->remeshAll();
     return coords;

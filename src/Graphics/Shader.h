@@ -126,6 +126,11 @@ public:
                 vals[i + j*n] = values[i][j];
         this->setMatrix(pname, vals, n, m);
     }
+    template <class T>
+    void setVector(std::string pname, std::vector<T> values)
+    {
+        return this->setVector(pname, values.data(), values.size());
+    }
 };
 
 #endif // SHADER_H

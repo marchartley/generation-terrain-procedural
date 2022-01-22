@@ -15,6 +15,7 @@
 #include "Karts/KarstPathsGeneration.h"
 #include "Utils/BSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
+#include "Interface/ControlPoint.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -32,13 +33,12 @@ enum SmoothingAlgorithm {
     DUAL_CONTOURING = 0b100
 };
 enum DebugMeshesNames {
-    ROCK_TRAILS  = 0b0000001,
-    FAILED_ROCKS = 0b0000010,
-    FLOW_TRAILS  = 0b0000100,
-    TUNNEL_PATHS = 0b0001000,
-    GRABBER      = 0b0010000,
-    KARST_PATHS  = 0b0100000,
-    SPACE_COLONI = 0b1000000
+    ROCK_TRAILS  = 0b000001,
+    FAILED_ROCKS = 0b000010,
+    FLOW_TRAILS  = 0b000100,
+    TUNNEL_PATHS = 0b001000,
+    KARST_PATHS  = 0b010000,
+    SPACE_COLONI = 0b100000
 };
 
 class Viewer : public QGLViewer {
@@ -128,11 +128,6 @@ public:
     bool display_vertices = true;
     qglviewer::Vec selectedPoint, orig, dir;
 
-    bool displayRockTrajectories = false;
-    bool displayFailedRockTrajectories = false;
-    bool displayFlowfield = false;
-    bool displayTunnelsPath = false;
-
     int erosionSize = 1;
     float erosionStrength = .0;
     int erosionQtt = 1000;
@@ -148,12 +143,9 @@ public:
 
     KarstPathsGeneration karstPathCreator;
     std::vector<BSpline> karstPaths;
-    bool displayKarstPaths = true;
 
     TreeColonisationAlgo::TreeColonisation spaceColonizer;
     std::vector<BSpline> spaceColonizerPaths;
-    bool displaySpaceColonizerPaths = true;
-
 
     int LoD = 0;
 
@@ -196,17 +188,13 @@ public:
 
     unsigned int frame_num = 0;
 
-    Sphere grabber;
-/*
-    Mesh rocksMeshes;
-    Mesh failedRocksMeshes;
-    Mesh flowDebugMeshes;
-    Mesh tunnelsMesh;
-    Mesh karstCreationMesh;
-    Mesh spaceColonizerMesh;*/
+//    std::vector<ControlPoint> grabbers;
+    ControlPoint mainGrabber;
+
     void updateFlowfieldDebugMesh();
 
     std::map<DebugMeshesNames, Mesh> debugMeshes;
+    std::map<DebugMeshesNames, std::vector<ControlPoint>> debugControlPoints;
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;
