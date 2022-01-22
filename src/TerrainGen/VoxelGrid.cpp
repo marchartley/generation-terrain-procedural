@@ -263,6 +263,12 @@ void VoxelGrid::letGravityMakeSandFall(bool remesh)
     std::cout << duration.count() << " s for making sand fall once" << std::endl;
 }
 
+void VoxelGrid::applyModification(Matrix3<float> modifications)
+{
+    for (auto& vc : this->chunks)
+        vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
+}
+
 void VoxelGrid::display() {
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
@@ -414,7 +420,7 @@ float VoxelGrid::getVoxelValue(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z);
+        return this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z);
     return -1;
 }
 void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
@@ -425,7 +431,10 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1) {
-        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
+        Matrix3<float> setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->height);
+        setterMatrix.at(voxPosX, voxPosY, _z) = -this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z) + newVal;
+        this->chunks[iChunk]->voxelsValuesStack.push_back(setterMatrix);
+//        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
         this->chunks[iChunk]->needRemeshing = true;
     }
 }
@@ -438,7 +447,8 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
-        return this->chunks[iChunk]->originalVoxelValues(voxPosX, voxPosY, _z);
+        return this->chunks[iChunk]->voxelsValuesStack[0].at(voxPosX, voxPosY, _z);
+//        return this->chunks[iChunk]->originalVoxelValues(voxPosX, voxPosY, _z);
     return -1;
 }
 Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
@@ -529,7 +539,7 @@ void VoxelGrid::saveMap(std::string filename)
         for (int x = 0; x < vc->sizeX; x++)
             for (int y = 0; y < vc->sizeY; y++)
                 for (int z = 0; z < vc->height; z++)
-                    out << vc->voxelValues(x, y, z) << " ";
+                    out << vc->getVoxelValue(x, y, z) << " ";
     }
     out.close();
 }

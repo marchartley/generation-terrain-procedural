@@ -31,6 +31,8 @@ public:
     void letGravityMakeSandFall();
     void computeGroups();
 
+    void applyModification(Matrix3<float> modifications);
+
     void resetVoxelsNeighbors();
     void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
 
@@ -38,6 +40,10 @@ public:
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
+
+    float getVoxelValue(int x, int y, int z);
+    float getVoxelValue(Vector3 pos);
+    Matrix3<float> getVoxelValues();
 
     std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr);
 
@@ -94,6 +100,8 @@ public:
 
     Mesh mesh;
     bool needRemeshing = true;
+
+    std::vector<Matrix3<float>> voxelsValuesStack;
 };
 
 #endif // VOXELCHUNK_H

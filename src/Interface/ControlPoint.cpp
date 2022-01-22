@@ -2,9 +2,9 @@
 
 std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
 std::map<GrabberState, std::vector<float>> ControlPoint::GrabberStateColor = {
-    {GrabberState::HIDDEN, {.0f, .0f, .0f, 1.f}},
-    {GrabberState::INACTIVE, {.3f, .0f, .0f, 1.f}},
-    {GrabberState::ACTIVE, {.8f, .0f, .0f, 1.f}}
+    {GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
+    {GrabberState::INACTIVE, {.3f, .0f, .0f, .3f}},
+    {GrabberState::ACTIVE, {.8f, .0f, .0f, .5f}}
 };
 
 ControlPoint::ControlPoint()

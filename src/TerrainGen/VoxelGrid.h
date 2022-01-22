@@ -47,6 +47,7 @@ public:
 
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
+    void applyModification(Matrix3<float> modifications);
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
