@@ -109,7 +109,7 @@ void Viewer::init() {
     this->debugMeshes[TUNNEL_PATHS].shader->setVector("color", std::vector<float>({152/255.f, 94/255.f, 209/255.f, 1.0}));
     this->debugMeshes[KARST_PATHS].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
     this->debugMeshes[SPACE_COLONI].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
-    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.0}));
+    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
@@ -494,7 +494,7 @@ void Viewer::throwRock()
     if (this->mouseInWorld)
     {
         RockErosion rock(this->manualErosionSize, this->manualErosionStrength);
-        rock.Apply(this->voxelGrid, this->mousePosWorld, addingMatterMode);
+        rock.Apply(this->voxelGrid, this->mousePosWorld, addingMatterMode, true);
     }
     update();
 }

@@ -48,6 +48,10 @@ public:
     Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR);
     Matrix3 resize(Vector3 newSize, RESIZE_MODE mode = LINEAR);
 
+    Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
+    Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
+
     T min() const;
     T max() const;
 
@@ -676,6 +680,41 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
         newMat.raiseErrorOnBadCoord = this->raiseErrorOnBadCoord;
     }
     return newMat;
+}
+
+
+template<typename T>
+Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int startZ, int endZ)
+{
+    if (endZ == -1) endZ = this->sizeZ;
+    Matrix3<T> croppedMatrix(endX - startX, endY - startY, endZ - startZ);
+    for (int x = startX; x < endX; x++) {
+        for (int y = startY; y < endY; y++) {
+            for (int z = startZ; z < endZ; z++) {
+                croppedMatrix.at(x - startX, y - startY, z - startZ) = this->at(x, y, z);
+            }
+        }
+    }
+    return croppedMatrix;
+}
+
+
+template<typename T>
+Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner)
+{
+    return this->paste(matrixToPaste, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
+}
+template<typename T>
+Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, int left, int up, int front)
+{
+    for (int x = std::max(left, 0); x < std::min(matrixToPaste.sizeX + left, this->sizeX); x++) {
+        for (int y = std::max(up, 0); y < std::min(matrixToPaste.sizeY + up, this->sizeY); y++) {
+            for (int z = std::max(front, 0); z < std::min(matrixToPaste.sizeZ + front, this->sizeZ); z++) {
+                this->at(x, y, z) = matrixToPaste.at(x - left, y - up, z - front);
+            }
+        }
+    }
+    return *this;
 }
 
 #endif // MATRIX3_H

@@ -9,6 +9,20 @@ RockErosion::RockErosion(int size, float maxStrength)
 {
     std::cout.precision(2);
     attackMask = Matrix3<float>(size, size, size);
+    float radius = size / 2.f;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            for (int k = 0; k < size; k++) {
+                float t_i = (i - radius) / radius;
+                float t_j = (j - radius) / radius;
+                float t_k = (k - radius) / radius;
+
+                float dist = std::min(std::sqrt(t_i*t_i + t_j*t_j + t_k*t_k), 1.f);
+                attackMask.at(i, j, k) = -(1 - dist) * maxStrength;
+            }
+        }
+    }
+    /*
     float maxVal = sqrt(3);
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < size; j++) {
@@ -19,10 +33,14 @@ RockErosion::RockErosion(int size, float maxStrength)
                 attackMask(i, j, k) = -(maxVal - sqrt(i_i*i_i + j_i*j_i + k_i*k_i))/(maxVal) * maxStrength;
             }
         }
-    }
+    }*/
 }
 
 void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode, bool applyRemeshing) {
+    Matrix3<float> erosionMatrix(grid->sizeX, grid->sizeY, grid->sizeZ);
+    erosionMatrix.paste(this->attackMask * (addingMatterMode ? -1.f : 1.f), pos - Vector3(size/2.f, size/2.f, size/2.f));
+    grid->applyModification(erosionMatrix);
+    /*
     for (int x = -size/2; x < size/2; x++) {
         for (int y = -size/2; y < size/2; y++) {
             for (int z = -size/2; z < size/2; z++){
@@ -31,6 +49,7 @@ void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addin
                     grid->setVoxelValue(pos + Vector3(x, y, z) + Vector3(.5, .5, .5), currentIsovalue + (this->attackMask(x+size/2, y+size/2, z+size/2) * (addingMatterMode ? -1 : 1)));
 
 //                }
+*/
                 /*
                 if(v != nullptr) {
                     v->isosurface += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
@@ -39,10 +58,10 @@ void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addin
                     v->parent->voxelValues[v->x][v->y][v->z] += this->attackMask[x+size/2][y+size/2][z+size/2] * (addingMatterMode ? -1 : 1);
                     v->parent->needRemeshing = true;
                 }*/
-
+/*
             }
         }
-    }
+    }*/
     if (applyRemeshing)
         grid->remeshAll();
 }
