@@ -23,9 +23,10 @@ namespace TreeColonisationAlgo {
         TreeColonisation();
         TreeColonisation(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength = 1.f, float randomness = 0.f);
         TreeColonisation(Graph<NODE_TYPE> graph, Vector3 startPos, float segmentLength = 1.f, float randomness = 0.f);
+        ~TreeColonisation();
 
         void init(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength, float randomness);
-        void reset();
+        void reset(std::vector<Vector3> newKeypoints = std::vector<Vector3>());
 
         void process();
 

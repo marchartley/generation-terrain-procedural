@@ -18,6 +18,7 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
       position(pos), radius(radius), state(state), useManipFrame(useTheManipulatedFrame), shape(radius, position, 10, 10)
 {
     this->move(pos);
+    this->prevPosition = pos;
     if (!useManipFrame) {
         this->manipFrame.removeFromMouseGrabberPool();
     } else {
@@ -42,13 +43,27 @@ void ControlPoint::onUpdate(std::function<void ()> func)
     this->onUpdateCallback = func;
 }
 
+void ControlPoint::afterUpdate(std::function<void ()> func)
+{
+    this->afterUpdateCallback = func;
+}
+
 void ControlPoint::updateSphere()
 {
     if (this->useManipFrame)
         this->position = Vector3(this->manipFrame.position().x, this->manipFrame.position().y, this->manipFrame.position().z);
 
-    if(this->onUpdateCallback)
-        this->onUpdateCallback();
+    if(this->onUpdateCallback) { // && this->useManipFrame && this->manipFrame.isManipulated())
+        if (prevPosition != position) {
+            this->prevPosition = position;
+            this->onUpdateCallback();
+        }
+    }
+    if (this->afterUpdateCallback) {
+        if (this->useManipFrame && (this->manipFrame.isManipulated() == false && this->currentlyManipulated == true))
+            this->afterUpdateCallback();
+    }
+    this->currentlyManipulated = this->manipFrame.isManipulated();
 
     this->shape.position = this->position;
     this->shape.radius = this->radius;

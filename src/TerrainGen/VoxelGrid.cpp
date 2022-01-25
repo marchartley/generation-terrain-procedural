@@ -76,7 +76,6 @@ void VoxelGrid::from2DGrid(Grid grid) {
         }
     }
     this->tempData = data;
-//    this->fromIsoData(data);
 }
 
 std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
@@ -100,14 +99,11 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
             this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
             this->chunks[i - 1]->neighboring_chunks[BACK] = this->chunks[i];
         }
-//        this->chunks[i]->resetVoxelsNeighbors();
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
-//        this->chunks[i]->computeFlowfield();
     }
     this->computeFlowfield();
-//    this->createMesh();
     return this->shared_from_this();
 }
 
@@ -194,7 +190,6 @@ void VoxelGrid::initMap()
     sizeX -= (sizeX % chunkSize);
     sizeY -= (sizeY % chunkSize);
 
-    this->voxels.clear();
     this->chunks.clear();
 
     // Create and configure FastNoise object
@@ -212,17 +207,6 @@ void VoxelGrid::initMap()
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
 
-    /*this->fluidSystem = std::make_unique<FluidSystem>(sizeX / this->fluidSimRescale, sizeY / this->fluidSimRescale, sizeZ / this->fluidSimRescale, 0.f, 0.f);
-    this->constantFlowSource = std::make_unique<VelocityField>(fluidSystem->fullStaggeredDim);
-    for (int x = 0; x < 2; x++) {
-        for (int y = 0; y < fluidSystem->dim(1); y++) {
-            for (int z = 0; z < fluidSystem->dim(2); z++) {
-                (*constantFlowSource)[0](x, y, z) = 10.0f;
-                (*constantFlowSource)[1](x, y, z) = 0.0f;
-                (*constantFlowSource)[2](x, y, z) = 0.0f;
-            }
-        }
-    }*/
     this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.1f, 0.0f, 0.0f, 10);
 }
 
@@ -231,7 +215,6 @@ void VoxelGrid::createMesh()
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->needRemeshing = true;
-//        vc->LoDIndex = vc->LoDs.size() - 1; // To remove
     }
     remeshAll();
 }
@@ -253,7 +236,6 @@ void VoxelGrid::makeItFall(float erosionStrength)
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
     auto start = std::chrono::system_clock::now();
-//    computeVoxelGroups();
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
@@ -269,6 +251,13 @@ void VoxelGrid::applyModification(Matrix3<float> modifications)
         vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
 }
 
+void VoxelGrid::undo()
+{
+    for (auto& vc : this->chunks)
+        vc->undo();
+    this->remeshAll();
+}
+
 void VoxelGrid::display() {
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
@@ -277,12 +266,10 @@ void VoxelGrid::display() {
 }
 
 int VoxelGrid::getHeight(int x, int y) {
-    int maxHeight = -1;
-    for (Voxel v : this->voxels) {
-        if (v.getX() == x && v.getY() == y && v.getZ() > maxHeight)
-            maxHeight = v.getZ();
-    }
-    return maxHeight;
+    for (int z = this->sizeZ - 1; z >= 0; z--)
+        if (this->getVoxelValue(x, y, z) > 0.f)
+            return z;
+    return -1;
 }
 
 bool VoxelGrid::contains(Vector3 v) {
@@ -292,67 +279,11 @@ bool VoxelGrid::contains(Vector3 v) {
 bool VoxelGrid::contains(float x, float y, float z) {
     return (0 <= x && x < this->sizeX && 0 <= y && y < this->sizeY && 0 <= z && z < this->sizeZ);
 }
-std::shared_ptr<Voxel> VoxelGrid::getVoxel(Vector3 pos) {
-    return this->getVoxel(pos.x, pos.y, pos.z);
-}
-
-std::shared_ptr<Voxel> VoxelGrid::getVoxel(float x, float y, float z) {
-    if(z < 0 || x < 0 || y < 0)
-        return nullptr;
-    int _x = x, _y = y, _z = z;
-    int xChunk = int(_x / chunkSize);
-    int voxPosX = _x % chunkSize;
-    int yChunk = _y / chunkSize;
-    int voxPosY = _y % chunkSize;
-
-    if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
-        return nullptr;
-    return this->chunks[xChunk * (this->sizeY / chunkSize) + yChunk]->voxels.at(voxPosX, voxPosY, _z);
-}
 
 void VoxelGrid::remeshAll()
 {
-//    this->computeVoxelGroups();
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
-    }
-}
-
-
-Matrix3<float> VoxelGrid::toFloat()
-{
-    Matrix3<float> arr(this->sizeX, this->sizeY, this->sizeZ, 0.0);
-    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
-    {
-        for(int x = 0; x < vc->sizeX; x++) {
-            for(int y = 0; y < vc->sizeY; y++) {
-                for(int z = 0; z < vc->height; z++) {
-                    arr(x + vc->x, y + vc->y, z) = vc->voxels(x, y, z)->getIsosurface();
-                }
-            }
-        }
-    }
-    return arr;
-}
-void VoxelGrid::toVoxels(Matrix3<float> arr)
-{
-    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
-    {
-        for(int x = 0; x < vc->sizeX; x++) {
-            for(int y = 0; y < vc->sizeY; y++) {
-                for (int z = 0; z < vc->height; z++) {
-                    vc->voxelValues(x, y, z) = arr(vc->x + x, vc->y + y, z);
-                }
-            }
-        }
-        vc->toVoxels();
-    }
-}
-void VoxelGrid::toVoxels()
-{
-    for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
-    {
-        vc->toVoxels();
     }
 }
 
@@ -448,7 +379,6 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
         return this->chunks[iChunk]->voxelsValuesStack[0].at(voxPosX, voxPosY, _z);
-//        return this->chunks[iChunk]->originalVoxelValues(voxPosX, voxPosY, _z);
     return -1;
 }
 Vector3 VoxelGrid::getFlowfield(Vector3 pos) {

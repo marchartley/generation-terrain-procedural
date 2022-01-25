@@ -13,7 +13,7 @@ LayerBasedGrid::LayerBasedGrid() : LayerBasedGrid(10, 10, 10)
 }
 LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
     : sizeX(nx), sizeY(ny), sizeZ(nz)
-{
+{/*
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetFrequency(0.01);
@@ -59,11 +59,11 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
         }
     }
     this->layers = data;
-    this->voxels = voxs;
+    this->voxels = voxs;*/
 }
 
 void LayerBasedGrid::createMesh() {
-
+/*
 //    this->computeGroups();
 
     std::vector<Vector3> voxelVertices;
@@ -89,7 +89,7 @@ void LayerBasedGrid::createMesh() {
 
     this->mesh.colorsArray = colors;
     this->mesh.fromArray(voxelVertices);
-    this->mesh.update();
+    this->mesh.update();*/
 }
 
 void LayerBasedGrid::display() {

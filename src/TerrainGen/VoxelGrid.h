@@ -48,20 +48,18 @@ public:
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
     void applyModification(Matrix3<float> modifications);
+    void undo();
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
     int getSizeZ() { return this->sizeZ; }
     float getBlockSize() { return this->blockSize; }
 
-    std::vector<Voxel> getVoxels() { return this->voxels; }
     std::vector<Matrix3<float>> tempData;
     int getHeight(int x, int y);
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
-    std::shared_ptr<Voxel> getVoxel(Vector3 pos);
-    std::shared_ptr<Voxel> getVoxel(float x, float y, float z);
 
     void remeshAll();
 
@@ -71,9 +69,6 @@ public:
     std::string toString();
     std::string toShortString();
 
-    Matrix3<float> toFloat();
-    void toVoxels(Matrix3<float> arr);
-    void toVoxels();
 
     void computeVoxelGroups();
 
@@ -112,7 +107,6 @@ public:
 
 //protected:
     int sizeX, sizeY, sizeZ;
-    std::vector<Voxel> voxels;
     float blockSize;
     std::vector<std::shared_ptr<VoxelChunk>> chunks;
     float noise_shifting;

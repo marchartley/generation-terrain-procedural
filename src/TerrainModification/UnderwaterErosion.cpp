@@ -152,6 +152,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
 }
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter)
 {
+    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),
@@ -166,9 +167,39 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
         coords.push_back(pos); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
         float rockSize = width.getPoint(i).y * this->maxRockSize;
         RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
-        rock.Apply(grid, pos, addingMatter, false);
+        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos, addingMatter);
         coords.push_back(path.getPoint(i + resolution)); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
     }
+    grid->applyModification(erosionMatrix);
     grid->remeshAll();
     return coords;
+}
+
+std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter)
+{
+    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    BSpline width = BSpline(std::vector<Vector3>({
+                                                     Vector3(0.0, 1.0),
+                                                     Vector3(0.5, 0.5),
+                                                     Vector3(1.0, 1.0)
+                                                 }));
+
+    float resolution = 0.01;
+    std::vector<std::vector<Vector3>> allCoords;
+    for (BSpline& path : paths) {
+        std::vector<Vector3> coords;
+        for (float i = 0; i < 1.0; i += resolution)
+        {
+            Vector3 pos = (path.getPoint(i));
+            coords.push_back(pos); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+            float rockSize = width.getPoint(i).y * this->maxRockSize;
+            RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
+            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos, addingMatter);
+            coords.push_back(path.getPoint(i + resolution)); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
+        }
+        allCoords.push_back(coords);
+    }
+    grid->applyModification(erosionMatrix);
+    grid->remeshAll();
+    return allCoords;
 }

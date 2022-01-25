@@ -13,7 +13,7 @@
 #include <iostream>
 //#include "Graphics/Shader.h"
 
-#define numVAOs 4000
+#define numVAOs 1000
 #define numVBOs 4000
 
 /*

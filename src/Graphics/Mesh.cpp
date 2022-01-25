@@ -164,7 +164,7 @@ void Mesh::update()
     if (!bufferReady)
     {
         this->bufferID = GlobalsGL::newBufferId();
-        GlobalsGL::generateBuffers();
+//        GlobalsGL::generateBuffers();
     }
     pushToBuffer();
 
@@ -172,19 +172,26 @@ void Mesh::update()
 
 void Mesh::pushToBuffer()
 {
+    GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[this->bufferID]);
     // Vertex
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID]);
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 0]);
     GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    GlobalsGL::f()->glEnableVertexAttribArray(0);
 
     // Textures
 
     // Normals
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 2]);
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 2]);
     GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    GlobalsGL::f()->glEnableVertexAttribArray(2);
 
     // Random stuff
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 3]);
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 3]);
     GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
+    GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    GlobalsGL::f()->glEnableVertexAttribArray(3);
     this->bufferReady = true;
 }
 void Mesh::display(GLenum shape)
@@ -194,17 +201,7 @@ void Mesh::display(GLenum shape)
     this->update();
     if(this->shader != nullptr)
         this->shader->use();
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID]);
-    GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    GlobalsGL::f()->glEnableVertexAttribArray(0);
-
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 2]);
-    GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    GlobalsGL::f()->glEnableVertexAttribArray(2);
-
-    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID + 3]);
-    GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    GlobalsGL::f()->glEnableVertexAttribArray(3);
+    GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[this->bufferID]);
     GlobalsGL::checkOpenGLError();
 
     glEnable(GL_DEPTH_TEST);

@@ -19,6 +19,12 @@ TreeColonisation::TreeColonisation(Graph<NODE_TYPE> graph, Vector3 startPos, flo
     init(pos, startPos, segmentLength, randomness);
 }
 
+TreeColonisation::~TreeColonisation()
+{
+    this->segments.clear();
+    this->nodes.clear();
+}
+
 void TreeColonisation::init(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength, float randomness)
 {
     this->segmentLength = segmentLength;
@@ -41,8 +47,12 @@ void TreeColonisation::init(std::vector<Vector3> nodes, Vector3 startPos, float 
     this->segments.push_back(std::make_shared<Segment>(nullptr, startPos, meanNodePos - startPos, this->segmentLength));
 }
 
-void TreeColonisation::reset()
+void TreeColonisation::reset(std::vector<Vector3> newKeypoints)
 {
+    if (!newKeypoints.empty()) {
+        this->initialNodes.clear();
+        this->initialNodes = newKeypoints;
+    }
     this->init(this->initialNodes, this->startPosition, this->segmentLength, this->randomness);
 }
 
@@ -114,7 +124,8 @@ void TreeColonisation::process()
             {
                 seg->dir /= (float)seg->numberOfCurrentAttractors;
                 seg->dir.normalize();
-                this->segments.push_back(seg->next(this->randomness));
+                if (seg->children.size() < 5)
+                    this->segments.push_back(seg->next(this->randomness));
                 seg->reset();
             }
         }
@@ -196,7 +207,7 @@ float Segment::distanceTo(std::shared_ptr<Node> node)
 
 std::shared_ptr<Segment> Segment::next(float randomness)
 {
-    Vector3 randomChildDir = Vector3(this->originalDir * (1-randomness) + Vector3::random()*randomness).normalized();
+    Vector3 randomChildDir = Vector3(this->dir * (1-randomness) + Vector3::random()*randomness).normalized();
 
     std::shared_ptr<Segment> child = std::make_shared<Segment>(this->shared_from_this(), this->pos + this->dir * this->length, randomChildDir, this->length);
     this->children.push_back(child);
