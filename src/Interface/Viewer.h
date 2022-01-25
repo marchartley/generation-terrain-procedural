@@ -119,7 +119,7 @@ public:
 
     ViewerMode viewerMode;
     MapMode mapMode;
-    SmoothingAlgorithm algorithm = MARCHING_CUBES;
+    SmoothingAlgorithm algorithm = NONE; // MARCHING_CUBES;
 
 //private:
     std::shared_ptr<Grid> grid;
@@ -175,7 +175,6 @@ public:
 
     std::shared_ptr<Shader> shader;
     PositionalLight light;
-    GLuint rocksVBO;
 
     std::string screenshotFolder;
     bool isTakingScreenshots = false;

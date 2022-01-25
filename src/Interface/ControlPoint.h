@@ -23,19 +23,23 @@ public:
     void setState(GrabberState newState);
 
     void onUpdate(std::function<void()> func);
+    void afterUpdate(std::function<void()> func);
 
     void updateSphere();
     void move(Vector3 newPos);
     void display();
 
     Vector3 position;
+    Vector3 prevPosition;
     float radius;
     GrabberState state;
     bool useManipFrame;
+    bool currentlyManipulated;
 
     Sphere shape;
 
     std::function<void()> onUpdateCallback;
+    std::function<void()> afterUpdateCallback;
 
     qglviewer::ManipulatedFrame manipFrame;
 

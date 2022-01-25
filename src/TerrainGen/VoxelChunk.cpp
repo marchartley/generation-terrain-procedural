@@ -8,8 +8,6 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<f
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
     this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->height, -1);
-//    this->voxelValues = iso_data;
-//    this->originalVoxelValues = this->voxelValues;
     this->voxelsValuesStack.push_back(iso_data);
     this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->height);
     this->updateLoDsAvailable();
@@ -22,23 +20,8 @@ VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, Matrix3<float>(), nullptr)
 }
 VoxelChunk::~VoxelChunk()
 {
-    this->voxels.clear();
 }
 
-void VoxelChunk::createVoxels()
-{
-    if (needRemeshing)
-    {
-        this->voxels = Matrix3<std::shared_ptr<Voxel>>(this->sizeX, this->sizeY, this->height);
-        for(int x = 0; x < this->sizeX; x++) {
-            for(int y = 0; y < this->sizeY; y++) {
-                for(int z = 0; z < this->height; z++) {
-                    std::shared_ptr<Voxel> v(new Voxel(x, y, z, voxelValues(x, y, z) > 0.0 ? DIRT : AIR, 1.0, voxelValues(x, y, z), this->shared_from_this()));
-                }
-            }
-        }
-    }
-}
 void VoxelChunk::computeFlowfield(Vector3 sea_current)
 {
     computeDistanceField();
@@ -147,10 +130,6 @@ void VoxelChunk::updateLoDsAvailable() {
 void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     if (!needRemeshing)
         return;
-//    this->toVoxels();
-    Voxel::currentLabelIndex = 1;
-    Voxel::voxelGroups.clear();
-    Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
 
     if (!updateMesh)
         return;
@@ -160,53 +139,24 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     std::vector<Vector3> voxelVertices;
     if (applyMarchingCubes) {
         voxelVertices = this->applyMarchingCubes(true, &colors);
+        this->mesh.colorsArray = colors;
+        this->mesh.fromArray(voxelVertices);
+        this->mesh.update();
     }
-    else {
-        colors.reserve(this->sizeX * this->sizeY * this->height * 6);
-        voxelVertices.reserve(this->sizeX * this->sizeY * this->height * 6);
+    else {/*
+        this->mesh.fromArray(CubeMesh::cubesVertices);
+        std::vector<Vector3> voxelsPos;
+        Matrix3<float> allVals = this->getVoxelValues();
         for (int x = 0; x < this->sizeX; x++) {
             for (int y = 0; y < this->sizeY; y++) {
                 for (int z = 0; z < this->height; z++) {
-                    if (this->getVoxelValue(x, y, z) > 0.0) {
-                        Voxel v(x, y, z, TerrainTypes::DIRT, 1.0, this->getVoxelValue(x, y, z), this->shared_from_this());
-                        // Add the vertices to the global mesh
-                        std::vector<Vector3> vertice = v.getMeshVertices(true);
-                        voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
-                        // Add the colors to each vertex
-                        int X = 6; // Start with 6 faces
-//                        for(auto& n : v->neighbors)
-//                            if (n.second && (bool)*n.second)
-//                                X--;    // Remove a face per neighbor
-                        X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
-                        for (int xx = 0; xx < X; xx++) {
-                            colors.push_back(Vector3((this->voxelGroups(x, y, z) == 0 ? 1.0 : 0.0), (this->voxelGroups(x, y, z) == 0 ? 0.0 : 1.0), 1.0));
-        //                        colors->push_back(HSVtoRGB((voxels(i, j, k)->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
-                        }
-                    }
+                    if (allVals.at(x, y, z) > 0.f)
+                        voxelsPos.push_back(Vector3(x, y, z));
                 }
             }
         }
-        /*this->applyToVoxels((&)(std::shared_ptr<Voxel> v) -> void {
-            if ((bool)*v) {
-                // Add the vertices to the global mesh
-                std::vector<Vector3> vertice = v->getMeshVertices(true);
-                voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
-                // Add the colors to each vertex
-                int X = 6; // Start with 6 faces
-                for(auto& n : v->neighbors)
-                    if (n.second && (bool)*n.second)
-                        X--;    // Remove a face per neighbor
-                X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
-                for (int x = 0; x < X; x++) {
-                    colors.push_back(Vector3((v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
-//                        colors->push_back(HSVtoRGB((voxels(i, j, k)->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
-                }
-            }
-        });*/
+        this->mesh.update(voxelsPos);*/
     }
-    this->mesh.colorsArray = colors;
-    this->mesh.fromArray(voxelVertices);
-    this->mesh.update();
 }
 
 Vector3 VoxelChunk::computeNormal(Vector3 pos)
@@ -381,18 +331,6 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 void VoxelChunk::makeItFall()
 {
     Matrix3<float> valuesAfterGravity(this->sizeX, this->sizeY, this->height);
-    /*this->applyToVoxels(()(std::shared_ptr<Voxel> v) -> void {
-        std::shared_ptr<Voxel> v_1 = v->neighbors(TOP);
-        if (v_1 == nullptr) {
-            v->isosurface = -0.01; // Just destroy the top voxels
-            v->manual_isosurface = 0.0;
-            return;
-        }
-        if (v->isOnGround || v_1->isOnGround)
-            return;
-        v->isosurface = v_1->isosurface;
-        v->manual_isosurface = v_1->manual_isosurface;
-    });*/
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->height - 1; z++) {
@@ -403,72 +341,17 @@ void VoxelChunk::makeItFall()
             valuesAfterGravity.at(x, y, this->height - 1) = - this->getVoxelValue(x, y, this->height - 1) - 1.0;
         }
     }
-//    toFloat();
     this->needRemeshing = true;
 }
 void VoxelChunk::letGravityMakeSandFall()
 {
-    /*
-    bool sandHadAction = false;
-    this->applyToVoxels((&)(std::shared_ptr<Voxel> v) -> void {
-        std::shared_ptr<Voxel> v_1 = v->neighbors(TOP);
-        if(v_1 && !*v_1) // If the top neighbor is air, don't care?
-            return;
-        if (v->getIsosurface() > 1.5)
-            return;
-        if(v->z == 0)
-            return;
-        if(v->getType() == DIRT) { // The bottom voxel is dirt
-            return;
-            if (v_1 == nullptr || v_1->getType() == DIRT)
-                return;
-            v->isosurface += v_1->isosurface;
-            v->manual_isosurface += v_1->manual_isosurface;
-            sandHadAction = true;
-        } else { // The bottom voxel is sand or air
-            if(!v_1 || v_1->getType() == DIRT) {
-                // If top voxel is dirt or air,
-                v->isosurface = 0.0;
-                v->manual_isosurface = 0.0;
-                sandHadAction = true;
-                return;
-            } else {
-                v->isosurface += v_1->isosurface;
-                v->manual_isosurface += v_1->manual_isosurface;
-                sandHadAction = true;
-            }
-        }
-        if (v_1) {
-            v_1->isosurface = -0.01;
-            v_1->manual_isosurface = -0.01;
-        }
-    });
-    this->needRemeshing = sandHadAction;
-//    this->computeGroups();*/
-    /*
-    for (int x = 0; x < this->sizeX; x++) {
-        for(int y = 0; y < this->sizeY; y++) {
-            for(int z = 0; z < this->height - 1; z++) {
-//                if(this->voxelValues(x, y, z+1) <= 0.0) // If it's air, don't mind
-//                    continue;
-                if(this->voxelValues(x, y, z+1) >= 1.0) // If top is dirt, don't
-                    continue;
-                if(this->voxelValues(x, y, z) >= 1.0) // If the block is staturated, skip.
-                    continue;
-
-                this->voxelValues(x, y, z) += 1 + (this->voxelValues(x, y, z+1));
-                this->voxelValues(x, y, z+1) = -1.0;
-            }
-            this->voxelValues(x, y, this->height - 1) = -1.0;
-        }
-    }
-    */
+    Matrix3<float> transportMatrix(this->sizeX, this->sizeY, this->height);
     float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             int lastSandyUnsaturatedHeight = 0;
             for(int z = 0; z < this->height; z++) {
-                float cellValue = this->parent->getVoxelValue(this->x + x, this->y + y, z);
+                float cellValue = this->parent->getVoxelValue(this->x + x, this->y + y, z) + transportMatrix.at(x, y, z);
                 if(cellValue < sandLowerLimit) continue;
                 else if (cellValue > sandUpperLimit) {
                     lastSandyUnsaturatedHeight = z;
@@ -476,79 +359,43 @@ void VoxelChunk::letGravityMakeSandFall()
                 {
                     // Make sand fall until the cell is empty
                     while (cellValue > 0 && lastSandyUnsaturatedHeight != z) {
-                        float lastSandyCellValue = this->parent->getVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight);
+                        float lastSandyCellValue = this->parent->getVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight) + transportMatrix.at(x, y, lastSandyUnsaturatedHeight);
                         float d_transported = std::min(cellValue, sandUpperLimit - lastSandyCellValue);
                         lastSandyCellValue += d_transported;
                         cellValue -= d_transported;
-                        this->parent->setVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight, lastSandyCellValue);
+                        transportMatrix.at(x, y, z) -= d_transported;
+                        transportMatrix.at(x, y, lastSandyUnsaturatedHeight) += d_transported;
+//                        this->parent->setVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight, lastSandyCellValue);
                         if(lastSandyCellValue >= sandUpperLimit) {
                             lastSandyUnsaturatedHeight ++;
                         }
                     }
-                    this->parent->setVoxelValue(this->x + x, this->y + y, z, cellValue);
+//                    transportMatrix.at(this->x + x, this->y + y, z) = cellValue;
+//                    this->parent->setVoxelValue(this->x + x, this->y + y, z, cellValue);
                 }
             }
         }
     }
+    this->applyModification(transportMatrix);
     this->needRemeshing = true;
 }
-
-void VoxelChunk::resetVoxelsNeighbors() {
-    this->applyToVoxels([](std::shared_ptr<Voxel> v) -> void { v->resetNeighbors(); });
-}
-
 void VoxelChunk::computeGroups()
 {
-    // Not clean, to refactor in VoxelGrid
-    if(this->x == 0 && this->y == 0) { // First chunk, reset all the voxels of all chunks
-        for(std::shared_ptr<VoxelChunk>& vc : this->parent->chunks) {
-            vc->applyToVoxels([](std::shared_ptr<Voxel> v) -> void {
-                v->group = -1;
-            });
-        }
-    }
-    /*
-    Voxel::currentLabelIndex = 1;
-    Voxel::voxelGroups.clear();
-    Voxel::voxelGroups.push_back(std::set<int>()); // First group reserved for the ones touching the ground
-
-    this->applyTo(this->voxelGroups, ()(int& grp) -> void {
-        grp = -1;
-    });
-    this->applyToVoxels(()(std::shared_ptr<Voxel> v) -> void {
-        v->group = -1;
-        v->isOnGround = false;
-    });*/
-    int calls = 0;
-    std::unordered_set<std::shared_ptr<Voxel>> groundNeighbors;
-    this->applyToVoxels([&calls, &groundNeighbors](std::shared_ptr<Voxel> v) -> void {
-        if(!(bool)*v)
-            return;
-        if(v->group == 0)
-            return;
-        v->group = v->getZ() == 0 ? 0 : -1; // If it's touching the ground, it's directly in first group
-        if (v->getZ() == 0) {
-            groundNeighbors.insert(v);
-            while (groundNeighbors.size() != 0) {
-                std::shared_ptr<Voxel> n = (*groundNeighbors.begin());
-                calls ++;
-                n->isOnGround = true;
-                n->group = 0;
-                groundNeighbors.erase(groundNeighbors.begin());
-                n->applyToNeighbors([&groundNeighbors](std::shared_ptr<Voxel> v_2) -> void {
-                    if(v_2 != nullptr && !v_2->isOnGround && (bool)*v_2) {
-                        groundNeighbors.insert(v_2);
-                    }
-                });
-            }
-        }
-    });
+    // TODO?
 }
 
 void VoxelChunk::applyModification(Matrix3<float> modifications)
 {
     this->voxelsValuesStack.push_back(modifications);
     this->needRemeshing = true;
+}
+
+void VoxelChunk::undo()
+{
+    if (this->voxelsValuesStack.size() > 1) {
+        this->voxelsValuesStack.pop_back();
+        this->needRemeshing = true;
+    }
 }
 
 
@@ -584,27 +431,4 @@ Matrix3<float> VoxelChunk::getVoxelValues()
     for (Matrix3<float>& voxelMatrix : this->voxelsValuesStack)
         voxelValues += voxelMatrix;
     return voxelValues;
-}
-Matrix3<float>& VoxelChunk::toFloat() {
-    Matrix3<float> voxelValues(this->sizeX, this->sizeY, this->height);
-    for(int x = 0; x < this->sizeX; x++) {
-        for(int y = 0; y < this->sizeY; y++) {
-            for(int z = 0; z < this->height; z++) {
-                voxelValues(x, y, z) = this->voxels(x, y, z)->getIsosurface();
-            }
-        }
-    }
-    return voxelValues;
-}
-Matrix3<std::shared_ptr<Voxel>>& VoxelChunk::toVoxels() {
-    return this->voxels; // Remove the function
-    createVoxels();
-    for(int x = 0; x < this->sizeX; x++) {
-        for(int y = 0; y < this->sizeY; y++) {
-            for(int z = 0; z < this->height; z++) {
-                this->voxels(x, y, z)->isosurface = this->voxelValues(x, y, z);
-            }
-        }
-    }
-    return this->voxels;
 }

@@ -3,6 +3,7 @@ layout (location=0) in vec3 position;
 //layout (location=1) in vec3 texture;
 layout (location=2) in vec3 normal;
 layout (location=3) in vec3 color;
+layout (location=4) in vec3 instanceOffset;
 
 float random (in vec2 st) {
     return fract(sin(dot(st.xy,
@@ -85,7 +86,7 @@ out vec3 initialVertPos;
 
 void main(void)
 {
-    vec3 position = vec3(position.x + offsetX, position.y + offsetY, position.z);
+    vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + instanceOffset.z);
 //    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
     varyingColor = vec4(color, 1.0);
     initialVertPos = vec3(position);

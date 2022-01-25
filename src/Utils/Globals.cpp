@@ -41,7 +41,7 @@ void GlobalsGL::generateBuffers()
 }
 GLuint GlobalsGL::newBufferId()
 {
-    return GlobalsGL::currentBufferId += 4; // Gives space for vertex, texture and normals
+    return GlobalsGL::currentBufferId += 1; // Gives space for vertex, texture and normals
 }
 bool GlobalsGL::checkOpenGLError()
 {

@@ -40,6 +40,7 @@ SOURCES += \
         src/Graph/FastPoissonGraph.cpp \
         src/Graph/GraphNode.cpp \
         src/Graph/Pathfinding.cpp \
+        src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
         src/Graphics/MarchingCubes.cpp \
         src/Graphics/Mesh.cpp \
@@ -91,6 +92,7 @@ HEADERS += \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \
     src/Graph/Pathfinding.h \
+    src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \

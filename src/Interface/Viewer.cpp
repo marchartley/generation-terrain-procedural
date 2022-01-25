@@ -28,7 +28,6 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                ViewerMode mode, QWidget *parent)
     : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
-    std::cout << std::endl;
 }
 Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -52,6 +51,8 @@ void Viewer::init() {
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+
+//    GlobalsGL::generateBuffers();
 
     this->camera()->setType(Camera::PERSPECTIVE);
 
@@ -85,7 +86,6 @@ void Viewer::init() {
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
     GlobalsGL::generateBuffers();
-    this->rocksVBO = GlobalsGL::newBufferId();
 
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
@@ -279,6 +279,7 @@ void Viewer::draw() {
         std::get<1>(debugMesh).display();
     }
     for (auto& controlPointsArray : this->debugControlPoints) {
+        std::vector<ControlPoint> grabbers = std::get<1>(controlPointsArray);
         for (auto& grabber : std::get<1>(controlPointsArray)) {
             grabber.shader->setMatrix("proj_matrix", pMatrix);
             grabber.shader->setMatrix("mv_matrix", mvMatrix);
@@ -331,7 +332,10 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     // Defines the Alt+R shortcut.
     if (e->key() == Qt::Key_Z)
     {
-        setViewerMode(ViewerMode::WIRE_MODE);
+        if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier) == true)
+            this->voxelGrid->undo();
+        else
+            setViewerMode(ViewerMode::WIRE_MODE);
         update(); // Refresh display
     } else if (e->key() == Qt::Key_S)
     {
@@ -603,14 +607,27 @@ void Viewer::initSpaceColonizer()
             FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 20.f);
             int nb_special_nodes = 10;
             std::vector<Vector3> keyPoints;
-            keyPoints.push_back(poissonGraph.nodes[0]->pos);
-            for (int i = 0; i < nb_special_nodes - 1; i++)
-                keyPoints.push_back(poissonGraph.nodes[(i + 1) * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
+            for (int i = 0; i < nb_special_nodes; i++) {
+                keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
+            }
             this->spaceColonizer = TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
             this->spaceColonizer.nodeMinDistance = this->voxelGrid->blockSize;
             this->spaceColonizer.nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
+
+            this->debugControlPoints[SPACE_COLONI].clear();
+            for (size_t i = 0; i < keyPoints.size(); i++) {
+                this->debugControlPoints[SPACE_COLONI].push_back(ControlPoint(keyPoints[i], 5.f));
+                this->debugControlPoints[SPACE_COLONI][i].afterUpdate([=]() -> void {this->computeSpaceColonizer(); });
+            }
+            this->spaceColonizer.process();
         } else {
-            this->spaceColonizer.reset();
+            std::vector<Vector3> keyPoints;
+            for (auto& controlPoint : this->debugControlPoints[SPACE_COLONI])
+                keyPoints.push_back(controlPoint.position);
+//            this->spaceColonizer = TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
+            this->spaceColonizer.nodeMinDistance = this->voxelGrid->blockSize;
+            this->spaceColonizer.nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
+            this->spaceColonizer.reset(keyPoints);
         }
     }
 }
@@ -627,6 +644,7 @@ void Viewer::updateSpaceColonizerPaths()
     this->spaceColonizerPaths.clear();
     std::vector<Vector3> pathPositions;
     std::vector<std::vector<Vector3>> allPaths = this->spaceColonizer.simplifyPaths();
+    std::cout << "For " << this->spaceColonizer.segments.size() << " segments, " << allPaths.size() << " paths created" << std::endl;
     for (const auto& path : allPaths)
     {
         pathPositions.insert(pathPositions.end(), path.begin(), path.end());
@@ -640,11 +658,14 @@ void Viewer::updateSpaceColonizerPaths()
 
 void Viewer::createTunnelFromSpaceColonizer()
 {
+    this->updateSpaceColonizerPaths();
     UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
+    std::cout << this->spaceColonizerPaths.size() << " tunnels to create." << std::endl;
+    erod.CreateMultipleTunnels(this->spaceColonizerPaths);/*
     for (const auto& spline : this->spaceColonizerPaths)
     {
         erod.CreateTunnel(spline);
-    }
+    }*/
     update();
 }
 

@@ -51,6 +51,8 @@ public:
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner);
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
+    Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
 
     T min() const;
     T max() const;
@@ -711,6 +713,24 @@ Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, int left, int up, int fr
         for (int y = std::max(up, 0); y < std::min(matrixToPaste.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToPaste.sizeZ + front, this->sizeZ); z++) {
                 this->at(x, y, z) = matrixToPaste.at(x - left, y - up, z - front);
+            }
+        }
+    }
+    return *this;
+}
+
+template<typename T>
+Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner)
+{
+    return this->add(matrixToAdd, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
+}
+template<typename T>
+Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front)
+{
+    for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
+        for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
+            for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
+                this->at(x, y, z) += matrixToAdd.at(x - left, y - up, z - front);
             }
         }
     }

@@ -1,7 +1,7 @@
 #include "DataStructure/Voxel.h"
 
 //#include "Graphics/MarchingCubes.h"
-
+/*
 std::vector<std::set<int>> Voxel::voxelGroups;
 int Voxel::currentLabelIndex = 0;
 std::unordered_map<TerrainTypes, bool> Voxel::isMatter = {
@@ -176,7 +176,7 @@ std::vector<Vector3> Voxel::getMeshVertices(bool useGlobalCoords)
     }
     return returnArray;
 }
-
+*/
 
 
 

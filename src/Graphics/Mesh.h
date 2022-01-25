@@ -47,7 +47,6 @@ public:
     std::shared_ptr<Shader> shader = nullptr;
     bool isDisplayed;
     GLenum displayShape;
-
 };
 
 #endif // MESH_H
