@@ -124,7 +124,7 @@ void main(void)
 
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
-    material_color = mix(material_color, varyingColor, .80);
+//    material_color = mix(material_color, varyingColor, .80);
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz, 1.0);
 
 //    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);

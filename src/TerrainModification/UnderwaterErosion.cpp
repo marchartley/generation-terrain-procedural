@@ -159,7 +159,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
                                                      Vector3(1.0, 1.0)
                                                  }));
 
-    float resolution = 0.01;
+    float resolution = 1.0 / path.length();
     std::vector<Vector3> coords;
     for (float i = 0; i < 1.0; i += resolution)
     {
@@ -184,9 +184,10 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
                                                      Vector3(1.0, 1.0)
                                                  }));
 
-    float resolution = 0.01;
+//    float resolution = 0.01;
     std::vector<std::vector<Vector3>> allCoords;
     for (BSpline& path : paths) {
+        float resolution = 0.10 / path.length();
         std::vector<Vector3> coords;
         for (float i = 0; i < 1.0; i += resolution)
         {

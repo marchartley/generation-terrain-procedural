@@ -14,6 +14,7 @@ public:
     std::vector<Vector3> getPath(float resolution);
     Vector3 getPoint(float x);
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
+    float length();
 
     Vector3 getCatmullPoint(float x);
 

@@ -3,6 +3,8 @@
 #include <QFile>
 #include <QTextStream>
 
+std::shared_ptr<Shader> Shader::default_shader = nullptr;
+
 Shader::Shader()
     : Shader(nullptr, nullptr, nullptr)
 {

@@ -254,7 +254,7 @@ Vector3& Vector3::operator*=(Vector3 o) {
     this->z *= o.z;
     return *this;
 }
-Vector3 Vector3::operator/(Vector3& o) {
+Vector3 Vector3::operator/(Vector3 o) {
     Vector3 v = *this;
     v /= o;
     return v;

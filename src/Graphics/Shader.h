@@ -6,12 +6,14 @@ class Shader;
 #include <string>
 #include <vector>
 #include "Utils/Globals.h"
+#include <memory>
 
 #include "Graphics/ShaderElement.h"
 
 class Shader
 {
 public:
+    static std::shared_ptr<Shader> default_shader;
     Shader();
     Shader(const char* vertexShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);

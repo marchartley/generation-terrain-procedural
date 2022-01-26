@@ -16,6 +16,7 @@
 #include "Utils/BSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
 #include "Interface/ControlPoint.h"
+#include "Interface/KarstPathGenerationInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -119,7 +120,7 @@ public:
 
     ViewerMode viewerMode;
     MapMode mapMode;
-    SmoothingAlgorithm algorithm = NONE; // MARCHING_CUBES;
+    SmoothingAlgorithm algorithm = MARCHING_CUBES;
 
 //private:
     std::shared_ptr<Grid> grid;
@@ -143,6 +144,7 @@ public:
 
     KarstPathsGeneration karstPathCreator;
     std::vector<BSpline> karstPaths;
+    KarstPathGenerationInterface karstPathInterface;
 
     TreeColonisationAlgo::TreeColonisation spaceColonizer;
     std::vector<BSpline> spaceColonizerPaths;
