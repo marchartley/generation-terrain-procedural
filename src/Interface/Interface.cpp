@@ -359,20 +359,20 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
     randomRocksSizeSlider->setValue(viewer->erosionSize);
     randomRocksStrengthSlider->setfValue(viewer->erosionStrength);
     randomRocksQuantitySlider->setValue(viewer->erosionQtt);
-    displayRandomRocks->setChecked(viewer->debugMeshes[ROCK_TRAILS].isDisplayed);
-    displayFailedRandomRocks->setChecked(viewer->debugMeshes[FAILED_ROCKS].isDisplayed);
+//    displayRandomRocks->setChecked(viewer->debugMeshes[ROCK_TRAILS].isDisplayed);
+//    displayFailedRandomRocks->setChecked(viewer->debugMeshes[FAILED_ROCKS].isDisplayed);
 
     currentSimulationFlowfieldStrengthSlider->setfValue(viewer->erosionFlowfieldFactor);
 //    manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
     currentSimulationRandomDirectionSlider->setfValue(viewer->erosionFlowfieldRandomness);
-    displayFlowfield->setChecked(viewer->debugMeshes[FLOW_TRAILS].isDisplayed);
+//    displayFlowfield->setChecked(viewer->debugMeshes[FLOW_TRAILS].isDisplayed);
 
     manualRocksSizeSlider->setValue(viewer->manualErosionSize);
     manualRocksStrengthSlider->setfValue(viewer->manualErosionStrength);
 
     curvesErosionSizeSlider->setValue(viewer->curvesErosionSize);
     curvesErosionStrengthSlider->setfValue(viewer->curvesErosionStrength);
-    displayCurvesErosion->setChecked(viewer->debugMeshes[TUNNEL_PATHS].isDisplayed);
+//    displayCurvesErosion->setChecked(viewer->debugMeshes[TUNNEL_PATHS].isDisplayed);
 
     karstCreationDistanceWeights->setfValue(viewer->karstPathCreator.distanceWeight);
     karstCreationFractureWeights->setfValue(viewer->karstPathCreator.fractureWeight);
@@ -380,9 +380,9 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
     karstCreationPorosityWeights->setfValue(viewer->karstPathCreator.porosityWeight);
     karstCreationGamma->setfValue(viewer->karstPathCreator.gamma);
     karstCreationTortuosity->setfValue(0.f);
-    karstCreationDisplay->setChecked(viewer->debugMeshes[KARST_PATHS].isDisplayed);
+//    karstCreationDisplay->setChecked(viewer->debugMeshes[KARST_PATHS].isDisplayed);
 
-    spaceColonizerDisplay->setChecked(viewer->debugMeshes[SPACE_COLONI].isDisplayed);
+//    spaceColonizerDisplay->setChecked(viewer->debugMeshes[SPACE_COLONI].isDisplayed);
 
     wireModeButton->setChecked(viewer->viewerMode == WIRE_MODE);
     fillModeButton->setChecked(viewer->viewerMode == FILL_MODE);

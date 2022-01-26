@@ -51,42 +51,26 @@ void Viewer::init() {
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-
-//    GlobalsGL::generateBuffers();
+    GlobalsGL::generateBuffers();
 
     this->camera()->setType(Camera::PERSPECTIVE);
 
     setTextIsEnabled(true);
     setMouseTracking(true);
 
-#ifdef _WIN32
     const char* vShader_grid = ":/src/Shaders/grid_vertex_shader_blinn_phong.glsl";
     const char* fShader_grid = ":/src/Shaders/grid_fragment_shader_blinn_phong.glsl";
     const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
     const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
-    const char* vShader_layer = ":/src/Shaders/layer_based_vertex_shader.glsl";
-    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
-//    const char* vGrabberShader = ":/src/Shaders/grabber_vertex_shader.glsl";
-//    const char* fGrabberShader = ":/src/Shaders/grabber_fragment_shader.glsl";
+//    const char* vShader_layer = ":/src/Shaders/layer_based_vertex_shader.glsl";
+//    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
     const char* vNoShader = ":/src/Shaders/no_vertex_shader.glsl";
     const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
-#elif linux
-    const char* vShader_grid = ":/src/Shaders/grid_vertex_shader_blinn_phong.glsl";
-    const char* fShader_grid = ":/src/Shaders/grid_fragment_shader_blinn_phong.glsl";
-    const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
-    const char* vShader_layer = ":/src/Shaders/layer_based_vertex_shader.glsl";
-    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
-//    const char* vGrabberShader = ":/src/Shaders/grabber_vertex_shader.glsl";
-//    const char* fGrabberShader = ":/src/Shaders/grabber_fragment_shader.glsl";
-    const char* vNoShader = ":/src/Shaders/no_vertex_shader.glsl";
-    const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
-#endif
+
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
-    GlobalsGL::generateBuffers();
-
+    Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
     this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
@@ -192,14 +176,14 @@ void Viewer::draw() {
 
 
     Material ground_material(
-                    new float[4]{.24, .08, .02, 1.},
-                    new float[4]{.30, .10, .04, 1.},
+                    new float[4]{.48, .16, .04, 1.},
+                    new float[4]{.60, .20, .08, 1.},
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
     Material grass_material(
-                    new float[4]{.14, .52, .00, 1.},
-                    new float[4]{.16, .60, .00, 1.},
+                    new float[4]{.28, .90, .00, 1.},
+                    new float[4]{.32, .80, .00, 1.},
                     new float[4]{.62, .56, .37, 1.},
                     51.2f
                     );
@@ -236,17 +220,8 @@ void Viewer::draw() {
                     vc->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
                     vc->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
                     vc->mesh.shader->setBool("display_light_source", true);
-                    vc->mesh.shader->setFloat("offsetX", 0.f); //-this->voxelGrid->sizeX/2);
-                    vc->mesh.shader->setFloat("offsetY", 0.f); // -this->voxelGrid->sizeY/2);
                     vc->mesh.shader->setVector("min_vertice_positions", minVoxelsShown());
                     vc->mesh.shader->setVector("max_vertice_positions", maxVoxelsShown());
-//                    Vector3 v = vc->mesh.vertexArray[0];
-//                    for (auto& v : vc->mesh.vertexArray) {
-//                        std::cout << (camera()->projectedCoordinatesOf(qglviewer::Vec(v.x, v.y, v.z)).norm() > 5000 ? "true" : "false")  << " ";
-//                        Vector3 vertEyeSpacePos = Vector3(mvMatrix[0] * v.x + mvMatrix[1] * v.y + mvMatrix[2] * v.z, mvMatrix[4] * v.x + mvMatrix[5] * v.y + mvMatrix[6] * v.z, mvMatrix[8] * v.x + mvMatrix[9] * v.y + mvMatrix[10] * v.z);
-////                        std::cout << vertEyeSpacePos.norm() << " ";
-//                    }
-//                    std::cout << std::endl;
                 }
                 this->voxelGrid->display();
             }
@@ -295,6 +270,8 @@ void Viewer::draw() {
     this->mainGrabber.shader->setMatrix("mv_matrix", mvMatrix);
     this->mainGrabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     this->mainGrabber.display();
+
+    this->karstPathInterface.display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -530,6 +507,8 @@ void Viewer::initKarstPathCreator()
         }
 
         this->karstPathCreator = KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
+        this->karstPathInterface = KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
+//        this->karstPathInterface.karstCreator = &this->karstPathCreator;
     }
 }
 
@@ -579,10 +558,7 @@ void Viewer::updateKarstPath()
 void Viewer::createKarst()
 {
     UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    for (const auto& spline : this->karstPaths)
-    {
-        erod.CreateTunnel(spline);
-    }
+    erod.CreateMultipleTunnels(this->karstPaths);
     update();
 }
 
@@ -751,7 +727,7 @@ bool Viewer::checkMouseOnVoxel()
     }
     this->mouseInWorld = found;
     if (found) {
-        std::cout << "Click on " << currPos << std::endl;
+//        std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
         this->mainGrabber.position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }

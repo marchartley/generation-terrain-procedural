@@ -24,8 +24,6 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
     } else {
         this->manipFrame.addInMouseGrabberPool();
     }
-//    QObject::connect(&this->manipFrame, SIGNAL(manipulated()), this, SLOT(updateSphere()));
-//    std::cout << this->manipFrame.isInMouseGrabberPool() << " " << this->manipFrame.grabsMouse() << std::endl;
 }
 
 ControlPoint::~ControlPoint()

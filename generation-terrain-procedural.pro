@@ -49,8 +49,11 @@ SOURCES += \
         src/Graphics/Sphere.cpp \
         src/Interface/ControlPoint.cpp \
         src/Interface/FancySlider.cpp \
+        src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
+        src/Interface/KarstPathGenerationInterface.cpp \
         src/Interface/RangeSlider.cpp \
+        src/Interface/Slider3D.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/Viewer.cpp \
         src/Karts/KarstPathsGeneration.cpp \
@@ -101,8 +104,11 @@ HEADERS += \
     src/Graphics/Sphere.h \
     src/Interface/ControlPoint.h \
     src/Interface/FancySlider.h \
+    src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
+    src/Interface/KarstPathGenerationInterface.h \
     src/Interface/RangeSlider.h \
+    src/Interface/Slider3D.h \
     src/Interface/Spoiler.h \
     src/Interface/Viewer.h \
     src/TerrainGen/Grid.h \

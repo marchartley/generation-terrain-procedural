@@ -47,6 +47,15 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
     return a * (1 - x) + b * x;
 }
 
+float BSpline::length()
+{
+    float length = 0;
+    for (size_t i = 0; i < this->points.size() - 1; i++) {
+        length += (this->points[i] - this->points[i + 1]).norm();
+    }
+    return length;
+}
+
 float CatmullNextT(Vector3 P0, Vector3 P1, float t_prev, float alpha)
 {
     return std::pow((P0 - P1).norm2(), alpha) + t_prev;

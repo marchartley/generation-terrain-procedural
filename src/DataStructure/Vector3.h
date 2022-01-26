@@ -32,6 +32,27 @@ public:
     Vector3 abs();
 
     float divergence() { return x + y + z; }
+
+    static Vector3 lerp(float t, Vector3 min, Vector3 max) {
+        return min + (max - min) * t;
+    }
+    static float inverseLerp(Vector3 val, Vector3 min, Vector3 max) {
+        return (val - min).dot(max - min) / ((max - min).norm2() > 0 ? (max - min).norm2() : 0.0001f);
+    }
+    float inverseLerp(Vector3 min, Vector3 max) {
+        return Vector3::inverseLerp(*this, min, max);
+    }
+    static float remap(Vector3 val, Vector3 oldMin, Vector3 oldMax, float newMin, float newMax)
+    {
+        float oldProgress = Vector3::inverseLerp(val, oldMin, oldMax);
+        return newMin + (newMax - newMin) * oldProgress;
+    }
+    float remap(Vector3 oldMin, Vector3 oldMax, float newMin, float newMax)
+    {
+        return Vector3::remap(*this, oldMin, oldMax, newMin, newMax);
+    }
+
+
 /*
     static Matrix3<Vector3> gradient(Matrix3<float> field);
     static Matrix3<Vector3> grad(Matrix3<float> field);
@@ -55,7 +76,7 @@ public:
     Vector3& operator-=(const Vector3& o);
     friend Vector3 operator*(Vector3 a, Vector3 o);
     Vector3& operator*=(Vector3 o);
-    Vector3 operator/(Vector3& o);
+    Vector3 operator/(Vector3 o);
     Vector3& operator/=(Vector3 o);
     Vector3 operator*(float o);
     Vector3& operator*=(float o);
