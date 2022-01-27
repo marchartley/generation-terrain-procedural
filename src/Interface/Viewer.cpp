@@ -80,12 +80,12 @@ void Viewer::init() {
     this->debugMeshes[KARST_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
     this->debugMeshes[SPACE_COLONI] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
 
-    this->debugControlPoints[ROCK_TRAILS] = std::vector<ControlPoint>();
-    this->debugControlPoints[FAILED_ROCKS] = std::vector<ControlPoint>();
-    this->debugControlPoints[FLOW_TRAILS] = std::vector<ControlPoint>();
-    this->debugControlPoints[TUNNEL_PATHS] = std::vector<ControlPoint>();
-    this->debugControlPoints[KARST_PATHS] = std::vector<ControlPoint>();
-    this->debugControlPoints[SPACE_COLONI] = std::vector<ControlPoint>();
+    this->debugControlPoints[ROCK_TRAILS] = std::vector<ControlPoint*>();
+    this->debugControlPoints[FAILED_ROCKS] = std::vector<ControlPoint*>();
+    this->debugControlPoints[FLOW_TRAILS] = std::vector<ControlPoint*>();
+    this->debugControlPoints[TUNNEL_PATHS] = std::vector<ControlPoint*>();
+    this->debugControlPoints[KARST_PATHS] = std::vector<ControlPoint*>();
+    this->debugControlPoints[SPACE_COLONI] = std::vector<ControlPoint*>();
 
     this->debugMeshes[ROCK_TRAILS].shader->setVector("color", std::vector<float>({86/255.f, 176/255.f, 12/255.f, .5f}));
     this->debugMeshes[FAILED_ROCKS].shader->setVector("color", std::vector<float>({176/255.f, 72/255.f, 12/255.f, .4f}));
@@ -94,7 +94,7 @@ void Viewer::init() {
     this->debugMeshes[KARST_PATHS].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
     this->debugMeshes[SPACE_COLONI].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
     ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
-    this->mainGrabber = ControlPoint(Vector3(), 1.f, ACTIVE, false);
+    this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
     for (auto& debugMesh : this->debugMeshes)
@@ -254,24 +254,24 @@ void Viewer::draw() {
         std::get<1>(debugMesh).display();
     }
     for (auto& controlPointsArray : this->debugControlPoints) {
-        std::vector<ControlPoint> grabbers = std::get<1>(controlPointsArray);
+        std::vector<ControlPoint*> grabbers = std::get<1>(controlPointsArray);
         for (auto& grabber : std::get<1>(controlPointsArray)) {
-            grabber.shader->setMatrix("proj_matrix", pMatrix);
-            grabber.shader->setMatrix("mv_matrix", mvMatrix);
-            grabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-            grabber.isDisplayed = this->debugMeshes[std::get<0>(controlPointsArray)].isDisplayed;
-            grabber.display();
+            grabber->mesh.shader->setMatrix("proj_matrix", pMatrix);
+            grabber->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+            grabber->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+            grabber->mesh.isDisplayed = this->debugMeshes[std::get<0>(controlPointsArray)].isDisplayed;
+            grabber->display();
         }
     }
     //    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
     glLineWidth(previousLineWidth[0]);
 
-    this->mainGrabber.shader->setMatrix("proj_matrix", pMatrix);
-    this->mainGrabber.shader->setMatrix("mv_matrix", mvMatrix);
-    this->mainGrabber.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-    this->mainGrabber.display();
+    this->mainGrabber->mesh.shader->setMatrix("proj_matrix", pMatrix);
+    this->mainGrabber->mesh.shader->setMatrix("mv_matrix", mvMatrix);
+    this->mainGrabber->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+    this->mainGrabber->display();
 
-    this->karstPathInterface.display();
+    this->karstPathInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -387,10 +387,10 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
     if (this->checkMouseOnVoxel())
     {
-        this->mainGrabber.move(this->mousePosWorld);
-        this->mainGrabber.setState(ACTIVE);
+        this->mainGrabber->move(this->mousePosWorld);
+        this->mainGrabber->setState(ACTIVE);
     } else {
-        this->mainGrabber.setState(HIDDEN);
+        this->mainGrabber->setState(HIDDEN);
     }
     update();
     QGLViewer::mouseMoveEvent(e);
@@ -467,7 +467,7 @@ void Viewer::recomputeFlowfield()
 void Viewer::setManualErosionRocksSize(int newSize)
 {
     this->manualErosionSize = newSize;
-    this->mainGrabber.radius = newSize / 2.f;
+    this->mainGrabber->radius = newSize / 2.f;
 }
 
 void Viewer::throwRock()
@@ -507,7 +507,7 @@ void Viewer::initKarstPathCreator()
         }
 
         this->karstPathCreator = KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
-        this->karstPathInterface = KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
+        this->karstPathInterface = new KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
 //        this->karstPathInterface.karstCreator = &this->karstPathCreator;
     }
 }
@@ -592,14 +592,14 @@ void Viewer::initSpaceColonizer()
 
             this->debugControlPoints[SPACE_COLONI].clear();
             for (size_t i = 0; i < keyPoints.size(); i++) {
-                this->debugControlPoints[SPACE_COLONI].push_back(ControlPoint(keyPoints[i], 5.f));
-                this->debugControlPoints[SPACE_COLONI][i].afterUpdate([=]() -> void {this->computeSpaceColonizer(); });
+                this->debugControlPoints[SPACE_COLONI].push_back(new ControlPoint(keyPoints[i], 5.f));
+                this->debugControlPoints[SPACE_COLONI][i]->afterUpdate([=]() -> void {this->computeSpaceColonizer(); });
             }
             this->spaceColonizer.process();
         } else {
             std::vector<Vector3> keyPoints;
             for (auto& controlPoint : this->debugControlPoints[SPACE_COLONI])
-                keyPoints.push_back(controlPoint.position);
+                keyPoints.push_back(controlPoint->position);
 //            this->spaceColonizer = TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
             this->spaceColonizer.nodeMinDistance = this->voxelGrid->blockSize;
             this->spaceColonizer.nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
@@ -651,7 +651,7 @@ void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
     {
         bool addTheNewPoint = true;
         for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
-            if (controls.manipFrame.isManipulated()) {
+            if (controls->manipFrame.isManipulated()) {
                 addTheNewPoint = false;
                 break;
             }
@@ -659,12 +659,12 @@ void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
     //    if (!this->currentTunnelPoints.empty() && pos == this->currentTunnelPoints.back()) return;
     //    this->currentTunnelPoints.push_back(pos);
         if (addTheNewPoint)
-            this->debugControlPoints[TUNNEL_PATHS].push_back(ControlPoint(pos, 5.f, INACTIVE));
+            this->debugControlPoints[TUNNEL_PATHS].push_back(new ControlPoint(pos, 5.f, INACTIVE));
     }
     this->currentTunnelPoints.clear();
     for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
-        this->currentTunnelPoints.push_back(controls.position);
-        controls.onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
+        this->currentTunnelPoints.push_back(controls->position);
+        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
     }
     BSpline path(this->currentTunnelPoints);
 
@@ -729,7 +729,7 @@ bool Viewer::checkMouseOnVoxel()
     if (found) {
 //        std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
-        this->mainGrabber.position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
+        this->mainGrabber->position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
 //    std::cout << currPos << " (length=" << currPos.norm() << " over " << std::sqrt(maxDist) << ")" << std::endl;
     return found;

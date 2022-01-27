@@ -20,13 +20,13 @@ Slider3D::Slider3D(Vector3 positionMin, Vector3 positionMax, float val, float mi
 
 void Slider3D::display()
 {
+    this->sliderControlPoint->display();
     this->sliderMesh.display(GL_LINES);
-    this->sliderControlPoint.display();
 }
 
 float Slider3D::getValue()
 {
-    return Vector3::remap(this->sliderControlPoint.position, this->minPos, this->maxPos, this->minValue, this->maxValue);
+    return Vector3::remap(this->sliderControlPoint->position, this->minPos, this->maxPos, this->minValue, this->maxValue);
 }
 
 void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, float maxValue, float val)
@@ -35,9 +35,12 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
     this->maxPos = positionMax;
     this->minValue = minValue;
     this->maxValue = maxValue;
-    this->sliderControlPoint = ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
-    this->sliderControlPoint.manipFrame.setConstraint(new SliderConstraint(positionMin, positionMax));
+    this->sliderControlPoint = new ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
+    this->sliderControlPoint->manipFrame.setConstraint(new SliderConstraint(positionMin, positionMax));
     this->sliderMesh.fromArray({minPos, maxPos});
+    this->sliderMesh.shader = this->sliderControlPoint->mesh.shader;
+
+    QObject::connect(this->sliderControlPoint, &ControlPoint::modified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
 }
 
 

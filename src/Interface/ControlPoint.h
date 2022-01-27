@@ -5,6 +5,7 @@
 #include "Graphics/Mesh.h"
 #include "DataStructure/Vector3.h"
 
+#include <QObject>
 #include <QGLViewer/manipulatedFrame.h>
 
 enum GrabberState {
@@ -13,15 +14,21 @@ enum GrabberState {
     ACTIVE   = 0x2
 };
 
-class ControlPoint : public Mesh
+class ControlPoint : public QObject
 {
+    Q_OBJECT
 public:
     ControlPoint();
     ControlPoint(Vector3 pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
     ~ControlPoint();
 
     void setState(GrabberState newState);
+    void updateStateDependingOnManipFrame();
 
+Q_SIGNALS:
+    void modified();
+
+public:
     void onUpdate(std::function<void()> func);
     void afterUpdate(std::function<void()> func);
 
@@ -35,6 +42,8 @@ public:
     GrabberState state;
     bool useManipFrame;
     bool currentlyManipulated;
+
+    Mesh mesh;
 
     Sphere shape;
 

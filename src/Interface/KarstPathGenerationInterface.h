@@ -4,24 +4,29 @@
 #include "Interface/ControlPoint.h"
 #include "Interface/InteractiveVector.h"
 #include "Interface/Slider3D.h"
-#include "Karts/KarstPathsGeneration.h"
+#include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
 
-class KarstPathGenerationInterface
+#include <QWidget>
+
+class KarstPathGenerationInterface : public QWidget
 {
+    Q_OBJECT
 public:
     KarstPathGenerationInterface();
     KarstPathGenerationInterface(KarstPathsGeneration* karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
 
     void display();
 
-    InteractiveVector fractureVector;
-    Slider3D waterHeightSlider;
+    InteractiveVector *fractureVector;
+    Slider3D *waterHeightSlider;
     Mesh waterLevelMesh;
 
-    void updateFracture();
-    void updateWaterHeight();
+public Q_SLOTS:
+    void updateFracture(Vector3 newFractureDir = Vector3());
+    void updateWaterHeight(float newHeight = 0.f);
 
+public:
     Vector3 AABBoxMinPos;
     Vector3 AABBoxMaxPos;
 

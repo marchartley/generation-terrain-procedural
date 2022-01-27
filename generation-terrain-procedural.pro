@@ -56,7 +56,7 @@ SOURCES += \
         src/Interface/Slider3D.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/Viewer.cpp \
-        src/Karts/KarstPathsGeneration.cpp \
+        src/Karst/KarstPathsGeneration.cpp \
         src/TerrainGen/Grid.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
         src/TerrainGen/VoxelChunk.cpp \
@@ -121,7 +121,7 @@ HEADERS += \
     src/Utils/BSpline.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
-    src/Karts/KarstPathsGeneration.h \
+    src/Karst/KarstPathsGeneration.h \
     src/Utils/Utils.h \
     src/sim-fluid-ethanjli/fluidsystem.h \
     src/sim-fluid-ethanjli/fluidsystem.tpp \

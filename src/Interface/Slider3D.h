@@ -11,13 +11,18 @@ enum Slider3DOrientation {
 };
 
 class SliderConstraint;
-class Slider3D
+class Slider3D : public QObject
 {
+    Q_OBJECT
 public:
     Slider3D();
     Slider3D(Vector3 positionMin, float length, float val = 0.f, float minValue = 0.f, float maxValue = 1.f, Slider3DOrientation orientation = X);
     Slider3D(Vector3 positionMin, Vector3 positionMax, float val = 0.f, float minValue = 0.f, float maxValue = 1.f);
 
+Q_SIGNALS:
+    void valueChanged(float newValue);
+
+public:
     void display();
 
     float getValue();
@@ -28,7 +33,7 @@ public:
     Vector3 maxPos;
 //    Slider3DOrientation orientation;
 
-    ControlPoint sliderControlPoint;
+    ControlPoint *sliderControlPoint;
     Mesh sliderMesh;
 
     void init(Vector3 positionMin, Vector3 positionMax, float minValue = 0.f, float maxValue = 1.f, float val = 0.f);
