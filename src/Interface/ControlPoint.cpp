@@ -10,13 +10,13 @@ std::map<GrabberState, std::vector<float>> ControlPoint::GrabberStateColor = {
 ControlPoint::ControlPoint()
     : ControlPoint(Vector3())
 {
-    this->isDisplayed = false;
+    this->mesh.isDisplayed = false;
 }
 
 ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool useTheManipulatedFrame)
-    : Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true),
-      position(pos), radius(radius), state(state), useManipFrame(useTheManipulatedFrame), shape(radius, position, 10, 10)
+    : position(pos), radius(radius), state(state), useManipFrame(useTheManipulatedFrame), shape(radius, position, 10, 10)
 {
+    this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
     this->move(pos);
     this->prevPosition = pos;
     if (!useManipFrame) {
@@ -24,6 +24,11 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
     } else {
         this->manipFrame.addInMouseGrabberPool();
     }
+
+    QObject::connect(&this->manipFrame, &qglviewer::ManipulatedFrame::modified, this, [=](){
+        Q_EMIT this->modified();
+        this->updateStateDependingOnManipFrame();
+    });
 }
 
 ControlPoint::~ControlPoint()
@@ -34,6 +39,13 @@ ControlPoint::~ControlPoint()
 void ControlPoint::setState(GrabberState newState)
 {
     this->state = newState;
+}
+
+void ControlPoint::updateStateDependingOnManipFrame()
+{
+    if (this->useManipFrame)
+        if (this->state != HIDDEN)
+            this->setState(this->manipFrame.isManipulated() ? ACTIVE : INACTIVE);
 }
 
 void ControlPoint::onUpdate(std::function<void ()> func)
@@ -66,8 +78,8 @@ void ControlPoint::updateSphere()
     this->shape.position = this->position;
     this->shape.radius = this->radius;
     this->shape.buildVerticesFlat();
-    this->fromArray(this->shape.mesh.vertexArrayFloat);
-    this->update();
+    this->mesh.fromArray(this->shape.mesh.vertexArrayFloat);
+    this->mesh.update();
 }
 
 void ControlPoint::display()
@@ -77,9 +89,9 @@ void ControlPoint::display()
         if (this->useManipFrame)
             this->setState(this->manipFrame.isManipulated() ? ACTIVE : INACTIVE);
 
-        this->shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
+        this->mesh.shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
         this->updateSphere();
-        Mesh::display();
+        this->mesh.display();
     }
 }
 

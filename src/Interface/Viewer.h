@@ -12,7 +12,7 @@
 #include "Graphics/DebugShader.h"
 #include "Graphics/Sphere.h"
 #include <QObject>
-#include "Karts/KarstPathsGeneration.h"
+#include "Karst/KarstPathsGeneration.h"
 #include "Utils/BSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
 #include "Interface/ControlPoint.h"
@@ -144,7 +144,7 @@ public:
 
     KarstPathsGeneration karstPathCreator;
     std::vector<BSpline> karstPaths;
-    KarstPathGenerationInterface karstPathInterface;
+    KarstPathGenerationInterface *karstPathInterface;
 
     TreeColonisationAlgo::TreeColonisation spaceColonizer;
     std::vector<BSpline> spaceColonizerPaths;
@@ -190,12 +190,12 @@ public:
     unsigned int frame_num = 0;
 
 //    std::vector<ControlPoint> grabbers;
-    ControlPoint mainGrabber;
+    ControlPoint *mainGrabber;
 
     void updateFlowfieldDebugMesh();
 
     std::map<DebugMeshesNames, Mesh> debugMeshes;
-    std::map<DebugMeshesNames, std::vector<ControlPoint>> debugControlPoints;
+    std::map<DebugMeshesNames, std::vector<ControlPoint*>> debugControlPoints;
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;

@@ -89,7 +89,7 @@ void FluidSimulation::velocityStep()
 
     this->projectVelocity();
 
-//    swapArrays(this->velocity_old, this->velocity);
+    swapArrays(this->velocity_old, this->velocity);
     this->advectVelocity();
     this->projectVelocity();
     this->setVelocityBounds();

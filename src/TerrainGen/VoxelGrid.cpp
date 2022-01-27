@@ -207,7 +207,10 @@ void VoxelGrid::initMap()
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
 
-    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, 0.1f, 0.0f, 0.0f, 10);
+    float dt = 0.1f;
+    float diffusion = 0.1f;
+    float viscosity = 0.01f;
+    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, dt, diffusion, viscosity, 10);
 }
 
 void VoxelGrid::createMesh()

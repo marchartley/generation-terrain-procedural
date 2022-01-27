@@ -5,25 +5,29 @@
 #include "Interface/ControlPoint.h"
 #include "Graphics/Mesh.h"
 
-class InteractiveVector
+class InteractiveVector : public QObject
 {
+    Q_OBJECT
 public:
     InteractiveVector();
     InteractiveVector(Vector3 end);
     InteractiveVector(Vector3 start, Vector3 end);
 
     void display();
-    void onUpdate(std::function<void()> callback);
 
+Q_SIGNALS:
+    void modified(Vector3 newVector);
+    void startingModified(Vector3 newVector);
+    void endingModified(Vector3 newVector);
+
+public:
     Vector3 getResultingVector() { return getEndingVector() - getStartingVector(); }
-    Vector3 getStartingVector() { return this->startingControlPoint.position; }
-    Vector3 getEndingVector() { return this->endingControlPoint.position; }
+    Vector3 getStartingVector() { return this->startingControlPoint->position; }
+    Vector3 getEndingVector() { return this->endingControlPoint->position; }
 
-    ControlPoint startingControlPoint;
-    ControlPoint endingControlPoint;
+    ControlPoint *startingControlPoint;
+    ControlPoint *endingControlPoint;
     Mesh arrowMesh;
-
-    std::function<void()> onUpdateCallback;
 
     std::vector<Vector3> getArrowPath();
 

@@ -15,7 +15,7 @@
 //#include <openvdb/openvdb.h>
 #include "DataStructure/Matrix3.h"
 #include "Graph/FastPoissonGraph.h"
-#include "Karts/KarstPathsGeneration.h"
+#include "Karst/KarstPathsGeneration.h"
 
 int main(int argc, char *argv[])
 {
