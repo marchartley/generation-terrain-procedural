@@ -4,6 +4,7 @@
 #include <QTextStream>
 
 std::shared_ptr<Shader> Shader::default_shader = nullptr;
+std::set<std::shared_ptr<Shader>> Shader::allShaders;
 
 Shader::Shader()
     : Shader(nullptr, nullptr, nullptr)
@@ -158,6 +159,14 @@ void Shader::setMaterial(std::string pname, Material &value)
     this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
     this->setVector((pname + ".specular").c_str(), value.specular, 4);
     this->setFloat((pname + ".shininness").c_str(), value.shininess);
+}
+
+void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> func)
+{
+    std::set<std::shared_ptr<Shader>>::iterator it;
+    for (it = Shader::allShaders.begin(); it != Shader::allShaders.end(); it++) {
+        func(*it);
+    }
 }
 
 

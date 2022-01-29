@@ -21,7 +21,7 @@ Slider3D::Slider3D(Vector3 positionMin, Vector3 positionMax, float val, float mi
 void Slider3D::display()
 {
     this->sliderControlPoint->display();
-    this->sliderMesh.display(GL_LINES);
+    this->sliderMesh.display(GL_LINES, 3.f);
 }
 
 float Slider3D::getValue()
@@ -38,7 +38,7 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
     this->sliderControlPoint = new ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
     this->sliderControlPoint->manipFrame.setConstraint(new SliderConstraint(positionMin, positionMax));
     this->sliderMesh.fromArray({minPos, maxPos});
-    this->sliderMesh.shader = this->sliderControlPoint->mesh.shader;
+    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
     QObject::connect(this->sliderControlPoint, &ControlPoint::modified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
 }
@@ -53,17 +53,16 @@ SliderConstraint::SliderConstraint(Vector3 minPos, Vector3 maxPos)
 {
     this->constraint = new qglviewer::LocalConstraint();
     this->constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
+    this->constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FORBIDDEN);
     Vector3 dir = maxPos - minPos;
     this->constraint->setTranslationConstraintDirection(qglviewer::Vec(dir.x, dir.y, dir.z));
 }
 
 void SliderConstraint::constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr) {
-    this->constraint->constrainTranslation(t, fr);/*
-    if (std::abs(t.x) > std::abs(t.y) && std::abs(t.x) > std::abs(t.z)) {
-        this->constraintx->constrainTranslation(t, fr);
-    } else if (std::abs(t.y) > std::abs(t.x) && std::abs(t.y) > std::abs(t.z)) {
-        this->constrainty->constrainTranslation(t, fr);
-    } else if (std::abs(t.z) > std::abs(t.x) && std::abs(t.z) > std::abs(t.y)) {
-        this->constraintz->constrainTranslation(t, fr);
-    }*/
+    this->constraint->constrainTranslation(t, fr);
+}
+
+void SliderConstraint::constrainRotation(qglviewer::Quaternion &q, qglviewer::Frame * const fr)
+{
+    this->constraint->constrainRotation(q, fr);
 }

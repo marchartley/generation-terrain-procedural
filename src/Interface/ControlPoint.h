@@ -27,6 +27,7 @@ public:
 
 Q_SIGNALS:
     void modified();
+    void afterModified();
 
 public:
     void onUpdate(std::function<void()> func);
@@ -35,6 +36,9 @@ public:
     void updateSphere();
     void move(Vector3 newPos);
     void display();
+
+    void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
+    void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
     Vector3 position;
     Vector3 prevPosition;
@@ -51,9 +55,10 @@ public:
     std::function<void()> afterUpdateCallback;
 
     qglviewer::ManipulatedFrame manipFrame;
+    std::map<GrabberState, std::vector<float>> GrabberStateColor;
 
     static std::shared_ptr<Shader> base_shader;
-    static std::map<GrabberState, std::vector<float>> GrabberStateColor;
+    static std::map<GrabberState, std::vector<float>> default_GrabberStateColor;
 };
 
 #endif // CONTROLPOINT_H

@@ -1,5 +1,7 @@
 #include "Graphics/Mesh.h"
 
+std::vector<Mesh*> Mesh::all_meshes;
+
 Mesh::Mesh(std::shared_ptr<Shader> shader, bool isDisplayed, GLenum displayShape)
     : Mesh(std::vector<Vector3>(), shader, isDisplayed, displayShape)
 {
@@ -9,6 +11,7 @@ Mesh::Mesh(std::vector<Vector3> _vertexArray, std::shared_ptr<Shader> shader, bo
     : vertexArray(_vertexArray), shader(shader), isDisplayed(isDisplayed), displayShape(displayShape)
 {
     this->fromArray(_vertexArray);
+    Mesh::all_meshes.push_back(this);
 }
 Mesh::Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader, bool isDisplayed, GLenum displayShape)
     : shader(shader), isDisplayed(isDisplayed), displayShape(displayShape)
@@ -20,6 +23,7 @@ Mesh::Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader,
                                             _vertexArrayFloat[i + 2]));
     }*/
     this->fromArray(_vertexArrayFloat); // This is time consuming, but less code to do
+    Mesh::all_meshes.push_back(this);
 }
 
 void Mesh::clear()
@@ -159,12 +163,26 @@ void Mesh::computeColors()
     }
 }
 
+void Mesh::setShaderToAllMeshesWithoutShader(Shader newShader)
+{
+    /*for (Mesh*& mesh : Mesh::all_meshes) {
+        if (!mesh->shader || mesh->shader->vShader < 0)
+            mesh->shader = std::make_shared<Shader>(newShader);
+    }*/
+}
+
 void Mesh::update()
 {
     if (!bufferReady)
     {
         this->bufferID = GlobalsGL::newBufferId();
 //        GlobalsGL::generateBuffers();
+    }
+    if (!this->shader && Shader::default_shader) {
+        this->shader = std::make_shared<Shader>(*Shader::default_shader);
+    }
+    if (Shader::allShaders.find(this->shader) == Shader::allShaders.end()) {
+        Shader::allShaders.insert(this->shader);
     }
     pushToBuffer();
 
@@ -194,7 +212,7 @@ void Mesh::pushToBuffer()
     GlobalsGL::f()->glEnableVertexAttribArray(3);
     this->bufferReady = true;
 }
-void Mesh::display(GLenum shape)
+void Mesh::display(GLenum shape, float lineWeight)
 {
     if (!isDisplayed) return;
     if (shape != 0) this->displayShape = shape;
@@ -206,7 +224,11 @@ void Mesh::display(GLenum shape)
 
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LEQUAL);
+    GLfloat previousLineWidth[1];
+    glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
+    glLineWidth(lineWeight);
     glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
+    glLineWidth(previousLineWidth[0]);
 
     if (this->shader != nullptr) {
         GlobalsGL::printShaderErrors(this->shader->vShader);

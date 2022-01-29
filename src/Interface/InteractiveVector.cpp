@@ -16,8 +16,8 @@ InteractiveVector::InteractiveVector(Vector3 start, Vector3 end)
 {
     this->startingControlPoint = new ControlPoint(start);
     this->endingControlPoint = new ControlPoint(end);
-    this->endingControlPoint->mesh.shader = this->startingControlPoint->mesh.shader;
-    this->arrowMesh.shader = this->startingControlPoint->mesh.shader;
+    this->endingControlPoint->mesh.shareShader(this->startingControlPoint->mesh);
+    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
 
     QObject::connect(this->startingControlPoint, &ControlPoint::modified, this, [=](){
         Q_EMIT this->modified(this->getResultingVector());
@@ -32,7 +32,7 @@ void InteractiveVector::display()
     this->startingControlPoint->display();
     this->endingControlPoint->display();
     this->arrowMesh.fromArray(this->getArrowPath());
-    this->arrowMesh.display(GL_LINES);
+    this->arrowMesh.display(GL_LINES, 3.f);
 }
 
 std::vector<Vector3> InteractiveVector::getArrowPath()

@@ -9,9 +9,13 @@
 #include "Interface/FancySlider.h"
 #include "Interface/Spoiler.h"
 
+#include "Interface/KarstPathGenerationInterface.h"
+#include "Interface/SpaceColonizationInterface.h"
+
 class ViewerInterface : public QDialog{
 public:
     ViewerInterface();
+    ~ViewerInterface();
 
     void setupUi(QDialog *Dialog);
 
@@ -26,6 +30,9 @@ public:
     QGridLayout* mainLayout;
     QVBoxLayout* controlLayout;
     Viewer* viewer;
+
+    std::shared_ptr<KarstPathGenerationInterface> karstPathGeneration;
+    std::shared_ptr<SpaceColonizationInterface> spaceColonization;
 
 
     QHBoxLayout* loadSaveLayout;
@@ -78,20 +85,20 @@ public:
     QPushButton* curvesErosionCreateMatter;
     QPushButton* curvesErosionRemoveMatter;
     QCheckBox* displayCurvesErosion;
-    QPushButton* karstCreationPreviewButton;
-    QCheckBox* karstCreationDisplay;
-    QPushButton* karstCreationConfirmButton;
-    FancySlider* karstCreationDistanceWeights;
-    FancySlider* karstCreationFractureWeights;
-    FancySlider* karstCreationWaterWeights;
-    FancySlider* karstCreationPorosityWeights;
-    FancySlider* karstCreationGamma;
-    FancySlider* karstCreationTortuosity;
-    QPushButton *spaceColonizerPreviewButton;
-    QPushButton *spaceColonizerConfirmButton;
-    QCheckBox *spaceColonizerDisplay;
-    FancySlider *spaceColonizerSegmentSize;
-    FancySlider *spaceColonizerRandomness;
+//    QPushButton* karstCreationPreviewButton;
+//    QCheckBox* karstCreationDisplay;
+//    QPushButton* karstCreationConfirmButton;
+//    FancySlider* karstCreationDistanceWeights;
+//    FancySlider* karstCreationFractureWeights;
+//    FancySlider* karstCreationWaterWeights;
+//    FancySlider* karstCreationPorosityWeights;
+//    FancySlider* karstCreationGamma;
+//    FancySlider* karstCreationTortuosity;
+//    QPushButton *spaceColonizerPreviewButton;
+//    QPushButton *spaceColonizerConfirmButton;
+//    QCheckBox *spaceColonizerDisplay;
+//    FancySlider *spaceColonizerSegmentSize;
+//    FancySlider *spaceColonizerRandomness;
     QPushButton* gravityGlobalButton;
     QPushButton* gravitySandButton;
     QPushButton* startStopRecording;

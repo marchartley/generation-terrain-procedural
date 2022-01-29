@@ -7,6 +7,7 @@ class Shader;
 #include <vector>
 #include "Utils/Globals.h"
 #include <memory>
+#include <set>
 
 #include "Graphics/ShaderElement.h"
 
@@ -14,6 +15,7 @@ class Shader
 {
 public:
     static std::shared_ptr<Shader> default_shader;
+    static std::set<std::shared_ptr<Shader>> allShaders;
     Shader();
     Shader(const char* vertexShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
@@ -32,6 +34,8 @@ public:
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
 
+    static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
+
 
     static std::string readShaderSource(std::string filename);
 
@@ -40,9 +44,9 @@ public:
     const char* fragmentShaderFilename;
     const char* geometryShaderFilename;
 
-    unsigned int vShader = -1;
-    unsigned int fShader = -1;
-    unsigned int gShader = -1;
+    int vShader = -1;
+    int fShader = -1;
+    int gShader = -1;
 
 
     template<typename T>

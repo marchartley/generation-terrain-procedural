@@ -1,51 +1,26 @@
 #include "Interface/Interface.h"
-
-QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall = false)
-{
-    QLabel* lab = new QLabel(QString::fromStdString(label));
-    QBoxLayout* layout;
-    if (makeItSmall)
-        layout = new QHBoxLayout;
-    else
-        layout = new QVBoxLayout;
-    layout->setMargin(0);
-    QGroupBox* group = new QGroupBox;
-    layout->addWidget(lab);
-    layout->addWidget(slider);
-    group->setLayout(layout);
-
-    return group;
-}
-QGroupBox* createMultipleSliderGroup(std::map<std::string, QSlider*> labelsAndSliders)
-{
-    QGridLayout* layout = new QGridLayout();
-    QGroupBox* group = new QGroupBox;
-    int row = 0;
-    for (const auto& labAndSlid : labelsAndSliders) {
-        QLabel* lab = new QLabel(QString::fromStdString(std::get<0>(labAndSlid)));
-        layout->addWidget(lab, row, 0);
-        layout->addWidget(std::get<1>(labAndSlid), row, 1);
-        row++;
-    }
-    group->setLayout(layout);
-
-    return group;
-}
-QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets)
-{
-    QVBoxLayout* layout = new QVBoxLayout;
-    QGroupBox* group = new QGroupBox;
-    for (QWidget*& w : widgets)
-        layout->addWidget(w);
-    group->setLayout(layout);
-    return group;
-}
+#include "Interface/InterfaceUtils.h"
 
 ViewerInterface::ViewerInterface() {
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);
+    this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>();
+    this->viewer->karstPathInterface = this->karstPathGeneration;
+    this->spaceColonization = std::make_shared<SpaceColonizationInterface>();
+    this->viewer->spaceColonizationInterface = this->spaceColonization;
+    QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
+        this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
+        this->spaceColonization->affectVoxelGrid(this->viewer->voxelGrid);
+    });
     setupUi(this);
+}
+
+ViewerInterface::~ViewerInterface()
+{
+    this->setUpdatesEnabled(false);
+    qDeleteAll(this->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
+    this->setUpdatesEnabled(true);
 }
 
 void ViewerInterface::setupUi(QDialog *Dialog)
@@ -71,7 +46,7 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->manualRocksBox = new Spoiler("Modifs manuelles");
     this->curvesErosionLayout = new QHBoxLayout;
     this->curvesErosionBox = new Spoiler("Erosion par courbes aléatoires");
-    this->karstCreationLayout = new QHBoxLayout;
+//    this->karstCreationLayout = new QHBoxLayout;
     this->karstCreationBox = new Spoiler("Creation de karsts");
     this->spaceColonizerLayout = new QHBoxLayout;
     this->spaceColonizerBox = new Spoiler("Creation de karsts par colonisation");
@@ -157,42 +132,44 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     controlLayout->addWidget(curvesErosionBox);
 
     // Karst creation layout
-    this->karstCreationPreviewButton = new QPushButton("Calculer");
-    this->karstCreationConfirmButton = new QPushButton("Creer le karst");
-    this->karstCreationDisplay = new QCheckBox("Afficher");
-    this->karstCreationDistanceWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    this->karstCreationFractureWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    this->karstCreationWaterWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    this->karstCreationPorosityWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    this->karstCreationGamma = new FancySlider(Qt::Orientation::Horizontal, 1, 10, 0.1);
-    this->karstCreationTortuosity = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
-    karstCreationLayout->addWidget(createVerticalGroup({karstCreationPreviewButton, karstCreationConfirmButton}));
-    karstCreationLayout->addWidget(createMultipleSliderGroup({
-                                                           {"Distances", karstCreationDistanceWeights},
-                                                           {"Fractures", karstCreationFractureWeights},
-                                                           {"Porosite", karstCreationPorosityWeights},
-                                                           {"Niveau d'eau", karstCreationWaterWeights},
-                                                       }));
-    karstCreationLayout->addWidget(createVerticalGroup({
-                                                           createSliderGroup("Gamma", karstCreationGamma),
-                                                           createSliderGroup("Tortuosite (m)", karstCreationTortuosity)
-                                                       }));
-    karstCreationLayout->addWidget(karstCreationDisplay);
-    karstCreationBox->setContentLayout(*karstCreationLayout);
+//    this->karstCreationPreviewButton = new QPushButton("Calculer");
+//    this->karstCreationConfirmButton = new QPushButton("Creer le karst");
+//    this->karstCreationDisplay = new QCheckBox("Afficher");
+//    this->karstCreationDistanceWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
+//    this->karstCreationFractureWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
+//    this->karstCreationWaterWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
+//    this->karstCreationPorosityWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
+//    this->karstCreationGamma = new FancySlider(Qt::Orientation::Horizontal, 1, 10, 0.1);
+//    this->karstCreationTortuosity = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
+//    karstCreationLayout->addWidget(createVerticalGroup({karstCreationPreviewButton, karstCreationConfirmButton}));
+//    karstCreationLayout->addWidget(createMultipleSliderGroup({
+//                                                           {"Distances", karstCreationDistanceWeights},
+//                                                           {"Fractures", karstCreationFractureWeights},
+//                                                           {"Porosite", karstCreationPorosityWeights},
+//                                                           {"Niveau d'eau", karstCreationWaterWeights},
+//                                                       }));
+//    karstCreationLayout->addWidget(createVerticalGroup({
+//                                                           createSliderGroup("Gamma", karstCreationGamma),
+//                                                           createSliderGroup("Tortuosite (m)", karstCreationTortuosity)
+//                                                       }));
+//    karstCreationLayout->addWidget(karstCreationDisplay);
+    this->karstCreationLayout = this->karstPathGeneration->createGUI();
+    karstCreationBox->setContentLayout(*this->karstCreationLayout);//*karstCreationLayout);
     controlLayout->addWidget(karstCreationBox);
 
     // Space colonization layout
-    this->spaceColonizerPreviewButton = new QPushButton("Calculer");
-    this->spaceColonizerConfirmButton = new QPushButton("Creer le karst");
-    this->spaceColonizerDisplay = new QCheckBox("Afficher");
-    this->spaceColonizerSegmentSize = new FancySlider(Qt::Orientation::Horizontal, 1.0, 40.0, 1.0);
-    this->spaceColonizerRandomness = new FancySlider(Qt::Orientation::Horizontal, 0.0, 1.0, 0.1);
-    spaceColonizerLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton}));
-    spaceColonizerLayout->addWidget(createVerticalGroup({
-                                                           createSliderGroup("Taille des segments", spaceColonizerSegmentSize),
-                                                           createSliderGroup("Aleatoire", spaceColonizerRandomness)
-                                                       }));
-    spaceColonizerLayout->addWidget(spaceColonizerDisplay);
+//    this->spaceColonizerPreviewButton = new QPushButton("Calculer");
+//    this->spaceColonizerConfirmButton = new QPushButton("Creer le karst");
+//    this->spaceColonizerDisplay = new QCheckBox("Afficher");
+//    this->spaceColonizerSegmentSize = new FancySlider(Qt::Orientation::Horizontal, 1.0, 40.0, 1.0);
+//    this->spaceColonizerRandomness = new FancySlider(Qt::Orientation::Horizontal, 0.0, 1.0, 0.1);
+//    spaceColonizerLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton}));
+//    spaceColonizerLayout->addWidget(createVerticalGroup({
+//                                                           createSliderGroup("Taille des segments", spaceColonizerSegmentSize),
+//                                                           createSliderGroup("Aleatoire", spaceColonizerRandomness)
+//                                                       }));
+//    spaceColonizerLayout->addWidget(spaceColonizerDisplay);
+    this->spaceColonizerLayout = this->spaceColonization->createGUI();
     spaceColonizerBox->setContentLayout(*spaceColonizerLayout);
     controlLayout->addWidget(spaceColonizerBox);
 
@@ -307,21 +284,21 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(curvesAddControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->setCurvesErosionConstructionMode(true); });
     QObject::connect(displayCurvesErosion, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[TUNNEL_PATHS].isDisplayed = display; viewer->update(); } );
 
-    QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->viewer->computeKarst(); } );
-    QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->viewer->createKarst(); } );
-    QObject::connect(karstCreationDistanceWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.distanceWeight = val; } );
-    QObject::connect(karstCreationFractureWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.fractureWeight = val; } );
-    QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.waterHeightWeight = val; } );
-    QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.porosityWeight = val; } );
-    QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.gamma = val; } );
-    QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.updateTortuosity(val); viewer->updateKarstPath(); } );
-    QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[KARST_PATHS].isDisplayed = display; viewer->update(); } );
+//    QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->viewer->computeKarst(); } );
+//    QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->viewer->createKarst(); } );
+//    QObject::connect(karstCreationDistanceWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.distanceWeight = val; } );
+//    QObject::connect(karstCreationFractureWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.fractureWeight = val; } );
+//    QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.waterHeightWeight = val; } );
+//    QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.porosityWeight = val; } );
+//    QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.gamma = val; } );
+//    QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->karstPathCreator.updateTortuosity(val); viewer->updateKarstPath(); } );
+//    QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[KARST_PATHS].isDisplayed = display; viewer->update(); } );
 
-    QObject::connect(spaceColonizerPreviewButton, &QPushButton::pressed, this, [=](){ this->viewer->computeSpaceColonizer(); } );
-    QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, this, [=](){ this->viewer->createTunnelFromSpaceColonizer(); } );
-    QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->spaceColonizer.randomness = val; } );
-    QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->spaceColonizer.segmentLength = val; } );
-    QObject::connect(spaceColonizerDisplay, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[SPACE_COLONI].isDisplayed = display; viewer->update(); } );
+//    QObject::connect(spaceColonizerPreviewButton, &QPushButton::pressed, this, [=](){ this->viewer->computeSpaceColonizer(); } );
+//    QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, this, [=](){ this->viewer->createTunnelFromSpaceColonizer(); } );
+//    QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->spaceColonizer.randomness = val; } );
+//    QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->viewer->spaceColonizer.segmentLength = val; } );
+//    QObject::connect(spaceColonizerDisplay, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[SPACE_COLONI].isDisplayed = display; viewer->update(); } );
 
     QObject::connect(gravityGlobalButton, &QPushButton::pressed, this, [=](){ this->viewer->createGlobalGravity(); } );
     QObject::connect(gravitySandButton  , &QPushButton::pressed, this, [=](){ this->viewer->createSandGravity(); } );
@@ -374,12 +351,12 @@ void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
     curvesErosionStrengthSlider->setfValue(viewer->curvesErosionStrength);
 //    displayCurvesErosion->setChecked(viewer->debugMeshes[TUNNEL_PATHS].isDisplayed);
 
-    karstCreationDistanceWeights->setfValue(viewer->karstPathCreator.distanceWeight);
-    karstCreationFractureWeights->setfValue(viewer->karstPathCreator.fractureWeight);
-    karstCreationWaterWeights->setfValue(viewer->karstPathCreator.waterHeightWeight);
-    karstCreationPorosityWeights->setfValue(viewer->karstPathCreator.porosityWeight);
-    karstCreationGamma->setfValue(viewer->karstPathCreator.gamma);
-    karstCreationTortuosity->setfValue(0.f);
+//    karstCreationDistanceWeights->setfValue(viewer->karstPathCreator.distanceWeight);
+//    karstCreationFractureWeights->setfValue(viewer->karstPathCreator.fractureWeight);
+//    karstCreationWaterWeights->setfValue(viewer->karstPathCreator.waterHeightWeight);
+//    karstCreationPorosityWeights->setfValue(viewer->karstPathCreator.porosityWeight);
+//    karstCreationGamma->setfValue(viewer->karstPathCreator.gamma);
+//    karstCreationTortuosity->setfValue(0.f);
 //    karstCreationDisplay->setChecked(viewer->debugMeshes[KARST_PATHS].isDisplayed);
 
 //    spaceColonizerDisplay->setChecked(viewer->debugMeshes[SPACE_COLONI].isDisplayed);
