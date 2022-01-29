@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-class Mesh
+class Mesh //: public std::enable_shared_from_this<Mesh>
 {
 public:
     Mesh(std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
@@ -23,7 +23,10 @@ public:
 
     void update();
     void pushToBuffer();
-    void display(GLenum shape = 0);
+    void display(GLenum shape = 0, float lineWeight = 1);
+
+    void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
+    void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
 
 
     unsigned int bufferID;
@@ -48,6 +51,10 @@ public:
     std::shared_ptr<Shader> shader = nullptr;
     bool isDisplayed;
     GLenum displayShape;
+
+    static void setShaderToAllMeshesWithoutShader(Shader newShader);
+
+    static std::vector<Mesh*> all_meshes;
 };
 
 #endif // MESH_H

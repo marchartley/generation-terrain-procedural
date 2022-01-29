@@ -43,17 +43,19 @@ SOURCES += \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
         src/Graphics/MarchingCubes.cpp \
-        src/Graphics/Mesh.cpp \
         src/Graphics/Shader.cpp \
+        src/Graphics/Mesh.cpp \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
         src/Interface/ControlPoint.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
+        src/Interface/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
         src/Interface/RangeSlider.cpp \
         src/Interface/Slider3D.cpp \
+        src/Interface/SpaceColonizationInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/Viewer.cpp \
         src/Karst/KarstPathsGeneration.cpp \
@@ -106,9 +108,11 @@ HEADERS += \
     src/Interface/FancySlider.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
+    src/Interface/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
     src/Interface/RangeSlider.h \
     src/Interface/Slider3D.h \
+    src/Interface/SpaceColonizationInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/Viewer.h \
     src/TerrainGen/Grid.h \

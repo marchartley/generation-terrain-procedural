@@ -1,7 +1,7 @@
 #include "ControlPoint.h"
 
 std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
-std::map<GrabberState, std::vector<float>> ControlPoint::GrabberStateColor = {
+std::map<GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
     {GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
     {GrabberState::INACTIVE, {.3f, .0f, .0f, .3f}},
     {GrabberState::ACTIVE, {.8f, .0f, .0f, .5f}}
@@ -19,6 +19,7 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
     this->move(pos);
     this->prevPosition = pos;
+    this->GrabberStateColor = ControlPoint::default_GrabberStateColor;
     if (!useManipFrame) {
         this->manipFrame.removeFromMouseGrabberPool();
     } else {
@@ -70,8 +71,12 @@ void ControlPoint::updateSphere()
         }
     }
     if (this->afterUpdateCallback) {
-        if (this->useManipFrame && (this->manipFrame.isManipulated() == false && this->currentlyManipulated == true))
+        if (this->useManipFrame && (this->manipFrame.isManipulated() == false && this->currentlyManipulated == true)) {
             this->afterUpdateCallback();
+        }
+    }
+    if (this->useManipFrame && (this->manipFrame.isManipulated() == false && this->currentlyManipulated == true)) {
+        Q_EMIT this->afterModified();
     }
     this->currentlyManipulated = this->manipFrame.isManipulated();
 
@@ -93,6 +98,18 @@ void ControlPoint::display()
         this->updateSphere();
         this->mesh.display();
     }
+}
+
+void ControlPoint::setGrabberStateColor(std::map<GrabberState, std::vector<float> > stateColorMap)
+{
+    for (auto& tuple : stateColorMap) {
+        this->setGrabberStateColor(std::get<0>(tuple), std::get<1>(tuple));
+    }
+}
+
+void ControlPoint::setGrabberStateColor(GrabberState state, std::vector<float> color)
+{
+    this->GrabberStateColor[state] = color;
 }
 
 void ControlPoint::move(Vector3 newPos)

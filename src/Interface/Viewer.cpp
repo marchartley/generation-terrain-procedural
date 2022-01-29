@@ -28,6 +28,7 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                ViewerMode mode, QWidget *parent)
     : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
+//    QObject::connect(this, &Viewer::viewerInitialized, this, &Viewer::initKarstPathCreator);
 }
 Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -152,13 +153,12 @@ void Viewer::init() {
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
         this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
-        this->initKarstPathCreator();
-        this->initSpaceColonizer();
-    }
-    if (this->voxelGrid) {
+//        this->initSpaceColonizer();
         updateFlowfieldDebugMesh();
     }
+    Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
 //    startAnimation();
+    QGLViewer::init();
 }
 
 void Viewer::draw() {
@@ -189,6 +189,17 @@ void Viewer::draw() {
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
     float globalAmbiant[4] = {.10, .10, .10, 1.0};
+
+    Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
+        shader->setMatrix("proj_matrix", pMatrix);
+        shader->setMatrix("mv_matrix", mvMatrix);
+        shader->setPositionalLight("light", this->light);
+        shader->setMaterial("ground_material", ground_material);
+        shader->setMaterial("grass_material", grass_material);
+        shader->setVector("globalAmbiant", globalAmbiant, 4);
+        shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+        shader->setBool("display_light_source", true);
+    });
 
     if (this->viewerMode != NO_DISPLAY)
     {
@@ -244,6 +255,7 @@ void Viewer::draw() {
             }
         }
     }
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     GLfloat previousLineWidth[1];
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(5.f);
@@ -271,7 +283,10 @@ void Viewer::draw() {
     this->mainGrabber->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     this->mainGrabber->display();
 
-    this->karstPathInterface->display();
+    if (this->karstPathInterface)
+        this->karstPathInterface->display();
+    if (this->spaceColonizationInterface)
+        this->spaceColonizationInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -490,11 +505,13 @@ void Viewer::computeLoD()
     this->update();
 }
 
+/*
 void Viewer::initKarstPathCreator()
 {
     if (voxelGrid)
     {
-        Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+        this->karstPathInterface->affectVoxelGrid(this->voxelGrid);*/
+/*        Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
         for (int x = 0; x < availableGrid.sizeX; x++) {
             for (int y = 0; y < availableGrid.sizeY; y++) {
                 for (int z = 0; z < availableGrid.sizeZ; z++) {
@@ -506,9 +523,10 @@ void Viewer::initKarstPathCreator()
             }
         }
 
-        this->karstPathCreator = KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
-        this->karstPathInterface = new KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
+        this->karstPathCreator = KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);*/
+//        this->karstPathInterface->karstCreator = this->karstPathCreator; //= new KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
 //        this->karstPathInterface.karstCreator = &this->karstPathCreator;
+/*
     }
 }
 
@@ -561,7 +579,8 @@ void Viewer::createKarst()
     erod.CreateMultipleTunnels(this->karstPaths);
     update();
 }
-
+*/
+/*
 void Viewer::initSpaceColonizer()
 {
     if (voxelGrid)
@@ -641,9 +660,9 @@ void Viewer::createTunnelFromSpaceColonizer()
     for (const auto& spline : this->spaceColonizerPaths)
     {
         erod.CreateTunnel(spline);
-    }*/
+    }*//*
     update();
-}
+}*/
 
 void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
 {

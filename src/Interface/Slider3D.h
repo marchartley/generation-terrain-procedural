@@ -31,7 +31,6 @@ public:
     float maxValue;
     Vector3 minPos;
     Vector3 maxPos;
-//    Slider3DOrientation orientation;
 
     ControlPoint *sliderControlPoint;
     Mesh sliderMesh;
@@ -47,6 +46,7 @@ public:
     SliderConstraint(Vector3 minPos, Vector3 maxPos);
 
     virtual void constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr);
+    virtual void constrainRotation(qglviewer::Quaternion& q, qglviewer::Frame* const fr);
 
 private:
     qglviewer::AxisPlaneConstraint* constraint;

@@ -1,6 +1,8 @@
 #ifndef VIEWER_H
 #define VIEWER_H
 
+class Viewer;
+
 #include "TerrainGen/Grid.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/LayerBasedGrid.h"
@@ -17,6 +19,7 @@
 #include "TreeColonisation/TreeColonisation.h"
 #include "Interface/ControlPoint.h"
 #include "Interface/KarstPathGenerationInterface.h"
+#include "Interface/SpaceColonizationInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -89,15 +92,15 @@ public Q_SLOTS:
     void setLoD(int newLoD) { this->LoD = newLoD; }
     void computeLoD();
 
-    void initKarstPathCreator();
-    void computeKarst();
-    void updateKarstPath();
-    void createKarst();
+//    void initKarstPathCreator();
+//    void computeKarst();
+//    void updateKarstPath();
+//    void createKarst();
 
-    void initSpaceColonizer();
-    void computeSpaceColonizer();
-    void updateSpaceColonizerPaths();
-    void createTunnelFromSpaceColonizer();
+//    void initSpaceColonizer();
+//    void computeSpaceColonizer();
+//    void updateSpaceColonizerPaths();
+//    void createTunnelFromSpaceColonizer();
 
     void loadMapUI();
     void saveMapUI();
@@ -142,12 +145,13 @@ public:
     float curvesErosionStrength = .5;
     bool addingCurvesErosionMatterMode = true;
 
-    KarstPathsGeneration karstPathCreator;
-    std::vector<BSpline> karstPaths;
-    KarstPathGenerationInterface *karstPathInterface;
+//    KarstPathsGeneration karstPathCreator;
+//    std::vector<BSpline> karstPaths;
+    std::shared_ptr<KarstPathGenerationInterface> karstPathInterface = nullptr;
+    std::shared_ptr<SpaceColonizationInterface> spaceColonizationInterface = nullptr;
 
-    TreeColonisationAlgo::TreeColonisation spaceColonizer;
-    std::vector<BSpline> spaceColonizerPaths;
+//    TreeColonisationAlgo::TreeColonisation spaceColonizer;
+//    std::vector<BSpline> spaceColonizerPaths;
 
     int LoD = 0;
 
