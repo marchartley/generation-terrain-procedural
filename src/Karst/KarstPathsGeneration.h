@@ -53,9 +53,9 @@ public:
 
     void createEdges(int maxNumberNeighbors, float maxNeighboringDistance);
 
-    void computeAllPathsBetweenSpecialNodes();
+    void computeAllPathsBetweenSpecialNodes(int uniqueNodeToRecompute = -1);
 
-    void updateTortuosity(float distanceToDisplace);
+    void updateTortuosity(float distanceToDisplace, std::vector<int> ignoreForSpecificNodes = std::vector<int>());
 
     Vector3 getNodePos(int node);
 

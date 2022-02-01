@@ -92,15 +92,8 @@ public Q_SLOTS:
     void setLoD(int newLoD) { this->LoD = newLoD; }
     void computeLoD();
 
-//    void initKarstPathCreator();
-//    void computeKarst();
-//    void updateKarstPath();
-//    void createKarst();
-
-//    void initSpaceColonizer();
-//    void computeSpaceColonizer();
-//    void updateSpaceColonizerPaths();
-//    void createTunnelFromSpaceColonizer();
+    void swapCamera(qglviewer::Camera* altCamera, bool useAltCamera);
+    void frameInterpolated();
 
     void loadMapUI();
     void saveMapUI();
@@ -203,6 +196,10 @@ public:
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;
+
+    qglviewer::Camera *mainCamera;
+    qglviewer::Camera *alternativeCamera;
+    bool usingMainCamera = true;
 };
 
 
