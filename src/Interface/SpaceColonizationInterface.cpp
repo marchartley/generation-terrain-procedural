@@ -2,10 +2,15 @@
 
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Interface/InterfaceUtils.h"
+#include <QGLViewer/manipulatedCameraFrame.h>
 
 SpaceColonizationInterface::SpaceColonizationInterface()
 {
 
+}
+
+SpaceColonizationInterface::~SpaceColonizationInterface()
+{
 }
 
 void SpaceColonizationInterface::display()
@@ -15,7 +20,9 @@ void SpaceColonizationInterface::display()
         for (ControlPoint*& ctrl : this->controlPoints) {
             ctrl->display();
         }
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({0/255.f, 255/255.f, 0/255.f, 1.f}));
+        this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
+        this->startingPoint->display();
+        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
         this->pathsMeshes.display(GL_LINES, 5.f);
     }
 }
@@ -35,12 +42,13 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
         }
     }
     FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 20.f);
-    int nb_special_nodes = 10;
+    int nb_special_nodes = 8;
     std::vector<Vector3> keyPoints;
     for (int i = 0; i < nb_special_nodes; i++) {
         keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
     }
-    this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
+    Vector3 startPos(0, 0, 0);
+    this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, startPos, 10.f);
     this->colonizer->nodeMinDistance = this->voxelGrid->blockSize;
     this->colonizer->nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
 
@@ -48,6 +56,8 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
         this->controlPoints.push_back(new ControlPoint(keyPoints[i], 5.f));
         QObject::connect(this->controlPoints[i], &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
     }
+    this->startingPoint = new ControlPoint(startPos, 5.f);
+    QObject::connect(this->startingPoint, &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
 }
 
 void SpaceColonizationInterface::initSpaceColonizer()
@@ -55,6 +65,7 @@ void SpaceColonizationInterface::initSpaceColonizer()
     std::vector<Vector3> newNodes;
     for (ControlPoint*& ctrl : this->controlPoints)
         newNodes.push_back(ctrl->position);
+    this->colonizer->startPosition = this->startingPoint->position;
     this->colonizer->reset(newNodes);
 }
 
@@ -67,16 +78,29 @@ void SpaceColonizationInterface::computeKarst()
 
 void SpaceColonizationInterface::updateKarstPath()
 {
+    if (!this->visitingCamera)
+        this->visitingCamera = new qglviewer::Camera();
+    this->visitingCamera->setFieldOfView(3.141592 / 3.f);
+    this->visitingCamera->setUpVector(Vector3(0, 0, 1));
     this->karstPaths.clear();
     std::vector<Vector3> pathPositions;
     std::vector<std::vector<Vector3>> allPaths = this->colonizer->simplifyPaths();
-    std::cout << "For " << this->colonizer->segments.size() << " segments, " << allPaths.size() << " paths created" << std::endl;
+
     for (const auto& path : allPaths)
     {
-        pathPositions.insert(pathPositions.end(), path.begin(), path.end());
         this->karstPaths.push_back(BSpline(path));
+        for (size_t i = 0; i < path.size() - 1; i++) {
+            pathPositions.push_back(path[i]);
+            pathPositions.push_back(path[i+1]);
+        }
     }
     this->pathsMeshes.fromArray(pathPositions);
+    if (allPaths.size() > 0) {
+        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, karstPaths);
+        this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
+        this->visitingCamera->setPosition(pathPositions[0]);
+        this->visitingCamera->lookAt(pathPositions[1]);
+    }
 }
 
 void SpaceColonizationInterface::createKarst()
@@ -94,6 +118,7 @@ QHBoxLayout *SpaceColonizationInterface::createGUI()
     QPushButton* spaceColonizerPreviewButton = new QPushButton("Calculer");
     QPushButton* spaceColonizerConfirmButton = new QPushButton("Creer le karst");
     QCheckBox* spaceColonizerDisplay = new QCheckBox("Afficher");
+    QCheckBox* useAsMainCamera = new QCheckBox("Observer l'interieur");
     FancySlider* spaceColonizerSegmentSize = new FancySlider(Qt::Orientation::Horizontal, 1.0, 40.0, 1.0);
     FancySlider* spaceColonizerRandomness = new FancySlider(Qt::Orientation::Horizontal, 0.0, 1.0, 0.1);
     this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton}));
@@ -101,15 +126,19 @@ QHBoxLayout *SpaceColonizationInterface::createGUI()
                                                            createSliderGroup("Taille des segments", spaceColonizerSegmentSize),
                                                            createSliderGroup("Aleatoire", spaceColonizerRandomness)
                                                        }));
-    this->spaceColonizationLayout->addWidget(spaceColonizerDisplay);
+    this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerDisplay, useAsMainCamera}));
 
     QObject::connect(spaceColonizerPreviewButton, &QPushButton::pressed, this, &SpaceColonizationInterface::computeKarst);
     QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, this, &SpaceColonizationInterface::createKarst); // [=](){ this->viewer->createTunnelFromSpaceColonizer(); } );
-    QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->randomness = val; } );
-    QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->segmentLength = val; } );
+    QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->randomness = val; this->computeKarst(); } );
+    QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->segmentLength = val; this->computeKarst(); } );
     QObject::connect(spaceColonizerDisplay, &QCheckBox::toggled, this, [=](bool display){ this->isHidden = !display; } );
+    QObject::connect(useAsMainCamera, &QCheckBox::toggled, this, [=](bool display){
+        Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
+    } );
 
     spaceColonizerDisplay->setChecked(!isHidden);
+    useAsMainCamera->setChecked(false);
 
     return this->spaceColonizationLayout;
 }

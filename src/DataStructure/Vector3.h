@@ -4,6 +4,7 @@
 #include "Utils/Globals.h"
 #include <iostream>
 #include <vector>
+#include <QGLViewer/vec.h>
 
 class Vector3 {
 public:
@@ -12,6 +13,7 @@ public:
     Vector3(float x, float y, float z = 0.f);
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
+    Vector3(qglviewer::Vec other);
 
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);
@@ -67,7 +69,7 @@ public:
     static Vector3 random();
 
     static Vector3 nabla;
-
+    operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
     friend Vector3 operator+(Vector3 a, Vector3 b);

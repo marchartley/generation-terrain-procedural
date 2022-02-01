@@ -9,8 +9,8 @@
 #include "Utils/Utils.h"
 
 
-using namespace qglviewer;
-using namespace std;
+//using namespace qglviewer;
+//using namespace std;
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
@@ -28,7 +28,7 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                ViewerMode mode, QWidget *parent)
     : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
-//    QObject::connect(this, &Viewer::viewerInitialized, this, &Viewer::initKarstPathCreator);
+    this->mainCamera = this->camera();
 }
 Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -54,7 +54,7 @@ void Viewer::init() {
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     GlobalsGL::generateBuffers();
 
-    this->camera()->setType(Camera::PERSPECTIVE);
+    this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
 
     setTextIsEnabled(true);
     setMouseTracking(true);
@@ -156,6 +156,10 @@ void Viewer::init() {
 //        this->initSpaceColonizer();
         updateFlowfieldDebugMesh();
     }
+
+    QObject::connect(this->spaceColonizationInterface.get(), &SpaceColonizationInterface::useAsMainCamera, this, &Viewer::swapCamera);
+    QObject::connect(this->karstPathInterface.get(), &KarstPathGenerationInterface::useAsMainCamera, this, &Viewer::swapCamera);
+
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
 //    startAnimation();
     QGLViewer::init();
@@ -263,7 +267,7 @@ void Viewer::draw() {
         std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
         std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
         std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-        std::get<1>(debugMesh).display();
+        std::get<1>(debugMesh).display(GL_LINES, 3.f);
     }
     for (auto& controlPointsArray : this->debugControlPoints) {
         std::vector<ControlPoint*> grabbers = std::get<1>(controlPointsArray);
@@ -362,11 +366,11 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if(e->key() == Qt::Key_Return) {
         erodeMap(e->modifiers() == Qt::ShiftModifier);
     } else if(e->key() == Qt::Key_Minus) {
-        this->setManualErosionRocksSize(max(2, this->erosionSize - 2));
+        this->setManualErosionRocksSize(std::max(2, this->erosionSize - 2));
         // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Plus) {
-        this->setManualErosionRocksSize(max(2, this->erosionSize + 2));
+        this->setManualErosionRocksSize(std::max(2, this->erosionSize + 2));
         // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
         update();
     } else if(e->key() == Qt::Key_Space) {
@@ -392,6 +396,8 @@ void Viewer::keyPressEvent(QKeyEvent *e)
     } else if(e->key() == Qt::Key_4) {
         // this->displayMessage( "Adding matter to create a tunnel" );
         createTunnel(false);
+    } else if(e->key() == Qt::Key_5) {
+        this->setCamera(this->spaceColonizationInterface->visitingCamera);
     } else {
         QGLViewer::keyPressEvent(e);
     }
@@ -505,164 +511,47 @@ void Viewer::computeLoD()
     this->update();
 }
 
-/*
-void Viewer::initKarstPathCreator()
+void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
 {
-    if (voxelGrid)
-    {
-        this->karstPathInterface->affectVoxelGrid(this->voxelGrid);*/
-/*        Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
-        for (int x = 0; x < availableGrid.sizeX; x++) {
-            for (int y = 0; y < availableGrid.sizeY; y++) {
-                for (int z = 0; z < availableGrid.sizeZ; z++) {
-                    float voxelVal = voxelGrid->getVoxelValue(x, y, z);
-                    if (voxelVal > 0) {
-                        availableGrid.at(x, y, z) = 1;
-                    }
-                }
+    if (altCamera != nullptr) {
+        this->alternativeCamera = altCamera;
+    }
+    if (useAltCamera) {
+        this->setCamera(this->alternativeCamera);
+        /*
+        if (this->spaceColonizationInterface->keyFramesPaths.size() > 0) {
+//        if  (this->alternativeCamera->keyFrameInterpolator(0)) {
+//            qglviewer::KeyFrameInterpolator *interp = this->alternativeCamera->keyFrameInterpolator(0);
+            qglviewer::KeyFrameInterpolator *interp = this->spaceColonizationInterface->keyFramesPaths[0];
+            interp->setInterpolationSpeed(1.0);
+            interp->setLoopInterpolation(true);
+            QObject::connect(interp, SIGNAL(interpolated()),
+                             this, SLOT(frameInterpolated()));
+            QObject::connect(interp, SIGNAL(endReached()),
+                             this, SLOT(frameInterpolated()));
+            for (int i = 0; i < interp->numberOfKeyFrames(); i++) {
+                qglviewer::Vec v;
+                interp->keyFrame(i).getPosition(v.x, v.y, v.z);
+                std::cout << v.x << " " << v.y << " " << v.z << " -> t=" << interp->keyFrameTime(i) << std::endl;
+//                interp->keyFrame(i).setPosition(v.x * 1000, v.y * 1000, v.z * 1000);
             }
-        }
-
-        this->karstPathCreator = KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);*/
-//        this->karstPathInterface->karstCreator = this->karstPathCreator; //= new KarstPathGenerationInterface(&this->karstPathCreator, Vector3(), Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ));
-//        this->karstPathInterface.karstCreator = &this->karstPathCreator;
-/*
+//            this->camera()->setKeyFrameInterpolator(0, interp);
+//            interp->setFrame(this->camera()->frame());
+            interp->startInterpolation();
+            std::cout << (interp->interpolationIsStarted() ? "Started" : "Not started") << std::endl;
+            std::cout << "Should take " << interp->duration() << "s between " << interp->firstTime() << " and " << interp->lastTime() << std::endl;
+//            this->camera()->playPath(0);
+        }*/
+    }
+    else {
+        this->setCamera(this->mainCamera);
     }
 }
 
-void Viewer::computeKarst()
+void Viewer::frameInterpolated()
 {
-    Matrix3<float> porosityMap(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
-    for (int x = 0; x < porosityMap.sizeX; x++) {
-        for (int y = 0; y < porosityMap.sizeY; y++) {
-            for (int z = 0; z < porosityMap.sizeZ; z++) {
-                float voxelVal = voxelGrid->getVoxelValue(x, y, z);
-                if (voxelVal > 0) {
-                    porosityMap.at(x, y, z) = voxelVal;
-                }
-            }
-        }
-    }
-    this->karstPathCreator.porosityMap = porosityMap;
-    int nb_special_nodes = 10;
-    this->karstPathCreator.resetSpecialNodes();
-    this->karstPathCreator.setSpecialNode(0, SOURCE);
-    for (int i = 0; i < nb_special_nodes - 1; i++)
-        this->karstPathCreator.setSpecialNode((i + 1) * this->karstPathCreator.graph.nodes.size() / nb_special_nodes, FORCED_POINT);
-
-    this->karstPathCreator.createEdges(10, 50.f);
-    this->karstPathCreator.computeAllPathsBetweenSpecialNodes();
-
-    this->updateKarstPath();
+    std::cout << "Interpolation" << std::endl;
 }
-
-void Viewer::updateKarstPath()
-{
-    this->karstPaths.clear();
-    std::vector<Vector3> pathPositions;
-    for (const auto& path : this->karstPathCreator.finalPaths)
-    {
-        for (size_t i = 0; i < path.size() - 1; i++) {
-            pathPositions.push_back(karstPathCreator.getNodePos(path[i    ])); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
-            pathPositions.push_back(karstPathCreator.getNodePos(path[i + 1])); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
-            karstPaths.push_back(BSpline(std::vector<Vector3>({karstPathCreator.getNodePos(path[i    ]),
-                                                               karstPathCreator.getNodePos(path[i + 1])})));
-        }
-    }
-    this->debugMeshes[KARST_PATHS].fromArray(pathPositions);
-    this->update();
-}
-
-void Viewer::createKarst()
-{
-    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    erod.CreateMultipleTunnels(this->karstPaths);
-    update();
-}
-*/
-/*
-void Viewer::initSpaceColonizer()
-{
-    if (voxelGrid)
-    {
-        // If it has never been initialized
-        if (!this->spaceColonizer.treeSuccess)
-        {
-            Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
-            for (int x = 0; x < availableGrid.sizeX; x++) {
-                for (int y = 0; y < availableGrid.sizeY; y++) {
-                    for (int z = 0; z < availableGrid.sizeZ; z++) {
-                        float voxelVal = voxelGrid->getVoxelValue(x, y, z);
-                        if (voxelVal > 0) {
-                            availableGrid.at(x, y, z) = 1;
-                        }
-                    }
-                }
-            }
-            FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 20.f);
-            int nb_special_nodes = 10;
-            std::vector<Vector3> keyPoints;
-            for (int i = 0; i < nb_special_nodes; i++) {
-                keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
-            }
-            this->spaceColonizer = TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
-            this->spaceColonizer.nodeMinDistance = this->voxelGrid->blockSize;
-            this->spaceColonizer.nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
-
-            this->debugControlPoints[SPACE_COLONI].clear();
-            for (size_t i = 0; i < keyPoints.size(); i++) {
-                this->debugControlPoints[SPACE_COLONI].push_back(new ControlPoint(keyPoints[i], 5.f));
-                this->debugControlPoints[SPACE_COLONI][i]->afterUpdate([=]() -> void {this->computeSpaceColonizer(); });
-            }
-            this->spaceColonizer.process();
-        } else {
-            std::vector<Vector3> keyPoints;
-            for (auto& controlPoint : this->debugControlPoints[SPACE_COLONI])
-                keyPoints.push_back(controlPoint->position);
-//            this->spaceColonizer = TreeColonisationAlgo::TreeColonisation(keyPoints, Vector3(0, 0, 0), 10.f);
-            this->spaceColonizer.nodeMinDistance = this->voxelGrid->blockSize;
-            this->spaceColonizer.nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
-            this->spaceColonizer.reset(keyPoints);
-        }
-    }
-}
-
-void Viewer::computeSpaceColonizer()
-{
-    this->initSpaceColonizer();
-    this->spaceColonizer.process();
-    this->updateSpaceColonizerPaths();
-}
-
-void Viewer::updateSpaceColonizerPaths()
-{
-    this->spaceColonizerPaths.clear();
-    std::vector<Vector3> pathPositions;
-    std::vector<std::vector<Vector3>> allPaths = this->spaceColonizer.simplifyPaths();
-    std::cout << "For " << this->spaceColonizer.segments.size() << " segments, " << allPaths.size() << " paths created" << std::endl;
-    for (const auto& path : allPaths)
-    {
-        pathPositions.insert(pathPositions.end(), path.begin(), path.end());
-        this->spaceColonizerPaths.push_back(BSpline(path));
-    }
-//    for (auto& vec : pathPositions)
-//        vec -= Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0);
-    this->debugMeshes[SPACE_COLONI].fromArray(pathPositions);
-    this->update();
-}
-
-void Viewer::createTunnelFromSpaceColonizer()
-{
-    this->updateSpaceColonizerPaths();
-    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    std::cout << this->spaceColonizerPaths.size() << " tunnels to create." << std::endl;
-    erod.CreateMultipleTunnels(this->spaceColonizerPaths);/*
-    for (const auto& spline : this->spaceColonizerPaths)
-    {
-        erod.CreateTunnel(spline);
-    }*//*
-    update();
-}*/
 
 void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
 {
@@ -675,8 +564,6 @@ void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
                 break;
             }
         }
-    //    if (!this->currentTunnelPoints.empty() && pos == this->currentTunnelPoints.back()) return;
-    //    this->currentTunnelPoints.push_back(pos);
         if (addTheNewPoint)
             this->debugControlPoints[TUNNEL_PATHS].push_back(new ControlPoint(pos, 5.f, INACTIVE));
     }
@@ -726,7 +613,7 @@ bool Viewer::checkMouseOnVoxel()
 
 */
     camera()->convertClickToLine(mousePos, orig, dir);
-    float maxDist = max((int)camera()->distanceToSceneCenter(), max(voxelGrid->getSizeX(), max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
+    float maxDist = std::max((int)camera()->distanceToSceneCenter(), std::max(voxelGrid->getSizeX(), std::max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
 
     Vector3 minPos = minVoxelsShown(), maxPos = maxVoxelsShown();
@@ -757,9 +644,9 @@ bool Viewer::checkMouseOnVoxel()
 void Viewer::updateFlowfieldDebugMesh()
 {
     std::vector<Vector3> normals;
-    for (int x = 0; x < this->voxelGrid->sizeX; x+= this->voxelGrid->fluidSimRescale) {
-        for (int y = 0; y < this->voxelGrid->sizeY; y+= this->voxelGrid->fluidSimRescale) {
-            for (int z = 0; z < this->voxelGrid->sizeZ; z+= this->voxelGrid->fluidSimRescale) {
+    for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->sizeX-1; x+= this->voxelGrid->fluidSimRescale) {
+        for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->sizeY-1; y+= this->voxelGrid->fluidSimRescale) {
+            for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->sizeZ - 1; z+= this->voxelGrid->fluidSimRescale) {
                 normals.push_back(Vector3(x, y, z) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
                 normals.push_back(Vector3(x, y, z) + (this->voxelGrid->getFlowfield(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
@@ -772,6 +659,8 @@ void Viewer::updateFlowfieldDebugMesh()
 
 void Viewer::closeEvent(QCloseEvent *e) {
     QGLViewer::closeEvent(e);
+
+    this->setCamera(this->mainCamera);
 
     std::string command = "ffmpeg -f image2 -i ";
     command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
@@ -833,13 +722,8 @@ void Viewer::loadMapUI()
 {
     QString filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
 
-#ifdef _WIN32
-    const char* vShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = "C:/codes/Qt/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
-#elif linux
-    const char* vShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/voxels_fragment_shader_blinn_phong.glsl";
-#endif
+    const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
+    const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
     voxelGrid->retrieveMap(filename.toStdString());

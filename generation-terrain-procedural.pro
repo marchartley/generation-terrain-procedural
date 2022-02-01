@@ -53,6 +53,7 @@ SOURCES += \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
+        src/Interface/PathCameraConstraint.cpp \
         src/Interface/RangeSlider.cpp \
         src/Interface/Slider3D.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
@@ -110,6 +111,7 @@ HEADERS += \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
+    src/Interface/PathCameraConstraint.h \
     src/Interface/RangeSlider.h \
     src/Interface/Slider3D.h \
     src/Interface/SpaceColonizationInterface.h \

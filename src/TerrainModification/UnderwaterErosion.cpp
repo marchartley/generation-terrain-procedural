@@ -191,7 +191,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
         std::vector<Vector3> coords;
         for (float i = 0; i < 1.0; i += resolution)
         {
-            Vector3 pos = (path.getPoint(i));
+            Vector3 pos = path.getPoint(i);
             coords.push_back(pos); // - Vector3(grid->sizeX/2.0, grid->sizeY/2.0, 0.0));
             float rockSize = width.getPoint(i).y * this->maxRockSize;
             RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));

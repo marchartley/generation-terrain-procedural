@@ -11,6 +11,8 @@ class KarstPathGenerationInterface;
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
+#include "Interface/PathCameraConstraint.h"
+#include <QGLViewer/manipulatedCameraFrame.h>
 
 class KarstPathGenerationInterface : public QWidget
 {
@@ -37,6 +39,9 @@ public:
     QHBoxLayout* createGUI();
     QHBoxLayout* karstCreationLayout;
 
+Q_SIGNALS:
+    void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);
+
 public Q_SLOTS:
     void updateFracture(Vector3 newFractureDir = Vector3());
     void updateWaterHeight(float newHeight = 0.f);
@@ -50,6 +55,9 @@ public:
     Vector3 AABBoxMaxPos;
 
     KarstPathsGeneration* karstCreator = nullptr;
+    ControlPoint *sourceControlPoint;
+    qglviewer::Camera* visitingCamera = nullptr;
+    PathCameraConstraint *cameraConstraint;
 };
 
 #endif // KARSTPATHGENERATIONINTERFACE_H

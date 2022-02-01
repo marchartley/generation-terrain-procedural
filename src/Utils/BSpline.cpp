@@ -47,6 +47,48 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
     return a * (1 - x) + b * x;
 }
 
+Vector3 BSpline::getDerivative(float x)
+{
+    return (getPoint(x + 0.0001) - getPoint(x - 0.0001)).normalized();
+}
+
+float BSpline::estimateClosestTime(Vector3 pos)
+{
+    float distDiff = std::numeric_limits<float>::max();
+//    Vector3 bestPosPrediction = pos;
+    size_t closestPoint;
+    for (size_t i = 0; i < this->points.size(); i++) {
+        float dist = (pos - this->points[i]).norm2();
+        if (dist < distDiff) {
+            distDiff = dist;
+            closestPoint = i;
+        }
+    }
+    // We know our point is between t(closest - 1) and t(closest + 1)
+    float halfSpace = 1 / (this->points.size() - 1.f);
+    float currentTime = closestPoint * halfSpace;
+    while (halfSpace > 0.001) {
+        halfSpace *= .5f;
+        Vector3 low = getPoint(currentTime - halfSpace), cur = getPoint(currentTime), hig = getPoint(currentTime + halfSpace);
+        float lowDist = (low - pos).norm2(), curDist = (cur - pos).norm2(), higDist = (hig - pos).norm2();
+        if (lowDist < curDist && lowDist < higDist) { // Lowest is closest
+            currentTime -= halfSpace * .5f;
+        }
+        else if (curDist < lowDist && curDist < higDist) { // Current is closest
+            continue;
+        }
+        else if (higDist < lowDist && higDist < curDist) { // Highest is closest
+            currentTime += halfSpace * .5f;
+        }
+    }
+    return std::clamp(currentTime, 0.f, 1.f);
+}
+
+Vector3 BSpline::estimateClosestPos(Vector3 pos)
+{
+    return this->getPoint(this->estimateClosestTime(pos));
+}
+
 float BSpline::length()
 {
     float length = 0;

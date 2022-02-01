@@ -6,39 +6,19 @@
 
 KarstPathGenerationInterface::KarstPathGenerationInterface()
 {
+    this->sourceControlPoint = new ControlPoint(Vector3(0, 0, 0), 5.f);
+    QObject::connect(this->sourceControlPoint, &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
 }
 
-/*
-KarstPathGenerationInterface::KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos)
-    : AABBoxMinPos(AABBoxMinPos), AABBoxMaxPos(AABBoxMaxPos)
-{
-    this->karstCreator = karstCreator;
-
-    this->fractureVector = new InteractiveVector(AABBoxMinPos, Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z));
-    this->waterHeightSlider = new Slider3D(Vector3(AABBoxMinPos.x - 10, AABBoxMinPos.y - 10, AABBoxMinPos.z), Vector3(AABBoxMinPos.x - 10, AABBoxMinPos.y - 10, AABBoxMaxPos.z), 0.f, AABBoxMinPos.z, AABBoxMaxPos.z);
-
-    QObject::connect(this->fractureVector, &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
-    QObject::connect(this->waterHeightSlider, &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
-
-    Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
-    Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
-    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->position.z);
-    this->waterLevelMesh.fromArray({
-                                       {AABBoxMinPos + offZ, AABBoxMinPos + offX + offZ,
-                                        AABBoxMinPos + offX + offZ, AABBoxMinPos + offX + offY + offZ,
-                                        AABBoxMinPos + offX + offY + offZ, AABBoxMinPos + offY + offZ,
-                                        AABBoxMinPos + offY + offZ, AABBoxMinPos + offZ}
-                                   });
-}
-*/
 void KarstPathGenerationInterface::display()
 {
     if (!isHidden)
     {
+        this->sourceControlPoint->display();
         this->fractureVector->display();
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
+        this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
         this->waterLevelMesh.display(GL_LINES, 5.f);
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({0/255.f, 255/255.f, 0/255.f, 1.f}));
+        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
         this->pathsMeshes.display(GL_LINES, 5.f);
         this->waterHeightSlider->display();
     }
@@ -125,6 +105,8 @@ void KarstPathGenerationInterface::computeKarst()
     int nb_special_nodes = 10;
     this->karstCreator->resetSpecialNodes();
     this->karstCreator->setSpecialNode(0, SOURCE);
+    this->karstCreator->graph.nodes[0]->pos = this->sourceControlPoint->position;
+
     for (int i = 0; i < nb_special_nodes - 1; i++)
         this->karstCreator->setSpecialNode((i + 1) * this->karstCreator->graph.nodes.size() / nb_special_nodes, FORCED_POINT);
 
@@ -137,6 +119,10 @@ void KarstPathGenerationInterface::computeKarst()
 
 void KarstPathGenerationInterface::updateKarstPath()
 {
+    if (!this->visitingCamera)
+        this->visitingCamera = new qglviewer::Camera();
+    this->visitingCamera->setFieldOfView(3.141592 / 3.f);
+    this->visitingCamera->setUpVector(Vector3(0, 0, 1));
     this->karstPaths.clear();
     std::vector<Vector3> pathPositions;
     for (const auto& path : this->karstCreator->finalPaths)
@@ -149,6 +135,12 @@ void KarstPathGenerationInterface::updateKarstPath()
         }
     }
     this->pathsMeshes.fromArray(pathPositions);
+    if (this->karstCreator->finalPaths.size() > 0) {
+        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, karstPaths);
+        this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
+        this->visitingCamera->setPosition(pathPositions[0]);
+        this->visitingCamera->lookAt(pathPositions[1]);
+    }
 //    this->display();
 }
 
@@ -168,6 +160,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
     QPushButton* karstCreationPreviewButton = new QPushButton("Calculer");
     QPushButton* karstCreationConfirmButton = new QPushButton("Creer le karst");
     QCheckBox* karstCreationDisplay = new QCheckBox("Afficher");
+    QCheckBox* karstCreationChangeCam = new QCheckBox("Observer l'interieur");
     FancySlider* karstCreationDistanceWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
     FancySlider* karstCreationFractureWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
     FancySlider* karstCreationWaterWeights = new FancySlider(Qt::Orientation::Horizontal, 0, 10, 0.1);
@@ -185,7 +178,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
                                                            createSliderGroup("Gamma", karstCreationGamma),
                                                            createSliderGroup("Tortuosite (m)", karstCreationTortuosity)
                                                        }));
-    karstCreationLayout->addWidget(karstCreationDisplay);
+    karstCreationLayout->addWidget(createVerticalGroup({karstCreationDisplay, karstCreationChangeCam}));
 
     QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->computeKarst(); } );
     QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(); } );
@@ -194,8 +187,11 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
     QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->waterHeightWeight = val; } );
     QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->porosityWeight = val; } );
     QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->gamma = val; } );
-    QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->updateTortuosity(val); this->updateKarstPath(); } );
+    QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->updateTortuosity(val, {0}); this->updateKarstPath(); } );
     QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, [=](bool display){ this->isHidden = !display; } );
+    QObject::connect(karstCreationChangeCam, &QCheckBox::toggled, this, [=](bool display){
+        Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
+    } );
 
 
     if (this->karstCreator) {
@@ -207,6 +203,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
     }
     karstCreationTortuosity->setfValue(0.f);
     karstCreationDisplay->setChecked(!this->isHidden);
+    karstCreationChangeCam->setChecked(false);
 
     return this->karstCreationLayout;
 }

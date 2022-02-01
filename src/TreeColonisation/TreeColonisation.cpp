@@ -145,31 +145,32 @@ std::vector<std::vector<Vector3> > TreeColonisation::simplifyPaths()
 {
     std::vector<std::vector<Vector3> > allPaths;
     std::set<std::shared_ptr<Segment>> allSegments(this->segments.begin(), this->segments.end());
-    std::set<std::shared_ptr<Segment>> Q;
+    std::vector<std::shared_ptr<Segment>> Q;
 
     std::vector<Vector3> currentPath;
     if (this->treeSuccess)
     {
-        Q.insert(this->segments[0]);
+        Q.insert(Q.begin(), this->segments[0]);
         while (!Q.empty())
         {
             std::shared_ptr<Segment> current = *Q.begin();
             Q.erase(Q.begin());
-//            allSegments.erase(std::find(allSegments.begin(), allSegments.end(), current));
-            if (current->parent != nullptr) {
+            allSegments.erase(std::find(allSegments.begin(), allSegments.end(), current));
+            if (currentPath.empty() && current->parent)
                 currentPath.push_back(current->parent->pos);
-                currentPath.push_back(current->pos);
+            currentPath.push_back(current->pos);
+            bool stopPath = true;
+            for (auto& child : current->children)
+            {
+                if (std::find(allSegments.begin(), allSegments.end(), child) != allSegments.end()) {
+                    Q.insert(Q.begin(), child);
+                    stopPath = false;
+                }
             }
-
-            if (current->children.empty())
+            if (stopPath)
             {
                 allPaths.push_back(currentPath);
                 currentPath = std::vector<Vector3>();
-            }
-            for (auto& child : current->children)
-            {
-                Q.insert(Q.begin(), child);
-//                allSegments.erase(std::find(allSegments.begin(), allSegments.end(), child));
             }
 
         }

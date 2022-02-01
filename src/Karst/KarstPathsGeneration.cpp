@@ -144,7 +144,7 @@ void KarstPathsGeneration::createEdges(int maxNumberNeighbors, float maxNeighbor
     }
 }
 
-void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes()
+void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRecompute)
 {
     /*
     NORMAL = 0,
@@ -152,17 +152,24 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes()
     DEAD_END = 2,
     SOURCE = 3,
     EXIT = 4*/
+
+    std::vector<std::tuple<int, KARST_NODE_TYPE>> specialNodesToCompute = this->specialNodes;
+    if (uniqueNodeToRecompute != -1)
+        for (auto& n : this->specialNodes)
+            if (std::get<0>(n) == uniqueNodeToRecompute)
+                specialNodesToCompute = std::vector<std::tuple<int, KARST_NODE_TYPE>>({n});
+
     this->finalPaths.clear();
     this->allPaths = Matrix3<std::vector<int>>(this->specialNodes.size(), this->specialNodes.size());
     Matrix3<float> pathDistances(this->specialNodes.size(), this->specialNodes.size(), 1, std::numeric_limits<float>::max());
     // Compute all paths
     std::vector<float> distances;
     std::vector<int> prec;
-    for(size_t i = 0; i < this->specialNodes.size(); i++) {
-        std::cout << 100 * i / (float)(this->specialNodes.size() - 1) << "%" << std::flush;
-        if (std::get<1>(this->specialNodes[i]) == KARST_NODE_TYPE::DEAD_END)
+    for(size_t i = 0; i < specialNodesToCompute.size(); i++) {
+        std::cout << 100 * i / (float)(specialNodesToCompute.size() - 1) << "%" << std::flush;
+        if (std::get<1>(specialNodesToCompute[i]) == KARST_NODE_TYPE::DEAD_END)
             continue;
-        int nodeA = std::get<0>(this->specialNodes[i]);
+        int nodeA = std::get<0>(specialNodesToCompute[i]);
         auto start = std::chrono::system_clock::now();
         std::tie(distances, prec) = Pathfinding::ShortestPathFrom(nodeA, this->graph.adjencyMatrix);
 
@@ -215,13 +222,16 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes()
     }
 }
 
-void KarstPathsGeneration::updateTortuosity(float distanceToDisplace)
+void KarstPathsGeneration::updateTortuosity(float distanceToDisplace, std::vector<int> ignoreForSpecificNodes)
 {
     // If the offset vectors are already computed, juste use these
     if (this->tortuosityOffsets.size() != this->graph.nodes.size())
         this->tortuosityOffsets = std::vector<Vector3>(this->graph.nodes.size());
 
     for (size_t i = 0; i < this->tortuosityOffsets.size(); i++) {
+        if (std::find(ignoreForSpecificNodes.begin(), ignoreForSpecificNodes.end(), int(i)) != ignoreForSpecificNodes.end())
+            continue; // If we wnat to ignore this node, just continue
+
         // If the tortuosity offset has already been defined (not first call to this function), just use it
         if (this->tortuosityOffsets[i].norm() > 0) {
             this->tortuosityOffsets[i] = this->tortuosityOffsets[i].normalized() * distanceToDisplace;
@@ -237,5 +247,10 @@ void KarstPathsGeneration::updateTortuosity(float distanceToDisplace)
 
 Vector3 KarstPathsGeneration::getNodePos(int node)
 {
+    // Don't make it vary if it's the source node
+    for (auto& n : this->specialNodes)
+        if (std::get<0>(n) == node && std::get<1>(n) == KARST_NODE_TYPE::SOURCE)
+            return this->graph.nodes[node]->pos;
+
     return this->graph.nodes[node]->pos + this->tortuosityOffsets[node];
 }
