@@ -1,5 +1,6 @@
 #include "PathCameraConstraint.h"
 
+#include <QGLViewer/manipulatedCameraFrame.h>
 
 
 PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera)
@@ -17,9 +18,9 @@ PathCameraConstraint::PathCameraConstraint(qglviewer::Camera* camera, std::vecto
 {
     this->constraint = new qglviewer::WorldConstraint();
     this->constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
-    this->camRotationConstraint = new qglviewer::LocalConstraint();
+    this->camRotationConstraint = new qglviewer::CameraConstraint(camera);
     this->camRotationConstraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::PLANE);
-    this->camRotationConstraint->setTranslationConstraintDirection(Vector3(0, 0, 1));
+    this->camRotationConstraint->setRotationConstraintDirection(Vector3(0, 0, 1));
 //    this->constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FORBIDDEN);
 }
 
@@ -39,7 +40,7 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
         for (size_t i = 0; i < path.points.size(); i++)
         {
             float distToPoint = (path.points[i] - currentPos).norm2();
-            if (std::abs(distToPoint - dist) < 0.01) {
+            if (std::abs(distToPoint - dist) < 1.0) {
                 closestPathCandidates.push_back(path);
                 closestPointIndexCandidates.push_back(i);
             } else if (distToPoint < dist) {
@@ -84,16 +85,22 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
     } else {
         return; // There is simply no path, we check all this for nothing...
     }
-    Vector3 constraintDir = closestPath.points[std::min(closestPointIndex+1, int(closestPath.points.size()-1))] - closestPath.points[std::max(closestPointIndex-1, 0)];
+    if (!goingForward)
+        t *= -1.f;
+
+    float closestTimeOnCurve = closestPath.estimateClosestTime(this->camera->position());
+    Vector3 constraintDir = closestPath.getDerivative(closestTimeOnCurve);
     this->constraint->setTranslationConstraintDirection(constraintDir);
-    this->camera->setPosition(closestPath.estimateClosestPos(this->camera->position()));
+    this->camera->setPosition(closestPath.getPoint(closestTimeOnCurve));
     this->camera->setPivotPoint(this->camera->position());
-    this->camera->setViewDirection(closestPath.getDerivative(closestPath.estimateClosestTime(this->camera->position())) * (goingForward ? 0.1f : -0.1f) + Vector3(this->camera->viewDirection()));
+    this->camera->setViewDirection(closestPath.getDerivative(closestTimeOnCurve) * (goingForward || true ? 0.1f : -0.1f) + Vector3(this->camera->viewDirection()));
+    this->camera->frame()->setSceneUpVector(Vector3(0, 0, 1));
     this->constraint->constrainTranslation(t, fr);
 }
 
 void PathCameraConstraint::constrainRotation(qglviewer::Quaternion &q, qglviewer::Frame * const fr)
 {
+//    this->camRotationConstraint-
     this->camRotationConstraint->constrainRotation(q, fr);
 //    std::cout << "Rotation applied" << std::endl;
 }

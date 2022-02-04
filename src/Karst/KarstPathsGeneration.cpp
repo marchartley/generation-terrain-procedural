@@ -58,8 +58,11 @@ KarstPathsGeneration::KarstPathsGeneration()
 KarstPathsGeneration::KarstPathsGeneration(Matrix3<int> availablityMap, Vector3 karst_dimensions, float poissonDistance, float gamma)
     : gamma(gamma)
 {
+    std::cout << "-> Error during resizing?" << std::endl;
     this->karst_available_matrix = availablityMap.resize(karst_dimensions, RESIZE_MODE::MIN_VAL);
+    std::cout << "-> No. Error during porosity?" << std::endl;
     this->porosityMap = Matrix3<float>(karst_dimensions);
+    std::cout << "-> No. Error during poisson distrib?" << std::endl;
     this->graph = FastPoissonGraph<int>(this->karst_available_matrix, poissonDistance, 30);
     this->tortuosityOffsets = std::vector<Vector3>(this->graph.nodes.size());
 }
@@ -96,7 +99,9 @@ float KarstPathsGeneration::computeCost(int nodeA, int nodeB)
         porosityCost = 1.f;
         for (const PorositySphere& poro : this->porositySpheres)
             porosityCost += poro.cost(this->getNodePos(nodeA));
+        this->porosityMap.raiseErrorOnBadCoord = false;
         porosityCost += this->porosityMap.at(this->getNodePos(nodeA));
+        this->porosityMap.raiseErrorOnBadCoord = true;
         porosityCost *= porosityWeight;
     }
     if (waterHeightWeight > 0) {
@@ -133,8 +138,9 @@ void KarstPathsGeneration::addPorosityMap(Matrix3<float> porosity)
 
 void KarstPathsGeneration::createEdges(int maxNumberNeighbors, float maxNeighboringDistance)
 {
+    std::cout << "Before edges" << std::endl;
     this->graph.createEdges(maxNumberNeighbors, maxNeighboringDistance, true); // The "true" means the cost are not precomputed, just the connection matrix
-
+    std::cout << "After edges \n-> connection = " << this->graph.connectionMatrix << "\n-> adjency = " << this->graph.adjencyMatrix << std::endl;
     for (int i = 0; i < this->graph.connectionMatrix.sizeX; i++) {
         for (int j = 0; j < this->graph.connectionMatrix.sizeY; j++) {
             if (this->graph.connectionMatrix.at(i, j)) {

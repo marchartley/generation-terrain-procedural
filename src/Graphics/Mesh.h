@@ -28,6 +28,10 @@ public:
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
     void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
 
+    bool isHidden() { return !this->isDisplayed; }
+    void hide() { this->isDisplayed = false; }
+    void show() { this->isDisplayed = true; }
+
 
     unsigned int bufferID;
     bool bufferReady = false;
@@ -49,7 +53,7 @@ public:
     std::map<int, int> indices;
     std::map<std::tuple<int, int, int>, int> vectorToIndex;
     std::shared_ptr<Shader> shader = nullptr;
-    bool isDisplayed;
+    bool isDisplayed = true;
     GLenum displayShape;
 
     static void setShaderToAllMeshesWithoutShader(Shader newShader);

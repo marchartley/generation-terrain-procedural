@@ -19,7 +19,7 @@ public:
 
 private:
     qglviewer::AxisPlaneConstraint* constraint;
-    qglviewer::AxisPlaneConstraint* camRotationConstraint;
+    qglviewer::CameraConstraint* camRotationConstraint;
     qglviewer::Camera* camera;
     std::vector<BSpline> paths;
 };

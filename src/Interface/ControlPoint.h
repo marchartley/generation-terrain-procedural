@@ -5,7 +5,7 @@
 #include "Graphics/Mesh.h"
 #include "DataStructure/Vector3.h"
 
-#include <QObject>
+#include "Interface/CustomInteractiveObject.h"
 #include <QGLViewer/manipulatedFrame.h>
 
 enum GrabberState {
@@ -14,7 +14,7 @@ enum GrabberState {
     ACTIVE   = 0x2
 };
 
-class ControlPoint : public QObject
+class ControlPoint : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
@@ -29,10 +29,14 @@ Q_SIGNALS:
     void modified();
     void afterModified();
 
-public:
+public Q_SLOTS:
+    void hide();
+    void show();
+
+private:
     void onUpdate(std::function<void()> func);
     void afterUpdate(std::function<void()> func);
-
+public:
     void updateSphere();
     void move(Vector3 newPos);
     void display();

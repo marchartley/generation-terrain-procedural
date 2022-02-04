@@ -80,25 +80,13 @@ public:
     QRadioButton* addingMode;
     QRadioButton* suppressMode;
     QPushButton* curvesAddControlPointButton;
+    QPushButton* curvesClearControlPointButton;
     FancySlider* curvesErosionSizeSlider;
     FancySlider* curvesErosionStrengthSlider;
     QPushButton* curvesErosionCreateMatter;
     QPushButton* curvesErosionRemoveMatter;
     QCheckBox* displayCurvesErosion;
-//    QPushButton* karstCreationPreviewButton;
-//    QCheckBox* karstCreationDisplay;
-//    QPushButton* karstCreationConfirmButton;
-//    FancySlider* karstCreationDistanceWeights;
-//    FancySlider* karstCreationFractureWeights;
-//    FancySlider* karstCreationWaterWeights;
-//    FancySlider* karstCreationPorosityWeights;
-//    FancySlider* karstCreationGamma;
-//    FancySlider* karstCreationTortuosity;
-//    QPushButton *spaceColonizerPreviewButton;
-//    QPushButton *spaceColonizerConfirmButton;
-//    QCheckBox *spaceColonizerDisplay;
-//    FancySlider *spaceColonizerSegmentSize;
-//    FancySlider *spaceColonizerRandomness;
+
     QPushButton* gravityGlobalButton;
     QPushButton* gravitySandButton;
     QPushButton* startStopRecording;

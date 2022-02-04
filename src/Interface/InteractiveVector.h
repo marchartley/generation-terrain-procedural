@@ -4,8 +4,9 @@
 #include "DataStructure/Vector3.h"
 #include "Interface/ControlPoint.h"
 #include "Graphics/Mesh.h"
+#include "Interface/CustomInteractiveObject.h"
 
-class InteractiveVector : public QObject
+class InteractiveVector : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
@@ -14,6 +15,10 @@ public:
     InteractiveVector(Vector3 start, Vector3 end);
 
     void display();
+
+public Q_SLOTS:
+    void hide();
+    void show();
 
 Q_SIGNALS:
     void modified(Vector3 newVector);

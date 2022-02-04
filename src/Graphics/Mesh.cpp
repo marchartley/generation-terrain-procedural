@@ -214,7 +214,8 @@ void Mesh::pushToBuffer()
 }
 void Mesh::display(GLenum shape, float lineWeight)
 {
-    if (!isDisplayed) return;
+    if (!isDisplayed)
+        return;
     if (shape != 0) this->displayShape = shape;
     this->update();
     if(this->shader != nullptr)

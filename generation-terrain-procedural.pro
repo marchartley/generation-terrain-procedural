@@ -48,6 +48,7 @@ SOURCES += \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
         src/Interface/ControlPoint.cpp \
+        src/Interface/CustomInteractiveObject.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
@@ -106,6 +107,7 @@ HEADERS += \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
     src/Interface/ControlPoint.h \
+    src/Interface/CustomInteractiveObject.h \
     src/Interface/FancySlider.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
