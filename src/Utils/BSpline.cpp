@@ -4,13 +4,21 @@ BSpline::BSpline()
 {
 
 }
-BSpline::BSpline(std::vector<Vector3> points) : points(points)
-{
-
-}
 BSpline::BSpline(int numberOfPoints) {
     for(int i = 0; i < numberOfPoints; i++) {
         this->points.push_back(Vector3::random());
+    }
+}
+
+BSpline::BSpline(std::vector<Vector3> points)
+    : points(points)
+{
+}
+BSpline::BSpline(std::vector<BSpline> subsplines)
+{
+    for (BSpline& spline : subsplines) {
+        bool ignoreFirstPoint = (this->points.empty() ? false : this->points.back() == spline.points.front());
+        this->points.insert(this->points.end(), spline.points.begin() + (ignoreFirstPoint ? 1 : 0), spline.points.end());
     }
 }
 
@@ -148,4 +156,36 @@ Vector3 BSpline::getCatmullPoint(float x)
 
     Vector3 C  = B1 * (t2 - t) / (t2 - t1) + B2 * (t - t1) / (t2 - t1);
     return C;
+}
+
+BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
+{
+    if (subspline.points.empty()) {
+        if (this->points.empty()) return *this; // We are just trying to do a simplification from an empty curve, that's pointless
+        else subspline = *this;
+    }
+    if (subspline.points.size() == 1) return subspline;
+
+    // Find farest point from the line going from start to end of this (sub)spline
+    Vector3 vecAB = (subspline.points.front() - subspline.points.back()).normalized();
+    float maxDist = 0;
+    int index = -1;
+    for (size_t i = 1; i < subspline.points.size() - 1; i++) {
+        float d = vecAB.cross((subspline.points[i] - subspline.points.front())).norm2();
+        if (d > maxDist) {
+            maxDist = d;
+            index = i;
+        }
+    }
+    // Now we split the spline in two subsplines, and apply recursively the algorithm until all points are "close" enough ( dist < epsilon)
+    BSpline returningSpline;
+    if (maxDist > epsilon * epsilon) {
+        BSpline sub1 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin(), subspline.points.begin() + index));
+        BSpline sub2 = this->simplifyByRamerDouglasPeucker(epsilon, std::vector<Vector3>(subspline.points.begin() + index, subspline.points.end()));
+        returningSpline = BSpline({sub1, sub2});
+    } else {
+        returningSpline.points = {subspline.points.front(), subspline.points.back()};
+    }
+    std::cout << maxDist << std::endl;
+    return returningSpline;
 }

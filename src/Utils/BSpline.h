@@ -10,6 +10,7 @@ public:
     BSpline();
     BSpline(int numberOfPoints);
     BSpline(std::vector<Vector3> points);
+    BSpline(std::vector<BSpline> subsplines);
 
     std::vector<Vector3> getPath(float resolution);
     Vector3 getPoint(float x);
@@ -20,6 +21,8 @@ public:
     float length();
 
     Vector3 getCatmullPoint(float x);
+
+    BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
     std::vector<Vector3> points;
 
