@@ -2,6 +2,7 @@
 #define SLIDER3D_H
 
 #include "Interface/ControlPoint.h"
+#include "Interface/CustomInteractiveObject.h"
 #include "DataStructure/Vector3.h"
 
 enum Slider3DOrientation {
@@ -11,13 +12,17 @@ enum Slider3DOrientation {
 };
 
 class SliderConstraint;
-class Slider3D : public QObject
+class Slider3D : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
     Slider3D();
     Slider3D(Vector3 positionMin, float length, float val = 0.f, float minValue = 0.f, float maxValue = 1.f, Slider3DOrientation orientation = X);
     Slider3D(Vector3 positionMin, Vector3 positionMax, float val = 0.f, float minValue = 0.f, float maxValue = 1.f);
+
+public Q_SLOTS:
+    void hide();
+    void show();
 
 Q_SIGNALS:
     void valueChanged(float newValue);

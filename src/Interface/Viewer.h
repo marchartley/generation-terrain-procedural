@@ -72,6 +72,7 @@ public Q_SLOTS:
     void setCurvesErosionStrength(float newStrength) { this->curvesErosionStrength = newStrength;}
     void setCurvesErosionAddingMatterMode(bool addingMode) { this->addingCurvesErosionMatterMode = addingMode; }
     void addCurvesControlPoint(Vector3 pos, bool justUpdatePath = false);
+    void clearTunnelPoints();
     void setCurvesErosionConstructionMode(bool isConstructing) {this->curvesErosionConstructionMode = isConstructing; }
     void createTunnel(bool removingMatter = true);
 

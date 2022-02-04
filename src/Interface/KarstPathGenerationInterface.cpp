@@ -7,21 +7,24 @@
 KarstPathGenerationInterface::KarstPathGenerationInterface()
 {
     this->sourceControlPoint = new ControlPoint(Vector3(0, 0, 0), 5.f);
+    this->fractureVector = new InteractiveVector();
+    this->waterHeightSlider = new Slider3D();
+    this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
+                                                                          {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
+                                                                          {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
+                                                                      });
     QObject::connect(this->sourceControlPoint, &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
 }
 
 void KarstPathGenerationInterface::display()
 {
-    if (!isHidden)
-    {
-        this->sourceControlPoint->display();
-        this->fractureVector->display();
-        this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
-        this->waterLevelMesh.display(GL_LINES, 5.f);
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-        this->pathsMeshes.display(GL_LINES, 5.f);
-        this->waterHeightSlider->display();
-    }
+    this->sourceControlPoint->display();
+    this->fractureVector->display();
+    this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
+    this->waterLevelMesh.display(GL_LINES, 5.f);
+    this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+    this->pathsMeshes.display(GL_LINES, 5.f);
+    this->waterHeightSlider->display();
 }
 
 void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -50,6 +53,7 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
                                    });
 
 
+    std::cout << "Error during the available matrix?" << std::endl;
     Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
@@ -61,8 +65,9 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
             }
         }
     }
-
+    std::cout << "No. Error during init karst paths gen?" << std::endl;
     this->karstCreator = new KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
+    std::cout << "No." << std::endl;
 }
 
 void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
@@ -90,6 +95,7 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
 
 void KarstPathGenerationInterface::computeKarst()
 {
+    std::cout << "Error during the porosity matrix?" << std::endl;
     Matrix3<float> porosityMap(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
     for (int x = 0; x < porosityMap.sizeX; x++) {
         for (int y = 0; y < porosityMap.sizeY; y++) {
@@ -103,17 +109,23 @@ void KarstPathGenerationInterface::computeKarst()
     }
     this->karstCreator->porosityMap = porosityMap;
     int nb_special_nodes = 10;
+    std::cout << "No. Error during reset special?" << std::endl;
     this->karstCreator->resetSpecialNodes();
     this->karstCreator->setSpecialNode(0, SOURCE);
     this->karstCreator->graph.nodes[0]->pos = this->sourceControlPoint->position;
 
+    std::cout << "No. Error during new special?" << std::endl;
     for (int i = 0; i < nb_special_nodes - 1; i++)
         this->karstCreator->setSpecialNode((i + 1) * this->karstCreator->graph.nodes.size() / nb_special_nodes, FORCED_POINT);
 
+    std::cout << "No. Error during edges?" << std::endl;
     this->karstCreator->createEdges(10, 50.f);
+    std::cout << "No. Error during paths?" << std::endl;
     this->karstCreator->computeAllPathsBetweenSpecialNodes();
 
+    std::cout << "No. Error during update?" << std::endl;
     this->updateKarstPath();
+    std::cout << "No." << std::endl;
 
 }
 
@@ -128,8 +140,8 @@ void KarstPathGenerationInterface::updateKarstPath()
     for (const auto& path : this->karstCreator->finalPaths)
     {
         for (size_t i = 0; i < path.size() - 1; i++) {
-            pathPositions.push_back(this->karstCreator->getNodePos(path[i    ])); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
-            pathPositions.push_back(this->karstCreator->getNodePos(path[i + 1])); // - Vector3(voxelGrid->sizeX/2.0, voxelGrid->sizeY/2.0, 0.0));
+            pathPositions.push_back(this->karstCreator->getNodePos(path[i    ]));
+            pathPositions.push_back(this->karstCreator->getNodePos(path[i + 1]));
             karstPaths.push_back(BSpline(std::vector<Vector3>({this->karstCreator->getNodePos(path[i    ]),
                                                                this->karstCreator->getNodePos(path[i + 1])})));
         }
@@ -141,14 +153,34 @@ void KarstPathGenerationInterface::updateKarstPath()
         this->visitingCamera->setPosition(pathPositions[0]);
         this->visitingCamera->lookAt(pathPositions[1]);
     }
-//    this->display();
+    Q_EMIT this->karstPathUpdated();
 }
 
 void KarstPathGenerationInterface::createKarst()
 {
     UnderwaterErosion erod(this->voxelGrid, 20.f, 2.f, 10);
     erod.CreateMultipleTunnels(this->karstPaths);
-    update();
+    //    Q_EMIT this->update();
+}
+
+void KarstPathGenerationInterface::hide()
+{
+    this->sourceControlPoint->hide();
+    this->fractureVector->hide();
+    this->waterHeightSlider->hide();
+    this->waterLevelMesh.hide();
+    this->pathsMeshes.hide();
+    CustomInteractiveObject::hide();
+}
+
+void KarstPathGenerationInterface::show()
+{
+    this->sourceControlPoint->show();
+    this->fractureVector->show();
+    this->waterHeightSlider->show();
+    this->waterLevelMesh.show();
+    this->pathsMeshes.show();
+    CustomInteractiveObject::show();
 }
 
 
@@ -188,7 +220,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
     QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->porosityWeight = val; } );
     QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->gamma = val; } );
     QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->updateTortuosity(val, {0}); this->updateKarstPath(); } );
-    QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, [=](bool display){ this->isHidden = !display; } );
+    QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, &KarstPathGenerationInterface::setVisibility);
     QObject::connect(karstCreationChangeCam, &QCheckBox::toggled, this, [=](bool display){
         Q_EMIT this->useAsMainCamera(this->visitingCamera, display);
     } );
@@ -202,7 +234,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
         karstCreationGamma->setfValue(this->karstCreator->gamma);
     }
     karstCreationTortuosity->setfValue(0.f);
-    karstCreationDisplay->setChecked(!this->isHidden);
+    karstCreationDisplay->setChecked(!this->isHidden());
     karstCreationChangeCam->setChecked(false);
 
     return this->karstCreationLayout;

@@ -85,10 +85,13 @@ void SpaceColonizationInterface::updateKarstPath()
     this->karstPaths.clear();
     std::vector<Vector3> pathPositions;
     std::vector<std::vector<Vector3>> allPaths = this->colonizer->simplifyPaths();
+    std::vector<BSpline> simplifiedKarstParths;
 
     for (const auto& path : allPaths)
     {
+        BSpline simplifiedPath = BSpline(path).simplifyByRamerDouglasPeucker(3.0);
         this->karstPaths.push_back(BSpline(path));
+        simplifiedKarstParths.push_back(simplifiedPath);
         for (size_t i = 0; i < path.size() - 1; i++) {
             pathPositions.push_back(path[i]);
             pathPositions.push_back(path[i+1]);
@@ -96,18 +99,20 @@ void SpaceColonizationInterface::updateKarstPath()
     }
     this->pathsMeshes.fromArray(pathPositions);
     if (allPaths.size() > 0) {
-        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, karstPaths);
+        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, simplifiedKarstParths);
         this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
         this->visitingCamera->setPosition(pathPositions[0]);
         this->visitingCamera->lookAt(pathPositions[1]);
     }
+
+    Q_EMIT this->karstPathUpdated();
 }
 
 void SpaceColonizationInterface::createKarst()
 {
-    this->updateKarstPath();
+    if (this->karstPaths.empty())
+        this->updateKarstPath();
     UnderwaterErosion erod(this->voxelGrid, 20.f, 2.f, 10);
-//    std::cout << this->karstPaths.size() << " tunnels to create." << std::endl;
     erod.CreateMultipleTunnels(this->karstPaths);
 }
 

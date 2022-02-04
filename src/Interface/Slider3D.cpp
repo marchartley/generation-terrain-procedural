@@ -2,7 +2,7 @@
 
 #include "Utils/Utils.h"
 
-Slider3D::Slider3D()
+Slider3D::Slider3D() : Slider3D(Vector3(), 1.f, 0.f, 0.f, 1.f, Slider3DOrientation::X)
 {
 
 }
@@ -16,6 +16,20 @@ Slider3D::Slider3D(Vector3 positionMin, float length, float val, float minValue,
 Slider3D::Slider3D(Vector3 positionMin, Vector3 positionMax, float val, float minValue, float maxValue)
 {
     this->init(positionMin, positionMax, minValue, maxValue, val);
+}
+
+void Slider3D::hide()
+{
+    this->sliderControlPoint->hide();
+    this->sliderMesh.hide();
+    CustomInteractiveObject::hide();
+}
+
+void Slider3D::show()
+{
+    this->sliderControlPoint->show();
+    this->sliderMesh.show();
+    CustomInteractiveObject::show();
 }
 
 void Slider3D::display()

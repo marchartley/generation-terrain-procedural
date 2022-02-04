@@ -14,7 +14,7 @@ class KarstPathGenerationInterface;
 #include "Interface/PathCameraConstraint.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 
-class KarstPathGenerationInterface : public QWidget
+class KarstPathGenerationInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
@@ -27,7 +27,7 @@ public:
     Slider3D *waterHeightSlider;
     Mesh waterLevelMesh;
 
-    bool isHidden;
+//    bool isHidden;
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     std::shared_ptr<VoxelGrid> voxelGrid;
@@ -41,6 +41,7 @@ public:
 
 Q_SIGNALS:
     void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);
+    void karstPathUpdated();
 
 public Q_SLOTS:
     void updateFracture(Vector3 newFractureDir = Vector3());
@@ -49,6 +50,9 @@ public Q_SLOTS:
     void computeKarst();
     void updateKarstPath();
     void createKarst();
+
+    void hide();
+    void show();
 
 public:
     Vector3 AABBoxMinPos;

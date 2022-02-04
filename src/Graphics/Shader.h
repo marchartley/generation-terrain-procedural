@@ -82,7 +82,7 @@ public:
     void setMatrix(std::string pname, T values[], int n, int m)
     {
         if (this == nullptr) {
-            std::cerr << "No shader defined" << std::endl;
+//            std::cerr << "No shader defined" << std::endl;
             return;
         }
         this->use();

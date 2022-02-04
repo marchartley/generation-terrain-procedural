@@ -82,7 +82,7 @@ void Shader::use(bool update_source_file)
 void Shader::setBool(std::string pname, bool value)
 {
     if (this == nullptr) {
-        std::cerr << "No shader defined" << std::endl;
+//        std::cerr << "No shader defined" << std::endl;
         return;
     }
     this->use();
@@ -91,7 +91,7 @@ void Shader::setBool(std::string pname, bool value)
 void Shader::setInt(std::string pname, int value)
 {
     if (this == nullptr) {
-        std::cerr << "No shader defined" << std::endl;
+//        std::cerr << "No shader defined" << std::endl;
         return;
     }
     this->use();
@@ -101,7 +101,7 @@ void Shader::setInt(std::string pname, int value)
 void Shader::setFloat(std::string pname, float value)
 {
     if (this == nullptr) {
-        std::cerr << "No shader defined" << std::endl;
+//        std::cerr << "No shader defined" << std::endl;
         return;
     }
     this->use();
@@ -111,7 +111,7 @@ void Shader::setFloat(std::string pname, float value)
 void Shader::setVector(std::string pname, Vector3 value)
 {
     if (this == nullptr) {
-        std::cerr << "No shader defined" << std::endl;
+//        std::cerr << "No shader defined" << std::endl;
         return;
     }
     this->use();
@@ -120,7 +120,7 @@ void Shader::setVector(std::string pname, Vector3 value)
 void Shader::setVector(std::string pname, float value[], int n)
 {
     if (this == nullptr) {
-        std::cerr << "No shader defined" << std::endl;
+//        std::cerr << "No shader defined" << std::endl;
         return;
     }
     this->use();

@@ -564,13 +564,16 @@ void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
                 break;
             }
         }
-        if (addTheNewPoint)
+        if (addTheNewPoint) {
             this->debugControlPoints[TUNNEL_PATHS].push_back(new ControlPoint(pos, 5.f, INACTIVE));
+            QObject::connect(this->debugControlPoints[TUNNEL_PATHS].back(), &ControlPoint::modified,
+                             this, [&](){ this->addCurvesControlPoint(Vector3(), true); });
+        }
     }
     this->currentTunnelPoints.clear();
     for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
         this->currentTunnelPoints.push_back(controls->position);
-        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
+//        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
     }
     BSpline path(this->currentTunnelPoints);
 
@@ -586,6 +589,15 @@ void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
 
     update();
 }
+
+void Viewer::clearTunnelPoints()
+{
+    this->curvesErosionConstructionMode = false;
+    this->currentTunnelPoints.clear();
+    this->debugControlPoints[TUNNEL_PATHS].clear();
+    this->debugMeshes[TUNNEL_PATHS].clear();
+    update();
+}
 void Viewer::createTunnel(bool removingMatter)
 {
     this->curvesErosionConstructionMode = false;
@@ -595,6 +607,7 @@ void Viewer::createTunnel(bool removingMatter)
     else
         this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter));
     this->currentTunnelPoints.clear();
+    this->debugControlPoints[TUNNEL_PATHS].clear();
     this->debugMeshes[TUNNEL_PATHS].update();
     update();
 }

@@ -40,6 +40,11 @@ ControlPoint::~ControlPoint()
 void ControlPoint::setState(GrabberState newState)
 {
     this->state = newState;
+    /*if (newState == HIDDEN) {
+        this->hide();
+    } else {
+        this->show();
+    }*/
 }
 
 void ControlPoint::updateStateDependingOnManipFrame()
@@ -98,6 +103,20 @@ void ControlPoint::display()
         this->updateSphere();
         this->mesh.display();
     }
+}
+
+void ControlPoint::hide()
+{
+    this->manipFrame.removeFromMouseGrabberPool();
+    this->mesh.hide();
+    CustomInteractiveObject::hide();
+}
+
+void ControlPoint::show()
+{
+    this->manipFrame.addInMouseGrabberPool();
+    this->mesh.show();
+    CustomInteractiveObject::show();
 }
 
 void ControlPoint::setGrabberStateColor(std::map<GrabberState, std::vector<float> > stateColorMap)

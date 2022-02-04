@@ -15,7 +15,7 @@ class SpaceColonizationInterface;
 
 using namespace TreeColonisationAlgo;
 
-class SpaceColonizationInterface : public QWidget
+class SpaceColonizationInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
@@ -39,6 +39,7 @@ public:
 
 Q_SIGNALS:
     void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);
+    void karstPathUpdated();
 
 public Q_SLOTS:
     void initSpaceColonizer();

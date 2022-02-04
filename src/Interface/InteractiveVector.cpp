@@ -35,12 +35,27 @@ void InteractiveVector::display()
     this->arrowMesh.display(GL_LINES, 3.f);
 }
 
+void InteractiveVector::hide()
+{
+    this->startingControlPoint->hide();
+    this->endingControlPoint->hide();
+    this->arrowMesh.hide();
+    CustomInteractiveObject::hide();
+}
+
+void InteractiveVector::show()
+{
+    this->startingControlPoint->show();
+    this->endingControlPoint->show();
+    this->arrowMesh.show();
+    CustomInteractiveObject::show();
+}
+
 std::vector<Vector3> InteractiveVector::getArrowPath()
 {
     Vector3 start = startingControlPoint->position, end = endingControlPoint->position;
     float length = (end - start).norm();
     float arrowHeadLength = length / 10.f;
-    // Todo : make a real arrow with the head
     return {
         start, end,
         end, end + ((start - end).cross(Vector3(0, 0, 1)).normalized() + (start - end).normalized()).normalized() * arrowHeadLength,
