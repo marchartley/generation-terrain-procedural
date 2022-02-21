@@ -102,11 +102,11 @@ Matrix Matrix::transpose()
 
 Matrix Matrix::product(Matrix m)
 {
-    Matrix temp(m.size(), (*this)[0].size());
+    Matrix temp((*this)[0].size(), m[0].size());
     for (size_t row = 0; row < (*this)[0].size(); row++) {
-        for (size_t col = 0; col < m.size(); col++)
+        for (size_t col = 0; col < m[0].size(); col++)
         {
-            for (size_t k = 0; k < m[0].size(); k++) {
+            for (size_t k = 0; k < m.size(); k++) {
                 temp[row][col] += (*this)[row][k] * m[k][col];
             }
         }
@@ -215,9 +215,9 @@ Matrix& Matrix::operator-=(float o)
 
 std::ostream& operator<<(std::ostream& io, const Matrix& m) {
     io << "Matrix (" << m.size() << "x" << m[0].size() << ") :\n";
-    for (size_t row = 0; row < m[0].size(); row ++)
+    for (size_t row = 0; row < m.size(); row ++)
     {
-        for (size_t col = 0; col < m.size(); col ++) {
+        for (size_t col = 0; col < m[0].size(); col ++) {
             io << int(m[row][col] * 100)/100. << "\t";
         }
         io << "\n";
@@ -227,9 +227,8 @@ std::ostream& operator<<(std::ostream& io, const Matrix& m) {
 
 std::ostream& operator<<(std::ostream& io, Matrix* m) {
     io << "Matrix (" << m->size() << "x" << m[0].size() << ") :\n";
-    for (size_t row = 0; row < m[0].size(); row ++)
-    {
-        for (size_t col = 0; col < m->size(); col ++) {
+    for (size_t col = 0; col < m->size(); col ++) {
+        for (size_t row = 0; row < m[0].size(); row ++) {
             io << int((*m)[row][col] * 100)/100. << "\t";
         }
         io << "\n";

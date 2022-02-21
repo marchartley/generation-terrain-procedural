@@ -53,6 +53,11 @@ Vector3 Vector3::abs()
     return a;
 }
 
+Matrix Vector3::toMatrix()
+{
+    return Matrix(3, 1, (float*)(*this));
+}
+
 float Vector3::dot(Vector3 o) {
     return (this->x * o.x) + (this->y * o.y) + (this->z * o.z);
 }
@@ -90,136 +95,57 @@ std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
         arr.insert(arr.end(), {v.x, v.y, v.z});
     return arr;
 }
-/*
-Matrix3<Vector3> Vector3::gradient(Matrix3<float> field)
-{
-    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                Vector3 vec = Vector3();
-                Vector3 allDirections;
-                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
-                        || z == 0 || z == field.sizeZ - 1) {
-                    returningGrid(x, y, z) = vec;
-                } else {
-                    for (int dx = std::max(x-1, 0); dx <= std::min(x+1, field.sizeX - 1); dx++) {
-                        for (int dy = std::max(y-1, 0); dy <= std::min(y+1, field.sizeY - 1); dy++) {
-                            for (int dz = std::max(z-1, 0); dz <= std::min(z+1, field.sizeZ - 1); dz++) {
-                                if(dx != x || dy != y || dz != z) {
-                                    Vector3 a = Vector3(dx - x, dy - y, dz - z);
-//                                    allDirections += a;
-                                    float f = field(dx, dy, dz);
-                                    vec += a * f; //Vector3(dx - x, dy - y, dz - z) * field(dx, dy, dz);
-                                }
-                            }
-                        }
-                    }
-                }
 
-                returningGrid(x, y, z) = vec;
 
-            }
-        }
-    }
-    return returningGrid;
+Vector3& Vector3::rotate(float angle_x, float angle_y, float angle_z) {
+    return this->rotate(Vector3(angle_x, angle_y, angle_z));
 }
-
-Matrix3<Vector3> Vector3::grad(Matrix3<float> field) {
-    return Vector3::gradient(field);
+Vector3& Vector3::rotate(Vector3 eulerAngles) {
+    Matrix Rx (3, 3, std::vector<float>({
+                   1, 0, 0,
+                   0, cos(eulerAngles.x), -sin(eulerAngles.x),
+                   0, sin(eulerAngles.x), cos(eulerAngles.x)
+               }).data());
+    Matrix Ry (3, 3, std::vector<float>({
+                    cos(eulerAngles.y), 0, -sin(eulerAngles.y),
+                    0, 1, 0,
+                    sin(eulerAngles.y), 0, cos(eulerAngles.y)
+                }).data());
+    Matrix Rz (3, 3, std::vector<float>({
+                    cos(eulerAngles.z), -sin(eulerAngles.z), 0,
+                    sin(eulerAngles.z), cos(eulerAngles.z), 0,
+                    0, 0, 1
+                }).data());
+    std::cout << "Rx " << Rx << "\nRy " << Ry << "\nRz " << Rz << std::endl;
+    Matrix R = Rx.product(Ry).product(Rz);
+    std::cout << "R " << R << std::endl;
+    Matrix newCoords = R.product(this->toMatrix());
+    std::cout << "New coords : " << newCoords << std::endl;
+    this->x = newCoords[0][0];
+    this->y = newCoords[1][0];
+    this->z = newCoords[2][0];
+    return *this;
 }
-
-Matrix3<float> Vector3::divergence(Matrix3<Vector3> field)
-{
-    Matrix3<float> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                returningGrid(x, y, z) = field(x, y, z).divergence();
-            }
-        }
-    }
-    return returningGrid;
+Vector3 Vector3::rotated(float angle_x, float angle_y, float angle_z) {
+    return this->rotated(Vector3(angle_x, angle_y, angle_z));
 }
-
-Matrix3<float> Vector3::div(Matrix3<Vector3> field)
-{
-    return Vector3::divergence(field);
+Vector3 Vector3::rotated(Vector3 eulerAngles) {
+    Vector3 v = *this;
+    return v.rotate(eulerAngles);
 }
-
-Matrix3<Vector3> Vector3::curl(Matrix3<Vector3> field)
-{
-    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                Vector3& vec = field(x, y, z);
-                returningGrid(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
-            }
-        }
-    }
-    return returningGrid;
+Vector3& Vector3::translate(float move_x, float move_y, float move_z) {
+    return this->translate(Vector3(move_x, move_y, move_z));
 }
-
-Matrix3<Vector3> Vector3::rot(Matrix3<Vector3> field)
-{
-    return Vector3::curl(field);
+Vector3& Vector3::translate(Vector3 move) {
+    return (*this += move);
 }
-
-Matrix3<Vector3> Vector3::laplacian(Matrix3<Vector3> field)
-{
-    Matrix3<Vector3> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                Vector3 vec = Vector3();
-                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
-                        || z == 0 || z == field.sizeZ - 1) {
-                    returningGrid(x, y, z) = vec;
-                } else {
-                    vec += field(x    , y    , z + 1);
-                    vec += field(x    , y    , z - 1);
-                    vec += field(x    , y + 1, z    );
-                    vec += field(x    , y - 1, z    );
-                    vec += field(x + 1, y    , z    );
-                    vec += field(x - 1, y    , z    );
-                    vec -= field(x    , y    , z    ) * 6;
-                }
-                returningGrid(x, y, z) = vec;
-            }
-        }
-    }
-    return returningGrid;
+Vector3 Vector3::translated(float move_x, float move_y, float move_z) {
+    return this->translated(Vector3(move_x, move_y, move_z));
 }
-
-Matrix3<float> Vector3::laplacian(Matrix3<float> field)
-{
-    Matrix3<float> returningGrid(field.sizeX, field.sizeY, field.sizeZ);
-    for (int x = 0; x < field.sizeX; x++) {
-        for (int y = 0; y < field.sizeY; y++) {
-            for (int z = 0; z < field.sizeZ; z++) {
-                float laplace = 0;
-                if (x == 0 || x == field.sizeX - 1 || y == 0 || y == field.sizeY - 1
-                        || z == 0 || z == field.sizeZ - 1) {
-                    // Keep laplacian value to 0
-                } else {
-                    laplace += field(x    , y    , z + 1);
-                    laplace += field(x    , y    , z - 1);
-                    laplace += field(x    , y + 1, z    );
-                    laplace += field(x    , y - 1, z    );
-                    laplace += field(x + 1, y    , z    );
-                    laplace += field(x - 1, y    , z    );
-                    laplace -= field(x    , y    , z    ) * 6;
-                }
-                returningGrid(x, y, z) = laplace;
-            }
-        }
-    }
-    return returningGrid;
+Vector3 Vector3::translated(Vector3 move) {
+    Vector3 v = *this;
+    return v.translate(move);
 }
-*/
-
-
 
 
 

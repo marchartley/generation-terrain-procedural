@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <QGLViewer/vec.h>
+#include "DataStructure/Matrix.h"
 
 class Vector3 {
 public:
@@ -33,7 +34,18 @@ public:
     Vector3 normalized() const;
     Vector3 abs();
 
+    Vector3& rotate(float angle_x, float angle_y, float angle_z);
+    Vector3& rotate(Vector3 eulerAngles);
+    Vector3 rotated(float angle_x, float angle_y, float angle_z);
+    Vector3 rotated(Vector3 eulerAngles);
+    Vector3& translate(float move_x, float move_y, float move_z);
+    Vector3& translate(Vector3 move);
+    Vector3 translated(float move_x, float move_y, float move_z);
+    Vector3 translated(Vector3 move);
+
     float divergence() { return x + y + z; }
+
+    Matrix toMatrix();
 
     static Vector3 lerp(float t, Vector3 min, Vector3 max) {
         return min + (max - min) * t;
@@ -53,18 +65,6 @@ public:
     {
         return Vector3::remap(*this, oldMin, oldMax, newMin, newMax);
     }
-
-
-/*
-    static Matrix3<Vector3> gradient(Matrix3<float> field);
-    static Matrix3<Vector3> grad(Matrix3<float> field);
-    static Matrix3<float> divergence(Matrix3<Vector3> field);
-    static Matrix3<float> div(Matrix3<Vector3> field);
-    static Matrix3<Vector3> curl(Matrix3<Vector3> field);
-    static Matrix3<Vector3> rot(Matrix3<Vector3> field);
-    static Matrix3<float> laplacian(Matrix3<float> field);
-    static Matrix3<Vector3> laplacian(Matrix3<Vector3> field);
-*/
 
     static Vector3 random();
 
