@@ -65,9 +65,7 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
             }
         }
     }
-    std::cout << "No. Error during init karst paths gen?" << std::endl;
     this->karstCreator = new KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
-    std::cout << "No." << std::endl;
 }
 
 void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
@@ -95,7 +93,6 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
 
 void KarstPathGenerationInterface::computeKarst()
 {
-    std::cout << "Error during the porosity matrix?" << std::endl;
     Matrix3<float> porosityMap(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
     for (int x = 0; x < porosityMap.sizeX; x++) {
         for (int y = 0; y < porosityMap.sizeY; y++) {
@@ -109,23 +106,17 @@ void KarstPathGenerationInterface::computeKarst()
     }
     this->karstCreator->porosityMap = porosityMap;
     int nb_special_nodes = 10;
-    std::cout << "No. Error during reset special?" << std::endl;
     this->karstCreator->resetSpecialNodes();
     this->karstCreator->setSpecialNode(0, SOURCE);
     this->karstCreator->graph.nodes[0]->pos = this->sourceControlPoint->position;
 
-    std::cout << "No. Error during new special?" << std::endl;
     for (int i = 0; i < nb_special_nodes - 1; i++)
         this->karstCreator->setSpecialNode((i + 1) * this->karstCreator->graph.nodes.size() / nb_special_nodes, FORCED_POINT);
 
-    std::cout << "No. Error during edges?" << std::endl;
     this->karstCreator->createEdges(10, 50.f);
-    std::cout << "No. Error during paths?" << std::endl;
     this->karstCreator->computeAllPathsBetweenSpecialNodes();
 
-    std::cout << "No. Error during update?" << std::endl;
     this->updateKarstPath();
-    std::cout << "No." << std::endl;
 
 }
 

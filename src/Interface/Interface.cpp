@@ -13,6 +13,10 @@ ViewerInterface::ViewerInterface() {
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
         this->spaceColonization->affectVoxelGrid(this->viewer->voxelGrid);
     });
+    QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::karstPathUpdated,
+                     this, [&](){ this->viewer->update(); });
     setupUi(this);
 }
 

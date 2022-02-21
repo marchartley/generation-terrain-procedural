@@ -89,7 +89,7 @@ void SpaceColonizationInterface::updateKarstPath()
 
     for (const auto& path : allPaths)
     {
-        BSpline simplifiedPath = BSpline(path).simplifyByRamerDouglasPeucker(3.0);
+        BSpline simplifiedPath = BSpline(path); //.simplifyByRamerDouglasPeucker(3.0);
         this->karstPaths.push_back(BSpline(path));
         simplifiedKarstParths.push_back(simplifiedPath);
         for (size_t i = 0; i < path.size() - 1; i++) {

@@ -99,7 +99,7 @@ float KarstPathsGeneration::computeCost(int nodeA, int nodeB)
         porosityCost = 1.f;
         for (const PorositySphere& poro : this->porositySpheres)
             porosityCost += poro.cost(this->getNodePos(nodeA));
-        this->porosityMap.raiseErrorOnBadCoord = false;
+        this->porosityMap.raiseErrorOnBadCoord = false; // Errors can rise if we manually bring a node outside the map
         porosityCost += this->porosityMap.at(this->getNodePos(nodeA));
         this->porosityMap.raiseErrorOnBadCoord = true;
         porosityCost *= porosityWeight;
@@ -138,9 +138,7 @@ void KarstPathsGeneration::addPorosityMap(Matrix3<float> porosity)
 
 void KarstPathsGeneration::createEdges(int maxNumberNeighbors, float maxNeighboringDistance)
 {
-    std::cout << "Before edges" << std::endl;
     this->graph.createEdges(maxNumberNeighbors, maxNeighboringDistance, true); // The "true" means the cost are not precomputed, just the connection matrix
-    std::cout << "After edges \n-> connection = " << this->graph.connectionMatrix << "\n-> adjency = " << this->graph.adjencyMatrix << std::endl;
     for (int i = 0; i < this->graph.connectionMatrix.sizeX; i++) {
         for (int j = 0; j < this->graph.connectionMatrix.sizeY; j++) {
             if (this->graph.connectionMatrix.at(i, j)) {
