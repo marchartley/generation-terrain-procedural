@@ -19,15 +19,6 @@
 
 int main(int argc, char *argv[])
 {
-//    BSpline b({Vector3(0, 0), Vector3(0, 1), Vector3(1, 1), Vector3(1, 0)});
-
-//    Vector3 point;
-//    for (float t = 0; t <= 1.0; t += 0.2) {
-//        point = b.getPoint(t);
-//        std::cout << point << std::endl;
-//    }
-//    openvdb::initialize();
-
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);

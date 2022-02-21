@@ -671,19 +671,9 @@ void Viewer::updateFlowfieldDebugMesh()
 }
 
 void Viewer::closeEvent(QCloseEvent *e) {
-    QGLViewer::closeEvent(e);
-
     this->setCamera(this->mainCamera);
-
-    std::string command = "ffmpeg -f image2 -i ";
-    command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
-    if (this->screenshotIndex > 0) {
-        int result = std::system(command.c_str());
-        if (result != 0) {
-            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
-        }
-    }
-
+    if (this->isTakingScreenshots) this->startStopRecording();
+    QGLViewer::closeEvent(e);
 }
 
 bool Viewer::createGlobalGravity()
@@ -720,13 +710,27 @@ bool Viewer::createSandGravity()
 
 bool Viewer::startStopRecording()
 {
-    this->isTakingScreenshots = !this->isTakingScreenshots;
     if(!makedir(this->screenshotFolder)) {
         this->isTakingScreenshots = false;
-        // this->displayMessage(QString::fromStdString("Not possible to create folder " + this->screenshotFolder ));
+        std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
         exit(-1);
     }
-    // this->displayMessage(this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling");
+    this->isTakingScreenshots = !this->isTakingScreenshots;
+    if (!isTakingScreenshots) {
+        std::string command = "ffmpeg -f image2 -i ";
+        command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
+        if (this->screenshotIndex > 0) {
+            int result = std::system(command.c_str());
+            if (result != 0) {
+                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+            }
+        }
+        this->screenshotFolder += "__next-take";
+        this->screenshotIndex = 0;
+    }
+
+
+    std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling, it's saved") << std::endl;
     update();
     return this->isTakingScreenshots;
 }

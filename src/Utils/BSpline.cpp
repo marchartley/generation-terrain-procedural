@@ -62,6 +62,7 @@ Vector3 BSpline::getDerivative(float x)
 
 float BSpline::estimateClosestTime(Vector3 pos)
 {
+    int checks = 0;
     float distDiff = std::numeric_limits<float>::max();
 //    Vector3 bestPosPrediction = pos;
     size_t closestPoint;
@@ -75,7 +76,7 @@ float BSpline::estimateClosestTime(Vector3 pos)
     // We know our point is between t(closest - 1) and t(closest + 1)
     float halfSpace = 1 / (this->points.size() - 1.f);
     float currentTime = closestPoint * halfSpace;
-    while (halfSpace > 0.001) {
+    while (halfSpace > 0.00001) {
         halfSpace *= .5f;
         Vector3 low = getPoint(currentTime - halfSpace), cur = getPoint(currentTime), hig = getPoint(currentTime + halfSpace);
         float lowDist = (low - pos).norm2(), curDist = (cur - pos).norm2(), higDist = (hig - pos).norm2();
@@ -88,6 +89,7 @@ float BSpline::estimateClosestTime(Vector3 pos)
         else if (higDist < lowDist && higDist < curDist) { // Highest is closest
             currentTime += halfSpace * .5f;
         }
+        checks++;
     }
     return std::clamp(currentTime, 0.f, 1.f);
 }
@@ -186,6 +188,5 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
     } else {
         returningSpline.points = {subspline.points.front(), subspline.points.back()};
     }
-    std::cout << maxDist << std::endl;
     return returningSpline;
 }

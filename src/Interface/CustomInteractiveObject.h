@@ -12,11 +12,15 @@ public:
     virtual void hide() { this->visible = false; }
     virtual void show() { this->visible = true; }
     bool isHidden() { return !this->isVisible(); }
-    bool isVisible() { return this->visible; }
+    bool isVisible() {
+        if (!__initialized) this->setVisibility(this->visible);
+        return this->visible;
+    }
     bool setVisibility(bool visible) {
         this->visible = visible;
         if (visible) show();
         else hide();
+        this->__initialized = true;
         return visible; }
 
 Q_SIGNALS:
@@ -24,6 +28,8 @@ Q_SIGNALS:
 
 protected:
     bool visible = true;
+    bool __initialized = false;
+    std::string id_name;
 };
 
 #endif // CUSTOMINTERACTIVEOBJECT_H
