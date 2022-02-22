@@ -77,3 +77,39 @@ Vector3 HSVtoRGB(float H, float S,float V){
     return Vector3(R, G, B);
 }
 
+// Source : http://paulbourke.net/geometry/pointlineplane/
+Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+{
+    Vector3 l21 = (p1 - p2);
+    Vector3 l13 = (p3 - p1);
+    Vector3 l43 = (p3 - p4);
+
+    float d1321 = l13.dot(l21);
+    float d1343 = l13.dot(l43);
+    float d4321 = l43.dot(l21);
+    float d4343 = l43.dot(l43);
+    float d2121 = l21.dot(l21);
+
+    float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
+//    float mu_b = -(d1334 + mu_a*d3412) / d3434;
+
+    return p1 + (p2 - p1) * mu_a;
+}
+bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+{
+    Vector3 l21 = (p1 - p2);
+    Vector3 l13 = (p3 - p1);
+    Vector3 l43 = (p3 - p4);
+
+    float d1321 = l13.dot(l21);
+    float d1343 = l13.dot(l43);
+    float d4321 = l43.dot(l21);
+    float d4343 = l43.dot(l43);
+    float d2121 = l21.dot(l21);
+
+    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.00001) return false;
+    float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
+    float mu_b = (d1343 + mu_a*d4321) / d4343;
+//    std::cout << "(mu_a = " << mu_a << " and mu_b = " << mu_b << ")";
+    return (0 <= mu_a) && (mu_a <= 1.0) && (0.0 <= mu_b) && (mu_b <= 1.0);
+}

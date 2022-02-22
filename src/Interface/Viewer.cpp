@@ -146,7 +146,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-//        voxelGrid->retrieveMap(this->mapSavingFolder + "natural_tube.data");
+        voxelGrid->retrieveMap(this->mapSavingFolder + "cube_reinforced_borders.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();

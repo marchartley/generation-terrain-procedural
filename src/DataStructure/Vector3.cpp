@@ -106,21 +106,18 @@ Vector3& Vector3::rotate(Vector3 eulerAngles) {
                    0, cos(eulerAngles.x), -sin(eulerAngles.x),
                    0, sin(eulerAngles.x), cos(eulerAngles.x)
                }).data());
-    Matrix Ry (3, 3, std::vector<float>({
+    Matrix Rz (3, 3, std::vector<float>({
                     cos(eulerAngles.y), 0, -sin(eulerAngles.y),
                     0, 1, 0,
                     sin(eulerAngles.y), 0, cos(eulerAngles.y)
                 }).data());
-    Matrix Rz (3, 3, std::vector<float>({
+    Matrix Ry (3, 3, std::vector<float>({
                     cos(eulerAngles.z), -sin(eulerAngles.z), 0,
                     sin(eulerAngles.z), cos(eulerAngles.z), 0,
                     0, 0, 1
                 }).data());
-    std::cout << "Rx " << Rx << "\nRy " << Ry << "\nRz " << Rz << std::endl;
     Matrix R = Rx.product(Ry).product(Rz);
-    std::cout << "R " << R << std::endl;
     Matrix newCoords = R.product(this->toMatrix());
-    std::cout << "New coords : " << newCoords << std::endl;
     this->x = newCoords[0][0];
     this->y = newCoords[1][0];
     this->z = newCoords[2][0];
@@ -145,6 +142,17 @@ Vector3 Vector3::translated(float move_x, float move_y, float move_z) {
 Vector3 Vector3::translated(Vector3 move) {
     Vector3 v = *this;
     return v.translate(move);
+}
+
+Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
+{
+    dir.normalize(); upVector.normalize();
+    Vector3 right = dir.cross(upVector);
+    float angle_heading = std::atan2(dir.y, dir.x);
+    float angle_pitch = std::asin(dir.z);
+    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
+                                  1.0);
+    return this->rotate(angle_heading, angle_pitch, angle_bank);
 }
 
 

@@ -36,3 +36,13 @@ Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, V
     blankMatrix.add(this->attackMask * (addingMatterMode ? -1.f : 1.f), pos - Vector3(size/2.f, size/2.f, size/2.f));
     return blankMatrix;
 }
+
+Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode)
+{
+    return this->computeErosionMatrix(blankMatrix, modifs, pos, addingMatterMode, Vector3(modifs.sizeX/2.f, modifs.sizeY/2.f, modifs.sizeZ/2.f));
+}
+Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode, Vector3 anchor)
+{
+    blankMatrix.add(modifs * (addingMatterMode ? -1.f : 1.f), pos - anchor);
+    return blankMatrix;
+}

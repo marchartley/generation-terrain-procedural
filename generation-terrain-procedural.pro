@@ -60,6 +60,8 @@ SOURCES += \
         src/Interface/SpaceColonizationInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/Viewer.cpp \
+        src/Karst/KarstHole.cpp \
+        src/Karst/KarstHoleProfile.cpp \
         src/Karst/KarstPathsGeneration.cpp \
         src/TerrainGen/Grid.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
@@ -119,6 +121,8 @@ HEADERS += \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/Viewer.h \
+    src/Karst/KarstHole.h \
+    src/Karst/KarstHoleProfile.h \
     src/TerrainGen/Grid.h \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/VoxelChunk.h \
