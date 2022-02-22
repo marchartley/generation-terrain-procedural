@@ -58,11 +58,8 @@ KarstPathsGeneration::KarstPathsGeneration()
 KarstPathsGeneration::KarstPathsGeneration(Matrix3<int> availablityMap, Vector3 karst_dimensions, float poissonDistance, float gamma)
     : gamma(gamma)
 {
-    std::cout << "-> Error during resizing?" << std::endl;
     this->karst_available_matrix = availablityMap.resize(karst_dimensions, RESIZE_MODE::MIN_VAL);
-    std::cout << "-> No. Error during porosity?" << std::endl;
     this->porosityMap = Matrix3<float>(karst_dimensions);
-    std::cout << "-> No. Error during poisson distrib?" << std::endl;
     this->graph = FastPoissonGraph<int>(this->karst_available_matrix, poissonDistance, 30);
     this->tortuosityOffsets = std::vector<Vector3>(this->graph.nodes.size());
 }

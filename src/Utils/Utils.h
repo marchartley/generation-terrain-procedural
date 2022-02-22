@@ -9,6 +9,9 @@ std::vector<std::string> split(std::string str, char c = ' ');
 bool makedir(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);
 
+Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
+bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
+
 template <class T>
 T lerp(float t, T min, T max) {
     return min + (max - min) * t;

@@ -48,6 +48,9 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
         keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
     }
     Vector3 startPos(0, 0, 0);
+//    startPos = Vector3(10, 10, 0); // TO REMOVE
+//    for (auto& pt : keyPoints)
+//        pt.z = 80; // TO REMOVE
     this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, startPos, 10.f);
     this->colonizer->nodeMinDistance = this->voxelGrid->blockSize;
     this->colonizer->nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;

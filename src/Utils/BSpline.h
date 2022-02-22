@@ -20,6 +20,8 @@ public:
     Vector3 estimateClosestPos(Vector3 pos);
     float length();
 
+    BSpline& close();
+
     Vector3 getCatmullPoint(float x);
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());

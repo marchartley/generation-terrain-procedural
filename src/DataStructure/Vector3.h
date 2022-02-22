@@ -42,6 +42,7 @@ public:
     Vector3& translate(Vector3 move);
     Vector3 translated(float move_x, float move_y, float move_z);
     Vector3 translated(Vector3 move);
+    Vector3& setDirection(Vector3 dir, Vector3 upVector = Vector3(0, 0, 1));
 
     float divergence() { return x + y + z; }
 

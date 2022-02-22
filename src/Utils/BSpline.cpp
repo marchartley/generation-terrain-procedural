@@ -108,6 +108,13 @@ float BSpline::length()
     return length;
 }
 
+BSpline& BSpline::close()
+{
+    if (this->points.size() > 0 && this->points.front() != this->points.back())
+        this->points.push_back(this->points.front());
+    return *this;
+}
+
 float CatmullNextT(Vector3 P0, Vector3 P1, float t_prev, float alpha)
 {
     return std::pow((P0 - P1).norm2(), alpha) + t_prev;
