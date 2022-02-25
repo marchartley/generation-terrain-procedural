@@ -38,11 +38,15 @@ public:
     Vector3& rotate(Vector3 eulerAngles);
     Vector3 rotated(float angle_x, float angle_y, float angle_z);
     Vector3 rotated(Vector3 eulerAngles);
+    Vector3& rotate(float angle, float dir_x, float dir_y, float dir_z);
+    Vector3& rotate(float angle, Vector3 direction);
+    Vector3 rotated(float angle, float dir_x, float dir_y, float dir_z);
+    Vector3 rotated(float angle, Vector3 direction);
     Vector3& translate(float move_x, float move_y, float move_z);
     Vector3& translate(Vector3 move);
     Vector3 translated(float move_x, float move_y, float move_z);
     Vector3 translated(Vector3 move);
-    Vector3& setDirection(Vector3 dir, Vector3 upVector = Vector3(0, 0, 1));
+//    Vector3& setDirection(Vector3 dir, Vector3 upVector = Vector3(0, 0, 1));
 
     float divergence() { return x + y + z; }
 
