@@ -54,6 +54,8 @@ public:
     Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
 
+    Matrix3<float> toDistanceMap();
+
     T min() const;
     T max() const;
 
@@ -735,6 +737,125 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front)
         }
     }
     return *this;
+}
+
+template<class T>
+Matrix3<float> Matrix3<T>::toDistanceMap()
+{
+    Matrix3<float> distances(this->sizeX, this->sizeY, this->sizeZ, std::numeric_limits<float>::max() - 10000);
+    distances.raiseErrorOnBadCoord = false;
+    distances.defaultValueOnBadCoord = 0.f;
+
+    // Check left
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x - 1, y, z) + 1);
+                }
+            }
+        }
+    }
+    // Check right
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x + 1, y, z) + 1);
+                }
+            }
+        }
+    }
+    // Check front
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y - 1, z) + 1);
+                }
+            }
+        }
+    }
+    // Check back
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y + 1, z) + 1);
+                }
+            }
+        }
+    }
+    // Check down
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z - 1) + 1);
+                }
+            }
+        }
+    }
+    // Check up
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (this->at(x, y, z) < .5) {
+                    distances(x, y, z) = 0;
+                } else {
+                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z + 1) + 1);
+                }
+            }
+        }
+    }
+    /*
+    // First pass
+    for (int x = 0; x < distances.sizeX; x++) {
+        for (int y = 0; y < distances.sizeY; y++) {
+            for (int z = 0; z < distances.sizeZ; z++) {
+                float currentVal = distances.at(x, y, z);
+                if (!this->at(x, y, z)) continue;
+                for (int dx = x-1; dx <= x+1; dx++) {
+                    for (int dy = y-1; dy <= y+1; dy++) {
+                        for (int dz = z-1; dz <= z+1; dz++) {
+                            currentVal = std::min(currentVal, distances.at(dx, dy, dz)+1);
+                        }
+                    }
+                }
+                distances.at(x, y, z) = currentVal;
+            }
+        }
+    }
+    // Second pass
+    for (int x = distances.sizeX-1; x >= 0; x--) {
+        for (int y = distances.sizeY-1; y >= 0; y--) {
+            for (int z = distances.sizeZ-1; z >= 0; z--) {
+                if (!this->at(x, y, z)) continue;
+                float currentVal = distances.at(x, y, z);
+                for (int dx = x-1; dx <= x+1; dx++) {
+                    for (int dy = y-1; dy <= y+1; dy++) {
+                        for (int dz = z-1; dz <= z+1; dz++) {
+                            currentVal = std::min(currentVal, distances.at(dx, dy, dz)+1);
+                        }
+                    }
+                }
+                distances.at(x, y, z) = currentVal;
+            }
+        }
+    }*/
+    distances.raiseErrorOnBadCoord = true;
+    distances.defaultValueOnBadCoord = 0.f;
+    return distances.normalize();
 }
 
 #endif // MATRIX3_H
