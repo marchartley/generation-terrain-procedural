@@ -130,6 +130,30 @@ Vector3 Vector3::rotated(Vector3 eulerAngles) {
     Vector3 v = *this;
     return v.rotate(eulerAngles);
 }
+Vector3& Vector3::rotate(float angle, float dir_x, float dir_y, float dir_z) {
+    return this->rotate(angle, Vector3(dir_x, dir_y, dir_z));
+}
+Vector3& Vector3::rotate(float angle, Vector3 direction) {
+    float c = cos(angle), s = sin(angle);
+    Vector3& v = direction; // alias
+    Matrix R (3, 3, std::vector<float>({
+                   v.x*v.x*(1-c)+c, v.x*v.y*(1-c)-v.z*s, v.x*v.z*(1-c)+v.y*s,
+                   v.x*v.y*(1-c)+v.z*s, v.y*v.y*(1-c)+c, v.y*v.z*(1-c)-v.x*s,
+                   v.x*v.z*(1-c)-v.y*s, v.y*v.z*(1-c)+v.x*s, v.z*v.z*(1-c)+c
+               }).data());
+    Matrix newCoords = R.product(this->toMatrix());
+    this->x = newCoords[0][0];
+    this->y = newCoords[1][0];
+    this->z = newCoords[2][0];
+    return *this;
+}
+Vector3 Vector3::rotated(float angle, float dir_x, float dir_y, float dir_z) {
+    return this->rotated(angle, Vector3(dir_x, dir_y, dir_z));
+}
+Vector3 Vector3::rotated(float angle, Vector3 direction) {
+    Vector3 v = *this;
+    return v.rotate(angle, direction);
+}
 Vector3& Vector3::translate(float move_x, float move_y, float move_z) {
     return this->translate(Vector3(move_x, move_y, move_z));
 }
@@ -144,16 +168,43 @@ Vector3 Vector3::translated(Vector3 move) {
     return v.translate(move);
 }
 
-Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
-{
-    dir.normalize(); upVector.normalize();
-    Vector3 right = dir.cross(upVector);
-    float angle_heading = std::atan2(dir.y, dir.x);
-    float angle_pitch = std::asin(dir.z);
-    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
-                                  1.0);
-    return this->rotate(angle_heading, angle_pitch, angle_bank);
-}
+//Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
+//{
+//    Vector3 forward = Vector3(0, 0, 1);//upVector.normalized();
+//    if (dir == forward) return *this;
+
+//    Vector3 old_right = Vector3(1, 0, 0);//this->normalized();
+//    Vector3 old_upVector = forward.cross(old_right);
+//    Vector3 right = dir.cross(upVector);
+////    dir -= *this->normalized();
+//    forward.normalize(); upVector.normalize(); right.normalize(); old_upVector.normalize(); old_right.normalize();
+////    float angle_heading = std::acos(dir.x) - std::acos(forward.x);
+////    float angle_pitch = std::acos(dir.y) - std::acos(forward.y);
+////    float angle_bank = std::acos(dir.z) - std::acos(forward.z);
+
+//    float angle_heading = std::atan2(dir.y, dir.x) - std::atan2(forward.x, forward.y);
+//    float angle_pitch = std::asin(dir.z) - std::asin(forward.z);
+//    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
+//                                  1.0) - std::atan2(old_right.dot(old_upVector) / old_right.norm(), 1.0);
+
+//    /*std::cout << "Forward   : " << forward <<
+//                 "\nold Right : " << old_right <<
+//                 "\nold Up    : " << old_upVector <<
+//                 "\nnew Forwa : " << dir <<
+//                 "\nnew Right : " << right <<
+//                 "\nnew Up    : " << upVector <<
+//                 "\nrotation  : " << Vector3(angle_heading, angle_pitch, angle_bank) << std::endl;*/
+//    return this->rotate(angle_heading, angle_pitch, angle_bank).normalize();
+
+//    /*
+//    dir.normalize(); upVector.normalize();
+//    Vector3 right = dir.cross(upVector);
+//    float angle_heading = std::atan2(dir.y, dir.x);
+//    float angle_pitch = std::asin(dir.z);
+//    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
+//                                  1.0);
+//    return this->rotate(angle_heading, angle_pitch, angle_bank);*/
+//}
 
 
 
