@@ -148,7 +148,7 @@ void KarstPathGenerationInterface::updateKarstPath()
 
 void KarstPathGenerationInterface::createKarst()
 {
-    UnderwaterErosion erod(this->voxelGrid, 20.f, 2.f, 10);
+    UnderwaterErosion erod(this->voxelGrid, 10.f, 2.f, 10);
     erod.CreateMultipleTunnels(this->karstPaths);
     //    Q_EMIT this->update();
 }

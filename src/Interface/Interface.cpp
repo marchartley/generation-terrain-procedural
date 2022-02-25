@@ -123,7 +123,7 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     // Curved erosion layout
     this->curvesAddControlPointButton = new QPushButton("Ajouter un point de control");
     this->curvesClearControlPointButton = new QPushButton("Tout retirer");
-    this->curvesErosionSizeSlider = new FancySlider(Qt::Orientation::Horizontal, 1, 200);
+    this->curvesErosionSizeSlider = new FancySlider(Qt::Orientation::Horizontal, 1, 30);
     this->curvesErosionStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
     this->curvesErosionCreateMatter = new QPushButton("Creer un pont");
     this->curvesErosionRemoveMatter = new QPushButton("Creer un tunnel");

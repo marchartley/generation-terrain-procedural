@@ -162,7 +162,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
 
     float resolution = 1.0 / path.length();
 
-    KarstHole hole(path);
+    KarstHole hole(path, this->maxRockSize);
     Matrix3<float> holeMatrix;
     Vector3 anchor;
     std::tie(holeMatrix, anchor) = hole.generateMask();
@@ -205,7 +205,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
         float resolution = 0.10 / path.length();
         std::vector<Vector3> coords;
 
-        KarstHole hole(path);
+        KarstHole hole(path, this->maxRockSize);
         Matrix3<float> holeMatrix;
         Vector3 anchor;
         std::tie(holeMatrix, anchor) = hole.generateMask();

@@ -115,7 +115,7 @@ void SpaceColonizationInterface::createKarst()
 {
     if (this->karstPaths.empty())
         this->updateKarstPath();
-    UnderwaterErosion erod(this->voxelGrid, 20.f, 2.f, 10);
+    UnderwaterErosion erod(this->voxelGrid, 10.f, 2.f, 10);
     erod.CreateMultipleTunnels(this->karstPaths);
 }
 
