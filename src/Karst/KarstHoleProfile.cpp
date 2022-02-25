@@ -36,6 +36,35 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
     this->vertices = BSpline(shape);
 }
 
+KarstHoleProfile &KarstHoleProfile::rotateTowardVector(Vector3 new_dir)
+{
+    Vector3 forward(0, 0, 1);
+    new_dir.normalize();
+    float angle = std::acos(forward.dot(new_dir));
+    for (Vector3& point : this->vertices.points)
+        point.rotate(angle, new_dir.cross(forward).normalized());
+    return *this;
+}
+
+KarstHoleProfile &KarstHoleProfile::translate(Vector3 translation)
+{
+    for (Vector3& point : this->vertices.points)
+        point.translate(translation);
+    return *this;
+}
+
+KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline path, float t)
+{
+    std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
+    std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
+    std::vector<Vector3> interpolatedPoints(startingPoints.size());
+    for (size_t i = 0; i < startingPoints.size(); i++) {
+        interpolatedPoints[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t);
+    }
+    KarstHoleProfile interpolation(interpolatedPoints);
+    return interpolation.rotateTowardVector(path.getDerivative(t)).translate(path.getPoint(t));
+}
+
 KarstHoleProfile& KarstHoleProfile::setNumberOfVertices(int vertice_count)
 {
     std::vector<Vector3> newPoints = this->vertices.getPath(1/(float)(vertice_count - 1));
@@ -45,6 +74,7 @@ KarstHoleProfile& KarstHoleProfile::setNumberOfVertices(int vertice_count)
 
 KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
 {
+    /*
     Vector3 minVec(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0);
     Vector3 maxVec(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), 1);
     for (const Vector3& point : this->vertices.points) {
@@ -53,7 +83,8 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
         maxVec.x = std::max(maxVec.x, point.x);
         maxVec.y = std::max(maxVec.y, point.y);
     }
-    Vector3 scaling = Vector3(sizeX, sizeY, 1) / (maxVec - minVec);
+    Vector3 scaling = Vector3(sizeX, sizeY, 1) / (maxVec - minVec);*/
+    float scaling = std::max(sizeX, sizeY); // Dunno what to do...
     for (Vector3& point : this->vertices.points)
         point *= scaling;
     return *this;

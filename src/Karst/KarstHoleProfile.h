@@ -22,6 +22,10 @@ public:
     KarstHoleProfile(BSpline shape);
     KarstHoleProfile(std::vector<Vector3> shape);
 
+    KarstHoleProfile& rotateTowardVector(Vector3 new_dir);
+    KarstHoleProfile& translate(Vector3 new_pos);
+    KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t);
+
     KarstHoleProfile& setNumberOfVertices(int vertice_count);
     KarstHoleProfile& setSize(float sizeX, float sizeY);
 

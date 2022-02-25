@@ -7,9 +7,9 @@
 class KarstHole
 {
 public:
-    KarstHole();
-    KarstHole(Vector3 start, Vector3 end);
-    KarstHole(BSpline fullPath);
+    KarstHole(float size = 1.f);
+    KarstHole(Vector3 start, Vector3 end, float size = 1.f);
+    KarstHole(BSpline fullPath, float size = 1.f);
 
     KarstHoleProfile interpolate(float t);
 
