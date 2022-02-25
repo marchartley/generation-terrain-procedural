@@ -2,19 +2,19 @@
 
 #include "Utils/Utils.h"
 
-KarstHole::KarstHole()
+KarstHole::KarstHole(float size)
 {
-    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(15, 15);
-    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(15, 15);
+    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(size, size);
+    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(size, size);
     this->path = BSpline();
 }
 
-KarstHole::KarstHole(Vector3 start, Vector3 end) : KarstHole()
+KarstHole::KarstHole(Vector3 start, Vector3 end, float size) : KarstHole(size)
 {
     this->path = BSpline({start, end});
 }
 
-KarstHole::KarstHole(BSpline fullPath) : KarstHole()
+KarstHole::KarstHole(BSpline fullPath, float size) : KarstHole(size)
 {
     this->path = fullPath;
 //    std::cout << "Start shape : \n";
@@ -28,14 +28,15 @@ KarstHole::KarstHole(BSpline fullPath) : KarstHole()
 KarstHoleProfile KarstHole::interpolate(float t)
 {
     /* Linear Interpolation, the simpliest */
-    std::vector<Vector3> startingPoints = this->startingProfile.vertices.getPath(.1f);
-    std::vector<Vector3> endingPoints = this->endingProfile.vertices.getPath(.1f);
-    std::vector<Vector3> interpolated(startingPoints.size());
+//    std::vector<Vector3> startingPoints = this->startingProfile.vertices.getPath(.1f);
+//    std::vector<Vector3> endingPoints = this->endingProfile.vertices.getPath(.1f);
+//    std::vector<Vector3> interpolated(startingPoints.size());
 
-    for (size_t i = 0; i < startingPoints.size(); i++) {
-        interpolated[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t).setDirection(this->path.getDerivative(t)).translate(this->path.getPoint(t));
-    }
-    return KarstHoleProfile(interpolated);
+//    KarstHoleProfile interp =
+    //for (size_t i = 0; i < startingPoints.size(); i++) {
+    //    interpolated[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t).setDirection(Vector3(1, 0, 0)/*this->path.getDerivative(t)*/).translate(this->path.getPoint(t));
+    //}
+    return this->startingProfile.interpolate(this->endingProfile, this->path, t); //KarstHoleProfile(interpolated);
 }
 
 std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
@@ -44,7 +45,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
     int number_of_points = 10;
-    int number_of_intermediates = 5;
+    int number_of_intermediates = std::min(5, int(this->path.points.size()));
     float dt = 1.f / (float)(number_of_intermediates - 1);
     for (int i = 0; i < number_of_intermediates; i++) {
         float t = i * dt;
@@ -68,9 +69,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
         std::vector<Vector3> points = this->interpolate(t).vertices.getPath(1.f / (float)(number_of_points - 1));
         for (Vector3& p : points) {
             p -= minVec;
-            std::cout << p << " ";
         }
-        std::cout << std::endl;
         allIntermediateVertices[i] = points;
         // Add the closing faces only on the first and last of the path using the "ear clipping" method
         if (i == 0 || i == number_of_intermediates - 1) {
@@ -146,31 +145,28 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
                                 });
         }
     }
-    std::cout << "Triangles : \n";
-    for (const auto& t : triangles) {
-        std::cout << t[0] << " " << t[1] << " " << t[2] << "\n";
-    }
 
     for (int x = 0; x < mask.sizeX; x++) {
         for (int y = 0; y < mask.sizeY; y++) {
             for (int z = 0; z < mask.sizeZ; z++) {
                 Vector3 point(x, y, z);
-                Vector3 ray(-110, -120, -130);
-                int numberOfCollisions = 0;
-                for (const std::vector<Vector3>& triangle : triangles) {
-                    if (this->segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]))
-                        numberOfCollisions ++;
-//                    std::cout << "(" << triangle[0] << ", " << triangle[1] << ", " << triangle[2] << ") ";
+                int maxNumberOfCollisions = 0;
+                for (int i = 0; i < 3; i++) {
+                    int numberOfCollisions = 0;
+                    Vector3 ray = (Vector3::random().normalize() * 2.f * maxVec).translate((maxVec + minVec)/ 2.f);
+                    for (const std::vector<Vector3>& triangle : triangles) {
+                        if (this->segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]))
+                            numberOfCollisions ++;
+                    }
+                    maxNumberOfCollisions = std::max(maxNumberOfCollisions, numberOfCollisions);
                 }
-                if (numberOfCollisions % 2 == 1) {
+                if (maxNumberOfCollisions % 2 == 1) {
                     mask.at(x, y, z) = 1.f;
                 }
-//                std::cout << numberOfCollisions << " ";
             }
         }
     }
-//    std::cout << "\n" << mask;
-//    std::cout << std::endl;
+    mask = mask.toDistanceMap(); // Not ready yet...
     Vector3 anchor = this->path.points[0] - minVec;
     return std::make_tuple(mask, anchor);
 }
