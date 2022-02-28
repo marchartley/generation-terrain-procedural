@@ -12,6 +12,19 @@ Vector3 HSVtoRGB(float H, float S,float V);
 Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
 bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
 
+
+namespace interpolation {
+    float linear(float x, float _min = 0.0, float _max = 1.0);
+    float inv_linear(float x, float _min = 0.0, float _max = 1.0);
+    float sigmoid(float _x, float lambda = 10.0, float offset = -0.5, float _min = 0.0, float _max = 1.0);
+    float smooth(float _x, float _min = 0.0, float _max = 1.0);
+    float quadratic(float _x, float _min = 0.0, float _max = 1.0);
+    float cubic(float _x, float _min = 0.0, float _max = 1.0);
+    float cosine(float _x, float _min = 0.0, float _max = 1.0);
+    float binary(float _x, float _min = 0.0, float _max = 1.0);
+}
+
+
 template <class T>
 T lerp(float t, T min, T max) {
     return min + (max - min) * t;
