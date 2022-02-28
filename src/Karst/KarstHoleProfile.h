@@ -24,10 +24,14 @@ public:
 
     KarstHoleProfile& rotateTowardVector(Vector3 new_dir);
     KarstHoleProfile& translate(Vector3 new_pos);
+    KarstHoleProfile& scale(float scale_factor);
     KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t);
+    std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t);
 
     KarstHoleProfile& setNumberOfVertices(int vertice_count);
     KarstHoleProfile& setSize(float sizeX, float sizeY);
+
+    std::vector<std::vector<int>> computeTrianglesIndices(const std::vector<Vector3>& points);
 
     static BSpline createTubeProfile();
     static BSpline createSolubleBedProfile();
