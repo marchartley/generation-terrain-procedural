@@ -107,9 +107,45 @@ bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
     float d4343 = l43.dot(l43);
     float d2121 = l21.dot(l21);
 
-    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.00001) return false;
+    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return false; // Parallel lines?
     float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
     float mu_b = (d1343 + mu_a*d4321) / d4343;
 //    std::cout << "(mu_a = " << mu_a << " and mu_b = " << mu_b << ")";
     return (0 <= mu_a) && (mu_a <= 1.0) && (0.0 <= mu_b) && (mu_b <= 1.0);
+}
+
+namespace interpolation {
+float linear(float x, float _min, float _max) {
+    return (x - _min) / (_max - _min);
+}
+float inv_linear(float x, float _min, float _max) {
+    return x * (_max - _min) + _min;
+}
+float sigmoid(float _x, float lambda, float offset, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    float s_0 = 1 / (1 + std::exp(-lambda * (0.f+offset)));
+    float s_1 = 1 / (1 + std::exp(-lambda * (1.f+offset)));
+    return inv_linear(linear(1 / (1 + std::exp(-lambda * (x+offset))), s_0, s_1), _min, _max);
+}
+float smooth(float _x, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    return inv_linear(3*x*x-2*x*x*x, _min, _max);
+}
+float quadratic(float _x, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    return inv_linear(x * x, _min, _max);
+}
+float cubic(float _x, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    return inv_linear(x * x * x, _min, _max);
+}
+float cosine(float _x, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    float pi = 3.141592;
+    return inv_linear((std::cos(x * pi + pi) / 2.f) + 0.5, _min, _max);
+}
+float binary(float _x, float _min, float _max) {
+    float x = linear(_x, _min, _max);
+    return inv_linear((x < 0.5 ? 0.f : 1.f), _min, _max);
+}
 }
