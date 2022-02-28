@@ -12,14 +12,18 @@ public:
     KarstHole(BSpline fullPath, float size = 1.f);
 
     KarstHoleProfile interpolate(float t);
+    std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(float t);
 
-    std::tuple<Matrix3<float>, Vector3> generateMask();
+    std::vector<std::vector<Vector3>> generateMesh();
 
-    bool segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3);
+    std::tuple<Matrix3<float>, Vector3> generateMask(std::vector<std::vector<Vector3>> precomputedTriangles = std::vector<std::vector<Vector3>>());
+
+    int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3);
 
     KarstHoleProfile startingProfile;
     KarstHoleProfile endingProfile;
     BSpline path;
+    float size;
 };
 
 #endif // KARSTHOLE_H
