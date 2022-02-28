@@ -7,6 +7,7 @@ KarstHole::KarstHole(float size)
     this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(size, size);
     this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(size, size);
     this->path = BSpline();
+    this->size = size;
 }
 
 KarstHole::KarstHole(Vector3 start, Vector3 end, float size) : KarstHole(size)
@@ -28,24 +29,21 @@ KarstHole::KarstHole(BSpline fullPath, float size) : KarstHole(size)
 KarstHoleProfile KarstHole::interpolate(float t)
 {
     /* Linear Interpolation, the simpliest */
-//    std::vector<Vector3> startingPoints = this->startingProfile.vertices.getPath(.1f);
-//    std::vector<Vector3> endingPoints = this->endingProfile.vertices.getPath(.1f);
-//    std::vector<Vector3> interpolated(startingPoints.size());
-
-//    KarstHoleProfile interp =
-    //for (size_t i = 0; i < startingPoints.size(); i++) {
-    //    interpolated[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t).setDirection(Vector3(1, 0, 0)/*this->path.getDerivative(t)*/).translate(this->path.getPoint(t));
-    //}
     return this->startingProfile.interpolate(this->endingProfile, this->path, t); //KarstHoleProfile(interpolated);
 }
+std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHole::interpolateAndGetMesh(float t)
+{
+    /* Linear Interpolation, the simpliest */
+    return this->startingProfile.interpolateAndGetMesh(this->endingProfile, this->path, t); //KarstHoleProfile(interpolated);
+}
 
-std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
+std::vector<std::vector<Vector3> > KarstHole::generateMesh()
 {
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
     int number_of_points = 10;
-    int number_of_intermediates = std::min(5, int(this->path.points.size()));
+    int number_of_intermediates = std::min(5, int(this->path.points.size())*2);
     float dt = 1.f / (float)(number_of_intermediates - 1);
     for (int i = 0; i < number_of_intermediates; i++) {
         float t = i * dt;
@@ -60,58 +58,82 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
         }
     }
 
-    Matrix3<float> mask((maxVec - minVec)); //Vector3((maxVec - minVec).x, (maxVec - minVec).y, 1));
-
     std::vector<std::vector<Vector3>> triangles;
-    std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates);
-    for (int i = 0; i < number_of_intermediates; i++) {
-        float t = i * dt;
-        std::vector<Vector3> points = this->interpolate(t).vertices.getPath(1.f / (float)(number_of_points - 1));
-        for (Vector3& p : points) {
-            p -= minVec;
-        }
+    std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates + 2);
+    for (int i = 0; i < number_of_intermediates + 2; i++) {
+        float t = (i-1.f) * dt;
+        std::vector<Vector3> points;
+        if (i == 0)
+            points = this->interpolate(0.0).translate(path.getDerivative(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
+        else if(i == number_of_intermediates + 1)
+            points = this->interpolate(1.0).translate(path.getDerivative(1.f) * this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
+        else
+            points = this->interpolate(t).vertices.getPath(1.f / (float)(number_of_points - 1));
+
+
         allIntermediateVertices[i] = points;
         // Add the closing faces only on the first and last of the path using the "ear clipping" method
-        if (i == 0 || i == number_of_intermediates - 1) {
-            Vector3 ray;
-//            if (i == 0)
-//            ray = Vector3(minVec.x, minVec.y, points[i].z);
-            ray = Vector3(-1.1, -1.2, points[i].z);
+        if (i == 0 || i == number_of_intermediates + 1) {
+            Vector3 middle(0, 0, 0);
+            Vector3 ray; //Vector3(-1.1, -1.2, points[i].z);
+            Vector3 kindOfTangent;
             std::vector<int> remaining_nodes(number_of_points); // Starts with {0, 1, 2, 3, ...N}
-            for (int i = 0; i < number_of_points; i++) remaining_nodes[i] = i;
+            for (int i = 0; i < number_of_points; i++) {
+                middle += points[i];
+                remaining_nodes[i] = i;
+            }
+            middle /= (float)number_of_points;
+            for (int i = 0; i < number_of_points; i++) {
+                if ((points[i] - middle).norm2() > ray.norm2()) {
+                    ray = (points[i] - middle) * 2.f;
+                    int second_indice = 1;
+                    while(kindOfTangent.norm2() == 0 || kindOfTangent.dot(ray) == 0) {
+                        kindOfTangent = (points[(i + second_indice)] - middle);
+                        second_indice++;
+                        if ((i + second_indice) % points.size() == 0) {
+//                            std::cout << "Fuuuuuu..." << std::endl;
+                            break;
+                        }
+                    }
+                }
+            }
+            ray += kindOfTangent;
+            ray += middle;
+
             int max_tries = number_of_points * number_of_points;
             while(remaining_nodes.size() > 3) {
                 max_tries --;
-                if (max_tries < 0) break;
-//                for (size_t j = 0; j < remaining_nodes.size(); j++)
-//                    std::cout << remaining_nodes[j] << " ";
+                if (max_tries < 0) {
+                    std::cout << "Breaking : too much iterations" << std::endl;
+                    break;
+                }
                 int previous = remaining_nodes[0],
                         current = remaining_nodes[1],
                         next = remaining_nodes[2];
                 Vector3 midpoint = (points[previous] + points[next])/2.f;
-//                std::cout << midpoint << std::endl;
                 // Check if midpoint is in the (reduced) polygon
                 int number_of_intersections = 0;
                 bool valid = true;
-                for (size_t j = 0; j < remaining_nodes.size() && valid; j++) {
+                int intersectionId1, intersectionId2;
+                for (size_t j = 0; j < points.size(); j++) {
                     // Count the number of intersection from the midpoint to somewhere outside
-                    if (intersection(ray, midpoint, points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
+                    if (intersection(ray, midpoint, points[j], points[(j + 1) % points.size()])) {
                         number_of_intersections++;
-//                        std::cout << "Intersection between nodes (" << minVec << ", " << midpoint << ") and (" << remaining_nodes[j] << ", " << remaining_nodes[(j + 1) % remaining_nodes.size()] << ")\n";
-                    } else {
-//                        std::cout << "No intersection between nodes (" << minVec << ", " << midpoint << ") and (" << remaining_nodes[j] << ", " << remaining_nodes[(j + 1) % remaining_nodes.size()] << ")\n";
                     }
-                    // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)
-                    if (intersection(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
-                        Vector3 inter = intersectionPoint(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
-                        if (inter != points[previous] && inter != points[next]) {
-                            valid = false;
-//                            std::cout << "Intersection between nodes (" << previous << ", " << next << ") and (" << remaining_nodes[j] << ", " << remaining_nodes[(j + 1) % remaining_nodes.size()] << ")\n";
-                        } else {
-//                            std::cout << "Exactly on the nodes (" << previous << ", " << next << ") and (" << remaining_nodes[j] << ", " << remaining_nodes[(j + 1) % remaining_nodes.size()] << ")\n";
+                }
+                for (size_t j = 0; j < remaining_nodes.size() && valid; j++) {
+                    if (previous != remaining_nodes[j] && previous != remaining_nodes[(j + 1) % remaining_nodes.size()] &&
+                            next != remaining_nodes[j] && next != remaining_nodes[(j + 1) % remaining_nodes.size()]) {
+                        // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)
+                        if (intersection(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
+                            Vector3 inter = intersectionPoint(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+                            if (inter != points[previous] && inter != points[next]) {
+                                valid = false;
+                                intersectionId1 = remaining_nodes[j];
+                                intersectionId2 = remaining_nodes[(j + 1) % remaining_nodes.size()];
+
+                            }
                         }
-                    } else {
-//                        std::cout << "Didn't even touch nodes (" << previous << ", " << next << ") and (" << remaining_nodes[j] << ", " << remaining_nodes[(j + 1) % remaining_nodes.size()] << ")\n";
                     }
                 }
                 // If there is an odd number of itersection, point is inside the shape,
@@ -122,6 +144,15 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
                 } else {
                     // Otherwise, rotate the list just to change the first 3 values
                     std::rotate(remaining_nodes.begin(), remaining_nodes.begin() + 1, remaining_nodes.end());
+                    if (max_tries < 10) {
+                        std::cout << "For polygon " << i << " and triangle " << previous << "-" << current << "-" << next << ": ";
+                        if (!valid)
+                            std::cout << "\n- The line " << previous << "-" << next << " has an intersection with line " << intersectionId1 << "-" << intersectionId2 << ".";
+                        if (number_of_intersections % 2 == 0)
+                            std::cout << "\n- The midpoint (" << midpoint << ") is outside the shape (" << number_of_intersections << " intersections)";
+                        std::cout << "\n--> middle is at (" << middle << ") and ray is " << ray << std::endl;
+//                        std::cout << std::endl;
+                    }
                 }
             }
             // Put the last 3 in a triangle
@@ -129,8 +160,8 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
                 triangles.push_back({points[remaining_nodes[0]], points[remaining_nodes[1]], points[remaining_nodes[2]]});
         }
     }
-//    std::cout << "We have " << triangles.size() << " triangles and we should have " << 2*(number_of_points-2) << std::endl;
-    for (int i = 0; i < number_of_intermediates - 1; i++) {
+
+    for (int i = 0; i < number_of_intermediates + 1; i++) {
         for (int j = 0; j < number_of_points; j++) {
             int j_plus_1 = (j + 1) % number_of_points;
             triangles.push_back({
@@ -145,28 +176,67 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask()
                                 });
         }
     }
+    return triangles;
+}
 
+std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vector<Vector3>>  precomputedTriangles)
+{
+    std::vector<std::vector<Vector3>> triangles = precomputedTriangles;
+    if (triangles.empty())
+        triangles = this->generateMesh();
+
+    Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+    Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+
+    for (const auto& triangle : triangles) {
+        for (const Vector3& pos : triangle) {
+            minVec.x = std::min(minVec.x, pos.x);
+            minVec.y = std::min(minVec.y, pos.y);
+            minVec.z = std::min(minVec.z, pos.z);
+            maxVec.x = std::max(maxVec.x, pos.x);
+            maxVec.y = std::max(maxVec.y, pos.y);
+            maxVec.z = std::max(maxVec.z, pos.z);
+        }
+    }
+    for (auto& triangle : triangles) {
+        for (Vector3& pos : triangle) {
+            pos -= minVec;
+        }
+    }
+    Matrix3<float> mask((maxVec - minVec)); //Vector3((maxVec - minVec).x, (maxVec - minVec).y, 1));
     for (int x = 0; x < mask.sizeX; x++) {
         for (int y = 0; y < mask.sizeY; y++) {
             for (int z = 0; z < mask.sizeZ; z++) {
                 Vector3 point(x, y, z);
-                int maxNumberOfCollisions = 0;
-                for (int i = 0; i < 3; i++) {
-                    int numberOfCollisions = 0;
-                    Vector3 ray = (Vector3::random().normalize() * 2.f * maxVec).translate((maxVec + minVec)/ 2.f);
+                bool allCollisionsValidated = false;
+                int numberOfCollisions = 0;
+                while (!allCollisionsValidated) {
+                    allCollisionsValidated = true;
+                    numberOfCollisions = 0;
+                    Vector3 ray = (Vector3::random().normalize() * 200.f * maxVec).translate((maxVec + minVec)/ 2.f);
                     for (const std::vector<Vector3>& triangle : triangles) {
-                        if (this->segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]))
+                        int collision_result = this->segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
+                        if (collision_result == 1)
                             numberOfCollisions ++;
+//                        else if (collision_result == -1) {
+//                            allCollisionsValidated = false;
+//                            break;
+//                        }
                     }
-                    maxNumberOfCollisions = std::max(maxNumberOfCollisions, numberOfCollisions);
                 }
-                if (maxNumberOfCollisions % 2 == 1) {
+                if (numberOfCollisions % 2 == 1) {
                     mask.at(x, y, z) = 1.f;
                 }
             }
         }
     }
-    mask = mask.toDistanceMap(); // Not ready yet...
+    mask = mask.toDistanceMap();
+
+    for (float& m : mask) {
+        if (m > 5.f) m = 5.f;
+        m = interpolation::linear(m, 0.f, 5.f);
+//        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+    }
     Vector3 anchor = this->path.points[0] - minVec;
     return std::make_tuple(mask, anchor);
 }
@@ -175,19 +245,23 @@ float tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
     return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
 }
 int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
-bool KarstHole::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
+int KarstHole::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
 {
     // Compute tetraheadron "signed" volume from one end of the segment and the triangle
-    bool segmentsEndOnDifferentSides = sign(tetrahedronSignedVolume(s1, t1, t2, t3)) != sign(tetrahedronSignedVolume(s2, t1, t2, t3));
-    if (!segmentsEndOnDifferentSides)
-        return false;
+    float product_of_volumes = tetrahedronSignedVolume(s1, t1, t2, t3) * tetrahedronSignedVolume(s2, t1, t2, t3);
+    if (std::abs(product_of_volumes) < 0.000001)
+        return -1;
+    if (sign(product_of_volumes) > 0) // Same sign for the two volums computed
+        return 0;
     // Compute the tetrahedron built with the segment
     // and 2 points of the triangle, all configs should have
     // the same sign.
-    int volume1 = sign(tetrahedronSignedVolume(s1, s2, t1, t2));
-    int volume2 = sign(tetrahedronSignedVolume(s1, s2, t3, t1));
-    int volume3 = sign(tetrahedronSignedVolume(s1, s2, t2, t3));
-    if (volume1 == volume2 && volume1 == volume3)
-        return true;
-    return false;
+    int volume1 = tetrahedronSignedVolume(s1, s2, t1, t2);
+    int volume2 = tetrahedronSignedVolume(s1, s2, t3, t1);
+    int volume3 = tetrahedronSignedVolume(s1, s2, t2, t3);
+    if (std::abs(volume1) < 0.000001 || std::abs(volume2) < 0.000001 || std::abs(volume3) < 0.000001)
+        return -1;
+    if (sign(volume1) == sign(volume2) && sign(volume1) == sign(volume3))
+        return 1;
+    return 0;
 }
