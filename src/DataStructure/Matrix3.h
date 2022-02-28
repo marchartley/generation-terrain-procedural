@@ -7,6 +7,7 @@
 #include <memory>
 #include <string>
 #include <math.h>
+#include <iomanip>
 #include "DataStructure/Vector3.h"
 
 enum RESIZE_MODE {
@@ -128,7 +129,7 @@ std::string Matrix3<T>::displayValues()
         out << "[Z-level = " << z << "] : \n";
         for (int y = 0; y < this->sizeY; y++) {
             for (int x = 0; x < this->sizeX; x++) {
-                out << at(x, y, z) << "\t";
+                out << std::setw(5) << at(x, y, z) << "\t";
             }
             out << "\n";
         }
@@ -745,90 +746,100 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
     Matrix3<float> distances(this->sizeX, this->sizeY, this->sizeZ, std::numeric_limits<float>::max() - 10000);
     distances.raiseErrorOnBadCoord = false;
     distances.defaultValueOnBadCoord = 0.f;
-
-    // Check left
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x - 1, y, z) + 1);
+/*
+    for (int i = 0; i < 2; i++) {
+        // Check left
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x - 1, y, z) + 1);
+                    }
                 }
             }
         }
-    }
-    // Check right
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x + 1, y, z) + 1);
+        // Check right
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x + 1, y, z) + 1);
+                    }
                 }
             }
         }
-    }
-    // Check front
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y - 1, z) + 1);
+        // Check front
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y - 1, z) + 1);
+                    }
                 }
             }
         }
-    }
-    // Check back
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y + 1, z) + 1);
+        // Check back
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y + 1, z) + 1);
+                    }
                 }
             }
         }
-    }
-    // Check down
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z - 1) + 1);
+        // Check down
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z - 1) + 1);
+                    }
                 }
             }
         }
-    }
-    // Check up
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (this->at(x, y, z) < .5) {
-                    distances(x, y, z) = 0;
-                } else {
-                    distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z + 1) + 1);
+        // Check up
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    if (this->at(x, y, z) < .5) {
+                        distances(x, y, z) = 0;
+                    } else {
+                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z + 1) + 1);
+                    }
                 }
             }
         }
-    }
-    /*
+    }*/
+    // Using the Chamfer distance -> direct neighbor               => distance = 3
+    //                               diagonal on 2 axis neighbor   => distance = 4
+    //                               diagonal on all axis neighbor => distance = 5
+//    float predefinedDistances[4] = {0, 3, 4, 5};
     // First pass
     for (int x = 0; x < distances.sizeX; x++) {
         for (int y = 0; y < distances.sizeY; y++) {
             for (int z = 0; z < distances.sizeZ; z++) {
                 float currentVal = distances.at(x, y, z);
-                if (!this->at(x, y, z)) continue;
+                if (!this->at(x, y, z)) {
+                    distances.at(x, y, z) = 0;
+                    continue;
+                }
                 for (int dx = x-1; dx <= x+1; dx++) {
                     for (int dy = y-1; dy <= y+1; dy++) {
                         for (int dz = z-1; dz <= z+1; dz++) {
-                            currentVal = std::min(currentVal, distances.at(dx, dy, dz)+1);
+                            // Weighted distance transform
+//                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + predefinedDistances[std::abs(dx) + std::abs(dy) + std::abs(dz)]);
+                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + (std::abs(dx) + std::abs(dy) + std::abs(dz)) * (std::abs(dx) + std::abs(dy) + std::abs(dz)));
                         }
                     }
                 }
@@ -840,22 +851,28 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
     for (int x = distances.sizeX-1; x >= 0; x--) {
         for (int y = distances.sizeY-1; y >= 0; y--) {
             for (int z = distances.sizeZ-1; z >= 0; z--) {
-                if (!this->at(x, y, z)) continue;
+                if (!this->at(x, y, z)) {
+                    distances.at(x, y, z) = 0;
+                    continue;
+                }
                 float currentVal = distances.at(x, y, z);
                 for (int dx = x-1; dx <= x+1; dx++) {
                     for (int dy = y-1; dy <= y+1; dy++) {
                         for (int dz = z-1; dz <= z+1; dz++) {
-                            currentVal = std::min(currentVal, distances.at(dx, dy, dz)+1);
+                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + (std::abs(dx) + std::abs(dy) + std::abs(dz))*(std::abs(dx) + std::abs(dy) + std::abs(dz)));
                         }
                     }
                 }
                 distances.at(x, y, z) = currentVal;
             }
         }
-    }*/
+    }
+//    distances /= 3.f; // We used a weighted distance, go back to normal
+    for (auto& d : distances) d = std::sqrt(d); // We used an Exact Euclidean Distance, go back to normal
     distances.raiseErrorOnBadCoord = true;
     distances.defaultValueOnBadCoord = 0.f;
-    return distances.normalize();
+//    std::cout << distances << "\n" << distances.displayValues() << std::endl;
+    return distances; //.normalize();
 }
 
 #endif // MATRIX3_H
