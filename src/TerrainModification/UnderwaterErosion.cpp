@@ -165,25 +165,20 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     KarstHole hole(path, this->maxRockSize);
     Matrix3<float> holeMatrix;
     Vector3 anchor;
-    std::tie(holeMatrix, anchor) = hole.generateMask();
+    std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
+    std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
     holeMatrix *= -this->maxRockStrength;
     RockErosion rock;
     erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
 
     std::vector<Vector3> coords;
-    for (float i = 0; i < 1.0; i += resolution)
-    {
-
-        Vector3 pos = (path.getPoint(i));
-        coords.push_back(pos);
-        coords.push_back(path.getPoint(i + resolution));
-        /*
-        Vector3 pos = (path.getPoint(i));
-        coords.push_back(pos);
-        float rockSize = width.getPoint(i).y * this->maxRockSize;
-        RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
-        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos, addingMatter);
-        coords.push_back(path.getPoint(i + resolution));*/
+    for (const auto& triangle : triangles) {
+        coords.push_back(triangle[0]);
+        coords.push_back(triangle[1]);
+        coords.push_back(triangle[1]);
+        coords.push_back(triangle[2]);
+        coords.push_back(triangle[2]);
+        coords.push_back(triangle[0]);
     }
     grid->applyModification(erosionMatrix);
     grid->remeshAll();
@@ -202,25 +197,26 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
 //    float resolution = 0.01;
     std::vector<std::vector<Vector3>> allCoords;
     for (BSpline& path : paths) {
-        float resolution = 0.10 / path.length();
-        std::vector<Vector3> coords;
+//        float resolution = 0.10 / path.length();
+//        std::vector<Vector3> coords;
 
         KarstHole hole(path, this->maxRockSize);
         Matrix3<float> holeMatrix;
         Vector3 anchor;
-        std::tie(holeMatrix, anchor) = hole.generateMask();
+        std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
+        std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
         holeMatrix *= -this->maxRockStrength;
         RockErosion rock;
         erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
 
-        for (float i = 0; i < 1.0; i += resolution)
-        {
-            Vector3 pos = path.getPoint(i);
-            coords.push_back(pos);/*
-            float rockSize = width.getPoint(i).y * this->maxRockSize;
-            RockErosion rock(random_gen::generate(0.0, rockSize), random_gen::generate(0.0, this->maxRockStrength));
-            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos, addingMatter);*/
-            coords.push_back(path.getPoint(i + resolution));
+        std::vector<Vector3> coords;
+        for (const auto& triangle : triangles) {
+            coords.push_back(triangle[0]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[0]);
         }
         allCoords.push_back(coords);
 //        break; // TO REMOVE
