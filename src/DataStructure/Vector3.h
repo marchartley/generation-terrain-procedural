@@ -48,6 +48,9 @@ public:
     Vector3 translated(Vector3 move);
 //    Vector3& setDirection(Vector3 dir, Vector3 upVector = Vector3(0, 0, 1));
 
+    Vector3& changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ);
+    Vector3 changedBasis(Vector3 newX, Vector3 newY, Vector3 newZ);
+
     float divergence() { return x + y + z; }
 
     Matrix toMatrix();

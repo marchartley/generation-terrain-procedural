@@ -168,6 +168,22 @@ Vector3 Vector3::translated(Vector3 move) {
     return v.translate(move);
 }
 
+Vector3 &Vector3::changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
+{
+    Vector3 newVec = this->changedBasis(newX, newY, newZ);
+    this->x = newVec.x;
+    this->y = newVec.y;
+    this->z = newVec.z;
+    return *this;
+}
+
+Vector3 Vector3::changedBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
+{
+    Vector3 newVec;
+    newVec += newX * this->x + newY * this->y + newZ * this->z;
+    return newVec;
+}
+
 //Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
 //{
 //    Vector3 forward = Vector3(0, 0, 1);//upVector.normalized();
