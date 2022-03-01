@@ -195,6 +195,8 @@ public:
     std::map<DebugMeshesNames, Mesh> debugMeshes;
     std::map<DebugMeshesNames, std::vector<ControlPoint*>> debugControlPoints;
 
+    Mesh randomParticlesInWater;
+
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;
 
