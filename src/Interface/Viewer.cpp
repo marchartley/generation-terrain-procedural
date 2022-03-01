@@ -146,7 +146,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
+        voxelGrid->retrieveMap(this->mapSavingFolder + "test_gravity.data"); //"cube.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
@@ -321,6 +321,8 @@ void Viewer::mousePressEvent(QMouseEvent *e)
     {
         this->throwRock();
     }
+    if (this->mouseInWorld)
+        std::cout << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
