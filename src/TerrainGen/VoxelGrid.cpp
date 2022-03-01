@@ -239,10 +239,10 @@ void VoxelGrid::makeItFall(float erosionStrength)
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
     auto start = std::chrono::system_clock::now();
-    this->applyModification(this->shareSandWithNeighbors());
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
+    this->applyModification(this->shareSandWithNeighbors());
     if (remesh)
         remeshAll();
     auto duration = std::chrono::duration<float>(std::chrono::system_clock::now() - start);
