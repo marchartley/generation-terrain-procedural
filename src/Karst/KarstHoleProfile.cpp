@@ -39,11 +39,23 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
 
 KarstHoleProfile &KarstHoleProfile::rotateTowardVector(Vector3 new_dir)
 {
-    Vector3 forward(0, 0, 1);
+    for (Vector3& point : this->vertices.points)
+        point.rotate(-3.141592/2.f, 0, 0);
+    Vector3 forward(0, 1, 0);
+    Vector3 up(0, 0, 1);
+    Vector3 right(1, 0, 0);
+
     new_dir.normalize();
     float angle = std::acos(forward.dot(new_dir));
+    Vector3 rotation = new_dir.cross(forward).normalize();
+    right.rotate(angle, rotation);
+    if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.99)
+        right = Vector3(0, 0, 1).cross(new_dir);
+    else
+        right = Vector3(0, 1, 1).cross(new_dir);
+    up = new_dir.cross(right);
     for (Vector3& point : this->vertices.points)
-        point.rotate(angle, new_dir.cross(forward).normalized());
+        point.changeBasis(right, new_dir, up);
     return *this;
 }
 
