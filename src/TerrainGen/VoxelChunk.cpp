@@ -256,7 +256,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
     if (this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end()) {
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[FRONT];
         int offset = addedLeft ? 1 : 0;
-        map.insertRow(offset, 1);
+        map.insertRow(/*offset*/0, 1);
         for (int x = 0; x < this->sizeX; x++) {
             for (int z = 0; z < this->height; z++)
             {
