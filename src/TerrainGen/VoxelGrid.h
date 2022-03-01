@@ -47,6 +47,7 @@ public:
 
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
+    Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
     void applyModification(Matrix3<float> modifications);
     void undo();
 

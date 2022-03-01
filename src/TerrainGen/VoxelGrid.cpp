@@ -22,7 +22,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
-//                        noise_val = 1.0; // To remove
+//                        noise_val = 1.1; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
 //                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
 //                        noise_val = 0.5; // To remove
@@ -239,6 +239,7 @@ void VoxelGrid::makeItFall(float erosionStrength)
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
     auto start = std::chrono::system_clock::now();
+    this->applyModification(this->shareSandWithNeighbors());
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
     }
@@ -246,6 +247,48 @@ void VoxelGrid::letGravityMakeSandFall(bool remesh)
         remeshAll();
     auto duration = std::chrono::duration<float>(std::chrono::system_clock::now() - start);
     std::cout << duration.count() << " s for making sand fall once" << std::endl;
+}
+
+Matrix3<float> VoxelGrid::shareSandWithNeighbors()
+{
+    Matrix3<float> allVoxels(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> transport(this->sizeX, this->sizeY, this->sizeZ);
+    for (auto& vc : this->chunks) {
+        allVoxels.paste(vc->getVoxelValues(), Vector3(vc->x, vc->y, 0));
+    }
+    allVoxels.raiseErrorOnBadCoord = false;
+    allVoxels.defaultValueOnBadCoord = std::numeric_limits<float>::max();
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                // Maybe check if val is movable (0 < val < 1.0)
+                float voxelValue = allVoxels.at(x, y, z);
+                if (voxelValue <= 0.0 || 1.0 <= voxelValue) continue;
+                float coefficient_to_share = 0.f;
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (dx == 0 && dy == 0) continue;
+                        float neighbor = allVoxels.at(x+dx, y+dy, z);
+                        if (0.0 <= neighbor && neighbor < 1.0) {
+                            coefficient_to_share += 1/sqrt((float)(dx*dx)+(dy*dy));
+                        }
+                    }
+                }
+                float value_to_share = voxelValue / (coefficient_to_share + 1.0);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        if (dx == 0 && dy == 0) continue;
+                        float neighbor = allVoxels.at(x+dx, y+dy, z);
+                        if (0.0 <= neighbor && neighbor < 1.0) {
+                            transport.at(x+dx, y+dy, z) += value_to_share / sqrt((float)(dx*dx)+(dy*dy)) * value_to_share;
+                        }
+                    }
+                }
+                transport.at(x, y, z) -= value_to_share * coefficient_to_share;
+            }
+        }
+    }
+    return transport;
 }
 
 void VoxelGrid::applyModification(Matrix3<float> modifications)
