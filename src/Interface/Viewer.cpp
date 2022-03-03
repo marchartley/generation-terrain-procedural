@@ -157,11 +157,13 @@ void Viewer::init() {
         updateFlowfieldDebugMesh();
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
-        std::vector<Vector3> randomParticles(voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ);
-        for (int i = 0; i < voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ / 2; i++) {
+        std::vector<Vector3> randomParticles(4 * voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ);
+        for (int i = 0; i < 4 * voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ; i+= 4) {
             Vector3 pos(random_gen::generate() * dim.x, random_gen::generate() * dim.y, random_gen::generate() * dim.z);
-            randomParticles[2*i] = pos;
-            randomParticles[2*i+1] = pos + Vector3::random() * 0.1;
+            randomParticles[i+0] = pos;
+            randomParticles[i+1] = pos + Vector3::random() * 0.1;
+            randomParticles[i+2] = pos + Vector3::random() * 0.1;
+            randomParticles[i+3] = pos + Vector3::random() * 0.1;
         }
         this->randomParticlesInWater.fromArray(randomParticles);
         this->randomParticlesInWater.shader = std::make_shared<Shader>(vNoShader, fNoShader);
@@ -290,7 +292,7 @@ void Viewer::draw() {
             grabber->display();
         }
     }
-    randomParticlesInWater.display(GL_LINES, 3);
+    randomParticlesInWater.display(GL_QUADS);
     //    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
     glLineWidth(previousLineWidth[0]);
 
