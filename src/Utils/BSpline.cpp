@@ -57,9 +57,9 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
 
 Vector3 BSpline::getDerivative(float x)
 {
-    float previousTime = std::max(0.f, x + 0.001f);
-    float nextTime = std::min(1.f, x - 0.001f);
-    return (getPoint(previousTime) - getPoint(nextTime)).normalized();
+    float previousTime = std::max(0.f, x - 0.001f);
+    float nextTime = std::min(1.f, x + 0.001f);
+    return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
 
 float BSpline::estimateClosestTime(Vector3 pos)

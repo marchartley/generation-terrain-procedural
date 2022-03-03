@@ -160,7 +160,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
                                                      Vector3(1.0, 1.0)
                                                  }));
 
-    float resolution = 1.0 / path.length();
+//    float resolution = 1.0 / path.length();
 
     KarstHole hole(path, this->maxRockSize);
     Matrix3<float> holeMatrix;

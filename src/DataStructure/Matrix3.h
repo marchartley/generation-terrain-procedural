@@ -834,12 +834,12 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
                     distances.at(x, y, z) = 0;
                     continue;
                 }
-                for (int dx = x-1; dx <= x+1; dx++) {
-                    for (int dy = y-1; dy <= y+1; dy++) {
-                        for (int dz = z-1; dz <= z+1; dz++) {
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
                             // Weighted distance transform
 //                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + predefinedDistances[std::abs(dx) + std::abs(dy) + std::abs(dz)]);
-                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + (std::abs(dx) + std::abs(dy) + std::abs(dz)) * (std::abs(dx) + std::abs(dy) + std::abs(dz)));
+                            currentVal = std::min(currentVal, distances.at(x+dx, y+dy, z+dz) + (float)std::sqrt(dx*dx + dy*dy + dz*dz));
                         }
                     }
                 }
@@ -856,10 +856,10 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
                     continue;
                 }
                 float currentVal = distances.at(x, y, z);
-                for (int dx = x-1; dx <= x+1; dx++) {
-                    for (int dy = y-1; dy <= y+1; dy++) {
-                        for (int dz = z-1; dz <= z+1; dz++) {
-                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + (std::abs(dx) + std::abs(dy) + std::abs(dz))*(std::abs(dx) + std::abs(dy) + std::abs(dz)));
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            currentVal = std::min(currentVal, distances.at(x+dx, y+dy, z+dz) + (float)std::sqrt(dx*dx + dy*dy + dz*dz));
                         }
                     }
                 }
@@ -868,10 +868,11 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
         }
     }
 //    distances /= 3.f; // We used a weighted distance, go back to normal
-    for (auto& d : distances) d = std::sqrt(d); // We used an Exact Euclidean Distance, go back to normal
+    /*for (auto& d : distances) {
+        d = std::sqrt(d); // We used an Exact Euclidean Distance, go back to normal
+    }*/
     distances.raiseErrorOnBadCoord = true;
     distances.defaultValueOnBadCoord = 0.f;
-//    std::cout << distances << "\n" << distances.displayValues() << std::endl;
     return distances; //.normalize();
 }
 

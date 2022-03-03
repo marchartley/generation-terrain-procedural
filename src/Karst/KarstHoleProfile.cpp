@@ -49,11 +49,12 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(Vector3 new_dir)
     float angle = std::acos(forward.dot(new_dir));
     Vector3 rotation = new_dir.cross(forward).normalize();
     right.rotate(angle, rotation);
-    if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.99)
+    if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.9)
         right = Vector3(0, 0, 1).cross(new_dir);
     else
         right = Vector3(0, 1, 1).cross(new_dir);
     up = new_dir.cross(right);
+    std::cout << new_dir << " " << right << " " << up << std::endl;
     for (Vector3& point : this->vertices.points)
         point.changeBasis(right, new_dir, up);
     return *this;
@@ -86,6 +87,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
         interpolatedPoints[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t);
     }
     KarstHoleProfile interpolation(interpolatedPoints);
+    std::cout << "Path length : " << path.length() << " and t = " << t << " -> derivative : " << path.getDerivative(t) << "\n";
     return interpolation.rotateTowardVector(path.getDerivative(t)).translate(path.getPoint(t));
 }
 std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t)

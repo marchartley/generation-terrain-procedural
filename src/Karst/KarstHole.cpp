@@ -4,8 +4,8 @@
 
 KarstHole::KarstHole(float size)
 {
-    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(size, size);
-    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(size, size);
+    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::TUBE).setSize(size, size);
+    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::TUBE).setSize(size, size);
     this->path = BSpline();
     this->size = size;
 }
@@ -231,10 +231,17 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
         }
     }
     mask = mask.toDistanceMap();
-
+    float maxDistance = mask.max();//this->size/2.f;
+    /*for (float& m : mask) {
+        if (m > maxDistance) m = maxDistance;
+    }*/
+//    std::cout << "Min distances : " << mask.min() << " -- max : " << mask.max() << " -- clamped to " << maxDistance << "\n";
+//    std::cout << mask.displayValues() << std::endl;
     for (float& m : mask) {
-        if (m > 5.f) m = 5.f;
-        m = interpolation::linear(m, 0.f, 5.f);
+        if (m > 0) {
+            int a = 0;
+        }
+        m = interpolation::linear(m, 0.f, maxDistance);
 //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
     }
     Vector3 anchor = this->path.points[0] - minVec;
