@@ -54,6 +54,9 @@ in vec3 initialVertPos;
 uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
+uniform float fogNear;
+uniform float fogFar;
+
 out vec4 fragColor;
 
 in vec3 realNormal;
@@ -110,27 +113,15 @@ void main(void)
 
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz, 1.0);
 
-    vec4 fogColor = vec4(0.7, 0.8, 0.9, 1.0);
-    float fogStart = 400.0;
-    float fogEnd = 600.0;
-    float dist = length(vertEyeSpacePos/10);
-
-//    if (dist > 5000.0)
-//        fragColor = vec4(1.0, 1.0, 1.0, 1.0);
-//    else
-//        fragColor = vec4(1.0, 0.0, 0.0, 1.0);
-//    return;
-
-
+    vec4 fogColor = vec4(0.2, 0.2, 0.2, 1.0);//vec4(0.7, 0.8, 0.9, 1.0);
+    float fogStart = fogNear;
+    float fogEnd = fogFar;
+    float dist = length(vertEyeSpacePos);
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
 //    material_color = mix(material_color, varyingColor, .80);
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz, 1.0);
 
 //    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
-
-//    bool isLight = length(vec3(proj_matrix * vec4(light.position, 1.0)).yz*10 - vertEyeSpacePos.xy) < 1.0;
-//    if (isLight)
-//        fragColor = vec4(V, 1.0) ;//vec4(1.0, 1.0, 1.0, 1.0);
 
 }

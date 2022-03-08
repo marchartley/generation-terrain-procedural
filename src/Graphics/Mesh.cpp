@@ -55,6 +55,7 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
     this->vertexArray = vertices;
     computeIndices(indices);
     this->vertexArrayFloat = Vector3::toArray(vertices);
+    this->needToUpdatePositions = true;
 
     this->computeNormals();
     this->computeColors();
@@ -134,6 +135,7 @@ void Mesh::computeNormals()
             this->normalsArrayFloat.insert(this->normalsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
         }
     }
+    this->needToUpdateNormals = true;
 }
 void Mesh::computeColors()
 {
@@ -161,6 +163,7 @@ void Mesh::computeColors()
             this->colorsArrayFloat.insert(this->colorsArrayFloat.end(), meanNormal.begin(), meanNormal.end());
         }
     }
+    this->needToUpdateColors = true;
 }
 
 void Mesh::setShaderToAllMeshesWithoutShader(Shader newShader)
@@ -193,7 +196,8 @@ void Mesh::pushToBuffer()
     GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[this->bufferID]);
     // Vertex
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 0]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
+    if (needToUpdatePositions)
+        GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->vertexArrayFloat.size() * sizeof(float), &this->vertexArrayFloat.front(), GL_STATIC_DRAW);
     GlobalsGL::f()->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glEnableVertexAttribArray(0);
 
@@ -201,13 +205,15 @@ void Mesh::pushToBuffer()
 
     // Normals
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 2]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
+    if (needToUpdateNormals)
+        GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->normalsArrayFloat.size() * sizeof(float), &this->normalsArrayFloat.front(), GL_STATIC_DRAW);
     GlobalsGL::f()->glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glEnableVertexAttribArray(2);
 
-    // Random stuff
+    // Colors
     GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, GlobalsGL::vbo[this->bufferID * 10 + 3]);
-    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
+    if (needToUpdateColors)
+        GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
     GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
     GlobalsGL::f()->glEnableVertexAttribArray(3);
     this->bufferReady = true;
