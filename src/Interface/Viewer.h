@@ -196,6 +196,10 @@ public:
     std::map<DebugMeshesNames, std::vector<ControlPoint*>> debugControlPoints;
 
     Mesh randomParticlesInWater;
+    bool displayParticles = false;
+    FastNoiseLite randomParticlesDisplacementNoise;
+    float fogNear = 1000.f;
+    float fogFar = 5000.f;
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;

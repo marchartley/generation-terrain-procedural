@@ -62,6 +62,8 @@ struct Material {
     float shininness;
 };
 
+uniform float fogNear;
+uniform float fogFar;
 uniform float offsetX;
 uniform float offsetY;
 

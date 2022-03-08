@@ -38,6 +38,11 @@ public:
 
     bool useIndices = true;
 
+    bool needToUpdatePositions = true;
+    bool needToUpdateTextures = true;
+    bool needToUpdateNormals = true;
+    bool needToUpdateColors = true;
+
 //protected:
     void computeIndices(std::vector<int> indices = std::vector<int>());
     void computeNormals();

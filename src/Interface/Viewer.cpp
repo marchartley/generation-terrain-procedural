@@ -67,6 +67,8 @@ void Viewer::init() {
 //    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
     const char* vNoShader = ":/src/Shaders/no_vertex_shader.glsl";
     const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
+    const char* vParticleShader = ":/src/Shaders/particle_vertex_shader.glsl";
+    const char* fParticleShader = ":/src/Shaders/particle_fragment_shader.glsl";
 
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
@@ -146,27 +148,37 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->retrieveMap(this->mapSavingFolder + "test_gravity.data"); //"cube.data");
+        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data"); //"cube.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         this->voxelGrid->createMesh();
-        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
+        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
+        }
         this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
 //        this->initSpaceColonizer();
-        updateFlowfieldDebugMesh();
+//        updateFlowfieldDebugMesh();
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
-        std::vector<Vector3> randomParticles(4 * voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ);
-        for (int i = 0; i < 4 * voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ; i+= 4) {
+        this->randomParticlesDisplacementNoise.SetFrequency(0.1);
+        int number_of_particles = (voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ) / 500;
+        this->randomParticlesInWater.colorsArray = std::vector<Vector3>(4 * number_of_particles);
+        std::vector<Vector3> randomParticles(4 * number_of_particles);
+        for (size_t i = 0; i < randomParticles.size(); i += 4) {
+            randomParticles[i+0] = Vector3(0, 0, 0);
+            randomParticles[i+1] = Vector3::random() * 0.5;
+            randomParticles[i+2] = Vector3::random() * 0.5;
+            randomParticles[i+3] = Vector3::random() * 0.5;
+
             Vector3 pos(random_gen::generate() * dim.x, random_gen::generate() * dim.y, random_gen::generate() * dim.z);
-            randomParticles[i+0] = pos;
-            randomParticles[i+1] = pos + Vector3::random() * 0.1;
-            randomParticles[i+2] = pos + Vector3::random() * 0.1;
-            randomParticles[i+3] = pos + Vector3::random() * 0.1;
+            this->randomParticlesInWater.colorsArray[i+0] = pos;
+            this->randomParticlesInWater.colorsArray[i+1] = pos;
+            this->randomParticlesInWater.colorsArray[i+2] = pos;
+            this->randomParticlesInWater.colorsArray[i+3] = pos;
         }
+        this->randomParticlesInWater.useIndices = false;
         this->randomParticlesInWater.fromArray(randomParticles);
-        this->randomParticlesInWater.shader = std::make_shared<Shader>(vNoShader, fNoShader);
+        this->randomParticlesInWater.shader = std::make_shared<Shader>(vParticleShader, fParticleShader);
         this->randomParticlesInWater.shader->setVector("color", std::vector<float>({46/255.f, 12/255.f, 200/255.f, .2f}));
     }
 
@@ -190,7 +202,6 @@ void Viewer::draw() {
     float mvMatrix[16];
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
-
 
     Material ground_material(
                     new float[4]{.48, .16, .04, 1.},
@@ -250,6 +261,8 @@ void Viewer::draw() {
                     vc->mesh.shader->setBool("display_light_source", true);
                     vc->mesh.shader->setVector("min_vertice_positions", minVoxelsShown());
                     vc->mesh.shader->setVector("max_vertice_positions", maxVoxelsShown());
+                    vc->mesh.shader->setFloat("fogNear", this->fogNear);
+                    vc->mesh.shader->setFloat("fogFar", this->fogFar);
                 }
                 this->voxelGrid->display();
             }
@@ -292,7 +305,32 @@ void Viewer::draw() {
             grabber->display();
         }
     }
-    randomParticlesInWater.display(GL_QUADS);
+    if (this->displayParticles) {
+
+        Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
+        std::vector<Vector3> displacements = this->randomParticlesInWater.colorsArray;
+        for (size_t i = 0; i < displacements.size(); i+=4) {
+            Vector3 displacement = Vector3(
+                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +10),
+                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +100),
+                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +1000)
+                        ).normalize() * 0.1f;
+
+            if (displacements[i+0].x > dim.x + 10) displacement.x = 0;
+            if (displacements[i+0].x < -10) displacement.x = dim.x + 10;
+            if (displacements[i+0].y > dim.y + 10) displacement.y = 0;
+            if (displacements[i+0].y < -10) displacement.y = dim.y + 10;
+            if (displacements[i+0].z > dim.z + 10) displacement.z = 0;
+            if (displacements[i+0].z < -10) displacement.z = dim.z + 10;
+            displacements[i+0] += displacement;
+            displacements[i+1] += displacement;
+            displacements[i+2] += displacement;
+            displacements[i+3] += displacement;
+        }
+        randomParticlesInWater.colorsArray = displacements;
+        randomParticlesInWater.computeColors();
+        randomParticlesInWater.display(GL_QUADS);
+    }
     //    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
     glLineWidth(previousLineWidth[0]);
 
@@ -336,7 +374,7 @@ void Viewer::mousePressEvent(QMouseEvent *e)
         this->throwRock();
     }
     if (this->mouseInWorld)
-        std::cout << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+        std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
@@ -534,33 +572,15 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
     }
     if (useAltCamera) {
         this->setCamera(this->alternativeCamera);
-        /*
-        if (this->spaceColonizationInterface->keyFramesPaths.size() > 0) {
-//        if  (this->alternativeCamera->keyFrameInterpolator(0)) {
-//            qglviewer::KeyFrameInterpolator *interp = this->alternativeCamera->keyFrameInterpolator(0);
-            qglviewer::KeyFrameInterpolator *interp = this->spaceColonizationInterface->keyFramesPaths[0];
-            interp->setInterpolationSpeed(1.0);
-            interp->setLoopInterpolation(true);
-            QObject::connect(interp, SIGNAL(interpolated()),
-                             this, SLOT(frameInterpolated()));
-            QObject::connect(interp, SIGNAL(endReached()),
-                             this, SLOT(frameInterpolated()));
-            for (int i = 0; i < interp->numberOfKeyFrames(); i++) {
-                qglviewer::Vec v;
-                interp->keyFrame(i).getPosition(v.x, v.y, v.z);
-                std::cout << v.x << " " << v.y << " " << v.z << " -> t=" << interp->keyFrameTime(i) << std::endl;
-//                interp->keyFrame(i).setPosition(v.x * 1000, v.y * 1000, v.z * 1000);
-            }
-//            this->camera()->setKeyFrameInterpolator(0, interp);
-//            interp->setFrame(this->camera()->frame());
-            interp->startInterpolation();
-            std::cout << (interp->interpolationIsStarted() ? "Started" : "Not started") << std::endl;
-            std::cout << "Should take " << interp->duration() << "s between " << interp->firstTime() << " and " << interp->lastTime() << std::endl;
-//            this->camera()->playPath(0);
-        }*/
+        this->displayParticles = true;
+        this->fogNear = 10.f;
+        this->fogFar = 50.f;
     }
     else {
         this->setCamera(this->mainCamera);
+        this->displayParticles = false;
+        this->fogNear = 1000.f;
+        this->fogFar = 5000.f;
     }
 }
 
