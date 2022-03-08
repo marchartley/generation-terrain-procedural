@@ -15,7 +15,7 @@ public:
     std::vector<Vector3> getPath(float resolution);
     Vector3 getPoint(float x);
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
-    Vector3 getDerivative(float x);
+    Vector3 getDerivative(float x, bool verbose = false);
     float estimateClosestTime(Vector3 pos);
     Vector3 estimateClosestPos(Vector3 pos);
     float length();
