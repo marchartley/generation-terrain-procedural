@@ -55,10 +55,17 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
     return a * (1 - x) + b * x;
 }
 
-Vector3 BSpline::getDerivative(float x)
+Vector3 BSpline::getDerivative(float x, bool verbose)
 {
     float previousTime = std::max(0.f, x - 0.001f);
     float nextTime = std::min(1.f, x + 0.001f);
+    if (verbose) {
+        std::cout << "Getting the derivative of a path with " << this->points.size() << " points : \n";
+        for (const auto& p : this->points)
+            std::cout << " - " << p << "\n";
+        std::cout << "Position used : " << previousTime << " and " << nextTime << " -> " << getPoint(nextTime) << " - " << getPoint(previousTime) << " = " << getPoint(nextTime) - getPoint(previousTime) << "\n";
+    }
+
     return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
 
@@ -129,6 +136,8 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
 
 Vector3 BSpline::getCatmullPoint(float x)
 {
+    if (x == 0.f) return this->points[0];
+    if (x == 1.f) return this->points[this->points.size() - 1];
     float alpha = 0.5f;
 
     //alpha /= 2.f;
