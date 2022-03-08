@@ -149,6 +149,8 @@ RESOURCES +=\
     src/Shaders/layer_based_vertex_shader.glsl \
     src/Shaders/no_fragment_shader.glsl \
     src/Shaders/no_vertex_shader.glsl \
+    src/Shaders/particle_fragment_shader.glsl \
+    src/Shaders/particle_vertex_shader.glsl \
     src/Shaders/noise.glsl \
     src/assets/handle.png \
     src/Shaders/voxels_fragment_shader_blinn_phong.glsl \
