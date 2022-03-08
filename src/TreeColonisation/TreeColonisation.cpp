@@ -140,6 +140,19 @@ void TreeColonisation::process()
     return;
 }
 
+std::pair<std::string, std::string> TreeColonisation::toFile()
+{
+    std::string allNodes;
+    std::string allLinks;
+
+    for (size_t i = 0; i < this->segments.size(); i++) {
+        allNodes += std::to_string(this->segments[i]->pos.x) + " " + std::to_string(this->segments[i]->pos.y) + " " + std::to_string(this->segments[i]->pos.z) + "\n";
+        if (this->segments[i]->parent != nullptr)
+            allLinks += std::to_string(i+1) + " " + std::to_string(std::find(this->segments.begin(), this->segments.end(), this->segments[i]->parent) - this->segments.begin()+1) + "\n";
+    }
+    return std::make_pair(allNodes, allLinks);
+}
+
 #include <set>
 std::vector<std::vector<Vector3> > TreeColonisation::simplifyPaths()
 {
