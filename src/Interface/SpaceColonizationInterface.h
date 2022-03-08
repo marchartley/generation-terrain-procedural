@@ -45,7 +45,7 @@ public Q_SLOTS:
     void initSpaceColonizer();
     void computeKarst();
     void updateKarstPath();
-    void createKarst();
+    void createKarst(bool usingSpheres = false);
 
 public:
     TreeColonisation* colonizer = nullptr;

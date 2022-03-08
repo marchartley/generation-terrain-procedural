@@ -111,12 +111,24 @@ void SpaceColonizationInterface::updateKarstPath()
     Q_EMIT this->karstPathUpdated();
 }
 
-void SpaceColonizationInterface::createKarst()
+void SpaceColonizationInterface::createKarst(bool usingSpheres)
 {
     if (this->karstPaths.empty())
         this->updateKarstPath();
     UnderwaterErosion erod(this->voxelGrid, 15.f, 3.f, 10);
-    erod.CreateMultipleTunnels(this->karstPaths);
+    erod.CreateMultipleTunnels(this->karstPaths, false, usingSpheres);
+
+    std::string nodes, links;
+    std::tie(nodes, links) = this->colonizer->toFile();
+    std::ofstream nodeFile;
+    nodeFile.open("../karst_nodes.dat", std::ios::out);
+    nodeFile << nodes;
+    nodeFile.close();
+    std::ofstream linkFile;
+    linkFile.open("../karst_links.dat", std::ios::out);
+    linkFile << links;
+    linkFile.close();
+
 }
 
 QHBoxLayout *SpaceColonizationInterface::createGUI()
@@ -125,11 +137,12 @@ QHBoxLayout *SpaceColonizationInterface::createGUI()
 
     QPushButton* spaceColonizerPreviewButton = new QPushButton("Calculer");
     QPushButton* spaceColonizerConfirmButton = new QPushButton("Creer le karst");
+    QPushButton* spaceColonizerQuickConfirmButton = new QPushButton("Tunnel rond");
     QCheckBox* spaceColonizerDisplay = new QCheckBox("Afficher");
     QCheckBox* useAsMainCamera = new QCheckBox("Observer l'interieur");
     FancySlider* spaceColonizerSegmentSize = new FancySlider(Qt::Orientation::Horizontal, 1.0, 40.0, 1.0);
     FancySlider* spaceColonizerRandomness = new FancySlider(Qt::Orientation::Horizontal, 0.0, 1.0, 0.1);
-    this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton}));
+    this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerPreviewButton, spaceColonizerConfirmButton, spaceColonizerQuickConfirmButton}));
     this->spaceColonizationLayout->addWidget(createVerticalGroup({
                                                            createSliderGroup("Taille des segments", spaceColonizerSegmentSize),
                                                            createSliderGroup("Aleatoire", spaceColonizerRandomness)
@@ -137,7 +150,8 @@ QHBoxLayout *SpaceColonizationInterface::createGUI()
     this->spaceColonizationLayout->addWidget(createVerticalGroup({spaceColonizerDisplay, useAsMainCamera}));
 
     QObject::connect(spaceColonizerPreviewButton, &QPushButton::pressed, this, &SpaceColonizationInterface::computeKarst);
-    QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, this, &SpaceColonizationInterface::createKarst); // [=](){ this->viewer->createTunnelFromSpaceColonizer(); } );
+    QObject::connect(spaceColonizerConfirmButton, &QPushButton::pressed, [=](){ this->createKarst(false); } );
+    QObject::connect(spaceColonizerQuickConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(true); } );
     QObject::connect(spaceColonizerRandomness, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->randomness = val; this->computeKarst(); } );
     QObject::connect(spaceColonizerSegmentSize, &FancySlider::floatValueChanged, this, [=](float val){ this->colonizer->segmentLength = val; this->computeKarst(); } );
     QObject::connect(spaceColonizerDisplay, &QCheckBox::toggled, this, [=](bool display){ this->isHidden = !display; } );

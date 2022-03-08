@@ -30,6 +30,8 @@ namespace TreeColonisationAlgo {
 
         void process();
 
+        std::pair<std::string, std::string> toFile();
+
         std::vector<std::vector<Vector3>> simplifyPaths();
 
         float nodeMinDistance;
