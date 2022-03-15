@@ -145,14 +145,14 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
 }
 
 
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter, bool applyChanges)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
     for (Vector3& coord : curve.points)
         coord = ((coord + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
-    return CreateTunnel(curve, addingMatter);
+    return CreateTunnel(curve, addingMatter, applyChanges);
 }
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
@@ -163,7 +163,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
 
     std::vector<Vector3> coords;
     if (usingSpheres) {
-        float resolution = (this->maxRockSize/2.f) / path.length();
+        float resolution = (this->maxRockSize/5.f) / path.length();
         RockErosion rock(this->maxRockSize, this->maxRockStrength);
         for (const auto& pos : path.getPath(resolution)) {
             erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
@@ -197,11 +197,12 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
         }
     }
     grid->applyModification(erosionMatrix);
-    grid->remeshAll();
+    if (applyChanges)
+        grid->remeshAll();
     return coords;
 }
 
-std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres)
+std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
@@ -243,7 +244,8 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
         }
     }
     grid->applyModification(erosionMatrix);
-    grid->remeshAll();
+    if (applyChanges)
+        grid->remeshAll();
     return allCoords;
 }
 
