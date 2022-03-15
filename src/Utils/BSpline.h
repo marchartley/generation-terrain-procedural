@@ -16,9 +16,16 @@ public:
     Vector3 getPoint(float x);
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
     Vector3 getDerivative(float x, bool verbose = false);
+    Vector3 getSecondDerivative(float x);
     float estimateClosestTime(Vector3 pos);
     Vector3 estimateClosestPos(Vector3 pos);
     float length();
+
+    Vector3 getCenterCircle(float x);
+    Vector3 getDirection(float x);
+    Vector3 getNormal(float x);
+    Vector3 getBinormal(float x);
+    float getCurvature(float x);
 
     BSpline& close();
 
