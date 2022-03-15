@@ -69,6 +69,13 @@ Vector3 BSpline::getDerivative(float x, bool verbose)
     return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
 
+Vector3 BSpline::getSecondDerivative(float x)
+{
+    float previousTime = std::max(0.f, x - 0.001f);
+    float nextTime = std::min(1.f, x + 0.001f);
+    return (getDerivative(nextTime) - getDerivative(previousTime)).normalized();
+}
+
 float BSpline::estimateClosestTime(Vector3 pos)
 {
     int checks = 0;
@@ -115,6 +122,31 @@ float BSpline::length()
         length += (this->points[i] - this->points[i + 1]).norm();
     }
     return length;
+}
+
+Vector3 BSpline::getCenterCircle(float x)
+{
+    return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));
+}
+
+Vector3 BSpline::getDirection(float x)
+{
+    return this->getDerivative(x).normalize();
+}
+
+Vector3 BSpline::getNormal(float x)
+{
+    return this->getSecondDerivative(x).normalize();
+}
+
+Vector3 BSpline::getBinormal(float x)
+{
+    return this->getDirection(x).cross(this->getNormal(x)).normalize();
+}
+
+float BSpline::getCurvature(float x)
+{
+    return (getDerivative(x).cross(getSecondDerivative(x))).norm() / (std::pow(getDerivative(x).norm(), 3));
 }
 
 BSpline& BSpline::close()
