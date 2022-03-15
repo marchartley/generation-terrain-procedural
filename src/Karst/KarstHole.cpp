@@ -4,8 +4,8 @@
 
 KarstHole::KarstHole(float size)
 {
-    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::TUBE).setSize(size, size);
-    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::TUBE).setSize(size, size);
+    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(size, size);
+    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(size, size);
     this->path = BSpline();
     this->size = size;
 }
@@ -42,8 +42,8 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
-    int number_of_points = 10;
-    int number_of_intermediates = std::min(5, int(this->path.points.size())*2);
+    int number_of_points = 5;
+    int number_of_intermediates = int(this->path.points.size())*2; // std::min(5, int(this->path.points.size())*2);
     float dt = 1.f / (float)(number_of_intermediates - 1);
     for (int i = 0; i < number_of_intermediates; i++) {
         float t = i * dt;
@@ -60,20 +60,19 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
 
     std::vector<std::vector<Vector3>> triangles;
     std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates + 2);
-    for (int i = 0; i < number_of_intermediates + 2; i++) {
-        float t = (i-1.f) * dt;
+    for (int iT = 0; iT < number_of_intermediates + 2; iT++) {
+        float t = (iT-1.f) * dt;
         std::vector<Vector3> points;
-        if (i == 0)
-            points = this->interpolate(0.0).translate(path.getDerivative(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
-        else if(i == number_of_intermediates + 1)
-            points = this->interpolate(1.0).translate(path.getDerivative(1.f) * this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
+        if (iT == 0)
+            points = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
+        else if(iT == number_of_intermediates + 1)
+            points = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
         else
             points = this->interpolate(t).vertices.getPath(1.f / (float)(number_of_points - 1));
 
-
-        allIntermediateVertices[i] = points;
+        allIntermediateVertices[iT] = points;
         // Add the closing faces only on the first and last of the path using the "ear clipping" method
-        if (i == 0 || i == number_of_intermediates + 1) {
+        if (iT == 0 || iT == number_of_intermediates + 1) {
             Vector3 middle(0, 0, 0);
             Vector3 ray; //Vector3(-1.1, -1.2, points[i].z);
             Vector3 kindOfTangent;
@@ -105,6 +104,10 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
                 max_tries --;
                 if (max_tries < 0) {
                     std::cout << "Breaking : too much iterations" << std::endl;
+                    for (int i = 0; i < number_of_points; i++) {
+                        std::cout << points[i] << "\n";
+                    }
+                    std::cout << std::endl;
                     break;
                 }
                 int previous = remaining_nodes[0],
@@ -145,7 +148,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
                     // Otherwise, rotate the list just to change the first 3 values
                     std::rotate(remaining_nodes.begin(), remaining_nodes.begin() + 1, remaining_nodes.end());
                     if (max_tries < 10) {
-                        std::cout << "For polygon " << i << " and triangle " << previous << "-" << current << "-" << next << ": ";
+                        std::cout << "For polygon " << iT << " and triangle " << previous << "-" << current << "-" << next << ": ";
                         if (!valid)
                             std::cout << "\n- The line " << previous << "-" << next << " has an intersection with line " << intersectionId1 << "-" << intersectionId2 << ".";
                         if (number_of_intersections % 2 == 0)
@@ -210,7 +213,14 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                 Vector3 point(x, y, z);
                 bool allCollisionsValidated = false;
                 int numberOfCollisions = 0;
+                int currentTry = 0;
                 while (!allCollisionsValidated) {
+                    currentTry++;
+                    if (currentTry > 100) {
+                        numberOfCollisions = 1; // Set it inside
+                        std::cout << "Way too much iterations..." << std::endl;
+                        break;
+                    }
                     allCollisionsValidated = true;
                     numberOfCollisions = 0;
                     Vector3 ray = (Vector3::random().normalize() * 200.f * maxVec).translate((maxVec + minVec)/ 2.f);
@@ -218,10 +228,10 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                         int collision_result = this->segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
                         if (collision_result == 1)
                             numberOfCollisions ++;
-//                        else if (collision_result == -1) {
-//                            allCollisionsValidated = false;
-//                            break;
-//                        }
+                        else if (collision_result == -1) {
+                            allCollisionsValidated = false;
+                            break;
+                        }
                     }
                 }
                 if (numberOfCollisions % 2 == 1) {
@@ -238,9 +248,6 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
 //    std::cout << "Min distances : " << mask.min() << " -- max : " << mask.max() << " -- clamped to " << maxDistance << "\n";
 //    std::cout << mask.displayValues() << std::endl;
     for (float& m : mask) {
-        if (m > 0) {
-            int a = 0;
-        }
         m = interpolation::linear(m, 0.f, maxDistance);
 //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
     }
@@ -254,9 +261,17 @@ float tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
 int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
 int KarstHole::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
 {
+    Vector3 ray = (s1 - s2).normalize();
+    Vector3 segment1 = (s1 - t1).normalize();
+    Vector3 segment2 = (s1 - t2).normalize();
+    Vector3 segment3 = (s1 - t3).normalize();
+    if (ray.dot(segment1) > 0.99 || ray.dot(segment2) > 0.99 || ray.dot(segment3) > 0.99) {
+//        std::cout << ray << "." << segment1 << " = " << ray.dot(segment1) << " " << ray << "." << segment2 << " = " << ray.dot(segment2) << " " << ray << "." << segment3 << " = " << ray.dot(segment3) << std::endl;
+        return -1;
+    }
     // Compute tetraheadron "signed" volume from one end of the segment and the triangle
     float product_of_volumes = tetrahedronSignedVolume(s1, t1, t2, t3) * tetrahedronSignedVolume(s2, t1, t2, t3);
-    if (std::abs(product_of_volumes) < 0.000001)
+    if (std::abs(product_of_volumes) < 0.000001 || sign(product_of_volumes) == 0)
         return -1;
     if (sign(product_of_volumes) > 0) // Same sign for the two volums computed
         return 0;

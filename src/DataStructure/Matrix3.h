@@ -60,6 +60,8 @@ public:
     T min() const;
     T max() const;
 
+    Matrix3<T> abs() const;
+
     Matrix3<T> rounded(int precision = 0) const;
 
     Matrix3<T>& normalize();
@@ -296,6 +298,15 @@ T Matrix3<T>::max() const
     for(const T& val : this->data)
         max = std::max(max, val);
     return max;
+}
+
+template <class T>
+Matrix3<T> Matrix3<T>::abs() const
+{
+    Matrix3<T> m = *this;
+    for (T& val : m)
+        val = std::abs(val);
+    return m;
 }
 
 template<class T>
@@ -746,81 +757,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
     Matrix3<float> distances(this->sizeX, this->sizeY, this->sizeZ, std::numeric_limits<float>::max() - 10000);
     distances.raiseErrorOnBadCoord = false;
     distances.defaultValueOnBadCoord = 0.f;
-/*
-    for (int i = 0; i < 2; i++) {
-        // Check left
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x - 1, y, z) + 1);
-                    }
-                }
-            }
-        }
-        // Check right
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x + 1, y, z) + 1);
-                    }
-                }
-            }
-        }
-        // Check front
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y - 1, z) + 1);
-                    }
-                }
-            }
-        }
-        // Check back
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y + 1, z) + 1);
-                    }
-                }
-            }
-        }
-        // Check down
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z - 1) + 1);
-                    }
-                }
-            }
-        }
-        // Check up
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    if (this->at(x, y, z) < .5) {
-                        distances(x, y, z) = 0;
-                    } else {
-                        distances(x, y, z) = std::min(distances(x, y, z), distances(x, y, z + 1) + 1);
-                    }
-                }
-            }
-        }
-    }*/
+
     // Using the Chamfer distance -> direct neighbor               => distance = 3
     //                               diagonal on 2 axis neighbor   => distance = 4
     //                               diagonal on all axis neighbor => distance = 5

@@ -3,6 +3,7 @@
 #include "TerrainModification/RockErosion.h"
 #include "Utils/BSpline.h"
 #include "Karst/KarstHole.h"
+#include "Utils/Utils.h"
 
 
 UnderwaterErosion::UnderwaterErosion()
@@ -151,7 +152,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
         coord = ((coord + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter);
 }
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
@@ -160,25 +161,40 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
                                                      Vector3(1.0, 1.0)
                                                  }));
 
-//    float resolution = 1.0 / path.length();
-
-    KarstHole hole(path, this->maxRockSize);
-    Matrix3<float> holeMatrix;
-    Vector3 anchor;
-    std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
-    std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
-    holeMatrix *= -this->maxRockStrength;
-    RockErosion rock;
-    erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
-
     std::vector<Vector3> coords;
-    for (const auto& triangle : triangles) {
-        coords.push_back(triangle[0]);
-        coords.push_back(triangle[1]);
-        coords.push_back(triangle[1]);
-        coords.push_back(triangle[2]);
-        coords.push_back(triangle[2]);
-        coords.push_back(triangle[0]);
+    if (usingSpheres) {
+        float resolution = (this->maxRockSize/2.f) / path.length();
+        RockErosion rock(this->maxRockSize, this->maxRockStrength);
+        for (const auto& pos : path.getPath(resolution)) {
+            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
+        }
+        erosionMatrix = erosionMatrix.abs();
+        erosionMatrix.toDistanceMap();
+//        std::cout << erosionMatrix.displayValues() << std::endl;
+        erosionMatrix.normalize();
+        for (float& m : erosionMatrix) {
+            m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+    //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+        }
+    } else {
+        KarstHole hole(path, this->maxRockSize);
+        Matrix3<float> holeMatrix;
+        Vector3 anchor;
+        std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
+        std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
+        holeMatrix *= -this->maxRockStrength;
+        RockErosion rock;
+        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
+
+        std::vector<Vector3> coords;
+        for (const auto& triangle : triangles) {
+            coords.push_back(triangle[0]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[0]);
+        }
     }
     grid->applyModification(erosionMatrix);
     grid->remeshAll();
