@@ -22,9 +22,9 @@ public:
     KarstHoleProfile(BSpline shape);
     KarstHoleProfile(std::vector<Vector3> shape);
 
-    KarstHoleProfile& rotateTowardVector(Vector3 new_dir);
-    KarstHoleProfile& translate(Vector3 new_pos);
-    KarstHoleProfile& scale(float scale_factor);
+    KarstHoleProfile& rotateTowardVector(BSpline path, float t);
+    KarstHoleProfile& translate(Vector3 new_pos, bool verbose = false);
+    KarstHoleProfile& scale(float scale_factor, bool verbose = false);
     KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t);
     std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t);
 

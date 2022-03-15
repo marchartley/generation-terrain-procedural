@@ -37,44 +37,65 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
     this->vertices = BSpline(shape);
 }
 
-KarstHoleProfile &KarstHoleProfile::rotateTowardVector(Vector3 new_dir)
+KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
 {
     for (Vector3& point : this->vertices.points)
         point.rotate(-3.141592/2.f, 0, 0);
+    Vector3 new_dir = path.getDirection(t);
     Vector3 forward(0, 1, 0);
     Vector3 up(0, 0, 1);
     Vector3 right(1, 0, 0);
-
-    new_dir.normalize();
+    right = path.getBinormal(t);
+    up = path.getNormal(t);
+    /*
     float angle = std::acos(forward.dot(new_dir));
     Vector3 rotation = new_dir.cross(forward).normalize();
     right.rotate(angle, rotation);
-    if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.9)
+    if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.999)
         right = Vector3(0, 0, 1).cross(new_dir);
     else
-        right = Vector3(0, 1, 1).cross(new_dir);
+        right = Vector3(0, 1, 1).cross(new_dir).normalize();
     up = new_dir.cross(right);
-    std::cout << new_dir << " " << right << " " << up << std::endl;
+//    std::cout << new_dir << " " << right << " " << up << std::endl;
+*/
     for (Vector3& point : this->vertices.points)
         point.changeBasis(right, new_dir, up);
     return *this;
 }
 
-KarstHoleProfile &KarstHoleProfile::translate(Vector3 translation)
+KarstHoleProfile &KarstHoleProfile::translate(Vector3 translation, bool verbose)
 {
-    for (Vector3& point : this->vertices.points)
+    if (verbose)
+        std::cout << "Points are going to move " << translation << "\n";
+    for (Vector3& point : this->vertices.points) {
+        if (verbose)
+            std::cout << " -> " << point << " -> ";
         point.translate(translation);
+        if (verbose)
+            std::cout << point << "\n";
+    }
+    if (verbose)
+        std::cout << std::endl;
     return *this;
 }
 
-KarstHoleProfile &KarstHoleProfile::scale(float scale_factor)
+KarstHoleProfile &KarstHoleProfile::scale(float scale_factor, bool verbose)
 {
     Vector3 mean;
     for (const Vector3& point : this->vertices.points)
         mean += point;
+    if (verbose)
+        std::cout << "For scale, mean = " << mean << "/" << (float)this->vertices.points.size() << " = ";
     mean /= (float)this->vertices.points.size();
-    for (Vector3& point : this->vertices.points)
+    if (verbose)
+        std::cout << mean << "\nPoints are going towards mean.\n";
+    for (Vector3& point : this->vertices.points) {
+        if (verbose)
+            std::cout << " -> point " << point << " moves toward " << (mean - point) << "*" << scale_factor;
         point += (mean - point) * scale_factor;
+        if (verbose)
+            std::cout << " ==> " << point << "\n";
+    }
     return *this;
 }
 
@@ -87,8 +108,8 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
         interpolatedPoints[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t);
     }
     KarstHoleProfile interpolation(interpolatedPoints);
-    std::cout << "Path length : " << path.length() << " and t = " << t << " -> derivative : " << path.getDerivative(t) << "\n";
-    return interpolation.rotateTowardVector(path.getDerivative(t)).translate(path.getPoint(t));
+//    std::cout << "Path length : " << path.length() << " and t = " << t << " -> derivative : " << path.getDerivative(t) << "\n";
+    return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
 }
 std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t)
 {
@@ -100,7 +121,7 @@ std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile:
     }
     KarstHoleProfile interpolation(interpolatedPoints);
     std::vector<std::vector<int>> triangleIndices = this->computeTrianglesIndices(interpolatedPoints);
-    interpolation = interpolation.rotateTowardVector(path.getDerivative(t)).translate(path.getPoint(t));
+    interpolation = interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
     std::vector<std::vector<Vector3>> triangles;
     for (const auto& triangle : triangleIndices) {
         triangles.push_back({interpolatedPoints[triangle[0]], interpolatedPoints[triangle[1]], interpolatedPoints[triangle[2]]});
