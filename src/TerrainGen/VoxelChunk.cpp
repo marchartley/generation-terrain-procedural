@@ -3,6 +3,7 @@
 #include <set>
 #include <unordered_set>
 #include <chrono>
+#include "Utils/Utils.h"
 
 VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<float> iso_data, std::shared_ptr<VoxelGrid> parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
@@ -350,28 +351,34 @@ void VoxelChunk::letGravityMakeSandFall()
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             int lastSandyUnsaturatedHeight = 0;
+            float lastSandyUnsaturatedWetnessCoefficient = interpolation::smooth(lastSandyUnsaturatedHeight/(float)this->height);
+            float lastSandySandUpperLimit = sandUpperLimit * remap(lastSandyUnsaturatedWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
             for(int z = 0; z < this->height; z++) {
+                float currentSandWetnessCoefficient = interpolation::smooth(z/(float)this->height);
+                float currentSandUpperLimit = sandUpperLimit * remap(currentSandWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
                 float cellValue = this->parent->getVoxelValue(this->x + x, this->y + y, z) + transportMatrix.at(x, y, z);
                 if(cellValue < sandLowerLimit) continue;
                 else if (cellValue > sandUpperLimit) {
-                    lastSandyUnsaturatedHeight = z;
-                } else // If it's not dirt nor air
+                    lastSandyUnsaturatedHeight = z + 1;
+                    lastSandyUnsaturatedWetnessCoefficient = interpolation::smooth(lastSandyUnsaturatedHeight/(float)this->height);
+                    lastSandySandUpperLimit = sandUpperLimit * remap(lastSandyUnsaturatedWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
+                    continue;
+                } else if (cellValue > currentSandUpperLimit)// If it's not dirt nor air
                 {
-                    // Make sand fall until the cell is empty
+                    // Make sand fall until the cell is empty or there's nowhere else to drop sand
                     while (cellValue > 0 && lastSandyUnsaturatedHeight != z) {
                         float lastSandyCellValue = this->parent->getVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight) + transportMatrix.at(x, y, lastSandyUnsaturatedHeight);
-                        float d_transported = std::min(cellValue, sandUpperLimit - lastSandyCellValue);
-                        lastSandyCellValue += d_transported;
+                        float d_transported = std::min(cellValue, currentSandUpperLimit - lastSandyCellValue);
+                        lastSandyCellValue += d_transported * 1.0001f;
                         cellValue -= d_transported;
                         transportMatrix.at(x, y, z) -= d_transported;
-                        transportMatrix.at(x, y, lastSandyUnsaturatedHeight) += d_transported;
-//                        this->parent->setVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight, lastSandyCellValue);
-                        if(lastSandyCellValue >= sandUpperLimit) {
+                        transportMatrix.at(x, y, lastSandyUnsaturatedHeight) += d_transported * 1.0001f;
+                        if(lastSandyCellValue >= lastSandySandUpperLimit) {
                             lastSandyUnsaturatedHeight ++;
+                            lastSandyUnsaturatedWetnessCoefficient = interpolation::smooth(lastSandyUnsaturatedHeight/(float)this->height);
+                            lastSandySandUpperLimit = sandUpperLimit * remap(lastSandyUnsaturatedWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
                         }
                     }
-//                    transportMatrix.at(this->x + x, this->y + y, z) = cellValue;
-//                    this->parent->setVoxelValue(this->x + x, this->y + y, z, cellValue);
                 }
             }
         }
