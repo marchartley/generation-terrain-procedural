@@ -45,3 +45,4 @@ build/generation-terrain-procedural
 build/Makefile
 build/qrc_qmake_qmake_immediate.cpp
 generation-terrain-procedural.pro.user
+*.dat
