@@ -358,21 +358,21 @@ void VoxelChunk::letGravityMakeSandFall()
                 float currentSandUpperLimit = sandUpperLimit * remap(currentSandWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
                 float cellValue = this->parent->getVoxelValue(this->x + x, this->y + y, z) + transportMatrix.at(x, y, z);
                 if(cellValue < sandLowerLimit) continue;
-                else if (cellValue > sandUpperLimit) {
+                else if (cellValue > currentSandUpperLimit) {
                     lastSandyUnsaturatedHeight = z + 1;
                     lastSandyUnsaturatedWetnessCoefficient = interpolation::smooth(lastSandyUnsaturatedHeight/(float)this->height);
                     lastSandySandUpperLimit = sandUpperLimit * remap(lastSandyUnsaturatedWetnessCoefficient, 0.f, 1.f, 0.2f, 1.f);
                     continue;
-                } else if (cellValue > currentSandUpperLimit)// If it's not dirt nor air
+                } else //if (cellValue > currentSandUpperLimit)// If it's not dirt nor air
                 {
                     // Make sand fall until the cell is empty or there's nowhere else to drop sand
                     while (cellValue > 0 && lastSandyUnsaturatedHeight != z) {
                         float lastSandyCellValue = this->parent->getVoxelValue(this->x + x, this->y + y, lastSandyUnsaturatedHeight) + transportMatrix.at(x, y, lastSandyUnsaturatedHeight);
                         float d_transported = std::min(cellValue, currentSandUpperLimit - lastSandyCellValue);
-                        lastSandyCellValue += d_transported * 1.0001f;
+                        lastSandyCellValue += d_transported; // * 1.0001f;
                         cellValue -= d_transported;
                         transportMatrix.at(x, y, z) -= d_transported;
-                        transportMatrix.at(x, y, lastSandyUnsaturatedHeight) += d_transported * 1.0001f;
+                        transportMatrix.at(x, y, lastSandyUnsaturatedHeight) += d_transported; // * 1.0001f;
                         if(lastSandyCellValue >= lastSandySandUpperLimit) {
                             lastSandyUnsaturatedHeight ++;
                             lastSandyUnsaturatedWetnessCoefficient = interpolation::smooth(lastSandyUnsaturatedHeight/(float)this->height);
