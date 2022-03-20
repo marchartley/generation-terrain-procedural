@@ -11,6 +11,7 @@ Vector3 HSVtoRGB(float H, float S,float V);
 
 Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
 bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4);
+float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vector3 p22);
 
 
 namespace interpolation {
