@@ -335,41 +335,47 @@ void VoxelGrid::remeshAll()
 
 void VoxelGrid::computeVoxelGroups()
 {
-    Matrix3<Vector3*> vecs(this->sizeX, this->sizeY, this->sizeZ);
-    for (int x = 0; x < this->sizeX; x ++) {
-        for(int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                if (z > 0)
-                    setVoxelGroup(x, y, z, -1);
-                vecs(x, y, z) = new Vector3(x, y, z);
-            }
-        }
+    int currentMarker = 0;
+    std::set<int> neighbors_coords;
+    Matrix3<int> connected(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<int> labels(this->sizeX, this->sizeY, this->sizeZ, -1);
+    Matrix3<float> voxelValues(this->sizeX, this->sizeY, this->sizeZ);
+    for (auto& vc : this->chunks)
+        voxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+    for (size_t i = 0; i < voxelValues.size(); i++) {
+        if (voxelValues[i] > 0.f) connected[i] = 1;
     }
-    std::unordered_set<Vector3*> groundNeighbors;
-    std::unordered_set<Vector3*> done;
-    for (int x = 0; x < this->sizeX; x ++) {
-        for(int y = 0; y < this->sizeY; y++) {
-            int group = getVoxelValue(x, y, 0) > 0.0 ? 0 : -1;
-            if (group == 0) {
-                setVoxelGroup(x, y, 0, group); // If it's touching the ground, it's directly in first group
-                groundNeighbors.insert(vecs(x, y, 0));
-                while (groundNeighbors.size() != 0) {
-                    Vector3* n = (*groundNeighbors.begin());
-                    setVoxelIsOnGround(n, true);
-                    done.insert(n);
-                    groundNeighbors.erase(groundNeighbors.begin());
-                    for (int n_x = -1; n_x <= 1; n_x++)
-                        for (int n_y = -1; n_y <= 1; n_y++)
-                            for (int n_z = -1; n_z <= 1; n_z++)
-                                if (getVoxelGroup(n->x + n_x, n->y + n_y, n->z + n_z) != 0 && getVoxelValue(n->x + n_x, n->y + n_y, n->z + n_z) > 0.0)
-                                    groundNeighbors.insert(vecs(n->x + n_x, n->y + n_y, n->z + n_z));
+    connected.raiseErrorOnBadCoord = false; // Allow to search on out-of-bounds
+    connected.defaultValueOnBadCoord = 0; // But mark it as background
+
+    for (size_t i = 0; i < connected.size(); i++) {
+        if (connected.at(i) == 1) {
+            currentMarker++;
+            neighbors_coords.insert(i);
+            while (!neighbors_coords.empty()) {
+                int nx, ny, nz;
+                size_t i_neighbor = *neighbors_coords.begin();
+                neighbors_coords.erase(neighbors_coords.begin());
+                labels.at(i_neighbor) = currentMarker;
+                std::tie(nx, ny, nz) = connected.getCoord(i_neighbor);
+                if (connected.at(i_neighbor) == 1) {
+                    connected.at(i_neighbor) = 0;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            for (int dz = -1; dz <= 1; dz++) {
+                                if (connected(nx + dx, ny + dy, nz + dz) == 1) {
+                                    neighbors_coords.insert(connected.getIndex(nx + dx, ny + dy, nz + dz));
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
     }
-    for (Vector3* vec : vecs.data)
-        delete vec;
-    vecs.clear();
+
+    for (auto& vc : this->chunks)
+        vc->voxelGroups = labels.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, 0, 0 + vc->height);
 }
 
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {
