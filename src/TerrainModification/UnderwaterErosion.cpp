@@ -186,7 +186,6 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
         RockErosion rock;
         erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
 
-        std::vector<Vector3> coords;
         for (const auto& triangle : triangles) {
             coords.push_back(triangle[0]);
             coords.push_back(triangle[1]);
