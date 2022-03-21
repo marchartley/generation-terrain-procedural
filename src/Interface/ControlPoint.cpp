@@ -99,7 +99,8 @@ void ControlPoint::display()
         if (this->useManipFrame)
             this->setState(this->manipFrame.isManipulated() ? ACTIVE : INACTIVE);
 
-        this->mesh.shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
+        if (this->mesh.shader != nullptr)
+            this->mesh.shader->setVector("color", ControlPoint::GrabberStateColor[this->state]);
         this->updateSphere();
         this->mesh.display();
     }

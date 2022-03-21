@@ -165,7 +165,9 @@ void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> fun
 {
     std::set<std::shared_ptr<Shader>>::iterator it;
     for (it = Shader::allShaders.begin(); it != Shader::allShaders.end(); it++) {
-        func(*it);
+        if (bool(*it)) {
+            func(*it);
+        }
     }
 }
 

@@ -20,9 +20,11 @@ void KarstPathGenerationInterface::display()
 {
     this->sourceControlPoint->display();
     this->fractureVector->display();
-    this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
+    if (this->waterLevelMesh.shader != nullptr)
+        this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
     this->waterLevelMesh.display(GL_LINES, 5.f);
-    this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+    if (this->pathsMeshes.shader != nullptr)
+        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
     this->pathsMeshes.display(GL_LINES, 5.f);
     this->waterHeightSlider->display();
 }
