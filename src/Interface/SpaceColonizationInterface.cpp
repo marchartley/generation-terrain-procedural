@@ -20,9 +20,11 @@ void SpaceColonizationInterface::display()
         for (ControlPoint*& ctrl : this->controlPoints) {
             ctrl->display();
         }
-        this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
+        if (this->startingPoint->mesh.shader != nullptr)
+            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
         this->startingPoint->display();
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+        if (this->pathsMeshes.shader != nullptr)
+            this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
         this->pathsMeshes.display(GL_LINES, 5.f);
     }
 }
