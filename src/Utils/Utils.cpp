@@ -118,12 +118,17 @@ float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vec
 {
     Vector3 d1 = p12 - p11;
     Vector3 d2 = p22 - p21;
+
+    Vector3 c1, c2;
     // Extreme case, same first point
     if (p11 == p21)
         return 0;
     // Case of parallel lines
     else if (std::abs(d1.dot(d2)) == (d1.norm() * d2.norm())) {
-        return (p21 - p11).cross(d1).norm();
+        Vector3 v = d1.normalized();
+        c1 = p11 - v * (p11.dot(v));
+        c2 = p21 - v * (p21.dot(v));
+        //return (p21 - p11).cross(d1).norm();
     } else {
         Vector3 n = d1.cross(d2);
         Vector3 n1 = d1.cross(n);
@@ -132,14 +137,14 @@ float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vec
         // Closest point on line p11-p12
         float t1 = (p21 - p11).dot(n2)/d1.dot(n2);
         t1 = std::max(std::min(t1, 1.f), 0.f);
-        Vector3 c1 = p11 + d1 * t1;
+        c1 = p11 + d1 * t1;
         // Closest point on line p21-p22
         float t2 = (p11 - p21).dot(n1)/d2.dot(n1);
         t2 = std::max(std::min(t2, 1.f), 0.f);
-        Vector3 c2 = p21 + d2 * t2;
+        c2 = p21 + d2 * t2;
 
-        return (c2 - c1).norm();
     }
+    return (c2 - c1).norm();
 }
 
 namespace interpolation {
