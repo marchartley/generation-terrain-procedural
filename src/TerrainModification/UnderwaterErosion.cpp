@@ -155,6 +155,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    bool modificationDoesSomething = true;
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),
@@ -168,13 +169,16 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
         for (const auto& pos : path.getPath(resolution)) {
             erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
         }
-        erosionMatrix = erosionMatrix.abs();
-        erosionMatrix.toDistanceMap();
-//        std::cout << erosionMatrix.displayValues() << std::endl;
-        erosionMatrix.normalize();
-        for (float& m : erosionMatrix) {
-            m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
-    //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+        if (erosionMatrix.abs().max() < 1.e-6) {
+            modificationDoesSomething = false;
+        } else {
+            erosionMatrix = erosionMatrix.abs();
+            erosionMatrix.toDistanceMap();
+            erosionMatrix.normalize();
+            for (float& m : erosionMatrix) {
+                m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+        //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+            }
         }
     } else {
         KarstHole hole(path, this->maxRockSize);
@@ -182,20 +186,34 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
         Vector3 anchor;
         std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
         std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
-        holeMatrix *= -this->maxRockStrength;
-        RockErosion rock;
-        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
+        if (holeMatrix.abs().max() == 0) {
+            modificationDoesSomething = false;
+        } else {
+            holeMatrix = holeMatrix.abs().toDistanceMap();
+            holeMatrix.normalize();
+            for (float& m : holeMatrix) {
+                if (m > 0) {
+                    int a = 0;
+                }
+                m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+        //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+            }
+            RockErosion rock;
+            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
 
-        for (const auto& triangle : triangles) {
-            coords.push_back(triangle[0]);
-            coords.push_back(triangle[1]);
-            coords.push_back(triangle[1]);
-            coords.push_back(triangle[2]);
-            coords.push_back(triangle[2]);
-            coords.push_back(triangle[0]);
+            for (const auto& triangle : triangles) {
+                coords.push_back(triangle[0]);
+                coords.push_back(triangle[1]);
+                coords.push_back(triangle[1]);
+                coords.push_back(triangle[2]);
+                coords.push_back(triangle[2]);
+                coords.push_back(triangle[0]);
+            }
         }
     }
-    grid->applyModification(erosionMatrix);
+    if (modificationDoesSomething) {
+        grid->applyModification(erosionMatrix);
+    }
     if (applyChanges)
         grid->remeshAll();
     return coords;
@@ -213,6 +231,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
 //    float resolution = 0.01;
     std::vector<std::vector<Vector3>> allCoords;
     for (BSpline& path : paths) {
+        bool modificationDoesSomething = true;
         if (usingSpheres) {
             float resolution = 0.10 / path.length();
             std::vector<Vector3> coords;
@@ -226,20 +245,30 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
             Vector3 anchor;
             std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
             std::tie(holeMatrix, anchor) = hole.generateMask(triangles);
-            holeMatrix *= -this->maxRockStrength;
-            RockErosion rock;
-            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
+            if (holeMatrix.abs().max() == 0) {
+                modificationDoesSomething = false;
+            } else {
+                holeMatrix = holeMatrix.abs().toDistanceMap();
+                holeMatrix.normalize();
+                for (float& m : holeMatrix) {
+                    m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+            //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+                }
+//                holeMatrix *= -this->maxRockStrength;
+                RockErosion rock;
+                erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
 
-            std::vector<Vector3> coords;
-            for (const auto& triangle : triangles) {
-                coords.push_back(triangle[0]);
-                coords.push_back(triangle[1]);
-                coords.push_back(triangle[1]);
-                coords.push_back(triangle[2]);
-                coords.push_back(triangle[2]);
-                coords.push_back(triangle[0]);
+                std::vector<Vector3> coords;
+                for (const auto& triangle : triangles) {
+                    coords.push_back(triangle[0]);
+                    coords.push_back(triangle[1]);
+                    coords.push_back(triangle[1]);
+                    coords.push_back(triangle[2]);
+                    coords.push_back(triangle[2]);
+                    coords.push_back(triangle[0]);
+                }
+                allCoords.push_back(coords);
             }
-            allCoords.push_back(coords);
         }
     }
     grid->applyModification(erosionMatrix);
