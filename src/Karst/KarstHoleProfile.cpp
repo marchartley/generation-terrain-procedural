@@ -45,9 +45,9 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
     Vector3 forward(0, 1, 0);
     Vector3 up(0, 0, 1);
     Vector3 right(1, 0, 0);
-    right = path.getBinormal(t);
-    up = path.getNormal(t);
-    /*
+//    right = path.getBinormal(t);
+//    up = path.getNormal(t);
+
     float angle = std::acos(forward.dot(new_dir));
     Vector3 rotation = new_dir.cross(forward).normalize();
     right.rotate(angle, rotation);
@@ -57,7 +57,7 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
         right = Vector3(0, 1, 1).cross(new_dir).normalize();
     up = new_dir.cross(right);
 //    std::cout << new_dir << " " << right << " " << up << std::endl;
-*/
+
     for (Vector3& point : this->vertices.points)
         point.changeBasis(right, new_dir, up);
     return *this;
