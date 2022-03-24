@@ -39,6 +39,7 @@ public:
 
     int getIndex(size_t x, size_t y, size_t z) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
+    Vector3 getCoordAsVector3(size_t index) const;
     bool checkCoord(int x, int y, int z = 0) const;
     bool checkCoord(Vector3 pos) const;
     bool checkIndex(size_t i) const;
@@ -59,6 +60,11 @@ public:
 
     T min() const;
     T max() const;
+
+    Matrix3<T>& max(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& max(Matrix3<T> otherMatrix, int left, int up, int front);
+    Matrix3<T>& min(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& min(Matrix3<T> otherMatrix, int left, int up, int front);
 
     Matrix3<T> abs() const;
 
@@ -259,6 +265,14 @@ std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const
     int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
     int x = index % this->sizeX;
     return std::make_tuple(x, y, z);
+}
+template<class T>
+Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
+{
+    int z = index / (this->sizeX * this->sizeY);
+    int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
+    int x = index % this->sizeX;
+    return Vector3(x, y, z);
 }
 
 template<class T>
@@ -745,6 +759,42 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front)
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
                 this->at(x, y, z) += matrixToAdd.at(x - left, y - up, z - front);
+            }
+        }
+    }
+    return *this;
+}
+
+template<typename T>
+Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner)
+{
+    return this->max(otherMatrix, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
+}
+template<typename T>
+Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, int left, int up, int front)
+{
+    for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
+        for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
+            for (int z = std::max(front, 0); z < std::min(otherMatrix.sizeZ + front, this->sizeZ); z++) {
+                this->at(x, y, z) = std::max(this->at(x, y, z), otherMatrix.at(x - left, y - up, z - front));
+            }
+        }
+    }
+    return *this;
+}
+
+template<typename T>
+Matrix3<T>& Matrix3<T>::min(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner)
+{
+    return this->min(otherMatrix, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
+}
+template<typename T>
+Matrix3<T>& Matrix3<T>::min(Matrix3<T> otherMatrix, int left, int up, int front)
+{
+    for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
+        for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
+            for (int z = std::max(front, 0); z < std::min(otherMatrix.sizeZ + front, this->sizeZ); z++) {
+                this->at(x, y, z) = std::min(this->at(x, y, z), otherMatrix.at(x - left, y - up, z - front));
             }
         }
     }

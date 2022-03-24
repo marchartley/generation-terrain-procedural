@@ -31,18 +31,26 @@ void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addin
         grid->remeshAll();
 }
 
-Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Vector3 pos, bool addingMatterMode)
+Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)
 {
-    blankMatrix.add(this->attackMask * (addingMatterMode ? -1.f : 1.f), pos - Vector3(size/2.f, size/2.f, size/2.f));
-    return blankMatrix;
+    return this->computeErosionMatrix(blankMatrix, this->attackMask, pos, addingMatterMode, useMax);
+//    blankMatrix.add(this->attackMask * (addingMatterMode ? -1.f : 1.f), pos - Vector3(size/2.f, size/2.f, size/2.f), useMax);
+//    return blankMatrix;
 }
 
-Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode)
+Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode, bool useMax)
 {
-    return this->computeErosionMatrix(blankMatrix, modifs, pos, addingMatterMode, Vector3(modifs.sizeX/2.f, modifs.sizeY/2.f, modifs.sizeZ/2.f));
+    return this->computeErosionMatrix(blankMatrix, modifs, pos, addingMatterMode, Vector3(modifs.sizeX/2.f, modifs.sizeY/2.f, modifs.sizeZ/2.f), useMax);
 }
-Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode, Vector3 anchor)
+Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode, Vector3 anchor, bool useMax)
 {
-    blankMatrix.add(modifs * (addingMatterMode ? -1.f : 1.f), pos - anchor);
+    if (useMax) {
+        if (addingMatterMode)
+            blankMatrix.max(modifs, pos - anchor);
+        else
+            blankMatrix.min(modifs, pos - anchor);
+    } else {
+        blankMatrix.add(modifs * (addingMatterMode ? -1.f : 1.f), pos - anchor);
+    }
     return blankMatrix;
 }

@@ -192,14 +192,11 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             holeMatrix = holeMatrix.abs().toDistanceMap();
             holeMatrix.normalize();
             for (float& m : holeMatrix) {
-                if (m > 0) {
-                    int a = 0;
-                }
                 m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
         //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
             }
             RockErosion rock;
-            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor);
+            erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, path.getPoint(0), addingMatter, anchor, true);
 
             for (const auto& triangle : triangles) {
                 coords.push_back(triangle[0]);

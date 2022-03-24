@@ -11,10 +11,10 @@ public:
     RockErosion(int size, float maxStrength);
 
     void Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode = false, bool applyRemeshing = true);
-    Matrix3<float>& computeErosionMatrix(Matrix3<float>& blankMatrix, Vector3 pos, bool addingMatterMode = false);
-    Matrix3<float>& computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode = false);
+    Matrix3<float>& computeErosionMatrix(Matrix3<float>& blankMatrix, Vector3 pos, bool addingMatterMode = false, bool useMax = false);
+    Matrix3<float>& computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode = false, bool useMax = false);
     Matrix3<float>& computeErosionMatrix(Matrix3<float>& blankMatrix, Matrix3<float>& modifs, Vector3 pos, bool addingMatterMode,
-                                         Vector3 anchor);
+                                         Vector3 anchor, bool useMax = false);
 
     int size;
     float maxStrength;
