@@ -9,9 +9,6 @@
 #include "Utils/Utils.h"
 
 
-//using namespace qglviewer;
-//using namespace std;
-
 Viewer::Viewer(QWidget *parent):
     Viewer(
         std::shared_ptr<Grid>(nullptr), // new Grid(100, 100, 40, 1.0),
@@ -148,16 +145,20 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data"); //"cube.data");
+        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
+        // TO REMOVE
+        UnderwaterErosion tunnels(this->voxelGrid, 20.f, 3.f, 0);
+        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
+        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
+//        this->voxelGrid->letGravityMakeSandFall(false);
+
         this->voxelGrid->createMesh();
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
         }
         this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
-//        this->initSpaceColonizer();
-//        updateFlowfieldDebugMesh();
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
         this->randomParticlesDisplacementNoise.SetFrequency(0.1);
@@ -641,7 +642,7 @@ void Viewer::createTunnel(bool removingMatter)
     if (this->currentTunnelPoints.empty())
         this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(3, !removingMatter));
     else
-        this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter));
+        this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter, false));
     this->currentTunnelPoints.clear();
     this->debugControlPoints[TUNNEL_PATHS].clear();
     this->debugMeshes[TUNNEL_PATHS].update();
