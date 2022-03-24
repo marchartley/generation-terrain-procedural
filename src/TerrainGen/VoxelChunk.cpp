@@ -137,10 +137,12 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     needRemeshing = false;
 
     std::vector<Vector3> colors;
+    std::vector<Vector3> normals;
     std::vector<Vector3> voxelVertices;
     if (applyMarchingCubes) {
-        voxelVertices = this->applyMarchingCubes(true, &colors);
+        voxelVertices = this->applyMarchingCubes(true, &colors, &normals);
         this->mesh.colorsArray = colors;
+        this->mesh.normalsArray = normals;
         this->mesh.fromArray(voxelVertices);
         this->mesh.update();
     }
@@ -186,11 +188,13 @@ Vector3 VoxelChunk::computeNormal(int x, int y, int z)
     }
     if (tris.size() == 0)
         return normal;
+    if (this->parent->getVoxelValue(Vector3(x, y, z) + normal) > 0)
+        normal *= -1.f;
     return normal.normalize();
 
 }
 
-std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords, std::vector<Vector3>* outColors)
+std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords, std::vector<Vector3>* outColors, std::vector<Vector3>* outNormals)
 {
     std::vector<Vector3> vertexArray;
     int cube_index = 0;
@@ -210,6 +214,9 @@ std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float i
 
         float interpolate = (isolevel - v1.isosurface) / (v2.isosurface - v1.isosurface);
         Vertex midpoint = v1 - ((v1 - v2) * interpolate);
+        if (outNormals != nullptr) {
+            outNormals->push_back(Vector3((v2 - v1) * (v1.isosurface > v2.isosurface ? 1.f : -1.f))); //this->computeNormal(vertices[0]));
+        }
         if (outColors != nullptr) {
 //            float blueVal = this->parent->getVoxelValue(v1) - this->parent->getOriginalVoxelValue(v1) + this->parent->getVoxelValue(v2) - this->parent->getOriginalVoxelValue(v2);
 //            blueVal = abs(blueVal / 2.0);$
@@ -234,10 +241,11 @@ std::vector<Vector3> VoxelChunk::computeMarchingCube(Vertex vertices[8], float i
     }
     return vertexArray;
 }
-std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::vector<Vector3>* outColors)
+std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::vector<Vector3>* outColors, std::vector<Vector3>* outNormals)
 {
     int LoD = this->LoDs[this->LoDIndex % this->LoDs.size()];//std::max(0, std::min(LoD, std::min(std::min(this->sizeX, this->sizeY), this->height)));
     std::vector<Vector3> colors;
+    std::vector<Vector3> normals;
     Matrix3<float> map = this->getVoxelValues();
 
     bool addedLeft = false;
@@ -319,13 +327,15 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
                                       Vertex(x_offset       , y_offset + LoDY, z + LoDZ, map(x       , y + LoDY, z + LoDZ))
                                      };
 
-                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors);
+                std::vector<Vector3> tempVerticesArray = this->computeMarchingCube(vertices, isolevel, useGlobalCoords, &colors, &normals);
                 vertexArray.insert(vertexArray.end(), tempVerticesArray.begin(), tempVerticesArray.end());
             }
         }
     }
     if (outColors != nullptr)
         *outColors = colors;
+    if (outNormals != nullptr)
+        *outNormals = normals;
     return vertexArray;
 }
 
@@ -388,7 +398,43 @@ void VoxelChunk::letGravityMakeSandFall()
 }
 void VoxelChunk::computeGroups()
 {
-    // TODO?
+    int currentMarker = 0;
+    std::set<int> neighbors_coords;
+    Matrix3<int> connected(this->sizeX, this->sizeY, this->height);
+    Matrix3<int> labels(this->sizeX, this->sizeY, this->height, -1);
+    Matrix3<float> voxelValues = this->getVoxelValues();
+    for (size_t i = 0; i < voxelValues.size(); i++) {
+        if (voxelValues[i] > 0.f) connected[i] = 1;
+    }
+    connected.raiseErrorOnBadCoord = false; // Allow to search on out-of-bounds
+    connected.defaultValueOnBadCoord = 0; // But mark it as background
+
+    for (size_t i = 0; i < connected.size(); i++) {
+        if (connected.at(i) == 1) {
+            currentMarker++;
+            neighbors_coords.insert(i);
+            while (!neighbors_coords.empty()) {
+                int nx, ny, nz;
+                size_t i_neighbor = *neighbors_coords.begin();
+                neighbors_coords.erase(neighbors_coords.begin());
+                labels.at(i_neighbor) = currentMarker;
+                std::tie(nx, ny, nz) = connected.getCoord(i_neighbor);
+                if (connected.at(i_neighbor) == 1) {
+                    connected.at(i_neighbor) = 0;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            for (int dz = -1; dz <= 1; dz++) {
+                                if (connected(nx + dx, ny + dy, nz + dz) == 1) {
+                                    neighbors_coords.insert(connected.getIndex(nx + dx, ny + dy, nz + dz));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    this->voxelGroups = labels;
 }
 
 void VoxelChunk::applyModification(Matrix3<float> modifications)
