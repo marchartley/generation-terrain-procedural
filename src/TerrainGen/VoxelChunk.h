@@ -37,7 +37,7 @@ public:
     void resetVoxelsNeighbors();
     void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
 
-    std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr);
+    std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 
 
     bool contains(Vector3 v);
@@ -47,7 +47,7 @@ public:
     float getVoxelValue(Vector3 pos);
     Matrix3<float> getVoxelValues();
 
-    std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr);
+    std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 
     Vector3 computeNormal(Vector3 pos);
     Vector3 computeNormal(int x, int y, int z);
