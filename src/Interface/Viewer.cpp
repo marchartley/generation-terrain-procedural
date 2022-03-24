@@ -204,17 +204,20 @@ void Viewer::draw() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
+    this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 0);
+
+    float white[4] = {1.f, 1.f, 1.f, 1.f};
     Material ground_material(
-                    new float[4]{.48, .16, .04, 1.},
-                    new float[4]{.60, .20, .08, 1.},
-                    new float[4]{.62, .56, .37, 1.},
-                    51.2f
+                    new float[4] {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
+                    new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
+                    new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    60.f // 51.2f
                     );
     Material grass_material(
-                    new float[4]{.28, .90, .00, 1.},
-                    new float[4]{.32, .80, .00, 1.},
-                    new float[4]{.62, .56, .37, 1.},
-                    51.2f
+                    new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
+                    new float[4] {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
+                    new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    40.f // 51.2f
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
     float globalAmbiant[4] = {.10, .10, .10, 1.0};
@@ -264,6 +267,7 @@ void Viewer::draw() {
                     vc->mesh.shader->setVector("max_vertice_positions", maxVoxelsShown());
                     vc->mesh.shader->setFloat("fogNear", this->fogNear);
                     vc->mesh.shader->setFloat("fogFar", this->fogFar);
+//                    vc->mesh.displayNormals();
                 }
                 this->voxelGrid->display();
             }
@@ -574,8 +578,8 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
     if (useAltCamera) {
         this->setCamera(this->alternativeCamera);
         this->displayParticles = true;
-        this->fogNear = 10.f;
-        this->fogFar = 50.f;
+        this->fogNear = 5.f;
+        this->fogFar = 30.f;
     }
     else {
         this->setCamera(this->mainCamera);
