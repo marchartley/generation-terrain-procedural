@@ -24,7 +24,7 @@ public:
     KarstHoleProfile endingProfile;
     BSpline path;
     float size;
-    int number_of_points = 5;
+    int number_of_points = 10;
     int number_of_intermediates = 2;
 
     std::vector<std::tuple<Vector3, float>> vertexCylinders;
