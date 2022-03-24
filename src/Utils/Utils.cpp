@@ -181,4 +181,11 @@ float binary(float _x, float _min, float _max) {
     float x = linear(_x, _min, _max);
     return inv_linear((x < 0.5 ? 0.f : 1.f), _min, _max);
 }
+
+float wyvill(float _x, float _min, float _max)
+{
+    float x = linear(_x, _min, _max);
+    return inv_linear(std::pow(1 - x*x, 3), _min, _max);
+}
+
 }
