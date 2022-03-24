@@ -90,11 +90,12 @@ void main(void)
 {
     vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + instanceOffset.z);
 //    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
+    vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     varyingColor = vec4(color, 1.0);
     initialVertPos = vec3(position);
     varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    varyingLightDir = light.position - varyingVertPos;
-    varyingNormal = vec4(norm_matrix * vec4(normal, 1.0)).xyz;
+    varyingLightDir = light_position - varyingVertPos;
+    varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(normal, 1.0)).xyz; // vec4(norm_matrix * vec4(normal, 1.0)).xyz;
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
     realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;
