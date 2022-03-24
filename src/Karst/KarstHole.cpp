@@ -135,11 +135,11 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         float t = (iT-1.f) * dt;
         std::vector<Vector3> points;
         if (iT == 0) {
-            points = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size)/*.scale(.5f)*/.vertices.getPath(1.f / (float)(number_of_points - 1));
+            points = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
             cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->size, path.getPoint(0.f)));
         }
         else if(iT == number_of_intermediates + 1) {
-            points = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size)/*.scale(.5f)*/.vertices.getPath(1.f / (float)(number_of_points - 1));
+            points = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
             cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->size));
         }
         else {
