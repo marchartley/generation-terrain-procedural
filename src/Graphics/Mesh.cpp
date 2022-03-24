@@ -245,3 +245,13 @@ void Mesh::display(GLenum shape, float lineWeight)
         GlobalsGL::checkOpenGLError();
     }
 }
+
+void Mesh::displayNormals()
+{
+    glBegin(GL_LINES);
+    for (size_t i = 0; i < this->vertexArray.size(); i++) {
+        glVertex3f(this->vertexArray[i].x, this->vertexArray[i].y, this->vertexArray[i].z);
+        glVertex3f(this->vertexArray[i].x + this->normalsArray[i].x, this->vertexArray[i].y + this->normalsArray[i].y, this->vertexArray[i].z + this->normalsArray[i].z);
+    }
+    glEnd();
+}
