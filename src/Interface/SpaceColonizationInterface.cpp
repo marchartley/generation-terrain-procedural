@@ -85,6 +85,7 @@ void SpaceColonizationInterface::updateKarstPath()
 {
     if (!this->visitingCamera)
         this->visitingCamera = new qglviewer::Camera();
+    this->visitingCamera->setZNearCoefficient(0.001);
     this->visitingCamera->setFieldOfView(3.141592 / 3.f);
     this->visitingCamera->setUpVector(Vector3(0, 0, 1));
     this->karstPaths.clear();
