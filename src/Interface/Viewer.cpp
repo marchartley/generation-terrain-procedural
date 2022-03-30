@@ -11,7 +11,7 @@
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
-        std::shared_ptr<Grid>(nullptr), // new Grid(100, 100, 40, 1.0),
+        std::shared_ptr<Grid>(new Grid(100, 100, 40, 1.0)),
         std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
@@ -138,7 +138,7 @@ void Viewer::init() {
 
     if (grid != nullptr) {
         this->grid->createMesh();
-        this->grid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
+        this->grid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (layerGrid != nullptr) {
         this->layerGrid->createMesh();
@@ -150,8 +150,9 @@ void Viewer::init() {
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
         UnderwaterErosion tunnels(this->voxelGrid, 20.f, 3.f, 0);
-        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
-        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
+//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{0, 55, 10}, {92, 55, 10}, {45, 55, 90}}), false, false, false));
+//        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
+//        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
 //        this->voxelGrid->letGravityMakeSandFall(false);
 
         this->voxelGrid->createMesh();
@@ -230,7 +231,12 @@ void Viewer::draw() {
         shader->setMaterial("grass_material", grass_material);
         shader->setVector("globalAmbiant", globalAmbiant, 4);
         shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+        shader->setBool("isSpotlight", this->usingSpotlight);
         shader->setBool("display_light_source", true);
+        shader->setVector("min_vertice_positions", minVoxelsShown());
+        shader->setVector("max_vertice_positions", maxVoxelsShown());
+        shader->setFloat("fogNear", this->fogNear);
+        shader->setFloat("fogFar", this->fogFar);
     });
 
     if (this->viewerMode != NO_DISPLAY)
@@ -239,14 +245,6 @@ void Viewer::draw() {
             if (this->grid == nullptr) {
                 std::cerr << "No grid to display" << std::endl;
             } else {
-                this->grid->mesh.shader->setMatrix("proj_matrix", pMatrix);
-                this->grid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-                this->grid->mesh.shader->setPositionalLight("light", this->light);
-                this->grid->mesh.shader->setMaterial("ground_material", ground_material);
-                this->grid->mesh.shader->setMaterial("grass_material", grass_material);
-                this->grid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-                this->grid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-                this->grid->mesh.shader->setBool("display_light_source", true);
                 this->grid->display(true);
             }
         }
@@ -254,21 +252,9 @@ void Viewer::draw() {
             if (this->voxelGrid == nullptr) {
                 std::cerr << "No voxel grid to display" << std::endl;
             } else {
-                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-                    vc->mesh.shader->setMatrix("proj_matrix", pMatrix);
-                    vc->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-                    vc->mesh.shader->setPositionalLight("light", this->light);
-                    vc->mesh.shader->setMaterial("ground_material", ground_material);
-                    vc->mesh.shader->setMaterial("grass_material", grass_material);
-                    vc->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-                    vc->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-                    vc->mesh.shader->setBool("display_light_source", true);
-                    vc->mesh.shader->setVector("min_vertice_positions", minVoxelsShown());
-                    vc->mesh.shader->setVector("max_vertice_positions", maxVoxelsShown());
-                    vc->mesh.shader->setFloat("fogNear", this->fogNear);
-                    vc->mesh.shader->setFloat("fogFar", this->fogFar);
+//                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
 //                    vc->mesh.displayNormals();
-                }
+//                }
                 this->voxelGrid->display();
             }
         }
@@ -276,16 +262,6 @@ void Viewer::draw() {
             if (this->layerGrid == nullptr) {
                 std::cerr << "No layer based grid to display" << std::endl;
             } else {
-                this->layerGrid->mesh.shader->setPositionalLight("light", this->light);
-                this->layerGrid->mesh.shader->setMaterial("ground_material", ground_material);
-                this->layerGrid->mesh.shader->setMaterial("grass_material", grass_material);
-                this->layerGrid->mesh.shader->setVector("globalAmbiant", globalAmbiant, 4);
-                this->layerGrid->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-                this->layerGrid->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-                this->layerGrid->mesh.shader->setMatrix("proj_matrix", pMatrix);
-                this->layerGrid->mesh.shader->setBool("display_light_source", true);
-//                this->layerGrid->mesh.shader->setFloat("offsetX", 0.0);
-//                this->layerGrid->mesh.shader->setFloat("offsetY", 0.0);
                 this->layerGrid->display();
             }
         }
@@ -580,12 +556,14 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->displayParticles = true;
         this->fogNear = 5.f;
         this->fogFar = 30.f;
+        this->usingSpotlight = true;
     }
     else {
         this->setCamera(this->mainCamera);
         this->displayParticles = false;
         this->fogNear = 1000.f;
         this->fogFar = 5000.f;
+        this->usingSpotlight = false;
     }
 }
 
