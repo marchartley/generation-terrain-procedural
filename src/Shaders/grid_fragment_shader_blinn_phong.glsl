@@ -71,6 +71,8 @@ uniform vec4 globalAmbiant;
 uniform PositionalLight light;
 uniform Material ground_material;
 uniform Material grass_material;
+uniform float fogNear;
+uniform float fogFar;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -104,10 +106,8 @@ void main(void)
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz, 1.0);
 
     vec4 fogColor = vec4(0.7, 0.8, 0.9, 1.0);
-    float fogStart = 0.0;
-    float fogEnd = 100.0;
     float dist = length(vertEyeSpacePos);
-    float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
+    float fogFactor = clamp(((fogFar - dist) / (fogFar - fogNear)), 0.0, 1.0);
 
     fragColor = mix(fogColor, material_color, fogFactor);
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);

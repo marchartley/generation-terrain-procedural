@@ -126,6 +126,7 @@ struct Material {
 
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
+uniform bool isSpotlight;
 uniform Material ground_material;
 uniform Material grass_material;
 
@@ -162,12 +163,13 @@ void main(void)
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
 
     vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz; // Fake light just above camera
+    vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     float dist_source = length(light_pos - varyingVertPos) / 5.0;
     float dist_cam = length(cam_pos - varyingVertPos) / 5.0;
-    float albedo = 0.9999;
-    float depth = 1.0;
-    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020), 1.0);
+    float albedo = 1.0;
+
+    float depth = (90 - initialVertPos.z) / 50; // Depth from surface, the "90" is hard-coded and should b given by the program
+    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
     vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005), 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
     vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
     vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
@@ -178,9 +180,15 @@ void main(void)
     float dist = length(vertEyeSpacePos);
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
-//    material_color = mix(material_color, varyingColor, .80);
+    float lumin = 1.0;
+    if (isSpotlight) {
+        float cone_angle = radians(20.0);
+        float cone_cos_angle = cos(cone_angle);
+        float epsilon = radians(10.0);
 
-    fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz, 1.0);
+        lumin = clamp(1 - (acos(dot(normalize(varyingLightDir), vec3(0.0, 0.0, 1.0))) - (cone_angle + epsilon))/(epsilon), 0.0, 1.0);
+    }
+    fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
 
 //    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
 

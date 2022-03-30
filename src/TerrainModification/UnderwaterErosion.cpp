@@ -4,6 +4,7 @@
 #include "Utils/BSpline.h"
 #include "Karst/KarstHole.h"
 #include "Utils/Utils.h"
+#include "Graph/Matrix3Graph.h"
 
 
 UnderwaterErosion::UnderwaterErosion()
@@ -192,6 +193,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             holeMatrix = holeMatrix.abs().toDistanceMap();
             holeMatrix.normalize();
             for (float& m : holeMatrix) {
+//                m = (m > 0 ? 1.0 : 0.0) * -this->maxRockStrength;
                 m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
         //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
             }
@@ -272,5 +274,32 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
     if (applyChanges)
         grid->remeshAll();
     return allCoords;
+}
+
+std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, bool applyChanges)
+{
+    float rx = 3.f, ry = 3.f, rz = 3.f;
+    Vector3 ratio(rx, ry, rz);
+    Matrix3<int> resizedMap = this->grid->getVoxelValues().resize(this->grid->sizeX / rx, this->grid->sizeY / ry, this->grid->sizeZ / rz).binarize();
+    Matrix3Graph graph(resizedMap);
+    graph.computeSurface();
+    Vector3 clampedStart = start / ratio;
+    clampedStart.x = std::clamp(clampedStart.x, 0.f, resizedMap.sizeX - 1.f);
+    clampedStart.y = std::clamp(clampedStart.y, 0.f, resizedMap.sizeY - 1.f);
+    clampedStart.z = std::clamp(clampedStart.z, 0.f, resizedMap.sizeZ - 1.f);
+    Vector3 clampedEnd = end / ratio;
+    clampedEnd.x = std::clamp(clampedEnd.x, 0.f, resizedMap.sizeX - 1.f);
+    clampedEnd.y = std::clamp(clampedEnd.y, 0.f, resizedMap.sizeY - 1.f);
+    clampedEnd.z = std::clamp(clampedEnd.z, 0.f, resizedMap.sizeZ - 1.f);
+    std::vector<Vector3> path = graph.shortestPath(clampedStart, clampedEnd);
+    for (Vector3& point : path)
+        point *= ratio;
+    std::vector<Vector3> meshPath;
+    for (size_t i = 0; i < path.size() - 1; i++) {
+        meshPath.push_back(path[i]);
+        meshPath.push_back(path[i + 1]);
+    }
+    this->CreateTunnel(BSpline(path), false, true, applyChanges);
+    return meshPath;
 }
 

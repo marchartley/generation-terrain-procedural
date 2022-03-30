@@ -146,6 +146,7 @@ void Viewer::init() {
     }
     if (voxelGrid != nullptr) {
         voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
+//        voxelGrid->from2DGrid(*(this->grid));
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
@@ -154,7 +155,7 @@ void Viewer::init() {
 //        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
 //        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
 //        this->voxelGrid->letGravityMakeSandFall(false);
-
+//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateCrack({44, 79, 90}, {48, 13, 90}));
         this->voxelGrid->createMesh();
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
@@ -207,18 +208,18 @@ void Viewer::draw() {
 
     this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 0);
 
-    float white[4] = {1.f, 1.f, 1.f, 1.f};
+    float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};
     Material ground_material(
                     new float[4] {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
                     new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
                     new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    60.f // 51.2f
+                    100.f // 51.2f
                     );
     Material grass_material(
                     new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
                     new float[4] {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
                     new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    40.f // 51.2f
+                    100.f // 51.2f
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
     float globalAmbiant[4] = {.10, .10, .10, 1.0};
@@ -625,6 +626,18 @@ void Viewer::createTunnel(bool removingMatter)
         this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(3, !removingMatter));
     else
         this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter, false));
+    this->currentTunnelPoints.clear();
+    this->debugControlPoints[TUNNEL_PATHS].clear();
+    this->debugMeshes[TUNNEL_PATHS].update();
+    update();
+}
+void Viewer::createCrack(bool removingMatter)
+{
+    if (this->currentTunnelPoints.size() < 2) return;
+
+    this->curvesErosionConstructionMode = false;
+    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
+    this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateCrack(this->currentTunnelPoints[0], this->currentTunnelPoints[1], true));
     this->currentTunnelPoints.clear();
     this->debugControlPoints[TUNNEL_PATHS].clear();
     this->debugMeshes[TUNNEL_PATHS].update();

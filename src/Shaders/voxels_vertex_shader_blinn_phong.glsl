@@ -69,6 +69,7 @@ uniform float offsetY;
 
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
+uniform bool isSpotlight;
 uniform Material ground_material;
 uniform Material grass_material;
 
@@ -95,7 +96,7 @@ void main(void)
     initialVertPos = vec3(position);
     varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
     varyingLightDir = light_position - varyingVertPos;
-    varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(normal, 1.0)).xyz; // vec4(norm_matrix * vec4(normal, 1.0)).xyz;
+    varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(normal, 1.0)).xyz;
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
     realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;

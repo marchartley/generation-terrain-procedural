@@ -39,6 +39,7 @@ SOURCES += \
         src/Graph/Graph.cpp \
         src/Graph/FastPoissonGraph.cpp \
         src/Graph/GraphNode.cpp \
+        src/Graph/Matrix3Graph.cpp \
         src/Graph/Pathfinding.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
@@ -100,6 +101,7 @@ HEADERS += \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \
+    src/Graph/Matrix3Graph.h \
     src/Graph/Pathfinding.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
