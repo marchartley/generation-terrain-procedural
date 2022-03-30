@@ -26,13 +26,15 @@ public:
 
     float dot(Vector3 o);
     Vector3 cross(Vector3 o);
-    Vector3 rounded(int precision = 0);
+    Vector3 rounded(int precision = 0) const;
 
     float norm();
     float norm2();
     Vector3& normalize();
     Vector3 normalized() const;
     Vector3 abs();
+
+    bool isAlmostVertical();
 
     Vector3& rotate(float angle_x, float angle_y, float angle_z);
     Vector3& rotate(Vector3 eulerAngles);

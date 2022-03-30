@@ -53,6 +53,11 @@ Vector3 Vector3::abs()
     return a;
 }
 
+bool Vector3::isAlmostVertical()
+{
+    return std::abs(this->dot(Vector3(0, 0, 1))) > 0.1;
+}
+
 Matrix Vector3::toMatrix()
 {
     return Matrix(3, 1, (float*)(*this));
@@ -67,7 +72,7 @@ Vector3 Vector3::cross(Vector3 o) {
               this->x * o.y - this->y * o.x);
     return v;
 }
-Vector3 Vector3::rounded(int precision)
+Vector3 Vector3::rounded(int precision) const
 {
     Vector3 v = *this;
     v.x = (int)(v.x * pow(10, precision)) / (float)(pow(10, precision));
