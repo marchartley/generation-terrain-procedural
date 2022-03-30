@@ -20,10 +20,10 @@ KarstHole::KarstHole(BSpline fullPath, float size) : KarstHole(size)
     this->path = fullPath;
 }
 
-KarstHoleProfile KarstHole::interpolate(float t)
+KarstHoleProfile KarstHole::interpolate(float t, float previousAcceptedTime, float nextAcceptedTime)
 {
     /* Linear Interpolation, the simpliest */
-    return this->startingProfile.interpolate(this->endingProfile, this->path, t); //KarstHoleProfile(interpolated);
+    return this->startingProfile.interpolate(this->endingProfile, this->path, t, previousAcceptedTime, nextAcceptedTime); //KarstHoleProfile(interpolated);
 }
 
 std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vector3>& vertices)
@@ -116,6 +116,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
 
     number_of_intermediates = 2 * int(this->path.points.size()); // std::min(5, int(this->path.points.size())*2);
     float dt = 1.f / (float)(number_of_intermediates - 1);
+    std::vector<float> validTimesInPath;
     for (int i = 0; i < number_of_intermediates; i++) {
         float t = i * dt;
         std::vector<Vector3> intermediateShape = this->interpolate(t).vertices.points;
@@ -127,12 +128,25 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
             maxVec.y = std::max(maxVec.y, pos.y);
             maxVec.z = std::max(maxVec.z, pos.z);
         }
+        // Find non-vertical times in our path
+        if (std::abs(this->path.getDirection(t).dot(Vector3(0, 0, 1))) < 0.9) {
+            validTimesInPath.push_back(t);
+        }
     }
 
     std::vector<std::vector<Vector3>> triangles;
     std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates + 2);
     for (int iT = 0; iT < number_of_intermediates + 2; iT++) {
         float t = (iT-1.f) * dt;
+        float previousValidTime = -1.f, nextValidTime = -1.f;
+        for (const float& time : validTimesInPath) {
+            if (time < t)
+                previousValidTime = time;
+            if (time > t) {
+                nextValidTime = time;
+                break; // no need to go further
+            }
+        }
         std::vector<Vector3> points;
         if (iT == 0) {
             points = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
@@ -143,7 +157,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
             cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->size));
         }
         else {
-            points = this->interpolate(t).vertices.getPath(1.f / (float)(number_of_points - 1));
+            points = this->interpolate(t, previousValidTime, nextValidTime).vertices.getPath(1.f / (float)(number_of_points - 1));
             if (iT < number_of_intermediates) // Avoid the last cylinder
                 cylinders.push_back(std::make_tuple(path.getPoint(t), path.getPoint(t + dt)));
         }
