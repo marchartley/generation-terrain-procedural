@@ -71,6 +71,8 @@ public:
     std::string toString();
     std::string toShortString();
 
+    void smoothVoxels();
+
 
     void computeVoxelGroups();
     Matrix3<float> getVoxelValues();

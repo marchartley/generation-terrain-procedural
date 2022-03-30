@@ -635,3 +635,9 @@ std::string VoxelGrid::toShortString()
     ret << "CS" << chunkSize;
     return ret.str();
 }
+
+void VoxelGrid::smoothVoxels()
+{
+    Matrix3<float> voxelValues = this->getVoxelValues();
+    this->applyModification(voxelValues.meanSmooth(3, 3, 3) - voxelValues);
+}
