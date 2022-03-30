@@ -25,7 +25,7 @@ public:
     KarstHoleProfile& rotateTowardVector(BSpline path, float t);
     KarstHoleProfile& translate(Vector3 new_pos, bool verbose = false);
     KarstHoleProfile& scale(float scale_factor, bool verbose = false);
-    KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t);
+    KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
     std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t);
 
     KarstHoleProfile& setNumberOfVertices(int vertice_count);
@@ -40,6 +40,7 @@ public:
     static BSpline createCanyonProfile();
 
     BSpline vertices;
+    float scaling = 1.f;
 };
 
 #endif // KARSTHOLEPROFILE_H

@@ -11,7 +11,7 @@ public:
     KarstHole(Vector3 start, Vector3 end, float size = 1.f);
     KarstHole(BSpline fullPath, float size = 1.f);
 
-    KarstHoleProfile interpolate(float t);
+    KarstHoleProfile interpolate(float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
 
     std::vector<std::vector<Vector3>> generateMesh();
     std::vector<std::vector<Vector3>> computeClosingMesh(std::vector<Vector3>& vertices);
