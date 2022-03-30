@@ -47,6 +47,7 @@ public:
 
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
+    void letGravityMakeSandFallWithFlow(bool remesh = true);
     Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
     void applyModification(Matrix3<float> modifications);
     void undo();
@@ -72,6 +73,7 @@ public:
 
 
     void computeVoxelGroups();
+    Matrix3<float> getVoxelValues();
 
     std::tuple<int, int, int, int> getChunksAndVoxelIndices(Vector3 pos);
     std::tuple<int, int, int, int> getChunksAndVoxelIndices(float x, float y, float z);
