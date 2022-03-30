@@ -16,6 +16,15 @@ enum RESIZE_MODE {
     MIN_VAL = 2
 };
 
+enum CONVOLUTION_BORDERS {
+    ZERO_PAD = 0,
+    REPEAT = 1,
+    MIRROR = 2,
+    WRAPPING = 3,
+    IGNORED = 4,
+    COPY = 5
+};
+
 // Warning : don't use bool type...
 // This class is based on a std::vector, which has specifications on bools
 // the [] operator won't work ... Use int or short int instead
@@ -38,6 +47,7 @@ public:
     T& operator[](Vector3 pos);
 
     int getIndex(size_t x, size_t y, size_t z) const;
+    int getIndex(Vector3 coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
     Vector3 getCoordAsVector3(size_t index) const;
     bool checkCoord(int x, int y, int z = 0) const;
@@ -58,6 +68,8 @@ public:
 
     Matrix3<float> toDistanceMap();
 
+    Matrix3<T> convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
+
     T min() const;
     T max() const;
 
@@ -67,6 +79,7 @@ public:
     Matrix3<T>& min(Matrix3<T> otherMatrix, int left, int up, int front);
 
     Matrix3<T> abs() const;
+    T sum();
 
     Matrix3<T> rounded(int precision = 0) const;
 
@@ -79,11 +92,17 @@ public:
     Matrix3<float> div();
     Matrix3<T> curl();
     Matrix3<T> rot();
-    Matrix3<T> laplacian() const;
+    Matrix3<T> laplacian();
+
+    static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
+    Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
+    Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOfZ = 3, bool ignoreBorders = false);
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
 
     void clear() { this->sizeX = 0; this->sizeY = 0; this->sizeZ = 0; return this->data.clear(); }
+
+    Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
 
 
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
@@ -257,6 +276,11 @@ int Matrix3<T>::getIndex(size_t x, size_t y, size_t z) const
 {
     return z * (this->sizeX * this->sizeY) + y * (this->sizeX) + x;
 }
+template<class T>
+int Matrix3<T>::getIndex(Vector3 coord) const
+{
+    return this->getIndex(int(coord.x), int(coord.y), int(coord.z));
+}
 
 template<class T>
 std::tuple<size_t, size_t, size_t> Matrix3<T>::getCoord(size_t index) const
@@ -323,6 +347,15 @@ Matrix3<T> Matrix3<T>::abs() const
     return m;
 }
 
+template <class T>
+T Matrix3<T>::sum()
+{
+    T sum = T();
+    for (T& val : this->data)
+        sum += val;
+    return sum;
+}
+
 template<class T>
 Matrix3<T> Matrix3<T>::rounded(int precision) const
 {
@@ -350,6 +383,38 @@ Matrix3<T> Matrix3<T>::normalized() const {
     Matrix3 mat = *this;
     return mat.normalize();
 }
+
+template<class T>
+Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) {
+    Matrix3<float> gaussian(sizeOnX, sizeOnY, sizeOnZ);
+    Vector3 center(sizeOnX/2, sizeOnY/2, sizeOnZ/2);
+    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
+    float sqrSigma = sigma * sigma;
+    for (int x = 0; x < gaussian.sizeX; x++) {
+        for (int y = 0; y < gaussian.sizeY; y++) {
+            for (int z = 0; z < gaussian.sizeZ; z++) {
+                Vector3 pos = Vector3(x, y, z) - center;
+                gaussian.at(x, y, z) = std::exp(-pos.norm2()/(2*sqrSigma)) * oneOverSqrt2Pi;
+            }
+        }
+    }
+    return gaussian;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) {
+    Matrix3<float> laplacian = Matrix3<float>(3 + sizeOnX/2 +1, 3 + sizeOnY/2 +1, 3 + sizeOnZ/2 +1, 0.f);
+    laplacian.at(sizeOnX/2 + 1, sizeOnY/2 + 1, sizeOnZ/2 + 1) = 1.f;
+    laplacian = laplacian.laplacian();
+    Matrix3<float> gaussian = Matrix3<T>::gaussian(sizeOnX, sizeOnY, sizeOnZ, sigma);
+    return this->convolution(laplacian.convolution(gaussian));
+}
+template<class T>
+Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOfZ, bool ignoreBorders) {
+    Matrix3<float> meanMatrix(sizeOnX, sizeOnY, sizeOfZ, 1.f);
+    return this->convolution(meanMatrix, (ignoreBorders ? CONVOLUTION_BORDERS::IGNORED : CONVOLUTION_BORDERS::ZERO_PAD));
+}
+
 /*
 template<class T>
 Matrix3<Vector3> Matrix3<T>::gradient() {
@@ -402,30 +467,55 @@ template<class T>
 Matrix3<Vector3> Matrix3<T>::grad() {return this->gradient(); }
 
 template<class T>
-Matrix3<T> Matrix3<T>::laplacian() const
+Matrix3<T> Matrix3<T>::laplacian()
 {
     Matrix3 returningGrid = *this;
+    this->raiseErrorOnBadCoord = false;
+    this->defaultValueOnBadCoord = 0;
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                Vector3 vec = Vector3();
-                if (x == 0 || x == this->sizeX - 1 || y == 0 || y == this->sizeY - 1
+                T val = T();
+                /*if (x == 0 || x == this->sizeX - 1 || y == 0 || y == this->sizeY - 1
                         || z == 0 || z == this->sizeZ - 1) {
-                    returningGrid.at(x, y, z) = vec;
-                } else {
-                    vec += this->at(x    , y    , z + 1);
-                    vec += this->at(x    , y    , z - 1);
-                    vec += this->at(x    , y + 1, z    );
-                    vec += this->at(x    , y - 1, z    );
-                    vec += this->at(x + 1, y    , z    );
-                    vec += this->at(x - 1, y    , z    );
-                    vec -= this->at(x    , y    , z    ) * 6;
-                }
-                returningGrid.at(x, y, z) = vec;
+                    returningGrid.at(x, y, z) = val;
+                } else {*/
+                    val += this->at(x    , y    , z + 1);
+                    val += this->at(x    , y    , z - 1);
+                    val += this->at(x    , y + 1, z    );
+                    val += this->at(x    , y - 1, z    );
+                    val += this->at(x + 1, y    , z    );
+                    val += this->at(x - 1, y    , z    );
+                    val -= this->at(x    , y    , z    ) * 6;
+//                }
+                returningGrid.at(x, y, z) = val;
             }
         }
     }
+    this->raiseErrorOnBadCoord = true;
     return returningGrid;
+}
+
+template<typename T>
+Matrix3<int> Matrix3<T>::binarize(T limitValue, bool greaterValuesAreSetToOne, bool useAlsoTheEqualSign)
+{
+    Matrix3<int> bin(this->sizeX, this->sizeY, this->sizeZ);
+    for (size_t i = 0; i < this->size(); i++) {
+        if (greaterValuesAreSetToOne) {
+            if ((useAlsoTheEqualSign && this->data[i] >= limitValue) || (!useAlsoTheEqualSign && this->data[i] > limitValue)) {
+                bin[i] = 1;
+            } else {
+                bin[i] = 0;
+            }
+        } else {
+            if ((useAlsoTheEqualSign && this->data[i] <= limitValue) || (!useAlsoTheEqualSign && this->data[i] < limitValue)) {
+                bin[i] = 1;
+            } else {
+                bin[i] = 0;
+            }
+        }
+    }
+    return bin;
 }
 
 template<typename T>
@@ -861,6 +951,57 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
     distances.raiseErrorOnBadCoord = true;
     distances.defaultValueOnBadCoord = 0.f;
     return distances; //.normalize();
+}
+
+
+template<class T>
+Matrix3<T> Matrix3<T>::convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS borders)
+{
+    Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
+    this->raiseErrorOnBadCoord = false;
+    this->defaultValueOnBadCoord = 0;
+
+    for (int x = 0; x < result.sizeX; x++) {
+        for (int y = 0; y < result.sizeY; y++) {
+            for (int z = 0; z < result.sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                T neighboringSum = T();
+                T normalisationValue = T();
+                for (int dx = 0; dx < convMatrix.sizeX; dx++) {
+                    for (int dy = 0; dy < convMatrix.sizeY; dy++) {
+                        for (int dz = 0; dz < convMatrix.sizeZ; dz++) {
+                            normalisationValue += convMatrix.at(dx, dy, dz);
+                            Vector3 dt(dx - (convMatrix.sizeX/2), dy - (convMatrix.sizeY/2), dz - (convMatrix.sizeZ/2));
+                            Vector3 cellValuePosition = pos + dt;
+                            if (borders == CONVOLUTION_BORDERS::IGNORED && !result.checkCoord(cellValuePosition))
+                                continue;
+                            else if (borders == CONVOLUTION_BORDERS::MIRROR && !result.checkCoord(cellValuePosition))
+                                cellValuePosition = cellValuePosition.abs();
+                            else if (borders == CONVOLUTION_BORDERS::REPEAT && !result.checkCoord(cellValuePosition))
+                                cellValuePosition = Vector3(std::max(int(cellValuePosition.x), int(0)),
+                                                            std::max(int(cellValuePosition.y), int(0)),
+                                                            std::max(int(cellValuePosition.z), int(0)));
+                            else if (borders == CONVOLUTION_BORDERS::WRAPPING && !result.checkCoord(cellValuePosition))
+                                cellValuePosition = Vector3(int(cellValuePosition.x) % result.sizeX,
+                                                            int(cellValuePosition.y) % result.sizeY,
+                                                            int(cellValuePosition.z) % result.sizeZ);
+                            else if (borders == CONVOLUTION_BORDERS::COPY && !result.checkCoord(cellValuePosition))
+                                cellValuePosition = pos;
+
+                            T cellValue = this->at(cellValuePosition);
+                            neighboringSum += cellValue * convMatrix.at(dx, dy, dz);
+                        }
+                    }
+
+                }
+                result.at(pos) = neighboringSum;
+                if (normalisationValue != 0)
+                    result.at(pos) /= normalisationValue;
+            }
+        }
+    }
+    this->raiseErrorOnBadCoord = true;
+    return result;
 }
 
 #endif // MATRIX3_H
