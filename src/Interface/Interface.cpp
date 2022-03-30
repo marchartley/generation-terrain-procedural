@@ -127,8 +127,9 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->curvesErosionStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
     this->curvesErosionCreateMatter = new QPushButton("Creer un pont");
     this->curvesErosionRemoveMatter = new QPushButton("Creer un tunnel");
+    this->curvesErosionCreateCrack = new QPushButton("Creer une faille");
     this->displayCurvesErosion = new QCheckBox("Afficher");
-    curvesErosionLayout->addWidget(createVerticalGroup({curvesErosionCreateMatter, curvesErosionRemoveMatter}));
+    curvesErosionLayout->addWidget(createVerticalGroup({curvesErosionCreateMatter, curvesErosionRemoveMatter, curvesErosionCreateCrack}));
     curvesErosionLayout->addWidget(createVerticalGroup({curvesAddControlPointButton, curvesClearControlPointButton}));
     curvesErosionLayout->addWidget(createSliderGroup("Taille", curvesErosionSizeSlider));
     curvesErosionLayout->addWidget(createSliderGroup("Force", curvesErosionStrengthSlider));
@@ -254,6 +255,7 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(curvesErosionStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setCurvesErosionStrength(float)));
     QObject::connect(curvesErosionCreateMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(false); } );
     QObject::connect(curvesErosionRemoveMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(true); } );
+    QObject::connect(curvesErosionCreateCrack, &QPushButton::pressed, this, [=](){ this->viewer->createCrack(true); } );
     QObject::connect(curvesAddControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->setCurvesErosionConstructionMode(true); });
     QObject::connect(curvesClearControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->clearTunnelPoints(); });
     QObject::connect(displayCurvesErosion, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[TUNNEL_PATHS].isDisplayed = display; viewer->update(); } );

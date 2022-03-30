@@ -18,6 +18,7 @@ public:
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true);
     std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true);
+    std::vector<Vector3> CreateCrack(Vector3 start, Vector3 end, bool applyChanges = true);
 
 
     std::shared_ptr<VoxelGrid> grid;

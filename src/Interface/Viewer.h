@@ -75,6 +75,7 @@ public Q_SLOTS:
     void clearTunnelPoints();
     void setCurvesErosionConstructionMode(bool isConstructing) {this->curvesErosionConstructionMode = isConstructing; }
     void createTunnel(bool removingMatter = true);
+    void createCrack(bool removingMatter = true);
 
     bool createGlobalGravity();
     bool createSandGravity();
@@ -200,6 +201,7 @@ public:
     FastNoiseLite randomParticlesDisplacementNoise;
     float fogNear = 1000.f;
     float fogFar = 5000.f;
+    bool usingSpotlight = false;
 
     std::string mapSavingFilename = "map1.data";
     std::string mapSavingFolder;

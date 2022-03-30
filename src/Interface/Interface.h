@@ -85,6 +85,7 @@ public:
     FancySlider* curvesErosionStrengthSlider;
     QPushButton* curvesErosionCreateMatter;
     QPushButton* curvesErosionRemoveMatter;
+    QPushButton* curvesErosionCreateCrack;
     QCheckBox* displayCurvesErosion;
 
     QPushButton* gravityGlobalButton;
