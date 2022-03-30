@@ -248,6 +248,8 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
     std::vector<Vector3> normals;
     Matrix3<float> map = this->getVoxelValues();
 
+//    map = map.meanSmooth(3, 3, 3, true);
+
     bool addedLeft = false;
     bool addedFront = false;
     if (this->neighboring_chunks.find(LEFT) != this->neighboring_chunks.end()) {
@@ -280,6 +282,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
             map(0, 0, z) = n->getVoxelValue(n->sizeX - 1, n->sizeY - 1, z);
     }
 
+
     if (this->x == 0) {
         for (int y = 0; y < map.sizeY; y++)
             for (int z = 0; z < this->height; z++)
@@ -305,7 +308,6 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
             map(x, y, map.sizeZ - 1) = -1;
         }
     }
-
     float isolevel = 0.0;
     std::vector<Vector3> vertexArray;
     int x = 0, y = 0, z = 0;
