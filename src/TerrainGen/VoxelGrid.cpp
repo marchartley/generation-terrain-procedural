@@ -2,6 +2,7 @@
 #include "TerrainModification/UnderwaterErosion.h"
 
 #include "Graphics/Shader.h"
+#include "Utils/Utils.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : blockSize(blockSize), noise_shifting(noise_shifting) {
@@ -129,7 +130,7 @@ void VoxelGrid::computeFlowfield()
     }
     for (int i = 0; i < 30; i++)
         this->fluidSimulation.step();
-    std::cout << this->fluidSimulation.currentStep << std::endl;
+    std::cout << "Fluid sim step : " << this->fluidSimulation.currentStep << ". Max fluid velocity : " << this->fluidSimulation.velocity.max() << std::endl;
     this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
 
     for (auto& vc : this->chunks) {
@@ -238,24 +239,78 @@ void VoxelGrid::makeItFall(float erosionStrength)
 }
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
-    auto start = std::chrono::system_clock::now();
+    auto start = std::chrono::system_clock::now();/*
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->letGravityMakeSandFall();
-    }
+    }*/
+    this->letGravityMakeSandFallWithFlow();
     this->applyModification(this->shareSandWithNeighbors());
     if (remesh)
         remeshAll();
     auto duration = std::chrono::duration<float>(std::chrono::system_clock::now() - start);
     std::cout << duration.count() << " s for making sand fall once" << std::endl;
 }
+void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
+{
+    Matrix3<float> transportMatrix(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> currentTransportMatrix(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> voxelValues = this->getVoxelValues();
+    Matrix3<Vector3> flow(this->sizeX, this->sizeY, this->sizeZ, this->sea_current); // To change with real flow
+//    Matrix3<Vector3> flow = this->flowField;
+    float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
+
+    int iter = 0;
+    do {
+        currentTransportMatrix = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        std::vector<Vector3> sandyPositions;
+        for (size_t i = 0; i < voxelValues.size(); i++) {
+            if (sandLowerLimit <= voxelValues[i] + transportMatrix[i] && voxelValues[i] + transportMatrix[i] < sandUpperLimit) {
+                sandyPositions.push_back(voxelValues.getCoordAsVector3(i));
+            }
+        }
+        std::sort(sandyPositions.begin(), sandyPositions.end(),
+                  [](const Vector3& a, const Vector3& b) -> bool { return a.z < b.z; });
+
+        int a = 0;
+        for (const Vector3& sandPos : sandyPositions) {
+            // If some sand has fall there, don't update... Maybe.. Maybe not... Maybe remove it
+            if (voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos) >= sandUpperLimit)
+                continue;
+            Vector3 currentPos = sandPos;
+            Vector3 currentDir(0, 0, -1.0);
+            while ((currentPos + currentDir).rounded() != sandPos.rounded() && this->contains(currentPos + currentDir) &&
+                   voxelValues.at(currentPos + currentDir) + transportMatrix.at(currentPos + currentDir) + currentTransportMatrix.at(currentPos + currentDir) <= 0) {
+                if (a == 0){
+                    std::cout << currentPos << "\n";
+                }
+                currentPos += currentDir;
+                currentDir += flow.at(currentPos);
+                currentDir.normalize();
+            }
+            a++;
+            // If it goes away
+            if (!this->contains(currentPos)) {
+                currentTransportMatrix.at(sandPos) -= voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos);
+                continue;
+            } else {
+                if (voxelValues.at(currentPos) + transportMatrix.at(currentPos) + currentTransportMatrix.at(currentPos) > sandUpperLimit)
+                    currentPos -= currentDir; // Go back to previous pos if it saturates the landing voxel
+                float transportedValue = voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos);
+                currentTransportMatrix.at(currentPos) += transportedValue;
+                currentTransportMatrix.at(sandPos) -= transportedValue;
+            }
+        }
+        transportMatrix += currentTransportMatrix;
+        std::cout << currentTransportMatrix.abs().sum() << " quantity moved at iteration " << ++iter << std::endl;
+    } while(currentTransportMatrix.abs().sum() > 1e-5);
+//    std::cout << transportMatrix.abs().sum() << " quantity of matter moved." << std::endl;
+    this->applyModification(transportMatrix);
+}
 
 Matrix3<float> VoxelGrid::shareSandWithNeighbors()
 {
-    Matrix3<float> allVoxels(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> allVoxels = this->getVoxelValues();
     Matrix3<float> transport(this->sizeX, this->sizeY, this->sizeZ);
-    for (auto& vc : this->chunks) {
-        allVoxels.paste(vc->getVoxelValues(), Vector3(vc->x, vc->y, 0));
-    }
     allVoxels.raiseErrorOnBadCoord = false;
     allVoxels.defaultValueOnBadCoord = std::numeric_limits<float>::max();
     for (int x = 0; x < this->sizeX; x++) {
@@ -339,9 +394,8 @@ void VoxelGrid::computeVoxelGroups()
     std::set<int> neighbors_coords;
     Matrix3<int> connected(this->sizeX, this->sizeY, this->sizeZ);
     Matrix3<int> labels(this->sizeX, this->sizeY, this->sizeZ, -1);
-    Matrix3<float> voxelValues(this->sizeX, this->sizeY, this->sizeZ);
-    for (auto& vc : this->chunks)
-        voxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+    Matrix3<float> voxelValues = this->getVoxelValues();
+
     for (size_t i = 0; i < voxelValues.size(); i++) {
         if (voxelValues[i] > 0.f) connected[i] = 1;
     }
@@ -376,6 +430,15 @@ void VoxelGrid::computeVoxelGroups()
 
     for (auto& vc : this->chunks)
         vc->voxelGroups = labels.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, 0, 0 + vc->height);
+}
+
+Matrix3<float> VoxelGrid::getVoxelValues()
+{
+    Matrix3<float> values(this->sizeX, this->sizeY, this->sizeZ);
+    for (auto& vc : this->chunks) {
+        values.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+    }
+    return values;
 }
 
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {
