@@ -53,7 +53,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeZ = grid.getMaxHeight();
     this->initMap();
 
-    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeY));
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -66,7 +66,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
                                                             -2.0, 2.0);
                         data[iChunk].at(x, y, i) = abs(noise_val);
                     }
-                    for (int i = z; i < this->getSizeZ()+1; i++) {
+                    for (int i = z; i < this->getSizeZ(); i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
                         data[iChunk].at(x, y, i) = -abs(noise_val);
@@ -192,6 +192,9 @@ void VoxelGrid::initMap()
     sizeY -= (sizeY % chunkSize);
 
     this->chunks.clear();
+    this->flowField.clear();
+    this->distanceField.clear();
+    this->pressureField.clear();
 
     // Create and configure FastNoise object
     this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
