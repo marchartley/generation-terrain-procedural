@@ -33,7 +33,7 @@ std::vector<Vector3> BSpline::getPath(float resolution)
 
 Vector3 BSpline::getPoint(float x)
 {
-    if (points.size() >= 4)
+    if (points.size() >= 2)
         return this->getCatmullPoint(x);
 
     if(points.size() == 0)
@@ -212,16 +212,16 @@ Vector3 BSpline::getCatmullPoint(float x)
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
 
-    if (iFloor <= 0) {
+    /*if (iFloor <= 0) {
         return this->getPoint(x_prime, this->points[0], this->points[1]);
     } else if (iCeil >= int(this->points.size()) - 1) {
         return this->getPoint(x_prime, this->points[iFloor], this->points[iCeil]);
-    }
+    }*/
 
-    Vector3 P0 = points[iFloor - 1];
+    Vector3 P0 = points[(iFloor == 0 ? 1 : iFloor - 1)];
     Vector3 P1 = points[iFloor - 0];
     Vector3 P2 = points[iCeil + 0];
-    Vector3 P3 = points[iCeil + 1];
+    Vector3 P3 = points[(iCeil == int(this->points.size())-1 ? this->points.size()-2 : iCeil + 1)];
 
     float t0 = 0;
     float t1 = CatmullNextT(P0, P1, t0, alpha);
