@@ -124,6 +124,37 @@ float BSpline::length()
     return length;
 }
 
+Vector3 BSpline::getFrenetDirection(float x)
+{
+    return getDirection(x);
+}
+
+Vector3 BSpline::getFrenetNormal(float x)
+{
+    Vector3 new_dir = this->getFrenetDirection(x);
+    Vector3 forward(0, 1, 0);
+    Vector3 up(0, 0, 1);
+    Vector3 right(1, 0, 0);
+    if (new_dir.isAlmostVertical())
+        right = Vector3(0, 1, 1).cross(new_dir);
+    else
+        right = Vector3(0, 0, 1).cross(new_dir);
+    return new_dir.cross(right).normalize();
+}
+
+Vector3 BSpline::getFrenetBinormal(float x)
+{
+    Vector3 new_dir = this->getFrenetDirection(x);
+    Vector3 forward(0, 1, 0);
+    Vector3 up(0, 0, 1);
+    Vector3 right(1, 0, 0);
+    if (new_dir.isAlmostVertical())
+        right = Vector3(0, 1, 1).cross(new_dir);
+    else
+        right = Vector3(0, 0, 1).cross(new_dir);
+    return right;
+}
+
 Vector3 BSpline::getCenterCircle(float x)
 {
     return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));

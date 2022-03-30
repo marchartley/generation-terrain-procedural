@@ -21,6 +21,10 @@ public:
     Vector3 estimateClosestPos(Vector3 pos);
     float length();
 
+    Vector3 getFrenetDirection(float x);
+    Vector3 getFrenetNormal(float x);
+    Vector3 getFrenetBinormal(float x);
+
     Vector3 getCenterCircle(float x);
     Vector3 getDirection(float x);
     Vector3 getNormal(float x);
