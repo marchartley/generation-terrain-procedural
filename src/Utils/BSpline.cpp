@@ -184,8 +184,9 @@ float BSpline::getCurvature(float x)
 
 BSpline& BSpline::close()
 {
-    if (this->points.size() > 0 && this->points.front() != this->points.back())
-        this->points.push_back(this->points.front());
+    if (this->points.size() > 1 && !this->closed) { // && this->points.front() != this->points.back()) {
+        this->closed = true;
+    }
     return *this;
 }
 
@@ -201,29 +202,36 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
 
 Vector3 BSpline::getCatmullPoint(float x)
 {
-    if (x == 0.f) return this->points[0];
-    if (x == 1.f) return this->points[this->points.size() - 1];
+    std::vector<Vector3> displayedPoints = this->points;
+    if (this->closed)
+        displayedPoints.push_back(displayedPoints.front());
+
+    size_t lastPointIndex = (this->closed ? displayedPoints.size() - 1 : displayedPoints.size() - 1);
+    size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+
+    if (x == 0.f) return displayedPoints[0];
+    if (x == 1.f) return displayedPoints[lastPointIndex];
     float alpha = 0.5f;
 
     //alpha /= 2.f;
 
-    float res = 1 / (float)(this->points.size() - 1);
+    float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);
     int iCeil = int(x / res) + 1;
     float resFloor = iFloor * res;
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
-
-    /*if (iFloor <= 0) {
-        return this->getPoint(x_prime, this->points[0], this->points[1]);
-    } else if (iCeil >= int(this->points.size()) - 1) {
-        return this->getPoint(x_prime, this->points[iFloor], this->points[iCeil]);
+/*
+    if (iFloor <= 0) {
+        return this->getPoint(x_prime, displayedPoints[0], displayedPoints[1]);
+    } else if (iCeil >= int(displayedPoints.size()) - 1) {
+        return this->getPoint(x_prime, displayedPoints[iFloor], displayedPoints[iCeil]);
     }*/
 
-    Vector3 P0 = points[(iFloor == 0 ? 1 : iFloor - 1)];
-    Vector3 P1 = points[iFloor - 0];
-    Vector3 P2 = points[iCeil + 0];
-    Vector3 P3 = points[(iCeil == int(this->points.size())-1 ? this->points.size()-2 : iCeil + 1)];
+    Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
+    Vector3 P1 = displayedPoints[iFloor - 0];
+    Vector3 P2 = displayedPoints[iCeil + 0];
+    Vector3 P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
 
     float t0 = 0;
     float t1 = CatmullNextT(P0, P1, t0, alpha);
