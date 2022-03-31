@@ -16,6 +16,8 @@ public:
     Matrix3Graph& computeSurface();
     Matrix3Graph& computeSurface(Matrix3<int> matrix);
 
+    Matrix3Graph& randomizeEdges(float randomFactor = 1.f, bool allowNegatives = false);
+
     std::vector<Vector3> shortestPath(Vector3 start, Vector3 end);
 
     Matrix3<int> originalMatrix;

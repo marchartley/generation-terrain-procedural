@@ -100,14 +100,46 @@ Matrix3Graph& Matrix3Graph::computeSurface(Matrix3<int> matrix)
 
 }
 
+Matrix3Graph& Matrix3Graph::randomizeEdges(float randomFactor, bool allowNegatives)
+{
+    for (auto& node : this->nodes) {
+        for (size_t i = 0; i < node->neighbors.size(); i++) {
+            float previous_distance = std::get<1>(node->neighbors[i]);
+            float rand = 1 + (random_gen::generate(-1.f, 1.f) * randomFactor);
+            float new_distance = previous_distance * rand;
+            if (!allowNegatives && new_distance < 0)
+                new_distance = 0;
+            node->neighbors[i] = std::make_pair(std::get<0>(node->neighbors[i]), new_distance);
+        }
+    }
+    return *this;
+}
+
 std::vector<Vector3> Matrix3Graph::shortestPath(Vector3 start, Vector3 end)
 {
+    float closestDistToStart = std::numeric_limits<float>::max();
+    float closestDistToEnd = std::numeric_limits<float>::max();
+    Vector3 newStart;
+    Vector3 newEnd;
+    for (auto& node : this->nodes) {
+        Vector3 pos = node->pos;
+        if ((pos - start).norm2() < closestDistToStart) {
+            closestDistToStart = (pos - start).norm2();
+            newStart = pos;
+        }
+        if ((pos - end).norm2() < closestDistToEnd) {
+            closestDistToEnd = (pos - end).norm2();
+            newEnd = pos;
+        }
+    }
+    start = newStart;
+    end = newEnd;
     float totalDistance;
     std::vector<int> path;
     std::tie(totalDistance, path) = Pathfinding::ShortestPathFrom(this->originalMatrix.getIndex(start), this->originalMatrix.getIndex(end),
-                                  this->nodes, [&](int index) -> float {
+                                  this->nodes/*, [&](int index) -> float {
         return (this->nodes[index]->pos - end).norm2();
-    });
+    }*/);
 
     path = Pathfinding::getPath(this->originalMatrix.getIndex(end), path);
     std::vector<Vector3> returnedPath(path.size());
