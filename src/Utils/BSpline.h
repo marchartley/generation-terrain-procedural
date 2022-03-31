@@ -38,6 +38,7 @@ public:
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
     std::vector<Vector3> points;
+    bool closed = false;
 
 };
 

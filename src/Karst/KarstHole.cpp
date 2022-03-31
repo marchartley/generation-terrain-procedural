@@ -2,20 +2,24 @@
 
 #include "Utils/Utils.h"
 
-KarstHole::KarstHole(float size)
+KarstHole::KarstHole(float size, KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    this->startingProfile = KarstHoleProfile(KarstHolePredefinedShapes::SOLUBLE_BED).setSize(size, size);
-    this->endingProfile = KarstHoleProfile(KarstHolePredefinedShapes::KEYHOLE).setSize(size, size);
+    this->startingProfile = KarstHoleProfile(startingShape).setSize(size, size);
+    this->endingProfile = KarstHoleProfile(endingShape).setSize(size, size);
     this->path = BSpline();
     this->size = size;
 }
 
-KarstHole::KarstHole(Vector3 start, Vector3 end, float size) : KarstHole(size)
+KarstHole::KarstHole(Vector3 start, Vector3 end, float size,
+                     KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
+    : KarstHole(size, startingShape, endingShape)
 {
     this->path = BSpline({start, end});
 }
 
-KarstHole::KarstHole(BSpline fullPath, float size) : KarstHole(size)
+KarstHole::KarstHole(BSpline fullPath, float size,
+                     KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
+    : KarstHole(size, startingShape, endingShape)
 {
     this->path = fullPath;
 }
@@ -238,6 +242,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                     allCollisionsValidated = true;
                     numberOfCollisions = 0;
                     ray = Vector3(x, -2, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
+                    ray = Vector3(x, -200, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
                     int i = 0;
                     int lastTrianglesCylinder = -1;
 //                    bool ignoreThisCylinder = false;
@@ -246,11 +251,11 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                         int triangle_group = i / (2 * (number_of_points - 2) + 2 * number_of_points);
                         i++;
                         if (triangle_group != lastTrianglesCylinder) {
+                            lastTrianglesCylinder = triangle_group;
                             if (numberOfCollisions % 2 == 1) {
                                 break;
                             }/*
                             ignoreThisCylinder = false;
-                            lastTrianglesCylinder = triangle_group;
                             float distToCylinder = shortestDistanceBetweenSegments(point, ray, cylindersStart[triangle_group], cylindersEnd[triangle_group]);
                             if (distToCylinder > this->size) {
                                 ignoreThisCylinder = true;
