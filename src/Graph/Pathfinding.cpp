@@ -60,11 +60,11 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(Matrix3<float> &adjencyMa
         openSet.erase(std::find(openSet.begin(), openSet.end(), current));
 
         for (int u = 0; u < n; u++) {
-            float possibleGScore = gScore[current] + adjencyMap.at(current, u);
+            float possibleGScore = gScore[current] + adjencyMap.at(current, u) + heuristicFunction(u);
             if (possibleGScore < gScore[u]) {
                 prec[u] = current;
                 gScore[u] = possibleGScore;
-                fScore[u] = possibleGScore + adjencyMap.at(current, u);
+                fScore[u] = possibleGScore + adjencyMap.at(current, u) + heuristicFunction(u);
                 if (std::find(openSet.begin(), openSet.end(), u) == openSet.end())
                     openSet.push_back(u);
             }

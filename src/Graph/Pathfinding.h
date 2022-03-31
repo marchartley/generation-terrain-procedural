@@ -33,15 +33,6 @@ template<class T>
 std::pair<float, std::vector<int> > Pathfinding::AStar(std::vector<std::shared_ptr<GraphNode<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction)
 {
     int n = nodes.size();
-    std::cout << "Neighbors of node #" << source << " at " << nodes[source]->pos << "\n";
-    for (const auto& n : nodes[source]->neighbors) {
-        std::cout << " - #" << std::get<0>(n)->index << " at " << std::get<0>(n)->pos << " (" << std::get<1>(n) << ")\n";
-    }
-    std::cout << "Neighbors of node #" << dest << " at " << nodes[dest]->pos << "\n";
-    for (const auto& n : nodes[dest]->neighbors) {
-        std::cout << " - #" << std::get<0>(n)->index << " at " << std::get<0>(n)->pos << " (" << std::get<1>(n) << ")\n";
-    }
-    std::cout << std::endl;
     std::vector<int> prec(n, -1);
     std::vector<float> gScore(n, std::numeric_limits<float>::max());
     std::vector<float> fScore(n, std::numeric_limits<float>::max());
@@ -76,7 +67,7 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(std::vector<std::shared_p
 
         for (const auto& n : nodes[current]->neighbors) {
             int u = std::get<0>(n)->index;
-            float possibleGScore = gScore[current] + heuristicFunction(u); //nodes[current]->getNeighborDistanceByIndex(u);
+            float possibleGScore = gScore[current] + std::get<1>(n) + heuristicFunction(u); //nodes[current]->getNeighborDistanceByIndex(u);
             if (possibleGScore < gScore[u]) {
                 prec[u] = current;
                 gScore[u] = possibleGScore;
