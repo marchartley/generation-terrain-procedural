@@ -7,9 +7,9 @@
 class KarstHole
 {
 public:
-    KarstHole(float size = 1.f);
-    KarstHole(Vector3 start, Vector3 end, float size = 1.f);
-    KarstHole(BSpline fullPath, float size = 1.f);
+    KarstHole(float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(Vector3 start, Vector3 end, float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(BSpline fullPath, float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
 
     KarstHoleProfile interpolate(float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
 

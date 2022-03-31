@@ -146,14 +146,16 @@ UnderwaterErosion::Apply(std::shared_ptr<Vector3> startingPoint, std::shared_ptr
 }
 
 
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter, bool applyChanges)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addingMatter, bool applyChanges,
+                                                     KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
     for (Vector3& coord : curve.points)
         coord = ((coord + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
-    return CreateTunnel(curve, addingMatter, applyChanges);
+    return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
 }
-std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges)
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges,
+                                                     KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     bool modificationDoesSomething = true;
@@ -182,7 +184,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             }
         }
     } else {
-        KarstHole hole(path, this->maxRockSize);
+        KarstHole hole(path, this->maxRockSize, startingShape, endingShape);
         Matrix3<float> holeMatrix;
         Vector3 anchor;
         std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
@@ -218,7 +220,8 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     return coords;
 }
 
-std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges)
+std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges,
+                                                                            KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
@@ -239,7 +242,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
                 erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
             }
         } else {
-            KarstHole hole(path, this->maxRockSize);
+            KarstHole hole(path, this->maxRockSize, startingShape, endingShape);
             Matrix3<float> holeMatrix;
             Vector3 anchor;
             std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
@@ -281,8 +284,7 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
     float rx = 3.f, ry = 3.f, rz = 3.f;
     Vector3 ratio(rx, ry, rz);
     Matrix3<int> resizedMap = this->grid->getVoxelValues().resize(this->grid->sizeX / rx, this->grid->sizeY / ry, this->grid->sizeZ / rz).binarize();
-    Matrix3Graph graph(resizedMap);
-    graph.computeSurface();
+    Matrix3Graph graph = Matrix3Graph(resizedMap).computeSurface().randomizeEdges(.5f);
     Vector3 clampedStart = start / ratio;
     clampedStart.x = std::clamp(clampedStart.x, 0.f, resizedMap.sizeX - 1.f);
     clampedStart.y = std::clamp(clampedStart.y, 0.f, resizedMap.sizeY - 1.f);
@@ -292,6 +294,8 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
     clampedEnd.y = std::clamp(clampedEnd.y, 0.f, resizedMap.sizeY - 1.f);
     clampedEnd.z = std::clamp(clampedEnd.z, 0.f, resizedMap.sizeZ - 1.f);
     std::vector<Vector3> path = graph.shortestPath(clampedStart, clampedEnd);
+
+    ratio = ((start / clampedStart.rounded()) + (end / clampedEnd.rounded())) / 2.f; // To be continued...
     for (Vector3& point : path)
         point *= ratio;
     std::vector<Vector3> meshPath;
@@ -299,7 +303,7 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
         meshPath.push_back(path[i]);
         meshPath.push_back(path[i + 1]);
     }
-    this->CreateTunnel(BSpline(path), false, true, applyChanges);
-    return meshPath;
+    return this->CreateTunnel(BSpline(path).simplifyByRamerDouglasPeucker(0.5f), false, false, applyChanges, KarstHolePredefinedShapes::CRACK, KarstHolePredefinedShapes::CRACK);
+//    return meshPath;
 }
 

@@ -241,7 +241,6 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                     }
                     allCollisionsValidated = true;
                     numberOfCollisions = 0;
-                    ray = Vector3(x, -2, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
                     ray = Vector3(x, -200, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
                     int i = 0;
                     int lastTrianglesCylinder = -1;
