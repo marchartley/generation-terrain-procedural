@@ -24,6 +24,9 @@ KarstHoleProfile::KarstHoleProfile(KarstHolePredefinedShapes shape)
     case CANYON:
         this->vertices = KarstHoleProfile::createCanyonProfile();
         break;
+    case CRACK:
+        this->vertices = KarstHoleProfile::createCrackProfile();
+        break;
     }
 }
 
@@ -39,27 +42,32 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
 
 KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
 {
-//    for (Vector3& point : this->vertices.points)
-//        point.rotate(-3.141592/2.f, 0, 0);
-    /*Vector3 new_dir = path.getDirection(t);
+    for (Vector3& point : this->vertices.points)
+        point.rotate(-3.141592/2.f, 0, 0);
+/*
+    Vector3 new_dir = path.getDirection(t);
     Vector3 forward(0, 1, 0);
     Vector3 up(0, 0, 1);
     Vector3 right(1, 0, 0);
 //    right = path.getBinormal(t);
 //    up = path.getNormal(t);
 
-    float angle = std::acos(forward.dot(new_dir));
-    Vector3 rotation = new_dir.cross(forward).normalize();
-    right.rotate(angle, rotation);
+//    float angle = std::acos(forward.dot(new_dir));
+//    Vector3 rotation = new_dir.cross(forward).normalize();
+//    right.rotate(angle, rotation);
     if (std::abs(new_dir.dot(Vector3(0, 0, 1))) < 0.999)
         right = Vector3(0, 0, 1).cross(new_dir).normalize();
     else
         right = Vector3(0, 1, 1).cross(new_dir).normalize();
     up = new_dir.cross(right).normalize();
 //    std::cout << new_dir << " " << right << " " << up << std::endl;
-*/
+
+    std::cout << "t = " << t << "\n";
+    std::cout << right << " against " << path.getFrenetBinormal(t) << "\n";
+    std::cout << new_dir << " against " << path.getFrenetDirection(t) << "\n";
+    std::cout << up << " against " << path.getFrenetNormal(t) << std::endl;*/
     for (Vector3& point : this->vertices.points)
-        point.changeBasis(path.getFrenetBinormal(t), path.getFrenetNormal(t), path.getFrenetDirection(t));
+        point.changeBasis(path.getFrenetBinormal(t), path.getFrenetDirection(t), path.getFrenetNormal(t));
 //        point.changeBasis(right, new_dir, up);
     return *this;
 }
@@ -272,7 +280,7 @@ BSpline KarstHoleProfile::createTubeProfile()
                        { .7, -.7, 0},
                        { .0, -1., 0},
                        {-.7, -.7, 0}
-                   }); //.close();
+                   }).close();
 }
 
 BSpline KarstHoleProfile::createSolubleBedProfile()
@@ -284,7 +292,7 @@ BSpline KarstHoleProfile::createSolubleBedProfile()
                        { 1.,  0., 0},
                        { .7, -.5, 0},
                        {-.7, -.5, 0}
-                   }); //.close();
+                   }).close();
 }
 
 BSpline KarstHoleProfile::createPassageProfile()
@@ -296,7 +304,7 @@ BSpline KarstHoleProfile::createPassageProfile()
                        { 1.,  0., 0},
                        { .5, -.5, 0},
                        {-.5, -.5, 0}
-                   }); //.close();
+                   }).close();
 }
 
 BSpline KarstHoleProfile::createKeyholeProfile()
@@ -310,7 +318,7 @@ BSpline KarstHoleProfile::createKeyholeProfile()
                        { .2, -1., 0},
                        {-.2, -1., 0},
                        {-.5, -.5, 0}
-                   }); //.close();
+                   }).close();
 }
 
 BSpline KarstHoleProfile::createCanyonProfile()
@@ -324,5 +332,15 @@ BSpline KarstHoleProfile::createCanyonProfile()
                        { .2, -1., 0},
                        {-.2, -1., 0},
                        {-.5, -.5, 0}
-                   }); //.close();
+                   }).close();
+}
+BSpline KarstHoleProfile::createCrackProfile()
+{
+    return BSpline({
+                       {-.25,  0, 0},
+                       {-.2,  .1, 0},
+                       { .2,  .1, 0},
+                       { .25,  0, 0},
+                       {  0, -1., 0}
+                   }).close();
 }
