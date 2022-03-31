@@ -55,7 +55,7 @@ Vector3 Vector3::abs()
 
 bool Vector3::isAlmostVertical()
 {
-    return std::abs(this->dot(Vector3(0, 0, 1))) > 0.1;
+    return std::abs(this->dot(Vector3(0, 0, 1))) > 0.999;
 }
 
 Matrix Vector3::toMatrix()
@@ -367,3 +367,4 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v) {
     return io;
 }
 
+Vector3 std::abs(Vector3 o) { return o.abs(); }
