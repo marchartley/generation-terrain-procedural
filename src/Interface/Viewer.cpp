@@ -325,6 +325,8 @@ void Viewer::draw() {
         this->karstPathInterface->display();
     if (this->spaceColonizationInterface)
         this->spaceColonizationInterface->display();
+    if (this->faultSlipInterface)
+        this->faultSlipInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
