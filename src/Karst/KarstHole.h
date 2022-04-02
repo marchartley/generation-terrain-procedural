@@ -18,7 +18,7 @@ public:
 
     std::tuple<Matrix3<float>, Vector3> generateMask(std::vector<std::vector<Vector3>> precomputedTriangles = std::vector<std::vector<Vector3>>());
 
-    static int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3);
+//    static int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3);
 
     KarstHoleProfile startingProfile;
     KarstHoleProfile endingProfile;

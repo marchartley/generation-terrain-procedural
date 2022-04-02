@@ -265,7 +265,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                             continue;*/
                         }
 
-                        int collision_result = KarstHole::segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
+                        int collision_result = segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
                         if (collision_result == 1) {
                             numberOfCollisions ++;
                         }
@@ -295,67 +295,4 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
 //    }
     Vector3 anchor = this->path.points[0] - minVec;
     return std::make_tuple(mask, anchor);
-}
-
-float tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
-    return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
-}
-int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
-int KarstHole::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
-{
-    // Möller–Trumbore intersection algorithm
-//    if (int(s1.x) == 10 && int(s1.z) == 10) {
-//        int a = 0;
-//    }
-    Vector3 rayOrigin = s1;
-    Vector3 rayDir = (s2 - s1);
-
-    Vector3 triEdge1 = (t2 - t1);
-    Vector3 triEdge2 = (t3 - t1);
-
-    Vector3 h = rayDir.cross(triEdge2);
-    float dot = triEdge1.dot(h);
-    if (std::abs(dot) <  1.e-6)
-        return false; // Ray parallel to the triangle
-    float f = 1.f/dot;
-    Vector3 s = (rayOrigin - t1);
-    float u = f * s.dot(h);
-    if (u < 0.f || 1.f < u)
-        return false; // Ray did not reach the triangle
-    Vector3 q = s.cross(triEdge1);
-    float v = f * rayDir.dot(q);
-    if (v < 0.f || 1.f < (u + v))
-        return false;
-
-    float t = f * triEdge2.dot(q);
-    return t > 0;
-    /*
-    Vector3 ray = (s1 - s2); //.normalize();
-    Vector3 segment1 = (s1 - t1); //.normalize();
-    Vector3 segment2 = (s1 - t2); //.normalize();
-    Vector3 segment3 = (s1 - t3); //.normalize();
-    if (ray.dot(segment1) > segment1.norm() * ray.norm() * 0.9999 ||
-            ray.dot(segment2) > segment2.norm() * ray.norm() * 0.9999 ||
-            ray.dot(segment3) > segment3.norm() * ray.norm() * 0.9999) {
-//        std::cout << ray << "." << segment1 << " = " << ray.dot(segment1) << " " << ray << "." << segment2 << " = " << ray.dot(segment2) << " " << ray << "." << segment3 << " = " << ray.dot(segment3) << std::endl;
-        return 1;
-    }
-    // Compute tetraheadron "signed" volume from one end of the segment and the triangle
-    float product_of_volumes = tetrahedronSignedVolume(s1, t1, t2, t3) * tetrahedronSignedVolume(s2, t1, t2, t3);
-    if (std::abs(product_of_volumes) < 0.000001 || sign(product_of_volumes) == 0)
-        return -1;
-    if (sign(product_of_volumes) > 0) // Same sign for the two volumes computed
-        return 0;
-    // Compute the tetrahedron built with the segment
-    // and 2 points of the triangle, all configs should have
-    // the same sign.
-    int volume1 = tetrahedronSignedVolume(s1, s2, t1, t2);
-    int volume2 = tetrahedronSignedVolume(s1, s2, t3, t1);
-    int volume3 = tetrahedronSignedVolume(s1, s2, t2, t3);
-    if (std::abs(volume1) < 0.000001 || std::abs(volume2) < 0.000001 || std::abs(volume3) < 0.000001)
-        return -1;
-    if (sign(volume1) == sign(volume2) && sign(volume1) == sign(volume3))
-        return 1;
-    return 0;
-    */
 }
