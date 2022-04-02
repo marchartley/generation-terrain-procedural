@@ -51,6 +51,7 @@ SOURCES += \
         src/Interface/ControlPoint.cpp \
         src/Interface/CustomInteractiveObject.cpp \
         src/Interface/FancySlider.cpp \
+        src/Interface/FaultSlipInterface.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
@@ -68,6 +69,7 @@ SOURCES += \
         src/TerrainGen/LayerBasedGrid.cpp \
         src/TerrainGen/VoxelChunk.cpp \
         src/TerrainGen/VoxelGrid.cpp \
+        src/TerrainModification/FaultSlip.cpp \
         src/TerrainModification/RockErosion.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
@@ -113,6 +115,7 @@ HEADERS += \
     src/Interface/ControlPoint.h \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/FancySlider.h \
+    src/Interface/FaultSlipInterface.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \
@@ -129,6 +132,7 @@ HEADERS += \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/VoxelChunk.h \
     src/TerrainGen/VoxelGrid.h \
+    src/TerrainModification/FaultSlip.h \
     src/TerrainModification/RockErosion.h \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \

@@ -9,13 +9,20 @@ ViewerInterface::ViewerInterface() {
     this->viewer->karstPathInterface = this->karstPathGeneration;
     this->spaceColonization = std::make_shared<SpaceColonizationInterface>();
     this->viewer->spaceColonizationInterface = this->spaceColonization;
+    this->faultSlip = std::make_shared<FaultSlipInterface>();
+    this->viewer->faultSlipInterface = this->faultSlip;
+
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
         this->spaceColonization->affectVoxelGrid(this->viewer->voxelGrid);
+        this->faultSlip->affectVoxelGrid(this->viewer->voxelGrid);
     });
+
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::karstPathUpdated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->faultSlip.get(), &FaultSlipInterface::faultSlipApplied,
                      this, [&](){ this->viewer->update(); });
     setupUi(this);
 }
@@ -54,6 +61,8 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->karstCreationBox = new Spoiler("Creation de karsts");
     this->spaceColonizerLayout = new QHBoxLayout;
     this->spaceColonizerBox = new Spoiler("Creation de karsts par colonisation");
+    this->faultSlipLayout = new QHBoxLayout;
+    this->faultSlipBox = new Spoiler("Fracture");
     this->gravityLayout = new QHBoxLayout;
     this->gravityBox = new Spoiler("Gravité");
     this->recordingLayout = new QHBoxLayout;
@@ -146,6 +155,11 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     this->spaceColonizerLayout = this->spaceColonization->createGUI();
     spaceColonizerBox->setContentLayout(*spaceColonizerLayout);
     controlLayout->addWidget(spaceColonizerBox);
+
+    // Fault slip layout
+    this->faultSlipLayout = this->faultSlip->createGUI();
+    faultSlipBox->setContentLayout(*faultSlipLayout);
+    controlLayout->addWidget(faultSlipBox);
 
     // Gravity controls
     this->gravityGlobalButton = new QPushButton("Chutes de pierres");

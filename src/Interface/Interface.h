@@ -11,6 +11,7 @@
 
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
+#include "Interface/FaultSlipInterface.h"
 
 class ViewerInterface : public QDialog{
 public:
@@ -33,6 +34,7 @@ public:
 
     std::shared_ptr<KarstPathGenerationInterface> karstPathGeneration;
     std::shared_ptr<SpaceColonizationInterface> spaceColonization;
+    std::shared_ptr<FaultSlipInterface> faultSlip;
 
 
     QHBoxLayout* loadSaveLayout;
@@ -49,6 +51,8 @@ public:
     Spoiler* karstCreationBox;
     QHBoxLayout* spaceColonizerLayout;
     Spoiler* spaceColonizerBox;
+    QHBoxLayout* faultSlipLayout;
+    Spoiler* faultSlipBox;
     QHBoxLayout* gravityLayout;
     Spoiler* gravityBox;
     QHBoxLayout* recordingLayout;

@@ -20,6 +20,7 @@ class Viewer;
 #include "Interface/ControlPoint.h"
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
+#include "Interface/FaultSlipInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -144,6 +145,7 @@ public:
 //    std::vector<BSpline> karstPaths;
     std::shared_ptr<KarstPathGenerationInterface> karstPathInterface = nullptr;
     std::shared_ptr<SpaceColonizationInterface> spaceColonizationInterface = nullptr;
+    std::shared_ptr<FaultSlipInterface> faultSlipInterface = nullptr;
 
 //    TreeColonisationAlgo::TreeColonisation spaceColonizer;
 //    std::vector<BSpline> spaceColonizerPaths;
