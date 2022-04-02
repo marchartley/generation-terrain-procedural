@@ -146,6 +146,55 @@ float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vec
     }
     return (c2 - c1).norm();
 }
+float tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
+    return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
+}
+int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
+int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
+{
+    // Möller–Trumbore intersection algorithm
+//    if (int(s1.x) == 10 && int(s1.z) == 10) {
+//        int a = 0;
+//    }
+    Vector3 rayOrigin = s1;
+    Vector3 rayDir = (s2 - s1);
+
+    Vector3 triEdge1 = (t2 - t1);
+    Vector3 triEdge2 = (t3 - t1);
+
+    Vector3 h = rayDir.cross(triEdge2);
+    float dot = triEdge1.dot(h);
+    if (std::abs(dot) <  1.e-6)
+        return false; // Ray parallel to the triangle
+    float f = 1.f/dot;
+    Vector3 s = (rayOrigin - t1);
+    float u = f * s.dot(h);
+    if (u < 0.f || 1.f < u)
+        return false; // Ray did not reach the triangle
+    Vector3 q = s.cross(triEdge1);
+    float v = f * rayDir.dot(q);
+    if (v < 0.f || 1.f < (u + v))
+        return false;
+
+    float t = f * triEdge2.dot(q);
+    return t > 0;
+}
+
+Vector3 intersectionPointRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal)
+{
+    // assuming vectors are all normalized
+    float denom = planeNormal.dot(rayDir);
+    if (denom > 1e-6) {
+        Vector3 planeToRay = rayOrigin - planeCenter;
+        float t = planeToRay.dot(planeNormal) / denom;
+        return rayOrigin + rayDir * t;
+    }
+
+    return Vector3();
+}
+
+
+
 
 namespace interpolation {
 float linear(float x, float _min, float _max) {
