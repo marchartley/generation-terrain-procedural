@@ -339,8 +339,8 @@ void ViewerInterface::setupUi()
     QObject::connect(recordingAction, &QAction::triggered, this->viewer, &Viewer::startStopRecording);
 //    QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
 //    QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterace::openManualEditionInterface);
-//    QObject::connect(undoAction, &QAction::triggered, this->viewer, &Viewer::undo);
-//    QObject::connect(redoAction, &QAction::triggered, this->viewer, &Viewer::redo);
+    QObject::connect(undoAction, &QAction::triggered, this->viewer, &Viewer::undo);
+    QObject::connect(redoAction, &QAction::triggered, this->viewer, &Viewer::redo);
 //    QObject::connect(marchingCubesAction, &QAction::triggered, this->viewer, &Viewer::displayWithMarchingCubes);
 //    QObject::connect(rawVoxelsAction, &QAction::triggered, this->viewer, &Viewer::displayWithRawVoxels);
 //    QObject::connect(heightmapAction, &QAction::triggered, this->viewer, &Viewer::displayGrid);

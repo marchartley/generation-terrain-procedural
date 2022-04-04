@@ -51,6 +51,7 @@ public:
     Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
     void applyModification(Matrix3<float> modifications);
     void undo();
+    void redo();
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }

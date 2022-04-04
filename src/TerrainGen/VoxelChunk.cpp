@@ -9,7 +9,7 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<f
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), height(height), parent(parent) {
 
     this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->height, -1);
-    this->voxelsValuesStack.push_back(iso_data);
+    this->applyModification(iso_data);
     this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->height);
     this->updateLoDsAvailable();
     this->computeDistanceField();
@@ -441,6 +441,12 @@ void VoxelChunk::computeGroups()
 
 void VoxelChunk::applyModification(Matrix3<float> modifications)
 {
+    // If there is a modification and we did some "undo's" before,
+    // erase the future matrices
+    if (currentHistoryIndex < this->voxelsValuesStack.size()) {
+        this->voxelsValuesStack.erase(this->voxelsValuesStack.begin() + currentHistoryIndex, this->voxelsValuesStack.end());
+    }
+    this->currentHistoryIndex++;
     this->voxelsValuesStack.push_back(modifications);
     this->needRemeshing = true;
 }
@@ -448,7 +454,17 @@ void VoxelChunk::applyModification(Matrix3<float> modifications)
 void VoxelChunk::undo()
 {
     if (this->voxelsValuesStack.size() > 1) {
-        this->voxelsValuesStack.pop_back();
+//        this->voxelsValuesStack.pop_back();
+        this->currentHistoryIndex --;
+        this->needRemeshing = true;
+    }
+}
+
+void VoxelChunk::redo()
+{
+    if (this->currentHistoryIndex < this->voxelsValuesStack.size()) {
+//        this->voxelsValuesStack.pop_back();
+        this->currentHistoryIndex ++;
         this->needRemeshing = true;
     }
 }
@@ -470,8 +486,8 @@ bool VoxelChunk::contains(float x, float y, float z) {
 float VoxelChunk::getVoxelValue(int x, int y, int z)
 {
     float finalValue = 0.f;
-    for (Matrix3<float>& voxelMatrix : this->voxelsValuesStack)
-        finalValue += voxelMatrix.at(x, y, z);
+    for (size_t i = 0; i < this->currentHistoryIndex; i++)
+        finalValue += this->voxelsValuesStack[i].at(x, y, z);
     return finalValue;
 }
 
@@ -483,7 +499,7 @@ float VoxelChunk::getVoxelValue(Vector3 pos)
 Matrix3<float> VoxelChunk::getVoxelValues()
 {
     Matrix3<float> voxelValues(this->sizeX, this->sizeY, this->height);
-    for (Matrix3<float>& voxelMatrix : this->voxelsValuesStack)
-        voxelValues += voxelMatrix;
+    for (size_t i = 0; i < this->currentHistoryIndex; i++)
+        voxelValues += this->voxelsValuesStack[i];
     return voxelValues;
 }
