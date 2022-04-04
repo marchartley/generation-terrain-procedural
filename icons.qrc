@@ -1,0 +1,20 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file>src/assets/display-marching-cubes_button.png</file>
+        <file>src/assets/display-voxels_button.png</file>
+        <file>src/assets/fault-slip_button.png</file>
+        <file>src/assets/flowfield_button.png</file>
+        <file>src/assets/gravity_button.png</file>
+        <file>src/assets/heightmap_button.png</file>
+        <file>src/assets/karst_button.png</file>
+        <file>src/assets/layerbased_button.png</file>
+        <file>src/assets/manual-edit_button.png</file>
+        <file>src/assets/open_button.png</file>
+        <file>src/assets/recording_button.png</file>
+        <file>src/assets/redo_button.png</file>
+        <file>src/assets/save_button.png</file>
+        <file>src/assets/tunnel_button.png</file>
+        <file>src/assets/undo_button.png</file>
+        <file>src/assets/voxelgrid_button.png</file>
+    </qresource>
+</RCC>
