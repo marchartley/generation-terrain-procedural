@@ -60,6 +60,9 @@ void Viewer::init() {
     const char* fShader_grid = ":/src/Shaders/grid_fragment_shader_blinn_phong.glsl";
     const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
     const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes_vertex.glsl";
+    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes_geometry.glsl";
+    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes_fragment.glsl";
 //    const char* vShader_layer = ":/src/Shaders/layer_based_vertex_shader.glsl";
 //    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
     const char* vNoShader = ":/src/Shaders/no_vertex_shader.glsl";
@@ -72,6 +75,9 @@ void Viewer::init() {
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
+
+//    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
+    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
 
     this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
     this->debugMeshes[FAILED_ROCKS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
@@ -257,6 +263,76 @@ void Viewer::draw() {
 //                    vc->mesh.displayNormals();
 //                }
                 this->voxelGrid->display();
+/*
+                tryMarchingCubes.shader->use();
+                GLuint edgeTableTex, triTableTex, dataFieldTex;
+                //Edge Table texture//
+                //This texture store the 256 different configurations of a marching cube.
+                //This is a table accessed with a bitfield of the 8 cube edges states
+                //(edge cut by isosurface or totally in or out).
+                //(cf. MarchingCubes.cpp)
+                GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+                GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
+                glEnable(GL_TEXTURE_2D);
+                glBindTexture(GL_TEXTURE_2D, edgeTableTex);
+                //Integer textures must use nearest filtering mode
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+                //We create an integer texture with new GL_EXT_texture_integer formats
+                glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
+                GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
+                //Triangle Table texture//
+                //This texture store the vertex index list for
+                //generating the triangles of each configurations.
+                //(cf. MarchingCubes.cpp)
+                glGenTextures(1, &triTableTex);
+                GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
+                glEnable(GL_TEXTURE_2D);
+                glBindTexture(GL_TEXTURE_2D, triTableTex);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+                glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
+                GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
+
+                //Datafield//
+                //Store the volume data to polygonise
+                glGenTextures(1, &dataFieldTex);
+                GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
+                glEnable(GL_TEXTURE_3D);
+                glBindTexture(GL_TEXTURE_3D, dataFieldTex);
+                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+                Matrix3<float> isoData = voxelGrid->getVoxelValues();//.resize(15, 15, 15);
+                GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, isoData.sizeX, isoData.sizeY, isoData.sizeZ, 0,
+                GL_ALPHA, GL_FLOAT, isoData.data.data());
+                std::vector<Vector3> points(isoData.size());
+                for (size_t i = 0; i < points.size(); i++) {
+                    points[i] = isoData.getCoordAsVector3(i);
+                }
+                tryMarchingCubes.useIndices = false;
+                tryMarchingCubes.fromArray(points);
+                tryMarchingCubes.shader->setInt("dataFieldTex", 0);
+                tryMarchingCubes.shader->setInt("edgeTableTex", 1);
+                tryMarchingCubes.shader->setInt("triTableTex", 2);
+                tryMarchingCubes.shader->setFloat("isolevel", 0.f);
+                tryMarchingCubes.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+                tryMarchingCubes.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+                tryMarchingCubes.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+                tryMarchingCubes.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+                tryMarchingCubes.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+                tryMarchingCubes.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+                tryMarchingCubes.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+                tryMarchingCubes.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+                tryMarchingCubes.display( GL_POINTS );*/
             }
         }
         else if (this->mapMode == LAYER_MODE) {

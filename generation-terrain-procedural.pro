@@ -165,6 +165,9 @@ RESOURCES +=\
     src/Shaders/grid_fragment_shader_blinn_phong.glsl \
     src/Shaders/grid_vertex_shader_blinn_phong.glsl \
     src/Shaders/vertex_shader_gouraud.glsl \
+    src/Shaders/MarchingCubes_geometry.glsl \
+    src/Shaders/MarchingCubes_fragment.glsl \
+    src/Shaders/MarchingCubes_vertex.glsl \
     src/assets/handle.png \
     src/assets/fault-slip_button.png \
     src/assets/flowfield_button.png \
