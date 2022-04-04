@@ -10,6 +10,7 @@ class Shader;
 #include <set>
 
 #include "Graphics/ShaderElement.h"
+#include "DataStructure/Matrix3.h"
 
 class Shader
 {
@@ -33,6 +34,7 @@ public:
     void setLightSource(std::string pname, LightSource& value);
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
+    void setTexture(std::string pname, int index, std::shared_ptr<Matrix3<float>> texture);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
