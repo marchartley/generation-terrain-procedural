@@ -24,7 +24,7 @@ ViewerInterface::ViewerInterface() {
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->faultSlip.get(), &FaultSlipInterface::faultSlipApplied,
                      this, [&](){ this->viewer->update(); });
-    setupUi(this);
+    setupUi();
 }
 
 ViewerInterface::~ViewerInterface()
@@ -34,13 +34,104 @@ ViewerInterface::~ViewerInterface()
     this->setUpdatesEnabled(true);
 }
 
-void ViewerInterface::setupUi(QDialog *Dialog)
+void ViewerInterface::setupUi()
 {
+    // Icons
+    QIcon openIcon(":/icons/src/assets/open_button.png");
+    QIcon faultSlipIcon(":/icons/src/assets/fault-slip_button.png");
+    QIcon flowfieldIcon(":/icons/src/assets/flowfield_button.png");
+    QIcon gravityIcon(":/icons/src/assets/gravity_button.png");
+    QIcon karstIcon(":/icons/src/assets/karst_button.png");
+    QIcon recordingIcon(":/icons/src/assets/recording_button.png");
+    QIcon savingIcon(":/icons/src/assets/save_button.png");
+    QIcon tunnelIcon(":/icons/src/assets/tunnel_button.png");
+    QIcon manualEditIcon(":/icons/src/assets/manual-edit_button.png");
+    QIcon undoIcon(":/icons/src/assets/undo_button.png");
+    QIcon redoIcon(":/icons/src/assets/redo_button.png");
+    QIcon marchingCubesIcon(":/icons/src/assets/display-marching-cubes_button.png");
+    QIcon rawVoxelsIcon(":/icons/src/assets/display-voxels_button.png");
+    QIcon heightmapIcon(":/icons/src/assets/heightmap_button.png");
+    QIcon layerBasedIcon(":/icons/src/assets/layerbased_button.png");
+    QIcon voxelGridIcon(":/icons/src/assets/voxelgrid_button.png");
+    // Actions
+    QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
+    openAction->setShortcuts(QKeySequence::Open);
+    QAction *faultSlipAction = new QAction(faultSlipIcon, "Glissements de terrains");
+//    faultSlipAction->setShortcuts(QKeySequence::Open);
+    QAction *flowfieldAction = new QAction(flowfieldIcon, "Simulation de courant");
+//    flowfieldAction->setShortcuts(QKeySequence::Open);
+    QAction *gravityAction = new QAction(gravityIcon, "Gravité");
+//    gravityAction->setShortcuts(QKeySequence::Open);
+    QAction *karstAction = new QAction(karstIcon, "Création de karsts");
+//    karstAction->setShortcuts(QKeySequence::Open);
+    QAction *recordingAction = new QAction(recordingIcon, "Enregistrement vidéo");
+//    recordingAction->setShortcuts(QKeySequence::);
+    QAction *savingAction = new QAction(savingIcon, "Sauvegarder la map");
+    savingAction->setShortcuts(QKeySequence::Save);
+    QAction *tunnelAction = new QAction(tunnelIcon, "Création de tunnels");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *manualEditAction = new QAction(manualEditIcon, "Manipulations manuelles");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *undoAction = new QAction(undoIcon, "Undo");
+    undoAction->setShortcuts(QKeySequence::Undo);
+    QAction *redoAction = new QAction(redoIcon, "Redo");
+    redoAction->setShortcuts(QKeySequence::Redo);
+    QAction *marchingCubesAction = new QAction(marchingCubesIcon, "Affichage lisse (Marching cubes)");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *rawVoxelsAction = new QAction(rawVoxelsIcon, "Affichage brut (voxels)");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *heightmapAction = new QAction(heightmapIcon, "Grille 2D (carte de hauteur)");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *layerBasedAction = new QAction(layerBasedIcon, "Stacks (Layer based)");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *voxelGridAction = new QAction(voxelGridIcon, "Grille 3D (voxel grid)");
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+
+    QMenu* fileMenu = new QMenu("File");
+    fileMenu->addActions({openAction, savingAction});
+    QMenu* editMenu = new QMenu("Edit");
+    editMenu->addActions({undoAction, redoAction});
+    QMenu* viewMenu = new QMenu("Affichage");
+    viewMenu->addActions({marchingCubesAction, rawVoxelsAction});
+    QMenu* modelMenu = new QMenu("Model");
+    modelMenu->addActions({heightmapAction, voxelGridAction, layerBasedAction});
+    QMenu* recordingMenu = new QMenu("Enregistrements");
+    recordingMenu->addActions({recordingAction});
+    QMenu* physicsMenu = new QMenu("Physiques");
+    physicsMenu->addActions({gravityAction, flowfieldAction});
+    QMenu* diggingMenu = new QMenu("Creuser");
+    diggingMenu->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
+
+    QMenuBar* menu = new QMenuBar(this);
+    menu->addMenu(fileMenu);
+    menu->addMenu(editMenu);
+    menu->addMenu(viewMenu);
+    menu->addMenu(recordingMenu);
+    menu->addMenu(physicsMenu);
+    menu->addMenu(diggingMenu);
+    menu->addMenu(modelMenu);
+
+    this->setMenuBar(menu);
+
+    QToolBar* toolbar = new QToolBar("Menu");
+    toolbar->addActions({openAction, savingAction, undoAction, redoAction, marchingCubesAction, rawVoxelsAction, heightmapAction, voxelGridAction, layerBasedAction,
+                        recordingAction, gravityAction, flowfieldAction, tunnelAction, karstAction, manualEditAction, faultSlipAction});
+
+    this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
+
+    QStatusBar* status = new QStatusBar(this);
+    this->setStatusBar(status);
+
+    QDockWidget* displayOptionWidget = new QDockWidget("Affichage", this);
+    displayOptionWidget->setFeatures(QDockWidget::DockWidgetFloatable);
+    this->addDockWidget(Qt::DockWidgetArea::BottomDockWidgetArea, displayOptionWidget);
+
     this->viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-    // Add the viewer
     mainLayout = new QGridLayout;
-    mainLayout->addWidget(viewer, 0, 0);
+//    this->toolbox = new QMenuBar(this);
+//    this->toolbox->addActions({openAction, savingAction, manualEditAction});
+
     mainLayout->setColumnStretch(0, 7);
     mainLayout->setColumnStretch(1, 3);
 
@@ -222,7 +313,6 @@ void ViewerInterface::setupUi(QDialog *Dialog)
     LoDChooserBox->setContentLayout(*LoDChooserLayout);
     controlLayout->addWidget(LoDChooserBox); // TODO : Connect the slider and button
 
-
     for (auto& child : controlLayout->children())
     {
         if (child->isWidgetType())
@@ -231,16 +321,40 @@ void ViewerInterface::setupUi(QDialog *Dialog)
         }
     }
     controlLayout->addStretch();
-    mainLayout->addLayout(controlLayout, 0, 1);
 
-    Dialog->setLayout(mainLayout);
+//    mainLayout->addWidget(toolbox, 0, 0, 1, 2);
+    mainLayout->addWidget(viewer, 1, 0);
+    mainLayout->addLayout(controlLayout, 1, 1);
+
+    QWidget* mainFrame = new QWidget(this);
+    mainFrame->setLayout(mainLayout);
+    this->setCentralWidget(mainFrame);
+//    setLayout(mainLayout);
+
+    QObject::connect(openAction, &QAction::triggered, this->viewer, &Viewer::loadMapUI);
+    QObject::connect(savingAction, &QAction::triggered, this->viewer, &Viewer::saveMapUI);
+//    QObject::connect(faultSlipAction, &QAction::triggered, this, &ViewerInterface::openFaultSlipInterface);
+//    QObject::connect(flowfieldAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
+//    QObject::connect(karstAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
+    QObject::connect(recordingAction, &QAction::triggered, this->viewer, &Viewer::startStopRecording);
+//    QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
+//    QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterace::openManualEditionInterface);
+//    QObject::connect(undoAction, &QAction::triggered, this->viewer, &Viewer::undo);
+//    QObject::connect(redoAction, &QAction::triggered, this->viewer, &Viewer::redo);
+//    QObject::connect(marchingCubesAction, &QAction::triggered, this->viewer, &Viewer::displayWithMarchingCubes);
+//    QObject::connect(rawVoxelsAction, &QAction::triggered, this->viewer, &Viewer::displayWithRawVoxels);
+//    QObject::connect(heightmapAction, &QAction::triggered, this->viewer, &Viewer::displayGrid);
+//    QObject::connect(layerBasedAction, &QAction::triggered, this->viewer, &Viewer::displayLayerBased);
+//    QObject::connect(voxelGridAction, &QAction::triggered, this->viewer, &Viewer::displayVoxelGrid);
+
+
 
     this->setAllValuesToFitViewerDefaults(this->viewer);
-    this->setupBindings(this);
-    this->retranslateUi(this);
+    this->setupBindings();
+    this->retranslateUi();
 } // setupUi
 
-void ViewerInterface::setupBindings(QDialog* Dialog)
+void ViewerInterface::setupBindings()
 {
 
     QObject::connect(loadButton, &QCheckBox::pressed, this, [=](){this->viewer->loadMapUI(); } );
@@ -300,12 +414,12 @@ void ViewerInterface::setupBindings(QDialog* Dialog)
     QObject::connect(karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated, this, [&](){ this->viewer->update(); });
     QObject::connect(spaceColonization.get(), &SpaceColonizationInterface::karstPathUpdated, this, [&](){ this->viewer->update(); });
 
-    QMetaObject::connectSlotsByName(Dialog);
+    QMetaObject::connectSlotsByName(this);
 } //setupBindings
 
-void ViewerInterface::retranslateUi(QDialog *Dialog)
+void ViewerInterface::retranslateUi()
 {
-    Dialog->setWindowTitle(QCoreApplication::translate("Dialog", "Dialog", nullptr));
+    this->setWindowTitle(QCoreApplication::translate("Dialog", "Dialog", nullptr));
 } // retranslateUi
 
 void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)

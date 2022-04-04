@@ -80,7 +80,8 @@ SOURCES += \
         src/sim-fluid-ethanjli/fluidsystem.cpp \
         src/sim-fluid-ethanjli/math.cpp
 
-RESOURCES += qml.qrc
+RESOURCES += qml.qrc \
+    icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -158,15 +159,26 @@ RESOURCES +=\
     src/Shaders/particle_fragment_shader.glsl \
     src/Shaders/particle_vertex_shader.glsl \
     src/Shaders/noise.glsl \
-    src/assets/handle.png \
     src/Shaders/voxels_fragment_shader_blinn_phong.glsl \
     src/Shaders/voxels_vertex_shader_blinn_phong.glsl\
     src/Shaders/fragment_shader_gouraud.glsl \
     src/Shaders/grid_fragment_shader_blinn_phong.glsl \
     src/Shaders/grid_vertex_shader_blinn_phong.glsl \
-    src/Shaders/vertex_shader_gouraud.glsl
+    src/Shaders/vertex_shader_gouraud.glsl \
+    src/assets/handle.png \
+    src/assets/fault-slip_button.png \
+    src/assets/flowfield_button.png \
+    src/assets/gravity_button.png \
+    src/assets/karst_button.png \
+    src/assets/open_button.png \
+    src/assets/recording_button.png \
+    src/assets/save_button.png \
+    src/assets/tunnel_button.png \
+    src/assets/manual-edit_button.png
 
 
 #DISTFILES +=
 
 FORMS +=
+
+DISTFILES +=

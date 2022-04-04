@@ -13,16 +13,16 @@
 #include "Interface/SpaceColonizationInterface.h"
 #include "Interface/FaultSlipInterface.h"
 
-class ViewerInterface : public QDialog{
+class ViewerInterface : public QMainWindow{
 public:
     ViewerInterface();
     ~ViewerInterface();
 
-    void setupUi(QDialog *Dialog);
+    void setupUi();
 
-    void setupBindings(QDialog* Dialog);
+    void setupBindings();
 
-    void retranslateUi(QDialog *Dialog);
+    void retranslateUi();
 
     void setAllValuesToFitViewerDefaults(Viewer* viewer);
 
@@ -36,6 +36,7 @@ public:
     std::shared_ptr<SpaceColonizationInterface> spaceColonization;
     std::shared_ptr<FaultSlipInterface> faultSlip;
 
+    QMenuBar* toolbox;
 
     QHBoxLayout* loadSaveLayout;
     Spoiler* loadSaveBox;
