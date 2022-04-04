@@ -211,6 +211,8 @@ public:
     qglviewer::Camera *mainCamera;
     qglviewer::Camera *alternativeCamera;
     bool usingMainCamera = true;
+
+    Mesh tryMarchingCubes;
 };
 
 
