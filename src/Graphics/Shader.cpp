@@ -161,6 +161,16 @@ void Shader::setMaterial(std::string pname, Material &value)
     this->setFloat((pname + ".shininness").c_str(), value.shininess);
 }
 
+void Shader::setTexture(std::string pname, int index, std::shared_ptr<Matrix3<float> > texture)
+{
+    this->use();
+    unsigned int tex_index;
+    GlobalsGL::f()->glGenTextures(1, &tex_index);
+    GlobalsGL::f()->glBindTexture(GL_TEXTURE_3D, tex_index);
+    GlobalsGL::f()->glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, texture->sizeX, texture->sizeY, texture->sizeZ, 0, GL_RED, GL_FLOAT, texture->data.data());
+    this->setInt(pname, index);
+}
+
 void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> func)
 {
     std::set<std::shared_ptr<Shader>>::iterator it;

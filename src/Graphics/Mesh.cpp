@@ -222,7 +222,7 @@ void Mesh::display(GLenum shape, float lineWeight)
 {
     if (!isDisplayed)
         return;
-    if (shape != 0) this->displayShape = shape;
+    if (shape != -1) this->displayShape = shape;
     this->update();
     if(this->shader != nullptr)
         this->shader->use();
@@ -234,13 +234,19 @@ void Mesh::display(GLenum shape, float lineWeight)
     GLfloat previousLineWidth[1];
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(lineWeight);
-    glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
+    if (this->displayShape == GL_TRIANGLES)
+        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
+    else
+        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size());
     glLineWidth(previousLineWidth[0]);
 
     if (this->shader != nullptr) {
-        GlobalsGL::printShaderErrors(this->shader->vShader);
-        GlobalsGL::printShaderErrors(this->shader->fShader);
-//        GlobalsGL::printShaderErrors(this->shader->gShader);
+        if (this->shader->vShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->vShader);
+        if (this->shader->fShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->fShader);
+        if (this->shader->gShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->gShader);
         GlobalsGL::printProgramErrors(this->shader->programID);
         GlobalsGL::checkOpenGLError();
     }

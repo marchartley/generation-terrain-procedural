@@ -23,7 +23,7 @@ public:
 
     void update();
     void pushToBuffer();
-    void display(GLenum shape = 0, float lineWeight = 1);
+    void display(GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
 
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
