@@ -33,6 +33,7 @@ public:
 
     void applyModification(Matrix3<float> modifications);
     void undo();
+    void redo();
 
     void resetVoxelsNeighbors();
     void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
@@ -73,6 +74,8 @@ public:
 
     Mesh mesh;
     bool needRemeshing = true;
+
+    size_t currentHistoryIndex = 0;
 
     std::vector<Matrix3<float>> voxelsValuesStack;
 
