@@ -103,6 +103,7 @@ in vec3 initialVertPos;
 uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
+uniform sampler3D voxelValues;
 uniform float fogNear;
 uniform float fogFar;
 
@@ -136,6 +137,13 @@ uniform mat4 norm_matrix;
 
 void main(void)
 {
+    /*
+    ivec3 texSize = textureSize(voxelValues, 0);
+    vec3 texSize = vec3(90, 90, 90);
+    float isovalue = clamp(texture(voxelValues, vec3(initialVertPos.x/texSize.x, initialVertPos.y/texSize.y, initialVertPos.z/texSize.z)).x, 0, 3);
+    isovalue = isovalue / 3.0;
+    fragColor = vec4(isovalue, isovalue, isovalue, 1.0);
+    return;*/
     if (min_vertice_positions.x > initialVertPos.x || initialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > initialVertPos.y || initialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > initialVertPos.z || initialVertPos.z > max_vertice_positions.z)
         discard;
     Material material = ground_material;

@@ -94,7 +94,7 @@ void PathCameraConstraint::constrainTranslation(qglviewer::Vec &t, qglviewer::Fr
     this->camera->setPosition(closestPath.getPoint(closestTimeOnCurve));
     this->camera->setPivotPoint(this->camera->position());
     this->camera->setViewDirection(closestPath.getDerivative(closestTimeOnCurve) * (goingForward || true ? 0.1f : -0.1f) + Vector3(this->camera->viewDirection()));
-    this->camera->frame()->setSceneUpVector(Vector3(0, 0, 1));
+//    this->camera->frame()->setSceneUpVector(Vector3(0, 0, 1));
     this->constraint->constrainTranslation(t, fr);
 }
 

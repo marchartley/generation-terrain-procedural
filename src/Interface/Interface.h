@@ -12,6 +12,10 @@
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
 #include "Interface/FaultSlipInterface.h"
+#include "Interface/FlowFieldInterface.h"
+#include "Interface/TunnelInterface.h"
+#include "Interface/ManualEditionInterface.h"
+#include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
 public:
@@ -28,6 +32,19 @@ public:
 
     void closeEvent(QCloseEvent* e);
 
+    void resizeEvent(QResizeEvent* e);
+
+public Q_SLOTS:
+    void openFaultSlipInterface();
+    void openFlowfieldInterface();
+    void openKarstInterface();
+    void openTunnelInterface();
+    void openManualEditionInterface();
+
+public:
+    StickyFrame* frame;
+    std::string lastPanelOpenedByStickyFrame;
+
     QGridLayout* mainLayout;
     QVBoxLayout* controlLayout;
     Viewer* viewer;
@@ -35,6 +52,9 @@ public:
     std::shared_ptr<KarstPathGenerationInterface> karstPathGeneration;
     std::shared_ptr<SpaceColonizationInterface> spaceColonization;
     std::shared_ptr<FaultSlipInterface> faultSlip;
+    std::shared_ptr<FlowFieldInterface> flowField;
+    std::shared_ptr<TunnelInterface> tunnelInterface;
+    std::shared_ptr<ManualEditionInterface> manualEditionInterface;
 
     QMenuBar* toolbox;
 

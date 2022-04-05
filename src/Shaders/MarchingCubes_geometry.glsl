@@ -32,8 +32,10 @@ uniform mat4 norm_matrix;
 
 //Vertices position for fragment shader
 in vec3 initialVertPos[];
-out vec3 finalVertPos;
-out vec4 outColor;
+in vec3 realNormal[];
+
+out vec3 ginitialVertPos;
+out vec3 grealNormal;
 
 //Get vertex i position within current marching cube
 vec3 cubePos(int i){
@@ -61,21 +63,7 @@ vec3 vertexInterp(float isolevel, vec3 v0, float l0, vec3 v1, float l1){
 }
 
 //Geometry Shader entry point
-void main(void) {/*
-    if (cubeVal(0) < 0) return;
-
-    gl_Position = proj_matrix * mv_matrix * vec4(cubePos(0), 1.0);
-    EmitVertex();
-    gl_Position = proj_matrix * mv_matrix * vec4(cubePos(1), 1.0);
-    EmitVertex();
-    gl_Position = proj_matrix * mv_matrix * vec4(cubePos(2), 1.0);
-    EmitVertex();
-    gl_Position = proj_matrix * mv_matrix * vec4(cubePos(3), 1.0);
-    EmitVertex();
-    EndPrimitive();
-
-    return;*/
-    finalVertPos = initialVertPos[0];
+void main(void) {
     vec4 position = vec4(initialVertPos[0], 1.0);
     int cubeindex=0;
 
@@ -130,7 +118,9 @@ void main(void) {/*
             position= vec4(vertlist[triTableValue(cubeindex, i)], 1);
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
-            outColor = vec4(1.0, 0.0, 0.0, 1.0);
+            ginitialVertPos = position.xyz;
+            grealNormal = realNormal[0];
+//            outColor = vec4(1.0, 0.0, 0.0, 1.0);
             EmitVertex();
 
             //Generate second vertex of triangle//
@@ -138,7 +128,9 @@ void main(void) {/*
             position= vec4(vertlist[triTableValue(cubeindex, i+1)], 1);
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
-            outColor = vec4(0.0, 1.0, 0.0, 1.0);
+            ginitialVertPos = position.xyz;
+            grealNormal = realNormal[0];
+//            outColor = vec4(0.0, 1.0, 0.0, 1.0);
             EmitVertex();
 
             //Generate last vertex of triangle//
@@ -146,7 +138,9 @@ void main(void) {/*
             position= vec4(vertlist[triTableValue(cubeindex, i+2)], 1);
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
-            outColor = vec4(0.0, 0.0, 1.0, 1.0);
+            ginitialVertPos = position.xyz;
+            grealNormal = realNormal[0];
+//            outColor = vec4(0.0, 0.0, 1.0, 1.0);
             EmitVertex();
 
             //End triangle strip at firts triangle

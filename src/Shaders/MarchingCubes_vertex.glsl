@@ -77,30 +77,16 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
-out vec4 varyingColor;
-out vec3 varyingHalfH;
 
-out vec3 varyingNormal;
-out vec3 varyingLightDir;
-out vec3 varyingVertPos;
-out vec3 realNormal;
-out vec3 vertEyeSpacePos;
 out vec3 initialVertPos;
+out vec3 realNormal;
 
 void main(void)
 {
     vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + instanceOffset.z);
-//    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
-    vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
-    varyingColor = vec4(color, 1.0);
-    initialVertPos = vec3(position);
-    varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    varyingLightDir = light_position - varyingVertPos;
-    varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(normal, 1.0)).xyz;
-    varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
-    realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;
-    vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
+    initialVertPos = vec3(position);
+    realNormal = normal;
 
     gl_Position = proj_matrix * mv_matrix * vec4(position, 1.0);
 

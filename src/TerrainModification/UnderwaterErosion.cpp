@@ -161,7 +161,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     bool modificationDoesSomething = true;
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
-                                                     Vector3(0.5, 0.5),
+                                                     Vector3(0.5, 2.0),
                                                      Vector3(1.0, 1.0)
                                                  }));
 
