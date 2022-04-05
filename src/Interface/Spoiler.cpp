@@ -31,14 +31,10 @@ Spoiler::Spoiler(const QString & title, const int animationDuration, QWidget *pa
     mainLayout.addWidget(&headerLine, row++, 2, 1, 1);
     mainLayout.addWidget(&contentArea, row, 0, 1, 3);
     setLayout(&mainLayout);
-    QObject::connect(&toggleButton, &QToolButton::clicked, [this](const bool checked) {
-        toggleButton.setArrowType(checked ? Qt::ArrowType::DownArrow : Qt::ArrowType::RightArrow);
-        toggleAnimation.setDirection(checked ? QAbstractAnimation::Forward : QAbstractAnimation::Backward);
-        toggleAnimation.start();
-    });
+    QObject::connect(&toggleButton, &QToolButton::clicked, this, &Spoiler::toggle);
 }
 
-void Spoiler::setContentLayout(QLayout & contentLayout) {
+Spoiler* Spoiler::setContentLayout(QLayout & contentLayout) {
     delete contentArea.layout();
     contentArea.setLayout(&contentLayout);
     const auto collapsedHeight = sizeHint().height() - contentArea.maximumHeight();
@@ -53,4 +49,22 @@ void Spoiler::setContentLayout(QLayout & contentLayout) {
     contentAnimation->setDuration(animationDuration);
     contentAnimation->setStartValue(0);
     contentAnimation->setEndValue(contentHeight);
+    return this;
+}
+
+Spoiler* Spoiler::toggle(const bool opening){
+    toggleButton.setArrowType(opening ? Qt::ArrowType::DownArrow : Qt::ArrowType::RightArrow);
+    toggleAnimation.setDirection(opening ? QAbstractAnimation::Forward : QAbstractAnimation::Backward);
+    toggleAnimation.start();
+    return this;
+}
+
+Spoiler* Spoiler::open()
+{
+    return this->toggle(true);
+}
+
+Spoiler* Spoiler::close()
+{
+    return this->toggle(false);
 }

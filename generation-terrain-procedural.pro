@@ -52,15 +52,19 @@ SOURCES += \
         src/Interface/CustomInteractiveObject.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
+        src/Interface/FlowFieldInterface.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
+        src/Interface/ManualEditionInterface.cpp \
         src/Interface/PathCameraConstraint.cpp \
         src/Interface/RangeSlider.cpp \
         src/Interface/Slider3D.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
         src/Interface/Spoiler.cpp \
+        src/Interface/StickyFrame.cpp \
+        src/Interface/TunnelInterface.cpp \
         src/Interface/Viewer.cpp \
         src/Karst/KarstHole.cpp \
         src/Karst/KarstHoleProfile.cpp \
@@ -117,15 +121,19 @@ HEADERS += \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
+    src/Interface/FlowFieldInterface.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
+    src/Interface/ManualEditionInterface.h \
     src/Interface/PathCameraConstraint.h \
     src/Interface/RangeSlider.h \
     src/Interface/Slider3D.h \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/Spoiler.h \
+    src/Interface/StickyFrame.h \
+    src/Interface/TunnelInterface.h \
     src/Interface/Viewer.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \

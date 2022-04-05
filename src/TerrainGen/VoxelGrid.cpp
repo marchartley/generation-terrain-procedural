@@ -104,7 +104,7 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
     }
-    this->computeFlowfield();
+//    this->computeFlowfield();
     return this->shared_from_this();
 }
 
@@ -287,7 +287,6 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
                     std::cout << currentPos << "\n";
                 }
                 currentPos += currentDir;
-                currentDir += flow.at(currentPos);
                 currentDir.normalize();
             }
             a++;
@@ -362,7 +361,14 @@ void VoxelGrid::undo()
     this->remeshAll();
 }
 
+void VoxelGrid::redo()
+{
+        vc->redo();
+    this->remeshAll();
+}
+
 void VoxelGrid::display() {
+
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->display();

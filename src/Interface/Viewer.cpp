@@ -859,10 +859,27 @@ void Viewer::loadMapUI()
     this->voxelGrid->createMesh();
     for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
         vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
+    update();
 }
 void Viewer::saveMapUI()
 {
     QString filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
     if (this->voxelGrid)
         voxelGrid->saveMap(filename.toStdString());
+}
+
+void Viewer::undo()
+{
+    if (this->voxelGrid != nullptr) {
+        this->voxelGrid->undo();
+    }
+    this->update();
+}
+
+void Viewer::redo()
+{
+    if (this->voxelGrid != nullptr) {
+        this->voxelGrid->redo();
+    }
+    this->update();
 }

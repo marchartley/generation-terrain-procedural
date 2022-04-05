@@ -22,6 +22,7 @@ private:
     qglviewer::CameraConstraint* camRotationConstraint;
     qglviewer::Camera* camera;
     std::vector<BSpline> paths;
+    int pathFollowed = -1;
 };
 
 #endif // PATHCAMERACONSTRAINT_H

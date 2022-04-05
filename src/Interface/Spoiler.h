@@ -19,9 +19,15 @@ private:
     QParallelAnimationGroup toggleAnimation;
     QScrollArea contentArea;
     int animationDuration{300};
+
+public Q_SLOTS:
+    Spoiler* toggle(const bool opening);
+    Spoiler* open();
+    Spoiler* close();
 public:
     explicit Spoiler(const QString & title = "", const int animationDuration = 300, QWidget *parent = 0);
-    void setContentLayout(QLayout & contentLayout);
+    Spoiler* setContentLayout(QLayout & contentLayout);
+
 };
 
 #endif // SPOILER_H

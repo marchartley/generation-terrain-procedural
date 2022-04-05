@@ -101,6 +101,9 @@ public Q_SLOTS:
     void loadMapUI();
     void saveMapUI();
 
+    void undo();
+    void redo();
+
 //    void saveScreenshot();
 
 //protected:

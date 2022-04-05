@@ -43,3 +43,25 @@ QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets)
     group->setLayout(layout);
     return group;
 }
+/*
+QWidget *stickTo(QWidget* widget, QWidget *container, float x, float y, float w, float h, bool useAbsolutePosition)
+{
+    widget->setParent(container);
+    widget->installEventFilter(container);
+//    widget->eventFilter()
+}
+void clearLayout(QLayout* layout, bool deleteWidgets)
+{
+    while (QLayoutItem* item = layout->takeAt(0))
+    {
+        if (deleteWidgets)
+        {
+            if (QWidget* widget = item->widget())
+                widget->deleteLater();
+        }
+        if (QLayout* childLayout = item->layout())
+            clearLayout(childLayout, deleteWidgets);
+        delete item;
+    }
+}
+*/
