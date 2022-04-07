@@ -118,7 +118,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
-    number_of_intermediates = 2 * int(this->path.points.size()); // std::min(5, int(this->path.points.size())*2);
+    number_of_intermediates = 2 * int(this->path.points.size()-1) + 1; // std::min(5, int(this->path.points.size())*2);
     float dt = 1.f / (float)(number_of_intermediates - 1);
     std::vector<float> validTimesInPath;
     for (int i = 0; i < number_of_intermediates; i++) {
