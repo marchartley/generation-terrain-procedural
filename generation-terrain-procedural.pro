@@ -53,6 +53,7 @@ SOURCES += \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
         src/Interface/FlowFieldInterface.cpp \
+        src/Interface/GravityInterface.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
@@ -122,6 +123,7 @@ HEADERS += \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
     src/Interface/FlowFieldInterface.h \
+    src/Interface/GravityInterface.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \

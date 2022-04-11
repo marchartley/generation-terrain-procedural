@@ -16,5 +16,9 @@
         <file>src/assets/tunnel_button.png</file>
         <file>src/assets/undo_button.png</file>
         <file>src/assets/voxelgrid_button.png</file>
+        <file>src/assets/fill_mode.png</file>
+        <file>src/assets/handle.png</file>
+        <file>src/assets/no_display.png</file>
+        <file>src/assets/wire_mode.png</file>
     </qresource>
 </RCC>
