@@ -18,6 +18,7 @@ public:
     static std::shared_ptr<Shader> default_shader;
     static std::set<std::shared_ptr<Shader>> allShaders;
     Shader();
+    Shader(Shader& copy);
     Shader(const char* vertexShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
     Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
@@ -34,7 +35,8 @@ public:
     void setLightSource(std::string pname, LightSource& value);
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
-    void setTexture(std::string pname, int index, std::shared_ptr<Matrix3<float>> texture);
+    void setTexture2D(std::string pname, int index, Matrix3<int> texture);
+    void setTexture3D(std::string pname, int index, Matrix3<float> texture);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 

@@ -28,6 +28,12 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
 {
     this->compileShadersFromSource();
 }
+Shader::Shader(Shader& copy) {
+    this->vertexShaderFilename = copy.vertexShaderFilename;
+    this->fragmentShaderFilename = copy.fragmentShaderFilename;
+    this->geometryShaderFilename = copy.geometryShaderFilename;
+    this->compileShadersFromSource();
+}
 void Shader::compileShadersFromSource()
 {
     this->programID = GlobalsGL::f()->glCreateProgram();
@@ -81,48 +87,28 @@ void Shader::use(bool update_source_file)
 
 void Shader::setBool(std::string pname, bool value)
 {
-    if (this == nullptr) {
-//        std::cerr << "No shader defined" << std::endl;
-        return;
-    }
     this->use();
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
 }
 void Shader::setInt(std::string pname, int value)
 {
-    if (this == nullptr) {
-//        std::cerr << "No shader defined" << std::endl;
-        return;
-    }
     this->use();
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setFloat(std::string pname, float value)
 {
-    if (this == nullptr) {
-//        std::cerr << "No shader defined" << std::endl;
-        return;
-    }
     this->use();
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setVector(std::string pname, Vector3 value)
 {
-    if (this == nullptr) {
-//        std::cerr << "No shader defined" << std::endl;
-        return;
-    }
     this->use();
     this->setVector(pname, value, 3);
 }
 void Shader::setVector(std::string pname, float value[], int n)
 {
-    if (this == nullptr) {
-//        std::cerr << "No shader defined" << std::endl;
-        return;
-    }
     this->use();
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
     switch (n) {
@@ -161,15 +147,53 @@ void Shader::setMaterial(std::string pname, Material &value)
     this->setFloat((pname + ".shininness").c_str(), value.shininess);
 }
 
-void Shader::setTexture(std::string pname, int index, std::shared_ptr<Matrix3<float> > texture)
+// Todo : change the integer type to a template (or select int or float)
+void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
 {
+    /// WARNING: It should work as GL_TEXTURE1 is defined just after GL_TEXTURE0, but it may not be stable...
+    int textureSlot = GL_TEXTURE0 + index;
+
+    GLuint texIndex;
     this->use();
-    unsigned int tex_index;
-    GlobalsGL::f()->glGenTextures(1, &tex_index);
-    GlobalsGL::f()->glBindTexture(GL_TEXTURE_3D, tex_index);
-    GlobalsGL::f()->glTexImage3D(GL_TEXTURE_3D, 0, GL_RED, texture->sizeX, texture->sizeY, texture->sizeZ, 0, GL_RED, GL_FLOAT, texture->data.data());
+    GlobalsGL::f()->glGenTextures(1, &texIndex);
+    GlobalsGL::f()->glActiveTexture(textureSlot);
+    glEnable(GL_TEXTURE_2D);
+    GlobalsGL::f()->glBindTexture(GL_TEXTURE_2D, texIndex);
+    //Integer textures must use nearest filtering mode
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //We create an integer texture with new GL_EXT_texture_integer formats
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, texture.sizeX, texture.sizeY, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, texture.data.data());
+    this->setInt(pname, index);
+
+}
+
+// Todo : change the integer type to a template (or select int or float)
+void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
+{
+    /// WARNING: It should work as GL_TEXTURE1 is defined just after GL_TEXTURE0, but it may not be stable...
+    int textureSlot = GL_TEXTURE0 + index;
+
+    GLuint texIndex;
+    this->use();
+    glGenTextures(1, &texIndex);
+    GlobalsGL::f()->glActiveTexture(textureSlot);
+    glEnable(GL_TEXTURE_3D);
+    glBindTexture(GL_TEXTURE_3D, texIndex);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, texture.sizeX, texture.sizeY, texture.sizeZ, 0,
+    GL_ALPHA, GL_FLOAT, texture.data.data());
     this->setInt(pname, index);
 }
+
 
 void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> func)
 {
