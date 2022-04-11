@@ -15,6 +15,7 @@
 #include "Interface/FlowFieldInterface.h"
 #include "Interface/TunnelInterface.h"
 #include "Interface/ManualEditionInterface.h"
+#include "Interface/GravityInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -34,12 +35,17 @@ public:
 
     void resizeEvent(QResizeEvent* e);
 
+    void focusOutEvent(QFocusEvent* e);
+
 public Q_SLOTS:
     void openFaultSlipInterface();
     void openFlowfieldInterface();
     void openKarstInterface();
     void openTunnelInterface();
     void openManualEditionInterface();
+    void openGravityInterface();
+
+    void hideAllInteractiveParts();
 
 public:
     StickyFrame* frame;
@@ -55,6 +61,7 @@ public:
     std::shared_ptr<FlowFieldInterface> flowField;
     std::shared_ptr<TunnelInterface> tunnelInterface;
     std::shared_ptr<ManualEditionInterface> manualEditionInterface;
+    std::shared_ptr<GravityInterface> gravityInterface;
 
     QMenuBar* toolbox;
 
@@ -72,7 +79,7 @@ public:
     Spoiler* karstCreationBox;
     QHBoxLayout* spaceColonizerLayout;
     Spoiler* spaceColonizerBox;
-    QHBoxLayout* faultSlipLayout;
+    QLayout* faultSlipLayout;
     Spoiler* faultSlipBox;
     QHBoxLayout* gravityLayout;
     Spoiler* gravityBox;

@@ -3,16 +3,18 @@
 #include "Utils/Utils.h"
 
 
-FaultSlipInterface::FaultSlipInterface()
+FaultSlipInterface::FaultSlipInterface(QWidget *parent) : CustomInteractiveObject(parent)
 {
 
+    this->faultSlip = FaultSlip();
+    this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
+    this->slipVector = std::make_unique<InteractiveVector>(Vector3(), Vector3());
 }
 
 void FaultSlipInterface::display()
 {
     if (voxelGrid != nullptr) {
         this->firstSlipControlPoint->display();
-//        this->secondSlipControlPoint->display();
         this->slipVector->display();
         if (this->planeMesh.shader != nullptr)
             this->planeMesh.shader->setVector("color", std::vector<float>({.1f, .5f, 1.f, .5f}));
@@ -48,15 +50,11 @@ void FaultSlipInterface::remesh()
 
 void FaultSlipInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
-    this->firstSlipControlPoint = new ControlPoint(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ), 5.f);
-//    this->secondSlipControlPoint = new ControlPoint(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ), 5.f);
-    this->slipVector = new InteractiveVector(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, 0));
+    this->firstSlipControlPoint->move(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ));
+    this->slipVector->setPositions(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, 0));
     this->voxelGrid = voxelGrid;
-    this->faultSlip = FaultSlip();
 
-    QObject::connect(this->slipVector, &InteractiveVector::modified, this, &FaultSlipInterface::updateSlipVector);
-    QObject::connect(this->firstSlipControlPoint, &ControlPoint::modified, this, &FaultSlipInterface::updatePoints);
-//    QObject::connect(this->secondSlipControlPoint, &ControlPoint::modified, this, &FaultSlipInterface::updatePoints);
+    this->setBindings();
 }
 void FaultSlipInterface::updateSlipVector(Vector3 newSlipVector)
 {
@@ -74,9 +72,12 @@ void FaultSlipInterface::computeFaultSlip()
     this->faultSlip.slippingDistance = 1.f;
     this->faultSlip.firstPointFault = this->firstSlipControlPoint->position;
     this->faultSlip.secondPointFault = this->slipVector->getStartingVector();
-//    this->faultSlip.secondPointFault = this->secondSlipControlPoint->position;
-
-    this->faultSlip.Apply(this->voxelGrid, true);
+    this->faultSlip.positiveSideFalling = this->faultSideApplied->isChecked();
+    if (this->voxelGrid != nullptr)
+    {
+        this->faultSlip.Apply(this->voxelGrid, true);
+        Q_EMIT this->faultSlipApplied();
+    }
 }
 
 void FaultSlipInterface::setSideAffected(bool isRightSide)
@@ -87,7 +88,6 @@ void FaultSlipInterface::setSideAffected(bool isRightSide)
 void FaultSlipInterface::hide()
 {
     this->firstSlipControlPoint->hide();
-//    this->secondSlipControlPoint->hide();
     this->slipVector->hide();
     this->planeMesh.hide();
     CustomInteractiveObject::hide();
@@ -96,29 +96,42 @@ void FaultSlipInterface::hide()
 void FaultSlipInterface::show()
 {
     this->firstSlipControlPoint->show();
-//    this->secondSlipControlPoint->show();
     this->slipVector->show();
     this->planeMesh.show();
     CustomInteractiveObject::show();
 }
 
 
-QHBoxLayout *FaultSlipInterface::createGUI()
+QLayout *FaultSlipInterface::createGUI()
 {
     this->faultSlipLayout = new QHBoxLayout;
 
-    QPushButton* faultApplyButton = new QPushButton("Chuter");
-    QCheckBox* faultSideApplied = new QCheckBox("Partie de droite chute");
-    QCheckBox* faultDisplayButton = new QCheckBox("Afficher");
+    this->faultApplyButton = new QPushButton("Chuter");
+    this->faultSideApplied = new QCheckBox("Partie de droite chute");
+    this->faultDisplayButton = new QCheckBox("Afficher");
     faultSlipLayout->addWidget(faultApplyButton);
     faultSlipLayout->addWidget(faultSideApplied);
-    faultSlipLayout->addWidget(faultDisplayButton);
+    // With new interface, we display/hide directly with buttons
+//    faultSlipLayout->addWidget(faultDisplayButton);
 
-    QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
-    QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
-    QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
 
     faultSideApplied->setChecked(this->faultSlip.positiveSideFalling);
 
+    this->setBindings();
+
     return this->faultSlipLayout;
+}
+
+
+void FaultSlipInterface::setBindings()
+{
+    if (this->voxelGrid != nullptr)
+    {
+        QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
+        QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
+        QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
+
+        QObject::connect(slipVector.get(), &InteractiveVector::modified, this, &FaultSlipInterface::updateSlipVector);
+        QObject::connect(firstSlipControlPoint.get(), &ControlPoint::modified, this, &FaultSlipInterface::updatePoints);
+    }
 }

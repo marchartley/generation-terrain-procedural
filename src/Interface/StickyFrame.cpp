@@ -3,17 +3,23 @@
 #include <iostream>
 #include <QHBoxLayout>
 #include <QPushButton>
-#include <QStyle>
+
 
 StickyFrame::StickyFrame(QWidget* parent) : QWidget(parent)
 {
     QHBoxLayout* layout = new QHBoxLayout(this);
     content = new QFrame();
     content->setAutoFillBackground(true);
-    content->setStyleSheet(QString("QFrame{background-color: rgba(1.0, 1.0, 1.0, 0.5); "
+    QPalette pal = QPalette();
+
+    // set black background
+    // Qt::black / "#000000" / "black"
+    pal.setColor(QPalette::Window, Qt::white);
+    content->setPalette(pal);
+    /*this->setStyleSheet(QString("QFrame{background-color: rgba(1.0, 1.0, 1.0, 0.5); "
                                    "color : rgba(1.0, 1.0, 1.0, 1.0);"
                                    "}"
-                                   "QFrame * {color : white; }"));
+                                   "QFrame * {color : white; }"));*/
     content->setLayout(new QVBoxLayout());
     layout->addWidget(content);
     this->setLayout(layout);
@@ -39,7 +45,7 @@ bool StickyFrame::eventFilter(QObject *obj, QEvent *event)
     if (event->type() == QEvent::Resize) {
         this->resizeWithParent();
     }
-    return QObject::eventFilter(obj, event);
+    return false; //QObject::eventFilter(obj, event);
 }
 
 void StickyFrame::clearContent()

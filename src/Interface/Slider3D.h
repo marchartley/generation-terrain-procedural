@@ -20,6 +20,9 @@ public:
     Slider3D(Vector3 positionMin, float length, float val = 0.f, float minValue = 0.f, float maxValue = 1.f, Slider3DOrientation orientation = X);
     Slider3D(Vector3 positionMin, Vector3 positionMax, float val = 0.f, float minValue = 0.f, float maxValue = 1.f);
 
+    void setPosition(Vector3 newPos);
+    void setPositions(Vector3 newStart, Vector3 newEnd);
+
 public Q_SLOTS:
     void hide();
     void show();

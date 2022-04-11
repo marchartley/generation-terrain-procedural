@@ -4,7 +4,10 @@ std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
 std::map<GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
     {GrabberState::HIDDEN, {.0f, .0f, .0f, 0.f}},
     {GrabberState::INACTIVE, {.3f, .0f, .0f, .5f}},
-    {GrabberState::ACTIVE, {.8f, .0f, .0f, .8f}}
+    {GrabberState::ACTIVE, {.8f, .0f, .0f, .8f}},
+    {GrabberState::POSITIVE, {.2f, 1.f, .1f, .8f}},
+    {GrabberState::NEGATIVE, {1.f, .2f, .1f, 8.f}},
+    {GrabberState::NEUTRAL, {.8f, .8f, .8f, .8f}},
 };
 
 ControlPoint::ControlPoint()
@@ -14,7 +17,7 @@ ControlPoint::ControlPoint()
 }
 
 ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool useTheManipulatedFrame)
-    : position(pos), radius(radius), state(state), useManipFrame(useTheManipulatedFrame), shape(radius, position, 10, 10)
+    : CustomInteractiveObject(), position(pos), radius(radius), state(state), useManipFrame(useTheManipulatedFrame), shape(radius, position, 10, 10)
 {
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
     this->move(pos);
@@ -134,9 +137,9 @@ void ControlPoint::setGrabberStateColor(GrabberState state, std::vector<float> c
 
 void ControlPoint::move(Vector3 newPos)
 {
+    this->position = newPos;
     if (this->useManipFrame) {
         this->manipFrame.setPosition(this->position.x, this->position.y, this->position.z);
     }
-    this->position = newPos;
     this->updateSphere();
 }

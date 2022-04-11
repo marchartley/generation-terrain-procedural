@@ -14,8 +14,9 @@
 
 #include <vector>
 #include "Graphics/Mesh.h"
+#include "Interface/CustomInteractiveObject.h"
 
-class Sphere
+class Sphere : public CustomInteractiveObject
 {
 public:
     // ctor/dtor
@@ -61,6 +62,8 @@ public:
     void drawLines(const float lineColor[4]) const;     // draw lines only
     void drawWithLines(const float lineColor[4]) const; // draw surface and lines
 
+    void show();
+    void hide();
     void display();
 
     // debug

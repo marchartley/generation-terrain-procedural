@@ -5,15 +5,26 @@ ViewerInterface::ViewerInterface() {
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);
-    this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>();
+    this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>(this);
+    this->karstPathGeneration->hide();
     this->viewer->karstPathInterface = this->karstPathGeneration;
-    this->spaceColonization = std::make_shared<SpaceColonizationInterface>();
+    this->spaceColonization = std::make_shared<SpaceColonizationInterface>(this);
+    this->spaceColonization->hide();
     this->viewer->spaceColonizationInterface = this->spaceColonization;
-    this->faultSlip = std::make_shared<FaultSlipInterface>();
+    this->faultSlip = std::make_shared<FaultSlipInterface>(this);
+    this->faultSlip->hide();
     this->viewer->faultSlipInterface = this->faultSlip;
-    this->flowField = std::make_shared<FlowFieldInterface>();
+    this->flowField = std::make_shared<FlowFieldInterface>(this);
+    this->viewer->flowFieldInterface = flowField;
+    this->flowField->hide();
     this->tunnelInterface = std::make_shared<TunnelInterface>();
-    this->manualEditionInterface = std::make_shared<ManualEditionInterface>();
+    this->viewer->tunnelInterface = this->tunnelInterface;
+    this->tunnelInterface->hide();
+    this->manualEditionInterface = std::make_shared<ManualEditionInterface>(this);
+    this->viewer->manualEditionInterface = this->manualEditionInterface;
+    this->manualEditionInterface->hide();
+    this->gravityInterface = std::make_shared<GravityInterface>(this);
+    this->gravityInterface->hide();
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
@@ -22,6 +33,7 @@ ViewerInterface::ViewerInterface() {
         this->flowField->affectVoxelGrid(this->viewer->voxelGrid);
         this->tunnelInterface->affectVoxelGrid(this->viewer->voxelGrid);
         this->manualEditionInterface->affectVoxelGrid(this->viewer->voxelGrid);
+        this->gravityInterface->affectVoxelGrid(this->viewer->voxelGrid);
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
@@ -30,6 +42,22 @@ ViewerInterface::ViewerInterface() {
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->faultSlip.get(), &FaultSlipInterface::faultSlipApplied,
                      this, [&](){ this->viewer->update(); });
+    QObject::connect(this->tunnelInterface.get(), &TunnelInterface::updated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
+                     this->tunnelInterface.get(), &TunnelInterface::mouseClickInWorldEvent);
+    QObject::connect(this->manualEditionInterface.get(), &ManualEditionInterface::updated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
+                     this->manualEditionInterface.get(), &ManualEditionInterface::mouseClickedOnMapEvent);
+    QObject::connect(this->viewer, &Viewer::mouseMovedOnMap,
+                     this->manualEditionInterface.get(), &ManualEditionInterface::setPosition);
+    QObject::connect(this->gravityInterface.get(), &GravityInterface::updated,
+                     this, [&](){ this->viewer->update(); });
+
+    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
+        this->setFocus(Qt::OtherFocusReason);
+    });
     setupUi();
 }
 
@@ -59,6 +87,9 @@ void ViewerInterface::setupUi()
     QIcon heightmapIcon(":/icons/src/assets/heightmap_button.png");
     QIcon layerBasedIcon(":/icons/src/assets/layerbased_button.png");
     QIcon voxelGridIcon(":/icons/src/assets/voxelgrid_button.png");
+    QIcon noDisplayIcon(":/icons/src/assets/no_display.png");
+    QIcon wireModeIcon(":/icons/src/assets/wire_mode.png");
+    QIcon fillModeIcon(":/icons/src/assets/fill_mode.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -96,7 +127,18 @@ void ViewerInterface::setupUi()
 //    tunnelAction->setShortcuts(QKeySequence::Open);
     QAction *voxelGridAction = new QAction(voxelGridIcon, "Grille 3D (voxel grid)");
     voxelGridAction->setCheckable(true);
+    voxelGridAction->setChecked(true);
 //    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *wireModeAction = new QAction(wireModeIcon, "Affichage fil de fer");
+    wireModeAction->setCheckable(true);
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *fillModeAction = new QAction(fillModeIcon, "Affichage normal");
+    fillModeAction->setCheckable(true);
+//    tunnelAction->setShortcuts(QKeySequence::Open);
+    QAction *noDisplayAction = new QAction(noDisplayIcon, "Cacher la carte");
+    noDisplayAction->setCheckable(true);
+    //    tunnelAction->setShortcuts(QKeySequence::Open);
+    fillModeAction->setChecked(true);
 
 
     QMenu* fileMenu = new QMenu("File");
@@ -104,9 +146,14 @@ void ViewerInterface::setupUi()
     QMenu* editMenu = new QMenu("Edit");
     editMenu->addActions({undoAction, redoAction});
     QMenu* viewMenu = new QMenu("Affichage");
+    QActionGroup* terrainSmoothGroup = new QActionGroup(viewMenu);
+    terrainSmoothGroup->addAction(marchingCubesAction);
+    terrainSmoothGroup->addAction(rawVoxelsAction);
+    viewMenu->addActions(terrainSmoothGroup->actions());
     QActionGroup* terrainDisplayGroup = new QActionGroup(viewMenu);
-    terrainDisplayGroup->addAction(marchingCubesAction);
-    terrainDisplayGroup->addAction(rawVoxelsAction);
+    terrainDisplayGroup->addAction(wireModeAction);
+    terrainDisplayGroup->addAction(fillModeAction);
+    terrainDisplayGroup->addAction(noDisplayAction);
     viewMenu->addActions(terrainDisplayGroup->actions());
     QMenu* modelMenu = new QMenu("Model");
     QActionGroup* terrainTypeGroup = new QActionGroup(modelMenu);
@@ -146,6 +193,8 @@ void ViewerInterface::setupUi()
     toolbar->addActions({gravityAction, flowfieldAction});
     toolbar->addSeparator();
     toolbar->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
+    toolbar->addSeparator();
+    toolbar->addActions({wireModeAction, fillModeAction, noDisplayAction});
 
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
 
@@ -154,6 +203,7 @@ void ViewerInterface::setupUi()
 
     QDockWidget* displayOptionWidget = new QDockWidget("Affichage", this);
     displayOptionWidget->setFeatures(QDockWidget::DockWidgetFloatable);
+    displayOptionWidget->setLayout(new QVBoxLayout());
     this->addDockWidget(Qt::DockWidgetArea::BottomDockWidgetArea, displayOptionWidget);
 
     this->viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -162,8 +212,8 @@ void ViewerInterface::setupUi()
 //    this->toolbox = new QMenuBar(this);
 //    this->toolbox->addActions({openAction, savingAction, manualEditAction});
 
-    mainLayout->setColumnStretch(0, 7);
-    mainLayout->setColumnStretch(1, 3);
+    mainLayout->setColumnStretch(0, 99);
+    mainLayout->setColumnStretch(1,  1);
 
     controlLayout = new QVBoxLayout;
 
@@ -309,13 +359,97 @@ void ViewerInterface::setupUi()
     displayModeLayout->addWidget(wireModeButton);
     displayModeLayout->addWidget(fillModeButton);
     displayModeLayout->addWidget(invisibleModeButton);
+
+
+    /*QGroupBox* optionalXGroup = new QGroupBox();
+    QHBoxLayout* optionalXLayout = new QHBoxLayout();*/
+    QCheckBox* sliderXactivation = new QCheckBox("Activer");
+    sliderXactivation->setChecked(true);
+    QObject::connect(sliderXactivation, &QCheckBox::toggled, this, [&](bool active) {
+        if (active) { this->viewer->minSliceMapX = this->mapSliceSliderX->min_value(); this->viewer->maxSliceMapX = this->mapSliceSliderX->max_value(); }
+        else        { this->viewer->minSliceMapX = 0.f;                                this->viewer->maxSliceMapX = 1.f; }
+        this->viewer->update();
+    });/*
+    optionalXLayout->addWidget(createSliderGroup("X", mapSliceSliderX, true));
+    optionalXLayout->addWidget(sliderXactivation);
+    optionalXGroup->setLayout(optionalXLayout);
+
+
+    QGroupBox* optionalYGroup = new QGroupBox();
+    QHBoxLayout* optionalYLayout = new QHBoxLayout();*/
+    QCheckBox* sliderYactivation = new QCheckBox("Activer");
+    sliderYactivation->setChecked(true);
+    QObject::connect(sliderYactivation, &QCheckBox::toggled, this, [&](bool active) {
+        if (active) { this->viewer->minSliceMapY = this->mapSliceSliderY->min_value(); this->viewer->maxSliceMapY = this->mapSliceSliderY->max_value(); }
+        else        { this->viewer->minSliceMapY = 0.f;                                this->viewer->maxSliceMapY = 1.f; }
+        this->viewer->update();
+    });/*
+    optionalYLayout->addWidget(createSliderGroup("Y", mapSliceSliderY, true));
+    optionalYLayout->addWidget(sliderYactivation);
+    optionalYGroup->setLayout(optionalYLayout);
+
+
+    QGroupBox* optionalZGroup = new QGroupBox();
+    QHBoxLayout* optionalZLayout = new QHBoxLayout();*/
+    QCheckBox* sliderZactivation = new QCheckBox("Activer");
+    sliderZactivation->setChecked(true);
+    QObject::connect(sliderZactivation, &QCheckBox::toggled, this, [&](bool active) {
+        if (active) { this->viewer->minSliceMapZ = this->mapSliceSliderZ->min_value(); this->viewer->maxSliceMapZ = this->mapSliceSliderZ->max_value(); }
+        else        { this->viewer->minSliceMapZ = 0.f;                                this->viewer->maxSliceMapZ = 1.f; }
+        this->viewer->update();
+    });/*
+    optionalZLayout->addWidget(createSliderGroup("Z", mapSliceSliderZ, true));
+    optionalZLayout->addWidget(sliderZactivation);
+    optionalZGroup->setLayout(optionalZLayout);
+    */
+
+//    displayModeLayout->addWidget(createVerticalGroup({mapSliceSliderX, optionalYGroup, optionalZGroup}));
+                                                         /*
+                         createOptionalSlider(mapSliceSliderX, "X", true, [&](bool activate, RangeSlider* slider) {
+                             if (activate) {
+                                 this->viewer->minSliceMapX = slider->min_value();
+                                 this->viewer->maxSliceMapX = slider->max_value();
+                             } else {
+                                 this->viewer->minSliceMapX = 0.f;
+                                 this->viewer->maxSliceMapX = 1.f;
+                             }
+                             this->viewer->update();
+                         }),
+                         createOptionalSlider(mapSliceSliderY, "Y", true, [&](bool activate, RangeSlider* slider) {
+                             if (activate) {
+                                 this->viewer->minSliceMapY = slider->min_value();
+                                 this->viewer->maxSliceMapY = slider->max_value();
+                             } else {
+                                 this->viewer->minSliceMapY = 0.f;
+                                 this->viewer->maxSliceMapY = 1.f;
+                             }
+                             this->viewer->update();
+                         }),
+                         createOptionalSlider(mapSliceSliderZ, "Z", true, [&](bool activate, RangeSlider* slider) {
+                             if (activate) {
+                                 this->viewer->minSliceMapZ = slider->min_value();
+                                 this->viewer->maxSliceMapZ = slider->max_value();
+                             } else {
+                                 this->viewer->minSliceMapZ = 0.f;
+                                 this->viewer->maxSliceMapZ = 1.f;
+                             }
+                             this->viewer->update();
+                         })
+                     }
+                     ));*/
+/*
     displayModeLayout->addWidget(createMultipleSliderGroup({
                                                                {"X", mapSliceSliderX},
                                                                {"Y", mapSliceSliderY},
                                                                {"Z", mapSliceSliderZ}
+                                                           })); */
+    displayModeLayout->addWidget(createMultipleSliderGroupWithCheckbox({
+                                                               {"X", {mapSliceSliderX, sliderXactivation}},
+                                                               {"Y", {mapSliceSliderY, sliderYactivation}},
+                                                               {"Z", {mapSliceSliderZ, sliderZactivation}}
                                                            }));
-    displayModeBox->setContentLayout(*displayModeLayout);
-    controlLayout->addWidget(displayModeBox);
+//    displayModeBox->setContentLayout(*displayModeLayout);
+//    controlLayout->addWidget(displayModeBox);
 
     // Display algorithm controls
     this->noAlgorithmButton = new QRadioButton("Voxels");
@@ -323,7 +457,7 @@ void ViewerInterface::setupUi()
     algorithmLayout->addWidget(noAlgorithmButton);
     algorithmLayout->addWidget(marchingCubesButton);
     algorithmBox->setContentLayout(*algorithmLayout);
-    controlLayout->addWidget(algorithmBox);
+//    controlLayout->addWidget(algorithmBox);
 
     // Display type controls
     this->gridModeButton = new QRadioButton("Heightmap");
@@ -333,7 +467,7 @@ void ViewerInterface::setupUi()
     displayTypeLayout->addWidget(voxelsModeButton);
     displayTypeLayout->addWidget(layerModeButton);
     displayTypeBox->setContentLayout(*displayTypeLayout);
-    controlLayout->addWidget(displayTypeBox);
+//    controlLayout->addWidget(displayTypeBox);
 
     // Display Level of Detail controls
     this->LoDChooserSlider = new FancySlider(Qt::Orientation::Horizontal, 0, this->viewer->getMaxLoDAvailable(), 1);
@@ -356,6 +490,24 @@ void ViewerInterface::setupUi()
     mainLayout->addWidget(viewer, 1, 0);
     mainLayout->addLayout(controlLayout, 1, 1);
 
+
+    QHBoxLayout* displayOptionLayout = new QHBoxLayout();
+    displayOptionLayout->addWidget(algorithmBox);
+    displayOptionLayout->addWidget(displayTypeBox);
+    displayOptionLayout->addItem(displayModeLayout); /*createMultipleSliderGroup({
+                                                                           {"X", mapSliceSliderX},
+                                                                           {"Y", mapSliceSliderY},
+                                                                           {"Z", mapSliceSliderZ}
+                                                                       }));*/
+    displayOptionLayout->addWidget(createVerticalGroup({
+                                                                     createSliderGroup("Niveau de détail", LoDChooserSlider),
+                                                                     LoDChooserConfirmButton
+                                                                 }));
+    QGroupBox* displayOptionBox = new QGroupBox();
+    displayOptionBox->setLayout(displayOptionLayout);
+    displayOptionWidget->setWidget(displayOptionBox);
+
+
     QWidget* mainFrame = new QWidget(this);
     mainFrame->setLayout(mainLayout);
     this->setCentralWidget(mainFrame);
@@ -370,6 +522,7 @@ void ViewerInterface::setupUi()
     QObject::connect(flowfieldAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
     QObject::connect(karstAction, &QAction::triggered, this, &ViewerInterface::openKarstInterface);
     QObject::connect(recordingAction, &QAction::triggered, this->viewer, &Viewer::startStopRecording);
+    QObject::connect(gravityAction, &QAction::triggered, this, &ViewerInterface::openGravityInterface);
     QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
     QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
     QObject::connect(undoAction, &QAction::triggered, this->viewer, &Viewer::undo);
@@ -388,6 +541,15 @@ void ViewerInterface::setupUi()
     });
     QObject::connect(voxelGridAction, &QAction::triggered, this, [&]() {
         this->viewer->setMapMode(MapMode::VOXEL_MODE);
+    });
+    QObject::connect(wireModeAction, &QAction::triggered, this, [&]() {
+        this->viewer->setViewerMode(WIRE_MODE);
+    });
+    QObject::connect(fillModeAction, &QAction::triggered, this, [&]() {
+        this->viewer->setViewerMode(FILL_MODE);
+    });
+    QObject::connect(noDisplayAction, &QAction::triggered, this, [&]() {
+        this->viewer->setViewerMode(NO_DISPLAY);
     });
 
 
@@ -415,21 +577,21 @@ void ViewerInterface::setupBindings()
 //    QObject::connect(currentSimulationStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
     QObject::connect(currentSimulationRandomDirectionSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionFlowfieldRandomness(float)));
     QObject::connect(displayFlowfield, &QCheckBox::toggled, this, [=](bool display){this->viewer->debugMeshes[FLOW_TRAILS].isDisplayed = display; viewer->update(); } );
-    QObject::connect(recomputeFlowfieldButton, &QPushButton::pressed, this, [=](){this->viewer->recomputeFlowfield(); } );
+//    QObject::connect(recomputeFlowfieldButton, &QPushButton::pressed, this, [=](){this->viewer->recomputeFlowfield(); } );
 
     QObject::connect(manualRocksSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setManualErosionRocksSize(int)));
     QObject::connect(manualRocksStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setManualErosionRocksStrength(float)));
     QObject::connect(addingMode, &QRadioButton::clicked, this, [=](){this->viewer->setAddingMatterMode(true); } );
     QObject::connect(suppressMode, &QRadioButton::clicked, this, [=](){this->viewer->setAddingMatterMode(false); } );
 
-    QObject::connect(curvesErosionSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setCurvesErosionSize(int)));
-    QObject::connect(curvesErosionStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setCurvesErosionStrength(float)));
-    QObject::connect(curvesErosionCreateMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(false); } );
-    QObject::connect(curvesErosionRemoveMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(true); } );
-    QObject::connect(curvesErosionCreateCrack, &QPushButton::pressed, this, [=](){ this->viewer->createCrack(true); } );
-    QObject::connect(curvesAddControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->setCurvesErosionConstructionMode(true); });
-    QObject::connect(curvesClearControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->clearTunnelPoints(); });
-    QObject::connect(displayCurvesErosion, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[TUNNEL_PATHS].isDisplayed = display; viewer->update(); } );
+//    QObject::connect(curvesErosionSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setCurvesErosionSize(int)));
+//    QObject::connect(curvesErosionStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setCurvesErosionStrength(float)));
+//    QObject::connect(curvesErosionCreateMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(false); } );
+//    QObject::connect(curvesErosionRemoveMatter, &QPushButton::pressed, this, [=](){ this->viewer->createTunnel(true); } );
+//    QObject::connect(curvesErosionCreateCrack, &QPushButton::pressed, this, [=](){ this->viewer->createCrack(true); } );
+//    QObject::connect(curvesAddControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->setCurvesErosionConstructionMode(true); });
+//    QObject::connect(curvesClearControlPointButton, &QPushButton::pressed, this, [=](){this->viewer->clearTunnelPoints(); });
+//    QObject::connect(displayCurvesErosion, &QCheckBox::toggled, this, [=](bool display){ this->viewer->debugMeshes[TUNNEL_PATHS].isDisplayed = display; viewer->update(); } );
 
     QObject::connect(gravityGlobalButton, &QPushButton::pressed, this, [=](){ this->viewer->createGlobalGravity(); } );
     QObject::connect(gravitySandButton  , &QPushButton::pressed, this, [=](){ this->viewer->createSandGravity(); } );
@@ -462,7 +624,7 @@ void ViewerInterface::setupBindings()
 
 void ViewerInterface::retranslateUi()
 {
-    this->setWindowTitle(QCoreApplication::translate("Dialog", "Dialog", nullptr));
+    this->setWindowTitle(QString("Simulation"));
 } // retranslateUi
 
 void ViewerInterface::setAllValuesToFitViewerDefaults(Viewer* viewer)
@@ -514,70 +676,117 @@ void ViewerInterface::closeEvent(QCloseEvent *e)
 }
 
 void ViewerInterface::resizeEvent(QResizeEvent *e)
-{/*
-    QPoint viewerPos = this->viewer->mapTo(this->centralWidget(), this->viewer->pos());
-    QSize viewerSize = this->viewer->size();
-    frame->setGeometry(QRect(viewerPos, viewerSize));*/
+{
+    QMainWindow::resizeEvent(e);
+}
+
+void ViewerInterface::focusOutEvent(QFocusEvent *e)
+{
+    QMainWindow::focusOutEvent(e);
 }
 
 void ViewerInterface::openFaultSlipInterface()
 {
+    this->hideAllInteractiveParts();
     if (lastPanelOpenedByStickyFrame == "FaultSlip") {
         lastPanelOpenedByStickyFrame = "";
         this->frame->hide();
     } else {
         lastPanelOpenedByStickyFrame = "FaultSlip";
+        this->faultSlip->show();
         this->frame->setContent(this->faultSlip->createGUI());
         this->frame->show();
     }
+    this->viewer->update();
 }
 
 void ViewerInterface::openFlowfieldInterface()
 {
+    this->hideAllInteractiveParts();
     if (lastPanelOpenedByStickyFrame == "FlowField") {
         lastPanelOpenedByStickyFrame = "";
         this->frame->hide();
     } else {
         lastPanelOpenedByStickyFrame = "FlowField";
+        this->flowField->show();
         this->frame->setContent(this->flowField->createGUI());
         this->frame->show();
     }
+    this->viewer->update();
 }
 
 void ViewerInterface::openKarstInterface()
 {
+    this->hideAllInteractiveParts();
     if (lastPanelOpenedByStickyFrame == "Karsts") {
         lastPanelOpenedByStickyFrame = "";
         this->frame->hide();
     } else {
         lastPanelOpenedByStickyFrame = "Karsts";
+        /*this->karstPathGeneration->show();
+        this->spaceColonization->show();
         QVBoxLayout* mix = new QVBoxLayout();
         mix->addLayout(this->karstPathGeneration->createGUI());
         mix->addLayout(this->spaceColonization->createGUI());
-        this->frame->setContent(mix);
+        this->frame->setContent(mix);*/
+        this->spaceColonization->show();
+        this->frame->setContent(this->spaceColonization->createGUI());
         this->frame->show();
     }
+    this->viewer->update();
 }
 void ViewerInterface::openTunnelInterface()
 {
+    this->hideAllInteractiveParts();
     if (lastPanelOpenedByStickyFrame == "Tunnels") {
         lastPanelOpenedByStickyFrame = "";
         this->frame->hide();
     } else {
         lastPanelOpenedByStickyFrame = "Tunnels";
+        this->tunnelInterface->show();
         this->frame->setContent(this->tunnelInterface->createGUI());
         this->frame->show();
     }
+    this->viewer->update();
 }
 void ViewerInterface::openManualEditionInterface()
 {
+    this->hideAllInteractiveParts();
     if (lastPanelOpenedByStickyFrame == "ManualEdition") {
         lastPanelOpenedByStickyFrame = "";
         this->frame->hide();
     } else {
         lastPanelOpenedByStickyFrame = "ManualEdition";
+        this->manualEditionInterface->show();
         this->frame->setContent(this->manualEditionInterface->createGUI());
         this->frame->show();
     }
+    this->viewer->update();
+}
+void ViewerInterface::openGravityInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "Gravity") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "Gravity";
+        this->gravityInterface->show();
+        this->frame->setContent(this->gravityInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
+void ViewerInterface::hideAllInteractiveParts()
+{
+    this->karstPathGeneration->hide();
+    this->spaceColonization->hide();
+    this->faultSlip->hide();
+    this->flowField->hide();
+    this->tunnelInterface->hide();
+    this->manualEditionInterface->hide();
+
+    this->viewer->update();
 }
 

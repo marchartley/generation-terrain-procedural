@@ -165,6 +165,18 @@ void Sphere::drawWithLines(const float lineColor[4]) const
     drawLines(lineColor);
 }
 
+void Sphere::show()
+{
+    this->mesh.show();
+    CustomInteractiveObject::show();
+}
+
+void Sphere::hide()
+{
+    this->mesh.hide();
+    CustomInteractiveObject::hide();
+}
+
 
 
 /*@@ FIXME: when the radius  = 0

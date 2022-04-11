@@ -21,7 +21,8 @@ InteractiveVector::InteractiveVector(Vector3 start, Vector3 end)
 
     QObject::connect(this->startingControlPoint, &ControlPoint::modified, this, [=](){
         Q_EMIT this->modified(this->getResultingVector());
-        Q_EMIT this->startingModified(this->getStartingVector()); });
+        Q_EMIT this->startingModified(this->getStartingVector());
+    });
     QObject::connect(this->endingControlPoint, &ControlPoint::modified, this, [=](){
         Q_EMIT this->modified(this->getResultingVector());
         Q_EMIT this->startingModified(this->getEndingVector()); });
@@ -33,6 +34,18 @@ void InteractiveVector::display()
     this->endingControlPoint->display();
     this->arrowMesh.fromArray(this->getArrowPath());
     this->arrowMesh.display(GL_LINES, 3.f);
+}
+
+void InteractiveVector::setPosition(Vector3 start)
+{
+    Vector3 movement = start - this->startingControlPoint->position;
+    this->setPositions(start, this->endingControlPoint->position + movement);
+}
+
+void InteractiveVector::setPositions(Vector3 start, Vector3 end)
+{
+    this->startingControlPoint->move(start);
+    this->endingControlPoint->move(end);
 }
 
 void InteractiveVector::hide()

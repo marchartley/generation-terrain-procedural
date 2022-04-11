@@ -25,7 +25,10 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                ViewerMode mode, QWidget *parent)
     : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
+    if (parent != nullptr)
+        parent->installEventFilter(this);
     this->mainCamera = this->camera();
+    this->flyingCamera = new qglviewer::Camera(*this->mainCamera);
 }
 Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -151,17 +154,18 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
+//        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
 //        voxelGrid->from2DGrid(*(this->grid));
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
         UnderwaterErosion tunnels(this->voxelGrid, 20.f, 3.f, 0);
-//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{0, 55, 10}, {92, 55, 10}, {45, 55, 90}}), false, false, false));
+//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{92, 27, 64}, {0, 67, 53}, {92, 79, 21}}), false, false, false));
 //        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
 //        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
 //        this->voxelGrid->letGravityMakeSandFall(false);
-//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateCrack({44, 79, 90}, {48, 13, 90}));
+//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateCrack({75, 35, 90}, {27, 77, 90}));
+        this->voxelGrid->mesh.shader = std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels);
         this->voxelGrid->createMesh();
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
@@ -200,6 +204,8 @@ void Viewer::init() {
 }
 
 void Viewer::draw() {
+    // Update the mouse position in the grid
+    this->checkMouseOnVoxel();
     this->frame_num ++;
     glClear(GL_DEPTH_BUFFER_BIT);
     if (this->viewerMode == ViewerMode::WIRE_MODE)
@@ -245,7 +251,7 @@ void Viewer::draw() {
         shader->setFloat("fogNear", this->fogNear);
         shader->setFloat("fogFar", this->fogFar);
     });
-
+    current_frame ++;
     if (this->viewerMode != NO_DISPLAY)
     {
         if (this->mapMode == GRID_MODE) {
@@ -262,8 +268,41 @@ void Viewer::draw() {
 //                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
 //                    vc->mesh.displayNormals();
 //                }
-                this->voxelGrid->display();
 /*
+                Matrix3<int> cubeEdges(256, 1);
+                for (int i = 0; i < 256; i++)
+                    cubeEdges[i] = MarchingCubes::cubeEdges[i];
+                Matrix3<int> triTable(16, 256);
+                for (int i = 0; i < 16; i++)
+                    for (int j = 0; j < 256; j++)
+                        triTable.at(i, j) = MarchingCubes::triangleTable[j][i];
+
+
+                Matrix3<float> isoData = this->voxelGrid->getVoxelValues().resize(30, 30, 30);
+                std::vector<Vector3> points(isoData.size());
+                for (size_t i = 0; i < points.size(); i++) {
+                    points[i] = isoData.getCoordAsVector3(i);
+                }
+
+                this->voxelGrid->mesh.useIndices = false;
+                this->voxelGrid->mesh.fromArray(points);
+            //    std::cout << "Setting voxel grid with " << points.size()*3 << " points because we use " << isoData << std::endl;
+                this->voxelGrid->mesh.shader->setTexture3D("dataFieldTex", 0, isoData);
+                this->voxelGrid->mesh.shader->setTexture2D("edgeTableTex", 1, cubeEdges);
+                this->voxelGrid->mesh.shader->setTexture2D("triTableTex", 2, triTable);
+                this->voxelGrid->mesh.shader->setFloat("isolevel", 0.f);
+                this->voxelGrid->mesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+                this->voxelGrid->mesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+
+*/
+                this->voxelGrid->display();
+                /*
                 tryMarchingCubes.shader->use();
                 GLuint edgeTableTex, triTableTex, dataFieldTex;
                 //Edge Table texture//
@@ -299,7 +338,6 @@ void Viewer::draw() {
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
                 glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
                 GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
-
                 //Datafield//
                 //Store the volume data to polygonise
                 glGenTextures(1, &dataFieldTex);
@@ -332,7 +370,8 @@ void Viewer::draw() {
                 tryMarchingCubes.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
                 tryMarchingCubes.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
                 tryMarchingCubes.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
-                tryMarchingCubes.display( GL_POINTS );*/
+                tryMarchingCubes.display( GL_POINTS );
+                */
             }
         }
         else if (this->mapMode == LAYER_MODE) {
@@ -403,6 +442,12 @@ void Viewer::draw() {
         this->spaceColonizationInterface->display();
     if (this->faultSlipInterface)
         this->faultSlipInterface->display();
+    if (this->tunnelInterface)
+        this->tunnelInterface->display();
+    if (this->flowFieldInterface)
+        this->flowFieldInterface->display();
+    if (this->manualEditionInterface)
+        this->manualEditionInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -426,15 +471,19 @@ void Viewer::draw() {
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
-    if (curvesErosionConstructionMode && checkMouseOnVoxel()) {
-        this->addCurvesControlPoint(this->mousePosWorld);
+    checkMouseOnVoxel();
+    if (curvesErosionConstructionMode && this->mouseInWorld) {
+//        this->addCurvesControlPoint(this->mousePosWorld);
     }
     if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
     {
         this->throwRock();
     }
-    if (this->mouseInWorld)
+    if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
         std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+
+    }
+    Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e);
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
@@ -506,15 +555,21 @@ void Viewer::keyPressEvent(QKeyEvent *e)
         update();
     } else if(e->key() == Qt::Key_3) {
         // this->displayMessage( "Removing matter to create a tunnel" );
-        createTunnel(true);
+//        createTunnel(true);
     } else if(e->key() == Qt::Key_4) {
         // this->displayMessage( "Adding matter to create a tunnel" );
-        createTunnel(false);
+//        createTunnel(false);
     } else if(e->key() == Qt::Key_5) {
         this->setCamera(this->spaceColonizationInterface->visitingCamera);
-    } else {
-        QGLViewer::keyPressEvent(e);
+    } else if(e->key() == Qt::Key_C) {
+        this->toggleCameraMode(); //this->swapCamera(this->flyingCamera, !this->usingMainCamera);
     }
+    QGLViewer::keyPressEvent(e);
+}
+
+void Viewer::keyReleaseEvent(QKeyEvent *e)
+{
+    QGLViewer::keyReleaseEvent(e);
 }
 void Viewer::mouseMoveEvent(QMouseEvent* e)
 {
@@ -527,6 +582,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     } else {
         this->mainGrabber->setState(HIDDEN);
     }
+
+    Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)));
     update();
     QGLViewer::mouseMoveEvent(e);
 }
@@ -590,15 +647,15 @@ void Viewer::erodeMap(bool sendFromCam)
     this->debugMeshes[FAILED_ROCKS].fromArray(asOneVector);
     this->debugMeshes[FAILED_ROCKS].update();
 
-    updateFlowfieldDebugMesh();
+//    updateFlowfieldDebugMesh();
 }
-
+/*
 void Viewer::recomputeFlowfield()
 {
     this->voxelGrid->computeFlowfield();
     updateFlowfieldDebugMesh();
 }
-
+*/
 void Viewer::setManualErosionRocksSize(int newSize)
 {
     this->manualErosionSize = newSize;
@@ -631,13 +688,19 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->alternativeCamera = altCamera;
     }
     if (useAltCamera) {
+        this->usingMainCamera = false;
         this->setCamera(this->alternativeCamera);
         this->displayParticles = true;
         this->fogNear = 5.f;
         this->fogFar = 30.f;
         this->usingSpotlight = true;
+
+        if (this->camera() == this->flyingCamera) {
+            this->toggleCameraMode();
+        }
     }
     else {
+        this->usingMainCamera = true;
         this->setCamera(this->mainCamera);
         this->displayParticles = false;
         this->fogNear = 1000.f;
@@ -650,7 +713,7 @@ void Viewer::frameInterpolated()
 {
     std::cout << "Interpolation" << std::endl;
 }
-
+/*
 void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
 {
     if (!justUpdatePath)
@@ -721,7 +784,7 @@ void Viewer::createCrack(bool removingMatter)
     this->debugMeshes[TUNNEL_PATHS].update();
     update();
 }
-
+*/
 bool Viewer::checkMouseOnVoxel()
 {
     if (voxelGrid == nullptr)
@@ -763,7 +826,7 @@ bool Viewer::checkMouseOnVoxel()
 //    std::cout << currPos << " (length=" << currPos.norm() << " over " << std::sqrt(maxDist) << ")" << std::endl;
     return found;
 }
-
+/*
 void Viewer::updateFlowfieldDebugMesh()
 {
     std::vector<Vector3> normals;
@@ -779,7 +842,7 @@ void Viewer::updateFlowfieldDebugMesh()
     this->debugMeshes[FLOW_TRAILS].update();
     update();
 }
-
+*/
 void Viewer::closeEvent(QCloseEvent *e) {
     this->setCamera(this->mainCamera);
     if (this->isTakingScreenshots) this->startStopRecording();
@@ -882,4 +945,30 @@ void Viewer::redo()
         this->voxelGrid->redo();
     }
     this->update();
+}
+
+
+bool Viewer::eventFilter(QObject* obj, QEvent* event)
+{
+    if (event->type() == QEvent::KeyPress)
+        this->keyPressEvent(static_cast<QKeyEvent *>(event));
+    if (event->type() == QEvent::KeyRelease)
+        this->keyReleaseEvent(static_cast<QKeyEvent *>(event));
+    if (event->type() == QEvent::Shortcut)
+        this->keyReleaseEvent(static_cast<QKeyEvent *>(event));
+    if (event->type() == QEvent::MouseMove)
+        this->mouseMoveEvent(static_cast<QMouseEvent *>(event));
+    if (event->type() == QEvent::MouseButtonPress)
+        this->mousePressEvent(static_cast<QMouseEvent *>(event));
+    if (event->type() == QEvent::MouseButtonRelease)
+        this->mouseReleaseEvent(static_cast<QMouseEvent *>(event));
+    if (event->type() == QEvent::MouseButtonDblClick)
+        this->mouseDoubleClickEvent(static_cast<QMouseEvent *>(event));
+    if (event->type() == QEvent::Wheel)
+        this->wheelEvent(static_cast<QWheelEvent *>(event));
+    if (event->type() == QEvent::Timer)
+        this->timerEvent(static_cast<QTimerEvent *>(event));
+
+    // Don't block any event
+    return false;
 }

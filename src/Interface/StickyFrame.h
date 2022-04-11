@@ -5,6 +5,7 @@
 #include <QResizeEvent>
 #include <QWidget>
 #include <QFrame>
+#include <QDockWidget>
 
 class StickyFrame : public QWidget
 {

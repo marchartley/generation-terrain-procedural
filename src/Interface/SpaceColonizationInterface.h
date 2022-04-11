@@ -19,12 +19,14 @@ class SpaceColonizationInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
-    SpaceColonizationInterface();
+    SpaceColonizationInterface(QWidget *parent = nullptr);
     ~SpaceColonizationInterface();
 
     void display();
 
-    bool isHidden;
+//    bool isHidden;
+    void hide();
+    void show();
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     std::shared_ptr<VoxelGrid> voxelGrid;
@@ -48,6 +50,7 @@ public Q_SLOTS:
     void createKarst(bool usingSpheres = false);
 
 public:
+    float karstWidth = 10.f;
     TreeColonisation* colonizer = nullptr;
     qglviewer::Camera* visitingCamera = nullptr;
     PathCameraConstraint *cameraConstraint;
