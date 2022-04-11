@@ -9,9 +9,22 @@
 #include <QGLViewer/manipulatedFrame.h>
 
 enum GrabberState {
-    HIDDEN   = 0x0,
-    INACTIVE = 0x1,
-    ACTIVE   = 0x2
+    HIDDEN         = 0x0,
+    INACTIVE       = 0x1,
+    ACTIVE         = 0x2,
+    POSITIVE       = 0x3,
+    NEGATIVE       = 0x4,
+    NEUTRAL        = 0x5,
+    CUSTOM_STATE_0 = 0x6,
+    CUSTOM_STATE_1 = 0x7,
+    CUSTOM_STATE_2 = 0x8,
+    CUSTOM_STATE_3 = 0x9,
+    CUSTOM_STATE_4 = 0xA,
+    CUSTOM_STATE_5 = 0xB,
+    CUSTOM_STATE_6 = 0xC,
+    CUSTOM_STATE_7 = 0xD,
+    CUSTOM_STATE_8 = 0xE,
+    CUSTOM_STATE_9 = 0xF,
 };
 
 class ControlPoint : public CustomInteractiveObject

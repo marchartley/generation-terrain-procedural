@@ -18,13 +18,13 @@ class KarstPathGenerationInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
-    KarstPathGenerationInterface();
+    KarstPathGenerationInterface(QWidget *parent = nullptr);
 //    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
 
     void display();
 
-    InteractiveVector *fractureVector;
-    Slider3D *waterHeightSlider;
+    std::unique_ptr<InteractiveVector> fractureVector;
+    std::unique_ptr<Slider3D> waterHeightSlider;
     Mesh waterLevelMesh;
 
 //    bool isHidden;
@@ -59,7 +59,7 @@ public:
     Vector3 AABBoxMaxPos;
 
     KarstPathsGeneration* karstCreator = nullptr;
-    ControlPoint *sourceControlPoint;
+    std::unique_ptr<ControlPoint> sourceControlPoint;
     qglviewer::Camera* visitingCamera = nullptr;
     PathCameraConstraint *cameraConstraint;
 };

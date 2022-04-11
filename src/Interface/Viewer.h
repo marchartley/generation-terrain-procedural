@@ -21,6 +21,9 @@ class Viewer;
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
 #include "Interface/FaultSlipInterface.h"
+#include "Interface/TunnelInterface.h"
+#include "Interface/ManualEditionInterface.h"
+#include "Interface/FlowFieldInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -55,6 +58,9 @@ public:
     Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
 
+Q_SIGNALS:
+    void mouseClickOnMap(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
+    void mouseMovedOnMap(Vector3 mousePosition);
 
 public Q_SLOTS:
     void setErosionRocksSize(int newSize) { this->erosionSize = newSize;}
@@ -62,13 +68,13 @@ public Q_SLOTS:
     void setErosionRocksQuantity(int newQtt) { this->erosionQtt = newQtt;}
     void erodeMap(bool sendFromCam = false);
 
-    void recomputeFlowfield();
+    // void recomputeFlowfield();
 
     void setManualErosionRocksSize(int newSize);
     void setManualErosionRocksStrength(float newStrength) { this->manualErosionStrength = newStrength;}
     void setAddingMatterMode(bool addingMode) { this->addingMatterMode = addingMode; }
     void throwRock();
-
+/*
     void setCurvesErosionSize(int newSize) { this->curvesErosionSize = newSize; }
     void setCurvesErosionStrength(float newStrength) { this->curvesErosionStrength = newStrength;}
     void setCurvesErosionAddingMatterMode(bool addingMode) { this->addingCurvesErosionMatterMode = addingMode; }
@@ -77,7 +83,7 @@ public Q_SLOTS:
     void setCurvesErosionConstructionMode(bool isConstructing) {this->curvesErosionConstructionMode = isConstructing; }
     void createTunnel(bool removingMatter = true);
     void createCrack(bool removingMatter = true);
-
+*/
     bool createGlobalGravity();
     bool createSandGravity();
 
@@ -111,8 +117,11 @@ public:
     virtual void init();
     virtual void draw();
 
+    bool eventFilter(QObject* obj, QEvent* event);
+
     void mousePressEvent(QMouseEvent* e);
     void keyPressEvent(QKeyEvent *e);
+    void keyReleaseEvent(QKeyEvent* e);
 
     void mouseMoveEvent(QMouseEvent* e);
 
@@ -149,11 +158,15 @@ public:
     std::shared_ptr<KarstPathGenerationInterface> karstPathInterface = nullptr;
     std::shared_ptr<SpaceColonizationInterface> spaceColonizationInterface = nullptr;
     std::shared_ptr<FaultSlipInterface> faultSlipInterface = nullptr;
+    std::shared_ptr<TunnelInterface> tunnelInterface = nullptr;
+    std::shared_ptr<FlowFieldInterface> flowFieldInterface = nullptr;
+    std::shared_ptr<ManualEditionInterface> manualEditionInterface = nullptr;
 
 //    TreeColonisationAlgo::TreeColonisation spaceColonizer;
 //    std::vector<BSpline> spaceColonizerPaths;
 
     int LoD = 0;
+    int current_frame = 0;
 
 
     int getMaxLoDAvailable() { return this->voxelGrid->getMaxLoD(); }
@@ -196,7 +209,7 @@ public:
 //    std::vector<ControlPoint> grabbers;
     ControlPoint *mainGrabber;
 
-    void updateFlowfieldDebugMesh();
+//    void updateFlowfieldDebugMesh();
 
     std::map<DebugMeshesNames, Mesh> debugMeshes;
     std::map<DebugMeshesNames, std::vector<ControlPoint*>> debugControlPoints;
@@ -213,6 +226,7 @@ public:
 
     qglviewer::Camera *mainCamera;
     qglviewer::Camera *alternativeCamera;
+    qglviewer::Camera *flyingCamera;
     bool usingMainCamera = true;
 
     Mesh tryMarchingCubes;

@@ -4,16 +4,19 @@
 #include "Interface/InterfaceUtils.h"
 
 
-KarstPathGenerationInterface::KarstPathGenerationInterface()
+KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : CustomInteractiveObject(parent)
 {
-    this->sourceControlPoint = new ControlPoint(Vector3(0, 0, 0), 5.f);
-    this->fractureVector = new InteractiveVector();
-    this->waterHeightSlider = new Slider3D();
+    this->karstCreator = new KarstPathsGeneration();
+    this->sourceControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
+    this->fractureVector = std::make_unique<InteractiveVector>();
+    this->waterHeightSlider = std::make_unique<Slider3D>(Vector3(), 1.0, 0.0, 0.0, 1.0, Slider3DOrientation::Z);
     this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
                                                                       });
-    QObject::connect(this->sourceControlPoint, &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
+    QObject::connect(this->sourceControlPoint.get(), &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
+    QObject::connect(this->fractureVector.get(), &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
+    QObject::connect(this->waterHeightSlider.get(), &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
 }
 
 void KarstPathGenerationInterface::display()
@@ -34,15 +37,12 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
     this->voxelGrid = voxelGrid;
     this->AABBoxMinPos = Vector3(0, 0, 0);
     this->AABBoxMaxPos = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * voxelGrid->blockSize;
-    this->fractureVector = new InteractiveVector(AABBoxMinPos, Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z));
-    this->waterHeightSlider = new Slider3D(Vector3(AABBoxMinPos.x - 10, AABBoxMinPos.y - 10, AABBoxMinPos.z), Vector3(AABBoxMinPos.x - 10, AABBoxMinPos.y - 10, AABBoxMaxPos.z), 0.f, AABBoxMinPos.z, AABBoxMaxPos.z);
+    this->fractureVector->setPositions(AABBoxMinPos, Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z));
+    this->waterHeightSlider->setPositions(AABBoxMinPos + Vector3(-10, -10, 0), Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z) + Vector3(-10, -10, 0));
     this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
                                                                       });
-
-    QObject::connect(this->fractureVector, &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
-    QObject::connect(this->waterHeightSlider, &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
 
     Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
     Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
@@ -202,7 +202,7 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
                                                            createSliderGroup("Gamma", karstCreationGamma),
                                                            createSliderGroup("Tortuosite (m)", karstCreationTortuosity)
                                                        }));
-    karstCreationLayout->addWidget(createVerticalGroup({karstCreationDisplay, karstCreationChangeCam}));
+    karstCreationLayout->addWidget(createVerticalGroup({/*karstCreationDisplay, */karstCreationChangeCam}));
 
     QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->computeKarst(); } );
     QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(); } );

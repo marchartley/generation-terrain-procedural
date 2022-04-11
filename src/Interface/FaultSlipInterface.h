@@ -19,7 +19,7 @@ class FaultSlipInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
-    FaultSlipInterface();
+    FaultSlipInterface(QWidget *parent = nullptr);
     void display();
     void remesh();
 
@@ -32,7 +32,7 @@ public:
 
     Mesh planeMesh;
 
-    QHBoxLayout* createGUI();
+    QLayout* createGUI();
     QHBoxLayout* faultSlipLayout;
 
 Q_SIGNALS:
@@ -47,10 +47,16 @@ public Q_SLOTS:
     void hide();
     void show();
 
-public:
-    ControlPoint *firstSlipControlPoint;
+protected:
+    std::unique_ptr<ControlPoint> firstSlipControlPoint;
 //    ControlPoint *secondSlipControlPoint;
-    InteractiveVector *slipVector;
+    std::unique_ptr<InteractiveVector> slipVector;
+
+    QPushButton* faultApplyButton;
+    QCheckBox* faultSideApplied;
+    QCheckBox* faultDisplayButton;
+
+    void setBindings();
 };
 
 #endif // FAULTSLIPINTERFACE_H

@@ -15,6 +15,8 @@ public:
     InteractiveVector(Vector3 start, Vector3 end);
 
     void display();
+    void setPosition(Vector3 start);
+    void setPositions(Vector3 start, Vector3 end);
 
 public Q_SLOTS:
     void hide();

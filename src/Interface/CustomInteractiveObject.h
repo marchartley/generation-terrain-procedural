@@ -2,15 +2,19 @@
 #define CUSTOMINTERACTIVEOBJECT_H
 
 #include <QObject>
+#include <QWidget>
 
-class CustomInteractiveObject : public QObject
+class CustomInteractiveObject : public QWidget
 {
     Q_OBJECT
 public:
-    explicit CustomInteractiveObject();
+    explicit CustomInteractiveObject(QWidget *parent = nullptr);
 
     virtual void hide() { this->visible = false; }
     virtual void show() { this->visible = true; }
+
+    bool eventFilter(QObject* obj, QEvent* event);
+
     bool isHidden() { return !this->isVisible(); }
     bool isVisible() {
         if (!__initialized) this->setVisibility(this->visible);

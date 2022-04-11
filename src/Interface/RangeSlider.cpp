@@ -187,14 +187,14 @@ bool SuperEventFilter::eventFilter(QObject* obj, QEvent* event)
   case QEvent::MouseButtonRelease:
       grandParent->mouseReleaseEvent((QMouseEvent*)event);
     qGuiApp->removeEventFilter(this);
-    return true;
+//    return true;
     break;
   case QEvent::MouseButtonPress:
       grandParent->mousePressEvent((QMouseEvent*)event);
-      break;
+//      break;
   case QEvent::MouseMove:
     grandParent->alt_update();
-    return true;
+//    return true;
     break;
   default:
     return QObject::eventFilter(obj, event);

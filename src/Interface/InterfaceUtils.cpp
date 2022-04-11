@@ -2,6 +2,10 @@
 
 #include <QLabel>
 #include <QBoxLayout>
+#include <QCheckBox>
+#include <QApplication>
+#include "Interface/WidgetActivationEvent.h"
+#include "Interface/WidgetDesactivationEvent.h"
 
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall)
 {
@@ -65,3 +69,49 @@ void clearLayout(QLayout* layout, bool deleteWidgets)
     }
 }
 */
+
+QGroupBox* createOptionalSlider(RangeSlider *slider, std::string checkboxLabel, bool activatedByDefault, std::function<void(bool, RangeSlider*)> onToggleCallback)
+{
+    /*
+    QHBoxLayout* layout = new QHBoxLayout();
+    QGroupBox* group = new QGroupBox;
+
+    QCheckBox* checkbox = new QCheckBox(QString::fromStdString(checkboxLabel));
+    checkbox->setChecked(activatedByDefault);
+    QObject::connect(checkbox, &QCheckBox::toggled,
+                     slider, [&](bool activation) { return onToggleCallback(activation, slider); });
+//    QObject::connect(checkbox, &QCheckBox::toggled, slider, [&](bool active) {
+//        if (active) {
+//            WidgetActivationEvent event;
+//            QApplication::postEvent(slider, &event);
+//        } else {
+//            WidgetDesactivationEvent event;
+//            QApplication::postEvent(slider, &event);
+//        }
+//    });
+
+    layout->addWidget(slider);
+    layout->addWidget(checkbox);
+
+    group->setLayout(layout);
+
+    return group;
+    */
+}
+
+QGroupBox *createMultipleSliderGroupWithCheckbox(std::map<std::string, std::pair<QSlider *, QCheckBox *>> labelsAndSlidersAndActivables)
+{
+    QGridLayout* layout = new QGridLayout();
+    QGroupBox* group = new QGroupBox;
+    int row = 0;
+    for (const auto& labAndSlidAndAct : labelsAndSlidersAndActivables) {
+        QLabel* lab = new QLabel(QString::fromStdString(std::get<0>(labAndSlidAndAct)));
+        layout->addWidget(lab, row, 0);
+        layout->addWidget(std::get<0>(std::get<1>(labAndSlidAndAct)), row, 1);
+        layout->addWidget(std::get<1>(std::get<1>(labAndSlidAndAct)), row, 2);
+        row++;
+    }
+    group->setLayout(layout);
+    group->resize(group->size());
+    return group;
+}

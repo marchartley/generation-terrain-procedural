@@ -18,6 +18,24 @@ Slider3D::Slider3D(Vector3 positionMin, Vector3 positionMax, float val, float mi
     this->init(positionMin, positionMax, minValue, maxValue, val);
 }
 
+void Slider3D::setPosition(Vector3 newPos)
+{
+    Vector3 movement = newPos - this->minPos;
+    this->minPos += movement;
+    this->maxPos += movement;
+    this->sliderControlPoint->move(this->sliderControlPoint->position + movement);
+    this->sliderMesh.fromArray({minPos, maxPos});
+}
+
+void Slider3D::setPositions(Vector3 newStart, Vector3 newEnd)
+{
+    float currentValue = this->getValue();
+    this->minPos = newStart;
+    this->maxPos = newEnd;
+    this->sliderControlPoint->move(Vector3::lerp(currentValue, newStart, newEnd));
+    this->sliderMesh.fromArray({minPos, maxPos});
+}
+
 void Slider3D::hide()
 {
     this->sliderControlPoint->hide();
