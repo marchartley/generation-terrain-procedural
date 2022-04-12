@@ -206,6 +206,7 @@ void Viewer::init() {
 void Viewer::draw() {
     // Update the mouse position in the grid
     this->checkMouseOnVoxel();
+
     this->frame_num ++;
     glClear(GL_DEPTH_BUFFER_BIT);
     if (this->viewerMode == ViewerMode::WIRE_MODE)
@@ -252,6 +253,7 @@ void Viewer::draw() {
         shader->setFloat("fogFar", this->fogFar);
     });
     current_frame ++;
+
     if (this->viewerMode != NO_DISPLAY)
     {
         if (this->mapMode == GRID_MODE) {
@@ -821,7 +823,7 @@ bool Viewer::checkMouseOnVoxel()
     if (found) {
 //        std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
-        this->mainGrabber->position = currPos; // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
+        this->mainGrabber->move(currPos); // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
 //    std::cout << currPos << " (length=" << currPos.norm() << " over " << std::sqrt(maxDist) << ")" << std::endl;
     return found;

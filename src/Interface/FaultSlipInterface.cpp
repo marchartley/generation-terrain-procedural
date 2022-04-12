@@ -27,7 +27,7 @@ void FaultSlipInterface::remesh()
     Vector3 minAABB = Vector3(0, 0, 0);
     Vector3 maxAABB = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
 
-    Vector3 p1 = this->firstSlipControlPoint->position;
+    Vector3 p1 = this->firstSlipControlPoint->getPosition();
     Vector3 p2 = this->slipVector->getStartingVector();
     Vector3 p3 = p1 + this->slipVector->getResultingVector();
     /*
@@ -70,7 +70,7 @@ void FaultSlipInterface::computeFaultSlip()
 {
     this->faultSlip.slippingDirection = this->slipVector->getResultingVector();
     this->faultSlip.slippingDistance = 1.f;
-    this->faultSlip.firstPointFault = this->firstSlipControlPoint->position;
+    this->faultSlip.firstPointFault = this->firstSlipControlPoint->getPosition();
     this->faultSlip.secondPointFault = this->slipVector->getStartingVector();
     this->faultSlip.positiveSideFalling = this->faultSideApplied->isChecked();
     if (this->voxelGrid != nullptr)

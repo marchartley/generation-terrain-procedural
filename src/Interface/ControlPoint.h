@@ -27,7 +27,7 @@ enum GrabberState {
     CUSTOM_STATE_9 = 0xF,
 };
 
-class ControlPoint : public CustomInteractiveObject
+class ControlPoint : /*public CustomInteractiveObject,*/ public qglviewer::ManipulatedFrame
 {
     Q_OBJECT
 public:
@@ -37,6 +37,8 @@ public:
 
     void setState(GrabberState newState);
     void updateStateDependingOnManipFrame();
+
+    void checkIfGrabsMouse(int x, int y,const qglviewer::Camera* const cam);
 
 Q_SIGNALS:
     void modified();
@@ -57,7 +59,14 @@ public:
     void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
     void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
-    Vector3 position;
+    Vector3 getPosition() const { return this->position(); }
+
+    void mousePressEvent(QMouseEvent* const event  , qglviewer::Camera* const cam );
+    void mouseReleaseEvent( QMouseEvent* const event, qglviewer::Camera* const cam);
+    void mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const cam);
+
+//    Vector3 position;
+//    Vector3 pos;
     Vector3 prevPosition;
     float radius;
     GrabberState state;
@@ -65,8 +74,13 @@ public:
     bool currentlyManipulated;
 
     Mesh mesh;
-
     Sphere shape;
+
+    Mesh translationMeshes;
+    Mesh rotationMeshes;
+
+    float arrowSize;
+    float circleRadius;
 
     std::function<void()> onUpdateCallback;
     std::function<void()> afterUpdateCallback;
@@ -76,6 +90,40 @@ public:
 
     static std::shared_ptr<Shader> base_shader;
     static std::map<GrabberState, std::vector<float>> default_GrabberStateColor;
+
+    void allowAllAxisTranslation(bool allow);
+    void allowAllAxisRotations(bool allow);
+
+    enum Axis {X, Y, Z, NONE};
+    std::map<Axis, bool> allowedTranslations;
+    std::map<Axis, bool> allowedRotations;
+
+protected:
+    std::vector<Vector3> computeCircle(Axis axis);
+
+    bool mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir);
+    bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
+    bool mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir);
+
+    bool isApplyingFreeMove = false;
+    bool isApplyingTranslation = false;
+    bool isApplyingRotation = false;
+    Axis currentAxis = NONE;
+};
+
+
+class CustomConstraint : public qglviewer::Constraint
+{
+public:
+    CustomConstraint();
+
+    virtual void constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr);
+    virtual void constrainRotation(qglviewer::Quaternion& q, qglviewer::Frame* const fr);
+
+private:
+    qglviewer::WorldConstraint* constraint;
+
+    bool useTranslation;
 };
 
 #endif // CONTROLPOINT_H

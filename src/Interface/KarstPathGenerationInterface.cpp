@@ -46,7 +46,7 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
 
     Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
     Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
-    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->position.z);
+    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z);
     this->waterLevelMesh.fromArray({
                                        {AABBoxMinPos + offZ, AABBoxMinPos + offX + offZ,
                                         AABBoxMinPos + offX + offZ, AABBoxMinPos + offX + offY + offZ,
@@ -83,7 +83,7 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
     karstCreator->waterHeights.back().height = newHeight;
     Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
     Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
-    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->position.z);
+    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z);
     this->waterLevelMesh.fromArray({
                                        {AABBoxMinPos + offZ, AABBoxMinPos + offX + offZ,
                                         AABBoxMinPos + offX + offZ, AABBoxMinPos + offX + offY + offZ,
@@ -109,7 +109,7 @@ void KarstPathGenerationInterface::computeKarst()
     int nb_special_nodes = 10;
     this->karstCreator->resetSpecialNodes();
     this->karstCreator->setSpecialNode(0, SOURCE);
-    this->karstCreator->graph.nodes[0]->pos = this->sourceControlPoint->position;
+    this->karstCreator->graph.nodes[0]->pos = this->sourceControlPoint->getPosition();
 
     for (int i = 0; i < nb_special_nodes - 1; i++)
         this->karstCreator->setSpecialNode((i + 1) * this->karstCreator->graph.nodes.size() / nb_special_nodes, FORCED_POINT);
