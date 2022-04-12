@@ -10,11 +10,13 @@
 class Vector3 {
 public:
     float x, y, z;
+    bool valid = true;
     Vector3();
     Vector3(float x, float y, float z = 0.f);
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
     Vector3(qglviewer::Vec other);
+    Vector3(bool valid);
 
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);
@@ -79,6 +81,8 @@ public:
     static Vector3 random();
 
     static Vector3 nabla;
+
+    bool isValid() const { return this->valid; }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);

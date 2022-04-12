@@ -23,6 +23,11 @@ Vector3::Vector3(qglviewer::Vec other)
 
 }
 
+Vector3::Vector3(bool valid) : Vector3()
+{
+    this->valid = valid;
+}
+
 float Vector3::norm() {
     if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
