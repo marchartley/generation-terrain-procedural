@@ -89,8 +89,8 @@ void SpaceColonizationInterface::initSpaceColonizer()
 {
     std::vector<Vector3> newNodes;
     for (ControlPoint*& ctrl : this->controlPoints)
-        newNodes.push_back(ctrl->position);
-    this->colonizer->startPosition = this->startingPoint->position;
+        newNodes.push_back(ctrl->getPosition());
+    this->colonizer->startPosition = this->startingPoint->getPosition();
     this->colonizer->reset(newNodes);
 }
 

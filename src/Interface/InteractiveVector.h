@@ -29,8 +29,8 @@ Q_SIGNALS:
 
 public:
     Vector3 getResultingVector() { return getEndingVector() - getStartingVector(); }
-    Vector3 getStartingVector() { return this->startingControlPoint->position; }
-    Vector3 getEndingVector() { return this->endingControlPoint->position; }
+    Vector3 getStartingVector() { return this->startingControlPoint->getPosition(); }
+    Vector3 getEndingVector() { return this->endingControlPoint->getPosition(); }
 
     ControlPoint *startingControlPoint;
     ControlPoint *endingControlPoint;

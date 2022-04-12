@@ -78,7 +78,7 @@ Vector3 HSVtoRGB(float H, float S,float V){
 }
 
 // Source : http://paulbourke.net/geometry/pointlineplane/
-Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+Vector3 intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
 {
     Vector3 l21 = (p1 - p2);
     Vector3 l13 = (p3 - p1);
@@ -90,12 +90,16 @@ Vector3 intersectionPoint(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
     float d4343 = l43.dot(l43);
     float d2121 = l21.dot(l21);
 
+    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return Vector3(false); // Parallel lines?
     float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
-//    float mu_b = -(d1334 + mu_a*d3412) / d3434;
+    float mu_b = (d1343 + mu_a*d4321) / d4343;
+
+    if (mu_a < 0.0 || 1.0 < mu_a || mu_b < 0.0 || 1.0 < mu_b)
+        return Vector3(false);
 
     return p1 + (p2 - p1) * mu_a;
-}
-bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+}/*
+bool intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
 {
     Vector3 l21 = (p1 - p2);
     Vector3 l13 = (p3 - p1);
@@ -112,7 +116,7 @@ bool intersection(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
     float mu_b = (d1343 + mu_a*d4321) / d4343;
 //    std::cout << "(mu_a = " << mu_a << " and mu_b = " << mu_b << ")";
     return (0 <= mu_a) && (mu_a <= 1.0) && (0.0 <= mu_b) && (mu_b <= 1.0);
-}
+}*/
 
 float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vector3 p22)
 {
@@ -180,17 +184,65 @@ int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, V
     return t > 0;
 }
 
-Vector3 intersectionPointRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal)
+Vector3 intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal)
 {
     // assuming vectors are all normalized
     float denom = planeNormal.dot(rayDir);
-    if (denom > 1e-6) {
+    if (std::abs(denom) > 1e-6) {
         Vector3 planeToRay = rayOrigin - planeCenter;
-        float t = planeToRay.dot(planeNormal) / denom;
+        if (planeToRay.dot(rayDir) > 0) {
+            return Vector3(false); // Direction pointing the wrong side = no intersection
+        }
+        float t = std::abs(planeToRay.dot(planeNormal) / denom);
         return rayOrigin + rayDir * t;
     }
 
-    return Vector3();
+    return Vector3(false);
+}
+
+Vector3 intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereCenter, float sphereRadius, bool returnClosestPoint)
+{
+    // Using Joachimsthal's Equation
+    // Found from https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
+    // ad^2 + bd + c = 0 with a = ||u||^2, b = 2 * (u dot rayToCenter) and c = ||rayToCenter||^2 - r^2
+    // Here ||u|| = 1
+    rayDir.normalize();
+    Vector3 centerToRay = rayOrigin - sphereCenter;
+    //float a = 1.f;
+    //float b = 2 * rayDir.dot(centerToRay);
+    float c = centerToRay.norm2() - sphereRadius * sphereRadius;
+
+    // Solutions are d = -u dot centerToRay +/- sqrt(root)
+    // with root = (u dot centerToRay)^2 - (||centerToRay||^2 - radius^2)
+    float root = rayDir.dot(centerToRay) * rayDir.dot(centerToRay) - c;
+
+    float d1 = -(rayDir.dot(centerToRay));
+    float d2 = -(rayDir.dot(centerToRay));
+    if (root < 0) {
+        // No solution
+        return Vector3(false);
+    } else if (root == 0) {
+        // One unique solution
+        // Use d1
+    } else {
+        // Two solutions, choose the closest or furthest
+        float sqrtRoot = std::sqrt(root);
+        d1 -= sqrtRoot;
+        d2 += sqrtRoot;
+    }
+    if (d1 < 0 && d2 >= 0) // d1 is behind
+        return rayOrigin + rayDir * d2;
+    if (d1 >= 0 && d2 < 0) // d2 is behind
+        return rayOrigin + rayDir * d1;
+    if (d1 < 0 && d2 < 0) // All behind
+        return Vector3(false);
+
+    if (returnClosestPoint) {
+        // The closest must be d1
+        return rayOrigin + rayDir * d1;
+    } else {
+        return rayOrigin + rayDir * d2;
+    }
 }
 
 

@@ -76,7 +76,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
         bool valid = true;
         for (size_t j = 0; j < vertices.size(); j++) {
             // Count the number of intersection from the midpoint to somewhere outside
-            if (intersection(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()])) {
+            if (intersectionBetweenTwoSegments(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()])) {
                 number_of_intersections++;
             }
         }
@@ -84,8 +84,8 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
             if (previous != remaining_nodes[j] && previous != remaining_nodes[(j + 1) % remaining_nodes.size()] &&
                     next != remaining_nodes[j] && next != remaining_nodes[(j + 1) % remaining_nodes.size()]) {
                 // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)
-                if (intersection(vertices[previous], vertices[next], vertices[remaining_nodes[j]], vertices[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
-                    Vector3 inter = intersectionPoint(vertices[previous], vertices[next], vertices[remaining_nodes[j]], vertices[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+                Vector3 inter = intersectionBetweenTwoSegments(vertices[previous], vertices[next], vertices[remaining_nodes[j]], vertices[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+                if (inter.isValid()) {
                     if (inter != vertices[previous] && inter != vertices[next]) {
                         valid = false;
 
@@ -133,13 +133,14 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
             maxVec.z = std::max(maxVec.z, pos.z);
         }
         // Find non-vertical times in our path
-        if (std::abs(this->path.getDirection(t).dot(Vector3(0, 0, 1))) < 0.9) {
+        if (!this->path.getDirection(t).isAlmostVertical()) {
             validTimesInPath.push_back(t);
         }
     }
 
     std::vector<std::vector<Vector3>> triangles;
     std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates + 2);
+    std::vector<KarstHoleProfile> intermediateProfiles;
     for (int iT = 0; iT < number_of_intermediates + 2; iT++) {
         float t = (iT-1.f) * dt;
         float previousValidTime = -1.f, nextValidTime = -1.f;
@@ -151,37 +152,52 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
                 break; // no need to go further
             }
         }
-        std::vector<Vector3> points;
-        if (iT == 0) {
-            points = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
-            cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->size, path.getPoint(0.f)));
-        }
-        else if(iT == number_of_intermediates + 1) {
-            points = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size).scale(.5f).vertices.getPath(1.f / (float)(number_of_points - 1));
-            cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->size));
-        }
-        else {
-            points = this->interpolate(t, previousValidTime, nextValidTime).vertices.getPath(1.f / (float)(number_of_points - 1));
-            if (iT < number_of_intermediates) // Avoid the last cylinder
-                cylinders.push_back(std::make_tuple(path.getPoint(t), path.getPoint(t + dt)));
-        }
+        KarstHoleProfile currentProfile;
+        if (this->path.getDirection(t).isAlmostVertical() && iT != number_of_intermediates + 1) {
+            KarstHoleProfile prev(KarstHolePredefinedShapes::TUBE);
+            prev.setSize(this->size, this->size);
+            prev.translate(path.getPoint(t));
+//            std::cout << "Verticality at t = " << t << " as the direction is " << this->path.getDirection(t) << std::endl;
+            if (iT > 0) {
+//                std::cout << previousValidTime << " < " << t << " < " << nextValidTime << " -> " << interpolation::linear(t, previousValidTime, nextValidTime) << std::endl;
+                currentProfile = prev; //.rotateIndicesUntilBestFitWith(intermediateProfiles.back(), this->number_of_points);
+            }
 
-        allIntermediateVertices[iT] = points;
+        } else {
+            if (iT == 0) {
+                currentProfile = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f);
+                cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->size, path.getPoint(0.f)));
+            }
+            else if(iT == number_of_intermediates + 1) {
+//                std::cout << "Direction " << path.getDirection(1.f) * this->size << std::endl;
+                currentProfile = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size).scale(.5f);
+                cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->size));
+            }
+            else {
+                currentProfile = this->interpolate(t, previousValidTime, nextValidTime);
+                if (iT < number_of_intermediates) // Avoid the last cylinder
+                    cylinders.push_back(std::make_tuple(path.getPoint(t), path.getPoint(t + dt)));
+            }
+        }
+        intermediateProfiles.push_back(currentProfile);
+        allIntermediateVertices[iT] = currentProfile.vertices.getPath(1.f / (float)(number_of_points - 1));
     }
 
     for (size_t i = 0; i < allIntermediateVertices.size() - 1; i++) {
+        std::vector<Vector3> startingShape = intermediateProfiles[i].vertices.getPath(1.f / (float)(number_of_points - 1));
+        std::vector<Vector3> endingShape = intermediateProfiles[i + 1].rotateIndicesUntilBestFitWith(intermediateProfiles[i], number_of_points).vertices.getPath(1.f / (float)(number_of_points - 1));
         // Compute the triangles that makes the actual tunnel
         for (int j = 0; j < number_of_points; j++) {
             int j_plus_1 = (j + 1) % number_of_points;
             triangles.push_back({
-                                    (allIntermediateVertices[i][j]),
-                                    (allIntermediateVertices[i][j_plus_1]),
-                                    (allIntermediateVertices[i+1][j])
+                                    (startingShape[j]),
+                                    (startingShape[j_plus_1]),
+                                    (endingShape[j])
                                 });
             triangles.push_back({
-                                    (allIntermediateVertices[i+1][j]),
-                                    (allIntermediateVertices[i+1][j_plus_1]),
-                                    (allIntermediateVertices[i][j_plus_1])
+                                    (endingShape[j]),
+                                    (endingShape[j_plus_1]),
+                                    (startingShape[j_plus_1])
                                 });
         }
 

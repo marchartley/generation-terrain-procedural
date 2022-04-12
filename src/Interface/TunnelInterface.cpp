@@ -99,7 +99,7 @@ void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
     }
     this->currentTunnelPoints.clear();
     for (auto& controls : this->controlPoints) {
-        this->currentTunnelPoints.push_back(controls->position);
+        this->currentTunnelPoints.push_back(controls->getPosition());
 //        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
     }
     this->computeTunnelPreview();

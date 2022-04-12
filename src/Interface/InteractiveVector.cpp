@@ -38,8 +38,8 @@ void InteractiveVector::display()
 
 void InteractiveVector::setPosition(Vector3 start)
 {
-    Vector3 movement = start - this->startingControlPoint->position;
-    this->setPositions(start, this->endingControlPoint->position + movement);
+    Vector3 movement = start - this->startingControlPoint->getPosition();
+    this->setPositions(start, this->endingControlPoint->getPosition() + movement);
 }
 
 void InteractiveVector::setPositions(Vector3 start, Vector3 end)
@@ -66,7 +66,7 @@ void InteractiveVector::show()
 
 std::vector<Vector3> InteractiveVector::getArrowPath()
 {
-    Vector3 start = startingControlPoint->position, end = endingControlPoint->position;
+    Vector3 start = startingControlPoint->getPosition(), end = endingControlPoint->getPosition();
     float length = (end - start).norm();
     float arrowHeadLength = length / 10.f;
     return {

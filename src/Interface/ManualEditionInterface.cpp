@@ -59,13 +59,13 @@ void ManualEditionInterface::setAddingMode(bool newMode)
 
 void ManualEditionInterface::setPosition(Vector3 newPosition)
 {
-    this->grabber->position = newPosition;
+    this->grabber->move(newPosition);
 }
 
 void ManualEditionInterface::applyModification()
 {
     RockErosion rock(this->manualEditionSize, this->manualEditionStrength);
-    rock.Apply(voxelGrid, this->grabber->position, this->addingMode, true);
+    rock.Apply(voxelGrid, this->grabber->getPosition(), this->addingMode, true);
     Q_EMIT this->updated();
 }
 

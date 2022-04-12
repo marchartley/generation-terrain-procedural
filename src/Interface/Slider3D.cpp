@@ -23,7 +23,7 @@ void Slider3D::setPosition(Vector3 newPos)
     Vector3 movement = newPos - this->minPos;
     this->minPos += movement;
     this->maxPos += movement;
-    this->sliderControlPoint->move(this->sliderControlPoint->position + movement);
+    this->sliderControlPoint->move(this->sliderControlPoint->getPosition() + movement);
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -58,7 +58,7 @@ void Slider3D::display()
 
 float Slider3D::getValue()
 {
-    return Vector3::remap(this->sliderControlPoint->position, this->minPos, this->maxPos, this->minValue, this->maxValue);
+    return Vector3::remap(this->sliderControlPoint->getPosition(), this->minPos, this->maxPos, this->minValue, this->maxValue);
 }
 
 void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, float maxValue, float val)
@@ -68,7 +68,7 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
     this->minValue = minValue;
     this->maxValue = maxValue;
     this->sliderControlPoint = new ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
-    this->sliderControlPoint->manipFrame.setConstraint(new SliderConstraint(positionMin, positionMax));
+    this->sliderControlPoint->setConstraint(new SliderConstraint(positionMin, positionMax));
     this->sliderMesh.fromArray({minPos, maxPos});
     this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 

@@ -4,8 +4,6 @@
 #include <QBoxLayout>
 #include <QCheckBox>
 #include <QApplication>
-#include "Interface/WidgetActivationEvent.h"
-#include "Interface/WidgetDesactivationEvent.h"
 
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall)
 {
