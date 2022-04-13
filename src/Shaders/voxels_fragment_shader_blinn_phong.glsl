@@ -207,6 +207,8 @@ void main(void)
 
         lumin = clamp(1 - (acos(dot(normalize(varyingLightDir), vec3(0.0, 0.0, 1.0))) - (cone_angle + epsilon))/(epsilon), 0.0, 1.0);
     }
+    if (gl_FrontFacing) // Ok, it's the wrong condition, but it looks like I did everything the wrong way around from the beggining so..... ¯\_(ツ)_/¯
+        lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
 
 //    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
