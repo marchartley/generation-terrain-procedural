@@ -41,6 +41,15 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
 
     QObject::connect(this, &qglviewer::ManipulatedFrame::modified, this, [=](){
         Q_EMIT this->modified();
+        if ((this->prevPosition - this->getPosition()).norm2() > 1.0) {
+            this->prevPosition = this->getPosition();
+//        if (this->positionsHistory.empty() || this->positionsHistory.back() != this->prevPosition) {
+            this->positionsHistory.push_back(prevPosition);
+            if (this->positionsHistory.size() > 10) {
+                this->positionsHistory.erase(positionsHistory.begin(), std::max(positionsHistory.end() - 10, positionsHistory.begin()));
+//                std::cout << positionsHistory.size() << " pos stored" << std::endl;
+            }
+        }
         this->updateStateDependingOnManipFrame();
     });
 }

@@ -60,6 +60,10 @@ public:
     void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
     Vector3 getPosition() const { return this->position(); }
+    Vector3 getFluidMovement() const {
+        if (positionsHistory.empty()) return Vector3();
+        return (this->getPosition() - this->positionsHistory.front()).normalize(); };
+    Vector3 getLastMovement() const { return (this->prevPosition - this->getPosition()).normalize(); };
 
     void mousePressEvent(QMouseEvent* const event  , qglviewer::Camera* const cam );
     void mouseReleaseEvent( QMouseEvent* const event, qglviewer::Camera* const cam);
@@ -67,6 +71,7 @@ public:
 
 //    Vector3 position;
 //    Vector3 pos;
+    std::vector<Vector3> positionsHistory;
     Vector3 prevPosition;
     float radius;
     GrabberState state;
@@ -98,6 +103,11 @@ public:
     std::map<Axis, bool> allowedTranslations;
     std::map<Axis, bool> allowedRotations;
 
+    bool isApplyingFreeMove = false;
+    bool isApplyingTranslation = false;
+    bool isApplyingRotation = false;
+    Axis currentAxis = NONE;
+
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
 
@@ -105,10 +115,6 @@ protected:
     bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
     bool mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir);
 
-    bool isApplyingFreeMove = false;
-    bool isApplyingTranslation = false;
-    bool isApplyingRotation = false;
-    Axis currentAxis = NONE;
 };
 
 

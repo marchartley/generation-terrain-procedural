@@ -267,9 +267,11 @@ void Viewer::draw() {
             if (this->voxelGrid == nullptr) {
                 std::cerr << "No voxel grid to display" << std::endl;
             } else {
-//                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-//                    vc->mesh.displayNormals();
-//                }
+                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
+                    vc->mesh.shader->setBool("clipPlaneActive", this->temporaryClipPlaneActivated);
+                    vc->mesh.shader->setVector("clipPlaneDirection", this->clipPlaneDirection);
+                    vc->mesh.shader->setVector("clipPlanePosition", this->clipPlanePosition);
+                }
 /*
                 Matrix3<int> cubeEdges(256, 1);
                 for (int i = 0; i < 256; i++)
@@ -389,11 +391,12 @@ void Viewer::draw() {
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(5.f);
     for (auto& debugMesh : this->debugMeshes) {
-        std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
+        /*std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
         std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());*/
         std::get<1>(debugMesh).display(GL_LINES, 3.f);
     }
+    /*
     for (auto& controlPointsArray : this->debugControlPoints) {
         std::vector<ControlPoint*> grabbers = std::get<1>(controlPointsArray);
         for (auto& grabber : std::get<1>(controlPointsArray)) {
@@ -403,7 +406,7 @@ void Viewer::draw() {
             grabber->mesh.isDisplayed = this->debugMeshes[std::get<0>(controlPointsArray)].isDisplayed;
             grabber->display();
         }
-    }
+    }*/
     if (this->displayParticles) {
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
@@ -973,4 +976,41 @@ bool Viewer::eventFilter(QObject* obj, QEvent* event)
 
     // Don't block any event
     return false;
+}
+
+void Viewer::clipViewTemporarily(Vector3 direction, Vector3 center, bool active)
+{
+    if (direction.norm2() > 0) {
+        Vector3 cameraDirection = this->camera()->viewDirection();
+        if (cameraDirection.dot(direction) > 1e-2)
+            direction *= -1.f; // The clipping will happen from the camera point of view
+
+        this->clipPlaneDirection = direction;
+        this->clipPlanePosition = center;
+    }
+    this->temporaryClipPlaneActivated = active;
+/*
+    center /= Vector3(this->voxelGrid->sizeX, this->voxelGrid->sizeY, this->voxelGrid->sizeZ);
+    if (direction.x == 1.0) {
+        this->minSliceMapX = center.x;
+    }
+    else if (direction.x == 1.0) {
+        this->minSliceMapX = center.x;
+    }
+    else if (direction.x == -1.0) {
+        this->maxSliceMapX = center.x;
+    }
+    else if (direction.y == 1.0) {
+        this->minSliceMapY = center.y;
+    }
+    else if (direction.y == -1.f) {
+        this->maxSliceMapY = center.y;
+    }
+    else if (direction.z == 1.0) {
+        this->minSliceMapZ = center.z;
+    }
+    else if (direction.z == -1.f) {
+        this->maxSliceMapZ = center.z;
+    }*/
+    this->update();
 }

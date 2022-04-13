@@ -22,6 +22,7 @@ public:
 
 Q_SIGNALS:
     void updated();
+    void needToClipView(Vector3 direction, Vector3 center, bool active);
 
 public Q_SLOTS:
     void show();
@@ -38,6 +39,7 @@ public Q_SLOTS:
     void createCrack(bool removingMatter = true);
 
     void mouseClickInWorldEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent *event);
+    void wheelEvent(QWheelEvent* event);
 
 public:
     std::shared_ptr<VoxelGrid> voxelGrid;

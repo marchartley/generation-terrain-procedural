@@ -229,8 +229,8 @@ void Mesh::display(GLenum shape, float lineWeight)
     GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[this->bufferID]);
     GlobalsGL::checkOpenGLError();
 
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
+//    glEnable(GL_DEPTH_TEST);
+//    glDepthFunc(GL_LEQUAL);
     GLfloat previousLineWidth[1];
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(lineWeight);
