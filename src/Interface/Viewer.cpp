@@ -11,7 +11,7 @@
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
-        std::shared_ptr<Grid>(new Grid(100, 100, 40, 1.0)),
+        std::make_shared<Grid>("C:/codes/Qt/generation-terrain-procedural/src/assets/heightmaps/map2.png", 100, 100, 30, 1.0),
         std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
@@ -155,7 +155,7 @@ void Viewer::init() {
     }
     if (voxelGrid != nullptr) {
 //        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
-//        voxelGrid->from2DGrid(*(this->grid));
+        voxelGrid->from2DGrid(*(this->grid));
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
