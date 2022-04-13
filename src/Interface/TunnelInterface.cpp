@@ -7,8 +7,7 @@
 
 TunnelInterface::TunnelInterface(QWidget *parent) : CustomInteractiveObject(parent)
 {
-    this->currentTunnelPoints = {{0, 0, 0}, {10, 0, 0}};
-    this->computeTunnelPreview();
+
 }
 
 void TunnelInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -52,7 +51,8 @@ QLayout* TunnelInterface::createGUI()
 
     addControlPointButton = new QPushButton("Ajouter un point de control");
     tunnelClearControlPointButton = new QPushButton("Tout retirer");
-    tunnelSizeSlider = new FancySlider(Qt::Orientation::Horizontal, 1, 30);
+    tunnelWidthSlider = new FancySlider(Qt::Orientation::Horizontal, 1, 30);
+    tunnelHeightSlider = new FancySlider(Qt::Orientation::Vertical, 1, 30);
     tunnelStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
     tunnelCreateMatter = new QPushButton("Arche");
     tunnelRemoveMatter = new QPushButton("Tunnel");
@@ -60,14 +60,17 @@ QLayout* TunnelInterface::createGUI()
     tunnelDisplayButton = new QCheckBox("Afficher");
     tunnelLayout->addWidget(createVerticalGroup({tunnelCreateMatter, tunnelRemoveMatter, tunnelCreateCrack}));
     tunnelLayout->addWidget(createVerticalGroup({/*addControlPointButton, */tunnelClearControlPointButton}));
-    tunnelLayout->addWidget(createSliderGroup("Taille", tunnelSizeSlider));
+    tunnelLayout->addWidget(createSliderGroup("Largeur", tunnelWidthSlider));
+    tunnelLayout->addWidget(createSliderGroup("Hauteur", tunnelHeightSlider));
 //    tunnelLayout->addWidget(createSliderGroup("Force", tunnelStrengthSlider));
 //    tunnelLayout->addWidget(tunnelDisplayButton);
 
-    this->tunnelSizeSlider->setValue(tunnelSize);
+    this->tunnelWidthSlider->setValue(tunnelWidth);
+    this->tunnelHeightSlider->setValue(tunnelHeight);
     this->tunnelStrengthSlider->setfValue(erosionStrength);
 
-    QObject::connect(tunnelSizeSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelSize);
+    QObject::connect(tunnelWidthSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelWidth);
+    QObject::connect(tunnelHeightSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelHeight);
     QObject::connect(tunnelStrengthSlider, &FancySlider::floatValueChanged, this, &TunnelInterface::setErosionStrength);
     QObject::connect(tunnelCreateMatter, &QPushButton::pressed, this, [=](){ this->createTunnel(false); } );
     QObject::connect(tunnelRemoveMatter, &QPushButton::pressed, this, [=](){ this->createTunnel(true);  } );
@@ -117,11 +120,12 @@ void TunnelInterface::clearTunnelPoints()
 }
 void TunnelInterface::createTunnel(bool removingMatter)
 {
-    UnderwaterErosion erod(this->voxelGrid, this->tunnelSize, erosionStrength, 10);
-    if (this->currentTunnelPoints.empty())
-        this->tunnelPreview.fromArray(erod.CreateTunnel(3, !removingMatter));
-    else
-        this->tunnelPreview.fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter, false));
+    if (this->currentTunnelPoints.empty()) return;
+
+    UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
+    BSpline path(this->currentTunnelPoints);
+    KarstHole hole(path, this->tunnelWidth, this->tunnelHeight);
+    this->tunnelPreview.fromArray(erod.CreateTunnel(hole, !removingMatter, true));
     this->currentTunnelPoints.clear();
     this->controlPoints.clear();
     this->tunnelPreview.update();
@@ -132,8 +136,10 @@ void TunnelInterface::createCrack(bool removingMatter)
 {
     if (this->currentTunnelPoints.size() < 2) return;
 
-    UnderwaterErosion erod(this->voxelGrid, this->tunnelSize, erosionStrength, 10);
-    this->tunnelPreview.fromArray(erod.CreateCrack(this->currentTunnelPoints[0], this->currentTunnelPoints[1], true));
+    UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
+    BSpline path(this->currentTunnelPoints);
+    KarstHole hole(path, this->tunnelWidth, this->tunnelHeight, CRACK, CRACK);
+    this->tunnelPreview.fromArray(erod.CreateTunnel(hole, removingMatter, true));
     this->currentTunnelPoints.clear();
     this->controlPoints.clear();
     this->tunnelPreview.update();
@@ -142,16 +148,51 @@ void TunnelInterface::createCrack(bool removingMatter)
 }
 
 void TunnelInterface::computeTunnelPreview() {
-    BSpline path(this->currentTunnelPoints);
-    KarstHole previewHole(path, this->tunnelSize);
-    std::vector<std::vector<Vector3>> vertices = previewHole.generateMesh();
-    std::vector<Vector3> meshVertices;
-    for (const auto& triangle : vertices) {
-        meshVertices.push_back(triangle[0]);
-        meshVertices.push_back(triangle[1]);
-        meshVertices.push_back(triangle[2]);
+    if (this->currentTunnelPoints.size() > 1) {
+        BSpline path(this->currentTunnelPoints);
+        KarstHole previewHole(path, this->tunnelWidth, this->tunnelHeight);
+        std::vector<std::vector<Vector3>> vertices = previewHole.generateMesh();
+        std::vector<Vector3> meshVertices;
+        for (const auto& triangle : vertices) {
+            meshVertices.push_back(triangle[0]);
+            meshVertices.push_back(triangle[1]);
+            meshVertices.push_back(triangle[2]);
+        }
+        this->tunnelPreview.fromArray(meshVertices);
+        if (this->tunnelPreview.shader != nullptr) {
+            this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
+        }
+    } else {
+        this->tunnelPreview.clear();
     }
-    this->tunnelPreview.fromArray(meshVertices);
     this->tunnelPreview.update();
     Q_EMIT this->updated();
+}
+
+void TunnelInterface::wheelEvent(QWheelEvent* event)
+{
+    if (event->modifiers().testFlag(Qt::ControlModifier)) {
+        this->setTunnelWidth(this->tunnelWidth - event->angleDelta().y() / 2);
+        Q_EMIT this->updated();
+    } else if (event->modifiers().testFlag(Qt::ShiftModifier)) {
+        this->setTunnelHeight(this->tunnelHeight - event->angleDelta().y() / 2);
+        Q_EMIT this->updated();
+    }
+    CustomInteractiveObject::wheelEvent(event);
+}
+
+
+void TunnelInterface::setTunnelWidth(int newSize)
+{
+    if (newSize < 0) newSize = 0;
+    this->tunnelWidth = newSize;
+    this->tunnelWidthSlider->setValue(newSize);
+    computeTunnelPreview();
+}
+void TunnelInterface::setTunnelHeight(int newSize)
+{
+    if (newSize < 0) newSize = 0;
+    this->tunnelHeight = newSize;
+    this->tunnelHeightSlider->setValue(newSize);
+    computeTunnelPreview();
 }
