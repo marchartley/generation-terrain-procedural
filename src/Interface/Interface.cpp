@@ -17,7 +17,7 @@ ViewerInterface::ViewerInterface() {
     this->flowField = std::make_shared<FlowFieldInterface>(this);
     this->viewer->flowFieldInterface = flowField;
     this->flowField->hide();
-    this->tunnelInterface = std::make_shared<TunnelInterface>();
+    this->tunnelInterface = std::make_shared<TunnelInterface>(this);
     this->viewer->tunnelInterface = this->tunnelInterface;
     this->tunnelInterface->hide();
     this->manualEditionInterface = std::make_shared<ManualEditionInterface>(this);
@@ -54,6 +54,8 @@ ViewerInterface::ViewerInterface() {
                      this->manualEditionInterface.get(), &ManualEditionInterface::setPosition);
     QObject::connect(this->gravityInterface.get(), &GravityInterface::updated,
                      this, [&](){ this->viewer->update(); });
+    QObject::connect(this->tunnelInterface.get(), &TunnelInterface::needToClipView,
+                     this->viewer, &Viewer::clipViewTemporarily);
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
         this->setFocus(Qt::OtherFocusReason);

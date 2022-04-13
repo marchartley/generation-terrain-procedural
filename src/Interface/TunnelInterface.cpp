@@ -89,21 +89,34 @@ void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
     {
         bool addTheNewPoint = true;
         for (auto& controls : this->controlPoints) {
-            if (controls->manipFrame.isManipulated()) {
+            if (controls->isManipulated()) {
                 addTheNewPoint = false;
                 break;
             }
         }
         if (addTheNewPoint) {
             this->controlPoints.push_back(std::make_unique<ControlPoint>(pos, 5.f, INACTIVE));
-            QObject::connect(this->controlPoints.back().get(), &ControlPoint::modified,
+            std::unique_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
+            newCtrl->allowAllAxisTranslation(true);
+            newCtrl->displayOnTop = true;
+            QObject::connect(newCtrl.get(), &ControlPoint::modified,
                              this, [&](){ this->addCurvesControlPoint(Vector3(), true); });
         }
     }
     this->currentTunnelPoints.clear();
-    for (auto& controls : this->controlPoints) {
-        this->currentTunnelPoints.push_back(controls->getPosition());
-//        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
+//    bool atLeastOnePointIsManipulated = false;
+    for (auto& control : this->controlPoints) {
+        this->currentTunnelPoints.push_back(control->getPosition());
+        if (control->isManipulated() && this->voxelGrid->contains(control->getPosition())) {
+//            atLeastOnePointIsManipulated = true;
+            Q_EMIT this->needToClipView(
+                        control->getFluidMovement(),
+                        control->getPosition(),
+                        true
+                        );
+            QObject::connect(control.get(), &ControlPoint::afterModified,
+                             this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
+        }
     }
     this->computeTunnelPreview();
 

@@ -107,6 +107,10 @@ uniform sampler3D voxelValues;
 uniform float fogNear;
 uniform float fogFar;
 
+uniform bool clipPlaneActive;
+uniform vec3 clipPlanePosition;
+uniform vec3 clipPlaneDirection;
+
 out vec4 fragColor;
 
 in vec3 realNormal;
@@ -146,6 +150,13 @@ void main(void)
     return;*/
     if (min_vertice_positions.x > initialVertPos.x || initialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > initialVertPos.y || initialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > initialVertPos.z || initialVertPos.z > max_vertice_positions.z)
         discard;
+
+    if (clipPlaneActive) {
+        if (dot((initialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
+            discard;
+        }
+    }
+
     Material material = ground_material;
     vec3 N = normalize(varyingNormal + fbm3ToVec3(initialVertPos)*0.5);
     vec3 L = normalize(varyingLightDir);

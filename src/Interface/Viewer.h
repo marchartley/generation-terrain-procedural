@@ -110,6 +110,8 @@ public Q_SLOTS:
     void undo();
     void redo();
 
+    void clipViewTemporarily(Vector3 direction, Vector3 center, bool active);
+
 //    void saveScreenshot();
 
 //protected:
@@ -230,6 +232,10 @@ public:
     bool usingMainCamera = true;
 
     Mesh tryMarchingCubes;
+
+    bool temporaryClipPlaneActivated = false;
+    Vector3 clipPlanePosition;
+    Vector3 clipPlaneDirection;
 };
 
 
