@@ -7,9 +7,9 @@
 class KarstHole
 {
 public:
-    KarstHole(float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    KarstHole(Vector3 start, Vector3 end, float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    KarstHole(BSpline fullPath, float size = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(Vector3 start, Vector3 end, float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
+    KarstHole(BSpline fullPath, float width = 1.f, float height = 1.f, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
 
     KarstHoleProfile interpolate(float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
 
@@ -23,8 +23,8 @@ public:
     KarstHoleProfile startingProfile;
     KarstHoleProfile endingProfile;
     BSpline path;
-    float size;
-    int number_of_points = 10;
+    float width, height;
+    int number_of_points = 6;
     int number_of_intermediates = 2;
 
     std::vector<std::tuple<Vector3, float>> vertexCylinders;

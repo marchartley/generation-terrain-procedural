@@ -2,24 +2,25 @@
 
 #include "Utils/Utils.h"
 
-KarstHole::KarstHole(float size, KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
+KarstHole::KarstHole(float width, float height, KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    this->startingProfile = KarstHoleProfile(startingShape).setSize(size, size);
-    this->endingProfile = KarstHoleProfile(endingShape).setSize(size, size);
+    this->startingProfile = KarstHoleProfile(startingShape).setSize(width, height);
+    this->endingProfile = KarstHoleProfile(endingShape).setSize(width, height);
     this->path = BSpline();
-    this->size = size;
+    this->width = width;
+    this->height = height;
 }
 
-KarstHole::KarstHole(Vector3 start, Vector3 end, float size,
+KarstHole::KarstHole(Vector3 start, Vector3 end, float width, float height,
                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
-    : KarstHole(size, startingShape, endingShape)
+    : KarstHole(width, height, startingShape, endingShape)
 {
     this->path = BSpline({start, end});
 }
 
-KarstHole::KarstHole(BSpline fullPath, float size,
+KarstHole::KarstHole(BSpline fullPath, float width, float height,
                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
-    : KarstHole(size, startingShape, endingShape)
+    : KarstHole(width, height, startingShape, endingShape)
 {
     this->path = fullPath;
 }
@@ -38,7 +39,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
     Vector3 kindOfTangent;
     std::vector<int> remaining_nodes(vertices.size()); // Starts with {0, 1, 2, 3, ...N}
     std::vector<std::vector<Vector3>> triangles;
-    for (size_t i = 0; i < vertices.size(); i++) {
+    for (size_t i = 0; i < remaining_nodes.size(); i++) {
         middle += vertices[i];
         remaining_nodes[i] = i;
     }
@@ -76,7 +77,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
         bool valid = true;
         for (size_t j = 0; j < vertices.size(); j++) {
             // Count the number of intersection from the midpoint to somewhere outside
-            if (intersectionBetweenTwoSegments(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()])) {
+            if (intersectionBetweenTwoSegments(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()]).isValid()) {
                 number_of_intersections++;
             }
         }
@@ -155,7 +156,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         KarstHoleProfile currentProfile;
         if (this->path.getDirection(t).isAlmostVertical() && iT != number_of_intermediates + 1) {
             KarstHoleProfile prev(KarstHolePredefinedShapes::TUBE);
-            prev.setSize(this->size, this->size);
+            prev.setSize(this->width, this->height);
             prev.translate(path.getPoint(t));
 //            std::cout << "Verticality at t = " << t << " as the direction is " << this->path.getDirection(t) << std::endl;
             if (iT > 0) {
@@ -165,13 +166,13 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
 
         } else {
             if (iT == 0) {
-                currentProfile = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->size).scale(.5f);
-                cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->size, path.getPoint(0.f)));
+                currentProfile = this->interpolate(0.0).translate(path.getDirection(0.f) * -this->width).scale(.5f);
+                cylinders.push_back(std::make_tuple(path.getPoint(0.f) + path.getDirection(0.f) * -this->width, path.getPoint(0.f)));
             }
             else if(iT == number_of_intermediates + 1) {
 //                std::cout << "Direction " << path.getDirection(1.f) * this->size << std::endl;
-                currentProfile = this->interpolate(1.0).translate(path.getDirection(1.f) * this->size).scale(.5f);
-                cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->size));
+                currentProfile = this->interpolate(1.0).translate(path.getDirection(1.f) * this->width).scale(.5f);
+                cylinders.push_back(std::make_tuple(path.getPoint(1.f), path.getPoint(1.f) + path.getDirection(1.f) * this->width));
             }
             else {
                 currentProfile = this->interpolate(t, previousValidTime, nextValidTime);
@@ -179,13 +180,14 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
                     cylinders.push_back(std::make_tuple(path.getPoint(t), path.getPoint(t + dt)));
             }
         }
+        currentProfile.vertices.closed = false;
         intermediateProfiles.push_back(currentProfile);
         allIntermediateVertices[iT] = currentProfile.vertices.getPath(1.f / (float)(number_of_points - 1));
     }
 
     for (size_t i = 0; i < allIntermediateVertices.size() - 1; i++) {
         std::vector<Vector3> startingShape = intermediateProfiles[i].vertices.getPath(1.f / (float)(number_of_points - 1));
-        std::vector<Vector3> endingShape = intermediateProfiles[i + 1].rotateIndicesUntilBestFitWith(intermediateProfiles[i], number_of_points).vertices.getPath(1.f / (float)(number_of_points - 1));
+        std::vector<Vector3> endingShape = intermediateProfiles[i + 1]/*.rotateIndicesUntilBestFitWith(intermediateProfiles[i], number_of_points)*/.vertices.getPath(1.f / (float)(number_of_points - 1));
         // Compute the triangles that makes the actual tunnel
         for (int j = 0; j < number_of_points; j++) {
             int j_plus_1 = (j + 1) % number_of_points;

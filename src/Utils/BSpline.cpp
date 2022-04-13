@@ -153,7 +153,7 @@ Vector3 BSpline::getFrenetBinormal(float x)
     if (!new_dir.isAlmostVertical())
         right = Vector3(0, 0, 1).cross(new_dir);
     else
-        right = Vector3(0, 1, 1).cross(new_dir);
+        right = Vector3(0, 0.01, 1).cross(new_dir);
     return right.normalize();
 }
 

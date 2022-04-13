@@ -196,7 +196,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             holeMatrix.normalize();
             for (float& m : holeMatrix) {
 //                m = (m > 0 ? 1.0 : 0.0) * -this->maxRockStrength;
-                m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+                m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength * (addingMatter ? -1.f : 1.f);
         //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
             }
             RockErosion rock;
@@ -304,6 +304,51 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
         meshPath.push_back(path[i + 1]);
     }
     return this->CreateTunnel(BSpline(path).simplifyByRamerDouglasPeucker(0.5f), false, false, applyChanges, KarstHolePredefinedShapes::CRACK, KarstHolePredefinedShapes::CRACK);
-//    return meshPath;
+    //    return meshPath;
+}
+
+std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool addingMatter, bool applyChanges)
+{
+    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    bool modificationDoesSomething = true;
+    BSpline width = BSpline(std::vector<Vector3>({
+                                                     Vector3(0.0, 1.0),
+                                                     Vector3(0.5, 2.0),
+                                                     Vector3(1.0, 1.0)
+                                                 }));
+
+    std::vector<Vector3> coords;
+    Matrix3<float> holeMatrix;
+    Vector3 anchor;
+    std::vector<std::vector<Vector3>> triangles = tunnel.generateMesh();
+    std::tie(holeMatrix, anchor) = tunnel.generateMask(triangles);
+    if (holeMatrix.abs().max() == 0) {
+        modificationDoesSomething = false;
+    } else {
+        holeMatrix = holeMatrix.abs().toDistanceMap();
+        holeMatrix.normalize();
+        for (float& m : holeMatrix) {
+//                m = (m > 0 ? 1.0 : 0.0) * -this->maxRockStrength;
+            m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength * (addingMatter ? -1.f : 1.f);
+    //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+        }
+        RockErosion rock;
+        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, tunnel.path.getPoint(0), addingMatter, anchor, true);
+
+        for (const auto& triangle : triangles) {
+            coords.push_back(triangle[0]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[1]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[2]);
+            coords.push_back(triangle[0]);
+        }
+    }
+    if (modificationDoesSomething) {
+        grid->applyModification(erosionMatrix);
+    }
+    if (applyChanges)
+        grid->remeshAll();
+    return coords;
 }
 

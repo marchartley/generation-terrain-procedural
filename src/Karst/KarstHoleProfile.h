@@ -29,6 +29,8 @@ public:
     KarstHoleProfile interpolate(KarstHoleProfile other, BSpline path, float t, float previousAcceptedTime = -1.f, float nextAcceptedTime = -1.f);
     std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t);
 
+    KarstHoleProfile& rotateIndicesUntilBestFitWith(KarstHoleProfile& otherProfile, int numberOfPointsUsed);
+
     KarstHoleProfile& setNumberOfVertices(int vertice_count);
     KarstHoleProfile& setSize(float sizeX, float sizeY);
 
@@ -42,7 +44,7 @@ public:
     static BSpline createCrackProfile();
 
     BSpline vertices;
-    float scaling = 1.f;
+    Vector3 scaling = Vector3(1.f, 1.f, 1.f);
 };
 
 #endif // KARSTHOLEPROFILE_H

@@ -110,7 +110,7 @@ KarstHoleProfile &KarstHoleProfile::scale(float scale_factor, bool verbose)
 
 KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline path, float t, float previousAcceptedTime, float nextAcceptedTime)
 {
-    std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
+    /*std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
     std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
     std::vector<Vector3> interpolatedPoints(startingPoints.size());
     for (size_t i = 0; i < startingPoints.size(); i++) {
@@ -118,8 +118,8 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
     }
     KarstHoleProfile interpolation(interpolatedPoints);
     return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
-    /*
-    if (true || !path.getDirection(t).isAlmostVertical()) {
+    */
+    if (!path.getDirection(t).isAlmostVertical()) {
         // Non-vertical path
         std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
         std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
@@ -132,31 +132,38 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
     } else {
         // Vertical case
         KarstHoleProfile interpolation(KarstHolePredefinedShapes::TUBE);
-        interpolation.setSize(this->scaling, this->scaling);
-        return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
+        interpolation.setSize(this->scaling.x, this->scaling.y);
+        //return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
         if (previousAcceptedTime > -1.f && nextAcceptedTime > -1.f) {
             float binormalRotation = 0.f;
-            Vector3 prevBinormal = path.getBinormal(previousAcceptedTime);
-            Vector3 nextBinormal = path.getBinormal(nextAcceptedTime);
-            Vector3 prevDir = path.getDirection(previousAcceptedTime);
-            Vector3 nextDir = path.getDirection(nextAcceptedTime);
-            Vector3 prevNorm = path.getNormal(previousAcceptedTime);
-            Vector3 nextNorm = path.getNormal(nextAcceptedTime);
+            Vector3 prevBinormal = path.getFrenetBinormal(previousAcceptedTime);
+            Vector3 nextBinormal = path.getFrenetBinormal(nextAcceptedTime);
+            Vector3 prevDir = path.getFrenetDirection(previousAcceptedTime);
+            Vector3 nextDir = path.getFrenetDirection(nextAcceptedTime);
+            Vector3 prevNorm = path.getFrenetNormal(previousAcceptedTime);
+            Vector3 nextNorm = path.getFrenetNormal(nextAcceptedTime);
             Vector3 rotator = nextDir.cross(prevDir);
             binormalRotation = std::acos(prevDir.dot(nextDir));
 //            binormalRotation = std::acos(nextNorm.dot(prevBinormal));
             binormalRotation *= interpolation::linear(t, previousAcceptedTime, nextAcceptedTime);
+            std::cout << "t-1 = " << previousAcceptedTime << " t+1 = " << nextAcceptedTime << " -> dot = " << prevBinormal.dot(nextBinormal) << "\n";
+            std::cout << "-> normal dot : " << prevNorm.dot(nextNorm) << std::endl;
             // Get the same as the previous timestamp
-            interpolation.rotateTowardVector(path, previousAcceptedTime);
+//            interpolation.rotateTowardVector(path, previousAcceptedTime);
             // Increase the rotation to fit the interpolation
-            for (auto& point : interpolation.vertices.points)
+            for (auto& point : interpolation.vertices.points) {
+                if (prevBinormal.dot(nextBinormal) < 0){
+                    point.rotate(3.141592, 0, 0);
+                }
+
                 point.rotate(binormalRotation, rotator);
 //                point.rotate(0, 0, binormalRotation);
+            }
         }
         // The points are automatically vertically-defined
-        interpolation.setSize(this->scaling, this->scaling);
+        interpolation.setSize(this->scaling.x, this->scaling.y);
         return interpolation.translate((path.getPoint(t)));
-    }*/
+    }
 }
 std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t)
 {
@@ -174,6 +181,57 @@ std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile:
         triangles.push_back({interpolatedPoints[triangle[0]], interpolatedPoints[triangle[1]], interpolatedPoints[triangle[2]]});
     }
     return std::make_pair(interpolation, triangles);
+}
+
+KarstHoleProfile &KarstHoleProfile::rotateIndicesUntilBestFitWith(KarstHoleProfile &otherProfile, int numberOfPointsUsed)
+{
+    std::vector<Vector3> startPositions = this->vertices.getPath(1.f / (float) numberOfPointsUsed);
+    std::vector<Vector3> endPositions = otherProfile.vertices.getPath(1.f / (float) numberOfPointsUsed);
+    float minDist = -1;
+    int bestRotateFit = -1;
+    bool best_reversed = false;
+
+    for (int rot = 0; rot < numberOfPointsUsed; rot++) {
+        float currentDist = 0;
+        bool need_to_be_reversed = false;
+        for (int i_init = 0; i_init < numberOfPointsUsed; i_init++) {
+            int i = (i_init + rot) % numberOfPointsUsed;
+            float t = (i / (float)(numberOfPointsUsed - 1));
+            float t_init = (i_init / (float)(numberOfPointsUsed - 1));
+            Vector3 moveVec = startPositions[i] - endPositions[i_init];
+            currentDist += moveVec.norm2();
+        }
+        if (currentDist < minDist || bestRotateFit == -1) {
+            minDist = currentDist;
+            bestRotateFit = rot;
+            best_reversed = need_to_be_reversed;
+        }
+    }
+
+    for (int rot = 0; rot < numberOfPointsUsed; rot++) {
+        float currentDist = 0;
+        bool need_to_be_reversed = true;
+        for (int i_init = 0; i_init < numberOfPointsUsed; i_init++) {
+            int i = ((numberOfPointsUsed - i_init - 1) + rot) % numberOfPointsUsed;
+            float t = (i / (float)(numberOfPointsUsed - 1));
+            float t_init = (i_init / (float)(numberOfPointsUsed - 1));
+            Vector3 moveVec = startPositions[i] - endPositions[i_init];
+            currentDist += moveVec.norm2();
+        }
+        if (currentDist < minDist || bestRotateFit == -1) {
+            minDist = currentDist;
+            bestRotateFit = rot;
+            best_reversed = need_to_be_reversed;
+        }
+    }
+
+    // bestRotateFit = src_shape.length + bestRotateFit * (best_reversed ? 1 : -1);
+    std::vector<Vector3> newPoints;
+    for (int i = bestRotateFit; i < numberOfPointsUsed + bestRotateFit; i++) {
+        newPoints.insert((best_reversed ? newPoints.begin() : newPoints.end() ), startPositions[i % numberOfPointsUsed]);
+    }
+    this->vertices.points = newPoints;
+    return *this;
 }
 
 KarstHoleProfile& KarstHoleProfile::setNumberOfVertices(int vertice_count)
@@ -195,8 +253,8 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
         maxVec.y = std::max(maxVec.y, point.y);
     }
     Vector3 scaling = Vector3(sizeX, sizeY, 1) / (maxVec - minVec);*/
-    float previousScaling = this->scaling;
-    scaling = std::max(sizeX, sizeY); // Dunno what to do...
+    Vector3 previousScaling = this->scaling;
+    scaling = Vector3(sizeX, sizeY, 1.f); // Dunno what to do...
     for (Vector3& point : this->vertices.points)
         point *= (scaling / previousScaling);
     return *this;
@@ -226,12 +284,12 @@ std::vector<std::vector<int> > KarstHoleProfile::computeTrianglesIndices(const s
         bool valid = true;
         for (size_t j = 0; j < remaining_nodes.size() && valid; j++) {
             // Count the number of intersection from the midpoint to somewhere outside
-            if (intersection(ray, midpoint, points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
+            if (intersectionBetweenTwoSegments(ray, midpoint, points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
                 number_of_intersections++;
             }
             // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)
-            if (intersection(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
-                Vector3 inter = intersectionPoint(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+            Vector3 inter = intersectionBetweenTwoSegments(points[previous], points[next], points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+            if (inter.isValid()) {
                 if (inter != points[previous] && inter != points[next]) {
                     valid = false;
                 }
@@ -280,7 +338,7 @@ BSpline KarstHoleProfile::createTubeProfile()
                        { .7, -.7, 0},
                        { .0, -1., 0},
                        {-.7, -.7, 0}
-                   }).close();
+                   })/*.close()*/;
 }
 
 BSpline KarstHoleProfile::createSolubleBedProfile()
@@ -292,7 +350,7 @@ BSpline KarstHoleProfile::createSolubleBedProfile()
                        { 1.,  0., 0},
                        { .7, -.5, 0},
                        {-.7, -.5, 0}
-                   }).close();
+                   })/*.close()*/;
 }
 
 BSpline KarstHoleProfile::createPassageProfile()
@@ -304,7 +362,7 @@ BSpline KarstHoleProfile::createPassageProfile()
                        { 1.,  0., 0},
                        { .5, -.5, 0},
                        {-.5, -.5, 0}
-                   }).close();
+                   })/*.close()*/;
 }
 
 BSpline KarstHoleProfile::createKeyholeProfile()
@@ -318,7 +376,7 @@ BSpline KarstHoleProfile::createKeyholeProfile()
                        { .2, -1., 0},
                        {-.2, -1., 0},
                        {-.5, -.5, 0}
-                   }).close();
+                   })/*.close()*/;
 }
 
 BSpline KarstHoleProfile::createCanyonProfile()
@@ -332,7 +390,7 @@ BSpline KarstHoleProfile::createCanyonProfile()
                        { .2, -1., 0},
                        {-.2, -1., 0},
                        {-.5, -.5, 0}
-                   }).close();
+                   })/*.close()*/;
 }
 BSpline KarstHoleProfile::createCrackProfile()
 {
@@ -342,5 +400,5 @@ BSpline KarstHoleProfile::createCrackProfile()
                        { .2,  .1, 0},
                        { .25,  0, 0},
                        {  0, -1., 0}
-                   }).close();
+                   })/*.close()*/;
 }

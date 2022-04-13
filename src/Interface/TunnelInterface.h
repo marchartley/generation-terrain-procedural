@@ -27,7 +27,9 @@ public Q_SLOTS:
     void show();
     void hide();
 
-    void setTunnelSize(int newSize) { this->tunnelSize = newSize; computeTunnelPreview(); }
+//    void setTunnelSize(int newSize) { this->tunnelSize = newSize; computeTunnelPreview(); }
+    void setTunnelWidth(int newSize);
+    void setTunnelHeight(int newSize);
     void setErosionStrength(float newStrength) { this->erosionStrength = newStrength;}
     void addCurvesControlPoint(Vector3 pos, bool justUpdatePath = false);
 
@@ -41,7 +43,7 @@ public:
     std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
-    float tunnelSize = 10;
+    float tunnelWidth = 10, tunnelHeight = 10;
     float erosionStrength = 3.f;
 
     void computeTunnelPreview();
@@ -53,7 +55,8 @@ protected:
     QHBoxLayout* tunnelLayout;
     QPushButton* addControlPointButton;
     QPushButton* tunnelClearControlPointButton;
-    FancySlider* tunnelSizeSlider;
+    FancySlider* tunnelWidthSlider;
+    FancySlider* tunnelHeightSlider;
     FancySlider* tunnelStrengthSlider;
     QPushButton* tunnelCreateMatter;
     QPushButton* tunnelRemoveMatter;
