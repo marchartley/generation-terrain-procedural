@@ -12,6 +12,7 @@ class Grid {
 public:
     Grid();
     Grid(int nx, int ny, float max_height, float tileSize = 0.1);
+    Grid(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1, float tileSize = 0.1);
 
     void display(bool displayNormals = false);
 

@@ -2,6 +2,10 @@
 #include "TerrainGen/Grid.h"
 
 #include "Utils/FastNoiseLit.h"
+#include "Utils/Utils.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "Utils/stb_image.h"
 //#include <QtOpenGLExtensions/QtOpenGLExtensions>
 
 
@@ -42,6 +46,52 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
     }
     this->computeNormals();
 }
+
+Grid::Grid(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
+    : sizeX(nx), sizeY(ny), maxHeight(max_height), tileSize(tileSize)
+{
+    int imgW, imgH, nbChannels;
+    unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
+    if (data == NULL)
+    {
+        std::cerr << "Error : Impossible to load " << heightmap_filename << ". Closing." << std::endl;
+        exit (-1);
+        return;
+    }
+    if (nx == -1)
+        this->sizeX = imgW;
+    if (ny == -1)
+        this->sizeY = imgH;
+
+    float max = 0;
+
+    Matrix3<float> map(imgW, imgH);
+    for (int x = 0; x < imgW; x++) {
+        for (int y = 0; y < imgH; y++) {
+            float value = (float)data[x + y * imgW];
+            map.at(x, y) = value;
+            max = std::max(max, value);
+        }
+    }
+    if (this->maxHeight == -1) {
+        maxHeight = max;
+    } else {
+        map *= (maxHeight / max);
+    }
+    map = map.resize(this->sizeX, this->sizeY, 1);
+    this->vertices = new Vector3*[this->sizeX];
+    this->normals = new Vector3*[this->sizeX];
+    for (int x = 0; x < this->sizeX; x++) {
+        this->vertices[x] = new Vector3[this->sizeY];
+        this->normals[x] = new Vector3[this->sizeY];
+        for (int y = 0; y < this->sizeY; y++) {
+            this->vertices[x][y] = Vector3(x, y, map.at(x, y));
+        }
+    }
+    this->computeNormals();
+    stbi_image_free(data);
+}
+
 Grid::Grid() : Grid(10, 10, 5.0) {
 
 }
@@ -57,8 +107,8 @@ void Grid::createMesh()
             vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
 
             vecs.push_back(Vector3(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z));
-            vecs.push_back(Vector3(this->vertices[x+1][y].x, this->vertices[x+1][y].y, this->vertices[x+1][y].z));
             vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
+            vecs.push_back(Vector3(this->vertices[x+1][y].x, this->vertices[x+1][y].y, this->vertices[x+1][y].z));
         }
     }
     this->mesh.fromArray(vecs);
@@ -146,7 +196,7 @@ void Grid::display(bool displayNormals) {
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
-            this->vertices[x][y] = Vector3(x, y, voxelGrid.getHeight(x, y)/ (voxelGrid.getSizeZ() / 2.0));
+            this->vertices[x][y] = Vector3(x, y, voxelGrid.getHeight(x, y)/ (voxelGrid.getSizeZ()));
         }
     }
     this->computeNormals();

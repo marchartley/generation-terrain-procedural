@@ -152,6 +152,8 @@ HEADERS += \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
     src/Utils/Utils.h \
+    src/Utils/stb_image.h \
+    src/Utils/stb_image_write.h \
     src/sim-fluid-ethanjli/fluidsystem.h \
     src/sim-fluid-ethanjli/fluidsystem.tpp \
     src/sim-fluid-ethanjli/math.h \
