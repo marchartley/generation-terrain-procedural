@@ -108,6 +108,7 @@ public:
     bool isApplyingRotation = false;
     Axis currentAxis = NONE;
 
+    bool displayOnTop = true;
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
 

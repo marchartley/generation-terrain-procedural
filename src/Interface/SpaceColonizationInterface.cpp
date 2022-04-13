@@ -6,7 +6,7 @@
 
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : CustomInteractiveObject(parent)
 {
-    this->startingPoint = new ControlPoint();
+    this->startingPoint = std::make_unique<ControlPoint>();
 }
 
 SpaceColonizationInterface::~SpaceColonizationInterface()
@@ -17,7 +17,7 @@ void SpaceColonizationInterface::display()
 {
     if (this->isVisible())
     {
-        for (ControlPoint*& ctrl : this->controlPoints) {
+        for (auto& ctrl : this->controlPoints) {
             ctrl->display();
         }
         if (this->startingPoint->mesh.shader != nullptr)
@@ -31,7 +31,7 @@ void SpaceColonizationInterface::display()
 
 void SpaceColonizationInterface::hide()
 {
-    for (ControlPoint*& ctrl : this->controlPoints) {
+    for (auto& ctrl : this->controlPoints) {
         ctrl->hide();
     }
     this->startingPoint->hide();
@@ -41,7 +41,7 @@ void SpaceColonizationInterface::hide()
 
 void SpaceColonizationInterface::show()
 {
-    for (ControlPoint*& ctrl : this->controlPoints) {
+    for (auto& ctrl : this->controlPoints) {
         ctrl->show();
     }
     this->startingPoint->show();
@@ -78,17 +78,19 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
     this->colonizer->nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
 
     for (size_t i = 0; i < keyPoints.size(); i++) {
-        this->controlPoints.push_back(new ControlPoint(keyPoints[i], 5.f));
-        QObject::connect(this->controlPoints[i], &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
+        this->controlPoints.push_back(std::make_unique<ControlPoint>(keyPoints[i], 5.f));
+        this->controlPoints.back()->allowAllAxisTranslation(true);
+        QObject::connect(this->controlPoints.back().get(), &ControlPoint::modified,
+                         this, &SpaceColonizationInterface::computeKarst);
     }
-    this->startingPoint = new ControlPoint(startPos, 5.f);
-    QObject::connect(this->startingPoint, &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
+    this->startingPoint = std::make_unique<ControlPoint>(startPos, 5.f);
+    QObject::connect(this->startingPoint.get(), &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
 }
 
 void SpaceColonizationInterface::initSpaceColonizer()
 {
     std::vector<Vector3> newNodes;
-    for (ControlPoint*& ctrl : this->controlPoints)
+    for (auto& ctrl : this->controlPoints)
         newNodes.push_back(ctrl->getPosition());
     this->colonizer->startPosition = this->startingPoint->getPosition();
     this->colonizer->reset(newNodes);
@@ -157,7 +159,6 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
 QHBoxLayout *SpaceColonizationInterface::createGUI()
 {
     this->spaceColonizationLayout = new QHBoxLayout;
-
     QPushButton* spaceColonizerPreviewButton = new QPushButton("Calculer");
     QPushButton* spaceColonizerConfirmButton = new QPushButton("Creer le karst");
     QPushButton* spaceColonizerQuickConfirmButton = new QPushButton("Tunnel rond");
