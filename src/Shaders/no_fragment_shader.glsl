@@ -10,6 +10,7 @@ uniform vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main(void)
 {
+    if (!gl_FrontFacing)
+        discard;
     fragColor = color;
-
 }
