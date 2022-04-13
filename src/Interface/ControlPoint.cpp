@@ -175,6 +175,15 @@ void ControlPoint::display()
 {
     if (this->state == HIDDEN) return;
     else {
+        GLboolean m_origin_blend, m_origin_depth, m_origin_cull;
+        glGetBooleanv(GL_BLEND, &m_origin_blend);
+        glGetBooleanv(GL_DEPTH_TEST,&m_origin_depth);
+        glGetBooleanv(GL_CULL_FACE, &m_origin_cull);
+        if (this->displayOnTop) {
+            glEnable(GL_BLEND);
+            glDisable(GL_DEPTH_TEST);
+            glDisable(GL_CULL_FACE);
+        }
         float controlAxisSizeUnselected = 2.f;
         float controlAxisSizeSelected = 4.f;
         if (this->useManipFrame)
@@ -229,6 +238,13 @@ void ControlPoint::display()
         }
         this->updateSphere();
         this->mesh.display();
+
+        if (m_origin_blend == GL_TRUE) glEnable(GL_BLEND);
+        else glDisable(GL_BLEND);
+        if (m_origin_depth == GL_TRUE) glEnable(GL_DEPTH_TEST);
+        else glDisable(GL_DEPTH_TEST);
+        if (m_origin_cull == GL_TRUE) glEnable(GL_CULL_FACE);
+        else glDisable(GL_CULL_FACE);
     }
 }
 

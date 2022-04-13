@@ -31,8 +31,8 @@ public:
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     std::shared_ptr<VoxelGrid> voxelGrid;
 
-    ControlPoint* startingPoint;
-    std::vector<ControlPoint*> controlPoints;
+    std::unique_ptr<ControlPoint> startingPoint;
+    std::vector<std::unique_ptr<ControlPoint>> controlPoints;
     std::vector<BSpline> karstPaths;
     Mesh pathsMeshes;
 
