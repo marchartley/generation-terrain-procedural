@@ -6,11 +6,12 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Utils/stb_image.h"
-//#include <QtOpenGLExtensions/QtOpenGLExtensions>
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "Utils/stb_image_write.h"
 
 
 Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
-    : sizeX(nx), sizeY(ny), maxHeight(maxHeight), tileSize(tileSize) {
+    : maxHeight(maxHeight), tileSize(tileSize) {
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetFrequency(0.01);
@@ -23,73 +24,29 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
 
     // Make a first pass, to get some noise
     float min = 1000, max = -1000;
-    this->vertices = new Vector3*[this->sizeX];
-    this->normals = new Vector3*[this->sizeX];
-    for (int x = 0; x < this->sizeX; x++) {
-        this->vertices[x] = new Vector3[this->sizeY];
-        this->normals[x] = new Vector3[this->sizeY];
-        for (int y = 0; y < this->sizeY; y++) {
+    this->vertices = Matrix3<Vector3>(nx, ny);
+    this->normals = Matrix3<Vector3>(nx, ny);
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
             float z = noise.GetNoise((float)x, (float)y);
-            this->vertices[x][y] = Vector3(x, y, z);
+            this->vertices.at(x, y) = Vector3(x, y, z);
             min = min < z ? min : z;
             max = max > z ? max : z;
         }
     }
-    // Sadely, we need a second pass because the noise function is a little f*cked up... we don't always have values in [-1;1]
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            this->vertices[x][y].z -= min;
-            this->vertices[x][y].z /= (max - min);
-            this->vertices[x][y].z *= maxHeight;
-//            this->vertices[x][y].z = maxHeight;
+    // Sadely, we need a second pass because the noise function is a little f*cked up... we don't always have values in [-1;1)
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            this->vertices.at(x, y).z = maxHeight * (this->vertices.at(x, y).z - min) / (max - min);
         }
     }
     this->computeNormals();
 }
 
 Grid::Grid(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
-    : sizeX(nx), sizeY(ny), maxHeight(max_height), tileSize(tileSize)
+    : maxHeight(max_height), tileSize(tileSize)
 {
-    int imgW, imgH, nbChannels;
-    unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
-    if (data == NULL)
-    {
-        std::cerr << "Error : Impossible to load " << heightmap_filename << ". Closing." << std::endl;
-        exit (-1);
-        return;
-    }
-    if (nx == -1)
-        this->sizeX = imgW;
-    if (ny == -1)
-        this->sizeY = imgH;
-
-    float max = 0;
-
-    Matrix3<float> map(imgW, imgH);
-    for (int x = 0; x < imgW; x++) {
-        for (int y = 0; y < imgH; y++) {
-            float value = (float)data[x + y * imgW];
-            map.at(x, y) = value;
-            max = std::max(max, value);
-        }
-    }
-    if (this->maxHeight == -1) {
-        maxHeight = max;
-    } else {
-        map *= (maxHeight / max);
-    }
-    map = map.resize(this->sizeX, this->sizeY, 1);
-    this->vertices = new Vector3*[this->sizeX];
-    this->normals = new Vector3*[this->sizeX];
-    for (int x = 0; x < this->sizeX; x++) {
-        this->vertices[x] = new Vector3[this->sizeY];
-        this->normals[x] = new Vector3[this->sizeY];
-        for (int y = 0; y < this->sizeY; y++) {
-            this->vertices[x][y] = Vector3(x, y, map.at(x, y));
-        }
-    }
-    this->computeNormals();
-    stbi_image_free(data);
+    this->loadFromHeightmap(heightmap_filename, nx, ny, max_height, tileSize);
 }
 
 Grid::Grid() : Grid(10, 10, 5.0) {
@@ -100,15 +57,15 @@ void Grid::createMesh()
 {
     std::vector<Vector3> vecs;
 
-    for(int x = 0; x < this->sizeX - 1; x++) {
-        for (int y = 0; y < this->sizeY - 1; y++) {
-            vecs.push_back(Vector3(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z));
-            vecs.push_back(Vector3(this->vertices[x][y+1].x, this->vertices[x][y+1].y, this->vertices[x][y+1].z));
-            vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
+    for(int x = 0; x < this->getSizeX() - 1; x++) {
+        for (int y = 0; y < this->getSizeY() - 1; y++) {
+            vecs.push_back(this->vertices.at(x, y));
+            vecs.push_back(this->vertices.at(x, y+1));
+            vecs.push_back(this->vertices.at(x+1, y+1));
 
-            vecs.push_back(Vector3(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z));
-            vecs.push_back(Vector3(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z));
-            vecs.push_back(Vector3(this->vertices[x+1][y].x, this->vertices[x+1][y].y, this->vertices[x+1][y].z));
+            vecs.push_back(this->vertices.at(x, y));
+            vecs.push_back(this->vertices.at(x+1, y+1));
+            vecs.push_back(this->vertices.at(x+1, y));
         }
     }
     this->mesh.fromArray(vecs);
@@ -119,31 +76,31 @@ void Grid::computeNormals() {
 //    Vector3 upVector(0.0, 0.0, 1.0);
 //    for (int x = 0; x < this->sizeX; x++)
 //        for (int y = 0; y < this->sizeY; y++)
-//            this->normals[x][y] = upVector;
+//            this->normals.at(x, y) = upVector;
 
+    this->normals = Matrix3<Vector3>(this->getSizeX(), this->getSizeY());
+    this->vertices.raiseErrorOnBadCoord = false;
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            Vector3 pos = this->vertices.at(x, y);
+            Vector3 v1 = this->vertices.at(x - 1, y    ) - pos;
+            Vector3 v2 = this->vertices.at(x - 1, y - 1) - pos;
+            Vector3 v3 = this->vertices.at(x    , y - 1) - pos;
+            Vector3 v4 = this->vertices.at(x + 1, y - 1) - pos;
+            Vector3 v5 = this->vertices.at(x + 1, y    ) - pos;
+            Vector3 v6 = this->vertices.at(x + 1, y + 1) - pos;
+            Vector3 v7 = this->vertices.at(x    , y + 1) - pos;
+            Vector3 v8 = this->vertices.at(x - 1, y + 1) - pos;
 
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            this->normals[x][y] = Vector3();
-
-            Vector3 v1 = x > 0 ? this->vertices[x - 1][y    ] - this->vertices[x][y] : Vector3();
-            Vector3 v2 = x > 0 && y > 0 ? this->vertices[x - 1][y - 1] - this->vertices[x][y] : Vector3();
-            Vector3 v3 = y > 0 ? this->vertices[x    ][y - 1] - this->vertices[x][y] : Vector3();
-            Vector3 v4 = x < sizeX - 1 && y > 0 ? this->vertices[x + 1][y - 1] - this->vertices[x][y] : Vector3();
-            Vector3 v5 = x < sizeX - 1 ? this->vertices[x + 1][y    ] - this->vertices[x][y] : Vector3();
-            Vector3 v6 = x < sizeX - 1 && y < sizeY - 1 ?this->vertices[x + 1][y + 1] - this->vertices[x][y] : Vector3();
-            Vector3 v7 = y < sizeY - 1 ? this->vertices[x    ][y + 1] - this->vertices[x][y] : Vector3();
-            Vector3 v8 = x > 0 && y < sizeY - 1 ? this->vertices[x - 1][y + 1] - this->vertices[x][y] : Vector3();
-
-            this->normals[x][y] += v1.cross(v2);
-            this->normals[x][y] += v2.cross(v3);
-            this->normals[x][y] += v3.cross(v4);
-            this->normals[x][y] += v4.cross(v5);
-            this->normals[x][y] += v5.cross(v6);
-            this->normals[x][y] += v6.cross(v7);
-            this->normals[x][y] += v7.cross(v8);
-            this->normals[x][y] += v8.cross(v1);
-            this->normals[x][y].normalize();
+            this->normals.at(x, y) += v1.cross(v2);
+            this->normals.at(x, y) += v2.cross(v3);
+            this->normals.at(x, y) += v3.cross(v4);
+            this->normals.at(x, y) += v4.cross(v5);
+            this->normals.at(x, y) += v5.cross(v6);
+            this->normals.at(x, y) += v6.cross(v7);
+            this->normals.at(x, y) += v7.cross(v8);
+            this->normals.at(x, y) += v8.cross(v1);
+            this->normals.at(x, y).normalize();
         }
     }
 }
@@ -156,10 +113,10 @@ void Grid::display(bool displayNormals) {
     float maxi = -9999999, mini = 9999999;
     for (int x = 0; x < this->sizeX; x++)
         for(int y = 0; y < this->sizeY; y++){
-            if (this->vertices[x][y].z > maxi)
-                maxi = this->vertices[x][y].z;
-            if (this->vertices[x][y].z < mini)
-                mini = this->vertices[x][y].z;
+            if (this->vertices.at(x, y).z > maxi)
+                maxi = this->vertices.at(x, y).z;
+            if (this->vertices.at(x, y).z < mini)
+                mini = this->vertices.at(x, y).z;
         }
     glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
     glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
@@ -168,13 +125,13 @@ void Grid::display(bool displayNormals) {
 //    glColor4f(1.0, 0.5, 0.5, 0.0);
     for(int x = 0; x < this->sizeX - 1; x++) {
         for (int y = 0; y < this->sizeY - 1; y++) {
-            glVertex3f(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z);
-            glVertex3f(this->vertices[x][y+1].x, this->vertices[x][y+1].y, this->vertices[x][y+1].z);
-            glVertex3f(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z);
+            glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
+            glVertex3f(this->vertices.at(x, y+1).x, this->vertices.at(x, y+1).y, this->vertices.at(x, y+1).z);
+            glVertex3f(this->vertices.at(x+1, y+1).x, this->vertices.at(x+1, y+1).y, this->vertices.at(x+1, y+1).z);
 
-            glVertex3f(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z);
-            glVertex3f(this->vertices[x+1][y].x, this->vertices[x+1][y].y, this->vertices[x+1][y].z);
-            glVertex3f(this->vertices[x+1][y+1].x, this->vertices[x+1][y+1].y, this->vertices[x+1][y+1].z);
+            glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
+            glVertex3f(this->vertices.at(x+1, y).x, this->vertices.at(x+1, y).y, this->vertices.at(x+1, y).z);
+            glVertex3f(this->vertices.at(x+1, y+1).x, this->vertices.at(x+1, y+1).y, this->vertices.at(x+1, y+1).z);
         }
     }
     glEnd();
@@ -184,8 +141,8 @@ void Grid::display(bool displayNormals) {
         for(int x = 0; x < this->sizeX - 1; x++) {
             for (int y = 0; y < this->sizeY - 1; y++) {
                 glBegin(GL_LINES);
-                glVertex3f(this->vertices[x][y].x, this->vertices[x][y].y, this->vertices[x][y].z);
-                glVertex3f(this->vertices[x][y].x + this->normals[x][y].x, this->vertices[x][y].y + this->normals[x][y].y, this->vertices[x][y].z + this->normals[x][y].z);
+                glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
+                glVertex3f(this->vertices.at(x, y).x + this->normals.at(x, y).x, this->vertices.at(x, y).y + this->normals.at(x, y).y, this->vertices.at(x, y).z + this->normals.at(x, y).z);
                 glEnd();
             }
         }
@@ -193,11 +150,90 @@ void Grid::display(bool displayNormals) {
     glPopMatrix();*/
 }
 
+float Grid::getMaxHeight()
+{
+    float max = 0;
+    for (const Vector3& v : this->vertices)
+        max = std::max(max, v.z);
+    return max;
+}
+
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
+    this->vertices = Matrix3<Vector3>(voxelGrid.getSizeX(), voxelGrid.getSizeY());
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
-            this->vertices[x][y] = Vector3(x, y, voxelGrid.getHeight(x, y)/ (voxelGrid.getSizeZ()));
+            this->vertices.at(x, y) = Vector3(x, y, voxelGrid.getHeight(x, y)/*/ (float)(voxelGrid.getSizeZ())*/);
         }
     }
     this->computeNormals();
+    this->createMesh();
+}
+
+void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
+{
+    int imgW, imgH, nbChannels;
+    unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
+    if (data == NULL)
+    {
+        std::cerr << "Error : Impossible to load " << heightmap_filename << "\n";
+        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
+        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
+        exit (-1);
+        return;
+    }
+    if (nx == -1)
+        nx = imgW;
+    if (ny == -1)
+        ny = imgH;
+
+    float max = 0;
+
+    Matrix3<float> map(imgW, imgH);
+    for (int x = 0; x < imgW; x++) {
+        for (int y = 0; y < imgH; y++) {
+            float value = (float)data[x + y * imgW];
+            map.at(x, y) = value;
+            max = std::max(max, value);
+        }
+    }
+    stbi_image_free(data);
+
+    if (this->maxHeight == -1) {
+        maxHeight = max;
+    } else {
+        map *= (maxHeight / max);
+    }
+    map = map.resize(nx, ny, 1);
+    this->vertices = Matrix3<Vector3>(map.sizeX, map.sizeY);
+    this->normals = Matrix3<Vector3>(map.sizeX, map.sizeY);
+    for (int x = 0; x < map.sizeX; x++) {
+        for (int y = 0; y < map.sizeY; y++) {
+            this->vertices.at(x, y) = Vector3(x, y, map.at(x, y));
+        }
+    }
+    this->computeNormals();
+}
+
+void Grid::saveHeightmap(std::string heightmap_filename)
+{
+    int width = this->getSizeX();
+    int height = this->getSizeY();
+    /*** NOTICE!! You have to use uint8_t array to pass in stb function  ***/
+    // Because the size of color is normally 255, 8bit.
+    // If you don't use this one, you will get a weird imge.
+    uint8_t* pixels = new uint8_t[width * height];
+
+    int index = 0;
+    for (int x = 0; x < width; x++)
+    {
+        for (int y = 0; y < height; y++)
+        {
+            uint8_t value = (uint8_t)this->vertices.at(x, y).z;
+            pixels[index++] = value;
+        }
+    }
+
+    // Here only one channel is used, maybe use more if more components are used
+    stbi_write_png(heightmap_filename.c_str(), width, height, 1, pixels, width);
+    delete[] pixels;
 }
