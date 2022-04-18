@@ -23,7 +23,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
                     for(int h = 0; h < this->getSizeZ(); h++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
                                                             -1.0 + noise_shifting, 1.0 + noise_shifting);
-//                        noise_val = 1.1; // To remove
+                        noise_val = 1.1; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
 //                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
 //                        noise_val = 0.5; // To remove
@@ -50,7 +50,7 @@ VoxelGrid::~VoxelGrid()
 void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeX = grid.getSizeX();
     this->sizeY = grid.getSizeY();
-    this->sizeZ = grid.getMaxHeight();
+    this->sizeZ = grid.getMaxHeight() * 2; // Give space for arches or things
     this->initMap();
 
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
@@ -59,13 +59,15 @@ void VoxelGrid::from2DGrid(Grid grid) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
-                    float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / grid.getMaxHeight());
+                    float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / (grid.getMaxHeight() * 2));
                     int z = int(grid_height);
+                    // Add some positive noise for h < height
                     for (int i = 0; i < z; i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
                         data[iChunk].at(x, y, i) = abs(noise_val);
                     }
+                    // Add negative noise for h > height
                     for (int i = z; i < this->getSizeZ(); i++) {
                         float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
                                                             -2.0, 2.0);
@@ -77,6 +79,7 @@ void VoxelGrid::from2DGrid(Grid grid) {
         }
     }
     this->tempData = data;
+    this->_smoothingNeeded = true;
 }
 
 std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
@@ -103,6 +106,10 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
 
+    }
+    if (this->_smoothingNeeded)  {
+        this->smoothVoxels();
+        this->_smoothingNeeded = false;
     }
 //    this->computeFlowfield();
     return this->shared_from_this();
@@ -259,6 +266,7 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
     Matrix3<float> currentTransportMatrix(this->sizeX, this->sizeY, this->sizeZ);
     Matrix3<float> voxelValues = this->getVoxelValues();
     Matrix3<Vector3> flow(this->sizeX, this->sizeY, this->sizeZ, this->sea_current); // To change with real flow
+    float gravityForce = 1.f;
 //    Matrix3<Vector3> flow = this->flowField;
     float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
 
@@ -287,6 +295,7 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
                     std::cout << currentPos << "\n";
                 }
                 currentPos += currentDir;
+                currentDir += flow.at(currentPos) + Vector3(0, 0, -1 * gravityForce);
                 currentDir.normalize();
             }
             a++;
@@ -363,6 +372,7 @@ void VoxelGrid::undo()
 
 void VoxelGrid::redo()
 {
+    for (auto& vc : this->chunks)
         vc->redo();
     this->remeshAll();
 }
@@ -373,6 +383,9 @@ void VoxelGrid::display() {
     {
         vc->display();
     }
+    /*
+    std::cout << "Voxel grid has " << this->mesh.vertexArrayFloat.size() << " points" << std::endl;
+    this->mesh.display(GL_POINTS);*/
 }
 
 int VoxelGrid::getHeight(int x, int y) {
@@ -392,9 +405,42 @@ bool VoxelGrid::contains(float x, float y, float z) {
 
 void VoxelGrid::remeshAll()
 {
+
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
     }
+/*
+    Matrix3<int> cubeEdges(256, 1);
+    for (int i = 0; i < 256; i++)
+        cubeEdges[i] = MarchingCubes::cubeEdges[i];
+    Matrix3<int> triTable(16, 256);
+    for (int i = 0; i < 16; i++)
+        for (int j = 0; j < 256; j++)
+            triTable.at(i, j) = MarchingCubes::triangleTable[j][i];
+
+
+    Matrix3<float> isoData = this->getVoxelValues().resize(30, 30, 30);
+    std::vector<Vector3> points(isoData.size());
+    for (size_t i = 0; i < points.size(); i++) {
+        points[i] = isoData.getCoordAsVector3(i);
+    }
+
+    mesh.useIndices = false;
+    mesh.fromArray(points);
+//    std::cout << "Setting voxel grid with " << points.size()*3 << " points because we use " << isoData << std::endl;
+    mesh.shader->setTexture3D("dataFieldTex", 0, isoData);
+    mesh.shader->setTexture2D("edgeTableTex", 1, cubeEdges);
+    mesh.shader->setTexture2D("triTableTex", 2, triTable);
+    mesh.shader->setFloat("isolevel", 0.f);
+    mesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+    mesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+    mesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+    mesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+    mesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+    mesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+    mesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+    mesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+    */
 }
 
 void VoxelGrid::computeVoxelGroups()
@@ -505,6 +551,15 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
         return this->chunks[iChunk]->voxelsValuesStack[0].at(voxPosX, voxPosY, _z);
     return -1;
 }
+Matrix3<Vector3> VoxelGrid::getFlowfield()
+{
+    Matrix3<Vector3> values(this->sizeX, this->sizeY, this->sizeZ);
+    for (auto& vc : this->chunks) {
+        values.paste(vc->flowField, vc->x, vc->y, 0);
+    }
+    return values;
+}
+
 Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
     return this->getFlowfield(pos.x, pos.y, pos.z);
 }

@@ -11,7 +11,7 @@
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
-        std::make_shared<Grid>("C:/codes/Qt/generation-terrain-procedural/src/assets/heightmaps/map2.png", 100, 100, 30, 1.0),
+        std::make_shared<Grid>("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/map2.png", 100, 100, 30, 1.0),
         std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
@@ -125,6 +125,8 @@ void Viewer::init() {
     char s_time[80];
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
 
+
+
 #ifdef _WIN32
     this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
     this->mapSavingFolder = "C:/codes/Qt/generation-terrain-procedural/saved_maps/";
@@ -155,11 +157,13 @@ void Viewer::init() {
     }
     if (voxelGrid != nullptr) {
 //        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
-        voxelGrid->from2DGrid(*(this->grid));
+//        voxelGrid->from2DGrid(*(this->grid));
         voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
-        UnderwaterErosion tunnels(this->voxelGrid, 20.f, 3.f, 0);
+        UnderwaterErosion tunnels(this->voxelGrid, 50.f, 3.f, 0);
+        tunnels.CreateTunnel(BSpline({{0, 30, 90}, {92, 30, 90}}), false, true, true);
+        this->grid->fromVoxelGrid(*(voxelGrid));
 //        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{92, 27, 64}, {0, 67, 53}, {92, 79, 21}}), false, false, false));
 //        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
 //        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
@@ -170,7 +174,7 @@ void Viewer::init() {
         for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
             vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
         }
-        this->setSceneCenter(qglviewer::Vec(voxelGrid->blockSize * voxelGrid->sizeX/2, voxelGrid->blockSize * voxelGrid->sizeY/2, voxelGrid->blockSize * voxelGrid->sizeZ/2));
+        this->setSceneCenter(voxelGrid->getDimensions() * voxelGrid->getBlockSize() / 2.f);
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
         this->randomParticlesDisplacementNoise.SetFrequency(0.1);
@@ -915,16 +919,34 @@ bool Viewer::startStopRecording()
 
 void Viewer::loadMapUI()
 {
-    QString filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
 
     const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
     const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
+
+    QString q_filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
+    if (q_filename.isEmpty()) return; // Cancel the action if no file has been selected
+    std::string filename = q_filename.toStdString();
+    std::string ext = toUpper(getExtention(filename));
+    if (!this->grid)
+        this->grid = std::make_shared<Grid>();
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
-    voxelGrid->retrieveMap(filename.toStdString());
-    voxelGrid->fromIsoData();
+
+    if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
+        // From heightmap
+        grid->loadFromHeightmap(filename, 127, 127, 255);
+        voxelGrid->from2DGrid(*grid);
+        voxelGrid->fromIsoData();
+    } else {
+        // Then it's our custom voxel grid file
+        voxelGrid->retrieveMap(filename);
+        voxelGrid->fromIsoData();
+        grid->fromVoxelGrid(*voxelGrid);
+    }
+    this->setSceneCenter(voxelGrid->getDimensions() * voxelGrid->getBlockSize() / 2.f);
     voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
     this->voxelGrid->createMesh();
+    this->grid->createMesh();
     for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
         vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     update();
@@ -989,28 +1011,5 @@ void Viewer::clipViewTemporarily(Vector3 direction, Vector3 center, bool active)
         this->clipPlanePosition = center;
     }
     this->temporaryClipPlaneActivated = active;
-/*
-    center /= Vector3(this->voxelGrid->sizeX, this->voxelGrid->sizeY, this->voxelGrid->sizeZ);
-    if (direction.x == 1.0) {
-        this->minSliceMapX = center.x;
-    }
-    else if (direction.x == 1.0) {
-        this->minSliceMapX = center.x;
-    }
-    else if (direction.x == -1.0) {
-        this->maxSliceMapX = center.x;
-    }
-    else if (direction.y == 1.0) {
-        this->minSliceMapY = center.y;
-    }
-    else if (direction.y == -1.f) {
-        this->maxSliceMapY = center.y;
-    }
-    else if (direction.z == 1.0) {
-        this->minSliceMapZ = center.z;
-    }
-    else if (direction.z == -1.f) {
-        this->maxSliceMapZ = center.z;
-    }*/
     this->update();
 }

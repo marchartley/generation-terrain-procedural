@@ -56,6 +56,7 @@ public:
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
     int getSizeZ() { return this->sizeZ; }
+    Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
     float getBlockSize() { return this->blockSize; }
 
     std::vector<Matrix3<float>> tempData;
@@ -86,6 +87,7 @@ public:
     void setVoxelValue(float x, float y, float z, float newVal);
     float getOriginalVoxelValue(Vector3 pos);
     float getOriginalVoxelValue(float x, float y, float z);
+    Matrix3<Vector3> getFlowfield();
     Vector3 getFlowfield(Vector3 pos);
     Vector3 getFlowfield(float x, float y, float z);
     void setFlowfield(Vector3 pos, Vector3 newVal);
@@ -130,6 +132,7 @@ public:
     int fluidSimRescale = 4;
 
 
+    bool _smoothingNeeded = false; // Just used when we come from a 2D grid.
 
     Matrix3<Vector3> flowField;
     Matrix3<int> distanceField;
