@@ -26,17 +26,27 @@ void FlowFieldInterface::recomputeFlowfield()
 
 void FlowFieldInterface::updateFlowfieldDebugMesh()
 {
+    Matrix3<Vector3> flowNormalized = this->voxelGrid->getFlowfield();
+    float max = -1, min = std::numeric_limits<float>::max();
+    for (auto& v : flowNormalized){
+        max = std::max(max, v.norm2());
+        min = std::min(min, v.norm2());
+    }
+    for (auto& v : flowNormalized)
+        v /= max;
     std::vector<Vector3> normals;
     for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->sizeX-1; x+= this->voxelGrid->fluidSimRescale) {
         for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->sizeY-1; y+= this->voxelGrid->fluidSimRescale) {
             for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->sizeZ - 1; z+= this->voxelGrid->fluidSimRescale) {
                 normals.push_back(Vector3(x, y, z) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back(Vector3(x, y, z) + (this->voxelGrid->getFlowfield(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
         }
     }
     this->flowMesh.fromArray(normals);
     this->flowMesh.update();
+
+//    Q_EMIT this->updated();
 }
 
 void FlowFieldInterface::hide()
