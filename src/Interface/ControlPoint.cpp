@@ -78,6 +78,10 @@ void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * con
         setGrabsMouse(true);
         return;
     }
+    if (this->state == HIDDEN || this->mesh.isHidden()) {
+        setGrabsMouse(false);
+        return;
+    }
 
     qglviewer::Vec orig, dir;
     cam->convertClickToLine(QPoint(x,y), orig, dir);
