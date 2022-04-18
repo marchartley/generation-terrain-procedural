@@ -17,6 +17,8 @@ int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, V
 Vector3 intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal);
 Vector3 intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereCenter, float sphereRadius, bool returnClosestPoint = true);
 
+std::string toUpper(std::string s);
+std::string getExtention(std::string file);
 
 namespace interpolation {
     float linear(float x, float _min = 0.0, float _max = 1.0);

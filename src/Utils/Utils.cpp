@@ -153,7 +153,7 @@ float shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vec
 float tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
     return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
 }
-int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
+inline int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
 int segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
 {
     // Möller–Trumbore intersection algorithm
@@ -289,4 +289,19 @@ float wyvill(float _x, float _min, float _max)
     return inv_linear(std::pow(1 - x*x, 3), _min, _max);
 }
 
+}
+
+std::string toUpper(std::string s)
+{
+    std::string res = s;
+    for (auto& c : res) {
+        c = toupper(c);
+    }
+    return res;
+}
+
+std::string getExtention(std::string file)
+{
+    std::string ext = file.substr(file.find_last_of('.') + 1);
+    return ext;
 }
