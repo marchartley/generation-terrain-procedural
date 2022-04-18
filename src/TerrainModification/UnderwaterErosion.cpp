@@ -242,7 +242,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
                 erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
             }
         } else {
-            KarstHole hole(path, this->maxRockSize, startingShape, endingShape);
+            KarstHole hole(path, this->maxRockSize, this->maxRockSize, startingShape, endingShape);
             Matrix3<float> holeMatrix;
             Vector3 anchor;
             std::vector<std::vector<Vector3>> triangles = hole.generateMesh();
@@ -332,6 +332,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
             m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength * (addingMatter ? -1.f : 1.f);
     //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
         }
+        holeMatrix = holeMatrix.meanSmooth();
         RockErosion rock;
         erosionMatrix = rock.computeErosionMatrix(erosionMatrix, holeMatrix, tunnel.path.getPoint(0), addingMatter, anchor, true);
 

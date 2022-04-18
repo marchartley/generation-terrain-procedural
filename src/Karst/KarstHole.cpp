@@ -97,7 +97,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
         // If there is an odd number of itersection, point is inside the shape,
         // we can create a triangle and remove the current node
         if (valid && number_of_intersections % 2 == 1) {
-            triangles.push_back({vertices[previous], vertices[current], vertices[next]});
+            triangles.push_back({vertices[current], vertices[previous], vertices[next]});
             remaining_nodes.erase(remaining_nodes.begin() + 1);
         } else {
             // Otherwise, rotate the list just to change the first 3 values
@@ -106,7 +106,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
     }
     // Put the last 3 in a triangle
     if (remaining_nodes.size() == 3)
-        triangles.push_back({vertices[remaining_nodes[0]], vertices[remaining_nodes[1]], vertices[remaining_nodes[2]]});
+        triangles.push_back({vertices[remaining_nodes[1]], vertices[remaining_nodes[0]], vertices[remaining_nodes[2]]});
     return triangles;
 }
 
@@ -119,11 +119,20 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
-    number_of_intermediates = 2 * int(this->path.points.size()-1) + 1; // std::min(5, int(this->path.points.size())*2);
+    std::vector<float> v_times;
+    float intervals = 1.f / (float)(int(this->path.points.size()) - 1);
+    for(size_t i = 0; i < this->path.points.size() - 1; i++) {
+        v_times.push_back((i +  0) * intervals);
+        v_times.push_back((i + .1) * intervals);
+        v_times.push_back((i + .9) * intervals);
+    }
+    v_times.push_back(1.f);
+
+    number_of_intermediates = v_times.size(); //2 * int(this->path.points.size()-1) + 1; // std::min(5, int(this->path.points.size())*2);
     float dt = 1.f / (float)(number_of_intermediates - 1);
     std::vector<float> validTimesInPath;
     for (int i = 0; i < number_of_intermediates; i++) {
-        float t = i * dt;
+        float t = v_times[i]; //i * dt;
         std::vector<Vector3> intermediateShape = this->interpolate(t).vertices.points;
         for (const Vector3& pos : intermediateShape) {
             minVec.x = std::min(minVec.x, pos.x);
@@ -143,7 +152,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     std::vector<std::vector<Vector3>> allIntermediateVertices(number_of_intermediates + 2);
     std::vector<KarstHoleProfile> intermediateProfiles;
     for (int iT = 0; iT < number_of_intermediates + 2; iT++) {
-        float t = (iT-1.f) * dt;
+        float t = v_times[std::min(std::max(iT, 0), int(v_times.size()-1))]; //(iT-1.f) * dt;
         float previousValidTime = -1.f, nextValidTime = -1.f;
         for (const float& time : validTimesInPath) {
             if (time < t)
@@ -192,8 +201,8 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         for (int j = 0; j < number_of_points; j++) {
             int j_plus_1 = (j + 1) % number_of_points;
             triangles.push_back({
-                                    (startingShape[j]),
                                     (startingShape[j_plus_1]),
+                                    (startingShape[j]),
                                     (endingShape[j])
                                 });
             triangles.push_back({
@@ -262,7 +271,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                     ray = Vector3(x, -200, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
                     int i = 0;
                     int lastTrianglesCylinder = -1;
-//                    bool ignoreThisCylinder = false;
+                    bool ignoreThisCylinder = false;
                     for (const std::vector<Vector3>& triangle : triangles) {
                         // Estimate the cylinder associated to this particular triangle.
                         int triangle_group = i / (2 * (number_of_points - 2) + 2 * number_of_points);
@@ -271,16 +280,16 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                             lastTrianglesCylinder = triangle_group;
                             if (numberOfCollisions % 2 == 1) {
                                 break;
-                            }/*
+                            }
                             ignoreThisCylinder = false;
                             float distToCylinder = shortestDistanceBetweenSegments(point, ray, cylindersStart[triangle_group], cylindersEnd[triangle_group]);
-                            if (distToCylinder > this->size) {
+                            if (distToCylinder > std::max(this->width, this->height)) {
                                 ignoreThisCylinder = true;
                             }
                         }
                         // Ignore this calculation if it's not needed.
                         if (ignoreThisCylinder) {
-                            continue;*/
+                            continue;
                         }
 
                         int collision_result = segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
