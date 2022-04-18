@@ -20,7 +20,12 @@ void TunnelInterface::display()
 {
     for (auto& ctrl : this->controlPoints)
         ctrl->display();
-    this->tunnelPreview.display(); //GL_LINES, 5.f);
+    if (controlPoints.size() > 1) {
+        if (this->tunnelPreview.shader != nullptr) {
+            this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
+        }
+        this->tunnelPreview.display(); //GL_LINES, 5.f);
+    }
 }
 
 void TunnelInterface::hide()
@@ -152,7 +157,7 @@ void TunnelInterface::createCrack(bool removingMatter)
     UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
     BSpline path(this->currentTunnelPoints);
     KarstHole hole(path, this->tunnelWidth, this->tunnelHeight, CRACK, CRACK);
-    this->tunnelPreview.fromArray(erod.CreateTunnel(hole, removingMatter, true));
+    this->tunnelPreview.fromArray(erod.CreateTunnel(hole, !removingMatter, true));
     this->currentTunnelPoints.clear();
     this->controlPoints.clear();
     this->tunnelPreview.update();
@@ -172,9 +177,6 @@ void TunnelInterface::computeTunnelPreview() {
             meshVertices.push_back(triangle[2]);
         }
         this->tunnelPreview.fromArray(meshVertices);
-        if (this->tunnelPreview.shader != nullptr) {
-            this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
-        }
     } else {
         this->tunnelPreview.clear();
     }
@@ -184,6 +186,7 @@ void TunnelInterface::computeTunnelPreview() {
 
 void TunnelInterface::wheelEvent(QWheelEvent* event)
 {
+    if (this->isHidden()) return;
     if (event->modifiers().testFlag(Qt::ControlModifier)) {
         this->setTunnelWidth(this->tunnelWidth - event->angleDelta().y() / 2);
         Q_EMIT this->updated();

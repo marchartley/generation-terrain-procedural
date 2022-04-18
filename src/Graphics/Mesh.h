@@ -14,8 +14,8 @@ public:
 //    Mesh(Shader shader, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
     Mesh(std::vector<Vector3> _vertexArray, std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
     Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
-    Mesh fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
-    Mesh fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
+    Mesh& fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
+    Mesh& fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
 
     void clear();
     Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);

@@ -38,7 +38,7 @@ float Vector3::norm2() {
 }
 
 Vector3& Vector3::normalize() {
-    if(this->norm() == 0)
+    if(this->norm() < 1e-5)
         return *this;
     float norm = this->norm();
     *this /= norm;

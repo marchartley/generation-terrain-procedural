@@ -28,8 +28,20 @@ Mesh::Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader,
 
 void Mesh::clear()
 {
-    this->vertexArray.clear();
-    this->colorsArray.clear();
+    vertexArray.clear();
+    vertexArrayFloat.clear();
+    normalsArray.clear();
+    normalsArrayIndex.clear();
+    normalsArrayFloat.clear();
+    colorsArray.clear();
+    colorsArrayIndex.clear();
+    colorsArrayFloat.clear();
+    indices.clear();
+    vectorToIndex.clear();
+    this->needToUpdatePositions = true;
+    this->needToUpdateColors = true;
+    this->needToUpdateNormals = true;
+    this->needToUpdateTextures = true;
 }
 Mesh Mesh::merge(std::shared_ptr<Mesh> other, bool recomputeIndices)
 {
@@ -50,7 +62,7 @@ Mesh Mesh::merge(std::vector<std::shared_ptr<Mesh>> others)
     return *this;
 }
 
-Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
+Mesh& Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
 {
     this->vertexArray = vertices;
     computeIndices(indices);
@@ -61,7 +73,7 @@ Mesh Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
     this->computeColors();
     return *this;
 }
-Mesh Mesh::fromArray(std::vector<float> vertices, std::vector<int> indices)
+Mesh& Mesh::fromArray(std::vector<float> vertices, std::vector<int> indices)
 {
     std::vector<Vector3> vecVertices;
     for (size_t i = 0; i < vertices.size(); i += 3)
@@ -236,6 +248,8 @@ void Mesh::display(GLenum shape, float lineWeight)
     glLineWidth(lineWeight);
     if (this->displayShape == GL_TRIANGLES)
         glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size()/3);
+    else if (this->displayShape == GL_LINE_STRIP)
+        glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size() - 1);
     else
         glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size());
     glLineWidth(previousLineWidth[0]);
