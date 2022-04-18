@@ -42,6 +42,8 @@ ViewerInterface::ViewerInterface() {
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->faultSlip.get(), &FaultSlipInterface::faultSlipApplied,
                      this, [&](){ this->viewer->update(); });
+    QObject::connect(this->flowField.get(), &FlowFieldInterface::updated,
+                     this, [&](){ this->viewer->update(); });
     QObject::connect(this->tunnelInterface.get(), &TunnelInterface::updated,
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
@@ -65,9 +67,9 @@ ViewerInterface::ViewerInterface() {
 
 ViewerInterface::~ViewerInterface()
 {
-    this->setUpdatesEnabled(false);
-    qDeleteAll(this->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
-    this->setUpdatesEnabled(true);
+//    this->setUpdatesEnabled(false);
+//    qDeleteAll(this->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
+//    this->setUpdatesEnabled(true);
 }
 
 void ViewerInterface::setupUi()
@@ -494,17 +496,13 @@ void ViewerInterface::setupUi()
 
 
     QHBoxLayout* displayOptionLayout = new QHBoxLayout();
-    displayOptionLayout->addWidget(algorithmBox);
-    displayOptionLayout->addWidget(displayTypeBox);
-    displayOptionLayout->addItem(displayModeLayout); /*createMultipleSliderGroup({
-                                                                           {"X", mapSliceSliderX},
-                                                                           {"Y", mapSliceSliderY},
-                                                                           {"Z", mapSliceSliderZ}
-                                                                       }));*/
+//    displayOptionLayout->addWidget(algorithmBox);
+//    displayOptionLayout->addWidget(displayTypeBox);
+    displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
-                                                                     createSliderGroup("Niveau de détail", LoDChooserSlider),
-                                                                     LoDChooserConfirmButton
-                                                                 }));
+                                                     createSliderGroup("Niveau de détail", LoDChooserSlider),
+                                                     LoDChooserConfirmButton
+                                                 }));
     QGroupBox* displayOptionBox = new QGroupBox();
     displayOptionBox->setLayout(displayOptionLayout);
     displayOptionWidget->setWidget(displayOptionBox);

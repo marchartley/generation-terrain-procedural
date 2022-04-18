@@ -25,6 +25,13 @@ enum CONVOLUTION_BORDERS {
     COPY = 5
 };
 
+enum RETURN_VALUE_ON_OUTSIDE {
+    DEFAULT_VALUE = 0,
+    MIRROR_VALUE = 1,
+    WRAPPED_VALUE = 2,
+    REPEAT_VALUE = 3
+};
+
 // Warning : don't use bool type...
 // This class is based on a std::vector, which has specifications on bools
 // the [] operator won't work ... Use int or short int instead
@@ -39,7 +46,7 @@ public:
     Matrix3(std::vector<std::vector<T>> data);
     Matrix3(std::vector<T> data, size_t sizeX, size_t sizeY, int sizeZ = -1);
 
-    T& at(size_t i, size_t j, size_t k = 0);
+    T& at(int i, int j, int k = 0);
     T& at(Vector3 pos);
     T& at(size_t i);
     T& operator()(size_t x, size_t y, size_t z = 0);
@@ -134,6 +141,10 @@ public:
 
     bool raiseErrorOnBadCoord = true;
     T defaultValueOnBadCoord = T();
+    RETURN_VALUE_ON_OUTSIDE returned_value_on_outside = DEFAULT_VALUE;
+    bool stillRaiseErrorForX = false;
+    bool stillRaiseErrorForY = false;
+    bool stillRaiseErrorForZ = false;
 
     auto begin() const { return data.begin(); }
     auto end() const { return data.end(); }
@@ -141,6 +152,10 @@ public:
     auto end() { return data.end(); }
     std::size_t size() const { return end() - begin(); }
     bool empty() const { return begin() == end(); }
+
+    Vector3 getMirrorPosition(Vector3 pos);
+    Vector3 getWrappedPosition(Vector3 pos);
+    Vector3 getRepeatPosition(Vector3 pos);
 
     Matrix3& init(std::vector<T> data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
@@ -233,16 +248,45 @@ T &Matrix3<T>::at(Vector3 pos)
     return this->at(pos.x, pos.y, pos.z);
 }
 template<class T>
-T &Matrix3<T>::at(size_t i, size_t j, size_t k)
+T &Matrix3<T>::at(int i, int j, int k)
 {
     if (checkCoord(i, j, k)) {
         int index = getIndex(i, j, k);
         return this->data[index];
     }
-    if (!raiseErrorOnBadCoord)
-        return defaultValueOnBadCoord;
-    throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
-        + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+    bool raiseError = raiseErrorOnBadCoord;
+    Vector3 newPos(i, j, k);
+    if (!raiseErrorOnBadCoord) {
+        if (returned_value_on_outside == DEFAULT_VALUE)
+            return defaultValueOnBadCoord;
+
+        if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
+            return defaultValueOnBadCoord; // raiseError = true;
+        if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
+            return defaultValueOnBadCoord; // raiseError = true;
+        if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
+            return defaultValueOnBadCoord; // raiseError = true;
+        /*
+        else if (returned_value_on_outside == MIRROR_VALUE)
+            return this->at(getMirrorPosition(Vector3(i, j, k)));
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            return this->at(getWrappedPosition(Vector3(i, j, k)));
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            return this->at(getRepeatPosition(Vector3(i, j, k)));*/
+
+        if (returned_value_on_outside == MIRROR_VALUE)
+            newPos = getMirrorPosition(newPos);
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            newPos = getWrappedPosition(newPos);
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            newPos = getRepeatPosition(newPos);
+
+    }
+    if (!raiseError)
+        return this->at(newPos);
+    else
+        throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
+            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
 }
 
 template<class T>
@@ -251,12 +295,45 @@ T &Matrix3<T>::at(size_t i)
     if (i >= 0 && i < sizeX * sizeY * sizeZ) {
         return this->data[i];
     }
-    if (!raiseErrorOnBadCoord)
-        return defaultValueOnBadCoord;
     int x, y, z;
-    std::tie(x, y, z) = this->getCoord(i);
-    throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
-        + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+    std::tie(x, y, z) = this->getCoord(i);/*
+    if (!raiseErrorOnBadCoord) {
+        if (returned_value_on_outside == DEFAULT_VALUE)
+            return defaultValueOnBadCoord;
+        else if (returned_value_on_outside == MIRROR_VALUE)
+            return this->at(getMirrorPosition(Vector3(x, y, z)));
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            return this->at(getWrappedPosition(Vector3(x, y, z)));
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            return this->at(getRepeatPosition(Vector3(x, y, z)));
+    }
+    */
+
+    bool raiseError = raiseErrorOnBadCoord;
+    Vector3 newPos(x, y, z);
+    if (!raiseErrorOnBadCoord) {
+        if (returned_value_on_outside == DEFAULT_VALUE)
+            return defaultValueOnBadCoord;
+
+        if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
+            return defaultValueOnBadCoord; // raiseError = true;
+        if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
+            return defaultValueOnBadCoord; // raiseError = true;
+        if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
+            return defaultValueOnBadCoord; // raiseError = true;
+
+        if (returned_value_on_outside == MIRROR_VALUE)
+            newPos = getMirrorPosition(newPos);
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            newPos = getWrappedPosition(newPos);
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            newPos = getRepeatPosition(newPos);
+    }
+    if (!raiseError)
+        return this->at(newPos);
+    else
+        throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
+            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
 }
 template<typename T>
 T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) {
@@ -975,16 +1052,13 @@ Matrix3<T> Matrix3<T>::convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS bo
                             Vector3 cellValuePosition = pos + dt;
                             if (borders == CONVOLUTION_BORDERS::IGNORED && !result.checkCoord(cellValuePosition))
                                 continue;
-                            else if (borders == CONVOLUTION_BORDERS::MIRROR && !result.checkCoord(cellValuePosition))
-                                cellValuePosition = cellValuePosition.abs();
+                            else if (borders == CONVOLUTION_BORDERS::MIRROR && !result.checkCoord(cellValuePosition)) {
+                                cellValuePosition = getMirrorPosition(cellValuePosition);
+                            }
                             else if (borders == CONVOLUTION_BORDERS::REPEAT && !result.checkCoord(cellValuePosition))
-                                cellValuePosition = Vector3(std::max(int(cellValuePosition.x), int(0)),
-                                                            std::max(int(cellValuePosition.y), int(0)),
-                                                            std::max(int(cellValuePosition.z), int(0)));
+                                cellValuePosition = getRepeatPosition(cellValuePosition);
                             else if (borders == CONVOLUTION_BORDERS::WRAPPING && !result.checkCoord(cellValuePosition))
-                                cellValuePosition = Vector3(int(cellValuePosition.x) % result.sizeX,
-                                                            int(cellValuePosition.y) % result.sizeY,
-                                                            int(cellValuePosition.z) % result.sizeZ);
+                                cellValuePosition = this->getWrappedPosition(cellValuePosition);
                             else if (borders == CONVOLUTION_BORDERS::COPY && !result.checkCoord(cellValuePosition))
                                 cellValuePosition = pos;
 
@@ -1004,4 +1078,33 @@ Matrix3<T> Matrix3<T>::convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS bo
     return result;
 }
 
+template<class T>
+Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)
+{
+    float x = pos.x;
+    float y = pos.y;
+    float z = pos.z;
+    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
+    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
+    z = int(x < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    return Vector3(x, y, z);
+}
+
+template<class T>
+Vector3 Matrix3<T>::getWrappedPosition(Vector3 pos)
+{
+    return     Vector3(int(pos.x) % sizeX,
+                       int(pos.y) % sizeY,
+                       int(pos.z) % sizeZ);
+}
+
+template<class T>
+Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
+{
+    Vector3 returned;
+    returned.x = std::min(std::max(0.f, pos.x), (float)sizeX);
+    returned.y = std::min(std::max(0.f, pos.y), (float)sizeY);
+    returned.z = std::min(std::max(0.f, pos.z), (float)sizeZ);
+    return returned;
+}
 #endif // MATRIX3_H
