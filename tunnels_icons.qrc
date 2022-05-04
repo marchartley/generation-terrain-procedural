@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/tunnels">
+        <file>src/assets/tunnels_icons/tunnel_type_canyon.png</file>
+        <file>src/assets/tunnels_icons/tunnel_type_fracture.png</file>
+        <file>src/assets/tunnels_icons/tunnel_type_fracture_flat.png</file>
+        <file>src/assets/tunnels_icons/tunnel_type_keyhole.png</file>
+        <file>src/assets/tunnels_icons/tunnel_type_soluble_bed.png</file>
+        <file>src/assets/tunnels_icons/tunnel_type_tube.png</file>
+    </qresource>
+</RCC>

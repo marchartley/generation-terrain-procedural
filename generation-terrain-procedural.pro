@@ -17,9 +17,9 @@ win32 {
     # For TBB on Windows, do everything on Release...
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen "C:/Program Files/OpenVDB/include" C:\Programs_installations\vcpkg\installed\x64-windows\include
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
-    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug
-    LIBS *= -L"C:\Program Files\OpenVDB\bin" -lopenvdb
-    DEFINES += "OPENVDB_DLL"
+#    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug
+#    LIBS *= -L"C:\Program Files\OpenVDB\bin" -lopenvdb
+#    DEFINES += "OPENVDB_DLL"
 }
 CONFIG += c++17
 
@@ -79,6 +79,7 @@ SOURCES += \
         src/TerrainModification/UnderwaterErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
         src/Utils/BSpline.cpp \
+        src/Utils/Collisions.cpp \
         src/Utils/Globals.cpp \
         src/Utils/Utils.cpp \
         src/main.cpp \
@@ -86,7 +87,8 @@ SOURCES += \
         src/sim-fluid-ethanjli/math.cpp
 
 RESOURCES += qml.qrc \
-    icons.qrc
+    icons.qrc \
+    tunnels_icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
 QML_IMPORT_PATH =
@@ -148,12 +150,14 @@ HEADERS += \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/BSpline.h \
+    src/Utils/Collisions.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
     src/Utils/Utils.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
+    src/Utils/stl_reader.h \
     src/sim-fluid-ethanjli/fluidsystem.h \
     src/sim-fluid-ethanjli/fluidsystem.tpp \
     src/sim-fluid-ethanjli/math.h \

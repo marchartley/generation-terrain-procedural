@@ -3,7 +3,6 @@
 #include "Interface/InterfaceUtils.h"
 #include "Utils/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Karst/KarstHole.h"
 
 TunnelInterface::TunnelInterface(QWidget *parent) : CustomInteractiveObject(parent)
 {
@@ -63,16 +62,39 @@ QLayout* TunnelInterface::createGUI()
     tunnelRemoveMatter = new QPushButton("Tunnel");
     tunnelCreateCrack = new QPushButton("Faille");
     tunnelDisplayButton = new QCheckBox("Afficher");
+    startingShapeCombobox = new QComboBox();
+    endingShapeCombobox = new QComboBox();
+
+    QIcon tubeIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_tube.png");
+    QIcon solubleIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_soluble_bed.png");
+    QIcon keyholeIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_keyhole.png");
+    QIcon canyonIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_canyon.png");
+    QIcon fractureIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture.png");
+    QIcon flatCrackIcon = QIcon(":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture_flat.png");
+
+    startingShapeCombobox->addItem(tubeIcon, "Tube", KarstHolePredefinedShapes::TUBE);
+    startingShapeCombobox->addItem(solubleIcon, "Soluble bed", KarstHolePredefinedShapes::SOLUBLE_BED);
+    startingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
+    startingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
+    startingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
+    startingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::CRACK);
+
+    endingShapeCombobox->addItem(tubeIcon, "Tube", KarstHolePredefinedShapes::TUBE);
+    endingShapeCombobox->addItem(solubleIcon, "Soluble bed", KarstHolePredefinedShapes::SOLUBLE_BED);
+    endingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
+    endingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
+    endingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
+    endingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::CRACK);
+
     tunnelLayout->addWidget(createVerticalGroup({tunnelCreateMatter, tunnelRemoveMatter, tunnelCreateCrack}));
     tunnelLayout->addWidget(createVerticalGroup({/*addControlPointButton, */tunnelClearControlPointButton}));
     tunnelLayout->addWidget(createSliderGroup("Largeur", tunnelWidthSlider));
     tunnelLayout->addWidget(createSliderGroup("Hauteur", tunnelHeightSlider));
+    tunnelLayout->addWidget(createVerticalGroup({new QLabel("Entrée"), startingShapeCombobox}));
+    tunnelLayout->addWidget(createVerticalGroup({new QLabel("Sortie"), endingShapeCombobox}));
 //    tunnelLayout->addWidget(createSliderGroup("Force", tunnelStrengthSlider));
 //    tunnelLayout->addWidget(tunnelDisplayButton);
 
-    this->tunnelWidthSlider->setValue(tunnelWidth);
-    this->tunnelHeightSlider->setValue(tunnelHeight);
-    this->tunnelStrengthSlider->setfValue(erosionStrength);
 
     QObject::connect(tunnelWidthSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelWidth);
     QObject::connect(tunnelHeightSlider, &FancySlider::valueChanged, this, &TunnelInterface::setTunnelHeight);
@@ -83,6 +105,16 @@ QLayout* TunnelInterface::createGUI()
 //    QObject::connect(addControlPointButton, &QPushButton::pressed, this, [=](){this->setCurvesErosionConstructionMode(true); });
     QObject::connect(tunnelClearControlPointButton, &QPushButton::pressed, this, [=](){this->clearTunnelPoints(); computeTunnelPreview(); });
 //    QObject::connect(tunnelDisplayButton, &QCheckBox::toggled, this, &TunnelInterface::setVisibility );
+    QObject::connect(startingShapeCombobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](int x) {this->updateStartingShape(); });
+    QObject::connect(endingShapeCombobox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [&](int x) {this->updateEndingShape(); });
+
+
+    this->tunnelWidthSlider->setValue(tunnelWidth);
+    this->tunnelHeightSlider->setValue(tunnelHeight);
+    this->tunnelStrengthSlider->setfValue(erosionStrength);
+
+    this->updateStartingShape();
+    this->updateEndingShape();
 
     return this->tunnelLayout;
 }
@@ -128,6 +160,18 @@ void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
     Q_EMIT updated();
 }
 
+void TunnelInterface::updateStartingShape()
+{
+    startingShape = static_cast<KarstHolePredefinedShapes>(this->startingShapeCombobox->currentData().toInt());
+    this->computeTunnelPreview();
+}
+
+void TunnelInterface::updateEndingShape()
+{
+    endingShape = static_cast<KarstHolePredefinedShapes>(this->endingShapeCombobox->currentData().toInt());
+    this->computeTunnelPreview();
+}
+
 void TunnelInterface::clearTunnelPoints()
 {
     this->currentTunnelPoints.clear();
@@ -142,7 +186,7 @@ void TunnelInterface::createTunnel(bool removingMatter)
 
     UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
     BSpline path(this->currentTunnelPoints);
-    KarstHole hole(path, this->tunnelWidth, this->tunnelHeight);
+    KarstHole hole(path, this->tunnelWidth, this->tunnelHeight, startingShape, endingShape);
     this->tunnelPreview.fromArray(erod.CreateTunnel(hole, !removingMatter, true));
     this->currentTunnelPoints.clear();
     this->controlPoints.clear();
@@ -168,7 +212,7 @@ void TunnelInterface::createCrack(bool removingMatter)
 void TunnelInterface::computeTunnelPreview() {
     if (this->currentTunnelPoints.size() > 1) {
         BSpline path(this->currentTunnelPoints);
-        KarstHole previewHole(path, this->tunnelWidth, this->tunnelHeight);
+        KarstHole previewHole(path, this->tunnelWidth, this->tunnelHeight, startingShape, endingShape);
         std::vector<std::vector<Vector3>> vertices = previewHole.generateMesh();
         std::vector<Vector3> meshVertices;
         for (const auto& triangle : vertices) {

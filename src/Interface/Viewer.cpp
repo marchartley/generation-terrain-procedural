@@ -257,7 +257,6 @@ void Viewer::draw() {
         shader->setFloat("fogFar", this->fogFar);
     });
     current_frame ++;
-
     if (this->viewerMode != NO_DISPLAY)
     {
         if (this->mapMode == GRID_MODE) {

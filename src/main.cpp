@@ -10,12 +10,6 @@
 #include <iostream>
 #include "DataStructure/Matrix.h"
 #include "Interface/Interface.h"
-//#define ViewerInterface Viewer
-
-//#include <openvdb/openvdb.h>
-#include "DataStructure/Matrix3.h"
-#include "Graph/FastPoissonGraph.h"
-#include "Karst/KarstPathsGeneration.h"
 
 #include "Utils/Utils.h"
 
