@@ -492,7 +492,7 @@ void ViewerInterface::setupUi()
 
 //    mainLayout->addWidget(toolbox, 0, 0, 1, 2);
     mainLayout->addWidget(viewer, 1, 0);
-    mainLayout->addLayout(controlLayout, 1, 1);
+//    mainLayout->addLayout(controlLayout, 1, 1);
 
 
     QHBoxLayout* displayOptionLayout = new QHBoxLayout();
@@ -513,7 +513,7 @@ void ViewerInterface::setupUi()
     this->setCentralWidget(mainFrame);
 
 
-    frame = new StickyFrame(this->viewer, 0, .2, .2, .6, false);
+    frame = new StickyFrame(this->viewer, 0, -1, -1, 1, false);
     frame->hide();
 
     QObject::connect(openAction, &QAction::triggered, this->viewer, &Viewer::loadMapUI);
@@ -788,5 +788,6 @@ void ViewerInterface::hideAllInteractiveParts()
     this->manualEditionInterface->hide();
 
     this->viewer->update();
+    this->update();
 }
 

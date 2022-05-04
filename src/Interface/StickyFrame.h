@@ -22,12 +22,14 @@ public:
     StickyFrame* setContent(QLayout* contentLayout);
 
     QFrame* content;
-protected:
+
+public Q_SLOTS:
     void resizeWithParent();
+protected:
 
 
-    float x, y;
-    float w, h;
+    float x0, y0;
+    float x1, y1;
     bool useAbsolutePosition;
 };
 

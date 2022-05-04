@@ -3,6 +3,7 @@
 #include <iostream>
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QTimer>
 
 
 StickyFrame::StickyFrame(QWidget* parent) : QWidget(parent)
@@ -25,14 +26,14 @@ StickyFrame::StickyFrame(QWidget* parent) : QWidget(parent)
     this->setLayout(layout);
 }
 
-StickyFrame::StickyFrame(QWidget *parent, float x, float y, float w, float h, bool useAbsolutePosition)
+StickyFrame::StickyFrame(QWidget *parent, float x0, float y0, float x1, float y1, bool useAbsolutePosition)
     : StickyFrame(parent)
 {
     parent->installEventFilter(this);
-    this->x = x;
-    this->y = y;
-    this->w = w;
-    this->h = h;
+    this->x0 = x0;
+    this->y0 = y0;
+    this->x1 = x1;
+    this->y1 = y1;
     this->useAbsolutePosition = useAbsolutePosition;
 }
 
@@ -59,20 +60,66 @@ StickyFrame* StickyFrame::setContent(QLayout* contentLayout)
 {
     qDeleteAll(content->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
     delete content->layout();
+    content->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
     content->setLayout(contentLayout);
+    content->layout()->activate();
+    this->layout()->activate();
+    resizeWithParent();
+
+    // Worst solution maybe... but fuck it, it works!
+    QTimer::singleShot(10, this, &StickyFrame::resizeWithParent);
     return this;
 }
 
 void StickyFrame::resizeWithParent()
 {
+    float x0 = this->x0;
+    float y0 = this->y0;
+    float x1 = this->x1;
+    float y1 = this->y1;
+
+    this->adjustSize();
+    float estimatedWidth = this->sizeHint().width();
+    float estimatedHeight = this->sizeHint().height();
+
     if (this->useAbsolutePosition) {
-        this->setGeometry(x, y, w, h);
+
     } else {
-        this->setGeometry(
-                    this->parentWidget()->width() * x,
-                    this->parentWidget()->height() * y,
-                    this->parentWidget()->width() * w,
-                    this->parentWidget()->height() * h
-                    );
+        if (x0 == -1) {
+            if (x1 == -1) {
+                // Just center the widget
+                x0 = this->parentWidget()->width() - estimatedWidth/2;
+                x1 = this->parentWidget()->width() + estimatedWidth/2;
+            } else {
+                x1 = this->parentWidget()->width() * x1;
+                x0 = std::max(x1 - estimatedWidth, 0.f);
+            }
+        } else {
+            x0 = this->parentWidget()->width() * x0;
+            if (x1 == -1) {
+                x1 = x0 + estimatedWidth;
+            } else {
+                x1 = this->parentWidget()->width() * x1;
+            }
+        }
+
+        if (y0 == -1) {
+            if (y1 == -1) {
+                // Just center the widget
+                y0 = this->parentWidget()->height() - estimatedHeight/2;
+                y1 = this->parentWidget()->height() + estimatedHeight/2;
+            } else {
+                y1 = this->parentWidget()->height() * y1;
+                y0 = std::max(y1 - estimatedHeight, 0.f);
+            }
+        } else {
+            y0 = this->parentWidget()->height() * y0;
+            if (y1 == -1) {
+                y1 = y0 + estimatedHeight;
+            } else {
+                y1 = this->parentWidget()->height() * y1;
+            }
+        }
     }
+    this->setGeometry(x0, y0, x1 - x0, y1 - y0);
 }
