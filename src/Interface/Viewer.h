@@ -119,6 +119,8 @@ public:
     virtual void init();
     virtual void draw();
 
+    bool inFlyMode();
+
     bool eventFilter(QObject* obj, QEvent* event);
 
     void mousePressEvent(QMouseEvent* e);

@@ -10,7 +10,7 @@ class SpaceColonizationInterface;
 #include <QWidget>
 #include "TreeColonisation/TreeColonisation.h"
 #include "TerrainGen/VoxelGrid.h"
-#include <QGLViewer/camera.h>
+#include "Interface/VisitingCamera.h"
 #include "Interface/PathCameraConstraint.h"
 
 using namespace TreeColonisationAlgo;
@@ -27,6 +27,8 @@ public:
 //    bool isHidden;
     void hide();
     void show();
+
+    void keyPressEvent(QKeyEvent* event);
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     std::shared_ptr<VoxelGrid> voxelGrid;
@@ -52,7 +54,7 @@ public Q_SLOTS:
 public:
     float karstWidth = 10.f;
     TreeColonisation* colonizer = nullptr;
-    qglviewer::Camera* visitingCamera = nullptr;
+    VisitingCamera* visitingCamera = nullptr;
     PathCameraConstraint *cameraConstraint;
 };
 

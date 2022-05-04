@@ -17,6 +17,20 @@ void SpaceColonizationInterface::display()
 {
     if (this->isVisible())
     {
+        // Hide control points when visiting
+        if (visitingCamera->isVisiting) {
+            for (auto& ctrl : this->controlPoints) {
+                ctrl->hide();
+            }
+            this->startingPoint->hide();
+        } else {
+            for (auto& ctrl : this->controlPoints) {
+                ctrl->show();
+            }
+            this->startingPoint->show();
+        }
+
+
         for (auto& ctrl : this->controlPoints) {
             ctrl->display();
         }
@@ -47,6 +61,17 @@ void SpaceColonizationInterface::show()
     this->startingPoint->show();
     this->pathsMeshes.show();
     CustomInteractiveObject::show();
+}
+
+void SpaceColonizationInterface::keyPressEvent(QKeyEvent *event)
+{
+    if (event->key() == Qt::Key_Up) {
+        if (visitingCamera->isVisiting)
+            visitingCamera->moveForward(1.f);
+    } else if (event->key() == Qt::Key_Down) {
+        if (visitingCamera->isVisiting)
+            visitingCamera->moveBackward(1.f);
+    }
 }
 
 void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -85,6 +110,8 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
     }
     this->startingPoint = std::make_unique<ControlPoint>(startPos, 5.f);
     QObject::connect(this->startingPoint.get(), &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
+
+    this->visitingCamera = new VisitingCamera();
 }
 
 void SpaceColonizationInterface::initSpaceColonizer()
@@ -105,8 +132,6 @@ void SpaceColonizationInterface::computeKarst()
 
 void SpaceColonizationInterface::updateKarstPath()
 {
-    if (!this->visitingCamera)
-        this->visitingCamera = new qglviewer::Camera();
     this->visitingCamera->setZNearCoefficient(0.001);
     this->visitingCamera->setFieldOfView(3.141592 / 3.f);
     this->visitingCamera->setUpVector(Vector3(0, 0, 1));
@@ -127,10 +152,11 @@ void SpaceColonizationInterface::updateKarstPath()
     }
     this->pathsMeshes.fromArray(pathPositions);
     if (allPaths.size() > 0) {
-        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, simplifiedKarstParths);
-        this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
+//        this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, simplifiedKarstParths);
+//        this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
         this->visitingCamera->setPosition(pathPositions[0]);
         this->visitingCamera->lookAt(pathPositions[1]);
+        this->visitingCamera->paths = this->karstPaths;
     }
 
     Q_EMIT this->karstPathUpdated();

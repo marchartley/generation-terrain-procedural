@@ -67,6 +67,7 @@ SOURCES += \
         src/Interface/StickyFrame.cpp \
         src/Interface/TunnelInterface.cpp \
         src/Interface/Viewer.cpp \
+        src/Interface/VisitingCamera.cpp \
         src/Karst/KarstHole.cpp \
         src/Karst/KarstHoleProfile.cpp \
         src/Karst/KarstPathsGeneration.cpp \
@@ -139,6 +140,7 @@ HEADERS += \
     src/Interface/StickyFrame.h \
     src/Interface/TunnelInterface.h \
     src/Interface/Viewer.h \
+    src/Interface/VisitingCamera.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \
     src/TerrainGen/Grid.h \
