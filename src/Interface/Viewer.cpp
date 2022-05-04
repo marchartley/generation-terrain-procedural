@@ -162,7 +162,6 @@ void Viewer::init() {
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
         UnderwaterErosion tunnels(this->voxelGrid, 50.f, 3.f, 0);
-        tunnels.CreateTunnel(BSpline({{0, 30, 90}, {92, 30, 90}}), false, true, true);
         this->grid->fromVoxelGrid(*(voxelGrid));
 //        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{92, 27, 64}, {0, 67, 53}, {92, 79, 21}}), false, false, false));
 //        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
@@ -476,6 +475,15 @@ void Viewer::draw() {
     }
 }
 
+bool Viewer::inFlyMode()
+{
+    Qt::Key keyBinded;
+    Qt::KeyboardModifiers modifierBinded;
+    Qt::MouseButton buttonBinded;
+    this->getMouseActionBinding(CAMERA, ROTATE, false, keyBinded, modifierBinded, buttonBinded);
+    return buttonBinded == Qt::NoButton;
+}
+
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
@@ -703,11 +711,12 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->fogFar = 30.f;
         this->usingSpotlight = true;
 
-        if (this->camera() == this->flyingCamera) {
+        if (!this->inFlyMode())
             this->toggleCameraMode();
-        }
     }
     else {
+        if (this->inFlyMode())
+            this->toggleCameraMode();
         this->usingMainCamera = true;
         this->setCamera(this->mainCamera);
         this->displayParticles = false;
@@ -715,6 +724,11 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->fogFar = 5000.f;
         this->usingSpotlight = false;
     }
+
+    if (alternativeCamera != nullptr && dynamic_cast<VisitingCamera*>(alternativeCamera) != nullptr) {
+        dynamic_cast<VisitingCamera*>(alternativeCamera)->isVisiting = useAltCamera;
+    }
+//    this->camera()->setFlySpeed(0);
 }
 
 void Viewer::frameInterpolated()
