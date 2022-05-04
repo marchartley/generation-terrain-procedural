@@ -280,17 +280,17 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                             lastTrianglesCylinder = triangle_group;
                             if (numberOfCollisions % 2 == 1) {
                                 break;
-                            }
+                            }/*
                             ignoreThisCylinder = false;
                             float distToCylinder = shortestDistanceBetweenSegments(point, ray, cylindersStart[triangle_group], cylindersEnd[triangle_group]);
                             if (distToCylinder > std::max(this->width, this->height)) {
                                 ignoreThisCylinder = true;
-                            }
+                            }*/
                         }
                         // Ignore this calculation if it's not needed.
-                        if (ignoreThisCylinder) {
-                            continue;
-                        }
+//                        if (ignoreThisCylinder) {
+//                            continue;
+//                        }
 
                         int collision_result = segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
                         if (collision_result == 1) {

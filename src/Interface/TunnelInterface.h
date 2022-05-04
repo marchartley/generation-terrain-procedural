@@ -6,6 +6,7 @@ class TunnelInterface;
 #include "TerrainGen/VoxelGrid.h"
 #include "Interface/FancySlider.h"
 #include "Interface/ControlPoint.h"
+#include "Karst/KarstHole.h"
 
 class TunnelInterface : public CustomInteractiveObject
 {
@@ -34,6 +35,9 @@ public Q_SLOTS:
     void setErosionStrength(float newStrength) { this->erosionStrength = newStrength;}
     void addCurvesControlPoint(Vector3 pos, bool justUpdatePath = false);
 
+    void updateStartingShape();
+    void updateEndingShape();
+
     void clearTunnelPoints();
     void createTunnel(bool removingMatter = true);
     void createCrack(bool removingMatter = true);
@@ -43,6 +47,9 @@ public Q_SLOTS:
 
 public:
     std::shared_ptr<VoxelGrid> voxelGrid;
+
+    KarstHolePredefinedShapes startingShape;
+    KarstHolePredefinedShapes endingShape;
 
 protected:
     float tunnelWidth = 10, tunnelHeight = 10;
@@ -64,6 +71,9 @@ protected:
     QPushButton* tunnelRemoveMatter;
     QPushButton* tunnelCreateCrack;
     QCheckBox* tunnelDisplayButton;
+
+    QComboBox* startingShapeCombobox;
+    QComboBox* endingShapeCombobox;
 };
 
 #endif // TUNNELINTERFACE_H
