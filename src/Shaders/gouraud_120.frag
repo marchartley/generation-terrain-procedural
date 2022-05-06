@@ -1,6 +1,4 @@
-#version 430
-
-varying vec4 fragColor;
+#version 120
 
 struct PositionalLight {
     vec4 ambiant;
@@ -26,19 +24,17 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
-in vec4 varyingColor;
-in vec3 varyingHalfH;
+varying vec4 varyingColor;
+varying vec3 varyingHalfH;
 
-in vec3 varyingNormal;
-in vec3 varyingLightDir;
-in vec3 varyingVertPos;
-in vec3 vertEyeSpacePos;
-in vec3 initialVertPos;
+varying vec3 varyingNormal;
+varying vec3 varyingLightDir;
+varying vec3 varyingVertPos;
+varying vec3 vertEyeSpacePos;
+varying vec3 initialVertPos;
 
 void main(void)
 {
-    fragColor = vec4(1.0, 1.0, 1.0, 1.0) * varyingColor;
-
     vec3 N = normalize(varyingNormal);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
@@ -62,6 +58,6 @@ void main(void)
         specular += lights[iLight].specular * material.specular * pow(max(iCosPhi, 0.0), material.shininness);
     }
 
-    fragColor = vec4(ambiant + diffuse + specular);
+    gl_FragColor = vec4(ambiant + diffuse + specular);
 
 }

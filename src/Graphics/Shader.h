@@ -25,7 +25,7 @@ public:
            const char* geometryShaderFilename);
     void compileShadersFromSource();
 
-    void use(bool update_source_files = false);
+    bool use(bool update_source_files = false);
 
     void setBool(std::string pname, bool value);
     void setInt(std::string pname, int value);
@@ -33,6 +33,8 @@ public:
     void setVector(std::string pname, Vector3 value);
     void setVector(std::string pname, float* value, int n);
     void setLightSource(std::string pname, LightSource& value);
+    void addLightSource(std::string pname, LightSource& value);
+    void clearLightSources(std::string pname);
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
     void setTexture2D(std::string pname, int index, Matrix3<int> texture);
@@ -43,10 +45,12 @@ public:
 
     static std::string readShaderSource(std::string filename);
 
-    unsigned int programID;
+    unsigned int programID = 0;
     const char* vertexShaderFilename;
     const char* fragmentShaderFilename;
     const char* geometryShaderFilename;
+
+    int lightCount = 0;
 
     int vShader = -1;
     int fShader = -1;
@@ -89,7 +93,7 @@ public:
 //            std::cerr << "No shader defined" << std::endl;
             return;
         }
-        this->use();
+        if (!this->use()) return;
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")
             GlobalsGL::f()->glUniformMatrix2fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
