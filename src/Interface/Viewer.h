@@ -238,6 +238,10 @@ public:
     bool temporaryClipPlaneActivated = false;
     Vector3 clipPlanePosition;
     Vector3 clipPlaneDirection;
+
+    // TODO : Transform this into a "particle" system
+    std::vector<Mesh> possibleRocks;
+    std::vector<std::tuple<int, Vector3>> rocksIndicesAndPosition;
 };
 
 

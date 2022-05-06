@@ -7,7 +7,7 @@
 #include "TerrainModification/UnderwaterErosion.h"
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
-
+#include <QTemporaryDir>
 
 Viewer::Viewer(QWidget *parent):
     Viewer(
@@ -71,6 +71,8 @@ void Viewer::init() {
     const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
     const char* vParticleShader = ":/src/Shaders/particle_vertex_shader.glsl";
     const char* fParticleShader = ":/src/Shaders/particle_fragment_shader.glsl";
+    const char* vRockShader = ":/src/Shaders/rockShader.vert";
+    const char* fRockShader = ":/src/Shaders/rockShader.frag";
 
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
@@ -103,6 +105,27 @@ void Viewer::init() {
     this->debugMeshes[SPACE_COLONI].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
     ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
+
+    QTemporaryDir tempDir;
+    QDirIterator it(":/models_3d/", QDir::Files, QDirIterator::Subdirectories);
+    this->possibleRocks = std::vector<Mesh>();
+    std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
+    while (it.hasNext()) {
+        QString dir = it.next();
+        QString newPath = tempDir.path() + QFileInfo(dir).fileName();
+        QFile::copy(dir, newPath);
+        Mesh m = Mesh(rocksShader);
+        possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize().scale(10.f));
+        break;
+    }
+    size_t nb_rocks = 200;
+    this->rocksIndicesAndPosition = std::vector<std::tuple<int, Vector3>>();
+    for (size_t i = 0; i < nb_rocks; i++) {
+        rocksIndicesAndPosition.push_back(std::make_tuple<int, Vector3>(
+                                              int(random_gen::generate(0, possibleRocks.size())),
+                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ))
+                                              ));
+    }
 
     // Don't compute the indices for this meshes, there's no chance any two vertex are the same
     for (auto& debugMesh : this->debugMeshes)
@@ -397,17 +420,17 @@ void Viewer::draw() {
         std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());*/
         std::get<1>(debugMesh).display(GL_LINES, 3.f);
     }
-    /*
-    for (auto& controlPointsArray : this->debugControlPoints) {
-        std::vector<ControlPoint*> grabbers = std::get<1>(controlPointsArray);
-        for (auto& grabber : std::get<1>(controlPointsArray)) {
-            grabber->mesh.shader->setMatrix("proj_matrix", pMatrix);
-            grabber->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-            grabber->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-            grabber->mesh.isDisplayed = this->debugMeshes[std::get<0>(controlPointsArray)].isDisplayed;
-            grabber->display();
+
+    for (size_t i = 0; i < rocksIndicesAndPosition.size(); i++) {
+        int iRock;
+        Vector3 pos;
+        std::tie(iRock, pos) = rocksIndicesAndPosition[i];
+        if (this->voxelGrid->getVoxelValue(pos) > 0) {
+            possibleRocks[iRock].shader->setVector("instanceOffset", pos);
+            possibleRocks[iRock].display();
         }
-    }*/
+    }
+
     if (this->displayParticles) {
 
         Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);

@@ -89,6 +89,7 @@ SOURCES += \
 
 RESOURCES += qml.qrc \
     icons.qrc \
+    models_3d.qrc \
     tunnels_icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
@@ -186,6 +187,9 @@ RESOURCES +=\
     src/Shaders/MarchingCubes_geometry.glsl \
     src/Shaders/MarchingCubes_fragment.glsl \
     src/Shaders/MarchingCubes_vertex.glsl \
+    src/assets/manual-edit_button.png\
+    src/Shaders/rockShader.frag \
+    src/Shaders/rockShader.vert \
     src/assets/handle.png \
     src/assets/fault-slip_button.png \
     src/assets/flowfield_button.png \
@@ -196,6 +200,7 @@ RESOURCES +=\
     src/assets/save_button.png \
     src/assets/tunnel_button.png \
     src/assets/manual-edit_button.png
+    src/assets/tunnel_button.png
 
 
 #DISTFILES +=

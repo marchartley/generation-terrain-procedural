@@ -1,0 +1,22 @@
+<RCC>
+    <qresource prefix="/models_3d">
+        <file>src/assets/models/flat_rock_SubTool1.stl</file>
+        <file>src/assets/models/flat_rock_SubTool2.stl</file>
+        <file>src/assets/models/flat_rock_SubTool3.stl</file>
+        <file>src/assets/models/flat_rock_SubTool4.stl</file>
+        <file>src/assets/models/flat_rock_SubTool5.stl</file>
+        <file>src/assets/models/rock_SubTool1.stl</file>
+        <file>src/assets/models/rock_SubTool2.stl</file>
+        <file>src/assets/models/rock_SubTool3.stl</file>
+        <file>src/assets/models/rock_SubTool4.stl</file>
+        <file>src/assets/models/rock_SubTool5.stl</file>
+        <file>src/assets/models/rock_SubTool6.stl</file>
+        <file>src/assets/models/rock_SubTool7.stl</file>
+        <file>src/assets/models/rock_SubTool8.stl</file>
+        <file>src/assets/models/rock_SubTool9.stl</file>
+        <file>src/assets/models/rock_SubTool10.stl</file>
+        <file>src/assets/models/rock_SubTool11.stl</file>
+        <file>src/assets/models/rock_SubTool12.stl</file>
+        <file>src/assets/models/rock_SubTool13.stl</file>
+    </qresource>
+</RCC>
