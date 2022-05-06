@@ -12,11 +12,12 @@ public:
     float x, y, z;
     bool valid = true;
     Vector3();
-    Vector3(float x, float y, float z = 0.f);
+    Vector3(float x, float y, float z = 0.f, bool valid = true);
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
     Vector3(qglviewer::Vec other);
     Vector3(bool valid);
+    Vector3(const float* coords, bool valid = true);
 
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);

@@ -2,13 +2,13 @@
 #define TUNNELINTERFACE_H
 
 class TunnelInterface;
-#include "Interface/CustomInteractiveObject.h"
+#include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "Interface/FancySlider.h"
 #include "Interface/ControlPoint.h"
 #include "Karst/KarstHole.h"
 
-class TunnelInterface : public CustomInteractiveObject
+class TunnelInterface : public ActionInterface
 {
     Q_OBJECT
 public:
@@ -17,6 +17,7 @@ public:
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
+    void replay(nlohmann::json action);
 
 
     QLayout* createGUI();

@@ -48,6 +48,7 @@ SOURCES += \
         src/Graphics/Mesh.cpp \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
+        src/Interface/ActionInterface.cpp \
         src/Interface/ControlPoint.cpp \
         src/Interface/CustomInteractiveObject.cpp \
         src/Interface/FancySlider.cpp \
@@ -77,11 +78,13 @@ SOURCES += \
         src/TerrainGen/VoxelGrid.cpp \
         src/TerrainModification/FaultSlip.cpp \
         src/TerrainModification/RockErosion.cpp \
+        src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
         src/Utils/BSpline.cpp \
         src/Utils/Collisions.cpp \
         src/Utils/Globals.cpp \
+        src/Utils/RewritableFile.cpp \
         src/Utils/Utils.cpp \
         src/main.cpp \
         src/sim-fluid-ethanjli/fluidsystem.cpp \
@@ -122,6 +125,7 @@ HEADERS += \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
+    src/Interface/ActionInterface.h \
     src/Interface/ControlPoint.h \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/FancySlider.h \
@@ -150,6 +154,7 @@ HEADERS += \
     src/TerrainGen/VoxelGrid.h \
     src/TerrainModification/FaultSlip.h \
     src/TerrainModification/RockErosion.h \
+    src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/BSpline.h \
@@ -157,7 +162,9 @@ HEADERS += \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
+    src/Utils/RewritableFile.h \
     src/Utils/Utils.h \
+    src/Utils/json.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
     src/Utils/stl_reader.h \
@@ -198,8 +205,6 @@ RESOURCES +=\
     src/assets/open_button.png \
     src/assets/recording_button.png \
     src/assets/save_button.png \
-    src/assets/tunnel_button.png \
-    src/assets/manual-edit_button.png
     src/assets/tunnel_button.png
 
 

@@ -181,7 +181,7 @@ bool SuperEventFilter::eventFilter(QObject* obj, QEvent* event)
 {
    /* if (obj != grandParent)
         return false;*/
-    std::cout << event->type() << std::endl;
+//    std::cout << event->type() << std::endl;
   switch(event->type())
   {
   case QEvent::MouseButtonRelease:

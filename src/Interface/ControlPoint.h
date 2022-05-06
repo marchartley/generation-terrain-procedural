@@ -40,6 +40,8 @@ public:
 
     void checkIfGrabsMouse(int x, int y,const qglviewer::Camera* const cam);
 
+//    void setPosition (const qglviewer::Vec &position);
+
 Q_SIGNALS:
     void modified();
     void afterModified();
@@ -68,12 +70,14 @@ public:
     void mousePressEvent(QMouseEvent* const event  , qglviewer::Camera* const cam );
     void mouseReleaseEvent( QMouseEvent* const event, qglviewer::Camera* const cam);
     void mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const cam);
+    void wheelEvent(QWheelEvent *const event, qglviewer::Camera *const camera);
+
+    void setSphereRadius(float newRadius);
 
 //    Vector3 position;
 //    Vector3 pos;
     std::vector<Vector3> positionsHistory;
     Vector3 prevPosition;
-    float radius;
     GrabberState state;
     bool useManipFrame;
     bool currentlyManipulated;
@@ -86,6 +90,10 @@ public:
 
     float arrowSize;
     float circleRadius;
+
+    float radius;
+    float minSphereRadius = -1;
+    float maxSphereRadius = -1;
 
     std::function<void()> onUpdateCallback;
     std::function<void()> afterUpdateCallback;
@@ -109,6 +117,9 @@ public:
     Axis currentAxis = NONE;
 
     bool displayOnTop = true;
+
+    qglviewer::WorldConstraint* default_constraint;
+    qglviewer::Constraint* custom_constraint = nullptr;
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
 

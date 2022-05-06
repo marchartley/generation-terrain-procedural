@@ -4,26 +4,24 @@
 class FaultSlipInterface;
 #include "Interface/ControlPoint.h"
 #include "Interface/InteractiveVector.h"
-//#include "Interface/Slider3D.h"
-//#include "Karst/KarstPathsGeneration.h"
-//#include "Graphics/Mesh.h"
-//#include "Interface/FancySlider.h"
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
-//#include "Interface/PathCameraConstraint.h"
-//#include <QGLViewer/manipulatedCameraFrame.h>
 #include "TerrainModification/FaultSlip.h"
+#include "Interface/ActionInterface.h"
 
-class FaultSlipInterface : public CustomInteractiveObject
+class FaultSlipInterface : public ActionInterface
 {
     Q_OBJECT
 public:
     FaultSlipInterface(QWidget *parent = nullptr);
+
     void display();
     void remesh();
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+
+    void replay(nlohmann::json action);
     std::shared_ptr<VoxelGrid> voxelGrid;
 //    std::shared_ptr<FaultSlip> faultSlip;
     FaultSlip faultSlip;

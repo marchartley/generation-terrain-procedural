@@ -122,6 +122,35 @@ float Matrix::trace()
     return trace;
 }
 
+std::string Matrix::displayValues()
+{
+    std::string txt = "";
+    for (size_t col = 0; col < this->size(); col ++) {
+        for (size_t row = 0; row < this[0].size(); row ++) {
+            txt += std::to_string(int((*this)[row][col] * 1000)/1000.) + "\t";
+        }
+        txt += "\n";
+    }
+    return txt;
+}
+
+std::string Matrix::toString()
+{
+    return "Matrix (" + std::to_string(this->size()) + "x" + std::to_string(this[0].size()) + ") :\n" + this->displayValues();
+    //    return txt;
+}
+
+std::string Matrix::displayValuesOneLine()
+{
+    std::string txt = "";
+    for (size_t col = 0; col < this->size(); col ++) {
+        for (size_t row = 0; row < this[0].size(); row ++) {
+            txt += std::to_string(int((*this)[row][col] * 1000)/1000.) + " ";
+        }
+    }
+    return txt;
+}
+
 
 Matrix operator+(Matrix a, Matrix b)
 {
@@ -218,7 +247,7 @@ std::ostream& operator<<(std::ostream& io, const Matrix& m) {
     for (size_t row = 0; row < m.size(); row ++)
     {
         for (size_t col = 0; col < m[0].size(); col ++) {
-            io << int(m[row][col] * 100)/100. << "\t";
+            io << int(m[row][col] * 1000)/1000. << "\t";
         }
         io << "\n";
     }
@@ -226,12 +255,6 @@ std::ostream& operator<<(std::ostream& io, const Matrix& m) {
 }
 
 std::ostream& operator<<(std::ostream& io, Matrix* m) {
-    io << "Matrix (" << m->size() << "x" << m[0].size() << ") :\n";
-    for (size_t col = 0; col < m->size(); col ++) {
-        for (size_t row = 0; row < m[0].size(); row ++) {
-            io << int((*m)[row][col] * 100)/100. << "\t";
-        }
-        io << "\n";
-    }
+    io << m->toString();
     return io;
 }

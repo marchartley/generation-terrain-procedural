@@ -3,9 +3,8 @@
 #include "Utils/Utils.h"
 
 
-FaultSlipInterface::FaultSlipInterface(QWidget *parent) : CustomInteractiveObject(parent)
+FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("faultSlip", parent)
 {
-
     this->faultSlip = FaultSlip();
     this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
     this->slipVector = std::make_unique<InteractiveVector>(Vector3(), Vector3());
@@ -57,6 +56,28 @@ void FaultSlipInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 
     this->setBindings();
 }
+
+void FaultSlipInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto& parameters = action.at("parameters");
+        Vector3 slippingDirection = json_to_vec3(parameters.at("slipping_direction"));
+        float slippingDistance = parameters.at("slipping_distance").get<float>();
+        Vector3 firstPointPos = json_to_vec3(parameters.at("first_point_pos"));
+        Vector3 secondPointPos = json_to_vec3(parameters.at("second_point_pos"));
+        bool positiveSideFalling = parameters.at("positive_side").get<bool>();
+
+        this->faultSlip.slippingDirection = slippingDirection;
+        this->faultSlip.slippingDistance = slippingDistance;
+        this->faultSlip.firstPointFault = firstPointPos;
+        this->faultSlip.secondPointFault = secondPointPos;
+        this->faultSlip.positiveSideFalling = positiveSideFalling;
+        if (this->voxelGrid != nullptr)
+        {
+            this->faultSlip.Apply(this->voxelGrid, false);
+        }
+    }
+}
 void FaultSlipInterface::updateSlipVector(Vector3 newSlipVector)
 {
     this->remesh();
@@ -69,14 +90,38 @@ void FaultSlipInterface::updatePoints()
 
 void FaultSlipInterface::computeFaultSlip()
 {
-    this->faultSlip.slippingDirection = this->slipVector->getResultingVector();
-    this->faultSlip.slippingDistance = 1.f;
-    this->faultSlip.firstPointFault = this->firstSlipControlPoint->getPosition();
-    this->faultSlip.secondPointFault = this->slipVector->getStartingVector();
-    this->faultSlip.positiveSideFalling = this->faultSideApplied->isChecked();
+    Vector3 slippingDirection = this->slipVector->getResultingVector();
+    float slippingDistance = 1.f;
+    Vector3 firstPointPos = this->firstSlipControlPoint->getPosition();
+    Vector3 secondPointPos = this->slipVector->getStartingVector();
+    bool positiveSideFalling = this->faultSideApplied->isChecked();
+    this->faultSlip.slippingDirection = slippingDirection;
+    this->faultSlip.slippingDistance = slippingDistance;
+    this->faultSlip.firstPointFault = firstPointPos;
+    this->faultSlip.secondPointFault = secondPointPos;
+    this->faultSlip.positiveSideFalling = positiveSideFalling;
     if (this->voxelGrid != nullptr)
     {
+//        Matrix3<float> previousState = this->voxelGrid->getVoxelValues();
         this->faultSlip.Apply(this->voxelGrid, true);
+/*
+        Matrix3<float> changes = this->voxelGrid->getVoxelValues() - previousState;
+        std::map<std::string, std::string> parameters = {
+            {"slipping_direction", vec3_to_json(slippingDirection).dump()},
+            {"slipping_distance", std::to_string(slippingDistance)},
+            {"first_point_pos", vec3_to_json(firstPointPos).dump()},
+            {"second_point_pos", vec3_to_json(secondPointPos).dump()},
+            {"positive_side", std::to_string(positiveSideFalling)}
+        };*/
+        this->addTerrainAction(nlohmann::json({
+                                               {"slipping_direction", vec3_to_json(slippingDirection)},
+                                               {"slipping_distance", slippingDistance},
+                                               {"first_point_pos", vec3_to_json(firstPointPos)},
+                                               {"second_point_pos", vec3_to_json(secondPointPos)},
+                                               {"positive_side", positiveSideFalling}
+                                              }));
+        // this->addTerrainAction(TerrainAction(this->actionType, parameters, changes));
+
         Q_EMIT this->faultSlipApplied();
     }
 }

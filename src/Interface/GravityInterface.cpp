@@ -1,6 +1,6 @@
 #include "GravityInterface.h"
 
-GravityInterface::GravityInterface(QWidget *parent) : CustomInteractiveObject(parent)
+GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity", parent)
 {
     this->createGUI();
 }
@@ -15,10 +15,35 @@ void GravityInterface::display()
 
 }
 
+void GravityInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto& parameters = action.at("parameters");
+        bool applyGlobalGravity = parameters.at("global_gravity").get<bool>();
+        bool applySandGravity = parameters.at("sand_gravity").get<bool>();
+        float erosionStrength = parameters.at("erosion_strength").get<float>();
+        Vector3 currentDirection = json_to_vec3(parameters.at("current_direction"));
+
+        if (applyGlobalGravity) {
+            this->voxelGrid->makeItFall();
+        }
+        if (applySandGravity) {
+            this->voxelGrid->letGravityMakeSandFall(false);
+        }
+    }
+}
+
 
 bool GravityInterface::createGlobalGravity()
 {
     this->voxelGrid->makeItFall();
+
+    this->addTerrainAction(nlohmann::json({
+                                               {"global_gravity", true},
+                                               {"sand_gravity", false},
+                                               {"erosion_strength", 0.f},
+                                               {"current_direction", vec3_to_json(Vector3(0, 0, 0))}
+                                            }));
     Q_EMIT updated();
     return false;
     /*
@@ -36,6 +61,14 @@ bool GravityInterface::createSandGravity()
 {
     this->voxelGrid->letGravityMakeSandFall(true);
     Q_EMIT updated();
+
+
+    this->addTerrainAction(nlohmann::json({
+                                           {"global_gravity", false},
+                                           {"sand_gravity", true},
+                                           {"erosion_strength", 0.f},
+                                           {"current_direction", vec3_to_json(Vector3(0, 0, 0))}
+                                          }));
     return false;
     /*
     this->startAnimation();

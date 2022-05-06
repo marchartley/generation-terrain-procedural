@@ -24,6 +24,7 @@ class Viewer;
 #include "Interface/TunnelInterface.h"
 #include "Interface/ManualEditionInterface.h"
 #include "Interface/FlowFieldInterface.h"
+#include "Interface/GravityInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -165,6 +166,7 @@ public:
     std::shared_ptr<TunnelInterface> tunnelInterface = nullptr;
     std::shared_ptr<FlowFieldInterface> flowFieldInterface = nullptr;
     std::shared_ptr<ManualEditionInterface> manualEditionInterface = nullptr;
+    std::shared_ptr<GravityInterface> gravityInterface = nullptr;
 
 //    TreeColonisationAlgo::TreeColonisation spaceColonizer;
 //    std::vector<BSpline> spaceColonizerPaths;
