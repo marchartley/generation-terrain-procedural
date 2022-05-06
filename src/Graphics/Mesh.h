@@ -17,6 +17,15 @@ public:
     Mesh& fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
     Mesh& fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
 
+    Mesh& fromStl(std::string filename);
+
+    Mesh& normalize();
+    Mesh& scale(float factor);
+    Mesh& scale(float factor_x, float factor_y, float factor_z);
+    Mesh& scale(Vector3 factor);
+    Mesh& translate(Vector3 translation);
+    Mesh& translate(float translation_x, float translation_y, float translation_z);
+
     void clear();
     Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);
     Mesh merge(std::vector<std::shared_ptr<Mesh>> others);
@@ -32,6 +41,10 @@ public:
     bool isHidden() { return !this->isDisplayed; }
     void hide() { this->isDisplayed = false; }
     void show() { this->isDisplayed = true; }
+
+    void setShader(std::shared_ptr<Shader> shader);
+
+    std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
 
 
     unsigned int bufferID;
@@ -65,6 +78,11 @@ public:
     static void setShaderToAllMeshesWithoutShader(Shader newShader);
 
     static std::vector<Mesh*> all_meshes;
+
+    GLuint vao;
+    GLuint vbo[4];
+
+//    bool useModernOpenGL = true;
 };
 
 #endif // MESH_H

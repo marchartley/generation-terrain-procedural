@@ -32,11 +32,13 @@ QOpenGLExtraFunctions* GlobalsGL::ef() {
 }
 void GlobalsGL::generateBuffers()
 {
+#if useModernOpenGL
     if(GlobalsGL::buffersGenerated)
         return;
     GlobalsGL::f()->glGenVertexArrays(numVAOs, GlobalsGL::vao);
     GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[0]);
     GlobalsGL::f()->glGenBuffers(numVBOs, GlobalsGL::vbo);
+#endif
     GlobalsGL::buffersGenerated = true;
 }
 GLuint GlobalsGL::newBufferId()
@@ -58,6 +60,7 @@ bool GlobalsGL::checkOpenGLError()
 
 bool GlobalsGL::printShaderErrors(GLuint shader)
 {
+#if useModernOpenGL
     int state = 0;
     GlobalsGL::f()->glGetShaderiv(shader, GL_COMPILE_STATUS, &state);
     if (state == 1)
@@ -73,10 +76,13 @@ bool GlobalsGL::printShaderErrors(GLuint shader)
         std::cout << "[OpenGL] Shader error: " << log << std::endl;
         free(log);
     }
+#endif
     return false;
 }
 bool GlobalsGL::printProgramErrors(int program)
 {
+
+#if useModernOpenGL
     int state = 0;
     GlobalsGL::f()->glGetProgramiv(program, GL_LINK_STATUS, &state);
     if (state == 1)
@@ -92,6 +98,7 @@ bool GlobalsGL::printProgramErrors(int program)
         std::cout << "[OpenGL] Program error: " << log << std::endl;
         free(log);
     }
+#endif
     return false;
 }
 void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type,

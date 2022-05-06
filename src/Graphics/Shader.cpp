@@ -36,6 +36,7 @@ Shader::Shader(Shader& copy) {
 }
 void Shader::compileShadersFromSource()
 {
+#if useModernOpenGL || !useModernOpenGL
     this->programID = GlobalsGL::f()->glCreateProgram();
     if (vertexShaderFilename != nullptr)
     {
@@ -69,47 +70,53 @@ void Shader::compileShadersFromSource()
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
+#endif
 }
 
-void Shader::use(bool update_source_file)
+bool Shader::use(bool update_source_file)
 {
     if (update_source_file)
     {
         this->compileShadersFromSource();
     }
-    GlobalsGL::checkOpenGLError();
-    GlobalsGL::f()->glUseProgram(this->programID);
-    GlobalsGL::printProgramErrors(this->programID);
-    GlobalsGL::printShaderErrors(this->vShader);
-    GlobalsGL::printShaderErrors(this->fShader);
-    GlobalsGL::checkOpenGLError();
+
+    if (programID > 0) {
+        GlobalsGL::checkOpenGLError();
+        GlobalsGL::f()->glUseProgram(this->programID);
+        GlobalsGL::printProgramErrors(this->programID);
+        GlobalsGL::printShaderErrors(this->vShader);
+        GlobalsGL::printShaderErrors(this->fShader);
+        GlobalsGL::checkOpenGLError();
+        return true;
+    }
+    return false;
 }
 
 void Shader::setBool(std::string pname, bool value)
 {
-    this->use();
+    if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
 }
 void Shader::setInt(std::string pname, int value)
 {
-    this->use();
+    if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setFloat(std::string pname, float value)
 {
-    this->use();
+    if (!this->use()) return;
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
 void Shader::setVector(std::string pname, Vector3 value)
 {
-    this->use();
+    if (!this->use()) return;
     this->setVector(pname, value, 3);
 }
 void Shader::setVector(std::string pname, float value[], int n)
 {
-    this->use();
+    if (!this->use()) return;
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
     switch (n) {
     case 1:
@@ -133,6 +140,19 @@ void Shader::setLightSource(std::string pname, LightSource &value)
     this->setVector((pname + ".specular").c_str(), value.specular, 4);
 }
 
+void Shader::addLightSource(std::string pname, LightSource &value)
+{
+    this->setLightSource(pname + "[" + std::to_string(lightCount) +"]", value);
+    lightCount ++;
+    this->setInt(pname + "_count", this->lightCount);
+}
+
+void Shader::clearLightSources(std::string pname)
+{
+    this->lightCount = 0;
+    this->setInt(pname + "_count", 0);
+}
+
 void Shader::setPositionalLight(std::string pname, PositionalLight &value)
 {
     this->setLightSource(pname, value);
@@ -154,7 +174,7 @@ void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
-    this->use();
+    if (!this->use()) return;
     GlobalsGL::f()->glGenTextures(1, &texIndex);
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glEnable(GL_TEXTURE_2D);
@@ -179,7 +199,7 @@ void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
-    this->use();
+    if (!this->use()) return;
     glGenTextures(1, &texIndex);
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glEnable(GL_TEXTURE_3D);
@@ -212,6 +232,8 @@ std::string Shader::readShaderSource(std::string filename)
     QString qFilename = QString::fromStdString(filename);
     if (!QFile::exists(qFilename))
         qFilename = ":" + qFilename;
+    if (!QFile::exists(qFilename))
+        std::cerr << "The shader " << filename << " doesn't exist!" << std::endl;
     QFile file(qFilename);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
     std::string line;

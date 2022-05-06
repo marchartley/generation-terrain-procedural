@@ -1,6 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#define useModernOpenGL 1
+
 //class random_gen;
 //class GlobalsGL;
 
