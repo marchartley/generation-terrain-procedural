@@ -5,26 +5,44 @@ ViewerInterface::ViewerInterface() {
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);
+
+    this->actionsOnMap = std::make_shared<std::vector<nlohmann::json>>();
+    std::string historyFilename = "MyChanges.json";
+    std::shared_ptr<std::fstream> actionsHistoryFile = std::make_shared<std::fstream>(historyFilename);
     this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>(this);
     this->karstPathGeneration->hide();
+    // this->karstPathGeneration->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->viewer->karstPathInterface = this->karstPathGeneration;
     this->spaceColonization = std::make_shared<SpaceColonizationInterface>(this);
     this->spaceColonization->hide();
+    this->spaceColonization->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->viewer->spaceColonizationInterface = this->spaceColonization;
     this->faultSlip = std::make_shared<FaultSlipInterface>(this);
     this->faultSlip->hide();
+    this->faultSlip->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->viewer->faultSlipInterface = this->faultSlip;
     this->flowField = std::make_shared<FlowFieldInterface>(this);
     this->viewer->flowFieldInterface = flowField;
     this->flowField->hide();
+    this->flowField->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->tunnelInterface = std::make_shared<TunnelInterface>(this);
     this->viewer->tunnelInterface = this->tunnelInterface;
     this->tunnelInterface->hide();
+    this->tunnelInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->manualEditionInterface = std::make_shared<ManualEditionInterface>(this);
     this->viewer->manualEditionInterface = this->manualEditionInterface;
     this->manualEditionInterface->hide();
+    this->manualEditionInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
     this->gravityInterface = std::make_shared<GravityInterface>(this);
+    this->viewer->gravityInterface = this->gravityInterface;
     this->gravityInterface->hide();
+    this->gravityInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);

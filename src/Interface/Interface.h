@@ -138,6 +138,8 @@ public:
     QPushButton* LoDChooserConfirmButton;
 
     std::map<QWidget*, QWidget*> widgetsMapping;
+
+    std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;
 };
 
 #endif // INTERFACE_H

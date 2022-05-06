@@ -4,7 +4,7 @@
 #include "Utils/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
-TunnelInterface::TunnelInterface(QWidget *parent) : CustomInteractiveObject(parent)
+TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", parent)
 {
 
 }
@@ -24,6 +24,24 @@ void TunnelInterface::display()
             this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
         }
         this->tunnelPreview.display(); //GL_LINES, 5.f);
+    }
+}
+
+void TunnelInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto& parameters = action.at("parameters");
+        bool removingMatter = parameters.at("removing_matter").get<bool>();
+        KarstHolePredefinedShapes startingShape = parameters.at("starting_shape").get<KarstHolePredefinedShapes>();
+        KarstHolePredefinedShapes endingShape = parameters.at("ending_shape").get<KarstHolePredefinedShapes>();
+        float width = parameters.at("width").get<float>();
+        float height = parameters.at("height").get<float>();
+        float erosionStrength = parameters.at("erosion_strength").get<float>();
+        BSpline path = json_to_bspline(parameters.at("path"));
+
+        UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
+        KarstHole hole(path, width, height, startingShape, endingShape);
+        erod.CreateTunnel(hole, !removingMatter);
     }
 }
 
@@ -60,7 +78,7 @@ QLayout* TunnelInterface::createGUI()
     tunnelStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.0, 3.0, 0.1);
     tunnelCreateMatter = new QPushButton("Arche");
     tunnelRemoveMatter = new QPushButton("Tunnel");
-    tunnelCreateCrack = new QPushButton("Faille");
+//    tunnelCreateCrack = new QPushButton("Faille");
     tunnelDisplayButton = new QCheckBox("Afficher");
     startingShapeCombobox = new QComboBox();
     endingShapeCombobox = new QComboBox();
@@ -192,10 +210,20 @@ void TunnelInterface::createTunnel(bool removingMatter)
     this->controlPoints.clear();
     this->tunnelPreview.update();
 
+    this->addTerrainAction(nlohmann::json({
+                                              {"removing_matter", removingMatter},
+                                              {"starting_shape", startingShape},
+                                              {"ending_shape", endingShape},
+                                              {"height", tunnelHeight},
+                                              {"width", tunnelWidth},
+                                              {"erosion_strength", erosionStrength},
+                                              {"path", bspline_to_json(path)}
+                                          }));
+
     Q_EMIT updated();
 }
 void TunnelInterface::createCrack(bool removingMatter)
-{
+{/*
     if (this->currentTunnelPoints.size() < 2) return;
 
     UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
@@ -206,7 +234,7 @@ void TunnelInterface::createCrack(bool removingMatter)
     this->controlPoints.clear();
     this->tunnelPreview.update();
 
-    Q_EMIT updated();
+    Q_EMIT updated();*/
 }
 
 void TunnelInterface::computeTunnelPreview() {

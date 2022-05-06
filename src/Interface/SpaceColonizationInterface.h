@@ -12,10 +12,11 @@ class SpaceColonizationInterface;
 #include "TerrainGen/VoxelGrid.h"
 #include "Interface/VisitingCamera.h"
 #include "Interface/PathCameraConstraint.h"
+#include "Interface/ActionInterface.h"
 
 using namespace TreeColonisationAlgo;
 
-class SpaceColonizationInterface : public CustomInteractiveObject
+class SpaceColonizationInterface : public ActionInterface
 {
     Q_OBJECT
 public:
@@ -23,6 +24,7 @@ public:
     ~SpaceColonizationInterface();
 
     void display();
+    void replay(nlohmann::json action);
 
 //    bool isHidden;
     void hide();

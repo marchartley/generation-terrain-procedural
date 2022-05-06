@@ -1,6 +1,6 @@
 #include "FlowFieldInterface.h"
 
-FlowFieldInterface::FlowFieldInterface(QWidget *parent) : CustomInteractiveObject(parent)
+FlowFieldInterface::FlowFieldInterface(QWidget *parent) : ActionInterface("flowfield", parent)
 {
     this->createGUI();
 }
@@ -17,10 +17,21 @@ void FlowFieldInterface::display()
     this->flowMesh.display(GL_LINES, 5.f);
 }
 
+void FlowFieldInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        this->voxelGrid->computeFlowfield();
+    }
+}
+
 void FlowFieldInterface::recomputeFlowfield()
 {
     this->voxelGrid->computeFlowfield();
     this->updateFlowfieldDebugMesh();
+
+    this->addTerrainAction(nlohmann::json({
+                                              {}
+                                          }));
     Q_EMIT this->updated();
 }
 

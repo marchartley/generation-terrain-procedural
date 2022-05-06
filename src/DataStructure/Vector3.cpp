@@ -4,16 +4,16 @@
 
 Vector3 Vector3::nabla = Vector3(1.f, 1.f, 1.f).normalize();
 
-Vector3::Vector3(float x, float y, float z) : x(x), y(y), z(z) {
+Vector3::Vector3(float x, float y, float z, bool valid) : x(x), y(y), z(z), valid(valid) {
 
 }
 Vector3::Vector3() : Vector3(0.f, 0.f, 0.f) {
 
 }
-Vector3::Vector3(const Vector3& copy) : Vector3(copy.x, copy.y, copy.z) {
+Vector3::Vector3(const Vector3& copy) : Vector3(copy.x, copy.y, copy.z, copy.valid) {
 
 }
-Vector3::Vector3(Vector3* copy) : Vector3(copy->x, copy->y, copy->z) {
+Vector3::Vector3(Vector3* copy) : Vector3(copy->x, copy->y, copy->z, copy->valid) {
 
 }
 
@@ -26,6 +26,12 @@ Vector3::Vector3(qglviewer::Vec other)
 Vector3::Vector3(bool valid) : Vector3()
 {
     this->valid = valid;
+}
+
+Vector3::Vector3(const float *coords, bool valid)
+    : Vector3(coords[0], coords[1], coords[2], valid)
+{
+
 }
 
 float Vector3::norm() {
@@ -145,7 +151,7 @@ Vector3& Vector3::rotate(float angle, float dir_x, float dir_y, float dir_z) {
 }
 Vector3& Vector3::rotate(float angle, Vector3 direction) {
     float c = cos(angle), s = sin(angle);
-    Vector3& v = direction; // alias
+    Vector3 v = direction.normalized(); // alias
     Matrix R (3, 3, std::vector<float>({
                    v.x*v.x*(1-c)+c, v.x*v.y*(1-c)-v.z*s, v.x*v.z*(1-c)+v.y*s,
                    v.x*v.y*(1-c)+v.z*s, v.y*v.y*(1-c)+c, v.y*v.z*(1-c)-v.x*s,
@@ -330,6 +336,7 @@ Vector3& Vector3::operator=(const Vector3& o) {
     this->x = o.x;
     this->y = o.y;
     this->z = o.z;
+    this->valid = o.valid;
     return *this;
 }
 bool operator==(Vector3 a, Vector3 b)

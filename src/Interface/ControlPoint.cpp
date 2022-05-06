@@ -134,7 +134,11 @@ void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * con
         else if (this->currentAxis == Z)
             constraint->setTranslationConstraintDirection(Vector3(0.0, 0.0, 1.0));
     }
-    this->setConstraint(constraint);
+    if (this->custom_constraint == nullptr) {
+        this->setConstraint(constraint);
+    } else {
+        this->setConstraint(this->custom_constraint);
+    }
 }
 
 void ControlPoint::onUpdate(std::function<void ()> func)
@@ -291,6 +295,8 @@ void ControlPoint::mousePressEvent(QMouseEvent * const event, qglviewer::Camera 
         }
         else if (this->isApplyingTranslation) {
             this->startAction(QGLViewer::TRANSLATE);
+        } else if (this->isApplyingFreeMove) {
+            this->startAction(QGLViewer::TRANSLATE); // force translation
         }
     }
     qglviewer::ManipulatedFrame::mousePressEvent(event, cam);
@@ -304,6 +310,22 @@ void ControlPoint::mouseReleaseEvent(QMouseEvent * const event, qglviewer::Camer
 void ControlPoint::mouseMoveEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
 {
     qglviewer::ManipulatedFrame::mouseMoveEvent(event, cam);
+}
+
+void ControlPoint::wheelEvent(QWheelEvent * const event, qglviewer::Camera * const camera)
+{
+    setSphereRadius(this->radius - event->angleDelta().y()/10.f);
+    this->startAction(QGLViewer::MouseAction::NO_MOUSE_ACTION);
+}
+
+void ControlPoint::setSphereRadius(float newRadius)
+{
+    if (minSphereRadius >= 0)
+        newRadius = std::max(minSphereRadius, newRadius);
+    if (maxSphereRadius >= 0)
+        newRadius = std::min(maxSphereRadius, newRadius);
+    this->radius = newRadius;
+    this->updateSphere();
 }
 
 void ControlPoint::allowAllAxisTranslation(bool allow)

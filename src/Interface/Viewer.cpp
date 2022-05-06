@@ -972,6 +972,22 @@ void Viewer::loadMapUI()
         grid->loadFromHeightmap(filename, 127, 127, 255);
         voxelGrid->from2DGrid(*grid);
         voxelGrid->fromIsoData();
+    } else if (ext == "JSON") {
+        std::ifstream file(filename);
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        nlohmann::json json_content = nlohmann::json::parse(content);
+        if (!json_content.contains("actions"))
+            return;
+        for (auto action : json_content.at("actions")) {
+            // Let all the interfaces try to replay their actions
+//            karstPathInterface->replay(action);
+            spaceColonizationInterface->replay(action);
+            faultSlipInterface->replay(action);
+            gravityInterface->replay(action);
+            tunnelInterface->replay(action);
+            flowFieldInterface->replay(action);
+            manualEditionInterface->replay(action);
+        }
     } else {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);

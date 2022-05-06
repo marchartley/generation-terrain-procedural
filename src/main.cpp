@@ -1,17 +1,14 @@
 //#define OPENVDB_DLL
 
 #include "Utils/Globals.h"
-#include "Interface/Viewer.h"
-
-#include "DataStructure/Vector3.h"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <qapplication.h>
 #include <iostream>
-#include "DataStructure/Matrix.h"
 #include "Interface/Interface.h"
 
 #include "Utils/Utils.h"
+#include "TerrainModification/TerrainAction.h"
 
 int main(int argc, char *argv[])
 {

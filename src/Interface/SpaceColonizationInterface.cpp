@@ -4,7 +4,7 @@
 #include "Interface/InterfaceUtils.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 
-SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : CustomInteractiveObject(parent)
+SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : ActionInterface("space_colonization", parent)
 {
     this->startingPoint = std::make_unique<ControlPoint>();
 }
@@ -40,6 +40,32 @@ void SpaceColonizationInterface::display()
         if (this->pathsMeshes.shader != nullptr)
             this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
         this->pathsMeshes.display(GL_LINES, 5.f);
+    }
+}
+
+void SpaceColonizationInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto& parameters = action.at("parameters");
+        Vector3 startingPoint = json_to_vec3(parameters.at("starting_point"));
+        std::vector<Vector3> control_points;
+        for (auto& ctrl_json : parameters.at("control_points"))
+            control_points.push_back(json_to_vec3(ctrl_json));
+        float width = parameters.at("width").get<float>();
+        float randomness = parameters.at("randomness").get<float>();
+        float segmentLength = parameters.at("segment_length").get<float>();
+        bool usingSpheres = parameters.at("using_spheres").get<bool>();
+        float minDistance = parameters.at("min_distance").get<float>();
+        float maxDistance = parameters.at("max_distance").get<float>();
+
+        this->colonizer = new TreeColonisationAlgo::TreeColonisation(control_points, startingPoint, segmentLength, randomness);
+        colonizer->nodeMinDistance = minDistance;
+        colonizer->nodeMaxDistance = maxDistance;
+        this->colonizer->process();
+        this->updateKarstPath();
+        UnderwaterErosion erod(this->voxelGrid, width, 3.f, 10);
+        erod.CreateMultipleTunnels(this->karstPaths, false, usingSpheres);
+
     }
 }
 
@@ -180,6 +206,18 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
     linkFile << links;
     linkFile.close();
 
+    std::vector<nlohmann::json> controlPointsPos;
+    for (auto& ctrl : this->controlPoints) controlPointsPos.push_back(vec3_to_json(ctrl->getPosition()));
+    this->addTerrainAction(nlohmann::json({
+                                              {"starting_point", vec3_to_json(startingPoint->getPosition()) },
+                                              {"control_points", controlPointsPos},
+                                              {"width", karstWidth},
+                                              {"randomness", colonizer->randomness},
+                                              {"segment_length", colonizer->segmentLength},
+                                              {"using_spheres", usingSpheres},
+                                              {"min_distance", colonizer->nodeMinDistance},
+                                              {"max_distance", colonizer->nodeMaxDistance}
+                                          }));
 }
 
 QHBoxLayout *SpaceColonizationInterface::createGUI()

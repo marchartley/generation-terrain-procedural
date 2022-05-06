@@ -3,10 +3,10 @@
 
 class FlowFieldInterface;
 #include <QWidget>
-#include "Interface/CustomInteractiveObject.h"
+#include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
 
-class FlowFieldInterface : public CustomInteractiveObject
+class FlowFieldInterface : public ActionInterface
 {
     Q_OBJECT
 public:
@@ -15,6 +15,8 @@ public:
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
+
+    void replay(nlohmann::json action);
 
     QLayout* createGUI();
 

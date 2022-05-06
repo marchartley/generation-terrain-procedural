@@ -3,19 +3,20 @@
 
 class ManualEditionInterface;
 
-#include "Interface/CustomInteractiveObject.h"
+#include "Interface/ActionInterface.h"
 #include <QObject>
 #include "TerrainGen/VoxelGrid.h"
 #include "Interface/FancySlider.h"
 #include "Interface/ControlPoint.h"
 
-class ManualEditionInterface : public CustomInteractiveObject
+class ManualEditionInterface : public ActionInterface
 {
     Q_OBJECT
 public:
     ManualEditionInterface(QWidget *parent = nullptr);
 
     void display();
+    void replay(nlohmann::json action);
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     QLayout* createGUI();

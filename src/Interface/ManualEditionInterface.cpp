@@ -3,7 +3,7 @@
 #include "Interface/InterfaceUtils.h"
 #include "TerrainModification/RockErosion.h"
 
-ManualEditionInterface::ManualEditionInterface(QWidget *parent) : CustomInteractiveObject(parent)
+ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterface("manualEdit", parent)
 {
     this->grabber = std::make_unique<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
     /*this->grabber->GrabberStateColor = {
@@ -21,6 +21,21 @@ void ManualEditionInterface::display()
         this->grabber->setState(NEUTRAL);
     }
     grabber->display();
+}
+
+void ManualEditionInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto& parameters = action.at("parameters");
+
+        float size = parameters.at("size").get<float>();
+        float strength = parameters.at("strength").get<float>();
+        Vector3 position = json_to_vec3(parameters.at("position"));
+        bool addingMode = parameters.at("addingMode").get<bool>();
+
+        RockErosion rock(size, strength);
+        rock.Apply(voxelGrid, position, addingMode, false);
+    }
 }
 
 void ManualEditionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -64,8 +79,20 @@ void ManualEditionInterface::setPosition(Vector3 newPosition)
 
 void ManualEditionInterface::applyModification()
 {
-    RockErosion rock(this->manualEditionSize, this->manualEditionStrength);
-    rock.Apply(voxelGrid, this->grabber->getPosition(), this->addingMode, true);
+    float size = this->manualEditionSize;
+    float strength = this->manualEditionStrength;
+    Vector3 position = this->grabber->getPosition();
+
+    RockErosion rock(size, strength);
+    rock.Apply(voxelGrid, position, addingMode, true);
+
+    this->addTerrainAction(nlohmann::json({
+                                           {"size", size},
+                                           {"strength", strength},
+                                           {"position", vec3_to_json(position)},
+                                           {"addingMode", addingMode}
+                                          }));
+
     Q_EMIT this->updated();
 }
 
@@ -82,7 +109,6 @@ void ManualEditionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool 
 
 void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
 {
-    std::cout << "mouse moved" << std::endl;
     // Just used to cancel the Ctrl and Alt buttons
     if (readyToModify) {
         if (!event->modifiers().testFlag(Qt::ControlModifier) || !event->modifiers().testFlag(Qt::AltModifier))
@@ -99,7 +125,6 @@ void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
 void ManualEditionInterface::keyPressEvent(QKeyEvent *event)
 {
     if (!event->isAutoRepeat()) {
-        std::cout << "Key pressed : " << event->key() << std::endl;
         this->readyToModify = true;
         if (event->key() == Qt::Key_Shift) {
             this->addingMode = false;
@@ -114,7 +139,7 @@ void ManualEditionInterface::keyPressEvent(QKeyEvent *event)
 
 void ManualEditionInterface::keyReleaseEvent(QKeyEvent *event)
 {
-    std::cout << "Key released : " << event->key() << std::endl;
+
     if (event->key() == Qt::Key_Shift || event->key() == Qt::Key_Control) {
         this->readyToModify = false;
         Q_EMIT this->updated();

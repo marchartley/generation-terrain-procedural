@@ -24,6 +24,7 @@ void Slider3D::setPosition(Vector3 newPos)
     this->minPos += movement;
     this->maxPos += movement;
     this->sliderControlPoint->move(this->sliderControlPoint->getPosition() + movement);
+    this->sliderControlPoint->custom_constraint = new SliderConstraint(minPos, maxPos);
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -33,6 +34,10 @@ void Slider3D::setPositions(Vector3 newStart, Vector3 newEnd)
     this->minPos = newStart;
     this->maxPos = newEnd;
     this->sliderControlPoint->move(Vector3::lerp(currentValue, newStart, newEnd));
+    this->constraint = new SliderConstraint(minPos, maxPos);
+    this->sliderControlPoint->custom_constraint = constraint;
+//    this->sliderControlPoint->setConstraint(new SliderConstraint(newStart, newEnd));
+//    std::cout << "New positions : " << newStart << " " << newEnd << std::endl;
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -48,6 +53,19 @@ void Slider3D::show()
     this->sliderControlPoint->show();
     this->sliderMesh.show();
     CustomInteractiveObject::show();
+}
+
+float Slider3D::setValue(float newValue)
+{
+    // float t = interpolation::linear(newValue, this->minValue, this->maxValue);
+    this->sliderControlPoint->move(remap(newValue, minValue, maxValue, minPos, maxPos));
+    return newValue;
+}
+
+float Slider3D::setValue(Vector3 newPos)
+{
+    this->sliderControlPoint->move(newPos);
+    return this->getValue();
 }
 
 void Slider3D::display()
@@ -68,7 +86,8 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
     this->minValue = minValue;
     this->maxValue = maxValue;
     this->sliderControlPoint = new ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
-    this->sliderControlPoint->setConstraint(new SliderConstraint(positionMin, positionMax));
+    this->constraint = new SliderConstraint(positionMin, positionMax);
+    this->sliderControlPoint->custom_constraint = constraint;
     this->sliderMesh.fromArray({minPos, maxPos});
     this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
@@ -78,12 +97,12 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
 
 SliderConstraint::SliderConstraint()
 {
-    this->constraint = new qglviewer::LocalConstraint();
+    this->constraint = new qglviewer::WorldConstraint();
 }
 SliderConstraint::SliderConstraint(Vector3 minPos, Vector3 maxPos)
     : minPos(minPos), maxPos(maxPos)
 {
-    this->constraint = new qglviewer::LocalConstraint();
+    this->constraint = new qglviewer::WorldConstraint();
     this->constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
     this->constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FORBIDDEN);
     Vector3 dir = maxPos - minPos;
