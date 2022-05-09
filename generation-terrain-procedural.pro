@@ -180,24 +180,24 @@ HEADERS += \
     src/sim-fluid-ethanjli/vectorfield.tpp
 
 RESOURCES +=\
-    src/Shaders/grabber_fragment_shader.glsl \
-    src/Shaders/grabber_vertex_shader.glsl \
-    src/Shaders/layer_based_fragment_shader.glsl \
-    src/Shaders/layer_based_vertex_shader.glsl \
-    src/Shaders/no_fragment_shader.glsl \
-    src/Shaders/no_vertex_shader.glsl \
-    src/Shaders/particle_fragment_shader.glsl \
-    src/Shaders/particle_vertex_shader.glsl \
+    src/Shaders/MarchingCubes.frag \
+    src/Shaders/MarchingCubes.geom \
+    src/Shaders/MarchingCubes.vert \
+    src/Shaders/gouraud.frag \
+    src/Shaders/gouraud.vert \
+    src/Shaders/grabber.frag \
+    src/Shaders/grabber.vert \
+    src/Shaders/grid.frag \
+    src/Shaders/grid.vert \
+    src/Shaders/layer_based.frag \
+    src/Shaders/layer_based.vert \
+    src/Shaders/no_shader.frag \
+    src/Shaders/no_shader.vert \
+    src/Shaders/particle.frag \
     src/Shaders/noise.glsl \
-    src/Shaders/voxels_fragment_shader_blinn_phong.glsl \
-    src/Shaders/voxels_vertex_shader_blinn_phong.glsl\
-    src/Shaders/fragment_shader_gouraud.glsl \
-    src/Shaders/grid_fragment_shader_blinn_phong.glsl \
-    src/Shaders/grid_vertex_shader_blinn_phong.glsl \
-    src/Shaders/vertex_shader_gouraud.glsl \
-    src/Shaders/MarchingCubes_geometry.glsl \
-    src/Shaders/MarchingCubes_fragment.glsl \
-    src/Shaders/MarchingCubes_vertex.glsl \
+    src/Shaders/particle.vert \
+    src/Shaders/voxels.frag \
+    src/Shaders/voxels.vert \
     src/assets/manual-edit_button.png\
     src/Shaders/rockShader.frag \
     src/Shaders/rockShader.vert \

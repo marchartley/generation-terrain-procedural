@@ -10,9 +10,9 @@ TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : Action
 
 void TerrainGenerationInterface::prepareShader()
 {
-    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes_vertex.glsl";
-    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes_geometry.glsl";
-    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes_fragment.glsl";
+    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes.vert";
+    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes.geom";
+    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
 
     const char* vRockShader = ":/src/Shaders/rockShader.vert";
     const char* fRockShader = ":/src/Shaders/rockShader.frag";
