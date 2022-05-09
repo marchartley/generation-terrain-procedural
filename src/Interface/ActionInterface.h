@@ -20,7 +20,7 @@ public:
                                                          {"type", this->actionType},
                                                          {"parameters", actionParameters}
                                                      }));
-        saveAllActions();
+//        saveAllActions();
     }
 
     void affectSavingFile(std::shared_ptr<std::vector<nlohmann::json>> history, std::shared_ptr<std::fstream> file, std::string filename) {
@@ -29,9 +29,9 @@ public:
         this->savingFilename = filename;
     }
 
-    void saveAllActions() {
+    void saveAllActions(std::string filename = "") {
         savingFile->close();
-        savingFile->open(savingFilename, std::fstream::in | std::fstream::out | std::fstream::trunc);
+        savingFile->open((filename.empty() ? savingFilename : filename), std::fstream::in | std::fstream::out | std::fstream::trunc);
         *savingFile << nlohmann::json({{"actions", *jsonActionsHistory}}).dump(1, '\t');
         savingFile->flush();
     }

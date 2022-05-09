@@ -37,10 +37,11 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
     }
     this->tempData = data;
 }
+
 VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), grid.getTileSize()) {
     this->from2DGrid(grid);
 }
-VoxelGrid::VoxelGrid() : VoxelGrid(10, 10, 10, 1.0) {
+VoxelGrid::VoxelGrid() : VoxelGrid(1, 1, 1, 1.0) {
 
 }
 VoxelGrid::~VoxelGrid()

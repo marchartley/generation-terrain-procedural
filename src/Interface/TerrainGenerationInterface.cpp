@@ -1,6 +1,7 @@
 #include "TerrainGenerationInterface.h"
 
 #include "Utils/Utils.h"
+#include "Utils/stb_image_write.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
 {
@@ -135,9 +136,24 @@ void TerrainGenerationInterface::display()
 
 void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting)
 {
-    this->voxelGrid = std::make_shared<VoxelGrid>(nx, ny, nz, blockSize, noise_shifting);
+    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz, blockSize, noise_shifting);
+    tempMap->fromIsoData();
+
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>();
+    if (!this->heightmapGrid)
+        this->heightmapGrid = std::make_shared<Grid>();
+
+    // Okay, super dirty but I don't know how to manage shared_ptr...
+    this->voxelGrid->sizeX = tempMap->sizeX;
+    this->voxelGrid->sizeY = tempMap->sizeY;
+    this->voxelGrid->sizeZ = tempMap->sizeZ;
+    this->voxelGrid->blockSize = tempMap->blockSize;
+    this->voxelGrid->chunkSize = tempMap->chunkSize;
+    this->voxelGrid->noise_shifting = tempMap->noise_shifting;
+    this->voxelGrid->initMap();
+    this->voxelGrid->tempData = tempMap->tempData;
     this->voxelGrid->fromIsoData();
-    this->heightmapGrid = std::make_shared<Grid>();
     this->heightmapGrid->fromVoxelGrid(*voxelGrid);
 
     this->addTerrainAction(nlohmann::json({
@@ -154,9 +170,6 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
 
 void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::vector<std::shared_ptr<ActionInterface>> actionInterfaces)
 {
-    const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
-
     std::string ext = toUpper(getExtention(filename));
     if (!this->heightmapGrid)
         this->heightmapGrid = std::make_shared<Grid>();
@@ -186,15 +199,45 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         voxelGrid->fromIsoData();
         heightmapGrid->fromVoxelGrid(*voxelGrid);
     }
-    this->voxelGrid->createMesh();/*
+    this->voxelGrid->createMesh();
     this->heightmapGrid->createMesh();
-    for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
-        vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-*/
+
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
                                               {"from_noise", false}
                                           }));
+}
+
+void TerrainGenerationInterface::saveTerrain(std::string filename)
+{
+    std::string ext = toUpper(getExtention(filename));
+    if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
+        // To heightmap
+        this->heightmapGrid->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
+        std::vector<float> toFloatData(heightmapGrid->getSizeX() * heightmapGrid->getSizeY());
+        std::vector<int> toIntData(heightmapGrid->getSizeX() * heightmapGrid->getSizeY());
+
+        for (size_t i = 0; i < heightmapGrid->vertices.size(); i++) {
+            toFloatData[i] = heightmapGrid->vertices[i].z / heightmapGrid->maxHeight;
+            toIntData[i] = toFloatData[i] * 255;
+        }
+        if (ext == "PNG")
+            stbi_write_png(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toIntData.data(), sizeof(int));
+        else if (ext == "JPG")
+            stbi_write_jpg(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toIntData.data(), 95);
+        else if (ext == "BMP")
+            stbi_write_bmp(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toIntData.data());
+        else if (ext == "TGA")
+            stbi_write_tga(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toIntData.data());
+        else if (ext == "HDR")
+            stbi_write_hdr(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toFloatData.data());
+    } else if (ext == "JSON") {
+        // To JSON file containing the list of actions made on a map
+        this->saveAllActions(filename);
+    } else {
+        // Otherwise it's our custom voxel grid file
+        voxelGrid->saveMap(filename);
+    }
 }
 
 

@@ -15,6 +15,7 @@ public:
 
     void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::vector<std::shared_ptr<ActionInterface>> actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>());
+    void saveTerrain(std::string filename);
 
     void replay(nlohmann::json action);
 

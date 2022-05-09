@@ -569,8 +569,10 @@ void ViewerInterface::setupUi()
     frame = new StickyFrame(this->viewer, 0, -1, -1, 1, false);
     frame->hide();
 
-    QObject::connect(openAction, &QAction::triggered, this->viewer, &Viewer::loadMapUI);
-    QObject::connect(savingAction, &QAction::triggered, this->viewer, &Viewer::saveMapUI);
+//    QObject::connect(openAction, &QAction::triggered, this->viewer, &Viewer::loadMapUI);
+//    QObject::connect(savingAction, &QAction::triggered, this->viewer, &Viewer::saveMapUI);
+    QObject::connect(openAction, &QAction::triggered, this, &ViewerInterface::openMapUI);
+    QObject::connect(savingAction, &QAction::triggered, this, &ViewerInterface::saveMapUI);
     QObject::connect(faultSlipAction, &QAction::triggered, this, &ViewerInterface::openFaultSlipInterface);
     QObject::connect(flowfieldAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
     QObject::connect(karstAction, &QAction::triggered, this, &ViewerInterface::openKarstInterface);
@@ -615,8 +617,10 @@ void ViewerInterface::setupUi()
 void ViewerInterface::setupBindings()
 {
 
-    QObject::connect(loadButton, &QCheckBox::pressed, this, [=](){this->viewer->loadMapUI(); } );
-    QObject::connect(saveButton, &QCheckBox::pressed, this, [=](){this->viewer->saveMapUI(); } );
+//    QObject::connect(loadButton, &QCheckBox::pressed, this, [=](){this->viewer->loadMapUI(); } );
+//    QObject::connect(saveButton, &QCheckBox::pressed, this, [=](){this->viewer->saveMapUI(); } );
+    QObject::connect(loadButton, &QPushButton::pressed, this, &ViewerInterface::openMapUI );
+    QObject::connect(saveButton, &QPushButton::pressed, this, &ViewerInterface::saveMapUI );
 
     QObject::connect(randomRocksSizeSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setErosionRocksSize(int)));
     QObject::connect(randomRocksStrengthSlider, SIGNAL(floatValueChanged(float)), viewer, SLOT(setErosionRocksStrength(float)));
@@ -842,5 +846,17 @@ void ViewerInterface::hideAllInteractiveParts()
 
     this->viewer->update();
     this->update();
+}
+
+void ViewerInterface::openMapUI()
+{
+    QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
+    terrainGenerationInterface->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
+}
+
+void ViewerInterface::saveMapUI()
+{
+    QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
+    terrainGenerationInterface->saveTerrain(q_filename.toStdString());
 }
 
