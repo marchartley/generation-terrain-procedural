@@ -393,7 +393,7 @@ int VoxelGrid::getHeight(int x, int y) {
     for (int z = this->sizeZ - 1; z >= 0; z--)
         if (this->getVoxelValue(x, y, z) > 0.f)
             return z;
-    return -1;
+    return 0;
 }
 
 bool VoxelGrid::contains(Vector3 v) {
