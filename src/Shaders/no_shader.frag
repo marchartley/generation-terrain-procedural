@@ -1,6 +1,6 @@
-#version 120
+#version 430
 
-//out vec4 fragColor;
+out vec4 fragColor;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -12,5 +12,5 @@ void main(void)
 {
 //    if (!gl_FrontFacing)
 //        discard;
-    gl_FragColor = color;
+    fragColor = color;
 }

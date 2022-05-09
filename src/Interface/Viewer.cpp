@@ -63,19 +63,19 @@ void Viewer::init() {
     setTextIsEnabled(true);
     setMouseTracking(true);
 
-    const char* vShader_grid = ":/src/Shaders/grid_vertex_shader_blinn_phong.glsl";
-    const char* fShader_grid = ":/src/Shaders/grid_fragment_shader_blinn_phong.glsl";
-    const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
-    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes_vertex.glsl";
-    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes_geometry.glsl";
-    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes_fragment.glsl";
-//    const char* vShader_layer = ":/src/Shaders/layer_based_vertex_shader.glsl";
-//    const char* fShader_layer = ":/src/Shaders/layer_based_fragment_shader.glsl";
-    const char* vNoShader = ":/src/Shaders/no_vertex_shader.glsl";
-    const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
-    const char* vParticleShader = ":/src/Shaders/particle_vertex_shader.glsl";
-    const char* fParticleShader = ":/src/Shaders/particle_fragment_shader.glsl";
+    const char* vShader_grid = ":/src/Shaders/grid.vert";
+    const char* fShader_grid = ":/src/Shaders/grid.frag";
+    const char* vShader_voxels = ":/src/Shaders/voxels.vert";
+    const char* fShader_voxels = ":/src/Shaders/voxels.frag";
+    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes.vert";
+    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes.geom";
+    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
+//    const char* vShader_layer = ":/src/Shaders/layer_based.vert";
+//    const char* fShader_layer = ":/src/Shaders/layer_based.frag";
+    const char* vNoShader = ":/src/Shaders/no_shader.vert";
+    const char* fNoShader = ":/src/Shaders/no_shader.frag";
+    const char* vParticleShader = ":/src/Shaders/particle.vert";
+    const char* fParticleShader = ":/src/Shaders/particle.frag";
     /*const char* vRockShader = ":/src/Shaders/rockShader.vert";
     const char* fRockShader = ":/src/Shaders/rockShader.frag";*/
 
@@ -903,8 +903,8 @@ bool Viewer::startStopRecording()
 void Viewer::loadMapUI()
 {
 
-    const char* vShader_voxels = ":/src/Shaders/voxels_vertex_shader_blinn_phong.glsl";
-    const char* fShader_voxels = ":/src/Shaders/voxels_fragment_shader_blinn_phong.glsl";
+    const char* vShader_voxels = ":/src/Shaders/voxels.vert";
+    const char* fShader_voxels = ":/src/Shaders/voxels.frag";
 
     QString q_filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
     if (q_filename.isEmpty()) return; // Cancel the action if no file has been selected
