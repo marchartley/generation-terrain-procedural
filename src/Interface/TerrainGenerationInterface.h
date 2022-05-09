@@ -1,9 +1,11 @@
 #ifndef TERRAINGENERATIONINTERFACE_H
 #define TERRAINGENERATIONINTERFACE_H
 
+class TerrainGenerationInterface;
 #include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/Grid.h"
+#include "Interface/Viewer.h"
 
 class TerrainGenerationInterface : public ActionInterface
 {
@@ -11,7 +13,7 @@ class TerrainGenerationInterface : public ActionInterface
 public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
-    void display();
+    void display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles);
 
     void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::vector<std::shared_ptr<ActionInterface>> actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>());
@@ -45,6 +47,9 @@ protected:
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
     int numberOfRocksDisplayed = 500;
+
+    Mesh particlesMesh;
+    std::vector<Vector3> randomParticlesPositions;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

@@ -196,6 +196,7 @@ RESOURCES +=\
     src/Shaders/particle.frag \
     src/Shaders/noise.glsl \
     src/Shaders/particle.vert \
+    src/Shaders/particle.geom \
     src/Shaders/voxels.frag \
     src/Shaders/voxels.vert \
     src/assets/manual-edit_button.png\
