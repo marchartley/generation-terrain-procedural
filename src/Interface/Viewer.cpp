@@ -315,102 +315,10 @@ void Viewer::draw() {
         shader->setFloat("fogFar", this->fogFar);
     });
     current_frame ++;
-    if (this->viewerMode != NO_DISPLAY)
-    {
-        if (this->mapMode == GRID_MODE) {
-            if (this->grid == nullptr) {
-                std::cerr << "No grid to display" << std::endl;
-            } else {
-                this->grid->display(true);
-            }
-        }
-        else if (this->mapMode == VOXEL_MODE) {
-            if (this->voxelGrid == nullptr) {
-                std::cerr << "No voxel grid to display" << std::endl;
-            } else {
-                /*for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-                    vc->mesh.shader->setBool("clipPlaneActive", this->temporaryClipPlaneActivated);
-                    vc->mesh.shader->setVector("clipPlaneDirection", this->clipPlaneDirection);
-                    vc->mesh.shader->setVector("clipPlanePosition", this->clipPlanePosition);
-                }*/
-//                this->voxelGrid->display();
-/*
-                Matrix3<float> values = voxelGrid->getVoxelValues();
-                if (tryMarchingCubes.vertexArray.size() != values.size()) {
-                    std::vector<Vector3> points(values.size());
-                    for (size_t i = 0; i < values.size(); i++)
-                        points[i] = values.getCoordAsVector3(i);
-                    tryMarchingCubes.fromArray(points);
-                }
-                tryMarchingCubes.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);*/
-//                tryMarchingCubes.display( GL_POINTS );
-
-                if (this->terrainGenerationInterface)
-                    terrainGenerationInterface->display();
-
-            }
-        }
-        else if (this->mapMode == LAYER_MODE) {
-            if (this->layerGrid == nullptr) {
-                std::cerr << "No layer based grid to display" << std::endl;
-            } else {
-                this->layerGrid->display();
-            }
-        }
-    }
+    if (this->terrainGenerationInterface)
+        terrainGenerationInterface->display(this->mapMode, this->algorithm, this->displayParticles);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    GLfloat previousLineWidth[1];
-    glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
-    glLineWidth(5.f);
-    /*for (auto& debugMesh : this->debugMeshes) {*/
-        /*std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());*//*
-        std::get<1>(debugMesh).display(GL_LINES, 3.f);
-    }
 
-    for (size_t i = 0; i < rocksIndicesAndPosition.size(); i++) {
-        int iRock;
-        Vector3 pos;
-        std::tie(iRock, pos) = rocksIndicesAndPosition[i];
-        if (this->voxelGrid->getVoxelValue(pos) > 0) {
-            possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-            possibleRocks[iRock].display();
-        }
-    }*/
-
-    if (this->displayParticles) {
-
-        Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
-        std::vector<Vector3> displacements = this->randomParticlesInWater.colorsArray;
-        for (size_t i = 0; i < displacements.size(); i+=4) {
-            Vector3 displacement = Vector3(
-                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +10),
-                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +100),
-                        this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +1000)
-                        ).normalize() * 0.1f;
-
-            if (displacements[i+0].x > dim.x + 10) displacement.x = 0;
-            if (displacements[i+0].x < -10) displacement.x = dim.x + 10;
-            if (displacements[i+0].y > dim.y + 10) displacement.y = 0;
-            if (displacements[i+0].y < -10) displacement.y = dim.y + 10;
-            if (displacements[i+0].z > dim.z + 10) displacement.z = 0;
-            if (displacements[i+0].z < -10) displacement.z = dim.z + 10;
-            displacements[i+0] += displacement;
-            displacements[i+1] += displacement;
-            displacements[i+2] += displacement;
-            displacements[i+3] += displacement;
-        }
-        randomParticlesInWater.colorsArray = displacements;
-        randomParticlesInWater.computeColors();
-        randomParticlesInWater.display(GL_QUADS);
-    }
-    //    glBlendFunc(GL_SRC_ALPHA, GL_ZERO);
-    glLineWidth(previousLineWidth[0]);
-
-    this->mainGrabber->mesh.shader->setMatrix("proj_matrix", pMatrix);
-    this->mainGrabber->mesh.shader->setMatrix("mv_matrix", mvMatrix);
-    this->mainGrabber->mesh.shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
     this->mainGrabber->display();
 
     if (this->karstPathInterface)

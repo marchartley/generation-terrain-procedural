@@ -3,6 +3,31 @@
 
 class Viewer;
 
+
+enum MapMode {
+    GRID_MODE  = 0b001,
+    VOXEL_MODE = 0b010,
+    LAYER_MODE = 0b100,
+};
+enum ViewerMode {
+    FILL_MODE  = 0b001,
+    WIRE_MODE  = 0b010,
+    NO_DISPLAY = 0b100,
+};
+enum SmoothingAlgorithm {
+    NONE            = 0b001,
+    MARCHING_CUBES  = 0b010,
+    DUAL_CONTOURING = 0b100
+};
+enum DebugMeshesNames {
+    ROCK_TRAILS  = 0b000001,
+    FAILED_ROCKS = 0b000010,
+    FLOW_TRAILS  = 0b000100,
+    TUNNEL_PATHS = 0b001000,
+    KARST_PATHS  = 0b010000,
+    SPACE_COLONI = 0b100000
+};
+
 #include "TerrainGen/Grid.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/LayerBasedGrid.h"
@@ -29,29 +54,6 @@ class Viewer;
 #include "Interface/TerrainGenerationInterface.h"
 #include "Interface/ActionInterface.h"
 
-enum MapMode {
-    GRID_MODE  = 0b001,
-    VOXEL_MODE = 0b010,
-    LAYER_MODE = 0b100,
-};
-enum ViewerMode {
-    FILL_MODE  = 0b001,
-    WIRE_MODE  = 0b010,
-    NO_DISPLAY = 0b100,
-};
-enum SmoothingAlgorithm {
-    NONE            = 0b001,
-    MARCHING_CUBES  = 0b010,
-    DUAL_CONTOURING = 0b100
-};
-enum DebugMeshesNames {
-    ROCK_TRAILS  = 0b000001,
-    FAILED_ROCKS = 0b000010,
-    FLOW_TRAILS  = 0b000100,
-    TUNNEL_PATHS = 0b001000,
-    KARST_PATHS  = 0b010000,
-    SPACE_COLONI = 0b100000
-};
 
 class Viewer : public QGLViewer {
     Q_OBJECT

@@ -17,6 +17,10 @@ void TerrainGenerationInterface::prepareShader()
     const char* vRockShader = ":/src/Shaders/rockShader.vert";
     const char* fRockShader = ":/src/Shaders/rockShader.frag";
 
+    const char* vParticleShader = ":/src/Shaders/particle.vert";
+    const char* fParticleShader = ":/src/Shaders/particle.frag";
+    const char* gParticleShader = ":/src/Shaders/particle.geom";
+
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
                             true, GL_TRIANGLES);
     Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
@@ -100,53 +104,117 @@ void TerrainGenerationInterface::prepareShader()
                                               random_gen::generate(1.0, 4.0)
                                               ));
     }
+    this->randomParticlesPositions = std::vector<Vector3>(numberOfRocksDisplayed * 10);
+    for (size_t i = 0; i < randomParticlesPositions.size(); i++) {
+        randomParticlesPositions[i] = Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
+    }
+    this->particlesMesh = Mesh(randomParticlesPositions,
+                               std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
+                               true, GL_POINTS);
+    particlesMesh.shader->setVector("color", std::vector<float>({1.f, 1.f, 1.f, .2f}));
 }
 
 
-void TerrainGenerationInterface::display()
+void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles)
 {
-    Matrix3<float> values = voxelGrid->getVoxelValues();
-    // Not the best check, but still pretty good....
-    if (marchingCubeMesh.vertexArray.size() != values.size()) {
-        std::vector<Vector3> points(values.size());
-        for (size_t i = 0; i < values.size(); i++)
-            points[i] = values.getCoordAsVector3(i);
-        marchingCubeMesh.fromArray(points);
-        this->rocksIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>();
-        for (int i = 0; i < numberOfRocksDisplayed; i++) {
-            rocksIndicesAndPositionAndSize.push_back(std::make_tuple<int, Vector3, float>(
-                                                  int(random_gen::generate(0, possibleRocks.size())),
-                                                  Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
-                                                  random_gen::generate(1.f, 4.f)
-                                                         ));
+    if (mapMode == GRID_MODE) {
+        if (this->heightmapGrid == nullptr) {
+            std::cerr << "No grid to display" << std::endl;
+        } else {
+            this->heightmapGrid->display(true);
         }
     }
-    marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
-    marchingCubeMesh.display( GL_POINTS );
+    else if (mapMode == VOXEL_MODE) {
+        if (this->voxelGrid == nullptr) {
+            std::cerr << "No voxel grid to display" << std::endl;
+        } else {
+            Matrix3<float> values = voxelGrid->getVoxelValues();
+            // Not the best check, but still pretty good....
+            if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                std::vector<Vector3> points(values.size());
+                for (size_t i = 0; i < values.size(); i++)
+                    points[i] = values.getCoordAsVector3(i);
+                marchingCubeMesh.fromArray(points);
+                this->rocksIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>(numberOfRocksDisplayed);
+                for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
+                    rocksIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
+                                                          int(random_gen::generate(0, possibleRocks.size())),
+                                                          Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
+                                                          random_gen::generate(1.f, 4.f)
+                                                                 );
+                }
 
-    values.raiseErrorOnBadCoord = false;
-    values.defaultValueOnBadCoord = -1.f;
-    for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-        int iRock;
-        Vector3 pos;
-        float size;
-        std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
-        // Must be on ground, and have water somewhere around
-        if (values.at(pos) > 0) {
-            bool isOnBorder = false;
-            for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                    for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                        if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                            isOnBorder = true;
-                        }
-            if (isOnBorder) {
-                possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-                possibleRocks[iRock].shader->setFloat("sizeFactor", size);
-                possibleRocks[iRock].display();
+//                this->randomParticlesPositions = std::vector<Vector3>(numberOfRocksDisplayed * 1);
+//                for (size_t i = 0; i < randomParticlesPositions.size(); i++) {
+//                    randomParticlesPositions[i] = Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
+//                }
+            }
+            marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
+            marchingCubeMesh.display( GL_POINTS );
+
+            values.raiseErrorOnBadCoord = false;
+            values.defaultValueOnBadCoord = -1.f;
+            for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
+                int iRock;
+                Vector3 pos;
+                float size;
+                std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
+                // Must be on ground, and have water somewhere around
+                if (values.at(pos) > 0) {
+                    bool isOnBorder = false;
+                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
+                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
+                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
+                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
+                                    isOnBorder = true;
+                                }
+                    if (isOnBorder) {
+                        possibleRocks[iRock].shader->setVector("instanceOffset", pos);
+                        possibleRocks[iRock].shader->setFloat("sizeFactor", size);
+                        possibleRocks[iRock].display();
+                    }
+                }
+            }
+            if (displayParticles || true) {
+/*
+                Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
+                std::vector<Vector3> displacements = this->randomParticlesInWater.colorsArray;
+                for (size_t i = 0; i < displacements.size(); i+=4) {
+                    Vector3 displacement = Vector3(
+                                this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +10),
+                                this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +100),
+                                this->randomParticlesDisplacementNoise.GetNoise(displacements[i].x + random_gen::generate(0.1), displacements[i].y, displacements[i].z +1000)
+                                ).normalize() * 0.1f;
+
+                    if (displacements[i+0].x > dim.x + 10) displacement.x = 0;
+                    if (displacements[i+0].x < -10) displacement.x = dim.x + 10;
+                    if (displacements[i+0].y > dim.y + 10) displacement.y = 0;
+                    if (displacements[i+0].y < -10) displacement.y = dim.y + 10;
+                    if (displacements[i+0].z > dim.z + 10) displacement.z = 0;
+                    if (displacements[i+0].z < -10) displacement.z = dim.z + 10;
+                    displacements[i+0] += displacement;
+                    displacements[i+1] += displacement;
+                    displacements[i+2] += displacement;
+                    displacements[i+3] += displacement;
+                }
+                randomParticlesInWater.colorsArray = displacements;
+                randomParticlesInWater.computeColors();
+                randomParticlesInWater.display(GL_QUADS);
+                */
+                particlesMesh.fromArray(randomParticlesPositions);
+                particlesMesh.display(GL_POINTS);
             }
         }
-    }
+    }/*
+    else if (mapMode == LAYER_MODE) {
+        if (this->layerGrid == nullptr) {
+            std::cerr << "No layer based grid to display" << std::endl;
+        } else {
+            this->layerGrid->display();
+        }
+    }*/
+    /*
+    */
 }
 
 void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting)
