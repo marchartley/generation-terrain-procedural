@@ -7,6 +7,7 @@
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : ActionInterface("space_colonization", parent)
 {
     this->startingPoint = std::make_unique<ControlPoint>();
+//    this->
 }
 
 SpaceColonizationInterface::~SpaceColonizationInterface()

@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     QGLFormat glFormat;
     glFormat.setVersion(4, 1);
-    glFormat.setProfile(QGLFormat::CompatibilityProfile);
+    glFormat.setProfile(QGLFormat::CoreProfile);
     glFormat.setSampleBuffers(true);
     glFormat.setDefaultFormat(glFormat);
     glFormat.setSwapInterval(1);

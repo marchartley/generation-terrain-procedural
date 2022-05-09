@@ -9,11 +9,13 @@ ViewerInterface::ViewerInterface() {
     this->actionsOnMap = std::make_shared<std::vector<nlohmann::json>>();
     std::string historyFilename = "MyChanges.json";
     std::shared_ptr<std::fstream> actionsHistoryFile = std::make_shared<std::fstream>(historyFilename);
+
+
     this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>(this);
     this->karstPathGeneration->hide();
     // this->karstPathGeneration->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
-
     this->viewer->karstPathInterface = this->karstPathGeneration;
+
     this->spaceColonization = std::make_shared<SpaceColonizationInterface>(this);
     this->spaceColonization->hide();
     this->spaceColonization->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
@@ -22,8 +24,8 @@ ViewerInterface::ViewerInterface() {
     this->faultSlip = std::make_shared<FaultSlipInterface>(this);
     this->faultSlip->hide();
     this->faultSlip->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
-
     this->viewer->faultSlipInterface = this->faultSlip;
+
     this->flowField = std::make_shared<FlowFieldInterface>(this);
     this->viewer->flowFieldInterface = flowField;
     this->flowField->hide();
@@ -44,14 +46,45 @@ ViewerInterface::ViewerInterface() {
     this->gravityInterface->hide();
     this->gravityInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
+    this->undoRedoInterface = std::make_shared<UndoRedoInterface>(this);
+    this->viewer->undoRedoInterface = this->undoRedoInterface;
+    this->undoRedoInterface->hide();
+    this->undoRedoInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
+    this->terrainGenerationInterface = std::make_shared<TerrainGenerationInterface>(this);
+    this->viewer->terrainGenerationInterface = this->terrainGenerationInterface;
+    this->terrainGenerationInterface->hide();
+    this->terrainGenerationInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
+    this->actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>(
+                                                                              {
+                                                                                  spaceColonization,
+                                                                                  faultSlip,
+                                                                                  flowField,
+                                                                                  tunnelInterface,
+                                                                                  manualEditionInterface,
+                                                                                  gravityInterface,
+                                                                                  undoRedoInterface,
+                                                                                  terrainGenerationInterface
+                                                                              });
+
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
+        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
+        this->terrainGenerationInterface->prepareShader();
+        this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
+        this->viewer->grid = this->terrainGenerationInterface->heightmapGrid;
+
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
+        for (auto& actionInterface : this->actionInterfaces)
+            actionInterface->affectVoxelGrid(this->viewer->voxelGrid);
+        /*
         this->spaceColonization->affectVoxelGrid(this->viewer->voxelGrid);
         this->faultSlip->affectVoxelGrid(this->viewer->voxelGrid);
         this->flowField->affectVoxelGrid(this->viewer->voxelGrid);
         this->tunnelInterface->affectVoxelGrid(this->viewer->voxelGrid);
         this->manualEditionInterface->affectVoxelGrid(this->viewer->voxelGrid);
         this->gravityInterface->affectVoxelGrid(this->viewer->voxelGrid);
+        this->undoRedoInterface->affectVoxelGrid(this->viewer->voxelGrid);*/
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
@@ -76,6 +109,8 @@ ViewerInterface::ViewerInterface() {
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->tunnelInterface.get(), &TunnelInterface::needToClipView,
                      this->viewer, &Viewer::clipViewTemporarily);
+    QObject::connect(this->undoRedoInterface.get(), &UndoRedoInterface::updated,
+                     this, [&](){ this->viewer->update(); });
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
         this->setFocus(Qt::OtherFocusReason);
@@ -543,8 +578,8 @@ void ViewerInterface::setupUi()
     QObject::connect(gravityAction, &QAction::triggered, this, &ViewerInterface::openGravityInterface);
     QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
     QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
-    QObject::connect(undoAction, &QAction::triggered, this->viewer, &Viewer::undo);
-    QObject::connect(redoAction, &QAction::triggered, this->viewer, &Viewer::redo);
+    QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
+    QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
         this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES);
     });

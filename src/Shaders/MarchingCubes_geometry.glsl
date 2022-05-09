@@ -49,7 +49,7 @@ float cubeVal(int i){
     if (pos.x == 0 || pos.y == 0 || pos.z == 0) return -1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
     vec4 val = texture(dataFieldTex, cubePos(i)/texSize);
-    return val.a;
+    return val.a - 0.5;
 }
 
 //Get triangle table value
@@ -110,6 +110,12 @@ void main(void) {
     // Create the triangle
     /////// gl_FrontColor=vec4(cos(isolevel*10.0-0.5), sin(isolevel*10.0-0.5), cos(1.0-isolevel),1.0);
     int i=0;
+    vec3 normal;
+    if(triTableValue(cubeindex, 0)!=-1) {
+        vec3 edge1 = normalize((vertlist[triTableValue(cubeindex, 1)] - vertlist[triTableValue(cubeindex, 0)]));
+        vec3 edge2 = normalize((vertlist[triTableValue(cubeindex, 2)] - vertlist[triTableValue(cubeindex, 0)]));
+        normal = -normalize(cross(edge1, edge2));
+    }
 //    for (i=0; triTableValue(cubeindex, i) != -1 && i < 16; i+=3) { //Strange bug with this way, uncomment to test
     while(true){
         if(triTableValue(cubeindex, i)!=-1){
@@ -119,7 +125,7 @@ void main(void) {
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
             ginitialVertPos = position.xyz;
-            grealNormal = realNormal[0];
+            grealNormal = normal;
 //            outColor = vec4(1.0, 0.0, 0.0, 1.0);
             EmitVertex();
 
@@ -129,7 +135,7 @@ void main(void) {
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
             ginitialVertPos = position.xyz;
-            grealNormal = realNormal[0];
+            grealNormal = normal;
 //            outColor = vec4(0.0, 1.0, 0.0, 1.0);
             EmitVertex();
 
@@ -139,12 +145,13 @@ void main(void) {
             //Fill gl_Position attribute for vertex raster space position
             gl_Position = proj_matrix * mv_matrix * position;
             ginitialVertPos = position.xyz;
-            grealNormal = realNormal[0];
+            grealNormal = normal;
 //            outColor = vec4(0.0, 0.0, 1.0, 1.0);
             EmitVertex();
 
             //End triangle strip at firts triangle
             EndPrimitive();
+//            break;
         }else{
             break;
         }

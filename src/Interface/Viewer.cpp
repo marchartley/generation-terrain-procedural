@@ -9,8 +9,7 @@
 #include "Utils/Utils.h"
 #include <QTemporaryDir>
 
-Viewer::Viewer(QWidget *parent):
-    Viewer(
+Viewer::Viewer(QWidget *parent): Viewer(
         std::make_shared<Grid>("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/map2.png", 100, 100, 30, 1.0),
         std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
@@ -19,6 +18,10 @@ Viewer::Viewer(QWidget *parent):
         parent
         )
 {
+    if (parent != nullptr)
+        parent->installEventFilter(this);
+    this->mainCamera = this->camera();
+    this->flyingCamera = new qglviewer::Camera(*this->mainCamera);
 }
 Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
@@ -51,6 +54,8 @@ void Viewer::init() {
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_BLEND);
+    glEnable(GL_TEXTURE_2D);
+    glEnable(GL_TEXTURE_3D);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 
     this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
@@ -71,8 +76,8 @@ void Viewer::init() {
     const char* fNoShader = ":/src/Shaders/no_fragment_shader.glsl";
     const char* vParticleShader = ":/src/Shaders/particle_vertex_shader.glsl";
     const char* fParticleShader = ":/src/Shaders/particle_fragment_shader.glsl";
-    const char* vRockShader = ":/src/Shaders/rockShader.vert";
-    const char* fRockShader = ":/src/Shaders/rockShader.frag";
+    /*const char* vRockShader = ":/src/Shaders/rockShader.vert";
+    const char* fRockShader = ":/src/Shaders/rockShader.frag";*/
 
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
@@ -81,31 +86,10 @@ void Viewer::init() {
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
 //    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
-    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
-
-    this->debugMeshes[ROCK_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->debugMeshes[FAILED_ROCKS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->debugMeshes[FLOW_TRAILS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->debugMeshes[TUNNEL_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->debugMeshes[KARST_PATHS] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->debugMeshes[SPACE_COLONI] = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-
-    this->debugControlPoints[ROCK_TRAILS] = std::vector<ControlPoint*>();
-    this->debugControlPoints[FAILED_ROCKS] = std::vector<ControlPoint*>();
-    this->debugControlPoints[FLOW_TRAILS] = std::vector<ControlPoint*>();
-    this->debugControlPoints[TUNNEL_PATHS] = std::vector<ControlPoint*>();
-    this->debugControlPoints[KARST_PATHS] = std::vector<ControlPoint*>();
-    this->debugControlPoints[SPACE_COLONI] = std::vector<ControlPoint*>();
-
-    this->debugMeshes[ROCK_TRAILS].shader->setVector("color", std::vector<float>({86/255.f, 176/255.f, 12/255.f, .5f}));
-    this->debugMeshes[FAILED_ROCKS].shader->setVector("color", std::vector<float>({176/255.f, 72/255.f, 12/255.f, .4f}));
-    this->debugMeshes[FLOW_TRAILS].shader->setVector("color", std::vector<float>({143/255.f, 212/255.f, 255/255.f, .5f}));
-    this->debugMeshes[TUNNEL_PATHS].shader->setVector("color", std::vector<float>({152/255.f, 94/255.f, 209/255.f, 1.0}));
-    this->debugMeshes[KARST_PATHS].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
-    this->debugMeshes[SPACE_COLONI].shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.0}));
+//    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
     ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
-
+    /*
     QTemporaryDir tempDir;
     QDirIterator it(":/models_3d/", QDir::Files, QDirIterator::Subdirectories);
     this->possibleRocks = std::vector<Mesh>();
@@ -125,13 +109,7 @@ void Viewer::init() {
                                               int(random_gen::generate(0, possibleRocks.size())),
                                               Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ))
                                               ));
-    }
-
-    // Don't compute the indices for this meshes, there's no chance any two vertex are the same
-    for (auto& debugMesh : this->debugMeshes)
-        std::get<1>(debugMesh).useIndices = false;
-
-    this->matter_adder = RockErosion(this->erosionSize, 1.0);
+    }*/
 
     this->light = PositionalLight(
                 new float[4]{.5, .5, .5, 1.},
@@ -180,7 +158,7 @@ void Viewer::init() {
     if (voxelGrid != nullptr) {
 //        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
 //        voxelGrid->from2DGrid(*(this->grid));
-        voxelGrid->fromIsoData();
+        /*voxelGrid->fromIsoData();
         voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
         // TO REMOVE
         UnderwaterErosion tunnels(this->voxelGrid, 50.f, 3.f, 0);
@@ -217,13 +195,72 @@ void Viewer::init() {
         this->randomParticlesInWater.useIndices = false;
         this->randomParticlesInWater.fromArray(randomParticles);
         this->randomParticlesInWater.shader = std::make_shared<Shader>(vParticleShader, fParticleShader);
-        this->randomParticlesInWater.shader->setVector("color", std::vector<float>({46/255.f, 12/255.f, 200/255.f, .2f}));
+        this->randomParticlesInWater.shader->setVector("color", std::vector<float>({46/255.f, 12/255.f, 200/255.f, .2f}));*/
     }
 
     QObject::connect(this->spaceColonizationInterface.get(), &SpaceColonizationInterface::useAsMainCamera, this, &Viewer::swapCamera);
     QObject::connect(this->karstPathInterface.get(), &KarstPathGenerationInterface::useAsMainCamera, this, &Viewer::swapCamera);
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
+
+
+
+    /*Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
+    std::vector<Vector3> points(isoData.size());
+    for (size_t i = 0; i < points.size(); i++) {
+        isoData[i] = (std::max(-3.f, std::min(3.f, isoData[i])) / 6.f) + 0.5;
+        points[i] = isoData.getCoordAsVector3(i);
+    }
+    tryMarchingCubes.useIndices = false;
+    tryMarchingCubes.fromArray(points);*//*
+    tryMarchingCubes.shader->setInt("dataFieldTex", 0);
+    tryMarchingCubes.shader->setInt("edgeTableTex", 1);
+    tryMarchingCubes.shader->setInt("triTableTex", 2);
+    tryMarchingCubes.shader->setFloat("isolevel", 0.f);
+    tryMarchingCubes.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+    tryMarchingCubes.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+    tryMarchingCubes.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+    tryMarchingCubes.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+    tryMarchingCubes.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+    tryMarchingCubes.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+    tryMarchingCubes.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+    tryMarchingCubes.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+    //Edge Table texture//
+    //This texture store the 256 different configurations of a marching cube.
+    //This is a table accessed with a bitfield of the 8 cube edges states
+    //(edge cut by isosurface or totally in or out).
+    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
+    //Integer textures must use nearest filtering mode
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //We create an integer texture with new GL_EXT_texture_integer formats
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
+    //Triangle Table texture//
+    //This texture store the vertex index list for
+    //generating the triangles of each configurations.
+    glGenTextures(1, &triTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, triTableTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));*/
+    //Datafield//
+    //Store the volume data to polygonise
+//    tryMarchingCubes.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
+
+
 //    startAnimation();
     QGLViewer::init();
 }
@@ -291,115 +328,26 @@ void Viewer::draw() {
             if (this->voxelGrid == nullptr) {
                 std::cerr << "No voxel grid to display" << std::endl;
             } else {
-                for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
+                /*for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
                     vc->mesh.shader->setBool("clipPlaneActive", this->temporaryClipPlaneActivated);
                     vc->mesh.shader->setVector("clipPlaneDirection", this->clipPlaneDirection);
                     vc->mesh.shader->setVector("clipPlanePosition", this->clipPlanePosition);
-                }
+                }*/
+//                this->voxelGrid->display();
 /*
-                Matrix3<int> cubeEdges(256, 1);
-                for (int i = 0; i < 256; i++)
-                    cubeEdges[i] = MarchingCubes::cubeEdges[i];
-                Matrix3<int> triTable(16, 256);
-                for (int i = 0; i < 16; i++)
-                    for (int j = 0; j < 256; j++)
-                        triTable.at(i, j) = MarchingCubes::triangleTable[j][i];
-
-
-                Matrix3<float> isoData = this->voxelGrid->getVoxelValues().resize(30, 30, 30);
-                std::vector<Vector3> points(isoData.size());
-                for (size_t i = 0; i < points.size(); i++) {
-                    points[i] = isoData.getCoordAsVector3(i);
+                Matrix3<float> values = voxelGrid->getVoxelValues();
+                if (tryMarchingCubes.vertexArray.size() != values.size()) {
+                    std::vector<Vector3> points(values.size());
+                    for (size_t i = 0; i < values.size(); i++)
+                        points[i] = values.getCoordAsVector3(i);
+                    tryMarchingCubes.fromArray(points);
                 }
+                tryMarchingCubes.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);*/
+//                tryMarchingCubes.display( GL_POINTS );
 
-                this->voxelGrid->mesh.useIndices = false;
-                this->voxelGrid->mesh.fromArray(points);
-            //    std::cout << "Setting voxel grid with " << points.size()*3 << " points because we use " << isoData << std::endl;
-                this->voxelGrid->mesh.shader->setTexture3D("dataFieldTex", 0, isoData);
-                this->voxelGrid->mesh.shader->setTexture2D("edgeTableTex", 1, cubeEdges);
-                this->voxelGrid->mesh.shader->setTexture2D("triTableTex", 2, triTable);
-                this->voxelGrid->mesh.shader->setFloat("isolevel", 0.f);
-                this->voxelGrid->mesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
-                this->voxelGrid->mesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+                if (this->terrainGenerationInterface)
+                    terrainGenerationInterface->display();
 
-*/
-                this->voxelGrid->display();
-                /*
-                tryMarchingCubes.shader->use();
-                GLuint edgeTableTex, triTableTex, dataFieldTex;
-                //Edge Table texture//
-                //This texture store the 256 different configurations of a marching cube.
-                //This is a table accessed with a bitfield of the 8 cube edges states
-                //(edge cut by isosurface or totally in or out).
-                //(cf. MarchingCubes.cpp)
-                GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
-                GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
-                glEnable(GL_TEXTURE_2D);
-                glBindTexture(GL_TEXTURE_2D, edgeTableTex);
-                //Integer textures must use nearest filtering mode
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-                //We create an integer texture with new GL_EXT_texture_integer formats
-                glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
-                GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
-                //Triangle Table texture//
-                //This texture store the vertex index list for
-                //generating the triangles of each configurations.
-                //(cf. MarchingCubes.cpp)
-                glGenTextures(1, &triTableTex);
-                GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
-                glEnable(GL_TEXTURE_2D);
-                glBindTexture(GL_TEXTURE_2D, triTableTex);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-                glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
-                GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
-                //Datafield//
-                //Store the volume data to polygonise
-                glGenTextures(1, &dataFieldTex);
-                GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
-                glEnable(GL_TEXTURE_3D);
-                glBindTexture(GL_TEXTURE_3D, dataFieldTex);
-                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-                Matrix3<float> isoData = voxelGrid->getVoxelValues();//.resize(15, 15, 15);
-                GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, isoData.sizeX, isoData.sizeY, isoData.sizeZ, 0,
-                GL_ALPHA, GL_FLOAT, isoData.data.data());
-                std::vector<Vector3> points(isoData.size());
-                for (size_t i = 0; i < points.size(); i++) {
-                    points[i] = isoData.getCoordAsVector3(i);
-                }
-                tryMarchingCubes.useIndices = false;
-                tryMarchingCubes.fromArray(points);
-                tryMarchingCubes.shader->setInt("dataFieldTex", 0);
-                tryMarchingCubes.shader->setInt("edgeTableTex", 1);
-                tryMarchingCubes.shader->setInt("triTableTex", 2);
-                tryMarchingCubes.shader->setFloat("isolevel", 0.f);
-                tryMarchingCubes.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
-                tryMarchingCubes.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
-                tryMarchingCubes.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
-                tryMarchingCubes.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
-                tryMarchingCubes.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
-                tryMarchingCubes.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
-                tryMarchingCubes.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
-                tryMarchingCubes.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
-                tryMarchingCubes.display( GL_POINTS );
-                */
             }
         }
         else if (this->mapMode == LAYER_MODE) {
@@ -414,10 +362,10 @@ void Viewer::draw() {
     GLfloat previousLineWidth[1];
     glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
     glLineWidth(5.f);
-    for (auto& debugMesh : this->debugMeshes) {
+    /*for (auto& debugMesh : this->debugMeshes) {*/
         /*std::get<1>(debugMesh).shader->setMatrix("proj_matrix", pMatrix);
         std::get<1>(debugMesh).shader->setMatrix("mv_matrix", mvMatrix);
-        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());*/
+        std::get<1>(debugMesh).shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());*//*
         std::get<1>(debugMesh).display(GL_LINES, 3.f);
     }
 
@@ -429,7 +377,7 @@ void Viewer::draw() {
             possibleRocks[iRock].shader->setVector("instanceOffset", pos);
             possibleRocks[iRock].display();
         }
-    }
+    }*/
 
     if (this->displayParticles) {
 
@@ -973,6 +921,7 @@ void Viewer::loadMapUI()
         voxelGrid->from2DGrid(*grid);
         voxelGrid->fromIsoData();
     } else if (ext == "JSON") {
+        // The JSON file contains the list of actions made on a map
         std::ifstream file(filename);
         std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         nlohmann::json json_content = nlohmann::json::parse(content);
@@ -987,6 +936,7 @@ void Viewer::loadMapUI()
             tunnelInterface->replay(action);
             flowFieldInterface->replay(action);
             manualEditionInterface->replay(action);
+            undoRedoInterface->replay(action);
         }
     } else {
         // Then it's our custom voxel grid file
@@ -1008,23 +958,6 @@ void Viewer::saveMapUI()
     if (this->voxelGrid)
         voxelGrid->saveMap(filename.toStdString());
 }
-
-void Viewer::undo()
-{
-    if (this->voxelGrid != nullptr) {
-        this->voxelGrid->undo();
-    }
-    this->update();
-}
-
-void Viewer::redo()
-{
-    if (this->voxelGrid != nullptr) {
-        this->voxelGrid->redo();
-    }
-    this->update();
-}
-
 
 bool Viewer::eventFilter(QObject* obj, QEvent* event)
 {

@@ -16,6 +16,8 @@
 #include "Interface/TunnelInterface.h"
 #include "Interface/ManualEditionInterface.h"
 #include "Interface/GravityInterface.h"
+#include "Interface/UndoRedoInterface.h"
+#include "Interface/TerrainGenerationInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -62,6 +64,10 @@ public:
     std::shared_ptr<TunnelInterface> tunnelInterface;
     std::shared_ptr<ManualEditionInterface> manualEditionInterface;
     std::shared_ptr<GravityInterface> gravityInterface;
+    std::shared_ptr<UndoRedoInterface> undoRedoInterface;
+    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface;
+
+    std::vector<std::shared_ptr<ActionInterface>> actionInterfaces;
 
     QMenuBar* toolbox;
 
