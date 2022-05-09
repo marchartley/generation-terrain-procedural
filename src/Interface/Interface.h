@@ -49,6 +49,9 @@ public Q_SLOTS:
 
     void hideAllInteractiveParts();
 
+    void openMapUI();
+    void saveMapUI();
+
 public:
     StickyFrame* frame;
     std::string lastPanelOpenedByStickyFrame;
@@ -145,6 +148,7 @@ public:
 
     std::map<QWidget*, QWidget*> widgetsMapping;
 
+    std::string mapSavingFolder = "../saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;
 };
 
