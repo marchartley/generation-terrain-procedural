@@ -171,6 +171,8 @@ void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
 
 void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
 {
+    this->tileSize = tileSize;
+    this->maxHeight = max_height;
     int imgW, imgH, nbChannels;
     unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
     if (data == NULL)
@@ -198,12 +200,12 @@ void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, flo
     }
     stbi_image_free(data);
 
+    map = map.resize(nx, ny, 1);
     if (this->maxHeight == -1) {
         maxHeight = max;
     } else {
         map *= (maxHeight / max);
     }
-    map = map.resize(nx, ny, 1);
     this->vertices = Matrix3<Vector3>(map.sizeX, map.sizeY);
     this->normals = Matrix3<Vector3>(map.sizeX, map.sizeY);
     for (int x = 0; x < map.sizeX; x++) {
@@ -216,24 +218,32 @@ void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, flo
 
 void Grid::saveHeightmap(std::string heightmap_filename)
 {
+    std::string ext = toUpper(getExtention(heightmap_filename));
     int width = this->getSizeX();
     int height = this->getSizeY();
-    /*** NOTICE!! You have to use uint8_t array to pass in stb function  ***/
-    // Because the size of color is normally 255, 8bit.
-    // If you don't use this one, you will get a weird imge.
-    uint8_t* pixels = new uint8_t[width * height];
+    // To heightmap
+    std::vector<float> toFloatData(width*height);
+    std::vector<uint8_t> toIntData(width*height);
 
-    int index = 0;
-    for (int x = 0; x < width; x++)
-    {
-        for (int y = 0; y < height; y++)
-        {
-            uint8_t value = (uint8_t)this->vertices.at(x, y).z;
-            pixels[index++] = value;
-        }
+    float newHeight = this->maxHeight;
+    for (const auto& vert : this->vertices)
+        newHeight = std::max(newHeight, vert.z);
+
+    for (size_t i = 0; i < this->vertices.size(); i++) {
+        toFloatData[i] = this->vertices[i].z / newHeight;
+        toIntData[i] = toFloatData[i] * 255;
     }
-
-    // Here only one channel is used, maybe use more if more components are used
-    stbi_write_png(heightmap_filename.c_str(), width, height, 1, pixels, width);
-    delete[] pixels;
+    if (ext == "PNG")
+        stbi_write_png(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), this->getSizeX() * 1);
+    else if (ext == "JPG")
+        stbi_write_jpg(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), 95);
+    else if (ext == "BMP")
+        stbi_write_bmp(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+    else if (ext == "TGA")
+        stbi_write_tga(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+    else if (ext == "HDR")
+        stbi_write_hdr(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toFloatData.data());
+    else {
+        std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
+    }
 }
