@@ -77,6 +77,7 @@ uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
 uniform vec3 instanceOffset;
+uniform float sizeFactor = 1.f;
 
 out vec4 varyingColor;
 out vec3 varyingHalfH;
@@ -90,7 +91,7 @@ out vec3 initialVertPos;
 
 void main(void)
 {
-    vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + instanceOffset.z);
+    vec3 position = position.xyz * sizeFactor + vec3(offsetX + instanceOffset.x, offsetY + instanceOffset.y, instanceOffset.z);
 //    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
     vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     varyingColor = vec4(color, 1.0);

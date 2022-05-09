@@ -91,13 +91,13 @@ void TerrainGenerationInterface::prepareShader()
         QFile::copy(dir, newPath);
         Mesh m = Mesh(rocksShader);
         possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize().scale(10.f));
-        break;
     }
-    this->rocksIndicesAndPosition = std::vector<std::tuple<int, Vector3>>();
+    this->rocksIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>();
     for (int i = 0; i < numberOfRocksDisplayed; i++) {
-        rocksIndicesAndPosition.push_back(std::make_tuple<int, Vector3>(
+        rocksIndicesAndPositionAndSize.push_back(std::make_tuple<int, Vector3, float>(
                                               int(random_gen::generate(0, possibleRocks.size())),
-                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ))
+                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
+                                              random_gen::generate(1.0, 4.0)
                                               ));
     }
 }
@@ -112,24 +112,39 @@ void TerrainGenerationInterface::display()
         for (size_t i = 0; i < values.size(); i++)
             points[i] = values.getCoordAsVector3(i);
         marchingCubeMesh.fromArray(points);
-        this->rocksIndicesAndPosition = std::vector<std::tuple<int, Vector3>>();
+        this->rocksIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>();
         for (int i = 0; i < numberOfRocksDisplayed; i++) {
-            rocksIndicesAndPosition.push_back(std::make_tuple<int, Vector3>(
+            rocksIndicesAndPositionAndSize.push_back(std::make_tuple<int, Vector3, float>(
                                                   int(random_gen::generate(0, possibleRocks.size())),
-                                                  Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ))
-                                                  ));
+                                                  Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
+                                                  random_gen::generate(1.f, 4.f)
+                                                         ));
         }
     }
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
     marchingCubeMesh.display( GL_POINTS );
 
-    for (size_t i = 0; i < rocksIndicesAndPosition.size(); i++) {
+    values.raiseErrorOnBadCoord = false;
+    values.defaultValueOnBadCoord = -1.f;
+    for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
         int iRock;
         Vector3 pos;
-        std::tie(iRock, pos) = rocksIndicesAndPosition[i];
-        if (this->voxelGrid->getVoxelValue(pos) > 0) {
-            possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-            possibleRocks[iRock].display();
+        float size;
+        std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
+        // Must be on ground, and have water somewhere around
+        if (values.at(pos) > 0) {
+            bool isOnBorder = false;
+            for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
+                for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
+                    for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
+                        if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
+                            isOnBorder = true;
+                        }
+            if (isOnBorder) {
+                possibleRocks[iRock].shader->setVector("instanceOffset", pos);
+                possibleRocks[iRock].shader->setFloat("sizeFactor", size);
+                possibleRocks[iRock].display();
+            }
         }
     }
 }
@@ -178,7 +193,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmapGrid->loadFromHeightmap(filename, 127, 127, 255);
+        heightmapGrid->loadFromHeightmap(filename, 127, 127, 50);
         voxelGrid->from2DGrid(*heightmapGrid);
         voxelGrid->fromIsoData();
     } else if (ext == "JSON") {
@@ -214,7 +229,9 @@ void TerrainGenerationInterface::saveTerrain(std::string filename)
     if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
         // To heightmap
         this->heightmapGrid->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
-        std::vector<float> toFloatData(heightmapGrid->getSizeX() * heightmapGrid->getSizeY());
+        this->heightmapGrid->saveHeightmap(filename);
+
+        /*std::vector<float> toFloatData(heightmapGrid->getSizeX() * heightmapGrid->getSizeY());
         std::vector<int> toIntData(heightmapGrid->getSizeX() * heightmapGrid->getSizeY());
 
         for (size_t i = 0; i < heightmapGrid->vertices.size(); i++) {
@@ -230,7 +247,7 @@ void TerrainGenerationInterface::saveTerrain(std::string filename)
         else if (ext == "TGA")
             stbi_write_tga(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toIntData.data());
         else if (ext == "HDR")
-            stbi_write_hdr(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toFloatData.data());
+            stbi_write_hdr(filename.c_str(), heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 1, toFloatData.data());*/
     } else if (ext == "JSON") {
         // To JSON file containing the list of actions made on a map
         this->saveAllActions(filename);

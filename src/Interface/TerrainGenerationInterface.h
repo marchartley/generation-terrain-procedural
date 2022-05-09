@@ -43,8 +43,8 @@ protected:
 
     // TODO : Transform this into a "particle" system
     std::vector<Mesh> possibleRocks;
-    std::vector<std::tuple<int, Vector3>> rocksIndicesAndPosition;
-    int numberOfRocksDisplayed = 200;
+    std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
+    int numberOfRocksDisplayed = 500;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H
