@@ -40,7 +40,7 @@ class Matrix3
 {
 public:
     Matrix3();
-    Matrix3(size_t sizeX, size_t szeY, size_t sizeZ = 1, T initValue = T());
+    Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ = 1, T initValue = T());
     Matrix3(Vector3 size, T initValue = T());
     Matrix3(std::vector<std::vector<std::vector<T>>> data);
     Matrix3(std::vector<std::vector<T>> data);
@@ -53,6 +53,7 @@ public:
     T& operator[](size_t i);
     T& operator[](Vector3 pos);
 
+    Vector3 getDimensions() const;
     int getIndex(size_t x, size_t y, size_t z) const;
     int getIndex(Vector3 coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;

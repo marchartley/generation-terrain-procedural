@@ -66,7 +66,9 @@ SOURCES += \
         src/Interface/SpaceColonizationInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/StickyFrame.cpp \
+        src/Interface/TerrainGenerationInterface.cpp \
         src/Interface/TunnelInterface.cpp \
+        src/Interface/UndoRedoInterface.cpp \
         src/Interface/Viewer.cpp \
         src/Interface/VisitingCamera.cpp \
         src/Karst/KarstHole.cpp \
@@ -143,7 +145,9 @@ HEADERS += \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/StickyFrame.h \
+    src/Interface/TerrainGenerationInterface.h \
     src/Interface/TunnelInterface.h \
+    src/Interface/UndoRedoInterface.h \
     src/Interface/Viewer.h \
     src/Interface/VisitingCamera.h \
     src/Karst/KarstHole.h \

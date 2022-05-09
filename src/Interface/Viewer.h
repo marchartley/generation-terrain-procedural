@@ -25,6 +25,9 @@ class Viewer;
 #include "Interface/ManualEditionInterface.h"
 #include "Interface/FlowFieldInterface.h"
 #include "Interface/GravityInterface.h"
+#include "Interface/UndoRedoInterface.h"
+#include "Interface/TerrainGenerationInterface.h"
+#include "Interface/ActionInterface.h"
 
 enum MapMode {
     GRID_MODE  = 0b001,
@@ -108,8 +111,8 @@ public Q_SLOTS:
     void loadMapUI();
     void saveMapUI();
 
-    void undo();
-    void redo();
+//    void undo();
+//    void redo();
 
     void clipViewTemporarily(Vector3 direction, Vector3 center, bool active);
 
@@ -167,6 +170,8 @@ public:
     std::shared_ptr<FlowFieldInterface> flowFieldInterface = nullptr;
     std::shared_ptr<ManualEditionInterface> manualEditionInterface = nullptr;
     std::shared_ptr<GravityInterface> gravityInterface = nullptr;
+    std::shared_ptr<UndoRedoInterface> undoRedoInterface = nullptr;
+    std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = nullptr;
 
 //    TreeColonisationAlgo::TreeColonisation spaceColonizer;
 //    std::vector<BSpline> spaceColonizerPaths;
@@ -175,7 +180,7 @@ public:
     int current_frame = 0;
 
 
-    int getMaxLoDAvailable() { return this->voxelGrid->getMaxLoD(); }
+    int getMaxLoDAvailable() { return 8; /*return this->voxelGrid->getMaxLoD();*/ }
 
     bool addingMatterMode = true;
     RockErosion matter_adder;
@@ -244,6 +249,10 @@ public:
     // TODO : Transform this into a "particle" system
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3>> rocksIndicesAndPosition;
+
+
+
+    GLuint edgeTableTex, triTableTex, dataFieldTex;
 };
 
 

@@ -405,10 +405,10 @@ bool VoxelGrid::contains(float x, float y, float z) {
 
 void VoxelGrid::remeshAll()
 {
-
+    /*
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
-    }
+    }*/
 /*
     Matrix3<int> cubeEdges(256, 1);
     for (int i = 0; i < 256; i++)

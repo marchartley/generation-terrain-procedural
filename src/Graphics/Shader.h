@@ -38,12 +38,16 @@ public:
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
     void setTexture2D(std::string pname, int index, Matrix3<int> texture);
+    void setTexture2D(std::string pname, int index, int width, int height, int* data);
+    void setTexture2D(std::string pname, int index, int width, int height, int** data);
     void setTexture3D(std::string pname, int index, Matrix3<float> texture);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
 
     static std::string readShaderSource(std::string filename);
+
+    std::map<int, GLuint> textureSlotIndices;
 
     unsigned int programID = 0;
     const char* vertexShaderFilename;

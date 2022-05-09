@@ -170,39 +170,102 @@ void Shader::setMaterial(std::string pname, Material &value)
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
 {
-    /// WARNING: It should work as GL_TEXTURE1 is defined just after GL_TEXTURE0, but it may not be stable...
+    int **data = new int*[texture.sizeY];
+    for (int i = 0; i < texture.sizeY; i++) {
+        data[i] = new int[texture.sizeX];
+        for (int j = 0; j < texture.sizeX; j++) {
+            data[i][j] = texture.at(j, i);
+        }
+    }
+
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
     if (!this->use()) return;
-    GlobalsGL::f()->glGenTextures(1, &texIndex);
+    if (textureSlotIndices.count(textureSlot) == 0) {
+        glGenTextures(1, &texIndex);
+        textureSlotIndices[textureSlot] = texIndex;
+    }
+    texIndex = textureSlotIndices[textureSlot];
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glEnable(GL_TEXTURE_2D);
-    GlobalsGL::f()->glBindTexture(GL_TEXTURE_2D, texIndex);
-    //Integer textures must use nearest filtering mode
+    glBindTexture(GL_TEXTURE_2D, texIndex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //We create an integer texture with new GL_EXT_texture_integer formats
     glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, texture.sizeX, texture.sizeY, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, texture.data.data());
+    GL_ALPHA_INTEGER_EXT, GL_INT, data);
     this->setInt(pname, index);
 
+    for (int i = 0; i < texture.sizeX; i++)
+        delete[] data[i];
+    delete[] data;
+}
+
+void Shader::setTexture2D(std::string pname, int index, int width, int height, int *data)
+{
+    int textureSlot = GL_TEXTURE0 + index;
+
+    GLuint texIndex;
+    if (!this->use()) return;
+    if (textureSlotIndices.count(textureSlot) == 0) {
+        glGenTextures(1, &texIndex);
+        textureSlotIndices[textureSlot] = texIndex;
+    }
+    texIndex = textureSlotIndices[textureSlot];
+    GlobalsGL::f()->glActiveTexture(textureSlot);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texIndex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    this->setInt(pname, index);
+}
+
+void Shader::setTexture2D(std::string pname, int index, int width, int height, int **data)
+{
+    int textureSlot = GL_TEXTURE0 + index;
+
+    GLuint texIndex;
+    if (!this->use()) return;
+    if (textureSlotIndices.count(textureSlot) == 0) {
+        glGenTextures(1, &texIndex);
+        textureSlotIndices[textureSlot] = texIndex;
+    }
+    texIndex = textureSlotIndices[textureSlot];
+    GlobalsGL::f()->glActiveTexture(textureSlot);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texIndex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    this->setInt(pname, index);
 }
 
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
 {
-    /// WARNING: It should work as GL_TEXTURE1 is defined just after GL_TEXTURE0, but it may not be stable...
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
     if (!this->use()) return;
-    glGenTextures(1, &texIndex);
+    if (textureSlotIndices.count(textureSlot) == 0) {
+        glGenTextures(1, &texIndex);
+        textureSlotIndices[textureSlot] = texIndex;
+    }
+    texIndex = textureSlotIndices[textureSlot];
+
     GlobalsGL::f()->glActiveTexture(textureSlot);
-    glEnable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, texIndex);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
