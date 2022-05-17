@@ -44,6 +44,7 @@ public Q_SLOTS:
     void openFaultSlipInterface();
     void openFlowfieldInterface();
     void openKarstInterface();
+    void openKarstPeytavieInterface();
     void openTunnelInterface();
     void openManualEditionInterface();
     void openGravityInterface();

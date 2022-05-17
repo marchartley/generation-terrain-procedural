@@ -13,8 +13,9 @@ class KarstPathGenerationInterface;
 #include "TerrainGen/VoxelGrid.h"
 #include "Interface/PathCameraConstraint.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
+#include "Interface/ActionInterface.h"
 
-class KarstPathGenerationInterface : public CustomInteractiveObject
+class KarstPathGenerationInterface : public ActionInterface
 {
     Q_OBJECT
 public:
@@ -22,6 +23,7 @@ public:
 //    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
 
     void display();
+    void replay(nlohmann::json action);
 
     std::unique_ptr<InteractiveVector> fractureVector;
     std::unique_ptr<Slider3D> waterHeightSlider;

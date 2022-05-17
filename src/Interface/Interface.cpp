@@ -135,6 +135,7 @@ void ViewerInterface::setupUi()
     QIcon flowfieldIcon(":/icons/src/assets/flowfield_button.png");
     QIcon gravityIcon(":/icons/src/assets/gravity_button.png");
     QIcon karstIcon(":/icons/src/assets/karst_button.png");
+    QIcon karstPeytavieIcon(":/icons/src/assets/karst_peytavie_button.png");
     QIcon recordingIcon(":/icons/src/assets/recording_button.png");
     QIcon savingIcon(":/icons/src/assets/save_button.png");
     QIcon tunnelIcon(":/icons/src/assets/tunnel_button.png");
@@ -159,7 +160,8 @@ void ViewerInterface::setupUi()
 //    flowfieldAction->setShortcuts(QKeySequence::Open);
     QAction *gravityAction = new QAction(gravityIcon, "Gravité");
 //    gravityAction->setShortcuts(QKeySequence::Open);
-    QAction *karstAction = new QAction(karstIcon, "Création de karsts");
+    QAction *karstAction = new QAction(karstIcon, "Création de karsts par colonization d'espace");
+    QAction *karstPeytavieAction = new QAction(karstPeytavieIcon, "Création de karsts par graphe");
 //    karstAction->setShortcuts(QKeySequence::Open);
     QAction *recordingAction = new QAction(recordingIcon, "Enregistrement vidéo");
 //    recordingAction->setShortcuts(QKeySequence::);
@@ -229,7 +231,7 @@ void ViewerInterface::setupUi()
     QMenu* physicsMenu = new QMenu("Physiques");
     physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction});
     QMenu* diggingMenu = new QMenu("Creuser");
-    diggingMenu->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
+    diggingMenu->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
 
     QMenuBar* menu = new QMenuBar(this);
     menu->addMenu(fileMenu);
@@ -255,7 +257,7 @@ void ViewerInterface::setupUi()
     toolbar->addSeparator();
     toolbar->addActions({gravityAction, flowfieldAction, erosionAction});
     toolbar->addSeparator();
-    toolbar->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
+    toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
     toolbar->addSeparator();
     toolbar->addActions({wireModeAction, fillModeAction, noDisplayAction});
 
@@ -582,6 +584,7 @@ void ViewerInterface::setupUi()
     QObject::connect(faultSlipAction, &QAction::triggered, this, &ViewerInterface::openFaultSlipInterface);
     QObject::connect(flowfieldAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
     QObject::connect(karstAction, &QAction::triggered, this, &ViewerInterface::openKarstInterface);
+    QObject::connect(karstPeytavieAction, &QAction::triggered, this, &ViewerInterface::openKarstPeytavieInterface);
     QObject::connect(recordingAction, &QAction::triggered, this->viewer, &Viewer::startStopRecording);
     QObject::connect(gravityAction, &QAction::triggered, this, &ViewerInterface::openGravityInterface);
     QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
@@ -795,6 +798,20 @@ void ViewerInterface::openKarstInterface()
         this->frame->setContent(mix);*/
         this->spaceColonization->show();
         this->frame->setContent(this->spaceColonization->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+void ViewerInterface::openKarstPeytavieInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "Karsts-Peytavie") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "Karsts-Peytavie";
+        this->karstPathGeneration->show();
+        this->frame->setContent(this->karstPathGeneration->createGUI());
         this->frame->show();
     }
     this->viewer->update();

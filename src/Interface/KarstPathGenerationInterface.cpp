@@ -4,7 +4,7 @@
 #include "Interface/InterfaceUtils.h"
 
 
-KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : CustomInteractiveObject(parent)
+KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : ActionInterface("karst-peytavie", parent)
 {
     this->karstCreator = new KarstPathsGeneration();
     this->sourceControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
@@ -21,15 +21,24 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : Cu
 
 void KarstPathGenerationInterface::display()
 {
-    this->sourceControlPoint->display();
-    this->fractureVector->display();
-    if (this->waterLevelMesh.shader != nullptr)
-        this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
-    this->waterLevelMesh.display(GL_LINES, 5.f);
-    if (this->pathsMeshes.shader != nullptr)
-        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-    this->pathsMeshes.display(GL_LINES, 5.f);
-    this->waterHeightSlider->display();
+    if (this->isVisible()) {
+        this->sourceControlPoint->display();
+        this->fractureVector->display();
+        if (this->waterLevelMesh.shader != nullptr)
+            this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
+        this->waterLevelMesh.display(GL_LINES, 5.f);
+        if (this->pathsMeshes.shader != nullptr)
+            this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+        this->pathsMeshes.display(GL_LINES, 5.f);
+        this->waterHeightSlider->display();
+    }
+}
+
+void KarstPathGenerationInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        // Nothing for now
+    }
 }
 
 void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -66,7 +75,7 @@ void KarstPathGenerationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> vo
             }
         }
     }
-    this->karstCreator = new KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 10.f);
+    this->karstCreator = new KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
 }
 
 void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
@@ -74,12 +83,16 @@ void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
     if (karstCreator->fracturesDirections.empty())
         this->karstCreator->addFractureDirection(FractureDirection(Vector3(0, 0, 0), 1.f));
     karstCreator->fracturesDirections.back().direction = newFractureDir;
+    /// For demonstration purpose only
+    this->computeKarst();
 }
 
 void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
 {
+    this->AABBoxMinPos = Vector3(0, 0, 0);
+    this->AABBoxMaxPos = voxelGrid->getDimensions();
     if (karstCreator->waterHeights.empty())
-        this->karstCreator->addWaterHeight(WaterHeight(0.f, 1.f));
+        this->karstCreator->addWaterHeight(WaterHeight(0.f, 20.f, 2.0));
     karstCreator->waterHeights.back().height = newHeight;
     Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
     Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
@@ -90,15 +103,19 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
                                         AABBoxMinPos + offX + offY + offZ, AABBoxMinPos + offY + offZ,
                                         AABBoxMinPos + offY + offZ, AABBoxMinPos + offZ}
                                    });
+    /// For demonstration purpose only
+    this->computeKarst();
 }
 
 void KarstPathGenerationInterface::computeKarst()
 {
+    if (karstCreator->graph.nodes.empty()) return;
     Matrix3<float> porosityMap(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
+    Matrix3<float> voxelValues = voxelGrid->getVoxelValues();
     for (int x = 0; x < porosityMap.sizeX; x++) {
         for (int y = 0; y < porosityMap.sizeY; y++) {
             for (int z = 0; z < porosityMap.sizeZ; z++) {
-                float voxelVal = voxelGrid->getVoxelValue(x, y, z);
+                float voxelVal = voxelValues.at(x, y, z);
                 if (voxelVal > 0) {
                     porosityMap.at(x, y, z) = voxelVal;
                 }
@@ -206,11 +223,16 @@ QHBoxLayout *KarstPathGenerationInterface::createGUI()
 
     QObject::connect(karstCreationPreviewButton, &QPushButton::pressed, this, [=](){ this->computeKarst(); } );
     QObject::connect(karstCreationConfirmButton, &QPushButton::pressed, this, [=](){ this->createKarst(); } );
-    QObject::connect(karstCreationDistanceWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->distanceWeight = val; } );
-    QObject::connect(karstCreationFractureWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->fractureWeight = val; } );
-    QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->waterHeightWeight = val; } );
-    QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->porosityWeight = val; } );
-    QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->gamma = val; } );
+    QObject::connect(karstCreationDistanceWeights, &FancySlider::floatValueChanged, this, [=](float val){
+        this->karstCreator->distanceWeight = val; this->computeKarst(); } );
+    QObject::connect(karstCreationFractureWeights, &FancySlider::floatValueChanged, this, [=](float val){
+        this->karstCreator->fractureWeight = val; this->computeKarst(); } );
+    QObject::connect(karstCreationWaterWeights, &FancySlider::floatValueChanged, this, [=](float val){
+        this->karstCreator->waterHeightWeight = val; this->computeKarst(); } );
+    QObject::connect(karstCreationPorosityWeights, &FancySlider::floatValueChanged, this, [=](float val){
+        this->karstCreator->porosityWeight = val; this->computeKarst(); } );
+    QObject::connect(karstCreationGamma, &FancySlider::floatValueChanged, this, [=](float val){
+        this->karstCreator->gamma = val; this->computeKarst(); } );
     QObject::connect(karstCreationTortuosity, &FancySlider::floatValueChanged, this, [=](float val){ this->karstCreator->updateTortuosity(val, {0}); this->updateKarstPath(); } );
     QObject::connect(karstCreationDisplay, &QCheckBox::toggled, this, &KarstPathGenerationInterface::setVisibility);
     QObject::connect(karstCreationChangeCam, &QCheckBox::toggled, this, [=](bool display){
