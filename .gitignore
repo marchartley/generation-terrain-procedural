@@ -46,3 +46,14 @@ build/Makefile
 build/qrc_qmake_qmake_immediate.cpp
 generation-terrain-procedural.pro.user
 *.dat
+src/assets/models/coral_1_bottom_watertight.stl
+src/assets/models/coral_1_top_watertight.stl
+src/assets/models/coral_2_whole_watertight.stl
+src/assets/models/coral_4_whole_watertight.stl
+src/assets/models/coral_5_top_and_bottom_unwatertight.stl
+src/assets/models/coral_5_top_watertight.stl
+src/assets/models/coral_6_watertight_fixed.stl
+src/assets/models/coral_8_watertight.stl
+src/assets/models/coral_9_watertight.stl
+src/assets/models/My_Scan_2.stl
+src/assets/models/plastic-reef-5-corals20191129-2115-1wwd1bd.zip
