@@ -11,6 +11,8 @@ int sign(float a);
 Vector3 segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3);
 Vector3 intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal);
 Vector3 intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereCenter, float sphereRadius, bool returnClosestPoint = true);
+bool intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 minAABBox, Vector3 maxAABBox);
+bool intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 boxCenter, Vector3 halfSizeX, Vector3 halfSizeY, Vector3 halfSizeZ);
 
 }
 

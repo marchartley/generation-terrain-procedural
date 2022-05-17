@@ -168,3 +168,66 @@ Vector3 Collision::intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vect
         return rayOrigin + rayDir * d2;
     }
 }
+
+bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 minAABBox, Vector3 maxAABBox)
+{
+    Vector3 box = maxAABBox - minAABBox;
+    return Collision::intersectionTriangleAABBox(t0, t1, t2, (minAABBox + maxAABBox)/2, Vector3(box.x * .5f, 0, 0), Vector3(0, box.y * .5f, 0), Vector3(0, 0, box.z * .5f));
+}
+
+std::tuple<float, float> project(std::vector<Vector3> vertices, Vector3 axis) {
+    float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::min();
+    float projection;
+    axis.normalize();
+
+    for (auto& v : vertices) {
+        projection = axis.dot(v);
+        proj_min = std::min(proj_min, projection);
+        proj_max = std::max(proj_max, projection);
+    }
+    return std::make_tuple(proj_min, proj_max);
+}
+bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 boxCenter, Vector3 halfSizeX, Vector3 halfSizeY, Vector3 halfSizeZ)
+{
+    // Taken from https://stackoverflow.com/a/17503268/9863298
+
+    std::vector<Vector3> boxNormals = {halfSizeX.normalized(), halfSizeY.normalized(), halfSizeZ.normalized()};
+    std::vector<Vector3> triPoints = {t0, t1, t2};
+    std::vector<Vector3> triEdges = {t1 - t0, t2 - t1, t0 - t2};
+    std::vector<Vector3> cubeVertices = {boxCenter - halfSizeX - halfSizeY - halfSizeZ,
+                                         boxCenter - halfSizeX - halfSizeY + halfSizeZ,
+                                         boxCenter - halfSizeX + halfSizeY - halfSizeZ,
+                                         boxCenter - halfSizeX + halfSizeY + halfSizeZ,
+                                         boxCenter + halfSizeX - halfSizeY - halfSizeZ,
+                                         boxCenter + halfSizeX - halfSizeY + halfSizeZ,
+                                         boxCenter + halfSizeX + halfSizeY - halfSizeZ,
+                                         boxCenter + halfSizeX + halfSizeY + halfSizeZ,
+                                         };
+
+    // Check that the projected triangle intersect the projected box on all the axis
+    float proj_min, proj_max, proj_min2, proj_max2;
+    for (int i = 0; i < 3; i++) {
+        std::tie(proj_min, proj_max) = project({t0, t1, t2}, boxNormals[i]);
+        std::tie(proj_min2, proj_max2) = project(cubeVertices, boxNormals[i]);
+        if (proj_min > proj_max2 || proj_max < proj_min2)
+            return false;
+    }
+
+    Vector3 normal = (t0 - t1).cross(t2 - t1).normalize();
+    float triOffset = normal.dot(t0);
+    std::tie(proj_min, proj_max) = project(cubeVertices, normal);
+    if (proj_min > triOffset || proj_max < triOffset)
+        return false;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            Vector3 axis = triEdges[i].cross(boxNormals[j]);
+            std::tie(proj_min, proj_max) = project(cubeVertices, axis);
+            std::tie(proj_min2, proj_max2) = project(triPoints, axis);
+            if(proj_max <= proj_min2 || proj_min >= proj_max2)
+                return false;
+        }
+    }
+
+    return true;
+}
