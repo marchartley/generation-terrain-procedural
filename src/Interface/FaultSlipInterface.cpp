@@ -29,20 +29,16 @@ void FaultSlipInterface::remesh()
     Vector3 p1 = this->firstSlipControlPoint->getPosition();
     Vector3 p2 = this->slipVector->getStartingVector();
     Vector3 p3 = p1 + this->slipVector->getResultingVector();
-    /*
-    Vector3 x1 = intersectionPointRayPlane(p1, p1 - p2, minAABB, Vector3(1, 0, 0));
-    Vector3 x2 = intersectionPointRayPlane(p1, p1 - p2, maxAABB, Vector3(1, 0, 0));
-    Vector3 y1 = intersectionPointRayPlane(p1, p1 - p2, minAABB, Vector3(0, 1, 0));
-    Vector3 y2 = intersectionPointRayPlane(p1, p1 - p2, maxAABB, Vector3(0, 1, 0));
-    Vector3 z1 = intersectionPointRayPlane(p1, p1 - p2, minAABB, Vector3(0, 0, 1));
-    Vector3 z2 = intersectionPointRayPlane(p1, p1 - p2, maxAABB, Vector3(0, 0, 1));*/
 
     Vector3 largeur  = (p2 - p1).normalize() * maxAABB;
     Vector3 hauteur = (p3 - p1).normalize() * maxAABB;
 
     this->planeMesh.fromArray({
                                   p1 - largeur - hauteur, p2 + largeur - hauteur, p1 - largeur + hauteur,
-                                  p1 - largeur + hauteur, p2 + largeur - hauteur, p2 + largeur + hauteur
+                                  p1 - largeur + hauteur, p2 + largeur - hauteur, p2 + largeur + hauteur,
+
+                                  p2 + largeur - hauteur, p1 - largeur - hauteur, p1 - largeur + hauteur,
+                                  p2 + largeur - hauteur, p1 - largeur + hauteur, p2 + largeur + hauteur
                               });
     this->planeMesh.update();
 }
@@ -50,7 +46,7 @@ void FaultSlipInterface::remesh()
 void FaultSlipInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->firstSlipControlPoint->move(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ));
-    this->slipVector->setPositions(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, 0));
+    this->slipVector->setPositions(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ / 2.f));
     this->voxelGrid = voxelGrid;
     this->remesh();
 
@@ -102,17 +98,7 @@ void FaultSlipInterface::computeFaultSlip()
     this->faultSlip.positiveSideFalling = positiveSideFalling;
     if (this->voxelGrid != nullptr)
     {
-//        Matrix3<float> previousState = this->voxelGrid->getVoxelValues();
         this->faultSlip.Apply(this->voxelGrid, true);
-/*
-        Matrix3<float> changes = this->voxelGrid->getVoxelValues() - previousState;
-        std::map<std::string, std::string> parameters = {
-            {"slipping_direction", vec3_to_json(slippingDirection).dump()},
-            {"slipping_distance", std::to_string(slippingDistance)},
-            {"first_point_pos", vec3_to_json(firstPointPos).dump()},
-            {"second_point_pos", vec3_to_json(secondPointPos).dump()},
-            {"positive_side", std::to_string(positiveSideFalling)}
-        };*/
         this->addTerrainAction(nlohmann::json({
                                                {"slipping_direction", vec3_to_json(slippingDirection)},
                                                {"slipping_distance", slippingDistance},
@@ -120,7 +106,6 @@ void FaultSlipInterface::computeFaultSlip()
                                                {"second_point_pos", vec3_to_json(secondPointPos)},
                                                {"positive_side", positiveSideFalling}
                                               }));
-        // this->addTerrainAction(TerrainAction(this->actionType, parameters, changes));
 
         Q_EMIT this->faultSlipApplied();
     }
@@ -150,6 +135,8 @@ void FaultSlipInterface::show()
 
 QLayout *FaultSlipInterface::createGUI()
 {
+    if (this->faultSlipLayout != nullptr) return faultSlipLayout;
+
     this->faultSlipLayout = new QHBoxLayout;
 
     this->faultApplyButton = new QPushButton("Chuter");

@@ -96,8 +96,8 @@ void main(void)
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
     float material_shininness = ground_material.shininness * (1 - upValue) + grass_material.shininness * upValue;
 
-    vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
-    vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
+    vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant)) * 2.0;
+    vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0) * 2.0;
 //    vec4 ambiantColor = vec4(varyingColor.xyz * .5, 1.0);
 //    vec4 ambiant = ((globalAmbiant * ambiantColor) + (light.ambiant * ambiantColor));
 //    vec4 diffuse = light.diffuse * (varyingColor*1.1) * max(cosTheta, 0.0);
@@ -110,6 +110,7 @@ void main(void)
     float fogFactor = clamp(((fogFar - dist) / (fogFar - fogNear)), 0.0, 1.0);
 
     fragColor = mix(fogColor, material_color, fogFactor);
+    fragColor = varyingColor;
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
 //    bool isLight = length(vec3(proj_matrix * vec4(light.position, 1.0)).yz*10 - vertEyeSpacePos.xy) < 1.0;

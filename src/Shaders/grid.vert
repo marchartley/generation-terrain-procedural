@@ -64,6 +64,8 @@ struct Material {
 uniform float offsetX;
 uniform float offsetY;
 
+uniform float time;
+
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
 uniform Material ground_material;
@@ -84,8 +86,8 @@ out vec3 vertEyeSpacePos;
 
 void main(void)
 {
-    vec3 position = vec3(position.x + offsetX, position.y + offsetY, position.z);
-    varyingColor = vec4(color, 1.0);
+    varyingColor = vec4(vec3(position.z) / 90.0, 1.0);
+    vec3 position = vec3(position.x + offsetX, position.y + offsetY, position.z * (sin(time) + 1.0)/2.0);
 
     varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
     varyingLightDir = light.position - varyingVertPos;

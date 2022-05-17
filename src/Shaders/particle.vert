@@ -5,10 +5,14 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
+uniform float time;
+uniform float maxTerrainHeight;
+
 out vec3 initialVertPos;
 
 void main(void)
 {
-    initialVertPos = position;
+    initialVertPos = position + vec3(0, 0, -0.05) * (time);
+    initialVertPos.z = mod(initialVertPos.z, maxTerrainHeight);
     gl_Position = proj_matrix * mv_matrix * vec4(initialVertPos, 1.0);
 }
