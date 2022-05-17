@@ -333,6 +333,8 @@ void Viewer::draw() {
         this->flowFieldInterface->display();
     if (this->manualEditionInterface)
         this->manualEditionInterface->display();
+    if (this->erosionInterface)
+        this->erosionInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux

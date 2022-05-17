@@ -20,5 +20,6 @@
         <file>src/assets/handle.png</file>
         <file>src/assets/no_display.png</file>
         <file>src/assets/wire_mode.png</file>
+        <file>src/assets/erosion.png</file>
     </qresource>
 </RCC>

@@ -51,6 +51,7 @@ SOURCES += \
         src/Interface/ActionInterface.cpp \
         src/Interface/ControlPoint.cpp \
         src/Interface/CustomInteractiveObject.cpp \
+        src/Interface/ErosionInterface.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
         src/Interface/FlowFieldInterface.cpp \
@@ -130,6 +131,7 @@ HEADERS += \
     src/Interface/ActionInterface.h \
     src/Interface/ControlPoint.h \
     src/Interface/CustomInteractiveObject.h \
+    src/Interface/ErosionInterface.h \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
     src/Interface/FlowFieldInterface.h \
