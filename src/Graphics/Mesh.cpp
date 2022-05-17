@@ -104,11 +104,11 @@ Mesh &Mesh::fromStl(std::string filename)
             trianglesVec3.push_back(Vector3(vertices[index]));
             indices.push_back(index);
 
-            index = stl_model.tri_corner_ind(itri, 2);
+            index = stl_model.tri_corner_ind(itri, 1);
             trianglesVec3.push_back(Vector3(vertices[index]));
             indices.push_back(index);
 
-            index = stl_model.tri_corner_ind(itri, 1);
+            index = stl_model.tri_corner_ind(itri, 2);
             trianglesVec3.push_back(Vector3(vertices[index]));
             indices.push_back(index);
         }

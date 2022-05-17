@@ -152,8 +152,8 @@ void main(void)
     ground_material.diffuse = vec4(.1, .8, .1, 1.);
     ground_material.ambiant = vec4(.5, .5, .5, 1.);
     ground_material.shininness = 32.;
-    if (min_vertice_positions.x > initialVertPos.x || initialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > initialVertPos.y || initialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > initialVertPos.z || initialVertPos.z > max_vertice_positions.z)
-        discard;
+//    if (min_vertice_positions.x > initialVertPos.x || initialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > initialVertPos.y || initialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > initialVertPos.z || initialVertPos.z > max_vertice_positions.z)
+//        discard;
 
     if (clipPlaneActive) {
         if (dot((initialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
@@ -162,7 +162,7 @@ void main(void)
     }
 
     Material material = ground_material;
-    vec3 N = normalize(varyingNormal + fbm3ToVec3(initialVertPos)*0.5);
+    vec3 N = -normalize(varyingNormal + fbm3ToVec3(initialVertPos)*0.5);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(-L, N);
@@ -170,7 +170,7 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-    float upValue = /*pow(*/clamp(dot(normalize(realNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(initialVertPos) * 0.5)), 0.0, 1.0)/*, 2)*/;
+    float upValue = clamp(dot(normalize(realNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(initialVertPos) * 0.5)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
@@ -178,9 +178,6 @@ void main(void)
 
     vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
     vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
-//    vec4 ambiantColor = vec4(varyingColor.xyz * .5, 1.0);
-//    vec4 ambiant = ((globalAmbiant * ambiantColor) + (light.ambiant * ambiantColor));
-//    vec4 diffuse = light.diffuse * (varyingColor*1.1) * max(cosTheta, 0.0);
     vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 3.0);
 
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
@@ -197,7 +194,6 @@ void main(void)
     vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
     vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
 
-    // vec4 fogColor = vec4( 54/255.f, 77/255.f, 108/255.f, 1.0); //vec4(0.2, 0.2, 0.2, 1.0);//vec4(0.7, 0.8, 0.9, 1.0);
     float fogStart = fogNear;
     float fogEnd = fogFar;
     float dist = length(vertEyeSpacePos);
@@ -211,11 +207,7 @@ void main(void)
 
         lumin = clamp(1 - (acos(dot(normalize(varyingLightDir), vec3(0.0, 0.0, 1.0))) - (cone_angle + epsilon))/(epsilon), 0.0, 1.0);
     }
-    if (gl_FrontFacing) // Ok, it's the wrong condition, but it looks like I did everything the wrong way around from the beggining so..... ¯\_(ツ)_/¯
+    if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
-
-//    fragColor = varyingColor; //vec4(1.0, 1.0, 1.0, 1.0);
-
-
 }

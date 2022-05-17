@@ -39,6 +39,8 @@ public:
     std::shared_ptr<Grid> heightmapGrid;
 
 protected:
+    void regenerateRocksAndParticles();
+
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
     GLuint edgeTableTex, triTableTex;
@@ -46,10 +48,12 @@ protected:
     // TODO : Transform this into a "particle" system
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
-    int numberOfRocksDisplayed = 500;
+    int numberOfRocksDisplayed = 5000;
 
     Mesh particlesMesh;
     std::vector<Vector3> randomParticlesPositions;
+
+    std::chrono::system_clock::time_point startingTime;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

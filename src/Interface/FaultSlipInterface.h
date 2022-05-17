@@ -31,7 +31,6 @@ public:
     Mesh planeMesh;
 
     QLayout* createGUI();
-    QHBoxLayout* faultSlipLayout;
 
 Q_SIGNALS:
     void faultSlipApplied();
@@ -50,6 +49,7 @@ protected:
 //    ControlPoint *secondSlipControlPoint;
     std::unique_ptr<InteractiveVector> slipVector;
 
+    QHBoxLayout* faultSlipLayout = nullptr;
     QPushButton* faultApplyButton;
     QCheckBox* faultSideApplied;
     QCheckBox* faultDisplayButton;

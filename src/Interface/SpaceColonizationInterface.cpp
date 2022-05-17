@@ -41,6 +41,11 @@ void SpaceColonizationInterface::display()
         if (this->pathsMeshes.shader != nullptr)
             this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
         this->pathsMeshes.display(GL_LINES, 5.f);
+    } else {
+        // Just make sure that they are not interacting when hidden
+        for (auto& ctrl : this->controlPoints) {
+            ctrl->hide();
+        }
     }
 }
 

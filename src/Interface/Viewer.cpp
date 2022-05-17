@@ -63,21 +63,10 @@ void Viewer::init() {
     setTextIsEnabled(true);
     setMouseTracking(true);
 
-    const char* vShader_grid = ":/src/Shaders/grid.vert";
-    const char* fShader_grid = ":/src/Shaders/grid.frag";
     const char* vShader_voxels = ":/src/Shaders/voxels.vert";
     const char* fShader_voxels = ":/src/Shaders/voxels.frag";
-    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes.vert";
-    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes.geom";
-    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
-//    const char* vShader_layer = ":/src/Shaders/layer_based.vert";
-//    const char* fShader_layer = ":/src/Shaders/layer_based.frag";
     const char* vNoShader = ":/src/Shaders/no_shader.vert";
     const char* fNoShader = ":/src/Shaders/no_shader.frag";
-    const char* vParticleShader = ":/src/Shaders/particle.vert";
-    const char* fParticleShader = ":/src/Shaders/particle.frag";
-    /*const char* vRockShader = ":/src/Shaders/rockShader.vert";
-    const char* fRockShader = ":/src/Shaders/rockShader.frag";*/
 
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
@@ -85,31 +74,9 @@ void Viewer::init() {
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
-//    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
-//    tryMarchingCubes = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels), true, GL_TRIANGLES);
     ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
-    /*
-    QTemporaryDir tempDir;
-    QDirIterator it(":/models_3d/", QDir::Files, QDirIterator::Subdirectories);
-    this->possibleRocks = std::vector<Mesh>();
-    std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (it.hasNext()) {
-        QString dir = it.next();
-        QString newPath = tempDir.path() + QFileInfo(dir).fileName();
-        QFile::copy(dir, newPath);
-        Mesh m = Mesh(rocksShader);
-        possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize().scale(10.f));
-        break;
-    }
-    size_t nb_rocks = 200;
-    this->rocksIndicesAndPosition = std::vector<std::tuple<int, Vector3>>();
-    for (size_t i = 0; i < nb_rocks; i++) {
-        rocksIndicesAndPosition.push_back(std::make_tuple<int, Vector3>(
-                                              int(random_gen::generate(0, possibleRocks.size())),
-                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ))
-                                              ));
-    }*/
+
 
     this->light = PositionalLight(
                 new float[4]{.5, .5, .5, 1.},
@@ -156,46 +123,7 @@ void Viewer::init() {
         this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
     }
     if (voxelGrid != nullptr) {
-//        voxelGrid->retrieveMap(this->mapSavingFolder + "cube.data");
-//        voxelGrid->from2DGrid(*(this->grid));
-        /*voxelGrid->fromIsoData();
-        voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
-        // TO REMOVE
-        UnderwaterErosion tunnels(this->voxelGrid, 50.f, 3.f, 0);
-        this->grid->fromVoxelGrid(*(voxelGrid));
-//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateTunnel(BSpline({{92, 27, 64}, {0, 67, 53}, {92, 79, 21}}), false, false, false));
-//        tunnels.CreateTunnel(BSpline({{0, 30, 30}, {92, 30, 30}}), false, false, false);
-//        tunnels.CreateTunnel(BSpline({{0, 60, 60}, {92, 60, 60}}), false, true, false);
-//        this->voxelGrid->letGravityMakeSandFall(false);
-//        this->debugMeshes[TUNNEL_PATHS].fromArray(tunnels.CreateCrack({75, 35, 90}, {27, 77, 90}));
-        this->voxelGrid->mesh.shader = std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels);
-        this->voxelGrid->createMesh();
-        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-            vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-        }
-        this->setSceneCenter(voxelGrid->getDimensions() * voxelGrid->getBlockSize() / 2.f);
 
-        Vector3 dim(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
-        this->randomParticlesDisplacementNoise.SetFrequency(0.1);
-        int number_of_particles = (voxelGrid->sizeX * voxelGrid->sizeY * voxelGrid->sizeZ) / 500;
-        this->randomParticlesInWater.colorsArray = std::vector<Vector3>(4 * number_of_particles);
-        std::vector<Vector3> randomParticles(4 * number_of_particles);
-        for (size_t i = 0; i < randomParticles.size(); i += 4) {
-            randomParticles[i+0] = Vector3(0, 0, 0);
-            randomParticles[i+1] = Vector3::random() * 0.5;
-            randomParticles[i+2] = Vector3::random() * 0.5;
-            randomParticles[i+3] = Vector3::random() * 0.5;
-
-            Vector3 pos(random_gen::generate() * dim.x, random_gen::generate() * dim.y, random_gen::generate() * dim.z);
-            this->randomParticlesInWater.colorsArray[i+0] = pos;
-            this->randomParticlesInWater.colorsArray[i+1] = pos;
-            this->randomParticlesInWater.colorsArray[i+2] = pos;
-            this->randomParticlesInWater.colorsArray[i+3] = pos;
-        }
-        this->randomParticlesInWater.useIndices = false;
-        this->randomParticlesInWater.fromArray(randomParticles);
-        this->randomParticlesInWater.shader = std::make_shared<Shader>(vParticleShader, fParticleShader);
-        this->randomParticlesInWater.shader->setVector("color", std::vector<float>({46/255.f, 12/255.f, 200/255.f, .2f}));*/
     }
 
     QObject::connect(this->spaceColonizationInterface.get(), &SpaceColonizationInterface::useAsMainCamera, this, &Viewer::swapCamera);
@@ -203,65 +131,7 @@ void Viewer::init() {
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
 
-
-
-    /*Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
-    std::vector<Vector3> points(isoData.size());
-    for (size_t i = 0; i < points.size(); i++) {
-        isoData[i] = (std::max(-3.f, std::min(3.f, isoData[i])) / 6.f) + 0.5;
-        points[i] = isoData.getCoordAsVector3(i);
-    }
-    tryMarchingCubes.useIndices = false;
-    tryMarchingCubes.fromArray(points);*//*
-    tryMarchingCubes.shader->setInt("dataFieldTex", 0);
-    tryMarchingCubes.shader->setInt("edgeTableTex", 1);
-    tryMarchingCubes.shader->setInt("triTableTex", 2);
-    tryMarchingCubes.shader->setFloat("isolevel", 0.f);
-    tryMarchingCubes.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
-    tryMarchingCubes.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
-    tryMarchingCubes.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
-    tryMarchingCubes.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
-    tryMarchingCubes.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
-    tryMarchingCubes.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
-    tryMarchingCubes.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
-    tryMarchingCubes.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
-    //Edge Table texture//
-    //This texture store the 256 different configurations of a marching cube.
-    //This is a table accessed with a bitfield of the 8 cube edges states
-    //(edge cut by isosurface or totally in or out).
-    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
-    //Integer textures must use nearest filtering mode
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //We create an integer texture with new GL_EXT_texture_integer formats
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
-    //Triangle Table texture//
-    //This texture store the vertex index list for
-    //generating the triangles of each configurations.
-    glGenTextures(1, &triTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, triTableTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));*/
-    //Datafield//
-    //Store the volume data to polygonise
-//    tryMarchingCubes.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
-
-
-//    startAnimation();
+    startAnimation();
     QGLViewer::init();
 }
 
@@ -281,20 +151,21 @@ void Viewer::draw() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 0);
+    this->light.position = Vector3(voxelGrid->sizeX / 2.0, voxelGrid->sizeY / 2.0, voxelGrid->sizeZ * 2.0);
+    //this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 100);
 
     float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};
     Material ground_material(
                     new float[4] {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
                     new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
-                    new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    100.f // 51.2f
+                    new float[4] {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    1.f // 51.2f
                     );
     Material grass_material(
                     new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
                     new float[4] {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
-                    new float[4] {250/255.f, 250/255.f, 250/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    100.f // 51.2f
+                    new float[4] {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    1.f // 51.2f
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
     float globalAmbiant[4] = {.10, .10, .10, 1.0};
@@ -308,6 +179,11 @@ void Viewer::draw() {
         shader->setVector("globalAmbiant", globalAmbiant, 4);
         shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
         shader->setBool("isSpotlight", this->usingSpotlight);
+        if (this->usingSpotlight) {
+            shader->setVector("light.position", this->camera()->position());
+        } else {
+            shader->setVector("light.position", (this->light.position + Vector3(this->camera()->position())) / 2.f);
+        }
         shader->setBool("display_light_source", true);
         shader->setVector("min_vertice_positions", minVoxelsShown());
         shader->setVector("max_vertice_positions", maxVoxelsShown());
@@ -318,7 +194,6 @@ void Viewer::draw() {
     if (this->terrainGenerationInterface)
         terrainGenerationInterface->display(this->mapMode, this->algorithm, this->displayParticles);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
     this->mainGrabber->display();
 
     if (this->karstPathInterface)
@@ -489,11 +364,12 @@ void Viewer::animate()
     /*if (voxelGrid) {
         voxelGrid->computeFlowfield();
         this->updateFlowfieldDebugMesh();
-    }*/
+    }*//*
     if (this->applyLetItFall)
         this->voxelGrid->makeItFall((this->applyLetSandFall ? -1.0 : 0.1));
     if (this->applyLetSandFall)
-        this->voxelGrid->letGravityMakeSandFall();
+        this->voxelGrid->letGravityMakeSandFall();*/
+    QGLViewer::animate();
 }
 
 Vector3 Viewer::minVoxelsShown()
@@ -509,7 +385,7 @@ Vector3 Viewer::maxVoxelsShown()
 }
 
 void Viewer::erodeMap(bool sendFromCam)
-{
+{/*
 //    this->voxelGrid->computeFlowfield();
     UnderwaterErosion erod(this->voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
     std::shared_ptr<Vector3> pos = nullptr;
@@ -522,7 +398,7 @@ void Viewer::erodeMap(bool sendFromCam)
         camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
 //        pos = std::make_shared<Vector3>(a.x, a.y, a.z);
         dir = std::make_shared<Vector3>(b.x, b.y, b.z);
-        // this->displayMessage( "Rocks launched from camera!" );*/
+        // this->displayMessage( "Rocks launched from camera!" );*//*
     } else {
         pos = nullptr;
         dir = std::make_shared<Vector3>(new Vector3(0.0, 0.0, 0.0));
@@ -543,7 +419,7 @@ void Viewer::erodeMap(bool sendFromCam)
     this->debugMeshes[FAILED_ROCKS].fromArray(asOneVector);
     this->debugMeshes[FAILED_ROCKS].update();
 
-//    updateFlowfieldDebugMesh();
+//    updateFlowfieldDebugMesh();*/
 }
 /*
 void Viewer::recomputeFlowfield()
@@ -591,12 +467,12 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->fogFar = 30.f;
         this->usingSpotlight = true;
 
-        if (!this->inFlyMode())
-            this->toggleCameraMode();
+//        if (!this->inFlyMode())
+//            this->toggleCameraMode();
     }
     else {
-        if (this->inFlyMode())
-            this->toggleCameraMode();
+//        if (this->inFlyMode())
+//            this->toggleCameraMode();
         this->usingMainCamera = true;
         this->setCamera(this->mainCamera);
         this->displayParticles = false;
@@ -608,7 +484,6 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
     if (alternativeCamera != nullptr && dynamic_cast<VisitingCamera*>(alternativeCamera) != nullptr) {
         dynamic_cast<VisitingCamera*>(alternativeCamera)->isVisiting = useAltCamera;
     }
-//    this->camera()->setFlySpeed(0);
 }
 
 void Viewer::frameInterpolated()

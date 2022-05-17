@@ -91,19 +91,21 @@ vec3 fbm3ToVec3(in vec3 st) {
     return vec3(fbm3(st), fbm3(st + 18.0), fbm3(st - 10.0));
 }
 
-in vec3 grealNormal;
-in vec3 ginitialVertPos;
-
 uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
-//Volume data field texture
 uniform sampler3D dataFieldTex;
 uniform float fogNear;
 uniform float fogFar;
 
+uniform bool clipPlaneActive;
+uniform vec3 clipPlanePosition;
+uniform vec3 clipPlaneDirection;
+
 out vec4 fragColor;
 
+in vec3 grealNormal;
+in vec3 ginitialVertPos;
 
 struct PositionalLight {
     vec4 ambiant;
@@ -119,11 +121,6 @@ struct Material {
     float shininness;
 };
 
-
-uniform bool clipPlaneActive;
-uniform vec3 clipPlanePosition;
-uniform vec3 clipPlaneDirection;
-
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
 uniform bool isSpotlight;
@@ -134,30 +131,27 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
-//in vec4 outColor;
-
 void main(void)
 {
-    vec3 position = ginitialVertPos;
-//    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
-    vec3 light_position = vec4(proj_matrix * mv_matrix * vec4(light.position, 1.0)).xyz;
-    vec3 varyingVertPos = vec4(proj_matrix * mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 varyingLightDir = light_position - varyingVertPos;
-    vec3 varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(grealNormal, 1.0)).xyz;
-    vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
-    vec3 vertEyeSpacePos = vec4(proj_matrix * mv_matrix * vec4(position, 1.0)).xyz;
-
-    if (min_vertice_positions.x > position.x || position.x > max_vertice_positions.x || min_vertice_positions.y > position.y || position.y > max_vertice_positions.y || min_vertice_positions.z > position.z || position.z > max_vertice_positions.z)
+    if (min_vertice_positions.x > ginitialVertPos.x || ginitialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > ginitialVertPos.y || ginitialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > ginitialVertPos.z || ginitialVertPos.z > max_vertice_positions.z)
         discard;
 
     if (clipPlaneActive) {
-        if (dot((position.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
+        if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
             discard;
         }
     }
 
     Material material = ground_material;
-    vec3 N = normalize(varyingNormal + fbm3ToVec3(position)*0.5);
+    vec3 position = ginitialVertPos.xyz;
+//    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
+    vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
+    vec3 varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
+    vec3 varyingLightDir = light_position - varyingVertPos;
+    vec3 varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(grealNormal, 1.0)).xyz;
+    vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
+    vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
+    vec3 N = -normalize(varyingNormal + fbm3ToVec3(ginitialVertPos)*0.5);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(-L, N);
@@ -165,10 +159,7 @@ void main(void)
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-//    fragColor = vec4(N, 1);
-//    return;
-
-    float upValue = clamp(dot(normalize(varyingNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(position) * 0.5)), 0.0, 1.0);
+    float upValue = clamp(dot(normalize(grealNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(ginitialVertPos) * 0.5)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
@@ -176,26 +167,22 @@ void main(void)
 
     vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
     vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
-//    vec4 ambiantColor = vec4(varyingColor.xyz * .5, 1.0);
-//    vec4 ambiant = ((globalAmbiant * ambiantColor) + (light.ambiant * ambiantColor));
-//    vec4 diffuse = light.diffuse * (varyingColor*1.1) * max(cosTheta, 0.0);
     vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 3.0);
 
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
 
     vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
-    float dist_source = length(light_pos - varyingVertPos) / 5.0;
-    float dist_cam = length(cam_pos - varyingVertPos) / 5.0;
+    float dist_source = length(light.position - ginitialVertPos) / 5.0;
+    float dist_cam = length(cam_pos - vertEyeSpacePos) / 5.0;
     float albedo = 1.0;
 
-    float depth = (90 - position.z) / 50; // Depth from surface, the "90" is hard-coded and should b given by the program
+    float depth = (textureSize(dataFieldTex, 0).z - ginitialVertPos.z); // Depth from surface, the "90" is hard-coded and should b given by the program
     vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
     vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005), 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
     vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
     vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
 
-    // vec4 fogColor = vec4( 54/255.f, 77/255.f, 108/255.f, 1.0); //vec4(0.2, 0.2, 0.2, 1.0);//vec4(0.7, 0.8, 0.9, 1.0);
     float fogStart = fogNear;
     float fogEnd = fogFar;
     float dist = length(vertEyeSpacePos);
@@ -212,6 +199,4 @@ void main(void)
     if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
-
-
 }

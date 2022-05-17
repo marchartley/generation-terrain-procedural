@@ -51,7 +51,7 @@ VoxelGrid::~VoxelGrid()
 void VoxelGrid::from2DGrid(Grid grid) {
     this->sizeX = grid.getSizeX();
     this->sizeY = grid.getSizeY();
-    this->sizeZ = grid.getMaxHeight() * 2; // Give space for arches or things
+    this->sizeZ = grid.getMaxHeight() * 3; // Give space for arches or things
     this->initMap();
 
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));

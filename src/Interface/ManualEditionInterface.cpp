@@ -6,10 +6,8 @@
 ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterface("manualEdit", parent)
 {
     this->grabber = std::make_unique<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
-    /*this->grabber->GrabberStateColor = {
-        {ACTIVE, std::vector<float>({.1f, .9f, .1f, 1.f})},
-        {INACTIVE, std::vector<float>({.9f, .1f, .1f, 1.f})},
-    };*/
+    this->grabber->setGrabberStateColor(POSITIVE, std::vector<float>({.1f, .9f, .1f, .2f}));
+    this->grabber->setGrabberStateColor(NEGATIVE, std::vector<float>({.9f, .1f, .1f, .2f}));
     setAddingMode(addingMode);
 }
 
