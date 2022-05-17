@@ -52,6 +52,7 @@ enum DebugMeshesNames {
 #include "Interface/GravityInterface.h"
 #include "Interface/UndoRedoInterface.h"
 #include "Interface/TerrainGenerationInterface.h"
+#include "Interface/ErosionInterface.h"
 #include "Interface/ActionInterface.h"
 
 
@@ -174,6 +175,7 @@ public:
     std::shared_ptr<GravityInterface> gravityInterface = nullptr;
     std::shared_ptr<UndoRedoInterface> undoRedoInterface = nullptr;
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = nullptr;
+    std::shared_ptr<ErosionInterface> erosionInterface = nullptr;
 
 //    TreeColonisationAlgo::TreeColonisation spaceColonizer;
 //    std::vector<BSpline> spaceColonizerPaths;

@@ -18,6 +18,7 @@
 #include "Interface/GravityInterface.h"
 #include "Interface/UndoRedoInterface.h"
 #include "Interface/TerrainGenerationInterface.h"
+#include "Interface/ErosionInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -46,6 +47,7 @@ public Q_SLOTS:
     void openTunnelInterface();
     void openManualEditionInterface();
     void openGravityInterface();
+    void openErosionInterface();
 
     void hideAllInteractiveParts();
 
@@ -69,6 +71,7 @@ public:
     std::shared_ptr<GravityInterface> gravityInterface;
     std::shared_ptr<UndoRedoInterface> undoRedoInterface;
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface;
+    std::shared_ptr<ErosionInterface> erosionInterface;
 
     std::vector<std::shared_ptr<ActionInterface>> actionInterfaces;
 

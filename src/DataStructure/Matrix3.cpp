@@ -17,12 +17,6 @@ Matrix3<Vector3> Matrix3<Vector3>::curl() {
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::rot() { return this->curl(); }
 
-template<class T>
-Vector3 Matrix3<T>::getDimensions() const
-{
-    return Vector3(this->sizeX, this->sizeY, this->sizeZ);
-}
-
 template<>
 Matrix3<float> Matrix3<Vector3>::divergence()
 {

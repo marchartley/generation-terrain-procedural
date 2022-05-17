@@ -56,6 +56,13 @@ ViewerInterface::ViewerInterface() {
     this->terrainGenerationInterface->hide();
     this->terrainGenerationInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
+    this->erosionInterface = std::make_shared<ErosionInterface>(this);
+    this->viewer->erosionInterface = this->erosionInterface;
+    this->erosionInterface->viewer = this->viewer;
+    this->erosionInterface->hide();
+    this->erosionInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
+
     this->actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>(
                                                                               {
                                                                                   spaceColonization,
@@ -65,7 +72,8 @@ ViewerInterface::ViewerInterface() {
                                                                                   manualEditionInterface,
                                                                                   gravityInterface,
                                                                                   undoRedoInterface,
-                                                                                  terrainGenerationInterface
+                                                                                  terrainGenerationInterface,
+                                                                                  erosionInterface
                                                                               });
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
@@ -77,14 +85,6 @@ ViewerInterface::ViewerInterface() {
         this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
         for (auto& actionInterface : this->actionInterfaces)
             actionInterface->affectVoxelGrid(this->viewer->voxelGrid);
-        /*
-        this->spaceColonization->affectVoxelGrid(this->viewer->voxelGrid);
-        this->faultSlip->affectVoxelGrid(this->viewer->voxelGrid);
-        this->flowField->affectVoxelGrid(this->viewer->voxelGrid);
-        this->tunnelInterface->affectVoxelGrid(this->viewer->voxelGrid);
-        this->manualEditionInterface->affectVoxelGrid(this->viewer->voxelGrid);
-        this->gravityInterface->affectVoxelGrid(this->viewer->voxelGrid);
-        this->undoRedoInterface->affectVoxelGrid(this->viewer->voxelGrid);*/
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
@@ -110,6 +110,8 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->tunnelInterface.get(), &TunnelInterface::needToClipView,
                      this->viewer, &Viewer::clipViewTemporarily);
     QObject::connect(this->undoRedoInterface.get(), &UndoRedoInterface::updated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->erosionInterface.get(), &ErosionInterface::updated,
                      this, [&](){ this->viewer->update(); });
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
@@ -147,6 +149,7 @@ void ViewerInterface::setupUi()
     QIcon noDisplayIcon(":/icons/src/assets/no_display.png");
     QIcon wireModeIcon(":/icons/src/assets/wire_mode.png");
     QIcon fillModeIcon(":/icons/src/assets/fill_mode.png");
+    QIcon erosionIcon(":/icons/src/assets/erosion.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -197,6 +200,9 @@ void ViewerInterface::setupUi()
     //    tunnelAction->setShortcuts(QKeySequence::Open);
     fillModeAction->setChecked(true);
 
+    QAction *erosionAction = new QAction(erosionIcon, "Eroder la carte");
+
+
 
     QMenu* fileMenu = new QMenu("File");
     fileMenu->addActions({openAction, savingAction});
@@ -221,7 +227,7 @@ void ViewerInterface::setupUi()
     QMenu* recordingMenu = new QMenu("Enregistrements");
     recordingMenu->addActions({recordingAction});
     QMenu* physicsMenu = new QMenu("Physiques");
-    physicsMenu->addActions({gravityAction, flowfieldAction});
+    physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction});
     QMenu* diggingMenu = new QMenu("Creuser");
     diggingMenu->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
 
@@ -247,7 +253,7 @@ void ViewerInterface::setupUi()
     toolbar->addSeparator();
     toolbar->addActions({recordingAction});
     toolbar->addSeparator();
-    toolbar->addActions({gravityAction, flowfieldAction});
+    toolbar->addActions({gravityAction, flowfieldAction, erosionAction});
     toolbar->addSeparator();
     toolbar->addActions({tunnelAction, karstAction, manualEditAction, faultSlipAction});
     toolbar->addSeparator();
@@ -580,6 +586,7 @@ void ViewerInterface::setupUi()
     QObject::connect(gravityAction, &QAction::triggered, this, &ViewerInterface::openGravityInterface);
     QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
     QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
+    QObject::connect(erosionAction, &QAction::triggered, this, &ViewerInterface::openErosionInterface);
     QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
@@ -835,6 +842,21 @@ void ViewerInterface::openGravityInterface()
     this->viewer->update();
 }
 
+void ViewerInterface::openErosionInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "Erosion") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "Erosion";
+        this->erosionInterface->show();
+        this->frame->setContent(this->erosionInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
 void ViewerInterface::hideAllInteractiveParts()
 {
     this->karstPathGeneration->hide();
@@ -843,6 +865,8 @@ void ViewerInterface::hideAllInteractiveParts()
     this->flowField->hide();
     this->tunnelInterface->hide();
     this->manualEditionInterface->hide();
+    this->gravityInterface->hide();
+    this->erosionInterface->hide();
 
     this->viewer->update();
     this->update();

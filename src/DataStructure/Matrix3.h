@@ -1108,4 +1108,10 @@ Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
     returned.z = std::min(std::max(0.f, pos.z), (float)sizeZ);
     return returned;
 }
+
+template<class T>
+Vector3 Matrix3<T>::getDimensions() const
+{
+    return Vector3(this->sizeX, this->sizeY, this->sizeZ);
+}
 #endif // MATRIX3_H
