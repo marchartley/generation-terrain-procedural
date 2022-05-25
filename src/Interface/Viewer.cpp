@@ -57,6 +57,7 @@ void Viewer::init() {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_TEXTURE_3D);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    this->setBackgroundColor(QColor(127, 127, 127));
 
     this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
 

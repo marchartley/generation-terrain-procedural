@@ -42,6 +42,7 @@ float fbm3 (in vec3 st) {
     return fbm(st.xy + st.z);
 }
 
+in vec3 vertexPosition;
 in vec4 varyingColor;
 in vec3 varyingHalfH;
 
@@ -67,6 +68,13 @@ struct Material {
     float shininness;
 };
 
+uniform vec3 min_vertice_positions;
+uniform vec3 max_vertice_positions;
+
+uniform bool clipPlaneActive;
+uniform vec3 clipPlanePosition;
+uniform vec3 clipPlaneDirection;
+
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
 uniform Material ground_material;
@@ -80,6 +88,16 @@ uniform mat4 norm_matrix;
 
 void main(void)
 {
+
+    if (min_vertice_positions.x > vertexPosition.x || vertexPosition.x > max_vertice_positions.x || min_vertice_positions.y > vertexPosition.y || vertexPosition.y > max_vertice_positions.y || min_vertice_positions.z > vertexPosition.z || vertexPosition.z > max_vertice_positions.z)
+        discard;
+
+    if (clipPlaneActive) {
+        if (dot((vertexPosition.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
+            discard;
+        }
+    }
+
     Material material = ground_material;
     vec3 N = normalize(varyingNormal);
     vec3 L = normalize(varyingLightDir);
@@ -110,7 +128,7 @@ void main(void)
     float fogFactor = clamp(((fogFar - dist) / (fogFar - fogNear)), 0.0, 1.0);
 
     fragColor = mix(fogColor, material_color, fogFactor);
-    fragColor = varyingColor;
+//    fragColor = varyingColor;
 //    fragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
 //    bool isLight = length(vec3(proj_matrix * vec4(light.position, 1.0)).yz*10 - vertEyeSpacePos.xy) < 1.0;

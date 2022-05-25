@@ -15,6 +15,7 @@ void TerrainGenerationInterface::prepareShader()
     const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
 
     const char* vShader_grid = ":/src/Shaders/grid.vert";
+    const char* gShader_grid = ":/src/Shaders/grid.geom";
     const char* fShader_grid = ":/src/Shaders/grid.frag";
 
     const char* vRockShader = ":/src/Shaders/rockShader.vert";
@@ -106,7 +107,33 @@ void TerrainGenerationInterface::prepareShader()
     particlesMesh.shader->setVector("color", std::vector<float>({1.f, 1.f, 1.f, .2f}));
     this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
 
-    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
+    this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
+
+    Matrix3<float> heightData(this->heightmapGrid->getSizeX(), this->heightmapGrid->getSizeY());
+    std::vector<Vector3> positions(heightData.size());
+    for (size_t i = 0; i < positions.size(); i++) {
+        positions[i] = heightData.getCoordAsVector3(i);
+        heightData[i] = heightmapGrid->getHeight(positions[i].x, positions[i].y);
+    }
+    heightmapMesh.useIndices = false;
+    heightmapMesh.fromArray(positions);
+    heightmapMesh.update();
+    heightmapMesh.shader->use();
+    GlobalsGL::f()->glBindVertexArray(heightmapMesh.vao);
+    heightmapMesh.shader->setInt("heightmapFieldTex", 3);
+
+    glGenTextures(1, &heightmapFieldTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+    GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+
+//    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
 }
 
 void TerrainGenerationInterface::regenerateRocksAndParticles()
@@ -142,23 +169,41 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             std::cerr << "No grid to display" << std::endl;
         } else {
             float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
-            this->heightmapGrid->mesh.shader->setFloat("time", time);
-            this->heightmapGrid->display(true);
+            GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
+            glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
+            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+
+            this->heightmapMesh.display(GL_POINTS);
+//            this->heightmapGrid->mesh.shader->setFloat("time", time);
+//            this->heightmapGrid->display(true);
         }
     }
     else if (mapMode == VOXEL_MODE) {
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             Matrix3<float> values = voxelGrid->getVoxelValues();
             // Not the best check, but still pretty good....
             if (marchingCubeMesh.vertexArray.size() != values.size()) {
                 regenerateRocksAndParticles();
             }
             marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
+            marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
+            marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
+            marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             marchingCubeMesh.display( GL_POINTS );
-
+            if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
+                marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
+                marchingCubeMesh.shader->setFloat("min_isolevel", -1000.f);
+                marchingCubeMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
+                marchingCubeMesh.display( GL_POINTS );
+                marchingCubeMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
+                marchingCubeMesh.shader->setFloat("max_isolevel",  1000.f);
+                marchingCubeMesh.display( GL_POINTS );
+                marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false);
+            }
+/*
             values.raiseErrorOnBadCoord = false;
             values.defaultValueOnBadCoord = -1.f;
             for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
@@ -187,7 +232,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                 float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
                 particlesMesh.shader->setFloat("time", time); // std::chrono::system_clock::now().time_since_epoch().count());
                 particlesMesh.display(GL_POINTS);
-            }
+            }*/
         }
     }/*
     else if (mapMode == LAYER_MODE) {
@@ -245,7 +290,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmapGrid->loadFromHeightmap(filename, 127, 127, 50);
+        heightmapGrid->loadFromHeightmap(filename, 127, 127, 50); //50, 50, 50);
         voxelGrid->from2DGrid(*heightmapGrid);
         voxelGrid->fromIsoData();
     } else if (ext == "JSON") {
