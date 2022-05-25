@@ -148,6 +148,7 @@ public:
     QRadioButton* voxelsModeButton;
     QRadioButton* layerModeButton;
     FancySlider* LoDChooserSlider;
+    RangeSlider* isolevelSelectionSlider;
     QPushButton* LoDChooserConfirmButton;
 
     std::map<QWidget*, QWidget*> widgetsMapping;

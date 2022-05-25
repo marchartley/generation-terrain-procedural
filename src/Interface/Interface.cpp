@@ -536,11 +536,22 @@ void ViewerInterface::setupUi()
 
     // Display Level of Detail controls
     this->LoDChooserSlider = new FancySlider(Qt::Orientation::Horizontal, 0, this->viewer->getMaxLoDAvailable(), 1);
+    this->isolevelSelectionSlider = new RangeSlider(Qt::Orientation::Horizontal, 0.f, 3.f, 0.1f);
+    QCheckBox* isolevelSelectionActivation = new QCheckBox("Activer");
     this->LoDChooserConfirmButton = new QPushButton("Regénérer");
     LoDChooserLayout->addWidget(createSliderGroup("Niveau de détail", LoDChooserSlider));
+    LoDChooserLayout->addWidget(createMultipleSliderGroupWithCheckbox({
+                                                                          {"Densité", {isolevelSelectionSlider, isolevelSelectionActivation}}
+                                                                      }));
     LoDChooserLayout->addWidget(LoDChooserConfirmButton);
     LoDChooserBox->setContentLayout(*LoDChooserLayout);
     controlLayout->addWidget(LoDChooserBox); // TODO : Connect the slider and button
+    isolevelSelectionActivation->setChecked(true);
+    QObject::connect(isolevelSelectionActivation, &QCheckBox::toggled, this, [&](bool active) {
+        if (active) { this->terrainGenerationInterface->minIsoLevel = isolevelSelectionSlider->min_value(); this->terrainGenerationInterface->maxIsoLevel = isolevelSelectionSlider->max_value();}
+        else { this->terrainGenerationInterface->minIsoLevel = -1000.f; this->terrainGenerationInterface->maxIsoLevel = 1000.f; }
+        this->viewer->update();
+    });
 
     for (auto& child : controlLayout->children())
     {
@@ -562,7 +573,10 @@ void ViewerInterface::setupUi()
     displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
                                                      createSliderGroup("Niveau de détail", LoDChooserSlider),
-                                                     LoDChooserConfirmButton
+                                                     LoDChooserConfirmButton,
+                                                           createMultipleSliderGroupWithCheckbox({
+                                                               {"Densité", {isolevelSelectionSlider, isolevelSelectionActivation}}
+                                                           })
                                                  }));
     QGroupBox* displayOptionBox = new QGroupBox();
     displayOptionBox->setLayout(displayOptionLayout);
@@ -681,6 +695,11 @@ void ViewerInterface::setupBindings()
 
     QObject::connect(LoDChooserSlider, SIGNAL(valueChanged(int)), viewer, SLOT(setLoD(int)));
     QObject::connect(LoDChooserConfirmButton, &QPushButton::pressed, viewer, &Viewer::computeLoD);
+    QObject::connect(isolevelSelectionSlider, &RangeSlider::alt_valueChanged, this, [=](float min, float max){
+        this->terrainGenerationInterface->minIsoLevel = min;
+        terrainGenerationInterface->maxIsoLevel = max;
+        viewer->update();
+    });
 
 
     QObject::connect(karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated, this, [&](){ this->viewer->update(); });
