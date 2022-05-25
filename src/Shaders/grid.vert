@@ -83,20 +83,23 @@ out vec3 varyingLightDir;
 out vec3 varyingVertPos;
 out vec3 realNormal;
 out vec3 vertEyeSpacePos;
+out vec3 vertexPosition;
 
 void main(void)
 {
     varyingColor = vec4(vec3(position.z) / 90.0, 1.0);
-    vec3 position = vec3(position.x + offsetX, position.y + offsetY, position.z * (sin(time) + 1.0)/2.0);
 
-    varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
+    float heightFactor = 1.0; // (sin(time) + 1.0)/2.0;
+    vertexPosition = vec3(position.x + offsetX, position.y + offsetY, position.z * heightFactor);
+
+    varyingVertPos = vec4(mv_matrix * vec4(vertexPosition, 1.0)).xyz;
     varyingLightDir = light.position - varyingVertPos;
     varyingNormal = vec4(norm_matrix * vec4(normal, 1.0)).xyz;
     varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
 
     realNormal = normal; //vec3(mv_matrix * vec4(normal, 1.0)).xyz;
-    vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
+    vertEyeSpacePos = vec4(mv_matrix * vec4(vertexPosition, 1.0)).xyz;
 
-    gl_Position = proj_matrix * mv_matrix * vec4(position, 1.0);
+    gl_Position = proj_matrix * mv_matrix * vec4(vertexPosition, 1.0);
 
 }

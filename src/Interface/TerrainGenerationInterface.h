@@ -37,21 +37,26 @@ public Q_SLOTS:
 public:
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<Grid> heightmapGrid;
+    float minIsoLevel = -1000.0;
+    float maxIsoLevel =  1000.0;
 
 protected:
     void regenerateRocksAndParticles();
 
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
+    Mesh heightmapMesh;
+    GLuint heightmapFieldTex;
     GLuint edgeTableTex, triTableTex;
 
     // TODO : Transform this into a "particle" system
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
-    int numberOfRocksDisplayed = 5000;
+    int numberOfRocksDisplayed = 0;
 
     Mesh particlesMesh;
     std::vector<Vector3> randomParticlesPositions;
+
 
     std::chrono::system_clock::time_point startingTime;
 };
