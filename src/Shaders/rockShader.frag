@@ -129,6 +129,7 @@ struct Material {
     float shininness;
 };
 
+uniform vec3 instanceOffset;
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
 uniform bool isSpotlight;
@@ -152,11 +153,11 @@ void main(void)
     ground_material.diffuse = vec4(.1, .8, .1, 1.);
     ground_material.ambiant = vec4(.5, .5, .5, 1.);
     ground_material.shininness = 32.;
-//    if (min_vertice_positions.x > initialVertPos.x || initialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > initialVertPos.y || initialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > initialVertPos.z || initialVertPos.z > max_vertice_positions.z)
-//        discard;
+    if (min_vertice_positions.x > instanceOffset.x || instanceOffset.x > max_vertice_positions.x || min_vertice_positions.y > instanceOffset.y || instanceOffset.y > max_vertice_positions.y || min_vertice_positions.z > instanceOffset.z || instanceOffset.z > max_vertice_positions.z)
+        discard;
 
     if (clipPlaneActive) {
-        if (dot((initialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
+        if (dot((instanceOffset.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
             discard;
         }
     }
