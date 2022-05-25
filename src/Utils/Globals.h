@@ -30,6 +30,10 @@ public:
         std::uniform_real_distribution<float> distribution(min, max);
         return distribution(random_gen::random_generator);
     }
+    static float generate(float max) {
+        std::uniform_real_distribution<float> distribution(0.f, max);
+        return distribution(random_gen::random_generator);
+    }
 };
 
 class GlobalsGL {

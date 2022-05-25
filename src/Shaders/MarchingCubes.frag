@@ -127,6 +127,8 @@ uniform bool isSpotlight;
 uniform Material ground_material;
 uniform Material grass_material;
 
+uniform bool displayingIgnoredVoxels = false;
+
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
@@ -173,13 +175,16 @@ void main(void)
 
     vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
-    float dist_source = length(light.position - ginitialVertPos) / 5.0;
-    float dist_cam = length(cam_pos - vertEyeSpacePos) / 5.0;
-    float albedo = 1.0;
+    float dist_source = length(light.position - ginitialVertPos) / 50.0;
+    float dist_cam = length(cam_pos - vertEyeSpacePos) / 50.0;
+    float albedo = 3.14;
+//    float albedo = 1.0;
 
-    float depth = (textureSize(dataFieldTex, 0).z - ginitialVertPos.z); // Depth from surface, the "90" is hard-coded and should b given by the program
-    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
-    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005), 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
+    float depth = (textureSize(dataFieldTex, 0).z - ginitialVertPos.z) / 100.0; // Depth from surface, the "90" is hard-coded and should b given by the program
+    vec4 attenuation_coef = vec4(vec3(0.000245, 0.0027, 0.0020) * depth, 1.0);
+    vec4 absorbtion_coef = vec4(vec3(0.210, 0.75, 0.95), 1.0);
+//    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
+//    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005), 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
     vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
     vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
 
@@ -189,7 +194,7 @@ void main(void)
     float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
 
     float lumin = 1.0;
-    if (isSpotlight) {
+    if (isSpotlight && false) {
         float cone_angle = radians(20.0);
         float cone_cos_angle = cos(cone_angle);
         float epsilon = radians(10.0);
@@ -199,4 +204,7 @@ void main(void)
     if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
+
+    if (displayingIgnoredVoxels)
+        fragColor = vec4(0, 0, 0, 0.1);
 }
