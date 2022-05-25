@@ -22,5 +22,6 @@
         <file>src/assets/wire_mode.png</file>
         <file>src/assets/erosion.png</file>
         <file>src/assets/karst_peytavie_button.png</file>
+        <file>src/assets/heightmap-erosion.png</file>
     </qresource>
 </RCC>

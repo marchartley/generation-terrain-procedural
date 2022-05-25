@@ -35,12 +35,16 @@ SOURCES += \
         src/DataStructure/Vector3.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
+        src/FastWFC/propagator.cpp \
+        src/FastWFC/wave.cpp \
+        src/FastWFC/wfc.cpp \
         src/FluidSimulation/FluidSimulation.cpp \
         src/Graph/Graph.cpp \
         src/Graph/FastPoissonGraph.cpp \
         src/Graph/GraphNode.cpp \
         src/Graph/Matrix3Graph.cpp \
         src/Graph/Pathfinding.cpp \
+        src/Graph/WaveFunctionCollapse.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
         src/Graphics/MarchingCubes.cpp \
@@ -56,6 +60,7 @@ SOURCES += \
         src/Interface/FaultSlipInterface.cpp \
         src/Interface/FlowFieldInterface.cpp \
         src/Interface/GravityInterface.cpp \
+        src/Interface/HeightmapErosionInterface.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
@@ -115,12 +120,26 @@ HEADERS += \
     src/DataStructure/Vector3.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
+    src/FastWFC/color.hpp \
+    src/FastWFC/direction.hpp \
+    src/FastWFC/external/rapidxml.hpp \
+    src/FastWFC/image.hpp \
+    src/FastWFC/overlapping_wfc.hpp \
+    src/FastWFC/propagator.hpp \
+    src/FastWFC/rapidxml_utils.hpp \
+    src/FastWFC/tiling_wfc.hpp \
+    src/FastWFC/utils.hpp \
+    src/FastWFC/utils/array2D.hpp \
+    src/FastWFC/utils/array3D.hpp \
+    src/FastWFC/wave.hpp \
+    src/FastWFC/wfc.hpp \
     src/FluidSimulation/FluidSimulation.h \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \
     src/Graph/Matrix3Graph.h \
     src/Graph/Pathfinding.h \
+    src/Graph/WaveFunctionCollapse.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
     src/Graphics/MarchingCubes.h \
@@ -136,6 +155,7 @@ HEADERS += \
     src/Interface/FaultSlipInterface.h \
     src/Interface/FlowFieldInterface.h \
     src/Interface/GravityInterface.h \
+    src/Interface/HeightmapErosionInterface.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \
@@ -190,6 +210,7 @@ RESOURCES +=\
     src/Shaders/grabber.frag \
     src/Shaders/grabber.vert \
     src/Shaders/grid.frag \
+    src/Shaders/grid.geom \
     src/Shaders/grid.vert \
     src/Shaders/layer_based.frag \
     src/Shaders/layer_based.vert \
