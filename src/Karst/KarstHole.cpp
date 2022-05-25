@@ -1,5 +1,5 @@
 #include "KarstHole.h"
-
+#include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
 KarstHole::KarstHole(float width, float height, KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
@@ -212,10 +212,14 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
                                 });
         }
 
-        std::vector<std::vector<Vector3>> firstClosingShape = this->computeClosingMesh(allIntermediateVertices[i]); // For the first tunnel, compute the front shape
-        triangles.insert(triangles.end(), firstClosingShape.begin(), firstClosingShape.end()); // Compute the back closing shape and add the triangles.
-        std::vector<std::vector<Vector3>> closingShape = this->computeClosingMesh(allIntermediateVertices[i + 1]);
-        triangles.insert(triangles.end(), closingShape.begin(), closingShape.end()); // Compute the back closing shape and add the triangles.
+//        if (i == 0) {
+            std::vector<std::vector<Vector3>> firstClosingShape = this->computeClosingMesh(allIntermediateVertices[i]); // For the first tunnel, compute the front shape
+            triangles.insert(triangles.end(), firstClosingShape.begin(), firstClosingShape.end()); // Compute the back closing shape and add the triangles.
+//        } else if (i == allIntermediateVertices.size() - 2) {
+            std::vector<std::vector<Vector3>> closingShape = this->computeClosingMesh(allIntermediateVertices[i + 1]);
+            triangles.insert(triangles.end(), closingShape.begin(), closingShape.end()); // Compute the back closing shape and add the triangles.
+//        }
+
     }
     return triangles;
 }
@@ -225,12 +229,9 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
     std::vector<std::vector<Vector3>> triangles = precomputedTriangles;
     if (triangles.empty())
         triangles = this->generateMesh();
-    std::vector<Vector3> cylindersStart;
-    std::vector<Vector3> cylindersEnd;
 
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
     Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
-
     for (const auto& triangle : triangles) {
         for (const Vector3& pos : triangle) {
             minVec.x = std::min(minVec.x, pos.x);
@@ -246,6 +247,55 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
             pos -= minVec;
         }
     }
+    /*
+    Matrix3<float> mask((maxVec - minVec) + Vector3(1, 1, 1), 0);
+
+    for (auto& triangle : triangles) {
+        Vector3 minTriangle = mask.getDimensions(), maxTriangle = Vector3(0, 0, 0);
+        for (Vector3& pos : triangle) {
+            minTriangle.x = std::min(minTriangle.x, pos.x);
+            maxTriangle.x = std::max(maxTriangle.x, pos.x);
+            minTriangle.y = std::min(minTriangle.y, pos.y);
+            maxTriangle.y = std::max(maxTriangle.y, pos.y);
+            minTriangle.z = std::min(minTriangle.z, pos.z);
+            maxTriangle.z = std::max(maxTriangle.z, pos.z);
+        }
+        for (int x = minTriangle.x; x < maxTriangle.x; x++) {
+            for (int y = minTriangle.y; y < maxTriangle.y; y++) {
+                for (int z = minTriangle.z; z < maxTriangle.z; z++) {
+                    if (Collision::intersectionTriangleAABBox(triangle[0], triangle[1], triangle[2], Vector3(x, y, z), Vector3(x+1, y+1, z+1))) {
+                        mask.at(x, y, z) = 1.f;
+                    }
+                }
+            }
+        }
+    }
+
+    for (int x = 0; x < mask.sizeX; x++) {
+        for (int y = 0; y < mask.sizeY; y++) {
+            bool currentlyInside = false;
+            bool lastVoxelWasSurface = false;
+            for (int z = 0; z < mask.sizeZ; z++) {
+                if (mask.at(x, y, z) > 0) {
+                    if (!lastVoxelWasSurface) {
+                        currentlyInside = !currentlyInside;
+                    } else {
+                        lastVoxelWasSurface = true;
+                    }
+                } else if (currentlyInside) {
+                    mask.at(x, y, z) = 1.f;
+                    lastVoxelWasSurface = false;
+                }
+            }
+        }
+    }
+
+    Vector3 anchor = this->path.points[0] - minVec;
+    return std::make_tuple(mask, anchor);
+    */
+
+    std::vector<Vector3> cylindersStart;
+    std::vector<Vector3> cylindersEnd;
     for (auto& cylinder : this->cylinders) {
         cylindersStart.push_back(std::get<0>(cylinder) - minVec);
         cylindersEnd.push_back(std::get<1>(cylinder) - minVec);
@@ -280,12 +330,12 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                             lastTrianglesCylinder = triangle_group;
                             if (numberOfCollisions % 2 == 1) {
                                 break;
-                            }/*
-                            ignoreThisCylinder = false;
-                            float distToCylinder = shortestDistanceBetweenSegments(point, ray, cylindersStart[triangle_group], cylindersEnd[triangle_group]);
-                            if (distToCylinder > std::max(this->width, this->height)) {
-                                ignoreThisCylinder = true;
-                            }*/
+                            }
+//                            ignoreThisCylinder = false;
+//                            float distToCylinder = shortestDistanceBetweenSegments(point, ray, cylindersStart[triangle_group], cylindersEnd[triangle_group]);
+//                            if (distToCylinder > std::max(this->width, this->height)) {
+//                                ignoreThisCylinder = true;
+//                            }
                         }
                         // Ignore this calculation if it's not needed.
 //                        if (ignoreThisCylinder) {
@@ -310,9 +360,9 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
     }
 //    mask = mask.toDistanceMap();
 //    float maxDistance = mask.max();//this->size/2.f;
-//    /*for (float& m : mask) {
+//    for (float& m : mask) {
 //        if (m > maxDistance) m = maxDistance;
-//    }*/
+//    }
 ////    std::cout << "Min distances : " << mask.min() << " -- max : " << mask.max() << " -- clamped to " << maxDistance << "\n";
 ////    std::cout << mask.displayValues() << std::endl;
 //    for (float& m : mask) {

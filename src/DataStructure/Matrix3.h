@@ -62,6 +62,9 @@ public:
     bool checkCoord(Vector3 pos) const;
     bool checkIndex(size_t i) const;
 
+    T interpolate(Vector3 coord);
+    T interpolate(float x, float y, float z);
+
     int getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect = true) const;
     int getNumberNeighbors(Vector3 pos, bool using4connect = true) const;
 
@@ -109,6 +112,7 @@ public:
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
 
     void clear() { this->sizeX = 0; this->sizeY = 0; this->sizeZ = 0; return this->data.clear(); }
+    void reset(T newVal = T()) { for (auto& val : data) val = newVal; }
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
 
@@ -241,6 +245,42 @@ template<class T>
 bool Matrix3<T>::checkIndex(size_t i) const
 {
     return (0 <= i && i < sizeX * sizeY * sizeZ);
+}
+
+template<class T>
+T Matrix3<T>::interpolate(Vector3 coord)
+{
+    Vector3 round = coord.rounded();
+    Vector3 cellOffset = coord - round;
+
+    bool previousErrorConfig = this->raiseErrorOnBadCoord;
+    RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
+    this->raiseErrorOnBadCoord = false;
+    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    T f000 = this->at(round + Vector3(0, 0, 0));
+    T f100 = this->at(round + Vector3(1, 0, 0));
+    T f010 = this->at(round + Vector3(0, 1, 0));
+    T f110 = this->at(round + Vector3(1, 1, 0));
+    T f001 = this->at(round + Vector3(0, 0, 1));
+    T f101 = this->at(round + Vector3(1, 0, 1));
+    T f011 = this->at(round + Vector3(0, 1, 1));
+    T f111 = this->at(round + Vector3(1, 1, 1));
+    // Interpolation
+    T interpol = ((
+                              f000 * (1-cellOffset.x) + f100 * cellOffset.x) * (1-cellOffset.y) + (
+                              f010 * (1-cellOffset.x) + f110 * cellOffset.x) * cellOffset.y) * (1 - cellOffset.z) +
+                        ((
+                             f001 * (1-cellOffset.x) + f101 * cellOffset.x) * (1-cellOffset.y) + (
+                             f011 * (1-cellOffset.x) + f111 * cellOffset.x) * cellOffset.y) * cellOffset.z;
+    this->raiseErrorOnBadCoord = previousErrorConfig;
+    this->returned_value_on_outside = previousOutsideConfig;
+    return interpol;
+}
+
+template<class T>
+T Matrix3<T>::interpolate(float x, float y, float z)
+{
+    return interpolate(Vector3(x, y, z));
 }
 
 template<class T>
@@ -1103,9 +1143,9 @@ template<class T>
 Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
 {
     Vector3 returned;
-    returned.x = std::min(std::max(0.f, pos.x), (float)sizeX);
-    returned.y = std::min(std::max(0.f, pos.y), (float)sizeY);
-    returned.z = std::min(std::max(0.f, pos.z), (float)sizeZ);
+    returned.x = std::min(std::max(0.f, pos.x), (float)sizeX - 1);
+    returned.y = std::min(std::max(0.f, pos.y), (float)sizeY - 1);
+    returned.z = std::min(std::max(0.f, pos.z), (float)sizeZ - 1);
     return returned;
 }
 

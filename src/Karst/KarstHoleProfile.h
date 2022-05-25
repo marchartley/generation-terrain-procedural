@@ -13,6 +13,7 @@ enum KarstHolePredefinedShapes
     KEYHOLE = 3,
     CANYON = 4,
     CRACK = 5,
+    STAR = 6
 };
 
 class KarstHoleProfile
@@ -42,6 +43,7 @@ public:
     static BSpline createKeyholeProfile();
     static BSpline createCanyonProfile();
     static BSpline createCrackProfile();
+    static BSpline createStarProfile();
 
     BSpline vertices;
     Vector3 scaling = Vector3(1.f, 1.f, 1.f);

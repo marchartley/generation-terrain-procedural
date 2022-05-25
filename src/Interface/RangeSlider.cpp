@@ -10,7 +10,7 @@
 #include "qguiapplication.h"
 #include "qdir.h"
 #include <QProxyStyle>
-
+#include "Utils/Utils.h"
 #include <iostream>
 
 class SliderProxy : public QProxyStyle
@@ -68,7 +68,7 @@ RangeSliderHandle::RangeSliderHandle(float val, RangeSlider *_parent)
 
 void RangeSlider::sliderChange(SliderChange change)
 {
-
+    std::cout << "My value = " << this->value() << std::endl;
 }
 
 void RangeSlider::resizeEvent(QResizeEvent *e)
@@ -211,7 +211,11 @@ void RangeSliderHandle::setValue(float value)
 
 float RangeSliderHandle::value()
 {
-    return ((this->val - this->parent->minimum()) / (this->parent->maximum() - this->parent->minimum()) + parent->minimum()) / this->parent->multiplier;
+    int miniParent = this->parent->minimum();
+    int maxiParent = this->parent->maximum();
+    return interpolation::inv_linear(this->val, miniParent, maxiParent) * this->parent->multiplier;
+//    int miniParent2 = this->parent->m;
+//    return ((this->val - this->parent->minimum()) / (this->parent->maximum() - this->parent->minimum()) + parent->minimum()) / this->parent->multiplier;
     /*
   double width = parent->width(), position = pos().x();
   double value = position/width;

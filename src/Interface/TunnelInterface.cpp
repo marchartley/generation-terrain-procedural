@@ -95,14 +95,14 @@ QLayout* TunnelInterface::createGUI()
     startingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
     startingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
     startingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
-    startingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::CRACK);
+    startingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::STAR);
 
     endingShapeCombobox->addItem(tubeIcon, "Tube", KarstHolePredefinedShapes::TUBE);
     endingShapeCombobox->addItem(solubleIcon, "Soluble bed", KarstHolePredefinedShapes::SOLUBLE_BED);
     endingShapeCombobox->addItem(keyholeIcon, "Keyhole", KarstHolePredefinedShapes::KEYHOLE);
     endingShapeCombobox->addItem(canyonIcon, "Canyon", KarstHolePredefinedShapes::CANYON);
     endingShapeCombobox->addItem(fractureIcon, "Fracture", KarstHolePredefinedShapes::CRACK);
-    endingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::CRACK);
+    endingShapeCombobox->addItem(flatCrackIcon, "Fond plat", KarstHolePredefinedShapes::STAR);
 
     tunnelLayout->addWidget(createVerticalGroup({tunnelCreateMatter, tunnelRemoveMatter/*, tunnelCreateCrack*/}));
     tunnelLayout->addWidget(createVerticalGroup({/*addControlPointButton, */tunnelClearControlPointButton}));
