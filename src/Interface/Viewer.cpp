@@ -132,7 +132,7 @@ void Viewer::init() {
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
 
-    startAnimation();
+//    startAnimation();
     QGLViewer::init();
 }
 
@@ -211,6 +211,8 @@ void Viewer::draw() {
         this->manualEditionInterface->display();
     if (this->erosionInterface)
         this->erosionInterface->display();
+    if (this->heightmapErosionInterface)
+        this->heightmapErosionInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux

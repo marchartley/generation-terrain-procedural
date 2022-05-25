@@ -12,18 +12,12 @@ ViewerInterface::ViewerInterface() {
 
 
     this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>(this);
-    this->karstPathGeneration->hide();
-    // this->karstPathGeneration->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
     this->viewer->karstPathInterface = this->karstPathGeneration;
 
     this->spaceColonization = std::make_shared<SpaceColonizationInterface>(this);
-    this->spaceColonization->hide();
-    this->spaceColonization->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
-
     this->viewer->spaceColonizationInterface = this->spaceColonization;
+
     this->faultSlip = std::make_shared<FaultSlipInterface>(this);
-    this->faultSlip->hide();
-    this->faultSlip->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
     this->viewer->faultSlipInterface = this->faultSlip;
 
     this->flowField = std::make_shared<FlowFieldInterface>(this);
@@ -33,34 +27,26 @@ ViewerInterface::ViewerInterface() {
 
     this->tunnelInterface = std::make_shared<TunnelInterface>(this);
     this->viewer->tunnelInterface = this->tunnelInterface;
-    this->tunnelInterface->hide();
-    this->tunnelInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     this->manualEditionInterface = std::make_shared<ManualEditionInterface>(this);
     this->viewer->manualEditionInterface = this->manualEditionInterface;
-    this->manualEditionInterface->hide();
-    this->manualEditionInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     this->gravityInterface = std::make_shared<GravityInterface>(this);
     this->viewer->gravityInterface = this->gravityInterface;
-    this->gravityInterface->hide();
-    this->gravityInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     this->undoRedoInterface = std::make_shared<UndoRedoInterface>(this);
     this->viewer->undoRedoInterface = this->undoRedoInterface;
-    this->undoRedoInterface->hide();
-    this->undoRedoInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     this->terrainGenerationInterface = std::make_shared<TerrainGenerationInterface>(this);
     this->viewer->terrainGenerationInterface = this->terrainGenerationInterface;
-    this->terrainGenerationInterface->hide();
-    this->terrainGenerationInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
 
     this->erosionInterface = std::make_shared<ErosionInterface>(this);
     this->viewer->erosionInterface = this->erosionInterface;
     this->erosionInterface->viewer = this->viewer;
-    this->erosionInterface->hide();
-    this->erosionInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+
+    this->heightmapErosionInterface = std::make_shared<HeightmapErosionInterface>(this);
+    this->viewer->heightmapErosionInterface = this->heightmapErosionInterface;
+//    this->heightmapErosionInterface->viewer = this->heightmapEiewer;
 
 
     this->actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>(
@@ -73,18 +59,27 @@ ViewerInterface::ViewerInterface() {
                                                                                   gravityInterface,
                                                                                   undoRedoInterface,
                                                                                   terrainGenerationInterface,
-                                                                                  erosionInterface
+                                                                                  erosionInterface,
+                                                                                  heightmapErosionInterface
                                                                               });
 
+    for (auto& actionInterface : this->actionInterfaces) {
+        actionInterface->hide();
+        actionInterface->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
+    }
+
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
-        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
+//        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
+        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/pente.png");
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
         this->viewer->grid = this->terrainGenerationInterface->heightmapGrid;
 
-        this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
+//        this->karstPathGeneration->affectVoxelGrid(this->viewer->voxelGrid);
         for (auto& actionInterface : this->actionInterfaces)
             actionInterface->affectVoxelGrid(this->viewer->voxelGrid);
+
+        this->heightmapErosionInterface->heightmap = this->terrainGenerationInterface->heightmapGrid;
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
@@ -112,6 +107,8 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->undoRedoInterface.get(), &UndoRedoInterface::updated,
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->erosionInterface.get(), &ErosionInterface::updated,
+                     this, [&](){ this->viewer->update(); });
+    QObject::connect(this->heightmapErosionInterface.get(), &HeightmapErosionInterface::updated,
                      this, [&](){ this->viewer->update(); });
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
@@ -151,85 +148,101 @@ void ViewerInterface::setupUi()
     QIcon wireModeIcon(":/icons/src/assets/wire_mode.png");
     QIcon fillModeIcon(":/icons/src/assets/fill_mode.png");
     QIcon erosionIcon(":/icons/src/assets/erosion.png");
+    QIcon heightmapErosionIcon(":/icons/src/assets/heightmap-erosion.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
+
     QAction *faultSlipAction = new QAction(faultSlipIcon, "Glissements de terrains");
-//    faultSlipAction->setShortcuts(QKeySequence::Open);
+
     QAction *flowfieldAction = new QAction(flowfieldIcon, "Simulation de courant");
-//    flowfieldAction->setShortcuts(QKeySequence::Open);
+
     QAction *gravityAction = new QAction(gravityIcon, "Gravité");
-//    gravityAction->setShortcuts(QKeySequence::Open);
+
     QAction *karstAction = new QAction(karstIcon, "Création de karsts par colonization d'espace");
+
     QAction *karstPeytavieAction = new QAction(karstPeytavieIcon, "Création de karsts par graphe");
-//    karstAction->setShortcuts(QKeySequence::Open);
+
     QAction *recordingAction = new QAction(recordingIcon, "Enregistrement vidéo");
-//    recordingAction->setShortcuts(QKeySequence::);
+
     QAction *savingAction = new QAction(savingIcon, "Sauvegarder la map");
     savingAction->setShortcuts(QKeySequence::Save);
+
     QAction *tunnelAction = new QAction(tunnelIcon, "Création de tunnels");
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *manualEditAction = new QAction(manualEditIcon, "Manipulations manuelles");
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *undoAction = new QAction(undoIcon, "Undo");
     undoAction->setShortcuts(QKeySequence::Undo);
+
     QAction *redoAction = new QAction(redoIcon, "Redo");
     redoAction->setShortcuts(QKeySequence::Redo);
+
     QAction *marchingCubesAction = new QAction(marchingCubesIcon, "Affichage lisse (Marching cubes)");
     marchingCubesAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *rawVoxelsAction = new QAction(rawVoxelsIcon, "Affichage brut (voxels)");
     rawVoxelsAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *heightmapAction = new QAction(heightmapIcon, "Grille 2D (carte de hauteur)");
     heightmapAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *layerBasedAction = new QAction(layerBasedIcon, "Stacks (Layer based)");
     layerBasedAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *voxelGridAction = new QAction(voxelGridIcon, "Grille 3D (voxel grid)");
     voxelGridAction->setCheckable(true);
     voxelGridAction->setChecked(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *wireModeAction = new QAction(wireModeIcon, "Affichage fil de fer");
     wireModeAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *fillModeAction = new QAction(fillModeIcon, "Affichage normal");
     fillModeAction->setCheckable(true);
-//    tunnelAction->setShortcuts(QKeySequence::Open);
+
     QAction *noDisplayAction = new QAction(noDisplayIcon, "Cacher la carte");
     noDisplayAction->setCheckable(true);
-    //    tunnelAction->setShortcuts(QKeySequence::Open);
     fillModeAction->setChecked(true);
 
     QAction *erosionAction = new QAction(erosionIcon, "Eroder la carte");
+
+    QAction *heightmapErosionAction = new QAction(heightmapErosionIcon, "Eroder la heightmap");
 
 
 
     QMenu* fileMenu = new QMenu("File");
     fileMenu->addActions({openAction, savingAction});
+
     QMenu* editMenu = new QMenu("Edit");
     editMenu->addActions({undoAction, redoAction});
+
     QMenu* viewMenu = new QMenu("Affichage");
+
     QActionGroup* terrainSmoothGroup = new QActionGroup(viewMenu);
     terrainSmoothGroup->addAction(marchingCubesAction);
     terrainSmoothGroup->addAction(rawVoxelsAction);
     viewMenu->addActions(terrainSmoothGroup->actions());
+
     QActionGroup* terrainDisplayGroup = new QActionGroup(viewMenu);
     terrainDisplayGroup->addAction(wireModeAction);
     terrainDisplayGroup->addAction(fillModeAction);
     terrainDisplayGroup->addAction(noDisplayAction);
     viewMenu->addActions(terrainDisplayGroup->actions());
+
     QMenu* modelMenu = new QMenu("Model");
+
     QActionGroup* terrainTypeGroup = new QActionGroup(modelMenu);
     terrainTypeGroup->addAction(voxelGridAction);
     terrainTypeGroup->addAction(heightmapAction);
     terrainTypeGroup->addAction(layerBasedAction);
     modelMenu->addActions(terrainTypeGroup->actions());
+
     QMenu* recordingMenu = new QMenu("Enregistrements");
     recordingMenu->addActions({recordingAction});
+
     QMenu* physicsMenu = new QMenu("Physiques");
-    physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction});
+    physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
+
     QMenu* diggingMenu = new QMenu("Creuser");
     diggingMenu->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
 
@@ -255,7 +268,7 @@ void ViewerInterface::setupUi()
     toolbar->addSeparator();
     toolbar->addActions({recordingAction});
     toolbar->addSeparator();
-    toolbar->addActions({gravityAction, flowfieldAction, erosionAction});
+    toolbar->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
     toolbar->addSeparator();
     toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
     toolbar->addSeparator();
@@ -604,6 +617,7 @@ void ViewerInterface::setupUi()
     QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
     QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
     QObject::connect(erosionAction, &QAction::triggered, this, &ViewerInterface::openErosionInterface);
+    QObject::connect(heightmapErosionAction, &QAction::triggered, this, &ViewerInterface::openHeightmapErosionInterface);
     QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
@@ -893,6 +907,21 @@ void ViewerInterface::openErosionInterface()
     this->viewer->update();
 }
 
+void ViewerInterface::openHeightmapErosionInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "HeightmapErosion") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "HeightmapErosion";
+        this->heightmapErosionInterface->show();
+        this->frame->setContent(this->heightmapErosionInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
 void ViewerInterface::hideAllInteractiveParts()
 {
     this->karstPathGeneration->hide();
@@ -903,6 +932,7 @@ void ViewerInterface::hideAllInteractiveParts()
     this->manualEditionInterface->hide();
     this->gravityInterface->hide();
     this->erosionInterface->hide();
+    this->heightmapErosionInterface->hide();
 
     this->viewer->update();
     this->update();
