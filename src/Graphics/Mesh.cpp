@@ -414,3 +414,18 @@ std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices)
     }
     return triangles;
 }
+
+
+std::string Mesh::toOFF()
+{
+    std::string out = "OFF\n# ICAR Team - Terrain generation\n";
+
+    out += std::to_string(vertexArray.size()) + " " + std::to_string(vertexArray.size() / 3) + " 0\n# Vertices\n";
+    for (size_t i = 0; i < vertexArray.size(); i++)
+        out += std::to_string(vertexArray[i].x) + " " + std::to_string(vertexArray[i].y) + " " + std::to_string(vertexArray[i].z) + "\n";
+
+    out += "# Faces\n";
+    for (size_t i = 0; i < vertexArray.size(); i += 3)
+        out += "3 " + std::to_string(i + 0) + " " + std::to_string(i + 1) + " " + std::to_string(i + 2) + "\n";
+    return out;
+}
