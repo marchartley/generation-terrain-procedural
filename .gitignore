@@ -58,3 +58,6 @@ src/assets/models/coral_9_watertight.stl
 src/assets/models/My_Scan_2.stl
 src/assets/models/plastic-reef-5-corals20191129-2115-1wwd1bd.zip
 src/FastWFC/*
+saved_maps/action_histories/*
+saved_maps/heightmaps/*
+saved_maps/voxel_grids/*
