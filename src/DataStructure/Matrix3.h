@@ -104,8 +104,10 @@ public:
     Matrix3<T> curl();
     Matrix3<T> rot();
     Matrix3<T> laplacian();
+    Vector3 gradient(Vector3 position);
+    Vector3 gradient(float posX, float posY, float posZ = 0);
 
-    static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
+    static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, Vector3 offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
     Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOfZ = 3, bool ignoreBorders = false);
 
@@ -417,6 +419,45 @@ Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
     return Vector3(x, y, z);
 }
 
+
+template<class T>
+Vector3 Matrix3<T>::gradient(Vector3 position)
+{
+    this->raiseErrorOnBadCoord = false;
+    Vector3 flooredPos = position.floor();
+    Vector3 offset = position - flooredPos;
+
+    return Vector3(
+                (at(flooredPos + Vector3(1, 0, 0)) - at(flooredPos)) * offset.x,
+                (at(flooredPos + Vector3(0, 1, 0)) - at(flooredPos)) * offset.y,
+                (at(flooredPos + Vector3(0, 0, 1)) - at(flooredPos)) * offset.z
+                );
+    /*
+    float NWB = at(flooredPos + Vector3(0, 0, 0));
+    float NEB = at(flooredPos + Vector3(1, 0, 0));
+    float SWB = at(flooredPos + Vector3(0, 1, 0));
+    float SEB = at(flooredPos + Vector3(1, 1, 0));
+    float NWT = at(flooredPos + Vector3(0, 0, 1));
+    float NET = at(flooredPos + Vector3(1, 0, 1));
+    float SWT = at(flooredPos + Vector3(0, 1, 1));
+    float SET = at(flooredPos + Vector3(1, 1, 1));
+
+    return Vector3(
+                ()
+                );
+    return Vector3(
+                at(flooredPos + Vector3(1, 0, 0)) * (1 - offset.x) + at(flooredPos) * offset.x,
+                at(flooredPos + Vector3(0, 1, 0)) * (1 - offset.y) + at(flooredPos) * offset.y,
+                at(flooredPos + Vector3(0, 0, 1)) * (1 - offset.z) + at(flooredPos) * offset.z
+                );*/
+}
+
+template<class T>
+Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
+{
+    return gradient(Vector3(posX, posY, posZ));
+}
+
 template<class T>
 Matrix3<T>& Matrix3<T>::init(std::vector<T> data, size_t sizeX, size_t sizeY, size_t sizeZ)
 {
@@ -503,9 +544,10 @@ Matrix3<T> Matrix3<T>::normalized() const {
 }
 
 template<class T>
-Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) {
+Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, Vector3 offset) {
     Matrix3<float> gaussian(sizeOnX, sizeOnY, sizeOnZ);
-    Vector3 center(sizeOnX/2, sizeOnY/2, sizeOnZ/2);
+    Vector3 center = Vector3(sizeOnX/2.f, sizeOnY/2.f, sizeOnZ/2.f) + offset;
+    center -= Vector3((sizeOnX > 1 ? .5 : 0), (sizeOnY > 1 ? .5 : 0), (sizeOnZ > 1 ? .5 : 0));
     float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
     float sqrSigma = sigma * sigma;
     for (int x = 0; x < gaussian.sizeX; x++) {
