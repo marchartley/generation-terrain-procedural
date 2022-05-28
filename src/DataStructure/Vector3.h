@@ -30,6 +30,8 @@ public:
     float dot(Vector3 o);
     Vector3 cross(Vector3 o);
     Vector3 rounded(int precision = 0) const;
+    Vector3 floor() const;
+    Vector3 ceil() const;
 
     float norm();
     float norm2();
