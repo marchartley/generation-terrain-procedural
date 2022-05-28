@@ -122,6 +122,16 @@ void TerrainGenerationInterface::prepareShader()
     GlobalsGL::f()->glBindVertexArray(heightmapMesh.vao);
     heightmapMesh.shader->setInt("heightmapFieldTex", 3);
 
+    float *heightmapData = new float[heightmapGrid->heights.size() * 4];
+    Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
+    for (size_t i = 0; i < heightmapGrid->heights.size(); i++) {
+        gradients[i] = (gradients[i].normalized() + Vector3(1, 1, 1)) / 2.f;
+        heightmapData[i * 4 + 0] = gradients[i].x;
+        heightmapData[i * 4 + 1] = gradients[i].y;
+        heightmapData[i * 4 + 2] = gradients[i].z;
+        heightmapData[i * 4 + 3] = heightmapGrid->heights[i];
+    }
+
     glGenTextures(1, &heightmapFieldTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
@@ -130,8 +140,11 @@ void TerrainGenerationInterface::prepareShader()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
-    GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+//            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+    GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+    delete[] heightmapData;
 
 //    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
 }
@@ -168,11 +181,25 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         if (this->heightmapGrid == nullptr) {
             std::cerr << "No grid to display" << std::endl;
         } else {
-            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
+//            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
             GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
-            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
-            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+//            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+            float maxHeight = heightmapGrid->heights.max();
+            this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
+            float *heightmapData = new float[heightmapGrid->heights.size() * 4];
+            Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
+            for (size_t i = 0; i < heightmapGrid->heights.size(); i++) {
+                gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
+                heightmapData[i * 4 + 0] = 1; // gradients[i].x;
+                heightmapData[i * 4 + 1] = 1; // gradients[i].y;
+                heightmapData[i * 4 + 2] = 1; // gradients[i].z;
+                heightmapData[i * 4 + 3] = heightmapGrid->heights[i] / maxHeight;
+            }
+            glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+            GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+            delete[] heightmapData;
 
             this->heightmapMesh.display(GL_POINTS);
 //            this->heightmapGrid->mesh.shader->setFloat("time", time);
