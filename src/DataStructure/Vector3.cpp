@@ -91,6 +91,22 @@ Vector3 Vector3::rounded(int precision) const
     v.z = (int)(v.z * pow(10, precision)) / (float)(pow(10, precision));
     return v;
 }
+Vector3 Vector3::floor() const
+{
+    Vector3 v = *this;
+    v.x = (int)v.x;
+    v.y = (int)v.y;
+    v.z = (int)v.z;
+    return v;
+}
+Vector3 Vector3::ceil() const
+{
+    Vector3 v = this->floor();
+    if (v.x != x) v.x += 1;
+    if (v.y != y) v.y += 1;
+    if (v.z != z) v.z += 1;
+    return v;
+}
 
 Vector3 Vector3::random() {
     Vector3 v(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0));
