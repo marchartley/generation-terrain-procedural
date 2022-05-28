@@ -41,6 +41,7 @@ in vec3 realNormal[];
 
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
+out vec4 gcolor;
 
 //Get vertex i position within current marching cube
 vec3 cubePos(vec3 voxelPos, int i){
@@ -124,6 +125,7 @@ int getCubeIndex(vec3 voxPos, out vec3 normal) {
 void main(void) {
     vec4 position = vec4(initialVertPos[0], 1.0);
     vec3 voxPos = position.xyz;
+    gcolor = vec4(1, 1, 1, 1);
 
     gl_Position = proj_matrix * mv_matrix * position;
 

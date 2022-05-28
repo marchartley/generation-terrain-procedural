@@ -8,6 +8,7 @@ layout ( triangle_strip, max_vertices = 4) out;
 
 //height data field texture
 uniform sampler2D heightmapFieldTex;
+uniform float maxHeight;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -19,11 +20,12 @@ in vec3 realNormal[];
 
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
+out vec4 gcolor;
 
 
 float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
-    return (pos.x >= texSize.x || pos.y >= texSize.y) ? 0 : texture(heightmapFieldTex, pos/texSize).r;
+    return (pos.x >= texSize.x || pos.y >= texSize.y) ? 0 : texture(heightmapFieldTex, pos/texSize).a * maxHeight;
 }
 
 vec3 getNormal(vec2 pos) {
@@ -70,21 +72,25 @@ void main(void) {
     gl_Position = proj_matrix * mv_matrix * v1;
     grealNormal = getNormal(v1.xy);
     ginitialVertPos = v1.xyz;
+    gcolor = vec4(texture(heightmapFieldTex, v1.xy/texSize).rgb, 1.0);
     EmitVertex();
 
     gl_Position = proj_matrix * mv_matrix * v2;
     grealNormal = getNormal(v2.xy);
     ginitialVertPos = v2.xyz;
+    gcolor = vec4(texture(heightmapFieldTex, v2.xy/texSize).rgb, 1.0);
     EmitVertex();
 
     gl_Position = proj_matrix * mv_matrix * v3;
     grealNormal = getNormal(v3.xy);
     ginitialVertPos = v3.xyz;
+    gcolor = vec4(texture(heightmapFieldTex, v3.xy/texSize).rgb, 1.0);
     EmitVertex();
 
     gl_Position = proj_matrix * mv_matrix * v4;
     grealNormal = getNormal(v4.xy);
     ginitialVertPos = v4.xyz;
+    gcolor = vec4(texture(heightmapFieldTex, v4.xy/texSize).rgb, 1.0);
     EmitVertex();
     EndPrimitive();
 }

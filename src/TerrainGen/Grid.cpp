@@ -24,25 +24,17 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
 
     // Make a first pass, to get some noise
     float min = 1000, max = -1000;
-//    this->vertices = Matrix3<Vector3>(nx, ny);
     this->normals = Matrix3<Vector3>(nx, ny);
     this->heights = Matrix3<float>(nx, ny);
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             float z = noise.GetNoise((float)x, (float)y);
             this->heights.at(x, y) = z;
-//            this->vertices.at(x, y) = Vector3(x, y, z);
             min = min < z ? min : z;
             max = max > z ? max : z;
         }
     }
     this->heights = ((this->heights - min) / (max - min)) * maxHeight;
-    // Sadely, we need a second pass because the noise function is a little f*cked up... we don't always have values in [-1;1)
-//    for (int x = 0; x < this->getSizeX(); x++) {
-//        for (int y = 0; y < this->getSizeY(); y++) {
-//            this->vertices.at(x, y).z = maxHeight * (this->vertices.at(x, y).z - min) / (max - min);
-//        }
-//    }
     this->computeNormals();
 }
 
@@ -58,6 +50,7 @@ Grid::Grid() : Grid(10, 10, 5.0) {
 
 void Grid::createMesh()
 {
+    /*
     std::vector<Vector3> vecs;
 
     for(int x = 0; x < this->getSizeX() - 1; x++) {
@@ -69,40 +62,20 @@ void Grid::createMesh()
             vecs.push_back(Vector3(x  , y  , this->heights.at(x  , y  )));
             vecs.push_back(Vector3(x+1, y+1, this->heights.at(x+1, y+1)));
             vecs.push_back(Vector3(x+1, y  , this->heights.at(x+1, y  )));
-//            vecs.push_back(this->vertices.at(x, y));
-//            vecs.push_back(this->vertices.at(x, y+1));
-//            vecs.push_back(this->vertices.at(x+1, y+1));
-
-//            vecs.push_back(this->vertices.at(x, y));
-//            vecs.push_back(this->vertices.at(x+1, y+1));
-//            vecs.push_back(this->vertices.at(x+1, y));
         }
     }
     this->mesh.fromArray(vecs);
-//    return this->vertexArrayFloat;
+    */
 }
 
 void Grid::computeNormals() {
-//    Vector3 upVector(0.0, 0.0, 1.0);
-//    for (int x = 0; x < this->sizeX; x++)
-//        for (int y = 0; y < this->sizeY; y++)
-//            this->normals.at(x, y) = upVector;
-
+    return;
+    /*
     this->normals = Matrix3<Vector3>(this->getSizeX(), this->getSizeY());
     this->heights.raiseErrorOnBadCoord = false;
-//    this->vertices.raiseErrorOnBadCoord = false;
+
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
-            /*Vector3 pos = this->vertices.at(x, y);
-            Vector3 v1 = this->vertices.at(x - 1, y    ) - pos;
-            Vector3 v2 = this->vertices.at(x - 1, y - 1) - pos;
-            Vector3 v3 = this->vertices.at(x    , y - 1) - pos;
-            Vector3 v4 = this->vertices.at(x + 1, y - 1) - pos;
-            Vector3 v5 = this->vertices.at(x + 1, y    ) - pos;
-            Vector3 v6 = this->vertices.at(x + 1, y + 1) - pos;
-            Vector3 v7 = this->vertices.at(x    , y + 1) - pos;
-            Vector3 v8 = this->vertices.at(x - 1, y + 1) - pos;
-            */
             Vector3 pos = Vector3(x   , y    , this->heights.at(x, y));
             Vector3 v1 = Vector3(x - 1, y    , this->heights.at(x - 1, y    )) - pos;
             Vector3 v2 = Vector3(x - 1, y - 1, this->heights.at(x - 1, y - 1)) - pos;
@@ -123,234 +96,161 @@ void Grid::computeNormals() {
             this->normals.at(x, y) += v8.cross(v1);
             this->normals.at(x, y).normalize();
         }
-    }
+    }*/
 }
 
 void Grid::display(bool displayNormals) {
     this->mesh.display();
-    /*
-    glPushMatrix();
-
-    float maxi = -9999999, mini = 9999999;
-    for (int x = 0; x < this->sizeX; x++)
-        for(int y = 0; y < this->sizeY; y++){
-            if (this->vertices.at(x, y).z > maxi)
-                maxi = this->vertices.at(x, y).z;
-            if (this->vertices.at(x, y).z < mini)
-                mini = this->vertices.at(x, y).z;
-        }
-    glScalef(1/this->tileSize, 1/this->tileSize, 1/this->tileSize);
-    glTranslatef(-(sizeX - 1) / 2.0, - (sizeY - 1) / 2.0, - (maxi + mini) / 2.0);
-
-    glBegin(GL_TRIANGLES);
-//    glColor4f(1.0, 0.5, 0.5, 0.0);
-    for(int x = 0; x < this->sizeX - 1; x++) {
-        for (int y = 0; y < this->sizeY - 1; y++) {
-            glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
-            glVertex3f(this->vertices.at(x, y+1).x, this->vertices.at(x, y+1).y, this->vertices.at(x, y+1).z);
-            glVertex3f(this->vertices.at(x+1, y+1).x, this->vertices.at(x+1, y+1).y, this->vertices.at(x+1, y+1).z);
-
-            glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
-            glVertex3f(this->vertices.at(x+1, y).x, this->vertices.at(x+1, y).y, this->vertices.at(x+1, y).z);
-            glVertex3f(this->vertices.at(x+1, y+1).x, this->vertices.at(x+1, y+1).y, this->vertices.at(x+1, y+1).z);
-        }
-    }
-    glEnd();
-
-    if (displayNormals) {
-        this->computeNormals();
-        for(int x = 0; x < this->sizeX - 1; x++) {
-            for (int y = 0; y < this->sizeY - 1; y++) {
-                glBegin(GL_LINES);
-                glVertex3f(this->vertices.at(x, y).x, this->vertices.at(x, y).y, this->vertices.at(x, y).z);
-                glVertex3f(this->vertices.at(x, y).x + this->normals.at(x, y).x, this->vertices.at(x, y).y + this->normals.at(x, y).y, this->vertices.at(x, y).z + this->normals.at(x, y).z);
-                glEnd();
-            }
-        }
-    }
-    glPopMatrix();*/
 }
 
 float Grid::getMaxHeight()
 {
     return this->heights.max();
-//    float max = 0;
-//    for (const Vector3& v : this->vertices)
-//        max = std::max(max, v.z);
-//    return max;
+}
+
+std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDeposit)
+{
+    std::vector<std::vector<Vector3>> traces;
+    float currentMaxHeight = this->heights.max();
+    this->heights /= currentMaxHeight;
+
+    int erosionRadius = 10;
+    float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction.
+    float sedimentCapacityFactor = 1; // Multiplier for how much sediment a droplet can carry
+    float minSedimentCapacity = .01f; // Used to prevent carry capacity getting too close to zero on flatter terrain
+    float erodeSpeed = .3f;
+    float depositSpeed = .3f;
+    float evaporateSpeed = .01f;
+    float gravity = 4;
+    int maxDropletLifetime = 30;
+
+    float initialWaterVolume = 1;
+    float initialSpeed = 1;
+
+    int numIterations = 1000;
+
+    for (int iteration = 0; iteration < numIterations; iteration++) {
+        std::vector<Vector3> trace;
+        // Create water droplet at random point on map
+        Vector3 pos(random_gen::generate(0, this->getSizeX() - 1), random_gen::generate(0, this->getSizeY() - 1), 0);
+        Vector3 dir(0, 0, 0);
+        float speed = initialSpeed;
+        float water = initialWaterVolume;
+        float sediment = 0;
+
+        Matrix3<Vector3> gradients = heights.gradient();
+        Matrix3<float> precomputedHeights = heights;
+
+        for (int lifetime = 0; lifetime < maxDropletLifetime; lifetime++) {
+            trace.push_back(pos);
+            if (!applyDeposit)
+                sediment = 0;
+
+            // Calculate droplet's height and direction of flow with bilinear interpolation of surrounding heights
+            float height = heights.interpolate(pos);
+            Vector3 gradient = heights.gradient(pos); //heights.gradient().interpolate(posX, posY, 0);
+//            HeightAndGradient heightAndGradient = CalculateHeightAndGradient (map, mapSize, posX, posY);
+
+            // Update the droplet's direction and position (move position 1 unit regardless of speed)
+            dir = (dir * inertia - gradient * (1 - inertia)).normalize();
+//            dirX = (dirX * inertia - gradient.x * (1 - inertia));
+//            dirY = (dirY * inertia - gradient.y * (1 - inertia));
+//            dirX = (dirX * inertia - heightAndGradient.gradientX * (1 - inertia));
+//            dirY = (dirY * inertia - heightAndGradient.gradientY * (1 - inertia));
+            // Normalize direction
+//            float len =  std::sqrt (dirX * dirX + dirY * dirY);
+//            if (len != 0) {
+//                dirX /= len;
+//                dirY /= len;
+//            }
+//            posX += dirX;
+//            posY += dirY;
+            pos += dir;
+
+            // Stop simulating droplet if it's not moving or has flowed over edge of map
+            if ((dir.x == 0 && dir.y == 0) || !heights.checkCoord(pos)) {
+//            if ((dirX == 0 && dirY == 0) || posX < 0 || posX >= getSizeX() - 1 || posY < 0 || posY >= getSizeY() - 1) {
+                break;
+            }
+
+            // Find the droplet's new height and calculate the deltaHeight
+            float newHeight = heights.interpolate(pos);
+            float deltaHeight = newHeight - height;
+
+            // Calculate the droplet's sediment capacity (higher when moving fast down a slope and contains lots of water)
+            float sedimentCapacity = std::max (-deltaHeight * speed * water * sedimentCapacityFactor, minSedimentCapacity);
+
+            // If carrying more sediment than capacity, or if flowing uphill:
+            if (sediment > sedimentCapacity || deltaHeight > 0) {
+                // If moving uphill (deltaHeight > 0) try fill up to the current height, otherwise deposit a fraction of the excess sediment
+                float amountToDeposit = (deltaHeight > 0) ? std::min (deltaHeight, sediment) : (sediment - sedimentCapacity) * depositSpeed;
+                sediment -= amountToDeposit;
+
+                // Add the sediment to the four nodes of the current cell using bilinear interpolation
+                // Deposition is not distributed over a radius (like erosion) so that it can fill small pits
+                precomputedHeights.raiseErrorOnBadCoord = false;
+                /*
+                heights[dropletIndex] += amountToDeposit * (1 - cellOffsetX) * (1 - cellOffsetY);
+                heights[dropletIndex + 1] += amountToDeposit * cellOffsetX * (1 - cellOffsetY);
+                heights[dropletIndex + getSizeX()] += amountToDeposit * (1 - cellOffsetX) * cellOffsetY;
+                heights[dropletIndex + getSizeX() + 1] += amountToDeposit * cellOffsetX * cellOffsetY;*/
+                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor())) * amountToDeposit * 1.f;
+                for (int x = 0; x < brush.sizeX; x++) {
+                    for (int y = 0; y < brush.sizeY; y++) {
+                        Vector3 offset(x - erosionRadius, y - erosionRadius);
+                        precomputedHeights.raiseErrorOnBadCoord = false;
+                        precomputedHeights.at(pos + offset) += brush.at(x, y);
+                    }
+                }
+
+            } else {
+                // Erode a fraction of the droplet's current carry capacity.
+                // Clamp the erosion to the change in height so that it doesn't dig a hole in the terrain behind the droplet
+                float amountToErode = std::min ((sedimentCapacity - sediment) * erodeSpeed, -deltaHeight);
+                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor())) * amountToErode * 1.f;
+                // Use erosion brush to erode from all nodes inside the droplet's erosion radius
+                for (int x = 0; x < brush.sizeX; x++) {
+                    for (int y = 0; y < brush.sizeY; y++) {
+                        Vector3 offset(x - erosionRadius, y - erosionRadius);
+                        float deltaSediment = std::max(0.f, std::min(heights.interpolate(pos + offset), brush.at(x, y)));
+                        precomputedHeights.raiseErrorOnBadCoord = false;
+                        precomputedHeights.at(pos + offset) -= deltaSediment;
+                        sediment += deltaSediment;
+                    }
+                }
+//                std::cout << "Position : " << Vector3(posX, posY, 0) << "\nErosion amount : " << amountToErode << "\nSediment capacity : " << sediment << " / " << sedimentCapacity << "\nBrush sum : " << brush.sum();
+//                std::cout << "\nEroded : " << sediment << "\nSpeed : " << speed << "\nWater : " << water << "\n\n";
+//                for (int brushPointIndex = 0; brushPointIndex < erosionBrushIndices[dropletIndex].Length; brushPointIndex++) {
+//                    int nodeIndex = erosionBrushIndices[dropletIndex][brushPointIndex];
+//                    float weighedErodeAmount = amountToErode * erosionBrushWeights[dropletIndex][brushPointIndex];
+//                    float deltaSediment = (heights[nodeIndex] < weighedErodeAmount) ? heights[nodeIndex] : weighedErodeAmount;
+//                    heights[nodeIndex] -= deltaSediment;
+//                    sediment += deltaSediment;
+//                }
+            }
+
+            // Update droplet's speed and water content
+            speed = std::sqrt (std::abs(speed * speed + deltaHeight * gravity));
+            water *= (1 - evaporateSpeed);
+        }
+        heights = precomputedHeights;
+        for(auto& h : heights)
+            h = std::min(std::max(h, 0.f), 1.f);
+        traces.push_back(trace);
+    }
+//    std::cout << std::endl;
+    this->heights *= currentMaxHeight;
+    for (size_t i = 0; i < traces.size(); i++) {
+        for (size_t j = 0; j < traces[i].size(); j++) {
+            traces[i][j].z = heights.interpolate(traces[i][j]) + .5f;
+        }
+    }
+    return traces;
 }
 
 std::vector<std::vector<Vector3>> Grid::hydraulicErosion()
 {
-    std::vector<std::vector<Vector3>> traces;
-    int nb_particles = 1000;
-
-//    int erosionRadius = 1;
-    float inertia = 0; //.05f;
-//    float sedimentCapacityFactor = 4;
-    float minSedimentCapacity = .01f;
-    float minWater = .01f;
-//    float maxCapacity = 1.f;
-    float depositRate = .5f;
-    float erosionRate = .5f;
-//    float depositRate = .3f;
-//    float erosionRate = .3f;
-    float evaporationRate = .001f;
-    float initialWaterVolume = 1;
-    float initialSpeed = 1;
-//    float gravity = 4;
-    float dt = 1.2;
-
-    float friction = .05f;
-
-//    Matrix3<float> heights(vertices.getDimensions());
-//    for (size_t i = 0; i < vertices.size(); i++)
-//        heights[i] = vertices[i].z;
-//    heights /= this->getMaxHeight();
-    Matrix3<Vector3> gradient;
-
-    int maxIterationPerParticle = 300;
-
-    for (int i = 0; i < nb_particles; i++) {
-
-
-        std::vector<Vector3> trace;
-        gradient = heights.gradient() * -1.f;
-        for (int x = 0; x < gradient.sizeX; x++) {
-            if (x == 0 || x == gradient.sizeX - 1)
-                for (int y = 0; y < gradient.sizeY; y++)
-                    gradient.at(x, y) = Vector3();
-            gradient.at(x, 0) = Vector3();
-            gradient.at(x, gradient.sizeY - 1) = Vector3();
-        }
-        Vector3 position = Vector3(random_gen::generate(1, this->getSizeX() - 1), random_gen::generate(1, this->getSizeY() - 1));
-
-        Vector3 direction = gradient.interpolate(position) * dt; //.normalize();
-        float speed = initialSpeed;
-        float water = initialWaterVolume;
-        float sediments = 0;
-
-        Vector3 meanPos = position;
-        int iteration = 0;
-        while (heights.checkCoord(position) && iteration < maxIterationPerParticle && water > minWater) {
-            float height = heights.interpolate(position);
-
-            direction += (gradient.interpolate(position) / water) * dt;
-            position += direction * dt;
-            direction *= (1.0 - dt * friction);
-
-            float newHeight = heights.interpolate(position);
-            float deltaHeight = newHeight - height;
-
-            trace.push_back(Vector3(position.x, position.y, heights.interpolate(position.x, position.y, 0) * this->getMaxHeight()));
-            if (!heights.checkCoord(position + direction * 3.f)) break;
-
-            float maxSediments = std::max(0.f, water * direction.norm() * deltaHeight);
-            float diff = maxSediments - sediments;
-            sediments += dt * depositRate * diff;
-
-            float erosion = dt * depositRate * diff * water;
-
-            float xOffset = position.x - position.rounded().x;
-            float yOffset = position.y - position.rounded().y;
-            if (heights.checkCoord(position.rounded() + Vector3(0, 0, 0)))
-                heights.at(position.rounded() + Vector3(0, 0, 0)) -= erosion * (1 - xOffset) * (1 - yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(1, 0, 0)))
-                heights.at(position.rounded() + Vector3(1, 0, 0)) -= erosion * (xOffset) * (1 - yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(0, 1, 0)))
-                heights.at(position.rounded() + Vector3(0, 1, 0)) -= erosion * (1 - xOffset) * (yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(1, 1, 0)))
-                heights.at(position.rounded() + Vector3(1, 1, 0)) -= erosion * (xOffset) * (yOffset);
-
-            water *= (1.0 - dt * evaporationRate);
-/*
-            float height = heights.interpolate(position);
-            direction = (direction * inertia + (gradient.interpolate(position) * (1.f - inertia))).normalize();
-            position += direction;
-//            meanPos += position;
-//            if ((meanPos / (float)iteration - position).norm2() < 0.5f) break;
-            trace.push_back(Vector3(position.x, position.y, heights.interpolate(position.x, position.y, 0) * this->getMaxHeight()));
-            if (!heights.checkCoord(position + direction * 3.f)) break;
-
-            float newHeight = heights.interpolate(position);
-            float deltaHeight = newHeight - height;
-
-            float erosion = erosionRate * gradient.interpolate(position).norm(); // * deltaHeight;// * erosionRate;
-            float deposit = sediments * depositRate;
-
-            deposit -= erosion;
-            sediments -= deposit;
-            float xOffset = position.x - position.rounded().x;
-            float yOffset = position.y - position.rounded().y;
-            if (heights.checkCoord(position.rounded() + Vector3(0, 0, 0)))
-                heights.at(position.rounded() + Vector3(0, 0, 0)) += deposit * (1 - xOffset) * (1 - yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(1, 0, 0)))
-                heights.at(position.rounded() + Vector3(1, 0, 0)) += deposit * (xOffset) * (1 - yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(0, 1, 0)))
-                heights.at(position.rounded() + Vector3(0, 1, 0)) += deposit * (1 - xOffset) * (yOffset);
-            if (heights.checkCoord(position.rounded() + Vector3(1, 1, 0)))
-                heights.at(position.rounded() + Vector3(1, 1, 0)) += deposit * (xOffset) * (yOffset);
-*/
-            /*
-
-            direction = (direction * inertia + (gradient.interpolate(position) * (1.f - inertia))).normalize();
-            position += direction;
-            if (!heights.checkCoord(position)) break;
-
-            float newHeight = heights.interpolate(position);
-            float deltaHeight = newHeight - height;
-            trace.push_back(Vector3(position.x, position.y, getHeight(position.x, position.y)));
-//            float speed = direction.norm();
-            float sedimentsCapacity = std::max(-deltaHeight * speed * water * sedimentCapacityFactor, minSedimentCapacity);
-
-            if (sediments > sedimentsCapacity || deltaHeight > 0) {
-                // Deposit
-                float deposit = (deltaHeight > 0) ? std::min(deltaHeight, sediments) : (sediments - sedimentsCapacity) * depositRate;
-                sediments -= deposit;
-                if (sediments < -0.5)
-                    std::cout << "Deposit way too big..." << std::endl;
-
-                float xOffset = position.x - position.rounded().x;
-                float yOffset = position.y - position.rounded().y;
-                if (heights.checkCoord(position.rounded() + Vector3(0, 0, 0)))
-                    heights.at(position.rounded() + Vector3(0, 0, 0)) += deposit * (1 - xOffset) * (1 - yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(1, 0, 0)))
-                    heights.at(position.rounded() + Vector3(1, 0, 0)) += deposit * (xOffset) * (1 - yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(0, 1, 0)))
-                    heights.at(position.rounded() + Vector3(0, 1, 0)) += deposit * (1 - xOffset) * (yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(1, 1, 0)))
-                    heights.at(position.rounded() + Vector3(1, 1, 0)) += deposit * (xOffset) * (yOffset);
-            } else {
-                // Erosion
-                float erosion = std::min(heights.interpolate(position), std::min((sedimentsCapacity - sediments) * erosionRate, -deltaHeight));
-                sediments += erosion;
-
-                float xOffset = position.x - position.rounded().x;
-                float yOffset = position.y - position.rounded().y;
-                if (heights.checkCoord(position.rounded() + Vector3(0, 0, 0)))
-                    heights.at(position.rounded() + Vector3(0, 0, 0)) -= erosion * (1 - xOffset) * (1 - yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(1, 0, 0)))
-                    heights.at(position.rounded() + Vector3(1, 0, 0)) -= erosion * (xOffset) * (1 - yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(0, 1, 0)))
-                    heights.at(position.rounded() + Vector3(0, 1, 0)) -= erosion * (1 - xOffset) * (yOffset);
-                if (heights.checkCoord(position.rounded() + Vector3(1, 1, 0)))
-                    heights.at(position.rounded() + Vector3(1, 1, 0)) -= erosion * (xOffset) * (yOffset);
-            }
-            speed = std::sqrt(speed * speed + deltaHeight * gravity);
-            water *= (1 - evaporationRate);
-            */
-            iteration ++;
-        }
-        traces.push_back(trace);
-    }
-//    heights *= this->getMaxHeight();
-//    for (size_t i = 0; i < vertices.size(); i++)
-//        vertices[i].z = heights[i] ;
-
-    this->computeNormals();
-    this->createMesh();
-
-    return traces;
+    return SebLangueHydraulicErosion(false);
 }
 
 void Grid::thermalErosion()
@@ -364,11 +264,9 @@ void Grid::windErosion()
 }
 
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
-    this->vertices = Matrix3<Vector3>(voxelGrid.getSizeX(), voxelGrid.getSizeY());
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
             this->heights.at(x, y) = voxelGrid.getHeight(x, y);
-//            this->vertices.at(x, y) = Vector3(x, y, voxelGrid.getHeight(x, y)/*/ (float)(voxelGrid.getSizeZ())*/);
         }
     }
     this->computeNormals();
@@ -413,14 +311,6 @@ void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, flo
         map *= (maxHeight / max);
     }
     this->heights = map;
-    /*
-    this->vertices = Matrix3<Vector3>(map.sizeX, map.sizeY);
-    this->normals = Matrix3<Vector3>(map.sizeX, map.sizeY);
-    for (int x = 0; x < map.sizeX; x++) {
-        for (int y = 0; y < map.sizeY; y++) {
-            this->vertices.at(x, y) = Vector3(x, y, map.at(x, y));
-        }
-    }*/
     this->computeNormals();
 }
 
@@ -434,14 +324,8 @@ void Grid::saveHeightmap(std::string heightmap_filename)
     std::vector<uint8_t> toIntData(width*height);
 
     float newHeight = std::max(this->maxHeight, this->heights.max());
-    /*
-    float newHeight = this->maxHeight;
-    for (const auto& vert : this->vertices)
-        newHeight = std::max(newHeight, vert.z);
-    */
     toFloatData = (this->heights/newHeight).data;
     for (size_t i = 0; i < this->heights.size(); i++) {
-//        toFloatData[i] = this->vertices[i].z / newHeight;
         toIntData[i] = toFloatData[i] * 255;
     }
     if (ext == "PNG")

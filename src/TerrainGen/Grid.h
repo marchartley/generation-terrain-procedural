@@ -26,6 +26,7 @@ public:
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals.at(x, y); }
 
+    std::vector<std::vector<Vector3>> SebLangueHydraulicErosion();
     std::vector<std::vector<Vector3>> hydraulicErosion();
     void thermalErosion();
     void windErosion();
@@ -40,7 +41,6 @@ public:
 //protected:
     void computeNormals();
     Matrix3<float> heights;
-    Matrix3<Vector3> vertices;
     Matrix3<Vector3> normals;
     float maxHeight;
     float tileSize;
