@@ -1,7 +1,7 @@
 #include "FaultSlip.h"
 
 #include "DataStructure/Matrix3.h"
-#include "Utils/Utils.h"
+#include "Utils/Collisions.h"
 
 FaultSlip::FaultSlip()
 {
@@ -22,7 +22,7 @@ void FaultSlip::Apply(std::shared_ptr<VoxelGrid> grid, bool applyRemeshing)
             for (int z = 0; z < voxelValues.sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 bool voxelIsConcerned =
-                        tetrahedronSignedVolume(this->firstPointFault, this->secondPointFault,
+                        Collision::tetrahedronSignedVolume(this->firstPointFault, this->secondPointFault,
                                                 this->firstPointFault+this->slippingDirection, pos) > 0 == this->positiveSideFalling;
                 if (voxelIsConcerned) {
                     transportMatrix.at(pos) = voxelValues.at(pos - this->slippingDirection * this->slippingDistance) - voxelValues.at(pos);

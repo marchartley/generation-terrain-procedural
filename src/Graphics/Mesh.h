@@ -46,6 +46,8 @@ public:
 
     std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
 
+    std::string toStl();
+
 
     unsigned int bufferID;
     bool bufferReady = false;

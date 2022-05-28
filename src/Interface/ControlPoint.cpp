@@ -1,6 +1,6 @@
 #include "ControlPoint.h"
 
-#include "Utils/Utils.h"
+#include "Utils/Collisions.h"
 
 std::shared_ptr<Shader> ControlPoint::base_shader = nullptr;
 std::map<GrabberState, std::vector<float>> ControlPoint::default_GrabberStateColor = {
@@ -365,28 +365,28 @@ std::vector<Vector3> ControlPoint::computeCircle(Axis axis)
 
 bool ControlPoint::mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir)
 {
-    return intersectionRaySphere(rayOrigin, rayDir, this->getPosition(), this->radius).isValid();
+    return Collision::intersectionRaySphere(rayOrigin, rayDir, this->getPosition(), this->radius).isValid();
 }
 
 bool ControlPoint::mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir)
 {
     float tolerence = this->radius/5.f;
     // X-axis
-    if (this->allowedTranslations[X] && shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+    if (this->allowedTranslations[X] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
                                         this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize,
                                         this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize) < tolerence) {
         this->currentAxis = X;
         return true;
     }
     // Y-axis
-    if (this->allowedTranslations[Y] && shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+    if (this->allowedTranslations[Y] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
                                         this->getPosition() - Vector3(0.0, 1.0, 0.0) * arrowSize,
                                         this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize) < tolerence) {
         this->currentAxis = Y;
         return true;
     }
     // Z-axis
-    if (this->allowedTranslations[Z] && shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
+    if (this->allowedTranslations[Z] && Collision::shortestDistanceBetweenSegments(rayOrigin, rayOrigin + rayDir * 1000.f,
                                         this->getPosition() - Vector3(0.0, 0.0, 1.0) * arrowSize,
                                         this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize) < tolerence) {
         this->currentAxis = Z;
@@ -408,7 +408,7 @@ bool ControlPoint::mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir)
 
     // X-axis
     if (this->allowedRotations[X]) {
-        intersection = intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(1.0, 0.0, 0.0));
+        intersection = Collision::intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(1.0, 0.0, 0.0));
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {
@@ -421,7 +421,7 @@ bool ControlPoint::mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir)
     }
     // Y-axis
     if (this->allowedRotations[Y]) {
-        intersection = intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(0.0, 1.0, 0.0));
+        intersection = Collision::intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(0.0, 1.0, 0.0));
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {
@@ -434,7 +434,7 @@ bool ControlPoint::mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir)
     }
     // Z-axis
     if (this->allowedRotations[Z]) {
-        intersection = intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(0.0, 0.0, 1.0));
+        intersection = Collision::intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(0.0, 0.0, 1.0));
         if (intersection.isValid()) {
             distanceToCenterSq = (intersection - this->getPosition()).norm2();
             if (minCircleRadiusSq < distanceToCenterSq && distanceToCenterSq < maxCircleRadiusSq) {

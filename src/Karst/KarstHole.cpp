@@ -77,7 +77,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
         bool valid = true;
         for (size_t j = 0; j < vertices.size(); j++) {
             // Count the number of intersection from the midpoint to somewhere outside
-            if (intersectionBetweenTwoSegments(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()]).isValid()) {
+            if (Collision::intersectionBetweenTwoSegments(ray, midpoint, vertices[j], vertices[(j + 1) % vertices.size()]).isValid()) {
                 number_of_intersections++;
             }
         }
@@ -85,7 +85,7 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
             if (previous != remaining_nodes[j] && previous != remaining_nodes[(j + 1) % remaining_nodes.size()] &&
                     next != remaining_nodes[j] && next != remaining_nodes[(j + 1) % remaining_nodes.size()]) {
                 // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)
-                Vector3 inter = intersectionBetweenTwoSegments(vertices[previous], vertices[next], vertices[remaining_nodes[j]], vertices[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
+                Vector3 inter = Collision::intersectionBetweenTwoSegments(vertices[previous], vertices[next], vertices[remaining_nodes[j]], vertices[remaining_nodes[(j + 1) % remaining_nodes.size()]]);
                 if (inter.isValid()) {
                     if (inter != vertices[previous] && inter != vertices[next]) {
                         valid = false;
@@ -342,14 +342,14 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
 //                            continue;
 //                        }
 
-                        int collision_result = segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]);
-                        if (collision_result == 1) {
+                        bool collision_result = Collision::segmentToTriangleCollision(point, ray, triangle[0], triangle[1], triangle[2]).isValid();
+                        if (collision_result) {
                             numberOfCollisions ++;
                         }
-                        else if (collision_result == -1) {
-                            allCollisionsValidated = false;
-                            break;
-                        }
+//                        else if (collision_result == -1) {
+//                            allCollisionsValidated = false;
+//                            break;
+//                        }
                     }
                 }
                 if (numberOfCollisions % 2 == 1) {
