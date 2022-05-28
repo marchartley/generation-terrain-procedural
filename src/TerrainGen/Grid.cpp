@@ -108,7 +108,9 @@ float Grid::getMaxHeight()
     return this->heights.max();
 }
 
-std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDeposit)
+
+// Greatly inspired by Sebastian Lague https://github.com/SebLague/Hydraulic-Erosion
+std::vector<std::vector<Vector3>> Grid::hydraulicErosion(bool applyDeposit)
 {
     std::vector<std::vector<Vector3>> traces;
     float currentMaxHeight = this->heights.max();
@@ -148,28 +150,14 @@ std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDep
 
             // Calculate droplet's height and direction of flow with bilinear interpolation of surrounding heights
             float height = heights.interpolate(pos);
-            Vector3 gradient = heights.gradient(pos); //heights.gradient().interpolate(posX, posY, 0);
-//            HeightAndGradient heightAndGradient = CalculateHeightAndGradient (map, mapSize, posX, posY);
+            Vector3 gradient = heights.gradient(pos);
 
             // Update the droplet's direction and position (move position 1 unit regardless of speed)
             dir = (dir * inertia - gradient * (1 - inertia)).normalize();
-//            dirX = (dirX * inertia - gradient.x * (1 - inertia));
-//            dirY = (dirY * inertia - gradient.y * (1 - inertia));
-//            dirX = (dirX * inertia - heightAndGradient.gradientX * (1 - inertia));
-//            dirY = (dirY * inertia - heightAndGradient.gradientY * (1 - inertia));
-            // Normalize direction
-//            float len =  std::sqrt (dirX * dirX + dirY * dirY);
-//            if (len != 0) {
-//                dirX /= len;
-//                dirY /= len;
-//            }
-//            posX += dirX;
-//            posY += dirY;
             pos += dir;
 
             // Stop simulating droplet if it's not moving or has flowed over edge of map
             if ((dir.x == 0 && dir.y == 0) || !heights.checkCoord(pos)) {
-//            if ((dirX == 0 && dirY == 0) || posX < 0 || posX >= getSizeX() - 1 || posY < 0 || posY >= getSizeY() - 1) {
                 break;
             }
 
@@ -189,11 +177,6 @@ std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDep
                 // Add the sediment to the four nodes of the current cell using bilinear interpolation
                 // Deposition is not distributed over a radius (like erosion) so that it can fill small pits
                 precomputedHeights.raiseErrorOnBadCoord = false;
-                /*
-                heights[dropletIndex] += amountToDeposit * (1 - cellOffsetX) * (1 - cellOffsetY);
-                heights[dropletIndex + 1] += amountToDeposit * cellOffsetX * (1 - cellOffsetY);
-                heights[dropletIndex + getSizeX()] += amountToDeposit * (1 - cellOffsetX) * cellOffsetY;
-                heights[dropletIndex + getSizeX() + 1] += amountToDeposit * cellOffsetX * cellOffsetY;*/
                 Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor())) * amountToDeposit * 1.f;
                 for (int x = 0; x < brush.sizeX; x++) {
                     for (int y = 0; y < brush.sizeY; y++) {
@@ -218,15 +201,6 @@ std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDep
                         sediment += deltaSediment;
                     }
                 }
-//                std::cout << "Position : " << Vector3(posX, posY, 0) << "\nErosion amount : " << amountToErode << "\nSediment capacity : " << sediment << " / " << sedimentCapacity << "\nBrush sum : " << brush.sum();
-//                std::cout << "\nEroded : " << sediment << "\nSpeed : " << speed << "\nWater : " << water << "\n\n";
-//                for (int brushPointIndex = 0; brushPointIndex < erosionBrushIndices[dropletIndex].Length; brushPointIndex++) {
-//                    int nodeIndex = erosionBrushIndices[dropletIndex][brushPointIndex];
-//                    float weighedErodeAmount = amountToErode * erosionBrushWeights[dropletIndex][brushPointIndex];
-//                    float deltaSediment = (heights[nodeIndex] < weighedErodeAmount) ? heights[nodeIndex] : weighedErodeAmount;
-//                    heights[nodeIndex] -= deltaSediment;
-//                    sediment += deltaSediment;
-//                }
             }
 
             // Update droplet's speed and water content
@@ -238,7 +212,6 @@ std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDep
             h = std::min(std::max(h, 0.f), 1.f);
         traces.push_back(trace);
     }
-//    std::cout << std::endl;
     this->heights *= currentMaxHeight;
     for (size_t i = 0; i < traces.size(); i++) {
         for (size_t j = 0; j < traces[i].size(); j++) {
@@ -246,11 +219,6 @@ std::vector<std::vector<Vector3> > Grid::SebLangueHydraulicErosion(bool applyDep
         }
     }
     return traces;
-}
-
-std::vector<std::vector<Vector3>> Grid::hydraulicErosion()
-{
-    return SebLangueHydraulicErosion(false);
 }
 
 void Grid::thermalErosion()

@@ -26,8 +26,7 @@ public:
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals.at(x, y); }
 
-    std::vector<std::vector<Vector3>> SebLangueHydraulicErosion(bool applyDeposit = true);
-    std::vector<std::vector<Vector3>> hydraulicErosion();
+    std::vector<std::vector<Vector3>> hydraulicErosion(bool applyDeposit = true);
     void thermalErosion();
     void windErosion();
 
