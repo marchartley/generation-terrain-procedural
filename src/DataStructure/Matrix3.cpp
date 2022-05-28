@@ -38,6 +38,25 @@ Matrix3<float> Matrix3<Vector3>::divergence()
 }
 
 template<>
+Vector3 Matrix3<Vector3>::gradient(Vector3 position)
+{
+    this->raiseErrorOnBadCoord = false;
+    Vector3 flooredPos = position.floor();
+    Vector3 offset = position - flooredPos;
+    return Vector3(
+                at(flooredPos + Vector3(1, 0, 0)).x * (1 - offset.x) + at(flooredPos).x * offset.x,
+                at(flooredPos + Vector3(0, 1, 0)).y * (1 - offset.y) + at(flooredPos).y * offset.y,
+                at(flooredPos + Vector3(0, 0, 1)).z * (1 - offset.z) + at(flooredPos).z * offset.z
+                );
+}
+
+template<>
+Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ)
+{
+    return gradient(Vector3(posX, posY, posZ));
+}
+
+template<>
 Matrix3<Vector3> Matrix3<Vector3>::gradient()
 {
     this->raiseErrorOnBadCoord = false;
@@ -45,6 +64,8 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient()
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
+//                returningGrid.at(x, y, z) = gradient(x, y, z);
+//                continue;
                 // Need to change the divergence function...
 //                returningGrid.at(x, y, z) = this->at(x, y, z).divergence();
                 returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x * .5f,
@@ -56,6 +77,7 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient()
     this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
+
 
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
