@@ -3,6 +3,7 @@
 
 #include "Utils/FastNoiseLit.h"
 #include "Utils/Utils.h"
+#include "Utils/BSpline.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "Utils/stb_image.h"
@@ -231,6 +232,44 @@ void Grid::windErosion()
 
 }
 
+void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpointsInFaults, float faultHeight)
+{
+    std::vector<BSpline> faults;
+    for (int i = 0; i < numberOfFaults; i++) {
+        Vector3 firstPoint, lastPoint;
+        int numberOfSubpoints = random_gen::generate(0, maxNumberOfSubpointsInFaults + 1);
+
+        // Force first and last points to be on the borders of the grid (maybe not the mendatory?)
+        if (random_gen::generate() < .5f) firstPoint = Vector3(random_gen::generate(0, getSizeX()), std::round(random_gen::generate()) * getSizeY());
+        else                            firstPoint = Vector3(std::round(random_gen::generate()) * getSizeX(), random_gen::generate(0, getSizeY()));
+        if (random_gen::generate() < .5f) lastPoint = Vector3(random_gen::generate(0, getSizeX()), std::round(random_gen::generate()) * getSizeY());
+        else                            lastPoint = Vector3(std::round(random_gen::generate()) * getSizeX(), random_gen::generate(0, getSizeY()));
+
+        std::vector<Vector3> points;
+        points.push_back(firstPoint);
+        for (int iSub = 0; iSub < numberOfSubpoints; iSub++)
+            points.push_back(Vector3(random_gen::generate(0, getSizeX()), random_gen::generate(0, getSizeY())));
+        points.push_back(lastPoint);
+        faults.push_back(BSpline(points));
+    }
+
+    Matrix3<float> faultsImpact(getSizeX(), getSizeY());
+    auto start = std::chrono::system_clock::now();
+    for (int x = 0; x < getSizeX(); x++) {
+        for (int y = 0; y < getSizeY(); y++) {
+            Vector3 pos(x, y);
+            float totalInfluence = 0;
+            for (size_t i = 0; i < faults.size(); i++) {
+                float coef = 1.f; // / (float)(i + 1);
+                float distanceToBorder = std::min(getSizeX() - x, std::min(x, std::min(getSizeY() - y, y)));
+                totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 2.f) - interpolation::fault_distance(distanceToBorder, 20.f)) * coef;
+            }
+            faultsImpact.at(pos) = totalInfluence / (float)numberOfFaults;
+        }
+    }
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms" << std::endl;
+    this->heights += (faultsImpact.normalized() * faultHeight);
+}
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {

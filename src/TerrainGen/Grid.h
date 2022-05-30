@@ -34,6 +34,8 @@ public:
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
+    void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
+
     void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1, float tileSize = 0.1);
     void saveHeightmap(std::string heightmap_filename);
 
