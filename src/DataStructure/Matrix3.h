@@ -64,6 +64,8 @@ public:
 
     T interpolate(Vector3 coord);
     T interpolate(float x, float y, float z);
+    Matrix3<T>& addValueAt(T value, Vector3 coord);
+    Matrix3<T>& addValueAt(T value, float x, float y, float z);
 
     int getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect = true) const;
     int getNumberNeighbors(Vector3 pos, bool using4connect = true) const;
@@ -106,6 +108,8 @@ public:
     Matrix3<T> laplacian();
     Vector3 gradient(Vector3 position);
     Vector3 gradient(float posX, float posY, float posZ = 0);
+
+    Matrix3<T> wrapWith(Matrix3<Vector3> wrapper);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, Vector3 offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
@@ -252,7 +256,7 @@ bool Matrix3<T>::checkIndex(size_t i) const
 template<class T>
 T Matrix3<T>::interpolate(Vector3 coord)
 {
-    Vector3 round = coord.rounded();
+    Vector3 round = coord.floor();
     Vector3 cellOffset = coord - round;
 
     bool previousErrorConfig = this->raiseErrorOnBadCoord;
@@ -419,6 +423,28 @@ Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
     return Vector3(x, y, z);
 }
 
+template <class T>
+Matrix3<T>& Matrix3<T>::addValueAt(T value, Vector3 coord) {
+    Vector3 floorPos = coord.floor();
+    Vector3 offset = coord - floorPos;
+
+    if (floorPos == Vector3(24, 0, 0))
+        int a = 0;
+
+    this->at(floorPos + Vector3(0, 0, 0)) += value * (1 - offset.x) * (1 - offset.y) * (1 - offset.z);
+    this->at(floorPos + Vector3(0, 0, 1)) += value * (1 - offset.x) * (1 - offset.y) * (    offset.z);
+    this->at(floorPos + Vector3(0, 1, 0)) += value * (1 - offset.x) * (    offset.y) * (1 - offset.z);
+    this->at(floorPos + Vector3(0, 1, 1)) += value * (1 - offset.x) * (    offset.y) * (    offset.z);
+    this->at(floorPos + Vector3(1, 0, 0)) += value * (    offset.x) * (1 - offset.y) * (1 - offset.z);
+    this->at(floorPos + Vector3(1, 0, 1)) += value * (    offset.x) * (1 - offset.y) * (    offset.z);
+    this->at(floorPos + Vector3(1, 1, 0)) += value * (    offset.x) * (    offset.y) * (1 - offset.z);
+    this->at(floorPos + Vector3(1, 1, 1)) += value * (    offset.x) * (    offset.y) * (    offset.z);
+    return *this;
+}
+template <class T>
+Matrix3<T>& Matrix3<T>::addValueAt(T value, float x, float y, float z) {
+    return this->addValueAt(value, Vector3(x, y, z));
+}
 
 template<class T>
 Vector3 Matrix3<T>::gradient(Vector3 position)
@@ -1189,6 +1215,26 @@ Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
     returned.y = std::min(std::max(0.f, pos.y), (float)sizeY - 1);
     returned.z = std::min(std::max(0.f, pos.z), (float)sizeZ - 1);
     return returned;
+}
+
+template <class T>
+Matrix3<T> Matrix3<T>::wrapWith(Matrix3<Vector3> wrapper)
+{
+    Matrix3<T> result(getDimensions());
+    this->raiseErrorOnBadCoord = false;
+    this->defaultValueOnBadCoord = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    result.raiseErrorOnBadCoord = false;
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                Vector3& wrap = wrapper.at(pos);
+                result.addValueAt(this->interpolate(pos - wrap), pos);
+                result.addValueAt(this->at(pos), pos + wrap);
+            }
+        }
+    }
+    return result;
 }
 
 template<class T>
