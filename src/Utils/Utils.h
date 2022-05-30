@@ -22,6 +22,11 @@ namespace interpolation {
     float cosine(float _x, float _min = 0.0, float _max = 1.0);
     float binary(float _x, float _min = 0.0, float _max = 1.0);
     float wyvill(float _x, float _min = 0.0, float _max = 1.0);
+
+    // Found in A Review of Digital Terrain Modeling (Eric Galin, Eric Guérin, Adrien Peytavie, Guillaume Cordonnier, Marie-Paule
+    // Cani, Bedrich Benes, James Gain) [2019]
+    // Used to generate a terrain from random faults
+    float fault_distance(float distance, float impactRadius);
 }
 
 
@@ -32,6 +37,13 @@ T lerp(float t, T min, T max) {
 template <class T>
 float inverseLerp(T val, T min, T max) {
     return (val - min) / (max - min);
+}
+
+template <class T>
+T clamp(T val, T min, T max) {
+    if (val < min) return min;
+    if (val > max) return max;
+    return val;
 }
 
 template <class T, class U>
