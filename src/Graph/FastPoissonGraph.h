@@ -80,8 +80,12 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     std::vector<std::shared_ptr<GraphNode<T>>> activeList;
     // Step 1 : Create initial sample, register it and put it in the active list
     Vector3 randomStart;
+    int tries = 0;
     do {
         randomStart = Vector3(random_gen::generate() * sizeX, random_gen::generate() * sizeY, random_gen::generate() * sizeZ);
+        tries ++;
+        if (tries > 100000)
+            return; // Error, not enough space to place nodes
     } while (!available_space_matrix.at(randomStart));
     std::shared_ptr<GraphNode<T>> firstNode = std::make_shared<GraphNode<T>>(T(), randomStart, 0);
     activeList.push_back(firstNode);
