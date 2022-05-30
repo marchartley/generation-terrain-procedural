@@ -94,9 +94,9 @@ Vector3 Vector3::rounded(int precision) const
 Vector3 Vector3::floor() const
 {
     Vector3 v = *this;
-    v.x = (int)v.x;
-    v.y = (int)v.y;
-    v.z = (int)v.z;
+    v.x = std::floor(v.x);
+    v.y = std::floor(v.y);
+    v.z = std::floor(v.z);
     return v;
 }
 Vector3 Vector3::ceil() const
