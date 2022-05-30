@@ -19,6 +19,7 @@ public:
     Vector3 getSecondDerivative(float x);
     float estimateClosestTime(Vector3 pos);
     Vector3 estimateClosestPos(Vector3 pos);
+    float estimateDistanceFrom(Vector3 pos);
     float length();
 
     Vector3 getFrenetDirection(float x);

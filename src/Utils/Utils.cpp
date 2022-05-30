@@ -118,6 +118,15 @@ float wyvill(float _x, float _min, float _max)
     return inv_linear(std::pow(1 - x*x, 3), _min, _max);
 }
 
+float fault_distance(float distance, float impactRadius)
+{
+//    float a = distance / impactRadius;
+//    float b = std::pow(a, 2);
+//    float c = 1 - b;
+//    float d = std::pow(c, 2);
+    return (distance < impactRadius ? std::pow(1 - std::pow(distance / impactRadius, 2), 2) : 0);
+}
+
 }
 
 std::string toUpper(std::string s)
