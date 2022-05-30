@@ -121,7 +121,7 @@ void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxe
         }
     }
     FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 20.f);
-    int nb_special_nodes = 8;
+    int nb_special_nodes = std::min(8, int(poissonGraph.nodes.size()));
     std::vector<Vector3> keyPoints;
     for (int i = 0; i < nb_special_nodes; i++) {
         keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
