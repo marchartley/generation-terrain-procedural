@@ -63,7 +63,7 @@ public:
     bool checkIndex(size_t i) const;
 
     T interpolate(Vector3 coord);
-    T interpolate(float x, float y, float z);
+    T interpolate(float x, float y, float z = 0);
     Matrix3<T>& addValueAt(T value, Vector3 coord);
     Matrix3<T>& addValueAt(T value, float x, float y, float z);
 
@@ -425,6 +425,10 @@ Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
 
 template <class T>
 Matrix3<T>& Matrix3<T>::addValueAt(T value, Vector3 coord) {
+    bool previousError = this->raiseErrorOnBadCoord;
+
+    this->raiseErrorOnBadCoord = false;
+
     Vector3 floorPos = coord.floor();
     Vector3 offset = coord - floorPos;
 
@@ -439,6 +443,8 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, Vector3 coord) {
     this->at(floorPos + Vector3(1, 0, 1)) += value * (    offset.x) * (1 - offset.y) * (    offset.z);
     this->at(floorPos + Vector3(1, 1, 0)) += value * (    offset.x) * (    offset.y) * (1 - offset.z);
     this->at(floorPos + Vector3(1, 1, 1)) += value * (    offset.x) * (    offset.y) * (    offset.z);
+
+    this->raiseErrorOnBadCoord = previousError;
     return *this;
 }
 template <class T>
