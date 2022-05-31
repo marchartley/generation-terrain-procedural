@@ -68,6 +68,8 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
                                                                        std::floor(prevSizeY / cellWidth),
                                                                        std::floor(prevSizeZ / cellWidth),
                                                                        RESIZE_MODE::MIN_VAL);
+    available_space_matrix.raiseErrorOnBadCoord = false;
+
     radius = 1.0;
     float sqr_diameter = radius * radius;
     this->sizeX = available_space_matrix.sizeX;
