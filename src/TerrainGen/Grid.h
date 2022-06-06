@@ -26,9 +26,27 @@ public:
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals.at(x, y); }
 
-    std::vector<std::vector<Vector3>> hydraulicErosion(bool applyDeposit = true);
-    void thermalErosion();
-    void windErosion();
+    /// Erosion functions (should be in another class, I guess...)
+    std::vector<std::vector<Vector3>> hydraulicErosion(int numIterations = 1000,
+                                                       int erosionRadius = 10,
+                                                       int maxDropletLifetime = 30,
+                                                       float erodeSpeed = .3f,
+                                                       float depositSpeed = .3f,
+                                                       float evaporateSpeed = .01f,
+                                                       float gravity = 4,
+                                                       float inertia = .05f,
+                                                       float sedimentCapacityFactor = 1,
+                                                       bool applyDeposit = true);
+    void thermalErosion(float erosionCoef = .1f, float minSlope = .01f);
+    std::vector<std::vector<Vector3>> windErosion(int numberOfParticles = 100,
+                                                  Vector3 windDirection = Vector3(2.f, 0.f, 0.f),
+                                                  float bedrocksProportionInGround = .0f,
+                                                  float suspension = .002f,
+                                                  float abrasion = .01f,
+                                                  float roughness = .005f,
+                                                  float settling = .05f,
+                                                  float scale = 40.f,
+                                                  float dt = .1f);
 
     void createMesh();
 

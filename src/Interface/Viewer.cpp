@@ -8,10 +8,12 @@
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
 #include <QTemporaryDir>
-
+#ifdef linux
+    #include "sys/stat.h"
+#endif
 Viewer::Viewer(QWidget *parent): Viewer(
-        std::make_shared<Grid>("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/map2.png", 100, 100, 30, 1.0),
-        std::make_shared<VoxelGrid>(3, 3, 3, 1.0, .30),
+        std::make_shared<Grid>(),
+        std::make_shared<VoxelGrid>(),
         std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
         VOXEL_MODE,
         FILL_MODE,
