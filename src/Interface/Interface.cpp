@@ -70,7 +70,11 @@ ViewerInterface::ViewerInterface() {
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
-        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/pente.png");
+#ifdef linux
+        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/radial.png");
+#else
+        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/radial.png");
+#endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
         this->viewer->grid = this->terrainGenerationInterface->heightmapGrid;
@@ -119,6 +123,8 @@ ViewerInterface::ViewerInterface() {
 
 ViewerInterface::~ViewerInterface()
 {
+    for (auto& action : actionInterfaces)
+        action.reset();
 //    this->setUpdatesEnabled(false);
 //    qDeleteAll(this->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
 //    this->setUpdatesEnabled(true);

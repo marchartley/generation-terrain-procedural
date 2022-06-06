@@ -1,3 +1,4 @@
+#include "Utils/Collisions.h"
 #include "Utils/Globals.h"
 #include "TerrainGen/Grid.h"
 
@@ -106,31 +107,32 @@ void Grid::display(bool displayNormals) {
 
 float Grid::getMaxHeight()
 {
-    return this->heights.max();
+    return this->maxHeight; //this->heights.max();
 }
 
 
 // Greatly inspired by Sebastian Lague https://github.com/SebLague/Hydraulic-Erosion
-std::vector<std::vector<Vector3>> Grid::hydraulicErosion(bool applyDeposit)
+std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
+                                                         int erosionRadius,
+                                                         int maxDropletLifetime,
+                                                         float erodeSpeed,
+                                                         float depositSpeed,
+                                                         float evaporateSpeed,
+                                                         float gravity,
+                                                         float inertia,
+                                                         float sedimentCapacityFactor,
+                                                         bool applyDeposit)
 {
     std::vector<std::vector<Vector3>> traces;
     float currentMaxHeight = this->heights.max();
     this->heights /= currentMaxHeight;
 
-    int erosionRadius = 10;
-    float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction.
-    float sedimentCapacityFactor = 1; // Multiplier for how much sediment a droplet can carry
+    // float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction.
+    // float sedimentCapacityFactor = 1; // Multiplier for how much sediment a droplet can carry
     float minSedimentCapacity = .01f; // Used to prevent carry capacity getting too close to zero on flatter terrain
-    float erodeSpeed = .3f;
-    float depositSpeed = .3f;
-    float evaporateSpeed = .01f;
-    float gravity = 4;
-    int maxDropletLifetime = 30;
 
     float initialWaterVolume = 1;
     float initialSpeed = 1;
-
-    int numIterations = 1000;
 
     for (int iteration = 0; iteration < numIterations; iteration++) {
         std::vector<Vector3> trace;
@@ -222,14 +224,191 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(bool applyDeposit)
     return traces;
 }
 
-void Grid::thermalErosion()
+void Grid::thermalErosion(float erosionCoef, float minSlope)
 {
-
+    minSlope *= getMaxHeight();
+    bool prevError = heights.raiseErrorOnBadCoord;
+    RETURN_VALUE_ON_OUTSIDE prevReturn = heights.returned_value_on_outside;
+    heights.raiseErrorOnBadCoord = false;
+    heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    for (size_t i = 0; i < heights.size(); i++) {
+        Vector3 pos = heights.getCoordAsVector3(i);
+//        if (pos.x == 0 || pos.x == getSizeX() - 1 || pos.y == 0 || pos.y == getSizeY() - 1) // On the borders, don't try yet...
+//            continue;
+        float totalMatterToMove = 0;
+        float height = heights.at(i);
+        Matrix3<float> displacement(3, 3, 1);
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                if (x == 0 && y == 0) continue;
+                Vector3 neighbor(pos.x + x, pos.y + y);
+                if (height - heights.at(neighbor) < -minSlope) {
+                    totalMatterToMove += (height - heights.at(neighbor)) - minSlope;
+                    displacement.at(x+1, y+1) = (height - heights.at(neighbor)) - minSlope;
+                }
+            }
+        }
+        displacement.at(1, 1) = -totalMatterToMove;
+        displacement *= erosionCoef;
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                Vector3 neighbor(pos.x + x, pos.y + y);
+                heights.at(neighbor) += displacement.at(x + 1, y + 1);
+            }
+        }
+    }
+    heights.raiseErrorOnBadCoord = prevError;
+    heights.returned_value_on_outside = prevReturn;
 }
 
-void Grid::windErosion()
-{
+void windCascade(Vector3 pos, Matrix3<float>& ground, Matrix3<float>& sand, float roughness, float settling, float dt) {
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            if (x == 0 && y == 0) continue;
 
+            Vector3 neighbor(pos.x + x, pos.y + y);
+            float diff = (ground.at(pos) + sand.at(pos)) - (ground.at(neighbor) + sand.at(neighbor));
+            float excess = std::abs(diff) - roughness;
+
+            float transfer = 0;
+            if (diff > 0)
+                transfer = std::min(sand.at(pos), excess / 2.f);
+            else
+                transfer = -std::min(sand.at(neighbor), excess / 2.f);
+            sand.at(pos) -= transfer * settling * dt;
+            sand.at(neighbor) += transfer * settling * dt;
+        }
+    }
+}
+std::vector<std::vector<Vector3> > Grid::windErosion(int numberOfParticles,
+                                                     Vector3 windDirection,
+                                                     float bedrocksProportionInGround,
+                                                     float suspension,
+                                                     float abrasion,
+                                                     float roughness,
+                                                     float settling,
+                                                     float scale,
+                                                     float dt)
+{
+    std::vector<std::vector<Vector3>> traces;
+    windDirection *= Vector3(1, 1, 0); // Keep only X and Y
+    // Create a heightmap for sand and a heightmap for bedrocks
+    Matrix3<float> normalizedInitialHeights = heights / 80.f; // .normalized();
+    float maxHeight = 80.f; // heights.max();
+//    float bedrocksProportionInGround = .0f;
+    Matrix3<float> ground = normalizedInitialHeights * bedrocksProportionInGround;
+    Matrix3<float> sand = normalizedInitialHeights * (1 - bedrocksProportionInGround);
+    ground.raiseErrorOnBadCoord = false;
+    ground.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    sand.raiseErrorOnBadCoord = false;
+    sand.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+
+    float terrainDiagonal = std::sqrt(getSizeX() * getSizeX() + getSizeY() * getSizeY());
+    Vector3 availableDropletStartingVector = windDirection.cross(Vector3(0, 0, 1)).normalize();
+    Vector3 availableStart = windDirection * (-terrainDiagonal) + availableDropletStartingVector * terrainDiagonal;
+    Vector3 availableEnd = windDirection * (-terrainDiagonal) - availableDropletStartingVector * terrainDiagonal;
+
+    for (int i = 0; i < numberOfParticles; i++) {
+
+        std::vector<Vector3> trace;
+
+        Vector3 pos(windDirection * 10.f * terrainDiagonal);
+        pos.valid = false;
+        for (int placementTry = 0; placementTry < 10; placementTry ++) {
+            pos.valid = false;
+            float rnd = random_gen::generate(0, 3.141592 * 2.f);
+            Vector3 posInLine = Vector3(getSizeX()/2, getSizeY()/2) + Vector3(std::cos(rnd), std::sin(rnd)) * terrainDiagonal;//Vector3::lerp(random_gen::generate(), availableStart, availableEnd);
+            Vector3 possiblePosX0 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,
+                                                                              Vector3(0, 0, 0), Vector3(getSizeX(), 0, 0));
+            Vector3 possiblePosX1 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,
+                                                                              Vector3(0, getSizeY(), 0), Vector3(getSizeX(), getSizeY(), 0));
+            Vector3 possiblePosY0 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,
+                                                                              Vector3(0, 0, 0), Vector3(0, getSizeY(), 0));
+            Vector3 possiblePosY1 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * 10.f * terrainDiagonal,
+                                                                              Vector3(getSizeX(), 0, 0), Vector3(getSizeX(), getSizeY(), 0));
+            if (possiblePosX0.isValid()) {
+                pos = possiblePosX0;
+            }
+            if (possiblePosX1.isValid() && (!pos.isValid() || (pos - posInLine) > (possiblePosX1 - posInLine))) {
+                pos = possiblePosX1;
+            }
+            if (possiblePosY0.isValid() && (!pos.isValid() || (pos - posInLine) > (possiblePosY0 - posInLine))) {
+                pos = possiblePosY0;
+            }
+            if (possiblePosY1.isValid() && (!pos.isValid() || (pos - posInLine) > (possiblePosY1 - posInLine))) {
+                pos = possiblePosY1;
+            }
+            if (pos.isValid()) break;
+        }
+        pos += windDirection * random_gen::generate(0, 5);
+//        Vector3 pos = Vector3(random_gen::generate(0, 5), random_gen::generate(0, getSizeY()));
+        Vector3 direction = windDirection; // (windDirection).normalize() * windDirection.norm();
+        float height = ground.interpolate(pos) + sand.interpolate(pos);
+        float sediment = 0;
+
+        // While particle in map
+        while (heights.checkCoord(pos) && direction.norm2() > .0001f) {
+            trace.push_back(Vector3(pos.x, pos.y, height * maxHeight));
+            float sandHeight = ground.interpolate(pos) + sand.interpolate(pos);
+            // Compute normal
+            float rightHeight = ground.interpolate(pos.x + 1, pos.y) + sand.interpolate(pos.x + 1, pos.y);
+            float frontHeight = ground.interpolate(pos.x, pos.y + 1) + sand.interpolate(pos.x, pos.y + 1);
+            Vector3 normal = Vector3(1.f, 0.f, (sandHeight - rightHeight) * scale).cross(Vector3(0.f, 1.f, (sandHeight - frontHeight) * scale)).normalize();
+
+            // If new pos is outside, stop it
+            if (!heights.checkCoord(pos)) break;
+
+            // On the ground
+            if (height <= sandHeight) {
+                float force = direction.norm() * (sandHeight - height);
+                if (sand.interpolate(pos) <= 0) {
+                    // Abrasion because the ground is visible
+                    float abrasionQuantity = std::min(abrasion * force * sediment * dt, ground.interpolate(pos));
+                    sand.addValueAt(abrasionQuantity, pos);
+                    ground.addValueAt(-abrasionQuantity, pos);
+                }
+                else if (sand.interpolate(pos) > dt * suspension * force) {
+                    // Suspension, wind particle go away with some sand
+                    float suspensionQuantity = std::min(suspension * force * sediment * dt, sand.interpolate(pos));
+                    sand.addValueAt(-suspensionQuantity, pos);
+                    sediment += suspensionQuantity;
+
+                    windCascade(pos, ground, sand, roughness, settling, dt);
+                }
+                else {
+                    // Adjust the sand height to be 0
+                    sand.addValueAt(-sand.interpolate(pos), pos);
+                }
+            }
+            // Is flying?
+            else {
+                float sandDeposit = std::min(dt * suspension * sediment, sediment);
+                sediment -= sandDeposit;
+
+
+                sand.addValueAt(sandDeposit, pos);
+                windCascade(pos, ground, sand, roughness, settling, dt);
+            }
+            if (height > sandHeight) {
+                // Particle in air, apply gravity
+                direction.z -= dt * .01f;
+            } else {
+                // Loose speed by rolling on ground
+                direction += direction.cross(normal).cross(normal) * dt;
+            }
+            direction += (windDirection - direction) * dt * .1f;
+            pos += Vector3(direction.x, direction.y) * dt;
+            height += direction.z * dt;
+            height = std::max(height, ground.interpolate(pos) + sand.interpolate(pos));
+
+        }
+        traces.push_back(trace);
+    }
+    // Reset and addition to avoid changing the "errorOnBadCoord" values
+    this->heights.reset();
+    this->heights += (sand + ground) * maxHeight;
+
+    return traces;
 }
 
 void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpointsInFaults, float faultHeight)
@@ -239,6 +418,15 @@ void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpo
         Vector3 firstPoint, lastPoint;
         int numberOfSubpoints = random_gen::generate(0, maxNumberOfSubpointsInFaults + 1);
 
+        /*float rng = int(random_gen::generate() * 5) / 5.f;
+        float rng2 = random_gen::generate(0, .01f);
+        if (random_gen::generate() < .999f) {
+            firstPoint = Vector3(rng * getSizeX(), 0 + rng2 * getSizeY());
+            lastPoint = Vector3(rng * getSizeX(), getSizeY() - rng2 * getSizeY());
+        } else {
+            firstPoint = Vector3(std::round(random_gen::generate()) * getSizeX(), random_gen::generate(0, getSizeY()));
+            lastPoint = Vector3(std::round(random_gen::generate()) * getSizeX(), random_gen::generate(0, getSizeY()));
+        }*/
         // Force first and last points to be on the borders of the grid (maybe not the mendatory?)
         if (random_gen::generate() < .5f) firstPoint = Vector3(random_gen::generate(0, getSizeX()), std::round(random_gen::generate()) * getSizeY());
         else                            firstPoint = Vector3(std::round(random_gen::generate()) * getSizeX(), random_gen::generate(0, getSizeY()));
@@ -262,7 +450,7 @@ void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpo
             for (size_t i = 0; i < faults.size(); i++) {
                 float coef = 1.f; // / (float)(i + 1);
                 float distanceToBorder = std::min(getSizeX() - x, std::min(x, std::min(getSizeY() - y, y)));
-                totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 2.f) - interpolation::fault_distance(distanceToBorder, 20.f)) * coef;
+                totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 5.f) - interpolation::fault_distance(distanceToBorder, 10.f)) * coef;
             }
             faultsImpact.at(pos) = totalInfluence / (float)numberOfFaults;
         }
