@@ -95,8 +95,8 @@ SOURCES += \
         src/Utils/RewritableFile.cpp \
         src/Utils/Utils.cpp \
         src/main.cpp \
-        src/sim-fluid-ethanjli/fluidsystem.cpp \
-        src/sim-fluid-ethanjli/math.cpp
+        #src/sim-fluid-ethanjli/fluidsystem.cpp \
+        #src/sim-fluid-ethanjli/math.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
@@ -194,12 +194,12 @@ HEADERS += \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
     src/Utils/stl_reader.h \
-    src/sim-fluid-ethanjli/fluidsystem.h \
-    src/sim-fluid-ethanjli/fluidsystem.tpp \
-    src/sim-fluid-ethanjli/math.h \
-    src/sim-fluid-ethanjli/math.tpp \
-    src/sim-fluid-ethanjli/vectorfield.h \
-    src/sim-fluid-ethanjli/vectorfield.tpp
+#    src/sim-fluid-ethanjli/fluidsystem.h \
+#    src/sim-fluid-ethanjli/fluidsystem.tpp \
+#    src/sim-fluid-ethanjli/math.h \
+#    src/sim-fluid-ethanjli/math.tpp \
+#    src/sim-fluid-ethanjli/vectorfield.h \
+#    src/sim-fluid-ethanjli/vectorfield.tpp
 
 RESOURCES +=\
     src/Shaders/MarchingCubes.frag \
