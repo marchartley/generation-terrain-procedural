@@ -1226,21 +1226,31 @@ Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
 template <class T>
 Matrix3<T> Matrix3<T>::wrapWith(Matrix3<Vector3> wrapper)
 {
+    // Wrap definition : f(wrap(p)) = f(p + wrap vec)
+    // But f(p) != f(p - wrap vec), in the definition. I think it should create
+    // better results because we can fetch outside values (with mirror for ex)
+    // But that's not the current definition.
     Matrix3<T> result(getDimensions());
     this->raiseErrorOnBadCoord = false;
     this->defaultValueOnBadCoord = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
+    Matrix3<float> unit(result.getDimensions(), 1.f);
+    Matrix3<float> unit_ctrl = unit;
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 Vector3& wrap = wrapper.at(pos);
-                result.addValueAt(this->interpolate(pos - wrap), pos);
                 result.addValueAt(this->at(pos), pos + wrap);
+//                result.addValueAt(this->interpolate(pos - wrap), pos);
+
+                unit_ctrl.addValueAt(1.f, pos + wrap);
+//                unit_ctrl.addValueAt(1.f, pos);
             }
         }
     }
-    return result;
+    for (auto& val : unit_ctrl) val = (val == 0 ? .00001f : val);
+    return result /= unit_ctrl;
 }
 
 template<class T>
