@@ -52,6 +52,7 @@ ViewerInterface::ViewerInterface() {
     this->actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>(
                                                                               {
                                                                                   spaceColonization,
+                                                                                  karstPathGeneration,
                                                                                   faultSlip,
                                                                                   flowField,
                                                                                   tunnelInterface,
@@ -84,6 +85,7 @@ ViewerInterface::ViewerInterface() {
             actionInterface->affectVoxelGrid(this->viewer->voxelGrid);
 
         this->heightmapErosionInterface->heightmap = this->terrainGenerationInterface->heightmapGrid;
+        viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,

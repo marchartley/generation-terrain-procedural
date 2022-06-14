@@ -1,11 +1,11 @@
 #include "FluidSimulation/FluidSimulation.h"
-
+/*
 template<class T>
 T clamp(T val, T min, T max) {
     val = std::min(std::max(val, min), max);
     return val;
 }
-
+*/
 
 FluidSimulation::FluidSimulation()
 {
