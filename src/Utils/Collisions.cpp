@@ -231,3 +231,53 @@ bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, V
 
     return true;
 }
+
+Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxMin, Vector3 boxMax)
+{
+//    Vector3 box = (boxMax - boxMin);
+//    orig -= boxMin;
+
+    float tmin = (boxMin.x - orig.x) / dir.x;
+    float tmax = (boxMax.x - orig.x) / dir.x;
+
+    if (tmin > tmax) std::swap(tmin, tmax);
+
+    float tymin = (boxMin.y - orig.y) / dir.y;
+    float tymax = (boxMax.y - orig.y) / dir.y;
+
+    if (tymin > tymax) std::swap(tymin, tymax);
+
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+
+    if (tymin > tmin)
+        tmin = tymin;
+
+    if (tymax < tmax)
+        tmax = tymax;
+
+    float tzmin = (boxMin.z - orig.z) / dir.z;
+    float tzmax = (boxMax.z - orig.z) / dir.z;
+
+    if (tzmin > tzmax) std::swap(tzmin, tzmax);
+
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+
+    if (tzmin > tmin)
+        tmin = tzmin;
+
+    if (tzmax < tmax)
+        tmax = tzmax;
+
+    if (tmin < 0) {
+        if (tmax < 0) {
+            return false;
+        } else {
+            return orig + dir * tmax;
+        }
+    } else {
+        return orig + dir * tmin;
+    }
+
+}
