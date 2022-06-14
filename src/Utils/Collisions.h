@@ -14,6 +14,7 @@ Vector3 intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereC
 bool intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 minAABBox, Vector3 maxAABBox);
 bool intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 boxCenter, Vector3 halfSizeX, Vector3 halfSizeY, Vector3 halfSizeZ);
 
+Vector3 intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxMin, Vector3 boxMax);
 }
 
 #endif // COLLISIONS_H
