@@ -9,6 +9,9 @@
 #include <math.h>
 #include <iomanip>
 #include "DataStructure/Vector3.h"
+#include "Utils/BSpline.h"
+#include "Utils/Collisions.h"
+#include "Utils/Utils.h"
 
 enum RESIZE_MODE {
     LINEAR = 0,
@@ -81,7 +84,8 @@ public:
 
     Matrix3<float> toDistanceMap();
 
-    Matrix3<T> convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
+    template<typename U>
+    Matrix3<T> convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
 
     T min() const;
     T max() const;
@@ -1146,12 +1150,12 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
 }
 
 
-template<class T>
-Matrix3<T> Matrix3<T>::convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS borders)
+template<class T> template<class U>
+Matrix3<T> Matrix3<T>::convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS borders)
 {
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
     this->raiseErrorOnBadCoord = false;
-    this->defaultValueOnBadCoord = 0;
+//    this->defaultValueOnBadCoord = 0;
 
     for (int x = 0; x < result.sizeX; x++) {
         for (int y = 0; y < result.sizeY; y++) {
@@ -1184,7 +1188,7 @@ Matrix3<T> Matrix3<T>::convolution(Matrix3<T> convMatrix, CONVOLUTION_BORDERS bo
 
                 }
                 result.at(pos) = neighboringSum;
-                if (normalisationValue != 0)
+                if (normalisationValue != T())
                     result.at(pos) /= normalisationValue;
             }
         }
