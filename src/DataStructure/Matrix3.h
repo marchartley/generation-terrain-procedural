@@ -114,6 +114,7 @@ public:
     Vector3 gradient(float posX, float posY, float posZ = 0);
 
     Matrix3<T> wrapWith(Matrix3<Vector3> wrapper);
+    Matrix3<T> wrapWith(BSpline original, BSpline wrapperCurve);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, Vector3 offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
@@ -1255,6 +1256,99 @@ Matrix3<T> Matrix3<T>::wrapWith(Matrix3<Vector3> wrapper)
     }
     for (auto& val : unit_ctrl) val = (val == 0 ? .00001f : val);
     return result /= unit_ctrl;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::wrapWith(BSpline original, BSpline wrapperCurve)
+{
+    // For now, start from a straight line on the X-axis
+//    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
+    float pathsResolution = 1000.f;
+    std::vector<Vector3> originalCurvePoints = original.getPath(1/pathsResolution);
+    std::vector<Vector3> wrapperCurvePoints = wrapperCurve.getPath(1/pathsResolution);
+/*
+    for (int i = 0; i < originalCurvePoints.size(); i++) {
+        float t = i / pathsResolution;
+        std::cout << "t = " << t << "\t: " << wrapperCurvePoints[i] << " " << originalCurvePoints[i] << " -> " << wrapperCurvePoints[i] - originalCurvePoints[i] << "\n";
+    }*/
+//    std::cout << std::endl;
+
+    Matrix3<Vector3> wrapper(this->getDimensions());
+    wrapper.raiseErrorOnBadCoord = false;
+    Matrix3<float> modifications(this->getDimensions(), 0.f);
+    modifications.raiseErrorOnBadCoord = false;
+
+    // Vectors along the curve
+    for (size_t i = 0; i < originalCurvePoints.size(); i++) {
+        Vector3 pos = originalCurvePoints[i];
+        Vector3 dir = wrapperCurvePoints[i] - pos;
+        float curveWrapLength = dir.norm();
+        dir.normalize();
+
+        // In direction of the curve wrapping
+        Vector3 endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir, Vector3(), getDimensions());
+        float distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
+
+        for (int j = 0; j < distanceToBorder; j++) {
+            float wrapLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWrapLength;
+//            wrapper.at(pos + dir * (float)j) += dir * wrapLength;
+//            modifications.at(pos + dir * (float)j) += 1.f;
+            wrapper.addValueAt(dir * wrapLength, pos + dir * (float)j);
+            modifications.addValueAt(1.f, pos + dir * (float)j);
+        }
+
+        // In opposite direction of the curve wrapping
+        endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir * -1.f, Vector3(), getDimensions());
+        distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
+
+        for (int j = 1; j < distanceToBorder; j++) {
+            float wrapLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWrapLength;
+//            wrapper.at(pos - dir * (float)j) += dir * wrapLength;
+//            modifications.at(pos - dir * (float)j) += 1.f;
+            wrapper.addValueAt(dir * wrapLength, pos - dir * (float)j);
+            modifications.addValueAt(1.f, pos - dir * (float)j);
+        }
+    }
+
+    for (size_t i = 0; i < wrapper.size(); i++) {
+        wrapper[i] /= (modifications[i] > 0 ? modifications[i] : 1.f);
+        modifications[i] = (modifications[i] > 0 ? 1.f : 0.f);
+    }
+
+    // Fill the empty gaps left
+    while (modifications.min() <= 0) {
+        for (size_t i = 0; i < wrapper.size(); i++) {
+            if (modifications[i] == 0) {
+                Vector3 pos = wrapper.getCoordAsVector3(i);
+                Vector3 replaceValue;
+                float divisor = 0.f;
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        for (int z = -1; z <= 1; z++) {
+                            Vector3 offset(x, y, z);
+                            if (modifications.at(pos + offset) > 0) {
+                                replaceValue += wrapper.at(pos + offset);
+                                divisor++;
+                            }
+                        }
+                    }
+                }
+                if (divisor > 0.f) {
+                    wrapper.at(pos) = replaceValue / divisor;
+                    modifications.at(pos) = 1.f;
+                }
+
+            }
+        }
+    }
+//    Matrix3<float> tempReturn(wrapper.getDimensions());
+//    for (size_t i = 0; i < tempReturn.size(); i++) {
+//        tempReturn[i] = wrapper[i].x;
+//    }
+//    return tempReturn;
+    return this->wrapWith(wrapper);
+
+//    Matrix3<float> unit_ctrl(this->getDimensions(), 1.f);
 }
 
 template<class T>
