@@ -3,6 +3,8 @@
 #include "Utils/Utils.h"
 #include "Utils/Collisions.h"
 
+#include <exception>
+
 BSpline::BSpline()
 {
 
@@ -25,12 +27,18 @@ BSpline::BSpline(std::vector<BSpline> subsplines)
     }
 }
 
-std::vector<Vector3> BSpline::getPath(float resolution)
+std::vector<Vector3> BSpline::getPath(int numberOfPoints)
 {
+    /// I'm really not sure this is the best solution, but an easy fix :
+    /// forcing user to have at least 2 points
+    numberOfPoints = std::max(numberOfPoints, 2);
+//    if (numberOfPoints < 2)
+//        throw std::invalid_argument("At least 2 points needed to get the path");
     std::vector<Vector3> path;
-    for (float x = 0.0; x < 1.0; x += resolution)
-        path.push_back(this->getPoint(x));
-    path.push_back(this->getPoint(1.0));
+    float resolution = 1.f / (float)(numberOfPoints - 1);
+    for (int i = 0; i < numberOfPoints; i ++)
+        path.push_back(this->getPoint(i * resolution));
+//    path.push_back(this->getPoint(1.0));
     return path;
 }
 
@@ -255,7 +263,7 @@ Vector3 BSpline::getCatmullPoint(float x)
 
     if (x == 0.f) return displayedPoints[0];
     if (x == 1.f) return displayedPoints[lastPointIndex];
-    float alpha = 0.5f;
+    float alpha = 2.f; // 2 = very round, 1 = quite normal, 0.5 = almost linear
 
     //alpha /= 2.f;
 

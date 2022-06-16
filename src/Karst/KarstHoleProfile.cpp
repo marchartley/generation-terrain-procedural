@@ -125,8 +125,8 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
     */
     if (!path.getDirection(t).isAlmostVertical()) {
         // Non-vertical path
-        std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
-        std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
+        std::vector<Vector3> startingPoints = this->vertices.getPath(10.f);
+        std::vector<Vector3> endingPoints = other.vertices.getPath(10.f);
         std::vector<Vector3> interpolatedPoints(startingPoints.size());
         for (size_t i = 0; i < startingPoints.size(); i++) {
             interpolatedPoints[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t);
@@ -171,8 +171,8 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
 }
 std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile::interpolateAndGetMesh(KarstHoleProfile other, BSpline path, float t)
 {
-    std::vector<Vector3> startingPoints = this->vertices.getPath(.1f);
-    std::vector<Vector3> endingPoints = other.vertices.getPath(.1f);
+    std::vector<Vector3> startingPoints = this->vertices.getPath(10.f);
+    std::vector<Vector3> endingPoints = other.vertices.getPath(10.f);
     std::vector<Vector3> interpolatedPoints(startingPoints.size());
     for (size_t i = 0; i < startingPoints.size(); i++) {
         interpolatedPoints[i] = (startingPoints[i] * (1 - t) + endingPoints[i] * t);
@@ -189,8 +189,8 @@ std::pair<KarstHoleProfile, std::vector<std::vector<Vector3>>> KarstHoleProfile:
 
 KarstHoleProfile &KarstHoleProfile::rotateIndicesUntilBestFitWith(KarstHoleProfile &otherProfile, int numberOfPointsUsed)
 {
-    std::vector<Vector3> startPositions = this->vertices.getPath(1.f / (float) numberOfPointsUsed);
-    std::vector<Vector3> endPositions = otherProfile.vertices.getPath(1.f / (float) numberOfPointsUsed);
+    std::vector<Vector3> startPositions = this->vertices.getPath(numberOfPointsUsed);
+    std::vector<Vector3> endPositions = otherProfile.vertices.getPath(numberOfPointsUsed);
     float minDist = -1;
     int bestRotateFit = -1;
     bool best_reversed = false;
@@ -240,7 +240,7 @@ KarstHoleProfile &KarstHoleProfile::rotateIndicesUntilBestFitWith(KarstHoleProfi
 
 KarstHoleProfile& KarstHoleProfile::setNumberOfVertices(int vertice_count)
 {
-    std::vector<Vector3> newPoints = this->vertices.getPath(1/(float)(vertice_count - 1));
+    std::vector<Vector3> newPoints = this->vertices.getPath(vertice_count - 1);
     this->vertices = BSpline(newPoints);
     return *this;
 }

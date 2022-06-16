@@ -5,6 +5,8 @@
 #include <vector>
 #include "DataStructure/Vector3.h"
 
+#define PI 3.14159265358979323846
+
 std::vector<std::string> split(std::string str, char c = ' ');
 bool makedir(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);

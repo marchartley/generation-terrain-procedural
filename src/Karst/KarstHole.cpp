@@ -105,8 +105,9 @@ std::vector<std::vector<Vector3>> KarstHole::computeClosingMesh(std::vector<Vect
         }
     }
     // Put the last 3 in a triangle
-    if (remaining_nodes.size() == 3)
-        triangles.push_back({vertices[remaining_nodes[1]], vertices[remaining_nodes[0]], vertices[remaining_nodes[2]]});
+    if (remaining_nodes.size() == 3) {
+        triangles.push_back({vertices[remaining_nodes[1]], vertices[remaining_nodes[0]], vertices[remaining_nodes[2]]});    
+    }
     return triangles;
 }
 
@@ -191,12 +192,12 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         }
         currentProfile.vertices.closed = false;
         intermediateProfiles.push_back(currentProfile);
-        allIntermediateVertices[iT] = currentProfile.vertices.getPath(1.f / (float)(number_of_points - 1));
+        allIntermediateVertices[iT] = currentProfile.vertices.getPath(number_of_points);
     }
 
     for (size_t i = 0; i < allIntermediateVertices.size() - 1; i++) {
-        std::vector<Vector3> startingShape = intermediateProfiles[i].vertices.getPath(1.f / (float)(number_of_points - 1));
-        std::vector<Vector3> endingShape = intermediateProfiles[i + 1]/*.rotateIndicesUntilBestFitWith(intermediateProfiles[i], number_of_points)*/.vertices.getPath(1.f / (float)(number_of_points - 1));
+        std::vector<Vector3> startingShape = intermediateProfiles[i].vertices.getPath(number_of_points);
+        std::vector<Vector3> endingShape = intermediateProfiles[i + 1]/*.rotateIndicesUntilBestFitWith(intermediateProfiles[i], number_of_points)*/.vertices.getPath(number_of_points);
         // Compute the triangles that makes the actual tunnel
         for (int j = 0; j < number_of_points; j++) {
             int j_plus_1 = (j + 1) % number_of_points;
@@ -318,7 +319,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
                     }
                     allCollisionsValidated = true;
                     numberOfCollisions = 0;
-                    ray = Vector3(x, -200, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
+                    ray = Vector3(-200, y, z); // + Vector3::random() * 180.f; // (Vector3::random() * 2.f * (maxVec - minVec).norm()).translate((minVec - maxVec)/ 2.f);
                     int i = 0;
                     int lastTrianglesCylinder = -1;
                     bool ignoreThisCylinder = false;

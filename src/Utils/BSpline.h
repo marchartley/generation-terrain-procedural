@@ -12,7 +12,7 @@ public:
     BSpline(std::vector<Vector3> points);
     BSpline(std::vector<BSpline> subsplines);
 
-    std::vector<Vector3> getPath(float resolution);
+    std::vector<Vector3> getPath(int numberOfPoints);
     Vector3 getPoint(float x);
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
     Vector3 getDerivative(float x, bool verbose = false);

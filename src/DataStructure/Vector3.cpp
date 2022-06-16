@@ -64,6 +64,15 @@ Vector3 Vector3::abs()
     return a;
 }
 
+Vector3& Vector3::setMag(float newMag)
+{
+    this->normalize();
+    this->x *= newMag;
+    this->y *= newMag;
+    this->z *= newMag;
+    return *this;
+}
+
 bool Vector3::isAlmostVertical()
 {
     return std::abs(this->dot(Vector3(0, 0, 1))) > 0.999;
