@@ -105,6 +105,10 @@ Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1
         return Vector3(false);
 
     float t = f * triEdge2.dot(q);
+
+    if (t < 0.f || 1.f < t)
+        return Vector3(false); // Intersection before or after the ray
+
     return rayOrigin + rayDir * t;
 }
 
@@ -228,7 +232,6 @@ bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, V
                 return false;
         }
     }
-
     return true;
 }
 
