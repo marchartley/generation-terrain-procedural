@@ -459,6 +459,7 @@ void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpo
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
 void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
+    this->heights = Matrix3<float>(voxelGrid.getSizeX(), voxelGrid.getSizeY());
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
             this->heights.at(x, y) = voxelGrid.getHeight(x, y);
