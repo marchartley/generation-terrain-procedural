@@ -91,8 +91,10 @@ SOURCES += \
         src/TreeColonisation/TreeColonisation.cpp \
         src/Utils/BSpline.cpp \
         src/Utils/Collisions.cpp \
+    src/Utils/ConstraintsSolver.cpp \
         src/Utils/Globals.cpp \
         src/Utils/RewritableFile.cpp \
+    src/Utils/ShapeCurve.cpp \
         src/Utils/Utils.cpp \
         src/main.cpp \
         #src/sim-fluid-ethanjli/fluidsystem.cpp \
@@ -185,10 +187,12 @@ HEADERS += \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/BSpline.h \
     src/Utils/Collisions.h \
+    src/Utils/ConstraintsSolver.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
     src/Utils/RewritableFile.h \
+    src/Utils/ShapeCurve.h \
     src/Utils/Utils.h \
     src/Utils/json.h \
     src/Utils/stb_image.h \
