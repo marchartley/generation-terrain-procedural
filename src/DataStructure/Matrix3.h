@@ -1264,8 +1264,8 @@ Matrix3<T> Matrix3<T>::wrapWith(BSpline original, BSpline wrapperCurve)
     // For now, start from a straight line on the X-axis
 //    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
     float pathsResolution = 1000.f;
-    std::vector<Vector3> originalCurvePoints = original.getPath(1/pathsResolution);
-    std::vector<Vector3> wrapperCurvePoints = wrapperCurve.getPath(1/pathsResolution);
+    std::vector<Vector3> originalCurvePoints = original.getPath(pathsResolution);
+    std::vector<Vector3> wrapperCurvePoints = wrapperCurve.getPath(pathsResolution);
 /*
     for (int i = 0; i < originalCurvePoints.size(); i++) {
         float t = i / pathsResolution;

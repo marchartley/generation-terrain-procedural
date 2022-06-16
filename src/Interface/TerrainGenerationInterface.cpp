@@ -332,11 +332,14 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
             for (auto& possibleAction : actionInterfaces)
                 possibleAction->replay(action);
         }
-    } else {
+    } else if (ext == "DATA") {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
         voxelGrid->fromIsoData();
         heightmapGrid->fromVoxelGrid(*voxelGrid);
+    } else {
+        // In any other case, consider that nothing has been done, cancel.
+        return;
     }
     this->voxelGrid->createMesh();
     this->heightmapGrid->createMesh();

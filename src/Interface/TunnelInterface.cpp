@@ -4,7 +4,7 @@
 #include "Utils/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
-TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", parent)
+TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", parent), startingShape(KarstHolePredefinedShapes::TUBE), endingShape(KarstHolePredefinedShapes::TUBE)
 {
 
 }
@@ -12,6 +12,9 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
 void TunnelInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
+
+    this->currentTunnelPoints = {Vector3(0, 0, 0), Vector3(10, 0, 0)};
+    createTunnel();
     //    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=](){ voxelGrid->computeFlowfield(); } );
 }
 

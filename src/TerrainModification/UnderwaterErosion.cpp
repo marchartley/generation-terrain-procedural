@@ -145,9 +145,9 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
 
     std::vector<Vector3> coords;
     if (usingSpheres) {
-        float resolution = (this->maxRockSize/5.f) / path.length();
+        float nb_points_on_path = path.length() / (this->maxRockSize/5.f);
         RockErosion rock(this->maxRockSize, this->maxRockStrength);
-        for (const auto& pos : path.getPath(resolution)) {
+        for (const auto& pos : path.getPath(nb_points_on_path)) {
             erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
         }
         if (erosionMatrix.abs().max() < 1.e-6) {
@@ -157,7 +157,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             erosionMatrix.toDistanceMap();
             erosionMatrix.normalize();
             for (float& m : erosionMatrix) {
-                m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+                m = interpolation::linear(m, 0.f, 1.0) * this->maxRockStrength * (addingMatter ? 1.f : -1.f);
         //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
             }
         }
@@ -213,10 +213,10 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
     for (BSpline& path : paths) {
         bool modificationDoesSomething = true;
         if (usingSpheres) {
-            float resolution = 0.10 / path.length();
+            float nb_points_on_path = path.length() * .1f;
             std::vector<Vector3> coords;
             RockErosion rock(this->maxRockSize, this->maxRockStrength);
-            for (const auto& pos : path.getPath(resolution)) {
+            for (const auto& pos : path.getPath(nb_points_on_path)) {
                 erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
             }
         } else {

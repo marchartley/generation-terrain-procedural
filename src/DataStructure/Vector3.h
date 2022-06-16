@@ -38,6 +38,7 @@ public:
     Vector3& normalize();
     Vector3 normalized() const;
     Vector3 abs();
+    Vector3& setMag(float newMag);
 
     bool isAlmostVertical();
 
