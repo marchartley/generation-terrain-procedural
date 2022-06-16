@@ -14,6 +14,9 @@ Vector3 HSVtoRGB(float H, float S,float V);
 std::string toUpper(std::string s);
 std::string getExtention(std::string file);
 
+float rad2deg(float rad);
+float deg2rad(float deg);
+
 namespace interpolation {
     float linear(float x, float _min = 0.0, float _max = 1.0);
     float inv_linear(float x, float _min = 0.0, float _max = 1.0);

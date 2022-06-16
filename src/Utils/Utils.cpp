@@ -143,3 +143,13 @@ std::string getExtention(std::string file)
     std::string ext = file.substr(file.find_last_of('.') + 1);
     return ext;
 }
+
+float rad2deg(float rad)
+{
+    return (rad * 180.f) / PI;
+}
+
+float deg2rad(float deg)
+{
+    return (deg * PI) / 180.f;
+}
