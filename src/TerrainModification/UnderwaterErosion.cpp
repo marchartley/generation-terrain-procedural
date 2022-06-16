@@ -231,7 +231,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
                 holeMatrix = holeMatrix.abs().toDistanceMap();
                 holeMatrix.normalize();
                 for (float& m : holeMatrix) {
-                    m = interpolation::linear(m, 0.f, 1.0) * -this->maxRockStrength;
+                    m = interpolation::linear(m, 0.f, 1.0) * this->maxRockStrength * (addingMatter ? 1.f : -1.f);
             //        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
                 }
 //                holeMatrix *= -this->maxRockStrength;
