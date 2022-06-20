@@ -112,7 +112,7 @@ Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1
     return rayOrigin + rayDir * t;
 }
 
-Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal)
+Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal, bool limitRayLength)
 {
     // assuming vectors are all normalized
     float denom = planeNormal.dot(rayDir);
@@ -122,6 +122,8 @@ Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vecto
             return Vector3(false); // Direction pointing the wrong side = no intersection
         }
         float t = std::abs(planeToRay.dot(planeNormal) / denom);
+        if (limitRayLength && (t < 0 || 1 < t))
+            return Vector3(false);
         return rayOrigin + rayDir * t;
     }
 
@@ -283,4 +285,45 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
         return orig + dir * tmin;
     }
 
+}
+
+bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> polygon)
+{
+    if (polygon.size() < 2) return false;
+
+    size_t firstIndex = 0, secondIndex = 0;
+
+    Vector3 firstVertex = polygon[firstIndex];
+    Vector3 secondVertex = polygon[secondIndex];
+    Vector3 center;
+    float polygonLength = 0;
+    for (size_t i = 0; i < polygon.size(); i++) {
+        center += polygon[i];
+        if (i > 0)
+            polygonLength += (polygon[i] - polygon[i - 1]).norm();
+    }
+    center /= (float)polygon.size();
+    // First, lets find a good plane to define our shape
+    while (std::abs((firstVertex - center).normalized().dot((secondVertex - center).normalized())) < (1 - 1e-5)) {
+        secondIndex ++;
+        if (secondIndex >= polygon.size()) {
+            secondIndex = 0;
+            firstIndex++;
+            if (firstIndex >= polygon.size()) return false;
+            firstVertex = polygon[firstIndex];
+        }
+        secondVertex = polygon[secondIndex];
+    }
+    // At this point, we can check if the "pos" is in the same plane as the shape
+
+    Vector3 ray = center + (firstVertex - center).normalized() * polygonLength; // Same, should be outside the shape
+
+    // Check the intersection of the ray with all the segments of the shape
+    int nb_intersections = 0;
+    for (size_t i = 0; i < polygon.size() - 1; i++) {
+        if (Collision::intersectionBetweenTwoSegments(point, ray, polygon[i], polygon[i+1]).isValid())
+            nb_intersections++;
+    }
+    // If there's a odd number of intersections, the point is inside
+    return (nb_intersections % 2) == 1;
 }

@@ -24,6 +24,8 @@ ShapeCurve::ShapeCurve(BSpline path)
 
 bool ShapeCurve::inside(Vector3 pos)
 {
+    return Collision::pointInPolygon(pos, this->getPath(10));
+    /*
     if (this->points.size() < 2) return false;
 
     size_t firstIndex = 0, secondIndex = 0;
@@ -57,7 +59,7 @@ bool ShapeCurve::inside(Vector3 pos)
             nb_intersections++;
     }
     // If there's a odd number of intersections, the point is inside
-    return (nb_intersections % 2) == 1;
+    return (nb_intersections % 2) == 1;*/
 }
 
 float ShapeCurve::estimateDistanceFrom(Vector3 pos)
