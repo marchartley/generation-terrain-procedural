@@ -96,6 +96,7 @@ SOURCES += \
         src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
         src/Utils/Utils.cpp \
+    src/Utils/Voronoi.cpp \
         src/main.cpp \
         #src/sim-fluid-ethanjli/fluidsystem.cpp \
         #src/sim-fluid-ethanjli/math.cpp
@@ -194,6 +195,9 @@ HEADERS += \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \
     src/Utils/Utils.h \
+    src/Utils/Voronoi.h \
+    src/Utils/jc_voronoi.h \
+    src/Utils/jc_voronoi_clip.h \
     src/Utils/json.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
