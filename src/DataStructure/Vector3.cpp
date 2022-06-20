@@ -123,6 +123,18 @@ Vector3 Vector3::random() {
     return v;
 }
 
+Vector3 Vector3::random(Vector3 maxValues)
+{
+    return Vector3::random(Vector3(), maxValues);
+}
+
+Vector3 Vector3::random(Vector3 minValues, Vector3 maxValues)
+{
+    return Vector3(random_gen::generate(minValues.x, maxValues.x),
+                   random_gen::generate(minValues.y, maxValues.y),
+                   random_gen::generate(minValues.z, maxValues.z));
+}
+
 std::vector<float> Vector3::toArray(Vector3 v)
 {
     std::vector<float> arr;
