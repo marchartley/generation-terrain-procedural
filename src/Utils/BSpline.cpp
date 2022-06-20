@@ -333,3 +333,23 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
     }
     return returningSpline;
 }
+
+std::tuple<Vector3, Vector3> BSpline::AABBox()
+{
+    if (this->points.empty()) return std::make_tuple(Vector3(), Vector3());
+    if (this->points.size() == 1) return std::make_tuple(points[0], points[0]);
+
+    float minDim = std::numeric_limits<float>::min();
+    float maxDim = std::numeric_limits<float>::max();
+    Vector3 minVec = Vector3(maxDim, maxDim, maxDim),
+            maxVec = Vector3(minDim, minDim, minDim);
+    for (const auto& point : points) {
+        minVec.x = std::min(point.x, minVec.x);
+        minVec.y = std::min(point.y, minVec.y);
+        minVec.z = std::min(point.z, minVec.z);
+        maxVec.x = std::max(point.x, maxVec.x);
+        maxVec.y = std::max(point.y, maxVec.y);
+        maxVec.z = std::max(point.z, maxVec.z);
+    }
+    return std::make_tuple(minVec, maxVec);
+}

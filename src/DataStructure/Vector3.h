@@ -83,6 +83,8 @@ public:
     }
 
     static Vector3 random();
+    static Vector3 random(Vector3 maxValues);
+    static Vector3 random(Vector3 minValues, Vector3 maxValues);
 
     static Vector3 nabla;
 

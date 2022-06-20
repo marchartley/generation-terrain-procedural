@@ -38,6 +38,8 @@ public:
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
+    std::tuple<Vector3, Vector3> AABBox();
+
     std::vector<Vector3> points;
     bool closed = false;
 
