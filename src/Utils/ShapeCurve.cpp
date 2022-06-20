@@ -67,3 +67,44 @@ float ShapeCurve::estimateDistanceFrom(Vector3 pos)
     float dist = BSpline::estimateDistanceFrom(pos);
     return dist * (inside(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
+
+Vector3 ShapeCurve::planeNormal()
+{
+    Vector3 normal;
+    int numberOfSamples = 10;
+    for (int i = 0; i < numberOfSamples; i++) {
+        float t = i / (numberOfSamples);
+        normal += this->getBinormal(t);
+    }
+    return normal / (float)numberOfSamples;
+}
+
+std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
+{
+    int maxFailures = 10 * numberOfPoints;
+    std::vector<Vector3> returnedPoints;
+    Vector3 minVec, maxVec;
+    std::tie(minVec, maxVec) = this->AABBox();
+    minVec.z = -1;
+    maxVec.z =  1;
+    Vector3 normalRay = this->planeNormal() * (maxVec - minVec).norm();
+
+    for (int i = 0; i < numberOfPoints; i++) {
+        Vector3 randomPoint = Vector3::random(minVec, maxVec) - normalRay;
+        Vector3 intersectionPoint = Collision::intersectionRayPlane(randomPoint, normalRay * 2.f, this->points[0], normalRay);
+//        if (!intersectionPoint.isValid()) {
+//            intersectionPoint = Collision::intersectionRayPlane(randomPoint, normalRay * -1.f, this->points[0], normalRay);
+//        }
+        if (intersectionPoint.isValid()) {
+            if (Collision::pointInPolygon(intersectionPoint, getPath(points.size()))) {
+                returnedPoints.push_back(intersectionPoint);
+                continue;
+            }
+        }
+        i --;
+        maxFailures --;
+        if (maxFailures < 0)
+            break;
+    }
+    return returnedPoints;
+}

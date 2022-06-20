@@ -12,6 +12,10 @@ public:
 
     bool inside(Vector3 pos);
     float estimateDistanceFrom(Vector3 pos);
+
+    Vector3 planeNormal();
+
+    std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 };
 
 #endif // SHAPECURVE_H
