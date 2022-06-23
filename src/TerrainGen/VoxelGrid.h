@@ -50,6 +50,7 @@ public:
     void letGravityMakeSandFallWithFlow(bool remesh = true);
     Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
     void applyModification(Matrix3<float> modifications);
+    void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f);
     void undo();
     void redo();
 
@@ -139,6 +140,9 @@ public:
     Matrix3<float> pressureField;
 
     Vector3 sea_current = Vector3(1.f, 0.0, 0.0);
+
+protected:
+    float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
 };
 
 #endif // VOXELGRID_H
