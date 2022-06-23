@@ -127,6 +127,14 @@ public:
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
 
+    template<typename U>
+    operator Matrix3<U>() {
+        Matrix3<U> returned(this->getDimensions());
+        for (size_t i = 0; i < this->size(); i++)
+            returned[i] = (U)((*this)[i]);
+        return returned;
+    }
+
 
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
     static Matrix3<T> identity(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
@@ -781,7 +789,7 @@ Matrix3<T> operator+(Matrix3<T> a, Matrix3<T> b) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] += o.data[i];
     }
@@ -795,7 +803,7 @@ Matrix3<T> operator-(Matrix3<T> a, const Matrix3<U>& b) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<U>& o)  {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] -= o.data[i];
     }
@@ -809,10 +817,11 @@ Matrix3<T> operator*(Matrix3<T> a, Matrix3<U> o) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] *= o.data[i];
     }
+    std::cout << std::endl;
     return *this;
 }
 template<typename T, typename U>
@@ -823,7 +832,7 @@ Matrix3<T> operator/(Matrix3<T>& a, const Matrix3<U>& b) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator/=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices maust have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] /= o.data[i];
     }
