@@ -21,8 +21,7 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for(int h = 0; h < this->getSizeZ(); h++) {
-                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)h),
-                                                            -1.0 + noise_shifting, 1.0 + noise_shifting);
+                        float noise_val = getNoiseValue(xChunk * chunkSize + x, yChunk * chunkSize + y, h, noise_shifting);
                         noise_val = 1.1; // To remove
 //                        noise_val = (xChunk == 1 && yChunk == 1 && h / chunkSize  == 1? 1.0 : -1.0); // To remove
 //                        noise_val -= (h > 10 ? 1.0 : 0.0); // To remove
@@ -64,14 +63,12 @@ void VoxelGrid::from2DGrid(Grid grid) {
                     int z = int(grid_height);
                     // Add some positive noise for h < height
                     for (int i = 0; i < z; i++) {
-                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
-                                                            -2.0, 2.0);
+                        float noise_val = getNoiseValue(xChunk * chunkSize + x, yChunk * chunkSize + y, i);
                         data[iChunk].at(x, y, i) = abs(noise_val);
                     }
                     // Add negative noise for h > height
                     for (int i = z; i < this->getSizeZ(); i++) {
-                        float noise_val = noiseMinMax.remap(this->noise.GetNoise((float)xChunk * chunkSize + x, (float)yChunk * chunkSize + y, (float)i),
-                                                            -2.0, 2.0);
+                        float noise_val = getNoiseValue(xChunk * chunkSize + x, yChunk * chunkSize + y, i);
                         data[iChunk].at(x, y, i) = -abs(noise_val);
                     }
                 }
@@ -305,16 +302,21 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
                 currentTransportMatrix.at(sandPos) -= voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos);
                 continue;
             } else {
-                if (voxelValues.at(currentPos) + transportMatrix.at(currentPos) + currentTransportMatrix.at(currentPos) > sandUpperLimit)
+                /*if (voxelValues.at(currentPos) + transportMatrix.at(currentPos) + currentTransportMatrix.at(currentPos) > sandUpperLimit)
                     currentPos -= currentDir; // Go back to previous pos if it saturates the landing voxel
                 float transportedValue = voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos);
                 currentTransportMatrix.at(currentPos) += transportedValue;
-                currentTransportMatrix.at(sandPos) -= transportedValue;
+                currentTransportMatrix.at(sandPos) -= transportedValue;*/
+                if (voxelValues.at(currentPos) + transportMatrix.interpolate(currentPos) + currentTransportMatrix.interpolate(currentPos) > sandUpperLimit)
+                    currentPos -= currentDir; // Go back to previous pos if it saturates the landing voxel
+                float transportedValue = voxelValues.at(sandPos) + transportMatrix.at(sandPos) + currentTransportMatrix.at(sandPos);
+                currentTransportMatrix.addValueAt(transportedValue, currentPos);
+                currentTransportMatrix.addValueAt(transportedValue, sandPos);
             }
         }
         transportMatrix += currentTransportMatrix;
         std::cout << currentTransportMatrix.abs().sum() << " quantity moved at iteration " << ++iter << std::endl;
-    } while(currentTransportMatrix.abs().sum() > 1e-5);
+    } while(currentTransportMatrix.abs().sum() > 1e5);
 //    std::cout << transportMatrix.abs().sum() << " quantity of matter moved." << std::endl;
     this->applyModification(transportMatrix);
 }
@@ -362,6 +364,34 @@ void VoxelGrid::applyModification(Matrix3<float> modifications)
 {
     for (auto& vc : this->chunks)
         vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
+}
+
+void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor)
+{
+    /// Two possibilities : either inverse the voxel values when needed, or just add random values based on Perlin noise
+    Matrix3<float> modification(this->getDimensions(), 0.f);
+    Matrix3<float> previousValues = this->getVoxelValues();
+
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            float startingHeight = this->getHeight(x, y);
+            float height = heightmapModifier.at(x, y);
+            if (height > 1)
+            for (int z = std::max((int)(startingHeight - 1), 0); z < std::min((int)(startingHeight + height), getSizeZ()); z++) {
+                // Method #1 : inverse the values of the voxels
+                modification.at(x, y, z) = previousValues.at(x, y, z) * -2.f * (z == startingHeight-1 ? -1.f : 1.f);
+                // Method #2 : use the noise values
+//                modification.at(x, y, z) = getNoiseValue(x, y, z);
+            }
+            if (0 < startingHeight + height && startingHeight + height < getSizeZ()) {
+                // Special case on last voxel : take into account the decimal value of the height
+                modification.at(x, y, startingHeight + height) = previousValues.at(x, y, startingHeight + height) * -2.f * (height - (int)height);
+                // Method #2 : use the noise values
+    //            modification.at(x, y, startingHeight + height) = getNoiseValue(x, y, startingHeight + height) * (height - (int)height);
+            }
+        }
+    }
+    this->applyModification(modification * factor);
 }
 
 void VoxelGrid::undo()
@@ -677,6 +707,11 @@ void VoxelGrid::retrieveMap(std::string filename)
         }
     }
     this->tempData = data;
+}
+
+float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
+{
+    return noiseMinMax.remap(this->noise.GetNoise((float)x, (float)y, (float)z), -2.0 + noise_shift, 2.0 + noise_shift);
 }
 
 
