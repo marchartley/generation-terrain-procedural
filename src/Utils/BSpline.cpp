@@ -234,6 +234,16 @@ float BSpline::getCurvature(float x)
     return (getDerivative(x).cross(getSecondDerivative(x))).norm() / (std::pow(getDerivative(x).norm(), 3));
 }
 
+Vector3 BSpline::center()
+{
+    if (this->points.empty()) return Vector3();
+
+    Vector3 center;
+    for (const auto& point : this->points)
+        center += point;
+    return center / (float) this->points.size();
+}
+
 BSpline& BSpline::close()
 {
     if (this->points.size() > 1 && !this->closed) { // && this->points.front() != this->points.back()) {
@@ -265,7 +275,7 @@ Vector3 BSpline::getCatmullPoint(float x)
     if (x == 1.f) return displayedPoints[lastPointIndex];
     float alpha = 2.f; // 2 = very round, 1 = quite normal, 0.5 = almost linear
 
-    //alpha /= 2.f;
+    alpha /= 2.f;
 
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);
@@ -352,4 +362,61 @@ std::tuple<Vector3, Vector3> BSpline::AABBox()
         maxVec.z = std::max(point.z, maxVec.z);
     }
     return std::make_tuple(minVec, maxVec);
+}
+
+Vector3 BSpline::containingBoxSize()
+{
+    Vector3 minBox, maxBox;
+    std::tie(minBox, maxBox) = this->AABBox();
+    return (maxBox - minBox);
+}
+
+BSpline &BSpline::grow(float increase)
+{
+    std::vector<Vector3> newPoints = this->points;
+    for (size_t i = 0; i < this->points.size(); i++) {
+        newPoints[i] = this->points[i] + getNormal(estimateClosestTime(this->points[i])) * increase;
+    }
+    this->points = newPoints;
+    return *this;
+}
+
+BSpline BSpline::computeConvexHull()
+{
+    if (this->points.empty()) return BSpline();
+    // Graham scan's algorithm
+    std::vector<Vector3> stack;
+    Vector3 start = this->points[0];
+    // Get point with lowest Y (and lowest X in case of tie)
+    for (size_t i = 0; i < this->points.size(); i++) {
+        Vector3 p = points[i];
+        if (p.y < start.y || (p.y == start.y && p.x < start.x)) {
+            start = p;
+        }
+    }
+    // Sort points by the minimum angle from the "starting point"
+    std::map<float, Vector3> points_angle;
+    for (size_t i = 0; i < this->points.size(); i++) {
+        Vector3 dir = (points[i] - start).normalize();
+        if (dir == Vector3()) continue; // Ignore the starting point
+        float angle = -dir.x; // Sort from "most right" to "more left"
+        if (points_angle.count(angle) == 0 || ((points_angle[angle] - start).norm2() < (points[i] - start).norm2())) {
+            points_angle[angle] = points[i];
+        }
+    }
+    // Add the starting point on the stack
+    stack.push_back(start);
+    // Iterate over all the points:
+    while (points_angle.begin() != points_angle.end()) {
+        // Remove the points from the stack if they create a "left turn"
+        // This can be checked if the Z component of (P1-P0).cross(P2-P0) <= 0
+        // With P0 the current point, P1 the top of stack and P2 the second top
+        while(stack.size() > 1 && ((stack[stack.size() - 1] - stack[stack.size() - 2]).cross((points_angle.begin()->second - stack[stack.size() - 2])).z <= 0)) {
+            stack.pop_back();
+        }
+        // Add the point at the end of the stack
+        stack.push_back(points_angle.begin()->second);
+        points_angle.erase(points_angle.begin());
+    }
+    return stack;
 }

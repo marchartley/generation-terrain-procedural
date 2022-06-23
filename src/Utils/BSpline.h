@@ -32,6 +32,8 @@ public:
     Vector3 getBinormal(float x);
     float getCurvature(float x);
 
+    Vector3 center();
+
     BSpline& close();
 
     Vector3 getCatmullPoint(float x);
@@ -39,6 +41,11 @@ public:
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
     std::tuple<Vector3, Vector3> AABBox();
+    Vector3 containingBoxSize();
+
+    BSpline& grow(float increase);
+
+    BSpline computeConvexHull();
 
     std::vector<Vector3> points;
     bool closed = false;

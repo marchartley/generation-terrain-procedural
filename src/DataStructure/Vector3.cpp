@@ -149,6 +149,20 @@ std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
     return arr;
 }
 
+Vector3 Vector3::min()
+{
+    return Vector3(std::numeric_limits<float>::min(),
+                   std::numeric_limits<float>::min(),
+                   std::numeric_limits<float>::min());
+}
+
+Vector3 Vector3::max()
+{
+    return Vector3(std::numeric_limits<float>::max(),
+                   std::numeric_limits<float>::max(),
+                   std::numeric_limits<float>::max());
+}
+
 
 Vector3& Vector3::rotate(float angle_x, float angle_y, float angle_z) {
     return this->rotate(Vector3(angle_x, angle_y, angle_z));
