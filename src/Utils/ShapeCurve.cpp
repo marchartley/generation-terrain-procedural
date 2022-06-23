@@ -22,9 +22,17 @@ ShapeCurve::ShapeCurve(BSpline path)
     }
 }
 
-bool ShapeCurve::inside(Vector3 pos)
+bool ShapeCurve::inside(Vector3 pos, bool useNativeShape)
 {
-    return Collision::pointInPolygon(pos, this->getPath(10));
+    std::vector<Vector3> pointsUsed;
+    if (useNativeShape) {
+        pointsUsed = this->points;
+        if (!this->points.empty())
+            pointsUsed.insert(pointsUsed.end(), this->points.front());
+    } else {
+        pointsUsed = this->getPath(10);
+    }
+    return Collision::pointInPolygon(pos, pointsUsed);
     /*
     if (this->points.size() < 2) return false;
 
@@ -68,6 +76,15 @@ float ShapeCurve::estimateDistanceFrom(Vector3 pos)
     return dist * (inside(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
+float ShapeCurve::computeArea()
+{
+    float area = 0;
+    for (size_t i = 1; i < this->points.size() + 1; i++){
+        area += points[i % points.size()].x * (points[(i+1) % points.size()].y - points[(i-1) % points.size()].y);
+    }
+    return std::abs(area) / 2.f;
+}
+
 Vector3 ShapeCurve::planeNormal()
 {
     Vector3 normal;
@@ -81,7 +98,7 @@ Vector3 ShapeCurve::planeNormal()
 
 std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 {
-    int maxFailures = 10 * numberOfPoints;
+    int maxFailures = 10000 * numberOfPoints;
     std::vector<Vector3> returnedPoints;
     Vector3 minVec, maxVec;
     std::tie(minVec, maxVec) = this->AABBox();

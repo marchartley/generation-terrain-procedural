@@ -10,8 +10,9 @@ public:
     ShapeCurve(std::vector<Vector3> points);
     ShapeCurve(BSpline path);
 
-    bool inside(Vector3 pos);
+    bool inside(Vector3 pos, bool useNativeShape = false);
     float estimateDistanceFrom(Vector3 pos);
+    float computeArea();
 
     Vector3 planeNormal();
 
