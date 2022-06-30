@@ -4,11 +4,12 @@
 #extension GL_EXT_gpu_shader4 : enable
 
 layout ( points ) in;
-layout ( triangle_strip, max_vertices = 4) out;
+layout ( triangle_strip, max_vertices = 16) out;
 
 //height data field texture
 uniform sampler2D heightmapFieldTex;
 uniform float maxHeight;
+//uniform sampler2D allBiomesColorTextures;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -26,6 +27,10 @@ out vec4 gcolor;
 float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     return (pos.x >= texSize.x || pos.y >= texSize.y) ? 0 : texture(heightmapFieldTex, pos/texSize).a * maxHeight;
+}
+float getDisplacementLength(vec2 pos) {
+    vec2 texSize = textureSize(heightmapFieldTex, 0);
+    return (pos.x >= texSize.x || pos.y >= texSize.y) ? 0 : texture(heightmapFieldTex, pos/texSize).b;
 }
 
 vec3 getNormal(vec2 pos) {
@@ -55,12 +60,40 @@ vec3 getNormal(vec2 pos) {
     return normalize(normal);
 }
 
+void sendInfoVertex(vec4 vecPos) {
+    float displacementStrength = 1.0;
+    vec2 texSize = textureSize(heightmapFieldTex, 0);
+    grealNormal = getNormal(vecPos.xy);
+    gcolor = vec4(texture(heightmapFieldTex, vecPos.xy/texSize).rgb, 1.0);
+    vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
+    ginitialVertPos = vecPos.xyz;
+    gl_Position = proj_matrix * mv_matrix * vecPos;
+    EmitVertex();
+}
+void subdivision(vec2 vecPos) {
+    vec4 v1 = vec4(vecPos + vec2(0, 0), getHeight(vecPos + vec2(0, 0)), 1.0);
+    vec4 v2 = vec4(vecPos + vec2(1, 0), getHeight(vecPos + vec2(1, 0)), 1.0);
+    vec4 v3 = vec4(vecPos + vec2(0, 1), getHeight(vecPos + vec2(0, 1)), 1.0);
+    vec4 v4 = vec4(vecPos + vec2(1, 1), getHeight(vecPos + vec2(1, 1)), 1.0);
+    vec4 v5 = vec4(vecPos + vec2(.5, .5), getHeight(vecPos + vec2(.5, .5)), 1.0);
+
+    sendInfoVertex(v1); sendInfoVertex(v2); sendInfoVertex(v5);
+                        sendInfoVertex(v3); sendInfoVertex(v1);
+    EndPrimitive();
+    sendInfoVertex(v5); sendInfoVertex(v2); sendInfoVertex(v4);
+                        sendInfoVertex(v3); sendInfoVertex(v5);
+    EndPrimitive();
+}
 //Geometry Shader entry point
 void main(void) {
+    float displacementStrength = 1.0;
     vec2 texSize = textureSize(heightmapFieldTex, 0);
 
     vec2 vecPos = initialVertPos[0].xy;
     if (vecPos.x >= texSize.x - 1 || vecPos.y >= texSize.y - 1) return;
+
+    subdivision(vecPos);
+    return;
 
     vec4 v1 = vec4(vecPos + vec2(0, 0), getHeight(vecPos + vec2(0, 0)), 1.0);
     vec4 v2 = vec4(vecPos + vec2(1, 0), getHeight(vecPos + vec2(1, 0)), 1.0);
@@ -69,28 +102,32 @@ void main(void) {
 
 //    grealNormal = normalize(cross(v1.xyz - v2.xyz, v3.xyz - v1.xyz)); //realNormal[0];
 
-    gl_Position = proj_matrix * mv_matrix * v1;
     grealNormal = getNormal(v1.xy);
+    v1 += vec4(grealNormal * getDisplacementLength(v1.xy) * displacementStrength, 0.0);
     ginitialVertPos = v1.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v1.xy/texSize).rgb, 1.0);
+    gl_Position = proj_matrix * mv_matrix * v1;
     EmitVertex();
 
-    gl_Position = proj_matrix * mv_matrix * v2;
     grealNormal = getNormal(v2.xy);
+    v2 += vec4(grealNormal * getDisplacementLength(v2.xy) * displacementStrength, 0.0);
     ginitialVertPos = v2.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v2.xy/texSize).rgb, 1.0);
+    gl_Position = proj_matrix * mv_matrix * v2;
     EmitVertex();
 
-    gl_Position = proj_matrix * mv_matrix * v3;
     grealNormal = getNormal(v3.xy);
+    v3 += vec4(grealNormal * getDisplacementLength(v3.xy) * displacementStrength, 0.0);
     ginitialVertPos = v3.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v3.xy/texSize).rgb, 1.0);
+    gl_Position = proj_matrix * mv_matrix * v3;
     EmitVertex();
 
-    gl_Position = proj_matrix * mv_matrix * v4;
     grealNormal = getNormal(v4.xy);
+    v4 += vec4(grealNormal * getDisplacementLength(v4.xy) * displacementStrength, 0.0);
     ginitialVertPos = v4.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v4.xy/texSize).rgb, 1.0);
+    gl_Position = proj_matrix * mv_matrix * v4;
     EmitVertex();
     EndPrimitive();
 }

@@ -61,3 +61,4 @@ src/FastWFC/*
 saved_maps/action_histories/*
 saved_maps/heightmaps/*
 saved_maps/voxel_grids/*
+*.zip

@@ -1,6 +1,11 @@
 #include "TerrainGenerationInterface.h"
 
+#include "Biomes/BiomeInstance.h"
+#include "Utils/ConstraintsSolver.h"
+#include "Utils/ShapeCurve.h"
 #include "Utils/Utils.h"
+#include "Utils/Voronoi.h"
+#include "Utils/stb_image.h"
 #include "Utils/stb_image_write.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
@@ -121,6 +126,7 @@ void TerrainGenerationInterface::prepareShader()
     heightmapMesh.shader->use();
     GlobalsGL::f()->glBindVertexArray(heightmapMesh.vao);
     heightmapMesh.shader->setInt("heightmapFieldTex", 3);
+    marchingCubeMesh.shader->setInt("heightmapFieldTex", 3);
 
     float *heightmapData = new float[heightmapGrid->heights.size() * 4];
     Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
@@ -145,6 +151,154 @@ void TerrainGenerationInterface::prepareShader()
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
     GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
     delete[] heightmapData;
+
+
+    glGenTextures(1, &biomeFieldTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE4);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, biomeFieldTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmapGrid->biomeIndices.sizeX, heightmapGrid->biomeIndices.sizeY, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, heightmapGrid->biomeIndices.data.data());
+    heightmapMesh.shader->setInt("biomeFieldTex", 4);
+    marchingCubeMesh.shader->setInt("biomeFieldTex", 4);
+
+    QTemporaryDir tempTextureDir;
+    QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
+    Matrix3<Vector3> allColorTextures;
+    Matrix3<Vector3> allNormalTextures;
+    Matrix3<Vector3> allDisplacementTextures;
+    int indexColorTextureClass = 0;
+    int indexNormalTextureClass = 0;
+    int indexDisplacementTextureClass = 0;
+    while (iTex.hasNext()) {
+        QString dir = iTex.next();
+        QString basename = QFileInfo(dir).baseName();
+        if (basename == "color" || basename == "normal" || basename == "displacement") {
+            std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
+            QString newPath = tempTextureDir.path() + QString::fromStdString(textureClass) + QFileInfo(dir).fileName();
+            QFile::copy(dir, newPath);
+            int imgW, imgH, c;
+            unsigned char *data = stbi_load(newPath.toStdString().c_str(), &imgW, &imgH, &c, 3);
+            std::cout << "Loading " << newPath.toStdString().c_str() << " for the class " << textureClass << "..." << std::endl;
+            Matrix3<Vector3> map(imgW, imgH);
+            for (int x = 0; x < imgW; x++) {
+                for (int y = 0; y < imgH; y++) {
+                    unsigned char r = data[3 * (x + y * imgW) + 0];
+                    unsigned char g = data[3 * (x + y * imgW) + 1];
+                    unsigned char b = data[3 * (x + y * imgW) + 2];
+                    map.at(x, y) = Vector3(r, g, b);
+                }
+            }
+            map = map.resize(512, 512, 1, RESIZE_MODE::LINEAR);
+            stbi_image_free(data);
+            if (basename == "color") {
+                colorTexturesIndex[textureClass] = indexColorTextureClass++;
+                if (allColorTextures.empty()) {
+                    allColorTextures = map;
+                } else {
+                    allColorTextures = allColorTextures.concat(map);
+                }
+            } else if (basename == "normal") {
+                normalTexturesIndex[textureClass] = indexNormalTextureClass++;
+                if (allNormalTextures.empty()) {
+                    allNormalTextures = map;
+                } else {
+                    allNormalTextures = allNormalTextures.concat(map);
+                }
+            } else if (basename == "displacement") {
+                displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
+                if (allDisplacementTextures.empty()) {
+                    allDisplacementTextures = map;
+                } else {
+                    allDisplacementTextures = allDisplacementTextures.concat(map);
+                }
+            }
+        }
+    }
+
+    allColorTextures /= 255.f;
+    allNormalTextures /= 255.f;
+    allDisplacementTextures /= 255.f;
+    float *allTexturesColors = new float[allColorTextures.size() * 4];
+    for (size_t i = 0; i < allColorTextures.size(); i++) {
+        allTexturesColors[4 * i + 0] = allColorTextures[i].x;
+        allTexturesColors[4 * i + 1] = allColorTextures[i].y;
+        allTexturesColors[4 * i + 2] = allColorTextures[i].z;
+        allTexturesColors[4 * i + 3] = 1.f;
+    }
+    float *allTexturesNormal = new float[allNormalTextures.size() * 4];
+    for (size_t i = 0; i < allNormalTextures.size(); i++) {
+        allTexturesNormal[4 * i + 0] = allNormalTextures[i].x;
+        allTexturesNormal[4 * i + 1] = allNormalTextures[i].y;
+        allTexturesNormal[4 * i + 2] = allNormalTextures[i].z;
+        allTexturesNormal[4 * i + 3] = 1.f;
+    }
+    float *allTexturesDisplacement = new float[allDisplacementTextures.size() * 4];
+    for (size_t i = 0; i < allDisplacementTextures.size(); i++) {
+        allTexturesDisplacement[4 * i + 0] = allDisplacementTextures[i].x;
+        allTexturesDisplacement[4 * i + 1] = allDisplacementTextures[i].y;
+        allTexturesDisplacement[4 * i + 2] = allDisplacementTextures[i].z;
+        allTexturesDisplacement[4 * i + 3] = 1.f;
+    }
+
+    glGenTextures(1, &allBiomesColorTextures);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allColorTextures.sizeX, allColorTextures.sizeY, 0,
+    GL_RGBA, GL_FLOAT, allTexturesColors);
+    delete[] allTexturesColors;
+    heightmapMesh.shader->setInt("allBiomesColorTextures", 5);
+    marchingCubeMesh.shader->setInt("allBiomesColorTextures", 5);
+
+    heightmapMesh.shader->setInt("maxBiomesColorTextures", indexColorTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesColorTextures", indexColorTextureClass);
+
+    glGenTextures(1, &allBiomesNormalTextures);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allNormalTextures.sizeX, allNormalTextures.sizeY, 0,
+    GL_RGBA, GL_FLOAT, allTexturesNormal);
+    delete[] allTexturesNormal;
+    heightmapMesh.shader->setInt("allBiomesNormalTextures", 6);
+    marchingCubeMesh.shader->setInt("allBiomesNormalTextures", 6);
+
+    heightmapMesh.shader->setInt("maxBiomesNormalTextures", indexNormalTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesNormalTextures", indexNormalTextureClass);
+
+    glGenTextures(1, &allBiomesDisplacementTextures);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allDisplacementTextures.sizeX, allDisplacementTextures.sizeY, 0,
+    GL_RGBA, GL_FLOAT, allTexturesDisplacement);
+    delete[] allTexturesDisplacement;
+    heightmapMesh.shader->setInt("allBiomesDisplacementTextures", 7);
+    marchingCubeMesh.shader->setInt("allBiomesDisplacementTextures", 7);
+
+    heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
 
 //    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
 }
@@ -177,29 +331,75 @@ void TerrainGenerationInterface::regenerateRocksAndParticles()
 
 void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles)
 {
+    /*if (this->heightmapGrid != nullptr) {
+        GlobalsGL::f()->glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, biomeFieldTex);
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmapGrid->biomeIndices.sizeX, heightmapGrid->biomeIndices.sizeY, 0,
+        GL_ALPHA_INTEGER_EXT, GL_INT, ((Matrix3<float>)(heightmapGrid->biomeIndices) / 10.f).data.data());
+    }*/
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
+
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
+//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+//            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
+    float maxHeight = heightmapGrid->heights.max();
+    this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
+    float *heightmapData = new float[heightmapGrid->heights.size() * 4];
+    Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
+    int maxColorTextureIndex = 0;
+    for (auto biome : colorTexturesIndex) {
+        maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
+    }
+    int maxNormalTextureIndex = 0;
+    for (auto biome : normalTexturesIndex) {
+        maxNormalTextureIndex = std::max(maxNormalTextureIndex, biome.second + 1);
+    }
+    int maxDisplacementTextureIndex = 0;
+    for (auto biome : displacementTexturesIndex) {
+        maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
+    }
+    int maxBiomeID = 0; //std::max(1, heightmapGrid->biomeIndices.max());
+    for (const auto& biomeValues : heightmapGrid->biomeIndices)
+        maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
+    Matrix3<std::vector<int>> resizedBiomeIndices = heightmapGrid->biomeIndices; //.resize(heightmapGrid->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
+    for (size_t i = 0; i < heightmapGrid->heights.size(); i++) {
+//        int biomeID = (resizedBiomeIndices[i].empty() ? 0 : resizedBiomeIndices[i].back());
+        float colorTextureOffset = 1.f;
+        float normalTextureOffset = 1.f;
+        float displacementTextureOffset = 1.f;
+        if (resizedBiomeIndices.getDimensions() == heightmapGrid->heights.getDimensions()) {
+            auto biome = (!resizedBiomeIndices[i].empty() ? BiomeInstance::instancedBiomes[resizedBiomeIndices[i].back()] : nullptr);
+            if (biome != nullptr && !biome->getTextureName().empty()) {
+                if (colorTexturesIndex.find(biome->getTextureName()) != colorTexturesIndex.end())
+                    colorTextureOffset = colorTexturesIndex[biome->getTextureName()] / (float)(maxColorTextureIndex);
+                if (normalTexturesIndex.find(biome->getTextureName()) != normalTexturesIndex.end())
+                    normalTextureOffset = normalTexturesIndex[biome->getTextureName()] / (float)(maxNormalTextureIndex);
+                if (displacementTexturesIndex.find(biome->getTextureName()) != displacementTexturesIndex.end())
+                    displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
+            }
+        }
+//        Vector3 color = HSVtoRGB(biomeID / (float)maxBiomeID, 1, 1);
+        gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
+        heightmapData[i * 4 + 0] = colorTextureOffset;
+        heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
+        heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
+        heightmapData[i * 4 + 3] = heightmapGrid->heights[i] / maxHeight;
+    }
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
+    GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+    delete[] heightmapData;
+
     if (mapMode == GRID_MODE) {
         if (this->heightmapGrid == nullptr) {
             std::cerr << "No grid to display" << std::endl;
         } else {
 //            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
-            GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
-            glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
-//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
-//            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
-            float maxHeight = heightmapGrid->heights.max();
-            this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
-            float *heightmapData = new float[heightmapGrid->heights.size() * 4];
-            Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
-            for (size_t i = 0; i < heightmapGrid->heights.size(); i++) {
-                gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
-                heightmapData[i * 4 + 0] = 1; // gradients[i].x;
-                heightmapData[i * 4 + 1] = 1; // gradients[i].y;
-                heightmapData[i * 4 + 2] = 1; // gradients[i].z;
-                heightmapData[i * 4 + 3] = heightmapGrid->heights[i] / maxHeight;
-            }
-            glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
-            GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
-            delete[] heightmapData;
 
             this->heightmapMesh.display(GL_POINTS);
 //            this->heightmapGrid->mesh.shader->setFloat("time", time);
@@ -317,20 +517,56 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmapGrid->loadFromHeightmap(filename, 127, 127, 50); //50, 50, 50);
+        heightmapGrid->loadFromHeightmap(filename, 127, 127, 40);
+
         voxelGrid->from2DGrid(*heightmapGrid);
         voxelGrid->fromIsoData();
+
+        ConstraintsSolver solver;
+        int iArch1 = solver.addItem(new Vector3());
+        int iArch2 = solver.addItem(new Vector3());
+        int iAlgae1 = solver.addItem(new Vector3());
+        int iAlgae2 = solver.addItem(new Vector3());
+
+        solver.addDistanceConstraint(iArch1, iArch2, 30.f);
+//        solver.addDistanceConstraint(iArch1, iAlgae1, 30.f);
+
+//        solver.addDistanceConstraint(iArch2, iArch1, 30.f);
+        solver.addDistanceConstraint(iAlgae1, iArch1, 30.f);
+        solver.addDistanceConstraint(iAlgae2, iArch1, 40.f);
+        solver.addDistanceConstraint(iAlgae2, iAlgae1, 70.f);
+
+        solver.addNormalConstraint(iArch1, deg2rad(0), deg2rad(20)); // 0 to 45
+        solver.addNormalConstraint(iArch2, deg2rad(20), deg2rad(90)); // 20 to 90
+        solver.addNormalConstraint(iAlgae1, deg2rad(0), deg2rad(90)); // 0 to 90
+
+        std::map<int, Vector3> positions = solver.solveWithVoxelGrid(voxelGrid);
+        std::vector<Vector3> pos;
+        for (auto& tuple : positions) {
+            pos.push_back(tuple.second);
+            std::cout << "Element " << tuple.first << " is placed at " << tuple.second << "\n";
+        }
+        std::cout << std::endl;
+//        exit(0);
+
+        UnderwaterErosion ue(voxelGrid, 10, 10, 10);
+        ue.CreateTunnel(BSpline({pos[0], (pos[0] + pos[1]) / 2 + Vector3(0, 0, 1) * (pos[0] - pos[1]).norm(), pos[1]}), true, true);
+        ue.CreateTunnel(BSpline({pos[2], pos[2] + Vector3(0, 0, 50)}), true, true);
+        ue.CreateMultipleTunnels({BSpline({pos[3] + Vector3(-5, -5, 0), pos[3] + Vector3(5, 5)}), BSpline({pos[3] + Vector3(-5, 5), pos[3] + Vector3(5, -5)})}, true, true);
+
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
         std::ifstream file(filename);
         std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         nlohmann::json json_content = nlohmann::json::parse(content);
-        if (!json_content.contains("actions"))
-            return;
-        for (auto action : json_content.at("actions")) {
-            // Let all the interfaces try to replay their actions
-            for (auto& possibleAction : actionInterfaces)
-                possibleAction->replay(action);
+        if (!json_content.contains("actions")) {
+            this->createTerrainFromBiomes(json_content);
+        } else {
+            for (auto action : json_content.at("actions")) {
+                // Let all the interfaces try to replay their actions
+                for (auto& possibleAction : actionInterfaces)
+                    possibleAction->replay(action);
+            }
         }
     } else if (ext == "DATA") {
         // Then it's our custom voxel grid file
@@ -348,6 +584,233 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_file", filename},
                                               {"from_noise", false}
                                           }));
+}
+/*
+Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, Vector3 pos) {
+    pos.z = std::max(pos.z, 0.f); // In case of small imprecision
+    while (grid->getVoxelValue(pos) > 0) {
+        pos += Vector3(0, 0, 1); // Move the position one voxel heigher
+        if (!grid->contains(pos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
+            pos.z = 0;
+            break;
+        }
+    }
+    return pos;
+}
+std::shared_ptr<BiomeInstance> recursivelyCreateBiome(nlohmann::json json_content, Vector3 biomePosition, ShapeCurve area) {
+    std::string biomeClass = json_content.at("class").get<std::string>();
+    // Should be able to retrieve the parameters of the biome...
+    std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
+    instance->position = biomePosition;
+    instance->area = area;
+    auto children = json_content.at("children");
+    Voronoi diagram(children.size(), area);
+    std::vector<BSpline> subarea_borders = diagram.solve();
+    for (size_t i = 0; i < children.size(); i++) {
+        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiome(children[i], diagram.pointset[i], subarea_borders[i]);
+        childBiome->parent = instance;
+        instance->instances.push_back(childBiome);
+    }
+    return instance;
+}
+Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
+    Matrix3<float> erosionMatrix(grid->getDimensions());
+    float nb_points_on_path = path.length() / (size/5.f);
+    RockErosion rock(size, strength);
+    for (const auto& pos : path.getPath(nb_points_on_path)) {
+        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
+    }
+    erosionMatrix = erosionMatrix.abs();
+    erosionMatrix.toDistanceMap();
+    erosionMatrix.normalize();
+    for (float& m : erosionMatrix) {
+        m = interpolation::linear(m, 0.f, 1.0) * strength * (addingMatter ? 1.f : -1.f);
+//        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
+    }
+    return erosionMatrix;
+}*/
+void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
+{
+    if (!this->heightmapGrid)
+        this->heightmapGrid = std::make_shared<Grid>();
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>();
+
+    this->heightmapGrid->heights = Matrix3<float>(124, 124, 1, 20.f);
+    this->heightmapGrid->maxHeight = 40.f;
+
+    this->voxelGrid->from2DGrid(*this->heightmapGrid);
+    this->voxelGrid->fromIsoData();
+
+    this->biomeGenerationNeeded = true;
+    this->biomeGenerationModelData = json_content;
+
+#ifdef NONE
+    ShapeCurve terrainArea({
+                   heightmapGrid->heights.getDimensions() * Vector3(0, 0, 0),
+                   heightmapGrid->heights.getDimensions() * Vector3(1, 0, 0),
+                   heightmapGrid->heights.getDimensions() * Vector3(1, 1, 0),
+                   heightmapGrid->heights.getDimensions() * Vector3(0, 1, 0)
+               });
+    Vector3 initialSpawn = heightmapGrid->heights.getDimensions() / 2.f + Vector3(10, 0, 0);
+    // All the biome hierarchy is created from the json
+    // Each biome has a class name, a position and his biome children
+    std::shared_ptr<BiomeInstance> rootBiome = std::make_shared<BiomeInstance>(BiomeModel::fromJson(json_content).createInstance(initialSpawn, terrainArea));
+    /*std::shared_ptr<BiomeInstance> rootBiome = recursivelyCreateBiome(json_content,
+                                                                      initialSpawn,
+                                                                      terrainArea);*/
+
+    heightmapGrid->biomeIndices = Matrix3<int>(heightmapGrid->heights.getDimensions(), 0);
+    std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
+    std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
+
+    biomeQueue.push_back(rootBiome);
+
+    int biomeID = 0;
+    while (!biomeQueue.empty()) {
+        std::shared_ptr<BiomeInstance> current = biomeQueue.front();
+        sortedBiomes.push_back(current);
+        biomeQueue.erase(biomeQueue.begin());
+        if (!terrainArea.inside(current->position * Vector3(1, 1, 0), true))
+            continue;
+
+        biomeQueue.insert(biomeQueue.end(), current->instances.begin(), current->instances.end());
+    }
+    biomeQueue.push_back(rootBiome);
+
+    // Sort the biomes by level, so that modifications are done top-to-bottom
+    std::sort(sortedBiomes.begin(),
+              sortedBiomes.end(),
+              [](const auto& a, const auto& b) -> bool {
+        return a->getLevel() < b->getLevel();
+    });
+
+    for (auto& current : sortedBiomes) {
+        ShapeCurve area = current->area;
+        int level = current->getLevel();
+//        area = area.grow(-1 * level); // Shrink the area to be able to see all layers
+        Vector3 AABBoxMin, AABBoxMax;
+        std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
+            for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
+                if (area.inside(Vector3(x, y, area.points[0].z)) && heightmapGrid->biomeIndices.checkCoord(Vector3(x, y))) {
+                    heightmapGrid->biomeIndices.at(x, y).push_back(biomeID);
+                }
+            }
+        }
+        current->instanceID = biomeID;
+        BiomeInstance::registerBiome(current);
+        biomeID++;
+
+    }
+    // First, level the terrain as the biomes design it
+    Matrix3<float> heightChange(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1);
+    for (auto& current : sortedBiomes) {
+        if (!current->depthShape.points.empty()) {
+            ShapeCurve area = current->area;
+            Vector3 AABBoxMin, AABBoxMax;
+            std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+            Matrix3<float> falloff2D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
+            for (size_t i = 0; i < falloff2D.size(); i++) {
+                Vector3 pos = falloff2D.getCoordAsVector3(i);
+                if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
+                    float dist = area.estimateDistanceFrom(pos);
+                    falloff2D[i] = dist < 0 ? 1.f : 0.f;
+                }
+            }
+            float desiredDepth = current->depthShape.getPoint(.5f).y;
+            Matrix3<float> newHeight = falloff2D.binarize() * -desiredDepth/5.f;
+            heightChange += newHeight;
+        }
+    }
+//    heightChange.meanSmooth(5, 5, 1);
+    voxelGrid->add2DHeightModification(heightChange, 1.5f);
+
+    // Now add the primitives on top
+    for (auto& current : sortedBiomes) {
+        Vector3 pos = current->position;
+        Vector3 surfacePos = getSurfacePosition(voxelGrid, pos);
+        ShapeCurve area = current->area;
+        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmapGrid->maxHeight);
+        Vector3 AABBoxMin, AABBoxMax;
+        std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        Matrix3<float> falloff2D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 1.f);
+        Matrix3<float> falloff3D(voxelGrid->getDimensions(), 1.f);
+        for (size_t i = 0; i < falloff2D.size(); i++) {
+            Vector3 pos = falloff2D.getCoordAsVector3(i);
+            if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
+                float dist = area.estimateDistanceFrom(pos);
+                falloff2D[i] = dist < 0 ? 1.f - interpolation::fault_distance(-dist, 0.1f) : 0.f;
+            }
+            for (int z = 0; z < falloff3D.sizeZ; z++) {
+                falloff3D.at(pos.x, pos.y, pos.z) = falloff2D[i];
+            }
+        }
+//        Matrix3<float> subFalloff2D
+
+        Matrix3<float> modifications(voxelGrid->getDimensions(), 0.f);
+        Matrix3<float> heightmapModifier(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
+
+        bool modif3D = false;
+        bool modif2D = false;
+
+        if (current->classname == "main-terrain") {
+            // Nothing to do, maybe add some noise on the ground?
+//            Matrix3<float> noise
+        } else if (current->classname == "colline") {
+            // Maybe add a sine wave, or a gaussian height increase
+//            heightmapModifier.paste(Matrix3<float>::gaussian(areaSize.x, areaSize.y, 1, 10.f).normalize() * 20.f  * falloff2D, (surfacePos - areaSize * .5f) * Vector3(1, 1, 0));
+            modif2D = true;
+        } else if (current->classname == "fault") {
+            // No idea what to do here, the hole will be drilled in "trench"
+        } else if (current->classname == "profondeur") {
+            // Maybe add a gaussian height decrease
+            Matrix3<float> hole = Matrix3<float>::gaussian(areaSize.x, areaSize.y, areaSize.z, 10.f).normalize() * -1.f;
+//            modifications.paste(hole, surfacePos - hole.getDimensions() * .5f);
+            modif3D = true;
+        } else if (current->classname == "plaine") {
+            // Don't think there's anything to do here
+        } else if (current->classname == "coral-reef") {
+            // No idea
+        } else if (current->classname == "arche") {
+            // Create an arch from the two "point" children
+            Vector3 point1 = getSurfacePosition(voxelGrid, current->instances[0]->position); // Start
+            Vector3 point4 = getSurfacePosition(voxelGrid, current->instances[1]->position); // End
+            Vector3 point2 = point1 + (point4 - point1) * .3f + Vector3(0, 0, (point4 - point1).norm() / 2.f); // Midpoint1
+            Vector3 point3 = point1 + (point4 - point1) * .6f + Vector3(0, 0, (point4 - point1).norm() / 2.f); // Midpoint2
+            modifications = archeTunnel(BSpline({point1, point2, point3, point4}), 5.f, 10.f, true, voxelGrid);
+            modif3D = true;
+        } else if (current->classname == "algae-area") {
+            // Maybe add some big spikes at this place
+        } else if (current->classname == "trench") {
+            // Dig a tunnel on the surface
+            Vector3 start = getSurfacePosition(voxelGrid, current->instances[0]->position); // Start
+            Vector3 end = getSurfacePosition(voxelGrid, current->instances[1]->position); // End
+            Vector3 midpoint1 = getSurfacePosition(voxelGrid, start + (end - start) * .4f + (end - start).cross(Vector3(0, 0, 1)) * .1f);
+            Vector3 midpoint2 = getSurfacePosition(voxelGrid, start + (end - start) * .6f + (end - start).cross(Vector3(0, 0, 1)) * -.1f);
+            modifications = archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f, 3.f, false, voxelGrid);
+            modif3D = true;
+        } else if (current->classname == "coral") {
+            // Add a small wall depending on the "point" children
+            Vector3 start = getSurfacePosition(voxelGrid, current->instances[0]->position); // Start
+            Vector3 end = getSurfacePosition(voxelGrid, current->instances[1]->position); // End
+            modifications = archeTunnel(BSpline({start, end}), 5.f, 3.f, true, voxelGrid);
+            modif3D = true;
+        } else if (current->classname == "point") {
+            // Nothing to do, this is the smallest primitive
+        } else {
+//            std::cout << "How the fuck did I get here? Class was " << current->classname << std::endl;
+        }
+
+        if (modif2D)
+            voxelGrid->add2DHeightModification(heightmapModifier, 10.f);
+        if (modif3D)
+            voxelGrid->applyModification(modifications * falloff3D);
+    }
+
+    // Yeah whatever... Just do the translation once again
+    this->heightmapGrid->fromVoxelGrid(*voxelGrid);
+#endif
 }
 
 void TerrainGenerationInterface::saveTerrain(std::string filename)

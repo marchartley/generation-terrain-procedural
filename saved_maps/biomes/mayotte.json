@@ -1,0 +1,194 @@
+{
+  "model-name": "Mayotte",
+  "params": {
+		"ground-texture": "underwater_ground"
+	},
+  "children": [
+    {
+      "class": "ile",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+        "size": 30,
+        "quantity": 1,
+				"ground-texture": "mountain"
+      },
+      "children": [
+        {
+          "class": "montagne",
+          "params": {
+            "depth": {
+              "min": -90,
+              "max": -10,
+              "slope": "mountain_rocks"
+            }
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "plage",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+				"depth": {
+					"min": -10,
+					"max": 5,
+					"slope": "linear"
+				},
+        "size": 1,
+        "quantity": 5,
+				"ground-texture": "beach_sand"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "recif-frangeant",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+        "size": 3,
+        "quantity": 10,
+				"ground-texture": "underwater_ground"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+            "depth": {
+              "min": 5,
+              "max": 5,
+              "slope": "flat"
+            }
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "lagon",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+        "size": 30,
+        "quantity": 5,
+				"ground-texture": "underwater_sand"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+            "depth": {
+              "min": 8,
+              "max": 20,
+              "slope": "curve"
+            }
+          },
+          "children": [
+            {
+              "class": "patate-corail",
+              "params": {
+                "probability-appearence": {
+                  "mean": 1,
+                  "vari": 0
+                },
+                "size": 1,
+                "quantity": 4,
+								"ground-texture": "coral"
+              },
+              "children": []
+            },
+            {
+              "class": "zone-algues",
+              "params": {
+                "probability-appearence": {
+                  "mean": 1,
+                  "vari": 0
+                },
+                "size": 1,
+                "quantity": 4,
+								"ground-texture": "algae"
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "recif-barriere",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+				"depth": {
+					"min": 15,
+					"max": 5,
+					"slope": "linear"
+				},
+        "size": 30,
+        "quantity": 2
+      },
+      "children": [
+        {
+          "class": "mur-corail",
+          "params": {
+            "quantity": 1,
+						"ground-texture": "coral2"
+          },
+          "children": [
+            {
+              "class": "passe-corail",
+              "params": {
+                "quantity": 2
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "profondeurs",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+        "size": 300,
+        "quantity": 10,
+        "depth": {
+          "min": 100,
+          "max": 100,
+          "slope": "linear"
+        }
+      },
+      "children": [
+				{
+					"class": "arche",
+					"params": {
+						"quantity": 1
+					},
+					"children": []
+				}
+			]
+    }
+  ]
+}

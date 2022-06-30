@@ -21,6 +21,8 @@ uniform isampler2D edgeTableTex;
 //Triangles table texture
 uniform isampler2D triTableTex;
 
+//uniform sampler2D allBiomesColorTextures;
+
 //Global iso level
 uniform float isolevel;
 //Marching cubes vertices decal

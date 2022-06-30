@@ -77,6 +77,8 @@ public:
     bool isDisplayed = true;
     GLenum displayShape;
 
+    bool cullFace = true;
+
     static void setShaderToAllMeshesWithoutShader(Shader newShader);
 
     static std::vector<Mesh*> all_meshes;

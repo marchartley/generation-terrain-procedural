@@ -30,6 +30,8 @@ TEMPLATE = app
 TARGET = interface
 
 SOURCES += \
+    src/Biomes/BiomeInstance.cpp \
+    src/Biomes/BiomeModel.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
         src/DataStructure/Vector3.cpp \
@@ -53,6 +55,7 @@ SOURCES += \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
         src/Interface/ActionInterface.cpp \
+    src/Interface/BiomeInterface.cpp \
         src/Interface/ControlPoint.cpp \
         src/Interface/CustomInteractiveObject.cpp \
         src/Interface/ErosionInterface.cpp \
@@ -104,6 +107,7 @@ SOURCES += \
 RESOURCES += qml.qrc \
     icons.qrc \
     models_3d.qrc \
+    terrain_textures.qrc \
     tunnels_icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
@@ -118,6 +122,9 @@ else: unix:!android: target.path = /opt/$${TARGET}/bin
 !isEmpty(target.path): INSTALLS += target
 
 HEADERS += \
+    src/Biomes/BiomeInstance.h \
+    src/Biomes/BiomeModel.h \
+    src/Biomes/BiomeUtils.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/Vector3.h \
@@ -151,6 +158,7 @@ HEADERS += \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
     src/Interface/ActionInterface.h \
+    src/Interface/BiomeInterface.h \
     src/Interface/ControlPoint.h \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/ErosionInterface.h \

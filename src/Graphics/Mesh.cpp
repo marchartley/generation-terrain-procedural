@@ -337,8 +337,10 @@ void Mesh::display(GLenum shape, float lineWeight)
         return;
     if (shape != -1) this->displayShape = shape;
     this->update();
-    if(this->shader != nullptr)
+    if(this->shader != nullptr) {
         this->shader->use();
+        this->shader->setBool("cullFace", this->cullFace);
+    }
     //    glEnable(GL_DEPTH_TEST);
     //    glDepthFunc(GL_LEQUAL);
     GLfloat previousLineWidth[1];

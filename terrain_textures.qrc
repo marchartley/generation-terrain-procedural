@@ -1,0 +1,45 @@
+<RCC>
+    <qresource prefix="/terrain_textures">
+        <file>src/assets/textures/algae/displacement.png</file>
+        <file>src/assets/textures/algae/normal.jpg</file>
+        <file>src/assets/textures/algae/occlusion.jpg</file>
+        <file>src/assets/textures/algae/specular.jpg</file>
+        <file>src/assets/textures/beach_sand/color.jpg</file>
+        <file>src/assets/textures/beach_sand/displace.tiff</file>
+        <file>src/assets/textures/beach_sand/normal.jpg</file>
+        <file>src/assets/textures/beach_sand/occlusion.jpg</file>
+        <file>src/assets/textures/beach_sand/specular.jpg</file>
+        <file>src/assets/textures/coral/color.jpg</file>
+        <file>src/assets/textures/coral/displacement.png</file>
+        <file>src/assets/textures/coral/Material_1307.jpg</file>
+        <file>src/assets/textures/coral/normal.jpg</file>
+        <file>src/assets/textures/coral/occlusion.jpg</file>
+        <file>src/assets/textures/coral/roughness.jpg</file>
+        <file>src/assets/textures/coral2/color.jpg</file>
+        <file>src/assets/textures/coral2/displacement.png</file>
+        <file>src/assets/textures/coral2/Material_737.png</file>
+        <file>src/assets/textures/coral2/normal.jpg</file>
+        <file>src/assets/textures/coral2/occlusion.jpg</file>
+        <file>src/assets/textures/coral2/roughness.jpg</file>
+        <file>src/assets/textures/mountain_rocks/color.jpg</file>
+        <file>src/assets/textures/mountain_rocks/displacement.png</file>
+        <file>src/assets/textures/mountain_rocks/Material_1607.jpg</file>
+        <file>src/assets/textures/mountain_rocks/normal.jpg</file>
+        <file>src/assets/textures/mountain_rocks/occlusion.jpg</file>
+        <file>src/assets/textures/mountain_rocks/roughness.jpg</file>
+        <file>src/assets/textures/underwater_ground/Material_1283.jpg</file>
+        <file>src/assets/textures/underwater_sand/Material_1573.jpg</file>
+        <file>src/assets/textures/algae/color.png</file>
+        <file>src/assets/textures/underwater_ground/color.jpg</file>
+        <file>src/assets/textures/underwater_ground/displacement.png</file>
+        <file>src/assets/textures/underwater_ground/normal.jpg</file>
+        <file>src/assets/textures/underwater_ground/occlusion.jpg</file>
+        <file>src/assets/textures/underwater_ground/roughness.jpg</file>
+        <file>src/assets/textures/underwater_ground/specular.jpg</file>
+        <file>src/assets/textures/underwater_sand/color.jpg</file>
+        <file>src/assets/textures/underwater_sand/displacement.png</file>
+        <file>src/assets/textures/underwater_sand/normal.jpg</file>
+        <file>src/assets/textures/underwater_sand/occlusion.jpg</file>
+        <file>src/assets/textures/underwater_sand/roughness.jpg</file>
+    </qresource>
+</RCC>

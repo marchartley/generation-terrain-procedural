@@ -25,14 +25,14 @@ int ConstraintsSolver::addItem(BSpline *curve)
     return ID;
 }
 
-std::map<int, Vector3> ConstraintsSolver::solve(std::shared_ptr<VoxelGrid> mainGrid)
+std::map<int, Vector3> ConstraintsSolver::solveWithVoxelGrid(std::shared_ptr<VoxelGrid> mainGrid)
 {
     auto startTime = std::chrono::system_clock::now();
     int number_elements = distanceConstraints.sizeX;
     float epsilon = 1e-5;
     float deltaMove = .1f;
     float deltaMoveDamping = 1.f;
-    int maxTries = 1000;
+    int maxTries = 10000;
     std::map<int, Vector3> returnedPositions;
     float minError = std::numeric_limits<float>::max();
     float error = 0;
@@ -138,6 +138,7 @@ std::map<int, Vector3> ConstraintsSolver::solve(std::shared_ptr<VoxelGrid> mainG
 
                 // If the dispacement is moving the element in the air or in an incorrect normal,
                 // bring it back to a border and reduce the distance until the ground normal is good
+                int displacementApprovalTries = 0;
                 while (!displacementApproved) {
                     float displacementDist = displacement.norm();
                     // Reduce the length by 1 if the normal is incompatible
@@ -167,11 +168,114 @@ std::map<int, Vector3> ConstraintsSolver::solve(std::shared_ptr<VoxelGrid> mainG
                         reconnectionTries++;
                     }
 
+                    displacementApprovalTries++;
+                    if (displacementApprovalTries > 1000)
+                    {
+                        displacement = Vector3();
+                        break;
+                    }
+
                     // If displacementDist < 0, stop trying
                     displacementApproved = (borders.at(elements_position[i] + displacement) == 1 &&
                                             minSlope <= angles.at(elements_position[i] + displacement) &&
                                             angles.at(elements_position[i] + displacement) <= maxSlope) || displacementDist <= 0;
                 }
+                moves[i] = displacement;
+
+                elements_position[i] += displacement;
+
+                if (displacement.norm2() > epsilon) atLeastOneDisplacementToDo = true;
+            }
+            tries++;
+            if (!atLeastOneDisplacementToDo || tries >= maxTries)
+                break;
+            deltaMove *= deltaMoveDamping;
+        }
+        if (error < minError) {
+            minError = error;
+            for(int i = 0; i < int(elements_position.size()); i++)
+                returnedPositions[i] = elements_position[i];
+        }
+        errorCounter.push_back(error);
+        stepCounter.push_back(tries);
+        std::cout << "Iter #" << iteration << ": error = " << error << " after " << tries << " steps" << std::endl;
+    }
+    auto endTime = std::chrono::system_clock::now();
+    std::cout << "Error: " << minError << " on iteration #" << iteration << "\nTime: " << std::chrono::duration<float>(endTime - startTime).count() << "s\nDetails:";
+//    for (int i = 0; i < iteration; i++) {
+//        std::cout << "\n- iter #" << (i+1) << ": Error = " << errorCounter[i] << " after " << stepCounter[i] << " steps";
+//    }
+    std::cout << std::endl;
+
+    return returnedPositions;
+}
+
+std::map<int, Vector3> ConstraintsSolver::solve(bool checkPossible, float deltaMoveForHigherDistances, float deltaMoveForLowerDistances)
+{
+    auto startTime = std::chrono::system_clock::now();
+    int number_elements = distanceConstraints.sizeX;
+    float epsilon = 1e-5;
+    float deltaMove = .1f;
+    float deltaMoveDamping = 1.f;
+
+    float deltaMoveIfDistanceIsGreater = deltaMoveForHigherDistances;
+    float deltaMoveIfDistanceIsLower = deltaMoveForLowerDistances;
+
+    int maxTries = 10000;
+    std::map<int, Vector3> returnedPositions;
+    float minError = std::numeric_limits<float>::max();
+    float error = 0;
+
+    std::vector<float> errorCounter;
+    std::vector<int> stepCounter;
+
+    if (checkPossible && !checkFeasibility()) {
+        std::cout << "No config possible! : \n";
+        checkFeasibility(true);
+        return returnedPositions;
+    }
+
+    int iteration = 0;
+    for (iteration = 0; iteration < 5 && minError > 1.0 * number_elements * number_elements; iteration++) {
+
+        std::vector<Vector3> elements_position(number_elements);
+        for (int i = 0; i < number_elements; i++) {
+            elements_position[i] = *this->pointsConstrainted[i];
+        }
+        if (iteration > 0) {
+            std::shuffle(elements_position.begin(), elements_position.end(), random_gen::random_generator);
+        }
+
+        int tries = 0;
+        error = 0;
+        while (true) { // Change this condition, one day
+            bool atLeastOneDisplacementToDo = false;
+
+            Matrix3<float> currentDistance(number_elements, number_elements, 1, 0.f);
+            Matrix3<Vector3> nodesPairs(number_elements, number_elements);
+            std::vector<Vector3> moves(number_elements);
+            for (int i = 0; i < number_elements; i++) {
+                for (int j = 0; j < number_elements; j++) {
+                    nodesPairs.at(i, j) = elements_position[j] - elements_position[i];
+                    currentDistance.at(i, j) = nodesPairs.at(i, j).norm();
+                }
+            }
+
+            for (int i = 0; i < number_elements; i++) {
+                Vector3 displacement;
+                int divisor = 0;
+                for (int j = 0; j < number_elements; j++) {
+                    if (distanceConstraintsAvailable.at(i, j) == 1) {
+                        float distanceToSatisfaction = (currentDistance.at(i, j) - distanceConstraints.at(i, j));
+                        displacement += nodesPairs.at(i, j).normalized() * distanceToSatisfaction * (distanceToSatisfaction > 0 ? deltaMoveIfDistanceIsGreater : deltaMoveIfDistanceIsLower);
+                        error += std::abs(distanceToSatisfaction);
+                        divisor ++;
+                    }
+                }
+                if (divisor > 0)
+                    displacement /= (float)divisor;
+                displacement *= deltaMove;
+
                 moves[i] = displacement;
 
                 elements_position[i] += displacement;

@@ -134,8 +134,41 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
+
+uniform sampler2D biomeFieldTex;
+uniform sampler2D heightmapFieldTex;
+uniform sampler2D allBiomesColorTextures;
+uniform int maxBiomesColorTextures;
+uniform sampler2D allBiomesNormalTextures;
+uniform int maxBiomesNormalTextures;
+
+vec3 hsv2rgb(vec3 c)
+{
+    vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+    vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+    return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+vec3 getBiomeColor(vec2 pos) {
+    vec2 texSize = textureSize(biomeFieldTex, 0);
+    float val = max(texture(biomeFieldTex, pos/texSize).r, max(texture(biomeFieldTex, pos/texSize).g, texture(biomeFieldTex, pos/texSize).b));
+//    return hsv2rgb(vec3(val, 1.0, 1.0));
+    return vec3(val, 1.0, 1.0);
+}
+
+
+vec3 getTriPlanarBlend(vec3 _wNorm){
+    // in wNorm is the world-space normal of the fragment
+    vec3 blending = abs( _wNorm );
+    blending = normalize(max(blending, 0.00001)); // Force weights to sum to 1.0
+    float b = (blending.x + blending.y + blending.z);
+    blending /= vec3(b, b, b);
+    return blending;
+}
+
 void main(void)
 {
+
     if (min_vertice_positions.x > ginitialVertPos.x || ginitialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > ginitialVertPos.y || ginitialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > ginitialVertPos.z || ginitialVertPos.z > max_vertice_positions.z)
         discard;
 
@@ -159,6 +192,20 @@ void main(void)
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(-L, N);
     vec3 H = normalize(varyingHalfH);
+
+    vec2 texSize = textureSize(heightmapFieldTex, 0);
+    float biomeColorValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbm3ToVec2(ginitialVertPos.xyz) * 5.0)/texSize).r;
+    float biomeNormalValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbm3ToVec2(ginitialVertPos.xyz) * 5.0)/texSize).r;
+//    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
+    float scale = 10.0;
+    vec3 blending = getTriPlanarBlend(grealNormal);
+    if (biomeNormalValue < 1.0) {
+        vec2 normalTextureOffset = vec2(biomeNormalValue, 0);
+        vec3 xaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(ginitialVertPos.yz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        vec3 yaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(ginitialVertPos.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        vec3 zaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(ginitialVertPos.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        N = (xaxis * blending.x + yaxis * blending.y + zaxis * blending.z);
+    }
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
@@ -208,4 +255,13 @@ void main(void)
 
     if (displayingIgnoredVoxels)
         fragColor = vec4(0, 0, 0, 0.1);
+
+//    fragColor = vec4(getBiomeColor(ginitialVertPos.xy), 1.0);
+    if (biomeColorValue < 1.0) {
+        vec2 colorTextureOffset = vec2(biomeColorValue, 0);
+        vec3 xaxis = texture2D(allBiomesColorTextures, colorTextureOffset + (fract(ginitialVertPos.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        vec3 yaxis = texture2D(allBiomesColorTextures, colorTextureOffset + (fract(ginitialVertPos.xz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        vec3 zaxis = texture2D(allBiomesColorTextures, colorTextureOffset + (fract(ginitialVertPos.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99 /*/ (maxBiomesColorTextures * scale)*/).rgb;
+        fragColor = vec4((vec4(blending.x * xaxis + blending.y * yaxis + blending.z * zaxis, 1.0) * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
+    }
 }

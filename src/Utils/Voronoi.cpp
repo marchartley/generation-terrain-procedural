@@ -61,6 +61,12 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, Vector3 minBoundarie, Vector3 ma
 
 std::vector<BSpline> Voronoi::solve()
 {
+    if (pointset.size() == 0) {
+        return std::vector<BSpline>();
+    } else if (pointset.size() == 1) {
+        if (!this->boundingShape.points.empty())
+            return std::vector<BSpline>{this->boundingShape};
+    }
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
     jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.points.size());
     for (size_t i = 0; i < pointset.size(); i++) {

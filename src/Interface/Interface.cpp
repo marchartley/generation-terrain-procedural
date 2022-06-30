@@ -48,6 +48,9 @@ ViewerInterface::ViewerInterface() {
     this->viewer->heightmapErosionInterface = this->heightmapErosionInterface;
 //    this->heightmapErosionInterface->viewer = this->heightmapEiewer;
 
+    this->biomeInterface = std::make_shared<BiomeInterface>(this);
+    this->viewer->biomeInterface = this->biomeInterface;
+
 
     this->actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>(
                                                                               {
@@ -61,7 +64,8 @@ ViewerInterface::ViewerInterface() {
                                                                                   undoRedoInterface,
                                                                                   terrainGenerationInterface,
                                                                                   erosionInterface,
-                                                                                  heightmapErosionInterface
+                                                                                  heightmapErosionInterface,
+                                                                                  biomeInterface
                                                                               });
 
     for (auto& actionInterface : this->actionInterfaces) {
@@ -74,7 +78,8 @@ ViewerInterface::ViewerInterface() {
 #ifdef linux
         this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/radial.png");
 #else
-        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/radial.png");
+        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
+//        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
 #endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
@@ -85,6 +90,11 @@ ViewerInterface::ViewerInterface() {
             actionInterface->affectVoxelGrid(this->viewer->voxelGrid);
 
         this->heightmapErosionInterface->heightmap = this->terrainGenerationInterface->heightmapGrid;
+        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
+        if (terrainGenerationInterface->biomeGenerationNeeded) {
+            this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
+            this->biomeInterface->generateBiomes();
+        }
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
     });
 
@@ -116,6 +126,8 @@ ViewerInterface::ViewerInterface() {
                      this, [&](){ this->viewer->update(); });
     QObject::connect(this->heightmapErosionInterface.get(), &HeightmapErosionInterface::updated,
                      this, [&](){ this->viewer->update(); });
+    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
+                     this->biomeInterface.get(), &BiomeInterface::mouseClickedOnMapEvent);
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
         this->setFocus(Qt::OtherFocusReason);
@@ -157,6 +169,7 @@ void ViewerInterface::setupUi()
     QIcon fillModeIcon(":/icons/src/assets/fill_mode.png");
     QIcon erosionIcon(":/icons/src/assets/erosion.png");
     QIcon heightmapErosionIcon(":/icons/src/assets/heightmap-erosion.png");
+    QIcon biomeIcon(":/icons/src/assets/biomes.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -216,6 +229,8 @@ void ViewerInterface::setupUi()
 
     QAction *heightmapErosionAction = new QAction(heightmapErosionIcon, "Eroder la heightmap");
 
+    QAction *biomeAction = new QAction(biomeIcon, "Gérer les biomes");
+
 
 
     QMenu* fileMenu = new QMenu("File");
@@ -244,6 +259,7 @@ void ViewerInterface::setupUi()
     terrainTypeGroup->addAction(heightmapAction);
     terrainTypeGroup->addAction(layerBasedAction);
     modelMenu->addActions(terrainTypeGroup->actions());
+    modelMenu->addActions({biomeAction});
 
     QMenu* recordingMenu = new QMenu("Enregistrements");
     recordingMenu->addActions({recordingAction});
@@ -273,6 +289,8 @@ void ViewerInterface::setupUi()
     toolbar->addActions({marchingCubesAction, rawVoxelsAction});
     toolbar->addSeparator();
     toolbar->addActions({heightmapAction, voxelGridAction, layerBasedAction});
+    toolbar->addSeparator();
+    toolbar->addActions({biomeAction});
     toolbar->addSeparator();
     toolbar->addActions({recordingAction});
     toolbar->addSeparator();
@@ -626,6 +644,7 @@ void ViewerInterface::setupUi()
     QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
     QObject::connect(erosionAction, &QAction::triggered, this, &ViewerInterface::openErosionInterface);
     QObject::connect(heightmapErosionAction, &QAction::triggered, this, &ViewerInterface::openHeightmapErosionInterface);
+    QObject::connect(biomeAction, &QAction::triggered, this, &ViewerInterface::openBiomeInterface);
     QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
@@ -930,6 +949,21 @@ void ViewerInterface::openHeightmapErosionInterface()
     this->viewer->update();
 }
 
+void ViewerInterface::openBiomeInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "BiomeGeneration") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "BiomeGeneration";
+        this->biomeInterface->show();
+        this->frame->setContent(this->biomeInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
 void ViewerInterface::hideAllInteractiveParts()
 {
     this->karstPathGeneration->hide();
@@ -941,6 +975,7 @@ void ViewerInterface::hideAllInteractiveParts()
     this->gravityInterface->hide();
     this->erosionInterface->hide();
     this->heightmapErosionInterface->hide();
+    this->biomeInterface->hide();
 
     this->viewer->update();
     this->update();

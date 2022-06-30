@@ -98,6 +98,7 @@ Vector3 ShapeCurve::planeNormal()
 
 std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 {
+    if (this->points.empty()) return std::vector<Vector3>();
     int maxFailures = 10000 * numberOfPoints;
     std::vector<Vector3> returnedPoints;
     Vector3 minVec, maxVec;
