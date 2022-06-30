@@ -215,6 +215,8 @@ void Viewer::draw() {
         this->erosionInterface->display();
     if (this->heightmapErosionInterface)
         this->heightmapErosionInterface->display();
+    if (this->biomeInterface)
+        this->biomeInterface->display();
 
     if (this->isTakingScreenshots) {
 #ifdef linux

@@ -138,6 +138,15 @@ std::string toUpper(std::string s)
     return res;
 }
 
+std::string toLower(std::string s)
+{
+    std::string res = s;
+    for (auto& c : res) {
+        c = tolower(c);
+    }
+    return res;
+}
+
 std::string getExtention(std::string file)
 {
     std::string ext = file.substr(file.find_last_of('.') + 1);

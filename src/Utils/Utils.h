@@ -12,6 +12,7 @@ bool makedir(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);
 
 std::string toUpper(std::string s);
+std::string toLower(std::string s);
 std::string getExtention(std::string file);
 
 float rad2deg(float rad);

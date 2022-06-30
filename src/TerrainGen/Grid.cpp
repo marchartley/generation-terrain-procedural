@@ -38,12 +38,15 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
     }
     this->heights = ((this->heights - min) / (max - min)) * maxHeight;
     this->computeNormals();
+
+    this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
 Grid::Grid(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
     : maxHeight(max_height), tileSize(tileSize)
 {
     this->loadFromHeightmap(heightmap_filename, nx, ny, max_height, tileSize);
+    this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
 Grid::Grid() : Grid(10, 10, 5.0) {

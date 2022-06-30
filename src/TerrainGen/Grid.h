@@ -65,6 +65,7 @@ public:
     float tileSize;
     std::vector<float> vertexArrayFloat;
     Mesh mesh;
+    Matrix3<std::vector<int>> biomeIndices;
 };
 
 #endif // GRID_H

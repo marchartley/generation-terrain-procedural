@@ -374,23 +374,46 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
 
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
+//            int currentHeight = this->getHeight(x, y);
             float startingHeight = this->getHeight(x, y);
             float height = heightmapModifier.at(x, y);
-            if (height > 1)
-            for (int z = std::max((int)(startingHeight - 1), 0); z < std::min((int)(startingHeight + height), getSizeZ()); z++) {
-                // Method #1 : inverse the values of the voxels
-                modification.at(x, y, z) = previousValues.at(x, y, z) * -2.f * (z == startingHeight-1 ? -1.f : 1.f);
-                // Method #2 : use the noise values
-//                modification.at(x, y, z) = getNoiseValue(x, y, z);
-            }
-            if (0 < startingHeight + height && startingHeight + height < getSizeZ()) {
-                // Special case on last voxel : take into account the decimal value of the height
-                modification.at(x, y, startingHeight + height) = previousValues.at(x, y, startingHeight + height) * -2.f * (height - (int)height);
-                // Method #2 : use the noise values
-    //            modification.at(x, y, startingHeight + height) = getNoiseValue(x, y, startingHeight + height) * (height - (int)height);
+//            if (height != 10)
+//                std::cout << height << " at (" << x << ", " << y << ")" << std::endl;
+//            float start = std::max(0.f, std::min((float)currentHeight, currentHeight + height));
+//            float end   = std::min((float)getSizeZ(), std::max((float)currentHeight, currentHeight + height));
+            if (height > 1) {
+//                std::cout << "Adding matter? " << height << "\n";
+                for (int z = std::max((int)(startingHeight-2), 0); z < std::min((int)(startingHeight + height), getSizeZ()); z++) {
+                    // Method #1 : inverse the values of the voxels
+                    modification.at(x, y, z) = previousValues.at(x, y, z) * -2.f * (z < startingHeight ? -1.f : 1.f);
+                    // Method #2 : use the noise values
+    //                modification.at(x, y, z) = getNoiseValue(x, y, z);
+                }
+                if (0 < startingHeight + height && startingHeight + height < getSizeZ()) {
+                    // Special case on last voxel : take into account the decimal value of the height
+                    modification.at(x, y, startingHeight + height) = previousValues.at(x, y, startingHeight + height) * -2.f * (height - (int)height);
+                    // Method #2 : use the noise values
+        //            modification.at(x, y, startingHeight + height) = getNoiseValue(x, y, startingHeight + height) * (height - (int)height);
+                }
+            } else if (height < 0) {
+//                std::cout << "With start at " << startingHeight << " and height at " << height << " we go from " << std::max((int)std::ceil(startingHeight + height), 0) << " to " << std::min((int)(startingHeight + 1), getSizeZ()) << "\n";
+                for (int z = std::max((int)std::ceil(startingHeight + height), 0); z < std::min((int)(startingHeight + 1), getSizeZ()); z++) {
+                    // Method #1 : inverse the values of the voxels
+//                    modification.at(x, y, z) = previousValues.at(x, y, z) * -2.f * (z == startingHeight-1 ? -1.f : 1.f);
+                    // Method #2 : use the noise values
+                    modification.at(x, y, z) = -getNoiseValue(x, y, z);
+//                    std::cout << "Remove from " << Vector3(x, y, z) << "\n";
+                }
+                if (0 < startingHeight + height && startingHeight + height < getSizeZ()) {
+                    // Special case on last voxel : take into account the decimal value of the height
+//                    modification.at(x, y, startingHeight + height) = previousValues.at(x, y, startingHeight + height) * -2.f * (height - (int)height);
+                    // Method #2 : use the noise values
+                    modification.at(x, y, startingHeight + height) = -getNoiseValue(x, y, startingHeight + height) * ((int)(height) - height);
+                }
             }
         }
     }
+    std::cout << "Factor = " << factor << std::endl;
     this->applyModification(modification * factor);
 }
 

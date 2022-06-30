@@ -17,6 +17,7 @@ public:
 
     void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::vector<std::shared_ptr<ActionInterface>> actionInterfaces = std::vector<std::shared_ptr<ActionInterface>>());
+    void createTerrainFromBiomes(nlohmann::json json_content);
     void saveTerrain(std::string filename);
 
     void replay(nlohmann::json action);
@@ -40,19 +41,28 @@ public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
 
+    bool biomeGenerationNeeded = false;
+    nlohmann::json biomeGenerationModelData;
+
+    std::map<std::string, int> colorTexturesIndex;
+    std::map<std::string, int> normalTexturesIndex;
+    std::map<std::string, int> displacementTexturesIndex;
+
 protected:
     void regenerateRocksAndParticles();
 
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
     Mesh heightmapMesh;
-    GLuint heightmapFieldTex;
+    GLuint heightmapFieldTex, biomeFieldTex;
     GLuint edgeTableTex, triTableTex;
+
+    GLuint allBiomesColorTextures, allBiomesNormalTextures, allBiomesDisplacementTextures;
 
     // TODO : Transform this into a "particle" system
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
-    int numberOfRocksDisplayed = 0;
+    int numberOfRocksDisplayed = 500;
 
     Mesh particlesMesh;
     std::vector<Vector3> randomParticlesPositions;

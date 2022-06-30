@@ -81,6 +81,7 @@ public:
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
+    Matrix3<T> concat(Matrix3<T> matrixToConcat);
 
     Matrix3<float> toDistanceMap();
 
@@ -821,7 +822,6 @@ Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
     for (size_t i = 0; i < data.size(); i++) {
         data[i] *= o.data[i];
     }
-    std::cout << std::endl;
     return *this;
 }
 template<typename T, typename U>
@@ -1061,6 +1061,15 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front)
     return *this;
 }
 
+template<class T>
+Matrix3<T> Matrix3<T>::concat(Matrix3<T> matrixToConcat)
+{
+    Matrix3<T> newMatrix(this->getDimensions() + matrixToConcat.getDimensions() * Vector3(1, 0, 0));
+    newMatrix.paste(*this, Vector3());
+    newMatrix.paste(matrixToConcat, (newMatrix.getDimensions() - matrixToConcat.getDimensions()) * Vector3(1, 0, 0));
+    return newMatrix;
+}
+
 template<typename T>
 Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner)
 {
@@ -1275,12 +1284,6 @@ Matrix3<T> Matrix3<T>::wrapWith(BSpline original, BSpline wrapperCurve)
     float pathsResolution = 1000.f;
     std::vector<Vector3> originalCurvePoints = original.getPath(pathsResolution);
     std::vector<Vector3> wrapperCurvePoints = wrapperCurve.getPath(pathsResolution);
-/*
-    for (int i = 0; i < originalCurvePoints.size(); i++) {
-        float t = i / pathsResolution;
-        std::cout << "t = " << t << "\t: " << wrapperCurvePoints[i] << " " << originalCurvePoints[i] << " -> " << wrapperCurvePoints[i] - originalCurvePoints[i] << "\n";
-    }*/
-//    std::cout << std::endl;
 
     Matrix3<Vector3> wrapper(this->getDimensions());
     wrapper.raiseErrorOnBadCoord = false;

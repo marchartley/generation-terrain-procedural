@@ -14,7 +14,8 @@ public:
     int addItem(Vector3* point);
     int addItem(BSpline* curve);
 
-    std::map<int, Vector3> solve(std::shared_ptr<VoxelGrid> mainGrid);
+    std::map<int, Vector3> solveWithVoxelGrid(std::shared_ptr<VoxelGrid> mainGrid);
+    std::map<int, Vector3> solve(bool checkPossible = true, float deltaMoveForHigherDistances = 1.f, float deltaMoveForLowerDistances = 1.f);
 
     void addDistanceConstraint(int object1, int object2, float distance);
     void addNormalConstraint(int object, float minAngle, float maxAngle);
