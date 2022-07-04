@@ -93,15 +93,6 @@ void FluidSimulation::velocityStep()
     this->advectVelocity();
     this->projectVelocity();
     this->setVelocityBounds();
-
-//    for (int x = sizeX / 3; x < 2 * sizeX / 3; x++) {
-//        for (int y = sizeY / 3; y < 2 * sizeY / 3; y++) {
-//            for (int z = sizeZ / 3; z < 2 * sizeZ / 3; z++) {
-//                meanVel += velocity(x, y, z);
-//            }
-//        }
-//    }
-//    std::cout << meanVel.normalized() << std::endl;
 }
 
 void FluidSimulation::diffuseVelocity()

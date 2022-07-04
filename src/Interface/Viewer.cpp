@@ -495,7 +495,6 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
 
 void Viewer::frameInterpolated()
 {
-    std::cout << "Interpolation" << std::endl;
 }
 /*
 void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
@@ -590,8 +589,6 @@ bool Viewer::checkMouseOnVoxel()
 
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
-//    std::cout << "Click from " << currPos << " to ... ";
-//    currPos += Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     while((currPos / 2.f).norm2() < maxDist && !found)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
@@ -603,30 +600,12 @@ bool Viewer::checkMouseOnVoxel()
     }
     this->mouseInWorld = found;
     if (found) {
-//        std::cout << "Click on " << currPos << std::endl;
         this->mousePosWorld = currPos;
         this->mainGrabber->move(currPos); // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
     }
-//    std::cout << currPos << " (length=" << currPos.norm() << " over " << std::sqrt(maxDist) << ")" << std::endl;
     return found;
 }
-/*
-void Viewer::updateFlowfieldDebugMesh()
-{
-    std::vector<Vector3> normals;
-    for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->sizeX-1; x+= this->voxelGrid->fluidSimRescale) {
-        for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->sizeY-1; y+= this->voxelGrid->fluidSimRescale) {
-            for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->sizeZ - 1; z+= this->voxelGrid->fluidSimRescale) {
-                normals.push_back(Vector3(x, y, z) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back(Vector3(x, y, z) + (this->voxelGrid->getFlowfield(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-            }
-        }
-    }
-    this->debugMeshes[FLOW_TRAILS].fromArray(normals);
-    this->debugMeshes[FLOW_TRAILS].update();
-    update();
-}
-*/
+
 void Viewer::closeEvent(QCloseEvent *e) {
     this->setCamera(this->mainCamera);
     if (this->isTakingScreenshots) this->startStopRecording();

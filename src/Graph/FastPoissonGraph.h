@@ -97,7 +97,6 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     // Step 2 : process all samples recursively
     int steps = 0;
     while (!activeList.empty()) {
-//        std::cout << "Step " << steps + 1 << std::endl;
         steps++;
         int randomIndex = random_gen::generate(0, activeList.size());
         std::shared_ptr<GraphNode<T>> currentNode = activeList[randomIndex];

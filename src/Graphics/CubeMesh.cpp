@@ -30,7 +30,6 @@ void CubeMesh::pushToBuffer(std::vector<Vector3> positions)
     this->positions = positions;
     this->positionsFloat = Vector3::toArray(positions);
 
-//    std::cout << this->bufferID << " -> " << GlobalsGL::vao[this->bufferID] << std::endl;
     GlobalsGL::f()->glBindVertexArray(GlobalsGL::vao[this->bufferID]);
 
     // Vertex

@@ -22,25 +22,7 @@ Vector3 Collision::intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector
         return Vector3(false);
 
     return p1 + (p2 - p1) * mu_a;
-}/*
-bool intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
-{
-    Vector3 l21 = (p1 - p2);
-    Vector3 l13 = (p3 - p1);
-    Vector3 l43 = (p3 - p4);
-
-    float d1321 = l13.dot(l21);
-    float d1343 = l13.dot(l43);
-    float d4321 = l43.dot(l21);
-    float d4343 = l43.dot(l43);
-    float d2121 = l21.dot(l21);
-
-    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return false; // Parallel lines?
-    float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
-    float mu_b = (d1343 + mu_a*d4321) / d4343;
-//    std::cout << "(mu_a = " << mu_a << " and mu_b = " << mu_b << ")";
-    return (0 <= mu_a) && (mu_a <= 1.0) && (0.0 <= mu_b) && (mu_b <= 1.0);
-}*/
+}
 
 float Collision::shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vector3 p22)
 {
