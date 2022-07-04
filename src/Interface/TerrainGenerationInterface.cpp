@@ -250,8 +250,8 @@ void TerrainGenerationInterface::prepareShader()
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
@@ -268,8 +268,8 @@ void TerrainGenerationInterface::prepareShader()
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
@@ -286,8 +286,8 @@ void TerrainGenerationInterface::prepareShader()
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
@@ -389,8 +389,9 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         heightmapData[i * 4 + 0] = colorTextureOffset;
         heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
         heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-        heightmapData[i * 4 + 3] = heightmapGrid->heights[i] / maxHeight;
+        heightmapData[i * 4 + 3] = (float)heightmapGrid->biomeIndices[i].size() * 10; //1.0; //heightmapGrid->heights[i] / maxHeight;
     }
+
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,
     GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
     delete[] heightmapData;

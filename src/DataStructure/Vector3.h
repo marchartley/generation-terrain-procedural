@@ -9,8 +9,6 @@
 
 class Vector3 {
 public:
-    float x, y, z;
-    bool valid = true;
     Vector3();
     Vector3(float x, float y, float z = 0.f, bool valid = true);
     Vector3(const Vector3& copy);
@@ -90,7 +88,8 @@ public:
 
     static Vector3 nabla;
 
-    bool isValid() const { return this->valid; }
+    bool isValid() const { return this->valid && (this->x == this->x && this->y == this->y && this->z == this->z); }
+    void setValid(bool newValidValue) { this->valid = newValidValue; }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
@@ -122,6 +121,10 @@ public:
 
     std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
 //    const char* toHashString() const {return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z); }
+
+    float x, y, z;
+protected:
+    bool valid = true;
 
 };
 

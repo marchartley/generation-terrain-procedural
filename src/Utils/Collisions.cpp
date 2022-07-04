@@ -269,8 +269,13 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
 
 }
 
-bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> polygon)
+bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> _polygon)
 {
+    std::vector<Vector3> polygon;
+    for (auto& p : _polygon)
+        if (polygon.empty() || (p - polygon.back()).norm2() > 0.01)
+            polygon.push_back(p);
+
     if (polygon.size() < 2) return false;
 
     size_t firstIndex = 0, secondIndex = 0;

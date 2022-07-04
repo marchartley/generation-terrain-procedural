@@ -26,6 +26,7 @@ Voronoi::Voronoi(int numberRandomPoints, Vector3 minBoundarie, Vector3 maxBounda
 }
 
 Voronoi::Voronoi(int numberRandomPoints, ShapeCurve boundingShape)
+    : boundingShape(boundingShape)
 {
     std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
     this->pointset = boundingShape.randomPointsInside(numberRandomPoints);
@@ -61,6 +62,14 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, Vector3 minBoundarie, Vector3 ma
 
 std::vector<BSpline> Voronoi::solve()
 {
+    if (boundingShape.points.empty()) {
+        boundingShape.points = {
+            Vector3(minBoundarie.x, minBoundarie.y, minBoundarie.z),
+            Vector3(minBoundarie.x, maxBoundarie.y, minBoundarie.z),
+            Vector3(maxBoundarie.x, maxBoundarie.y, minBoundarie.z),
+            Vector3(maxBoundarie.x, minBoundarie.y, minBoundarie.z)
+        };
+    }
     if (pointset.size() == 0) {
         return std::vector<BSpline>();
     } else if (pointset.size() == 1) {
@@ -80,20 +89,20 @@ std::vector<BSpline> Voronoi::solve()
 
     jcv_clipper polygonclipper;
     jcv_clipper* clipper = 0;
+    polygonclipper.test_fn = jcv_clip_polygon_test_point;
+    polygonclipper.clip_fn = jcv_clip_polygon_clip_edge;
+    polygonclipper.fill_fn = jcv_clip_polygon_fill_gaps;
+    jcv_clipping_polygon polygon;
     if (!boundingShape.points.empty()) {
-        polygonclipper.test_fn = jcv_clip_polygon_test_point;
-        polygonclipper.clip_fn = jcv_clip_polygon_clip_edge;
-        polygonclipper.fill_fn = jcv_clip_polygon_fill_gaps;
 
-        jcv_clipping_polygon polygon;
         polygon.num_points = boundingShape.points.size();
         polygon.points = boundingPoints;
-        polygonclipper.ctx = &polygon;
-
-        clipper = &polygonclipper;
     } else {
-        // nada
+        std::cout << "We should not be here" << std::endl;
     }
+    polygonclipper.ctx = &polygon;
+
+    clipper = &polygonclipper;
 
     jcv_rect* rect = new jcv_rect;
     rect->min = {minBoundarie.x, minBoundarie.y};

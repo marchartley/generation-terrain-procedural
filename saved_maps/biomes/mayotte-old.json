@@ -1,0 +1,154 @@
+{
+  "model-name": "Mayotte",
+  "params": {
+		"ground-texture": "underwater_ground"
+	},
+  "children": [
+    {
+      "class": "ile",
+      "params": {
+        "quantity": 1,
+				"ground-texture": "mountain"
+      },
+      "children": [
+        {
+          "class": "montagne",
+          "params": {
+            "depth": {
+              "min": -90,
+              "max": -10,
+              "slope": "mountain_rocks"
+            }
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "plage",
+      "params": {
+				"depth": {
+					"min": -10,
+					"max": 5,
+					"slope": "linear"
+				},
+        "quantity": 5,
+				"ground-texture": "beach_sand"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "recif-frangeant",
+      "params": {
+        "quantity": 10,
+				"ground-texture": "underwater_ground"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+            "depth": {
+              "min": 5,
+              "max": 5,
+              "slope": "flat"
+            }
+          },
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "lagon",
+      "params": {
+        "quantity": 5,
+				"ground-texture": "underwater_sand"
+      },
+      "children": [
+        {
+          "class": "plaine",
+          "params": {
+            "depth": {
+              "min": 8,
+              "max": 20,
+              "slope": "curve"
+            }
+          },
+          "children": [
+            {
+              "class": "patate-corail",
+              "params": {
+                "quantity": 4,
+								"ground-texture": "coral"
+              },
+              "children": []
+            },
+            {
+              "class": "zone-algues",
+              "params": {
+                "quantity": 4,
+								"ground-texture": "algae"
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "recif-barriere",
+      "params": {
+				"depth": {
+					"min": 15,
+					"max": 5,
+					"slope": "linear"
+				},
+        "quantity": 2
+      },
+      "children": [
+        {
+          "class": "mur-corail",
+          "params": {
+            "quantity": 1,
+						"ground-texture": "coral2"
+          },
+          "children": [
+            {
+              "class": "passe-corail",
+              "params": {
+                "quantity": 2
+              },
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "profondeurs",
+      "params": {
+        "quantity": 10,
+        "depth": {
+          "min": 100,
+          "max": 100,
+          "slope": "linear"
+        }
+      },
+      "children": [
+				{
+					"class": "arche",
+					"params": {
+						"quantity": 1
+					},
+					"children": []
+				}
+			]
+    }
+  ]
+}

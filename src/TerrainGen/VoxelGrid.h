@@ -111,6 +111,8 @@ public:
 
     int getMaxLoD();
 
+    void saveState();
+
     void saveMap(std::string filename);
     void retrieveMap(std::string filename);
 
