@@ -154,7 +154,7 @@ void Viewer::draw() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->light.position = Vector3(voxelGrid->sizeX / 2.0, voxelGrid->sizeY / 2.0, voxelGrid->sizeZ * 2.0);
+    this->light.position = Vector3(voxelGrid->sizeX / 2.0, voxelGrid->sizeY, voxelGrid->sizeZ * 2.0);
     //this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 100);
 
     float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};

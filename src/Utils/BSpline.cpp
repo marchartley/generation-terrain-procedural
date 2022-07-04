@@ -67,7 +67,7 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
     return a * (1 - x) + b * x;
 }
 
-Vector3 BSpline::getDerivative(float x, bool verbose)
+Vector3 BSpline::getDerivative(float x)
 {
     float previousTime = std::max(0.f, x - 0.001f);
     float nextTime = std::min(1.f, x + 0.001f);
@@ -321,6 +321,9 @@ BSpline &BSpline::grow(float increase)
 {
     std::vector<Vector3> newPoints = this->points;
     for (size_t i = 0; i < this->points.size(); i++) {
+        Vector3 point = this->points[i];
+        float time = estimateClosestTime(this->points[i]);
+        Vector3 normal = getNormal(estimateClosestTime(this->points[i]));
         newPoints[i] = this->points[i] + getNormal(estimateClosestTime(this->points[i])) * increase;
     }
     this->points = newPoints;
@@ -365,4 +368,34 @@ BSpline BSpline::computeConvexHull()
         points_angle.erase(points_angle.begin());
     }
     return stack;
+}
+
+BSpline& BSpline::removeDuplicates()
+{
+    std::vector<Vector3> newPoints;
+    for (const auto& point : this->points) {
+        if (newPoints.empty() || (point - newPoints.back()).norm() > 0.001f)
+            newPoints.push_back(point);
+    }
+    this->points = newPoints;
+    return *this;
+}
+
+std::string BSpline::toString() const
+{
+    std::ostringstream out;
+    out << "BSpline with " << this->points.size() << " points (" << (closed ? "closed" : "not closed") << ") :\n";
+    for (auto& p : this->points)
+        out << "- " << p << "\n";
+    return out.str();
+}
+
+std::ostream& operator<<(std::ostream& io, const BSpline& s) {
+    io << s.toString();
+    return io;
+}
+
+std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
+    io << s->toString();
+    return io;
 }

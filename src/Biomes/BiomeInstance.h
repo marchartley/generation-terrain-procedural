@@ -16,7 +16,7 @@ public:
     int getLevel();
     void completeIfNeeded();
 
-    std::shared_ptr<BiomeInstance> clone();
+    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea);
 
     std::string getTextureName();
 

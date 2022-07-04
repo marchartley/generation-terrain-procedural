@@ -90,10 +90,12 @@ Vector3 ShapeCurve::planeNormal()
     Vector3 normal;
     int numberOfSamples = 10;
     for (int i = 0; i < numberOfSamples; i++) {
-        float t = i / (numberOfSamples);
-        normal += this->getBinormal(t);
+        float t = i / (float)(numberOfSamples);
+        Vector3 binormal = this->getBinormal(t);
+        if (binormal.isValid())
+            normal += binormal;
     }
-    return normal / (float)numberOfSamples;
+    return normal.normalize();
 }
 
 std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
@@ -108,13 +110,14 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
     Vector3 normalRay = this->planeNormal() * (maxVec - minVec).norm();
 
     for (int i = 0; i < numberOfPoints; i++) {
+        // Check the collision from a point below and a point above the plane
         Vector3 randomPoint = Vector3::random(minVec, maxVec) - normalRay;
         Vector3 intersectionPoint = Collision::intersectionRayPlane(randomPoint, normalRay * 2.f, this->points[0], normalRay);
 //        if (!intersectionPoint.isValid()) {
 //            intersectionPoint = Collision::intersectionRayPlane(randomPoint, normalRay * -1.f, this->points[0], normalRay);
 //        }
         if (intersectionPoint.isValid()) {
-            if (Collision::pointInPolygon(intersectionPoint, getPath(points.size()))) {
+            if (Collision::pointInPolygon(intersectionPoint, points)) { //getPath(points.size()))) {
                 returnedPoints.push_back(intersectionPoint);
                 continue;
             }

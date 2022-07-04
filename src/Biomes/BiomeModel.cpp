@@ -78,7 +78,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(BiomeMode
     // Should be able to retrieve the parameters of the biome...
     std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
     instance->position = biomePosition;
-    instance->area = area;
+    instance->area = area.removeDuplicates();
     instance->depthShape = model.depthShape;
     instance->textureClass = model.textureClass;
     auto children = model.modelChildren;

@@ -99,11 +99,18 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     while (!biomeQueue.empty()) {
         std::shared_ptr<BiomeInstance> current = biomeQueue.front();
         biomeQueue.erase(biomeQueue.begin());
-        if (!terrainArea.inside(current->position * Vector3(1, 1, 0), true))
+        if (!terrainArea.inside(current->position * Vector3(1, 1, 0), true)) {
+            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is outside the terrain" << std::endl;
             continue;
-        if (!current->valid)
+        }
+        if (!current->valid) {
+            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is not valid" << std::endl;
             continue;
-
+        }
+        if (current->area.computeArea() == 0) {
+            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") has no space : " << current->area << std::endl;
+            continue;
+        }
         sortedBiomes.push_back(current);
         biomeQueue.insert(biomeQueue.end(), current->instances.begin(), current->instances.end());
     }
@@ -121,21 +128,38 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     for (auto& current : sortedBiomes) {
         ShapeCurve area = current->area;
         int level = current->getLevel();
-        area = area.grow(-1); // Shrink the area to be able to see all layers
+//        area = area.grow(-1); // Shrink the area to be able to see all layers
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        std::ostringstream out;
+        out << "Checking for " << current->classname << " (#" << biomeID << ") :\n";
+        bool atLeastOne = false;
+        if (biomeID == 34) {
+            int a = 0;
+//            area = current->area.grow(-1);
+//            std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        }
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
                 if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->biomeIndices.checkCoord(Vector3(x, y))) {
                     heightmap->biomeIndices.at(x, y).push_back(biomeID);
+                    out << "Found at (" << x << ", " << y << ")\n";
+                    atLeastOne = true;
                 }
             }
         }
+        if (!atLeastOne) {
+            out << "Never seen...\n";
+        }
+        out << "Area was\n";
+        for (auto& p : current->area.points)
+            out << "- " << p << "\n";
         current->instanceID = biomeID;
         BiomeInstance::registerBiome(current);
         possibleBiomeInstances.push_back(*current);
         biomeID++;
-
+//        if (current->getLevel() > 1)
+//            std::cout << out.str() << std::endl;
     }
     // First, level the terrain as the biomes design it
     Matrix3<float> heightChange(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1);
@@ -230,7 +254,20 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     }
 
     // Yeah whatever... Just do the translation once again
+//    voxelGrid->saveState();
     this->heightmap->fromVoxelGrid(*voxelGrid);
+
+/*
+    for (auto& tuple : BiomeInstance::instancedBiomes) {
+        auto& biome = tuple.second;
+        if (biome->instanceID == 34) {
+            std::cout << biome->area.inside(Vector3(15, 42, 0) * Vector3(1, 1, 0)) << std::endl;
+            std::cout << biome->area.inside(Vector3(15, 42, 0) * Vector3(1, 1, 0)) << std::endl;
+        }
+//            std::cout << "Distance to biome #" << biome->instanceID << " (" << biome->classname << ") : ";
+//            std::cout << biome->area.estimateDistanceFrom(mousePosInMap * Vector3(1, 1, 0)) << " ";
+//            std::cout << "(" << (biome->area.inside(mousePosInMap * Vector3(1, 1, 0)) ? "contained" : "outside") << ")" << std::endl;
+    }*/
 }
 
 void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, BiomeInstance newBiome)
@@ -240,20 +277,17 @@ void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace,
     ShapeCurve previousArea = biomeToReplace->area;
     int previousID = biomeToReplace->instanceID;
 
-    std::cout << "changing..." << std::endl;
-    *biomeToReplace = *(newBiome.clone());
-    for (auto& child : biomeToReplace->instances)
+    *biomeToReplace = *(newBiome.clone(previousArea));
+    for (auto& child : biomeToReplace->instances) {
         child->parent = biomeToReplace;
-    std::cout << "Done. Completing..." << std::endl;
+    }
 
     biomeToReplace->parent = previousParent;
     biomeToReplace->position = previousPos;
-    biomeToReplace->area = previousArea;
+//    biomeToReplace->area = previousArea;
     biomeToReplace->instanceID = previousID;
 
     biomeToReplace->completeIfNeeded();
-
-    std::cout << "Done." << std::endl;
 }
 
 void BiomeInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -389,7 +423,7 @@ QLayout* BiomeInterface::createGUI()
 //        std::cout << "(" << BiomeInstance::instancedBiomes[selectedIndex]->classname << ") by (" << possibleBiomeInstances[replacementIndex].classname << ")" << std::endl;
 
         if (selectedIndex > -1 && replacementIndex > -1)
-            this->replaceBiome(BiomeInstance::instancedBiomes[selectedIndex], possibleBiomeInstances[replacementIndex]);
+            this->replaceBiome(BiomeInstance::instancedBiomes[this->selectedBiomeIDs[selectedIndex]], possibleBiomeInstances[replacementIndex]);
     });
 
     this->replaceDialog = new BiomeReplacementDialog(this);

@@ -96,6 +96,9 @@ ViewerInterface::ViewerInterface() {
             this->biomeInterface->generateBiomes();
         }
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
+
+        biomeInterface->replaceBiome(BiomeInstance::instancedBiomes[50], biomeInterface->possibleBiomeInstances[36]);
+        biomeInterface->generateBiomes(this->biomeInterface->rootBiome);
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,

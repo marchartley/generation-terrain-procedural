@@ -1,4 +1,5 @@
 #include "BiomeInstance.h"
+#include "Utils/Voronoi.h"
 
 std::map<int, std::shared_ptr<BiomeInstance>> BiomeInstance::instancedBiomes;
 
@@ -38,13 +39,20 @@ void BiomeInstance::completeIfNeeded()
         child->completeIfNeeded();
 }
 
-std::shared_ptr<BiomeInstance> BiomeInstance::clone()
+std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea)
 {
     std::shared_ptr<BiomeInstance> cloneBiome = std::make_shared<BiomeInstance>(*this);
+    cloneBiome->area = newArea;
+    std::cout << "Previous area : " << this->area << " - new area : " << cloneBiome->area << std::endl;
+    std::cout << "Previous instance size : " << this->instances.size() << " - new size : ";
     cloneBiome->instances.clear();
 
-    for (auto& child : instances) {
-        std::shared_ptr<BiomeInstance> newChild = child->clone();
+    Voronoi diagram(this->instances.size(), newArea);
+    std::vector<BSpline> subareas = diagram.solve();
+
+    std::cout << this->instances.size() << " (nb subareas = " << subareas.size() << ")" << std::endl;
+    for (size_t i = 0; i < this->instances.size() && i < subareas.size(); i++) {
+        std::shared_ptr<BiomeInstance> newChild = this->instances[i]->clone(subareas[i]);
         newChild->parent = cloneBiome;
         cloneBiome->instances.push_back(newChild);
     }

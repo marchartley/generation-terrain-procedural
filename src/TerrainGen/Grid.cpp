@@ -316,9 +316,9 @@ std::vector<std::vector<Vector3> > Grid::windErosion(int numberOfParticles,
         std::vector<Vector3> trace;
 
         Vector3 pos(windDirection * 10.f * terrainDiagonal);
-        pos.valid = false;
+        pos.setValid(false);
         for (int placementTry = 0; placementTry < 10; placementTry ++) {
-            pos.valid = false;
+            pos.setValid(false);
             float rnd = random_gen::generate(0, 3.141592 * 2.f);
             Vector3 posInLine = Vector3(getSizeX()/2, getSizeY()/2) + Vector3(std::cos(rnd), std::sin(rnd)) * terrainDiagonal;//Vector3::lerp(random_gen::generate(), availableStart, availableEnd);
             Vector3 possiblePosX0 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,

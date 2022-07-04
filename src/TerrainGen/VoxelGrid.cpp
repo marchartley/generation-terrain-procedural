@@ -693,6 +693,16 @@ int VoxelGrid::getMaxLoD()
     }
 }
 
+void VoxelGrid::saveState()
+{
+    Matrix3<float> voxelValues = this->getVoxelValues();
+    for (auto& vc : chunks) {
+        vc->voxelsValuesStack.clear();
+        vc->currentHistoryIndex = 0;
+    }
+    this->applyModification(voxelValues);
+}
+
 void VoxelGrid::saveMap(std::string filename)
 {
     std::ofstream out;

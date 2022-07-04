@@ -61,14 +61,14 @@ protected:
     void setBindings();
     void updateBiomeSelectionGui();
 
-    std::shared_ptr<BiomeInstance> rootBiome;
     std::vector<int> selectedBiomeIDs;
 //    int selectedBiomeID = -1;
     QLayout* layout = nullptr;
 
     QListWidget* biomeSelectionGui = nullptr;
 //    QLayout* biomeSelectionGuiLayout = nullptr;
-
+public:
+    std::shared_ptr<BiomeInstance> rootBiome;
     std::vector<BiomeInstance> possibleBiomeInstances;
 
     BiomeReplacementDialog* replaceDialog;

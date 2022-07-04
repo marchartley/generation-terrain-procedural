@@ -1,0 +1,119 @@
+{
+  "class": "main-terrain",
+  "params": {},
+  "children": [
+    {
+      "class": "fault",
+      "params": {},
+      "children": [
+        {
+          "class": "trench",
+          "params": {},
+          "children": [
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            },
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "colline",
+      "params": {},
+      "children": [
+        {
+          "class": "arche",
+          "params": {},
+          "children": [
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            },
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "class": "algae-area",
+          "params": {},
+          "children": []
+        }
+      ]
+    },
+    {
+      "class": "abyss",
+      "params": {},
+      "children": []
+    },
+    {
+      "class": "plain",
+      "params": {},
+      "children": []
+    },
+    {
+      "class": "coral-reef",
+      "params": {},
+      "children": [
+        {
+          "class": "coral",
+          "params": {},
+          "children": [
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            },
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "class": "coral",
+          "params": {},
+          "children": [
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            },
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            }
+          ]
+        },
+        {
+          "class": "coral",
+          "params": {},
+          "children": [
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            },
+            {
+              "class": "point",
+              "params": {},
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

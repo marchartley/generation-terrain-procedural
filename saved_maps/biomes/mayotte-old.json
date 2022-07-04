@@ -7,13 +7,8 @@
     {
       "class": "ile",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
-        "size": 30,
         "quantity": 1,
-				"ground-texture": "mountain_rocks"
+				"ground-texture": "mountain"
       },
       "children": [
         {
@@ -22,7 +17,7 @@
             "depth": {
               "min": -90,
               "max": -10,
-              "slope": "mountain"
+              "slope": "mountain_rocks"
             }
           },
           "children": []
@@ -32,16 +27,11 @@
     {
       "class": "plage",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
 				"depth": {
 					"min": -10,
 					"max": 5,
 					"slope": "linear"
 				},
-        "size": 1,
         "quantity": 5,
 				"ground-texture": "beach_sand"
       },
@@ -57,11 +47,6 @@
     {
       "class": "recif-frangeant",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
-        "size": 3,
         "quantity": 10,
 				"ground-texture": "underwater_ground"
       },
@@ -82,11 +67,6 @@
     {
       "class": "lagon",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
-        "size": 30,
         "quantity": 5,
 				"ground-texture": "underwater_sand"
       },
@@ -104,11 +84,6 @@
             {
               "class": "patate-corail",
               "params": {
-                "probability-appearence": {
-                  "mean": 1,
-                  "vari": 0
-                },
-                "size": 1,
                 "quantity": 4,
 								"ground-texture": "coral"
               },
@@ -117,11 +92,6 @@
             {
               "class": "zone-algues",
               "params": {
-                "probability-appearence": {
-                  "mean": 1,
-                  "vari": 0
-                },
-                "size": 1,
                 "quantity": 4,
 								"ground-texture": "algae"
               },
@@ -134,16 +104,11 @@
     {
       "class": "recif-barriere",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
 				"depth": {
 					"min": 15,
 					"max": 5,
 					"slope": "linear"
 				},
-        "size": 30,
         "quantity": 2
       },
       "children": [
@@ -168,11 +133,6 @@
     {
       "class": "profondeurs",
       "params": {
-        "probability-appearence": {
-          "mean": 1,
-          "vari": 0
-        },
-        "size": 300,
         "quantity": 10,
         "depth": {
           "min": 100,
