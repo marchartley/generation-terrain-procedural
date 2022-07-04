@@ -4,6 +4,7 @@
 #include "Utils/Collisions.h"
 
 #include <exception>
+#include <sstream>
 
 BSpline::BSpline()
 {
@@ -70,12 +71,6 @@ Vector3 BSpline::getDerivative(float x, bool verbose)
 {
     float previousTime = std::max(0.f, x - 0.001f);
     float nextTime = std::min(1.f, x + 0.001f);
-    if (verbose) {
-        std::cout << "Getting the derivative of a path with " << this->points.size() << " points : \n";
-        for (const auto& p : this->points)
-            std::cout << " - " << p << "\n";
-        std::cout << "Position used : " << previousTime << " and " << nextTime << " -> " << getPoint(nextTime) << " - " << getPoint(previousTime) << " = " << getPoint(nextTime) - getPoint(previousTime) << "\n";
-    }
 
     return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
@@ -117,45 +112,6 @@ float BSpline::estimateClosestTime(Vector3 pos)
         precision *= precisionFactor;
     }
     return closestTime;
-    /*
-    int checks = 0;
-    float distDiff = std::numeric_limits<float>::max();
-//    Vector3 bestPosPrediction = pos;
-    size_t closestPoint;
-    for (size_t i = 0; i < this->points.size(); i++) {
-        float dist = (pos - this->points[i]).norm2();
-        if (dist < distDiff) {
-            distDiff = dist;
-            closestPoint = i;
-        }
-    }
-    // We know our point is between t(closest - 1) and t(closest + 1)
-    float halfSpace = 1 / (this->points.size() - 1.f);
-    float currentTime = closestPoint * halfSpace;
-    while (halfSpace > 1e-6) {
-        Vector3 low = getPoint(clamp(currentTime - halfSpace, 0.f, 1.f)),
-                cur = getPoint(currentTime),
-                hig = getPoint(clamp(currentTime + halfSpace, 0.f, 1.f));
-        float lowDist = (low - pos).norm2(),
-                curDist = (cur - pos).norm2(),
-                higDist = (hig - pos).norm2();
-        std::cout << "-Checking between " << low << " and " << hig << " (current time = " << currentTime << " at pos " << cur << "\n";
-
-        currentTime = clamp(currentTime, 0.f, 1.f);
-        halfSpace *= .5f;
-
-        if (lowDist < curDist && lowDist < higDist) { // Lowest is closest
-            currentTime -= halfSpace * .5f;
-        }
-        else if (curDist < lowDist && curDist < higDist) { // Current is closest
-            continue;
-        }
-        else if (higDist < lowDist && higDist < curDist) { // Highest is closest
-            currentTime += halfSpace * .5f;
-        }
-        checks++;
-    }
-    return std::clamp(currentTime, 0.f, 1.f);*/
 }
 
 Vector3 BSpline::estimateClosestPos(Vector3 pos)
@@ -184,16 +140,6 @@ Vector3 BSpline::getFrenetDirection(float x)
 Vector3 BSpline::getFrenetNormal(float x)
 {
     return this->getFrenetDirection(x).cross(this->getFrenetBinormal(x)).normalize();
-    /*
-    Vector3 new_dir = this->getFrenetDirection(x);
-    Vector3 forward(0, 1, 0);
-    Vector3 up(0, 0, 1);
-    Vector3 right(1, 0, 0);
-    if (new_dir.isAlmostVertical())
-        right = Vector3(0, 1, 1).cross(new_dir);
-    else
-        right = Vector3(0, 0, 1).cross(new_dir);
-    return new_dir.cross(right).normalize();*/
 }
 
 Vector3 BSpline::getFrenetBinormal(float x)

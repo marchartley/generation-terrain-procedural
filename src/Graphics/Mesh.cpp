@@ -369,7 +369,6 @@ void Mesh::display(GLenum shape, float lineWeight)
         glDrawArrays(this->displayShape, 0, this->vertexArrayFloat.size());
 #else
         glEnable(GL_RESCALE_NORMAL);
-//        std::cout << vertexArray.size() << " " << colorsArray.size() << " " << normalsArray.size() << std::endl;
         glBegin(this->displayShape);
         for (size_t i = 0; i < this->vertexArray.size(); i++) {
             if (this->colorsArray.size() > i)

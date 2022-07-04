@@ -160,10 +160,6 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(BiomeMode
     std::vector<BSpline> subarea_borders = diagram.solve();
 
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {
-//        std::cout << "Shape for " << children[i].modelName << " (son of " << model.modelName << ") :\n";
-//        for (auto& p : subarea_borders[i].points)
-//            std::cout << "- " << p << "\n";
-//        std::cout << std::endl;
         std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstanceFromModel(children[i], diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;
         instance->instances.push_back(childBiome);

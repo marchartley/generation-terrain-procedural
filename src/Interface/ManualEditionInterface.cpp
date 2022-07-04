@@ -111,10 +111,8 @@ void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
     if (readyToModify) {
         if (!event->modifiers().testFlag(Qt::ControlModifier) || !event->modifiers().testFlag(Qt::AltModifier))
         {
-            std::cout << "Without modifier" << std::endl;
             readyToModify = false;
         } else {
-            std::cout << "With modifier" << std::endl;
         }
     }
     CustomInteractiveObject::mouseMoveEvent(event);
