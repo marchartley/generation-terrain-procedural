@@ -43,7 +43,8 @@ public:
     std::tuple<Vector3, Vector3> AABBox();
     Vector3 containingBoxSize();
 
-    BSpline& grow(float increase);
+//    BSpline& grow(float increase);
+//    BSpline& shrink(float decrease);
 
     BSpline computeConvexHull();
 

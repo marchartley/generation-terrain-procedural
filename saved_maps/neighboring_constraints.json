@@ -1,27 +1,27 @@
 {
 	"ile": {
 		"must"  : ["plage"],
-		"cannot": ["recif-barriere", "profondeurs"]
+		"cannot": ["recif-frangeant", "lagon", "recif-barriere", "profondeurs"]
 	},
 	"plage": {
 		"must"  : ["ile", "recif-frangeant"],
-		"cannot": ["recif-barriere", "profondeurs"]
+		"cannot": ["lagon", "recif-barriere", "profondeurs"]
 	},
 	"recif-frangeant": {
 		"must"  : ["plage", "lagon"],
-		"cannot": ["profondeurs"]
+		"cannot": ["ile", "recif-barriere", "profondeurs"]
 	},
 	"lagon": {
 		"must"  : ["recif-frangeant", "recif-barriere"],
-		"cannot": []
+		"cannot": ["ile", "plage", "profondeur"]
 	},
 	"recif-barriere": {
 		"must"  : ["lagon", "profondeurs"],
-		"cannot": []
+		"cannot": ["ile", "plage", "recif-frangeant"]
 	},
 	"profondeurs": {
 		"must"  : ["recif-barriere"],
-		"cannot": []
+		"cannot": ["ile", "plage", "recif-frangeant", "lagon"]
 	},
 	"plaine": {
 		"must"  : [],

@@ -45,6 +45,7 @@ Q_SIGNALS:
 public Q_SLOTS:
 
     void generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance = nullptr);
+    void randomize();
 
     void replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, BiomeInstance newBiome);
 

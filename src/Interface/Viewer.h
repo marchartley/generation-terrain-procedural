@@ -123,6 +123,8 @@ public Q_SLOTS:
 
 //    void saveScreenshot();
 
+    void drawingProcess();
+
 //protected:
 public:
     virtual void init();
@@ -259,7 +261,7 @@ public:
     std::vector<std::tuple<int, Vector3>> rocksIndicesAndPosition;
 
 
-
+    QThread* displayThread;
     GLuint edgeTableTex, triTableTex, dataFieldTex;
 };
 

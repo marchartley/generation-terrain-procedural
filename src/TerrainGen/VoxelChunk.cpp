@@ -439,7 +439,7 @@ void VoxelChunk::computeGroups()
     this->voxelGroups = labels;
 }
 
-void VoxelChunk::applyModification(Matrix3<float> modifications)
+void VoxelChunk::applyModification(Matrix3<float> modifications, Vector3 anchor)
 {
     // If there is a modification and we did some "undo's" before,
     // erase the future matrices
@@ -448,6 +448,7 @@ void VoxelChunk::applyModification(Matrix3<float> modifications)
     }
     this->currentHistoryIndex++;
     this->voxelsValuesStack.push_back(modifications);
+    this->voxelsValuesAnchorStack.push_back(anchor);
     this->needRemeshing = true;
 }
 

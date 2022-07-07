@@ -389,7 +389,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         heightmapData[i * 4 + 0] = colorTextureOffset;
         heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
         heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-        heightmapData[i * 4 + 3] = (float)heightmapGrid->biomeIndices[i].size() * 10; //1.0; //heightmapGrid->heights[i] / maxHeight;
+        heightmapData[i * 4 + 3] = heightmapGrid->heights[i] / maxHeight; //1.0; //heightmapGrid->heights[i] / maxHeight;
     }
 
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmapGrid->getSizeX(), heightmapGrid->getSizeY(), 0,

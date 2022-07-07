@@ -93,12 +93,9 @@ ViewerInterface::ViewerInterface() {
         this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
         if (terrainGenerationInterface->biomeGenerationNeeded) {
             this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
-            this->biomeInterface->generateBiomes();
+            this->biomeInterface->generateBiomes(); // std::async([&]() -> void {this->biomeInterface->generateBiomes(); });
         }
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
-
-        biomeInterface->replaceBiome(BiomeInstance::instancedBiomes[50], biomeInterface->possibleBiomeInstances[36]);
-        biomeInterface->generateBiomes(this->biomeInterface->rootBiome);
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,

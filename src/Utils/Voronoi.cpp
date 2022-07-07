@@ -29,7 +29,7 @@ Voronoi::Voronoi(int numberRandomPoints, ShapeCurve boundingShape)
     : boundingShape(boundingShape)
 {
     std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
-    this->pointset = boundingShape.randomPointsInside(numberRandomPoints);
+    this->pointset = boundingShape.shrink(1.f).randomPointsInside(numberRandomPoints);
 }
 
 Voronoi::Voronoi(std::vector<Vector3> pointset)
@@ -60,7 +60,7 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, Vector3 minBoundarie, Vector3 ma
     this->maxBoundarie = maxBoundarie;
 }
 
-std::vector<BSpline> Voronoi::solve()
+std::vector<BSpline> Voronoi::solve(int numberOfRelaxations)
 {
     if (boundingShape.points.empty()) {
         boundingShape.points = {
@@ -113,7 +113,8 @@ std::vector<BSpline> Voronoi::solve()
     jcv_diagram_generate(pointset.size(), (const jcv_point*)points, rect, clipper, &diagram);
 
     const jcv_site* sites = jcv_diagram_get_sites( &diagram );
-    std::vector<BSpline> areas(pointset.size());
+    this->areas = std::vector<BSpline>(pointset.size());
+    this->neighbors = std::vector<std::vector<int>>(pointset.size());
     for( int i = 0; i < diagram.numsites; ++i )
     {
         const jcv_site* site = &sites[i];
@@ -125,6 +126,9 @@ std::vector<BSpline> Voronoi::solve()
             jcv_point p0 = e->pos[0];
             Vector3 v0 = Vector3(p0.x, p0.y);
             areaShape.points.push_back(v0);
+            if (e->neighbor != nullptr)
+                neighbors[site->index].push_back(e->neighbor->index);
+
             e = e->next;
         }
         areas[site->index] = areaShape;
@@ -135,5 +139,16 @@ std::vector<BSpline> Voronoi::solve()
     free(boundingPoints);
     delete rect;
 
-    return areas;
+    return this->relax(numberOfRelaxations - 1);
+}
+
+std::vector<BSpline> Voronoi::relax(int numberOfRelaxations)
+{
+    for (int relaxation = 0; relaxation < numberOfRelaxations; relaxation++) {
+        for (size_t i = 0; i < this->pointset.size(); i++) {
+            this->pointset[i] = this->areas[i].center();
+        }
+        this->solve();
+    }
+    return this->areas;
 }

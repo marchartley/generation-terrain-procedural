@@ -213,7 +213,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
     for (BSpline& path : paths) {
         bool modificationDoesSomething = true;
         if (usingSpheres) {
-            float nb_points_on_path = path.length() * .1f;
+            float nb_points_on_path = path.length() / (float)(this->maxRockSize / 3.f);
             std::vector<Vector3> coords;
             RockErosion rock(this->maxRockSize, this->maxRockStrength);
             for (const auto& pos : path.getPath(nb_points_on_path)) {

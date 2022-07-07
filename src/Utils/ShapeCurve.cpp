@@ -129,3 +129,27 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
     }
     return returnedPoints;
 }
+
+
+ShapeCurve ShapeCurve::grow(float increase)
+{
+    Vector3 normal = this->planeNormal();
+    std::vector<Vector3> newPoints = this->points;
+    for (size_t i = 0; i < this->points.size(); i++) {
+//        Vector3 point = this->points[i];
+        Vector3 next_point = this->points[i + 1];
+        Vector3 prev_point = this->points[(this->points.size() + i - 1) % this->points.size()];
+        Vector3 dir = (next_point - prev_point).normalize();
+        /*
+        float time = estimateClosestTime(this->points[i]);
+        Vector3 normal = getNormal(estimateClosestTime(this->points[i]));*/
+        newPoints[i] = this->points[i] + dir.cross(normal) * increase; //+ getNormal(estimateClosestTime(this->points[i])) * increase;
+    }
+    this->points = newPoints;
+    return *this;
+}
+
+ShapeCurve ShapeCurve::shrink(float decrease)
+{
+    return this->grow(-decrease);
+}
