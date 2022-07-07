@@ -141,7 +141,7 @@ void VoxelGrid::computeFlowfield()
     for (auto& vc : this->chunks) {
         for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
             for (int y = vc->y; y < vc->y + vc->sizeY; y++) {
-                for (int z = 0; z < vc->height; z++) {
+                for (int z = 0; z < vc->sizeZ; z++) {
                     vc->flowField(x - vc->x, y - vc->y, z - 0) = flowField(x, y, z);
                 }
             }
@@ -360,13 +360,30 @@ Matrix3<float> VoxelGrid::shareSandWithNeighbors()
     return transport;
 }
 
-void VoxelGrid::applyModification(Matrix3<float> modifications)
+void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
 {
-    for (auto& vc : this->chunks)
-        vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
+    /// TODO : Use the anchor to be able to use smaller grids
+    for (auto& vc : this->chunks) {
+        // Check if the modification is affecting the chunk
+        if ((vc->x + vc->sizeX < anchor.x || vc->y + vc->sizeY < anchor.y || vc->z + vc->sizeZ < anchor.z) ||
+                (vc->x > anchor.x + modifications.sizeX || vc->y > anchor.y + modifications.sizeY || vc->z > anchor.z + modifications.sizeZ)) {
+            vc->applyModification(Matrix3<float>(0, 0, 0));
+        } else {
+            // We are sure that a part of the matrix is in this chunk
+            Vector3 O1 = Vector3(vc->x, vc->y, vc->z);
+            Vector3 chunkAnchor = anchor - O1;
+            Vector3 O2 = chunkAnchor;
+            Vector3 A = Vector3(std::max(chunkAnchor.x, 0.f), std::max(chunkAnchor.y, 0.f), std::max(chunkAnchor.z, 0.f));
+            Vector3 B = Vector3(std::min(chunkAnchor.x + modifications.sizeX, (float)vc->sizeX), std::min(chunkAnchor.y + modifications.sizeZ, (float)vc->sizeY), std::min(chunkAnchor.z + modifications.sizeZ, (float)vc->sizeZ));
+            Vector3 relativeA = A - O2;
+            Vector3 relativeB = B - O2;
+            vc->applyModification(modifications.subset(relativeA.x, relativeB.x, relativeA.y, relativeB.y, relativeA.z, relativeB.z), A);
+//            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
+        }
+    }
 }
 
-void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor)
+void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor, Vector3 anchor)
 {
     /// Two possibilities : either inverse the voxel values when needed, or just add random values based on Perlin noise
     Matrix3<float> modification(this->getDimensions(), 0.f);
@@ -413,8 +430,7 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
             }
         }
     }
-    std::cout << "Factor = " << factor << std::endl;
-    this->applyModification(modification * factor);
+    this->applyModification(modification * factor, anchor);
 }
 
 void VoxelGrid::undo()
@@ -538,7 +554,7 @@ void VoxelGrid::computeVoxelGroups()
     }
 
     for (auto& vc : this->chunks)
-        vc->voxelGroups = labels.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, 0, 0 + vc->height);
+        vc->voxelGroups = labels.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, 0, 0 + vc->sizeZ);
 }
 
 Matrix3<float> VoxelGrid::getVoxelValues()
@@ -586,7 +602,7 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1) {
-        Matrix3<float> setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->height);
+        Matrix3<float> setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->sizeZ);
         setterMatrix.at(voxPosX, voxPosY, _z) = -this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z) + newVal;
         this->chunks[iChunk]->applyModification(setterMatrix);
 //        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
@@ -712,7 +728,7 @@ void VoxelGrid::saveMap(std::string filename)
     for (auto& vc : chunks) {
         for (int x = 0; x < vc->sizeX; x++)
             for (int y = 0; y < vc->sizeY; y++)
-                for (int z = 0; z < vc->height; z++)
+                for (int z = 0; z < vc->sizeZ; z++)
                     out << vc->getVoxelValue(x, y, z) << " ";
     }
     out.close();

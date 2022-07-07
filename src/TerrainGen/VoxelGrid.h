@@ -49,8 +49,8 @@ public:
     void letGravityMakeSandFall(bool remesh = true);
     void letGravityMakeSandFallWithFlow(bool remesh = true);
     Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
-    void applyModification(Matrix3<float> modifications);
-    void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f);
+    void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
+    void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
     void undo();
     void redo();
 
