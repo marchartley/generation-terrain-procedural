@@ -15,6 +15,8 @@ public:
     float computeArea();
 
     Vector3 planeNormal();
+    ShapeCurve grow(float increase);
+    ShapeCurve shrink(float decrease);
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 };

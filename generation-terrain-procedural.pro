@@ -32,6 +32,7 @@ TARGET = interface
 SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
+    src/Biomes/BiomeUtils.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
         src/DataStructure/Vector3.cpp \
@@ -92,6 +93,7 @@ SOURCES += \
         src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
+    src/Utils/AdjencySolver.cpp \
         src/Utils/BSpline.cpp \
         src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
@@ -194,6 +196,7 @@ HEADERS += \
     src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \
+    src/Utils/AdjencySolver.h \
     src/Utils/BSpline.h \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \

@@ -588,7 +588,7 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
     if (iChunk != -1) {
         Matrix3<float> setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->height);
         setterMatrix.at(voxPosX, voxPosY, _z) = -this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z) + newVal;
-        this->chunks[iChunk]->voxelsValuesStack.push_back(setterMatrix);
+        this->chunks[iChunk]->applyModification(setterMatrix);
 //        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
         this->chunks[iChunk]->needRemeshing = true;
     }
@@ -601,7 +601,7 @@ float VoxelGrid::getOriginalVoxelValue(Vector3 pos) {
 float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
-    if (iChunk != -1)
+    if (iChunk != -1 && !this->chunks[iChunk]->voxelsValuesStack.empty())
         return this->chunks[iChunk]->voxelsValuesStack[0].at(voxPosX, voxPosY, _z);
     return -1;
 }
@@ -698,6 +698,7 @@ void VoxelGrid::saveState()
     Matrix3<float> voxelValues = this->getVoxelValues();
     for (auto& vc : chunks) {
         vc->voxelsValuesStack.clear();
+        vc->voxelsValuesAnchorStack.clear();
         vc->currentHistoryIndex = 0;
     }
     this->applyModification(voxelValues);

@@ -1,4 +1,5 @@
 #include "BiomeModel.h"
+#include "Utils/AdjencySolver.h"
 #include "Utils/ConstraintsSolver.h"
 #include "Utils/Voronoi.h"
 
@@ -84,91 +85,52 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(BiomeMode
     auto children = model.modelChildren;
 
     Voronoi diagram(children.size(), area);
-    if (instance->classname == "Mayotte") {
-        std::ifstream file("C:/codes/Qt/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        nlohmann::json neighboring = nlohmann::json::parse(content);
-        ConstraintsSolver solver;
+    std::vector<BSpline> subarea_borders = diagram.solve(3); // Add some relaxations to be a little bit more uniform
 
-        // Put the island in the middle
-        diagram.pointset[0] = BSpline(diagram.pointset).center();
-
-        float repulsionDistance = 100.f;
-        float attractionDistance = 1.f;
-        float neutralDistance = 50.f;
-        for (size_t i = 0; i < diagram.pointset.size(); i++) {
-            solver.addItem(new Vector3(diagram.pointset[i]));
+    std::vector<std::string> allChildrenClassnames;
+    for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {
+        allChildrenClassnames.push_back(children[i].modelName);
+    }
+    std::ifstream file("C:/codes/Qt/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    nlohmann::json neighboring = nlohmann::json::parse(content);
+    std::vector<float> constraintsWeights(diagram.pointset.size());
+    std::vector<std::pair<std::string, std::string>> obligationNeighboring;
+    std::vector<std::pair<std::string, std::string>> forbiddenNeighboring;
+    for (nlohmann::json::iterator it = neighboring.begin(); it != neighboring.end(); ++it) {
+        std::string biome1 = it.key();
+        std::vector<std::string> obligations = it.value().at("must").get<std::vector<std::string>>();
+        std::vector<std::string> forbidding = it.value().at("cannot").get<std::vector<std::string>>();
+        for (auto& biome : obligations) {
+            obligationNeighboring.push_back(std::make_pair(biome1, biome));
+            obligationNeighboring.push_back(std::make_pair(biome, biome1));
         }
-        std::vector<float> constraintsWeights(diagram.pointset.size());
-        for (size_t i = 0; i < diagram.pointset.size(); i++) {
-            if (neighboring.contains(model.modelChildren[i].modelName)) {
-                auto biomeConstraints = neighboring.at(model.modelChildren[i].modelName);
-                std::vector<std::string> cannot;
-                std::vector<std::string> must;
-                if (biomeConstraints.contains("cannot"))
-                    cannot = biomeConstraints.at("cannot").get<std::vector<std::string>>();
-                if (biomeConstraints.contains("must"))
-                    must = biomeConstraints.at("must").get<std::vector<std::string>>();
-                for (size_t j = 0; j < diagram.pointset.size(); j++) {
-                    if (std::find(cannot.begin(), cannot.end(), model.modelChildren[j].modelName) != cannot.end()) {
-                        constraintsWeights[i] += repulsionDistance;
-                    }
-                    else if (std::find(must.begin(), must.end(), model.modelChildren[j].modelName) != must.end()) {
-                        constraintsWeights[i] += attractionDistance;
-                    }
-                    else {
-                        constraintsWeights[i] += neutralDistance;
-                    }
-                }
-            }
-        }
-        for (size_t i = 0; i < diagram.pointset.size(); i++) {
-            if (neighboring.contains(model.modelChildren[i].modelName)) {
-                auto biomeConstraints = neighboring.at(model.modelChildren[i].modelName);
-                std::vector<std::string> cannot;
-                std::vector<std::string> must;
-                if (biomeConstraints.contains("cannot"))
-                    cannot = biomeConstraints.at("cannot").get<std::vector<std::string>>();
-                if (biomeConstraints.contains("must"))
-                    must = biomeConstraints.at("must").get<std::vector<std::string>>();
-                for (size_t j = 0; j < diagram.pointset.size(); j++) {
-                    if (std::find(cannot.begin(), cannot.end(), model.modelChildren[j].modelName) != cannot.end()) {
-                        solver.addDistanceConstraint(i, j, repulsionDistance / constraintsWeights[i]);
-                    }
-                    else if (std::find(must.begin(), must.end(), model.modelChildren[j].modelName) != must.end()) {
-                        solver.addDistanceConstraint(i, j, attractionDistance / constraintsWeights[i]);
-                    }
-                    else {
-                        solver.addDistanceConstraint(i, j, neutralDistance / constraintsWeights[i]);
-                    }
-                }
-            }
-        }
-        auto newPositions = solver.solve(false, .1f, .1f);
-        for (size_t i = 0; i < diagram.pointset.size(); i++) {
-            diagram.pointset[i] = newPositions[i];
-        }
-        BSpline group(diagram.pointset);
-        Vector3 AABBoxMin, AABBoxMax;
-        std::tie(AABBoxMin, AABBoxMax) = group.AABBox();
-        Vector3 containingBoxSize = group.containingBoxSize();
-        for (size_t i = 0; i < diagram.pointset.size(); i++) {
-            diagram.pointset[i] = ((diagram.pointset[i] - AABBoxMin) / containingBoxSize) * area.containingBoxSize();
+        for (auto& biome : forbidding) {
+            forbiddenNeighboring.push_back(std::make_pair(biome1, biome));
+            forbiddenNeighboring.push_back(std::make_pair(biome, biome1));
         }
     }
-
-    std::vector<BSpline> subarea_borders = diagram.solve();
+    std::vector<int> newChildrenOrder = std::vector<int>(children.size());
+    for (size_t i = 0; i < newChildrenOrder.size(); i++) newChildrenOrder[i] = i;
+    AdjencySolver solver;
+//    auto start = std::chrono::system_clock::now();
+    newChildrenOrder = solver.solve(diagram, allChildrenClassnames /*vectorMerge(allChildrenClassnames, allChildrenClassnames)*/, forbiddenNeighboring);
+    // Because we may have used multiple of the data, we need to clamp the new indices
+    for (auto& ind : newChildrenOrder) ind = ind % allChildrenClassnames.size();
+//    auto end = std::chrono::system_clock::now();
+//    std::cout << "Result in " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "s" << std::endl;
 
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {
-        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstanceFromModel(children[i], diagram.pointset[i], subarea_borders[i]);
+        int index = newChildrenOrder[i];
+        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstanceFromModel(children[index], diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;
         instance->instances.push_back(childBiome);
     }
     return instance;
 }
-BiomeInstance BiomeModel::createInstance(Vector3 initialPosition, ShapeCurve initialArea)
+std::shared_ptr<BiomeInstance> BiomeModel::createInstance(Vector3 initialPosition, ShapeCurve initialArea)
 {
-    BiomeInstance instance = *recursivelyCreateBiomeInstanceFromModel(*this, initialPosition, initialArea);
-    instance.completeIfNeeded();
+    std::shared_ptr<BiomeInstance> instance = recursivelyCreateBiomeInstanceFromModel(*this, initialPosition, initialArea);
+    instance->completeIfNeeded();
     return instance;
 }

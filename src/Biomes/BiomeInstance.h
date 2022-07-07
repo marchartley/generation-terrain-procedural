@@ -7,7 +7,7 @@ class BiomeInstance;
 #include "Utils/ShapeCurve.h"
 #include <vector>
 
-class BiomeInstance
+class BiomeInstance : public std::enable_shared_from_this<BiomeInstance>
 {
 public:
     BiomeInstance();
@@ -16,7 +16,8 @@ public:
     int getLevel();
     void completeIfNeeded();
 
-    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea);
+    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea, Vector3 newPosition = Vector3(false));
+    std::shared_ptr<BiomeInstance> getPointInstance(int index);
 
     std::string getTextureName();
 

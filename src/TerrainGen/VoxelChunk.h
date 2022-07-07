@@ -78,6 +78,7 @@ public:
     size_t currentHistoryIndex = 0;
 
     std::vector<Matrix3<float>> voxelsValuesStack;
+    std::vector<Vector3> voxelsValuesAnchorStack;
 
 
 //    static CubeMesh cubeMesh;

@@ -190,14 +190,14 @@ void main(void)
     vec3 varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(grealNormal, 1.0)).xyz;
     vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
     vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 N = -normalize(varyingNormal /*+ fbm3ToVec3(ginitialVertPos)*0.5*/);
+    vec3 N = normalize(varyingNormal /*+ fbm3ToVec3(ginitialVertPos)*0.5*/);
     vec3 L = normalize(varyingLightDir);
     vec3 V = normalize(-varyingVertPos);
     vec3 R = reflect(-L, N);
     vec3 H = normalize(varyingHalfH);
 
-    vec2 fbmWrap = 2.0 * (fbm3ToVec2(ginitialVertPos.xyz) - vec2(.5, .5)) * 5.0;
     vec2 texSize = textureSize(heightmapFieldTex, 0);
+    vec2 fbmWrap = clamp(ginitialVertPos.xy + 2.0 * (fbm3ToVec2(ginitialVertPos.xyz) - vec2(.5, .5)) * 5.0, vec2(0.01, 0.01), texSize) - ginitialVertPos.xy;
     float biomeColorValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbmWrap)/texSize).r;
     float realBiomeColorValue = texture(heightmapFieldTex, (ginitialVertPos.xy)/texSize).r;
     float biomeNormalValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbmWrap)/texSize).r;
@@ -227,12 +227,12 @@ void main(void)
         vec3 yaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(ginitialVertPos.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 zaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(ginitialVertPos.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
-        N = normalMap;
+        N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
     float cosTheta = dot(L, N);
     float cosPhi = dot(H, N);
 
-    float upValue = 0.0; // clamp(dot(normalize(grealNormal), normalize(vec3(0.0, 0.0, 1.0) + fbm3ToVec3(ginitialVertPos) * 0.5)), 0.0, 1.0);
+    float upValue = 1.0; // clamp(dot(normalize(grealNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
@@ -240,7 +240,7 @@ void main(void)
 
     vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
     vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
-    vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 3.0);
+    vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 32.0);
 
     vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
 
@@ -276,8 +276,10 @@ void main(void)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0) * gcolor;
 
-    if (displayingIgnoredVoxels)
+    if (displayingIgnoredVoxels) {
         fragColor = vec4(0, 0, 0, 0.1);
+        return;
+    }
 
 //    fragColor = vec4(getBiomeColor(ginitialVertPos.xy), 1.0);
     if (biomeColorValue < 1.0) {

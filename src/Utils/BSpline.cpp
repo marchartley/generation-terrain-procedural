@@ -317,19 +317,6 @@ Vector3 BSpline::containingBoxSize()
     return (maxBox - minBox);
 }
 
-BSpline &BSpline::grow(float increase)
-{
-    std::vector<Vector3> newPoints = this->points;
-    for (size_t i = 0; i < this->points.size(); i++) {
-        Vector3 point = this->points[i];
-        float time = estimateClosestTime(this->points[i]);
-        Vector3 normal = getNormal(estimateClosestTime(this->points[i]));
-        newPoints[i] = this->points[i] + getNormal(estimateClosestTime(this->points[i])) * increase;
-    }
-    this->points = newPoints;
-    return *this;
-}
-
 BSpline BSpline::computeConvexHull()
 {
     if (this->points.empty()) return BSpline();

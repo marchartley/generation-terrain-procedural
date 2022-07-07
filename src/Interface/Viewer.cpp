@@ -133,12 +133,19 @@ void Viewer::init() {
     QObject::connect(this->karstPathInterface.get(), &KarstPathGenerationInterface::useAsMainCamera, this, &Viewer::swapCamera);
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
+//    this->displayThread = new QThread(this);
+//    this->displayThread->create(&Viewer::drawingProcess);
+
 
 //    startAnimation();
     QGLViewer::init();
 }
 
+//void Viewer::drawingProcess() {}
 void Viewer::draw() {
+    this->drawingProcess(); // std::async([this]() { this->drawingProcess(); });//std::launch::async, &Viewer::drawingProcess, *this);
+}
+void Viewer::drawingProcess() {
     // Update the mouse position in the grid
     this->checkMouseOnVoxel();
 
@@ -154,7 +161,7 @@ void Viewer::draw() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->light.position = Vector3(voxelGrid->sizeX / 2.0, voxelGrid->sizeY, voxelGrid->sizeZ * 2.0);
+    this->light.position = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
     //this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 100);
 
     float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};

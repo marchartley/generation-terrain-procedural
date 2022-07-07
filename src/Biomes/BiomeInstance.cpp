@@ -39,10 +39,13 @@ void BiomeInstance::completeIfNeeded()
         child->completeIfNeeded();
 }
 
-std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea)
+std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, Vector3 newPosition)
 {
     std::shared_ptr<BiomeInstance> cloneBiome = std::make_shared<BiomeInstance>(*this);
     cloneBiome->area = newArea;
+    if (!newPosition.isValid())
+        newPosition = newArea.center();
+    cloneBiome->position = newPosition;
     std::cout << "Previous area : " << this->area << " - new area : " << cloneBiome->area << std::endl;
     std::cout << "Previous instance size : " << this->instances.size() << " - new size : ";
     cloneBiome->instances.clear();
@@ -52,11 +55,23 @@ std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea)
 
     std::cout << this->instances.size() << " (nb subareas = " << subareas.size() << ")" << std::endl;
     for (size_t i = 0; i < this->instances.size() && i < subareas.size(); i++) {
-        std::shared_ptr<BiomeInstance> newChild = this->instances[i]->clone(subareas[i]);
+        std::shared_ptr<BiomeInstance> newChild = this->instances[i]->clone(subareas[i], diagram.pointset[i]);
         newChild->parent = cloneBiome;
         cloneBiome->instances.push_back(newChild);
     }
     return cloneBiome;
+}
+
+std::shared_ptr<BiomeInstance> BiomeInstance::getPointInstance(int index)
+{
+    // Look for each point in the children, find the n-th point by decreasing the index
+    for (auto& child : instances) {
+        if (child->classname == "point")
+            index--;
+        if (index < 0)
+            return child;
+    }
+    return nullptr;
 }
 
 std::string BiomeInstance::getTextureName()
@@ -75,42 +90,72 @@ void BiomeInstance::completeArch()
 {
     // We need at least 2 points
     int neededPointsAmount = 2;
-    std::vector<Vector3> randomPoints = this->area.randomPointsInside(neededPointsAmount);
-    for (size_t i = getNumberOfPoints(); i < randomPoints.size(); i++) {
+    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+
+    Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
+    std::vector<BSpline> areas = diagram.solve();
+    size_t i = 0;
+    // Re-place older children
+    for (i = 0; i < this->instances.size(); i++) {
+        this->instances[i]->area = areas[i];
+        this->instances[i]->position = diagram.pointset[i];
+    }
+    // Add new points
+    for (; i < areas.size(); i++) {
         auto child = std::make_shared<BiomeInstance>(BiomeInstance::fromClass("point"));
         instances.push_back(child);
-        child->position = randomPoints[i];
+        child->parent = this->shared_from_this();
+        child->area = areas[i];
+        child->position = diagram.pointset[i];
     }
-    if (this->getNumberOfPoints() < neededPointsAmount)
-        this->valid = false;
 }
 
 void BiomeInstance::completeTrench()
 {
     // We need at least 2 points
     int neededPointsAmount = 2;
-    std::vector<Vector3> randomPoints = this->area.randomPointsInside(neededPointsAmount);
-    for (size_t i = getNumberOfPoints(); i < randomPoints.size(); i++) {
+    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+
+    Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
+    std::vector<BSpline> areas = diagram.solve();
+    size_t i = 0;
+    // Re-place older children
+    for (i = 0; i < this->instances.size(); i++) {
+        this->instances[i]->area = areas[i];
+        this->instances[i]->position = diagram.pointset[i];
+    }
+    // Add new points
+    for (; i < areas.size(); i++) {
         auto child = std::make_shared<BiomeInstance>(BiomeInstance::fromClass("point"));
         instances.push_back(child);
-        child->position = randomPoints[i];
+        child->parent = this->shared_from_this();
+        child->area = areas[i];
+        child->position = diagram.pointset[i];
     }
-    if (this->getNumberOfPoints() < neededPointsAmount)
-        this->valid = false;
 }
 
 void BiomeInstance::completeArea()
 {
-    // We want 10 points, just to get the Hull shape of them
-    int neededPointsAmount = 10;
-    std::vector<Vector3> randomPoints = this->area.randomPointsInside(neededPointsAmount);
-    for (size_t i = getNumberOfPoints(); i < randomPoints.size(); i++) {
+    // We need at least 2 points
+    int neededPointsAmount = 2;
+    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+
+    Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
+    std::vector<BSpline> areas = diagram.solve();
+    size_t i = 0;
+    // Re-place older children
+    for (i = 0; i < this->instances.size(); i++) {
+        this->instances[i]->area = areas[i];
+        this->instances[i]->position = diagram.pointset[i];
+    }
+    // Add new points
+    for (; i < areas.size(); i++) {
         auto child = std::make_shared<BiomeInstance>(BiomeInstance::fromClass("point"));
         instances.push_back(child);
-        child->position = randomPoints[i];
+        child->parent = this->shared_from_this();
+        child->area = areas[i];
+        child->position = diagram.pointset[i];
     }
-    if (this->getNumberOfPoints() < neededPointsAmount)
-        this->valid = false;
 }
 
 int BiomeInstance::getNumberOfPoints()

@@ -1,7 +1,6 @@
 {
   "model-name": "Mayotte",
   "params": {
-		"ground-texture": "underwater_ground"
 	},
   "children": [
     {
@@ -20,7 +19,7 @@
           "class": "montagne",
           "params": {
             "depth": {
-              "min": -90,
+              "min": -30,
               "max": -10,
               "slope": "mountain"
             }
@@ -62,8 +61,8 @@
           "vari": 0
         },
         "size": 3,
-        "quantity": 10,
-				"ground-texture": "underwater_ground"
+        "quantity": 5,
+				"ground-texture": "coral"
       },
       "children": [
         {
@@ -87,7 +86,7 @@
           "vari": 0
         },
         "size": 30,
-        "quantity": 5,
+        "quantity": 10,
 				"ground-texture": "underwater_sand"
       },
       "children": [
@@ -109,8 +108,8 @@
                   "vari": 0
                 },
                 "size": 1,
-                "quantity": 4,
-								"ground-texture": "coral"
+                "quantity": 1,
+								"----ground-texture": "coral"
               },
               "children": []
             },
@@ -122,8 +121,8 @@
                   "vari": 0
                 },
                 "size": 1,
-                "quantity": 4,
-								"ground-texture": "algae"
+                "quantity": 1,
+								"----ground-texture": "algae"
               },
               "children": []
             }
@@ -144,20 +143,21 @@
 					"slope": "linear"
 				},
         "size": 30,
-        "quantity": 2
+        "quantity": 4,
+				"ground-texture": "coral2"
       },
       "children": [
         {
           "class": "mur-corail",
           "params": {
             "quantity": 1,
-						"ground-texture": "coral2"
+						"----ground-texture": "coral2"
           },
           "children": [
             {
               "class": "passe-corail",
               "params": {
-                "quantity": 2
+                "quantity": 1
               },
               "children": []
             }
@@ -178,7 +178,8 @@
           "min": 100,
           "max": 100,
           "slope": "linear"
-        }
+        },
+				"ground-texture": "underwater_ground"
       },
       "children": [
 				{
