@@ -31,7 +31,7 @@ public:
     void letGravityMakeSandFall();
     void computeGroups();
 
-    void applyModification(Matrix3<float> modifications);
+    void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
     void undo();
     void redo();
 
@@ -59,7 +59,8 @@ public:
 //protected:
     Matrix3<float> iso_data;
     int x, y;
-    int sizeX, sizeY, height;
+    int z = 0; // Will be important later!
+    int sizeX, sizeY, sizeZ;
     Matrix3<int> voxelGroups;
     Matrix3<Vector3> flowField;
     Matrix3<int> distanceField;

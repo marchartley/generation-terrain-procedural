@@ -215,7 +215,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         }
     }
     heightChange = heightChange.meanSmooth(5, 5, 1);
-    voxelGrid->add2DHeightModification(heightChange, 1.0f);
+    voxelGrid->add2DHeightModification(heightChange, 1.5f);
 
     // Now add the primitives on top
     for (auto& current : sortedBiomes) {

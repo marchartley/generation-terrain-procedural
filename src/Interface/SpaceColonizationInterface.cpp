@@ -109,11 +109,12 @@ void SpaceColonizationInterface::keyPressEvent(QKeyEvent *event)
 void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
+    Matrix3<float> voxels = voxelGrid->getVoxelValues();
     Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
-                float voxelVal = voxelGrid->getVoxelValue(x, y, z);
+                float voxelVal = voxels(x, y, z);
                 if (voxelVal > 0) {
                     availableGrid.at(x, y, z) = 1;
                 }
