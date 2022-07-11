@@ -63,6 +63,8 @@ protected:
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
     int numberOfRocksDisplayed = 500;
+    std::vector<Mesh> possibleCorals;
+    std::vector<std::tuple<int, Vector3, float>> coralsIndicesAndPositionAndSize;
 
     Mesh particlesMesh;
     std::vector<Vector3> randomParticlesPositions;
