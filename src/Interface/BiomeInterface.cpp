@@ -73,7 +73,7 @@ Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool adding
 Matrix3<float> prepareTrench(std::shared_ptr<BiomeInstance> biome, std::shared_ptr<VoxelGrid> voxelGrid) {
     if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // Start
-    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // End
+    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(1)->position); // End
     Vector3 midpoint1 = getSurfacePosition(voxelGrid, start + (end - start) * .4f + (end - start).cross(Vector3(0, 0, 1)) * .1f);
     Vector3 midpoint2 = getSurfacePosition(voxelGrid, start + (end - start) * .6f + (end - start).cross(Vector3(0, 0, 1)) * -.1f);
     return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f, 3.f, false, voxelGrid);
@@ -81,7 +81,7 @@ Matrix3<float> prepareTrench(std::shared_ptr<BiomeInstance> biome, std::shared_p
 Matrix3<float> prepareCoralWall(std::shared_ptr<BiomeInstance> biome, std::shared_ptr<VoxelGrid> voxelGrid) {
     if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // Start
-    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // End
+    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(1)->position); // End
     Vector3 gradient = voxelGrid->getVoxelValues().gradient(getSurfacePosition(voxelGrid, (start + end) * .5f));
     Vector3 midpoint = (start + end) * .5f + gradient * (end - start).norm() * .2f;
     return archeTunnel(BSpline({start, midpoint, end}), 5.f, 3.f, true, voxelGrid);
@@ -89,7 +89,7 @@ Matrix3<float> prepareCoralWall(std::shared_ptr<BiomeInstance> biome, std::share
 Matrix3<float> prepareArche(std::shared_ptr<BiomeInstance> biome, std::shared_ptr<VoxelGrid> voxelGrid) {
     if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // Start
-    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(0)->position); // End
+    Vector3 end = getSurfacePosition(voxelGrid, biome->getPointInstance(1)->position); // End
     Vector3 midpoint1 = start + (end - start) * .3f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint1
     Vector3 midpoint2 = start + (end - start) * .6f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint2
     return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 5.f, 10.f, true, voxelGrid);
@@ -132,18 +132,18 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     while (!biomeQueue.empty()) {
         std::shared_ptr<BiomeInstance> current = biomeQueue.front();
         biomeQueue.erase(biomeQueue.begin());
-        if (!terrainArea.inside(current->position * Vector3(1, 1, 0), true)) {
-            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is outside the terrain" << std::endl;
-            continue;
-        }
+//        if (!terrainArea.inside(current->position * Vector3(1, 1, 0), true)) {
+//            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is outside the terrain" << std::endl;
+//            continue;
+//        }
         if (!current->valid) {
             std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is not valid" << std::endl;
             continue;
         }
-        if (current->area.computeArea() == 0) {
-            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") has no space : " << current->area << std::endl;
-            continue;
-        }
+//        if (current->area.computeArea() == 0) {
+//            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") has no space : " << current->area << std::endl;
+//            continue;
+//        }
         sortedBiomes.push_back(current);
         biomeQueue.insert(biomeQueue.end(), current->instances.begin(), current->instances.end());
     }
@@ -167,11 +167,6 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         std::ostringstream out;
         out << "Checking for " << current->classname << " (#" << biomeID << ") :\n";
         bool atLeastOne = false;
-        if (biomeID == 34) {
-            int a = 0;
-//            area = current->area.grow(-1);
-//            std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
-        }
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
                 if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->biomeIndices.checkCoord(Vector3(x, y))) {
@@ -214,7 +209,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             heightChange += newHeight;
         }
     }
-    heightChange = heightChange.meanSmooth(5, 5, 1);
+    heightChange = heightChange.meanSmooth(15, 15, 1);
     voxelGrid->add2DHeightModification(heightChange, 1.5f);
 
     // Now add the primitives on top
@@ -239,26 +234,26 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         }
 //        Matrix3<float> subFalloff2D
 
-        Matrix3<float> modifications(voxelGrid->getDimensions(), 0.f);
-        Matrix3<float> heightmapModifier(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
+        Matrix3<float> modifications(0, 0, 0);
+        Matrix3<float> heightmapModifier(0, 0, 1, 0.f);
 
         bool modif3D = false;
         bool modif2D = false;
 
         if (current->classname == "arche") {
             // Create an arch from the two "point" children
-            prepareArche(current, voxelGrid);
+            modifications = prepareArche(current, voxelGrid);
             modif3D = true;
         } else if (current->classname == "patate-corail") {
-            preparePatateCorail(current, voxelGrid);
+            modifications = preparePatateCorail(current, voxelGrid);
             modif3D = true;
         } else if (current->classname == "tranchee" || current->classname == "passe-corail") {
             // Dig a tunnel on the surface
-            prepareTrench(current, voxelGrid);
+            modifications = prepareTrench(current, voxelGrid);
             modif3D = true;
         } else if (current->classname == "mur-corail") {
             // Add a small wall depending on the "point" children
-            prepareCoralWall(current, voxelGrid);
+            modifications = prepareCoralWall(current, voxelGrid);
             modif3D = true;
         } else if (current->classname == "point") {
             // Nothing to do, this is the smallest primitive
@@ -267,9 +262,14 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         }
 
         if (modif2D && !heightmapModifier.data.empty())
-            voxelGrid->add2DHeightModification(heightmapModifier, 10.f);
-        if (modif3D && !modifications.data.empty())
-            voxelGrid->applyModification(modifications/* * falloff3D*/);
+            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y), 10.f, AABBoxMin.xy());
+        if (modif3D && !modifications.data.empty()) {
+//            std::cout << "Adding " << current->classname << " from " << AABBoxMin.xy() << " to " << AABBoxMax.xy() << std::endl;
+//            if (modifications.sum() == 0) {
+//                int a = 0;
+//            }
+            voxelGrid->applyModification(modifications.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y), AABBoxMin.xy());
+        }
     }
 
     // Yeah whatever... Just do the translation once again
