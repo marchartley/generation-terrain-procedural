@@ -666,7 +666,7 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
             }
         }
     }
-    this->raiseErrorOnBadCoord = true;
+    this->raiseErrorOnBadCoord = oldError;
     return returningGrid;
 }
 template<class T>
@@ -1015,11 +1015,11 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
     if (endZ == -1) endZ = this->sizeZ;
     Matrix3<T> croppedMatrix(std::max(endX - startX, 0), std::max(endY - startY, 0), std::max(endZ - startZ, 0));
     for (int x = startX; x < endX; x++) {
-        if (x < 0 || this->sizeX < x) continue;
+        if (x < 0 || this->sizeX <= x) continue;
         for (int y = startY; y < endY; y++) {
-            if (y < 0 || this->sizeY < y) continue;
+            if (y < 0 || this->sizeY <= y) continue;
             for (int z = startZ; z < endZ; z++) {
-                if (z < 0 || this->sizeZ < z) continue;
+                if (z < 0 || this->sizeZ <= z) continue;
                 croppedMatrix.at(x - startX, y - startY, z - startZ) = this->at(x, y, z);
             }
         }
