@@ -7,6 +7,7 @@
 #include "Utils/Voronoi.h"
 #include "Utils/stb_image.h"
 #include "Utils/stb_image_write.h"
+#include "DataStructure/Matrix.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
 {
@@ -15,6 +16,11 @@ TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : Action
 
 void TerrainGenerationInterface::prepareShader()
 {
+    bool verbose = true;
+
+    if (verbose)
+        std::cout << "Preparing main shaders..." << std::endl;
+
     const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes.vert";
     const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes.geom";
     const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
@@ -94,16 +100,39 @@ void TerrainGenerationInterface::prepareShader()
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
 
-    QTemporaryDir tempDir;
-    QDirIterator it(":/models_3d/", QDir::Files, QDirIterator::Subdirectories);
+    if (verbose)
+        std::cout << "Loading 3D models :" << std::endl;
+
+    QTemporaryDir tempDirCorals;
+    QDirIterator itCorals(":/models_3d/corals/", QDir::Files, QDirIterator::Subdirectories);
+    this->possibleCorals = std::vector<Mesh>();
+    std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
+    while (itCorals.hasNext()) {
+        QString dir = itCorals.next();
+        if (verbose)
+            std::cout << "- " << dir.toStdString() << "... " << std::flush;
+        QString newPath = tempDirCorals.path() + QFileInfo(dir).fileName();
+        QFile::copy(dir, newPath);
+        Mesh m = Mesh(coralsShader);
+        // Normalize it and move it upward so the anchor is on the ground
+        possibleCorals.push_back(m.fromStl(newPath.toStdString()).normalize().translate(0.f, 0.f, .25f));
+        if (verbose)
+            std::cout << m.vertexArray.size()/3 << " tris, done." << std::endl;
+    }
+    QTemporaryDir tempDirRocks;
+    QDirIterator itRocks(":/models_3d/rocks/", QDir::Files, QDirIterator::Subdirectories);
     this->possibleRocks = std::vector<Mesh>();
     std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (it.hasNext()) {
-        QString dir = it.next();
-        QString newPath = tempDir.path() + QFileInfo(dir).fileName();
+    while (itRocks.hasNext()) {
+        QString dir = itRocks.next();
+        if (verbose)
+            std::cout << "- " << dir.toStdString() << "... " << std::flush;
+        QString newPath = tempDirRocks.path() + QFileInfo(dir).fileName();
         QFile::copy(dir, newPath);
         Mesh m = Mesh(rocksShader);
         possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize());
+        if (verbose)
+            std::cout << m.vertexArray.size()/3 << " tris, done." << std::endl;
     }
     this->regenerateRocksAndParticles();
     this->particlesMesh = Mesh(this->randomParticlesPositions,
@@ -167,6 +196,8 @@ void TerrainGenerationInterface::prepareShader()
     heightmapMesh.shader->setInt("biomeFieldTex", 4);
     marchingCubeMesh.shader->setInt("biomeFieldTex", 4);
 
+    if (verbose)
+        std::cout << "Loading terrain textures :" << std::endl;
     QTemporaryDir tempTextureDir;
     QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
     Matrix3<Vector3> allColorTextures;
@@ -179,12 +210,14 @@ void TerrainGenerationInterface::prepareShader()
         QString dir = iTex.next();
         QString basename = QFileInfo(dir).baseName();
         if (basename == "color" || basename == "normal" || basename == "displacement") {
+            if (dir.endsWith(".tiff")) continue; // Ignore TIFF files for now...
             std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
             QString newPath = tempTextureDir.path() + QString::fromStdString(textureClass) + QFileInfo(dir).fileName();
             QFile::copy(dir, newPath);
             int imgW, imgH, c;
             unsigned char *data = stbi_load(newPath.toStdString().c_str(), &imgW, &imgH, &c, 3);
-            std::cout << "Loading " << newPath.toStdString().c_str() << " for the class " << textureClass << "..." << std::endl;
+            if (verbose)
+                std::cout << "- " << dir.toStdString().c_str() << " (" << textureClass << ") ..." << std::flush;
             Matrix3<Vector3> map(imgW, imgH);
             for (int x = 0; x < imgW; x++) {
                 for (int y = 0; y < imgH; y++) {
@@ -218,6 +251,8 @@ void TerrainGenerationInterface::prepareShader()
                     allDisplacementTextures = allDisplacementTextures.concat(map);
                 }
             }
+            if (verbose)
+                std::cout << "Done." << std::endl;
         }
     }
 
@@ -301,6 +336,8 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
 
 //    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
+    if (verbose)
+        std::cout << "Terrain shaders and assets ready." << std::endl;
 }
 
 void TerrainGenerationInterface::regenerateRocksAndParticles()
@@ -315,6 +352,14 @@ void TerrainGenerationInterface::regenerateRocksAndParticles()
     for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
         rocksIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
                                               int(random_gen::generate(0, possibleRocks.size())),
+                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
+                                              random_gen::generate(5.f, 15.f)
+                                                     );
+    }
+    this->coralsIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>(numberOfRocksDisplayed);
+    for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
+        coralsIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
+                                              int(random_gen::generate(0, possibleCorals.size())),
                                               Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
                                               random_gen::generate(5.f, 15.f)
                                                      );
@@ -431,7 +476,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                 marchingCubeMesh.display( GL_POINTS );
                 marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false);
             }
-/*
+
             values.raiseErrorOnBadCoord = false;
             values.defaultValueOnBadCoord = -1.f;
             for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
@@ -455,12 +500,52 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                     }
                 }
             }
-            if (displayParticles || true) {
+            Matrix3<Vector3> gradientTerrain = values.gradient();
+            gradientTerrain.raiseErrorOnBadCoord = false;
+            gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
+            for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
+                int iCoral;
+                Vector3 pos;
+                float size;
+                std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
+                // Must be on ground, and have water somewhere around
+                if (values.at(pos) > 0) {
+                    bool isOnBorder = false;
+                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
+                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
+                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
+                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
+                                    isOnBorder = true;
+                                }
+                    if (isOnBorder) {
+                        Vector3 up = -gradientTerrain.at(pos).normalize();
+                        Vector3 fwd = (up == Vector3(0, 1, 0) ? Vector3(1, 0, 0) : up.cross(Vector3(0, 1, 0)));
+                        Vector3 right = up.cross(fwd);/*
+                        std::vector<std::vector<float>> rotationMatrix({
+                                                  {fwd.x, right.x, up.x, 0},
+                                                  {fwd.y, right.y, up.y, 0},
+                                                  {fwd.z, right.z, up.z, 0},
+                                                  {0, 0, 0, 1}
+                                              });*/
+                        std::vector<std::vector<float>> rotationMatrix({
+                                                  {fwd.x, fwd.y, fwd.z, 0},
+                                                  {right.x, right.y, right.z, 0},
+                                                  {up.x, up.y, up.z, 0},
+                                                  {0, 0, 0, 1}
+                                              });
+                        possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
+                        possibleCorals[iCoral].shader->setMatrix("instanceRotation", (std::vector<std::vector<float>>)rotationMatrix);
+                        possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
+                        possibleCorals[iCoral].display();
+                    }
+                }
+            }
+            if (displayParticles) {
 //                particlesMesh.fromArray(randomParticlesPositions); // Maybe we shouldn't displace the particles
                 float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
                 particlesMesh.shader->setFloat("time", time); // std::chrono::system_clock::now().time_since_epoch().count());
                 particlesMesh.display(GL_POINTS);
-            }*/
+            }
         }
     }/*
     else if (mapMode == LAYER_MODE) {
