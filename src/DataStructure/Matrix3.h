@@ -474,9 +474,9 @@ Vector3 Matrix3<T>::gradient(Vector3 position)
     Vector3 offset = position - flooredPos;
 
     return Vector3(
-                (at(flooredPos + Vector3(1, 0, 0)) - at(flooredPos)) * offset.x,
-                (at(flooredPos + Vector3(0, 1, 0)) - at(flooredPos)) * offset.y,
-                (at(flooredPos + Vector3(0, 0, 1)) - at(flooredPos)) * offset.z
+                (at(flooredPos + Vector3(1, 0, 0)) - at(flooredPos)), // * offset.x,
+                (at(flooredPos + Vector3(0, 1, 0)) - at(flooredPos)), // * offset.y,
+                (at(flooredPos + Vector3(0, 0, 1)) - at(flooredPos)) // * offset.z
                 );
     /*
     float NWB = at(flooredPos + Vector3(0, 0, 0));
@@ -656,6 +656,7 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
 template<class T>
 Matrix3<Vector3> Matrix3<T>::gradient() {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
+    bool oldError = this->raiseErrorOnBadCoord;
     this->raiseErrorOnBadCoord = false;
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
