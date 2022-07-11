@@ -362,7 +362,7 @@ Matrix3<float> VoxelGrid::shareSandWithNeighbors()
 
 void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
 {
-    /// TODO : Use the anchor to be able to use smaller grids
+//    std::cout << "Full matrix weight : " << modifications.sum() << std::endl;
     for (auto& vc : this->chunks) {
         // Check if the modification is affecting the chunk
         if ((vc->x + vc->sizeX < anchor.x || vc->y + vc->sizeY < anchor.y || vc->z + vc->sizeZ < anchor.z) ||
@@ -377,7 +377,9 @@ void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
             Vector3 B = Vector3(std::min(chunkAnchor.x + modifications.sizeX, (float)vc->sizeX), std::min(chunkAnchor.y + modifications.sizeZ, (float)vc->sizeY), std::min(chunkAnchor.z + modifications.sizeZ, (float)vc->sizeZ));
             Vector3 relativeA = A - O2;
             Vector3 relativeB = B - O2;
-            vc->applyModification(modifications.subset(relativeA.x, relativeB.x, relativeA.y, relativeB.y, relativeA.z, relativeB.z), A);
+            Matrix3<float> subset = modifications.subset(relativeA.x, relativeB.x, relativeA.y, relativeB.y, relativeA.z, relativeB.z);
+//            std::cout << "Submatrix total weight : " << subset.sum() << std::endl;
+            vc->applyModification(subset, A);
 //            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
         }
     }
