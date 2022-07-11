@@ -308,7 +308,7 @@ Vector3& Vector3::operator+=(const Vector3& o) {
     this->z += o.z;
     return *this;
 }
-Vector3 operator-(Vector3 a, const Vector3& b) {
+Vector3 operator-(Vector3 a, Vector3 b) {
     a -= b;
     return a;
 }
@@ -338,7 +338,11 @@ Vector3& Vector3::operator/=(Vector3 o) {
     this->y /= o.y;
     this->z /= o.z;
     return *this;
-}
+}/*
+Vector3 operator/(Vector3 a, Vector3 b) {
+    a /= b;
+    return a;
+}*/
 Vector3 Vector3::operator*(float o) {
     Vector3 v = *this;
     v *= o;
@@ -390,9 +394,24 @@ Vector3& Vector3::operator=(const Vector3& o) {
     this->valid = o.valid;
     return *this;
 }
+
+Vector3 operator+(float a, Vector3 b) {
+    return b + a;
+}
+Vector3 operator-(float a, Vector3 b) {
+    return b * -1.f + a;
+}
+Vector3 operator*(float a, Vector3 b) {
+    return b * a;
+}
+
 bool operator==(Vector3 a, Vector3 b)
 {
     return a.x == b.x && a.y == b.y && a.z == b.z;
+}
+
+Vector3 operator-(Vector3 v) {
+    return v * -1.f;
 }
 
 bool operator!=(Vector3 a, Vector3 b)

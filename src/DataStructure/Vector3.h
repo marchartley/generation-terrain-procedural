@@ -93,11 +93,8 @@ public:
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
-    friend Vector3 operator+(Vector3 a, Vector3 b);
     Vector3& operator+=(const Vector3& o);
-    friend Vector3 operator-(Vector3 a, const Vector3& b);
     Vector3& operator-=(const Vector3& o);
-    friend Vector3 operator*(Vector3 a, Vector3 o);
     Vector3& operator*=(Vector3 o);
     Vector3 operator/(Vector3 o);
     Vector3& operator/=(Vector3 o);
@@ -109,6 +106,17 @@ public:
     Vector3& operator+=(float o);
     Vector3 operator-(float o);
     Vector3& operator-=(float o);
+    friend Vector3 operator+(Vector3 a, Vector3 b);
+    friend Vector3 operator-(Vector3 a, Vector3 b);
+    friend Vector3 operator*(Vector3 a, Vector3 o);
+//    friend Vector3 operator/(Vector3 a, Vector3 o);
+
+    friend Vector3 operator+(float a, Vector3 b);
+    friend Vector3 operator-(float a, Vector3 b);
+    friend Vector3 operator*(float a, Vector3 b);
+
+    friend Vector3 operator-(Vector3 v);
+
     Vector3& operator=(const Vector3& o);
     friend bool operator==(Vector3 a, Vector3 b);
     friend bool operator!=(Vector3 a, Vector3 b);
@@ -122,6 +130,13 @@ public:
     std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
 //    const char* toHashString() const {return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z); }
 
+    Vector3 xxx() const { return Vector3(x, x, x); }
+    Vector3 xx()  const { return Vector3(x, x, 0); }
+    Vector3 yyy() const { return Vector3(y, y, y); }
+    Vector3 yy()  const { return Vector3(y, y, 0); }
+    Vector3 xy()  const { return Vector3(x, y, 0); }
+    Vector3 yz()  const { return Vector3(y, z, 0); }
+    Vector3 xz()  const { return Vector3(x, z, 0); }
     float x, y, z;
 protected:
     bool valid = true;
