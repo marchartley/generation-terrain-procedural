@@ -76,12 +76,17 @@ void subdivision(vec2 vecPos) {
     vec4 v3 = vec4(vecPos + vec2(0, 1), getHeight(vecPos + vec2(0, 1)), 1.0);
     vec4 v4 = vec4(vecPos + vec2(1, 1), getHeight(vecPos + vec2(1, 1)), 1.0);
     vec4 v5 = vec4(vecPos + vec2(.5, .5), getHeight(vecPos + vec2(.5, .5)), 1.0);
-
+/*
     sendInfoVertex(v1); sendInfoVertex(v2); sendInfoVertex(v5);
                         sendInfoVertex(v3); sendInfoVertex(v1);
     EndPrimitive();
     sendInfoVertex(v5); sendInfoVertex(v2); sendInfoVertex(v4);
                         sendInfoVertex(v3); sendInfoVertex(v5);
+    EndPrimitive();*/
+
+    sendInfoVertex(v1); sendInfoVertex(v2); sendInfoVertex(v5); sendInfoVertex(v4);
+    EndPrimitive();
+    sendInfoVertex(v4); sendInfoVertex(v3); sendInfoVertex(v5); sendInfoVertex(v1);
     EndPrimitive();
 }
 //Geometry Shader entry point
