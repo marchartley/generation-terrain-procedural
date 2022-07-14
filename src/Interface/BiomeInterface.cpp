@@ -104,7 +104,10 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
     this->heightmap->maxHeight = 40.f;
 
-    this->voxelGrid->from2DGrid(*this->heightmap);
+    float scaleFactor = 1.f;
+    Vector3 start = Vector3(0, 0, 0);
+    Vector3 end = Vector3(124, 124, 0);
+    this->voxelGrid->from2DGrid(*this->heightmap, start, end, scaleFactor);
     this->voxelGrid->fromIsoData();
 
     ShapeCurve terrainArea({
@@ -190,13 +193,13 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //            std::cout << out.str() << std::endl;
     }
     // First, level the terrain as the biomes design it
-    Matrix3<float> heightChange(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1);
+    Matrix3<float> heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     for (auto& current : sortedBiomes) {
         if (!current->depthShape.points.empty()) {
             ShapeCurve area = current->area;
             Vector3 AABBoxMin, AABBoxMax;
             std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
-            Matrix3<float> falloff2D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
+            Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 0.f);
             for (size_t i = 0; i < falloff2D.size(); i++) {
                 Vector3 pos = falloff2D.getCoordAsVector3(i);
                 if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
@@ -210,7 +213,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         }
     }
     heightChange = heightChange.meanSmooth(15, 15, 1);
-    voxelGrid->add2DHeightModification(heightChange, 1.5f);
+    this->heightmap->heights += heightChange;
+    voxelGrid->add2DHeightModification(heightChange.subset(start, end).resize(scaleFactor) * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight()), 1.5f);
 
     // Now add the primitives on top
     for (auto& current : sortedBiomes) {
@@ -220,8 +224,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->maxHeight);
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
-        Matrix3<float> falloff2D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 1.f);
-        Matrix3<float> falloff3D(voxelGrid->getDimensions(), 1.f);
+        Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 1.f);
+        Matrix3<float> falloff3D(heightmap->getSizeX(), heightmap->getSizeY(), voxelGrid->getSizeZ(), 1.f);
         for (size_t i = 0; i < falloff2D.size(); i++) {
             Vector3 pos = falloff2D.getCoordAsVector3(i);
             if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
@@ -261,20 +265,17 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //            std::cout << "How the fuck did I get here? Class was " << current->classname << std::endl;
         }
 
-        if (modif2D && !heightmapModifier.data.empty())
-            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y), 10.f, AABBoxMin.xy());
+        if (modif2D && !heightmapModifier.data.empty()) {
+            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y) * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight()), 10.f, AABBoxMin.xy());
+        }
         if (modif3D && !modifications.data.empty()) {
-//            std::cout << "Adding " << current->classname << " from " << AABBoxMin.xy() << " to " << AABBoxMax.xy() << std::endl;
-//            if (modifications.sum() == 0) {
-//                int a = 0;
-//            }
             voxelGrid->applyModification(modifications.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y), AABBoxMin.xy());
         }
     }
 
     // Yeah whatever... Just do the translation once again
     voxelGrid->saveState();
-    this->heightmap->fromVoxelGrid(*voxelGrid);
+//    this->heightmap->fromVoxelGrid(*voxelGrid);
 
 /*
     for (auto& tuple : BiomeInstance::instancedBiomes) {
