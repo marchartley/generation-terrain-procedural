@@ -73,10 +73,12 @@ public:
     int getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect = true) const;
     int getNumberNeighbors(Vector3 pos, bool using4connect = true) const;
 
+    Matrix3<T> resize(float factor, RESIZE_MODE mode = LINEAR);
     Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR);
     Matrix3 resize(Vector3 newSize, RESIZE_MODE mode = LINEAR);
 
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
+    Matrix3<T> subset(Vector3 start, Vector3 end);
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner);
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
@@ -140,6 +142,7 @@ public:
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
     static Matrix3<T> identity(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
 
+    Matrix3<T> operator-() const;
     template<typename U>
     Matrix3<T>& operator+=(const Matrix3<U>& o);
     template<typename U>
@@ -788,6 +791,10 @@ Matrix3<T> operator+(Matrix3<T> a, Matrix3<T> b) {
     a += b;
     return a;
 }
+template<typename T>
+Matrix3<T> Matrix3<T>::operator-() const {
+    return *this * -1.f;
+}
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
@@ -927,6 +934,15 @@ int Matrix3<T>::getNumberNeighbors(Vector3 pos, bool using4connect) const
 }
 
 template<typename T>
+Matrix3<T> Matrix3<T>::resize(float factor, RESIZE_MODE mode)
+{
+    Vector3 newSize = this->getDimensions() * factor;
+    if (newSize.x < 1) newSize.x = 1;
+    if (newSize.y < 1) newSize.y = 1;
+    if (newSize.z < 1) newSize.z = 1;
+    return this->resize(newSize, mode);
+}
+template<typename T>
 Matrix3<T> Matrix3<T>::resize(Vector3 newSize, RESIZE_MODE mode)
 {
     return this->resize(newSize.x, newSize.y, newSize.z, mode);
@@ -1009,6 +1025,14 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
     return newMat;
 }
 
+
+template<typename T>
+Matrix3<T> Matrix3<T>::subset(Vector3 start, Vector3 end)
+{
+    if (start.z == 0 && end.z == 0)
+        end.z = -1; // Give it the default value so it will be managed by the main function
+    return this->subset(start.x, end.x, start.y, end.y, start.z, end.z);
+}
 
 template<typename T>
 Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int startZ, int endZ)
