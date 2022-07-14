@@ -47,19 +47,31 @@ VoxelGrid::~VoxelGrid()
 {
     this->chunks.clear();
 }
-void VoxelGrid::from2DGrid(Grid grid) {
-    this->sizeX = grid.getSizeX();
-    this->sizeY = grid.getSizeY();
-    this->sizeZ = grid.getMaxHeight() * 3; // Give space for arches or things
+void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
+    if (subsectionEnd == subsectionStart) {
+        // If they are not set, we want the entire map
+        subsectionStart = Vector3();
+        subsectionEnd = Vector3(grid.getSizeX(), grid.getSizeY());
+    } else {
+        // Otherwise, we want a subset of the map, we just need to clamp the dimensions
+        subsectionStart.x = std::max(subsectionStart.x, 0.f);
+        subsectionStart.y = std::max(subsectionStart.y, 0.f);
+        subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
+        subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
+    }
+    this->sizeX = (subsectionEnd.x - subsectionStart.x) * scaleFactor; //grid.getSizeX();
+    this->sizeY = (subsectionEnd.y - subsectionStart.y) * scaleFactor; //grid.getSizeY();
+    this->sizeZ = grid.getMaxHeight() * scaleFactor * 3; // Give space for arches or things
     this->initMap();
 
+    Matrix3<float> gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(scaleFactor);
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
-                    float grid_height = grid.getHeight(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / (grid.getMaxHeight() * 2));
+                    float grid_height = gridHeights.at(xChunk * chunkSize + x, yChunk * chunkSize + y) * (this->sizeZ / (grid.getMaxHeight() * 2));
                     int z = int(grid_height);
                     // Add some positive noise for h < height
                     for (int i = 0; i < z; i++) {
@@ -70,6 +82,31 @@ void VoxelGrid::from2DGrid(Grid grid) {
                     for (int i = z; i < this->getSizeZ(); i++) {
                         float noise_val = getNoiseValue(xChunk * chunkSize + x, yChunk * chunkSize + y, i);
                         data[iChunk].at(x, y, i) = -abs(noise_val);
+                    }
+                }
+            }
+            iChunk ++;
+        }
+    }
+    this->tempData = data;
+    this->_smoothingNeeded = true;
+}
+
+void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased)
+{
+    this->sizeX = layerBased.getSizeX();
+    this->sizeY = layerBased.getSizeY();
+    this->sizeZ = layerBased.getSizeZ();
+    this->initMap();
+
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
+    int iChunk = 0;
+    for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+        for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+            for (int x = 0; x < chunkSize; x++) {
+                for (int y = 0; y < chunkSize; y++) {
+                    for (int z = 0; z < this->getSizeZ(); z++) {
+                        data[iChunk].at(x, y, z) = LayerBasedGrid::densityFromMaterial(layerBased.getValue(x, y, z));
                     }
                 }
             }
@@ -390,6 +427,29 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
     /// Two possibilities : either inverse the voxel values when needed, or just add random values based on Perlin noise
     Matrix3<float> modification(this->getDimensions(), 0.f);
     Matrix3<float> previousValues = this->getVoxelValues();
+
+    /// Third possibility : Apply deformation on the Z-axis
+    Matrix3<Vector3> deformation(this->getDimensions());
+    float maxDepthAllowed = this->getSizeZ();
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            float currentHeight = this->getHeight(x, y);
+            float heightmapValue = heightmapModifier.at(x, y);
+//            float desiredDepth = heightmapValue / maxDepthAllowed;
+            for (int z = 0; z < this->getSizeZ(); z++) {
+                float coef = z <= currentHeight ?
+                            1 - (currentHeight - z) / currentHeight :
+                            1 - (z - currentHeight) / (maxDepthAllowed - currentHeight);
+                deformation.at(x, y, z) = Vector3(0, 0, heightmapValue * coef);
+            }
+        }
+    }
+    Matrix3<float> newVoxels = previousValues.wrapWith(deformation) - previousValues;
+
+    this->applyModification(newVoxels, anchor);
+    return;
+
+
 
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {

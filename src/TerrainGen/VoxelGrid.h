@@ -5,6 +5,7 @@ class VoxelGrid;
 
 #include "TerrainGen/Grid.h"
 #include "TerrainGen/VoxelChunk.h"
+#include "TerrainGen/LayerBasedGrid.h"
 #include "DataStructure/Voxel.h"
 #include <vector>
 #include <map>
@@ -36,7 +37,8 @@ public:
     VoxelGrid(Grid& grid);
     VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     ~VoxelGrid();
-    void from2DGrid(Grid grid);
+    void from2DGrid(Grid grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
+    void fromLayerBased(LayerBasedGrid layerBased);
     std::shared_ptr<VoxelGrid> fromIsoData();
 
     void initMap();
