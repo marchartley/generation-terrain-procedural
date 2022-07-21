@@ -109,6 +109,7 @@ struct _jcv_point
 {
     jcv_real x;
     jcv_real y;
+    jcv_real weight;
 };
 
 struct _jcv_graphedge
@@ -123,6 +124,7 @@ struct _jcv_graphedge
 struct _jcv_site
 {
     jcv_point       p;
+    jcv_real        weight;
     int             index;  // Index into the original list of points
     jcv_graphedge*  edges;  // The half edges owned by the cell
 };
@@ -409,12 +411,14 @@ static void jcv_edge_create(jcv_edge* e, jcv_site* s1, jcv_site* s2)
     // jcv_real my = s1->p.y + dy * jcv_real(0.5);
     // jcv_real pc = ( pa * mx + pb * my );
 
-    jcv_real dx = s2->p.x - s1->p.x;
-    jcv_real dy = s2->p.y - s1->p.y;
+    jcv_real coef = .5f; // (s1->weight < s2->weight ? (s1->weight / (2.f * s2->weight)) : (1.f - (s2->weight / (2.f * s1->weight))));
+    jcv_real dx = (s2->p.x - s1->p.x);
+    jcv_real dy = (s2->p.y - s1->p.y);
     int dx_is_larger = (dx*dx) > (dy*dy); // instead of fabs
 
     // Simplify it, using dx and dy
-    e->c = dx * (s1->p.x + dx * (jcv_real)0.5) + dy * (s1->p.y + dy * (jcv_real)0.5);
+//    e->c = dx * (s1->p.x + dx * (jcv_real)0.5) + dy * (s1->p.y + dy * (jcv_real)0.5);
+    e->c = dx * (s1->p.x + dx * coef) + dy * (s1->p.y + dy * coef);
 
     if( dx_is_larger )
     {
@@ -1365,6 +1369,7 @@ void jcv_diagram_generate_useralloc(int num_points, const jcv_point* points, con
         sites[i].p        = points[i];
         sites[i].edges    = 0;
         sites[i].index    = i;
+        sites[i].weight   = points[i].weight;
     }
 
     qsort(sites, (size_t)num_points, sizeof(jcv_site), jcv_point_cmp);

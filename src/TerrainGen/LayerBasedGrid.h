@@ -23,30 +23,25 @@ public:
 
     void createMesh();
     void display();
+    TerrainTypes getValue(Vector3 pos);
+    TerrainTypes getValue(float x, float y, float z);
 
-    std::vector<std::vector<std::vector<std::tuple<TerrainTypes, float>>>> layers;
-    int sizeX, sizeY;
-    int height;
-    float sizeZ;
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
+
+    int getSizeX() { return layers.sizeX; }
+    int getSizeY() { return layers.sizeY; }
+    float getSizeZ();
+//    int sizeX, sizeY;
+//    float sizeZ;
 
     Mesh mesh;
-    std::vector<std::vector<std::vector<std::shared_ptr<Voxel>>>> voxels;
 
+    void from2DGrid(Grid grid);
+    void fromVoxelGrid(VoxelGrid voxelGrid);
 
-    template<class R>
-    void applyToVoxels(std::function<R(std::shared_ptr<Voxel>)> func) {
-        for(int v_x = 0; v_x < sizeX; v_x++) {
-            for(int v_y = 0; v_y < sizeY; v_y++) {
-                for(int h = 0; h < sizeZ; h++) {
-                    func(this->voxels[v_x][v_y][h]);
-                }
-            }
-        }
-    }
-    template <class F>
-    void applyToVoxels(F func) {
-        this->applyToVoxels(std::function<void(std::shared_ptr<Voxel>)>(func));
-    }
+    static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
+    static TerrainTypes materialFromDensity(float density);
+    static float densityFromMaterial(TerrainTypes material);
 };
 /*
 class LayerBasedGrid;

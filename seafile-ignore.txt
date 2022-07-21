@@ -1,0 +1,66 @@
+.git/
+build/
+build-Release/
+build-Release/*
+build-Debug/*
+.pro.user.*
+
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+*.user
+*.user.*
+build/*
+
+*.dat
+src/assets/models/coral_1_bottom_watertight.stl
+src/assets/models/coral_1_top_watertight.stl
+src/assets/models/coral_2_whole_watertight.stl
+src/assets/models/coral_4_whole_watertight.stl
+src/assets/models/coral_5_top_and_bottom_unwatertight.stl
+src/assets/models/coral_5_top_watertight.stl
+src/assets/models/coral_6_watertight_fixed.stl
+src/assets/models/coral_8_watertight.stl
+src/assets/models/coral_9_watertight.stl
+src/assets/models/My_Scan_2.stl
+src/assets/models/plastic-reef-5-corals20191129-2115-1wwd1bd.zip
+src/FastWFC/*
+saved_maps/action_histories/*
+saved_maps/heightmaps/*
+saved_maps/voxel_grids/*
+*.zip
+src/assets/textures/CIF_2021_ED166_HARTLEY_Marc_137014.pdf
+src/assets/textures/coral/Material_1307.jpg
+src/assets/textures/coral2/Material_737.png
+src/assets/textures/mountain_rocks/Material_1607.jpg
+src/assets/textures/underwater_ground/Material_1283.jpg
+src/assets/textures/underwater_sand/Material_1573.jpg

@@ -1,0 +1,33 @@
+{
+  "model-name": "Mayotte",
+  "params": {
+	},
+  "children": [
+    {
+      "class": "profondeurs",
+      "params": {
+        "probability-appearence": {
+          "mean": 1,
+          "vari": 0
+        },
+        "size": 300,
+        "quantity": 2,
+        "depth": {
+          "min": 100,
+          "max": 100,
+          "slope": "linear"
+        },
+				"ground-texture": "underwater_ground"
+      },
+      "children": [
+				{
+					"class": "arche",
+					"params": {
+						"quantity": 1
+					},
+					"children": []
+				}
+			]
+    }
+  ]
+}

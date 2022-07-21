@@ -85,13 +85,17 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(BiomeMode
     auto children = model.modelChildren;
 
     Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve(3); // Add some relaxations to be a little bit more uniform
+    std::vector<BSpline> subarea_borders = diagram.solve(100); // Add some relaxations to be a little bit more uniform
 
     std::vector<std::string> allChildrenClassnames;
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {
         allChildrenClassnames.push_back(children[i].modelName);
     }
+#ifdef linux
+    std::ifstream file("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
+#else
     std::ifstream file("C:/codes/Qt/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
+#endif
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     nlohmann::json neighboring = nlohmann::json::parse(content);
     std::vector<float> constraintsWeights(diagram.pointset.size());
