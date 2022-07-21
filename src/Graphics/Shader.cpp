@@ -277,6 +277,11 @@ void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
     this->setInt(pname, index);
 }
 
+//void Shader::setMatrix(std::string pname, Matrix value)
+//{
+//    this->setMatrix(pname, value.)
+//}
+
 
 void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> func)
 {

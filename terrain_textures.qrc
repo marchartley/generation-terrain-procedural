@@ -5,7 +5,6 @@
         <file>src/assets/textures/algae/occlusion.jpg</file>
         <file>src/assets/textures/algae/specular.jpg</file>
         <file>src/assets/textures/beach_sand/color.jpg</file>
-        <file>src/assets/textures/beach_sand/displace.tiff</file>
         <file>src/assets/textures/beach_sand/normal.jpg</file>
         <file>src/assets/textures/beach_sand/occlusion.jpg</file>
         <file>src/assets/textures/beach_sand/specular.jpg</file>
@@ -41,5 +40,6 @@
         <file>src/assets/textures/underwater_sand/normal.jpg</file>
         <file>src/assets/textures/underwater_sand/occlusion.jpg</file>
         <file>src/assets/textures/underwater_sand/roughness.jpg</file>
+        <file>src/assets/textures/beach_sand/displacement.tiff</file>
     </qresource>
 </RCC>

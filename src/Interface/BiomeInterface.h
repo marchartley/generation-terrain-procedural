@@ -39,10 +39,12 @@ public:
     std::vector<Mesh> selectionPlanes;
     BiomeModel biomeModel;
     int tempIndex = -1;
+    Vector3 tempMousePos;
 
-Q_SIGNALS:
+    void setVoxelGridSizeFactor(float newFactor);
 
 public Q_SLOTS:
+    void mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
 
     void generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance = nullptr);
     void randomize();
@@ -57,8 +59,14 @@ public Q_SLOTS:
 
     void displayUniqueSelection(int selectionIndex);
 
-protected:
+    Matrix3<float> prepareTrench(std::shared_ptr<BiomeInstance> biome);
+    Matrix3<float> prepareCoralWall(std::shared_ptr<BiomeInstance> biome);
+    Matrix3<float> prepareArche(std::shared_ptr<BiomeInstance> biome);
+    Matrix3<float> preparePatateCorail(std::shared_ptr<BiomeInstance> biome);
 
+protected:
+    Vector3 fromHeightmapPosToVoxels(Vector3 pos);
+    Vector3 fromVoxelsPosToHeightmap(Vector3 pos);
     void setBindings();
     void updateBiomeSelectionGui();
 
@@ -73,6 +81,9 @@ public:
     std::vector<BiomeInstance> possibleBiomeInstances;
 
     BiomeReplacementDialog* replaceDialog;
+
+    float voxelGridScaleFactor = 1.f;
+    Vector3 voxelGridOffsetStart;
 };
 
 

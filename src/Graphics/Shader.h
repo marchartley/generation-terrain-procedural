@@ -11,6 +11,7 @@ class Shader;
 
 #include "Graphics/ShaderElement.h"
 #include "DataStructure/Matrix3.h"
+#include "DataStructure/Matrix.h"
 
 class Shader
 {
@@ -41,6 +42,7 @@ public:
     void setTexture2D(std::string pname, int index, int width, int height, int* data);
     void setTexture2D(std::string pname, int index, int width, int height, int** data);
     void setTexture3D(std::string pname, int index, Matrix3<float> texture);
+//    void setMatrix(std::string pname, Matrix value);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
@@ -61,6 +63,21 @@ public:
     int gShader = -1;
 
 
+    template<typename T>
+    void setMatrix(std::string pname, std::vector<std::vector<T>> values)
+    {
+        int n = values.size(), m = values[0].size();
+        T* vals = new T[n * m];
+        for (int i = 0; i < n; i++)
+            for (int j = 0; j < m; j++)
+                vals[i + j*n] = values[i][j];
+        this->setMatrix(pname, vals, n, m);
+    }
+    template<typename T>
+    void setMatrix(std::string pname, std::vector<T> values)
+    {
+        this->setMatrix(pname, &values.begin());
+    }
     template<typename T>
     void setMatrix(const char* pname, T& values)
     {
@@ -128,21 +145,6 @@ public:
                                                1, GL_FALSE, values);
         else
             throw std::invalid_argument("The size of the matrix to send to the shader is unusual");
-    }
-    template<typename T>
-    void setMatrix(std::string pname, std::vector<T> values)
-    {
-        this->setMatrix(pname, &values.begin());
-    }
-    template<typename T>
-    void setMatrix(std::string pname, std::vector<std::vector<T>> values)
-    {
-        int n = values.size(), m = values[0].size();
-        T* vals = new T[n * m];
-        for (int i = 0; i < n; i++)
-            for (int j = 0; j < m; j++)
-                vals[i + j*n] = values[i][j];
-        this->setMatrix(pname, vals, n, m);
     }
     template <class T>
     void setVector(std::string pname, std::vector<T> values)

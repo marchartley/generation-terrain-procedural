@@ -197,7 +197,7 @@ void main(void)
     vec3 H = normalize(varyingHalfH);
 
     vec2 texSize = textureSize(heightmapFieldTex, 0);
-    vec2 fbmWrap = clamp(ginitialVertPos.xy + 2.0 * (fbm3ToVec2(ginitialVertPos.xyz) - vec2(.5, .5)) * 5.0, vec2(0.01, 0.01), texSize) - ginitialVertPos.xy;
+    vec2 fbmWrap = clamp(ginitialVertPos.xy + 2.0 * (fbm3ToVec2(ginitialVertPos.xyz) - vec2(.5, .5)) * 5.0, vec2(0.51, 0.51), texSize - vec2(0.51, 0.51)) - ginitialVertPos.xy;
     float biomeColorValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbmWrap)/texSize).r;
     float realBiomeColorValue = texture(heightmapFieldTex, (ginitialVertPos.xy)/texSize).r;
     float biomeNormalValue = texture(heightmapFieldTex, (ginitialVertPos.xy + fbmWrap)/texSize).r;

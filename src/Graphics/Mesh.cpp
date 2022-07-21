@@ -289,8 +289,7 @@ void Mesh::update()
     {
         GlobalsGL::f()->glGenVertexArrays(1, &this->vao);
         GlobalsGL::f()->glGenBuffers(4, this->vbo);
-//        this->bufferID = GlobalsGL::newBufferId();
-//        GlobalsGL::generateBuffers();
+        GlobalsGL::checkOpenGLError();
     }
     if (!this->shader && Shader::default_shader) {
         this->shader = std::make_shared<Shader>(*Shader::default_shader);

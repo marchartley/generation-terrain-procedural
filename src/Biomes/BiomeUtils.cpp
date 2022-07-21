@@ -7,7 +7,7 @@ int biomeID(std::string biomeName) {
     return -1;
 }
 
-std::__cxx11::string biomeName(int ID) {
+std::string biomeName(int ID) {
     return biomesNames[ID];
 }
 

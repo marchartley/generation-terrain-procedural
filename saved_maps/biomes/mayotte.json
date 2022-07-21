@@ -41,7 +41,7 @@
 					"slope": "linear"
 				},
         "size": 1,
-        "quantity": 5,
+        "quantity": 3,
 				"ground-texture": "beach_sand"
       },
       "children": [
@@ -61,7 +61,7 @@
           "vari": 0
         },
         "size": 3,
-        "quantity": 5,
+        "quantity": 3,
 				"ground-texture": "coral"
       },
       "children": [
@@ -86,7 +86,7 @@
           "vari": 0
         },
         "size": 30,
-        "quantity": 10,
+        "quantity": 2,
 				"ground-texture": "underwater_sand"
       },
       "children": [
