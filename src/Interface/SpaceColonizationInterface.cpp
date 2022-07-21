@@ -104,6 +104,7 @@ void SpaceColonizationInterface::keyPressEvent(QKeyEvent *event)
         if (visitingCamera->isVisiting)
             visitingCamera->moveBackward(1.f);
     }
+    ActionInterface::keyPressEvent(event);
 }
 
 void SpaceColonizationInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -227,7 +228,7 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
                                           }));
 }
 
-QHBoxLayout *SpaceColonizationInterface::createGUI()
+QLayout *SpaceColonizationInterface::createGUI()
 {
     this->spaceColonizationLayout = new QHBoxLayout;
     QPushButton* spaceColonizerPreviewButton = new QPushButton("Calculer");

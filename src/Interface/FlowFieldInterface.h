@@ -20,9 +20,6 @@ public:
 
     QLayout* createGUI();
 
-Q_SIGNALS:
-    void updated();
-
 public Q_SLOTS:
     void show();
     void hide();

@@ -21,9 +21,6 @@ public:
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     QLayout* createGUI();
 
-Q_SIGNALS:
-    void updated();
-
 public Q_SLOTS:
     void show();
     void hide();

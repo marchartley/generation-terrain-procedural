@@ -7,6 +7,8 @@
 #include "TerrainModification/UnderwaterErosion.h"
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
+#include "Interface/TerrainGenerationInterface.h"
+#include "Interface/VisitingCamera.h"
 #include <QTemporaryDir>
 #ifdef linux
     #include "sys/stat.h"
@@ -23,7 +25,6 @@ Viewer::Viewer(QWidget *parent): Viewer(
     if (parent != nullptr)
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
-    this->flyingCamera = new qglviewer::Camera(*this->mainCamera);
 }
 Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
@@ -33,7 +34,6 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
     if (parent != nullptr)
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
-    this->flyingCamera = new qglviewer::Camera(*this->mainCamera);
 }
 Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
@@ -62,6 +62,11 @@ void Viewer::init() {
     this->setBackgroundColor(QColor(127, 127, 127));
 
     this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
+
+    this->setShortcut(KeyboardAction::MOVE_CAMERA_DOWN, 0);
+    this->setShortcut(KeyboardAction::MOVE_CAMERA_UP, 0);
+    this->setShortcut(KeyboardAction::MOVE_CAMERA_LEFT, 0);
+    this->setShortcut(KeyboardAction::MOVE_CAMERA_RIGHT, 0);
 
     setTextIsEnabled(true);
     setMouseTracking(true);
@@ -129,21 +134,12 @@ void Viewer::init() {
 
     }
 
-    QObject::connect(this->spaceColonizationInterface.get(), &SpaceColonizationInterface::useAsMainCamera, this, &Viewer::swapCamera);
-    QObject::connect(this->karstPathInterface.get(), &KarstPathGenerationInterface::useAsMainCamera, this, &Viewer::swapCamera);
-
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
-//    this->displayThread = new QThread(this);
-//    this->displayThread->create(&Viewer::drawingProcess);
-
-
-//    startAnimation();
     QGLViewer::init();
 }
 
-//void Viewer::drawingProcess() {}
 void Viewer::draw() {
-    this->drawingProcess(); // std::async([this]() { this->drawingProcess(); });//std::launch::async, &Viewer::drawingProcess, *this);
+    this->drawingProcess();
 }
 void Viewer::drawingProcess() {
     // Update the mouse position in the grid
@@ -201,30 +197,14 @@ void Viewer::drawingProcess() {
         shader->setFloat("fogFar", this->fogFar);
     });
     current_frame ++;
-    if (this->terrainGenerationInterface)
-        terrainGenerationInterface->display(this->mapMode, this->algorithm, this->displayParticles);
+    if (this->interfaces.count("terrainGenerationInterface")) {
+        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->display(this->mapMode, this->algorithm, this->displayParticles);
+    }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     this->mainGrabber->display();
 
-    if (this->karstPathInterface)
-        this->karstPathInterface->display();
-    if (this->spaceColonizationInterface)
-        this->spaceColonizationInterface->display();
-    if (this->faultSlipInterface)
-        this->faultSlipInterface->display();
-    if (this->tunnelInterface)
-        this->tunnelInterface->display();
-    if (this->flowFieldInterface)
-        this->flowFieldInterface->display();
-    if (this->manualEditionInterface)
-        this->manualEditionInterface->display();
-    if (this->erosionInterface)
-        this->erosionInterface->display();
-    if (this->heightmapErosionInterface)
-        this->heightmapErosionInterface->display();
-    if (this->biomeInterface)
-        this->biomeInterface->display();
-
+    for (auto& actionInterface : this->interfaces)
+        actionInterface.second->display();
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -244,26 +224,11 @@ void Viewer::drawingProcess() {
     }
 }
 
-bool Viewer::inFlyMode()
-{
-    Qt::Key keyBinded;
-    Qt::KeyboardModifiers modifierBinded;
-    Qt::MouseButton buttonBinded;
-    this->getMouseActionBinding(CAMERA, ROTATE, false, keyBinded, modifierBinded, buttonBinded);
-    return buttonBinded == Qt::NoButton;
-}
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
     checkMouseOnVoxel();
-    if (curvesErosionConstructionMode && this->mouseInWorld) {
-//        this->addCurvesControlPoint(this->mousePosWorld);
-    }
-    if (QApplication::keyboardModifiers().testFlag(Qt::AltModifier) == true)
-    {
-        this->throwRock();
-    }
     if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
         std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
 
@@ -273,82 +238,6 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 
 void Viewer::keyPressEvent(QKeyEvent *e)
 {
-    // Defines the Alt+R shortcut.
-    if (e->key() == Qt::Key_Z)
-    {
-        if (QApplication::keyboardModifiers().testFlag(Qt::ControlModifier) == true)
-            this->voxelGrid->undo();
-        else
-            setViewerMode(ViewerMode::WIRE_MODE);
-        update(); // Refresh display
-    } else if (e->key() == Qt::Key_S)
-    {
-        setViewerMode(ViewerMode::FILL_MODE);
-        update(); // Refresh display
-    } else if (e->key() == Qt::Key_Q)
-    {
-        setMapMode(MapMode::VOXEL_MODE);
-        update(); // Refresh display
-    } else if (e->key() == Qt::Key_D)
-    {
-        setMapMode(MapMode::GRID_MODE);
-        update(); // Refresh display
-    } else if (e->key() == Qt::Key_F)
-    {
-        setMapMode(MapMode::LAYER_MODE);
-        update(); // Refresh display
-    } else if (e->key() == Qt::Key_R) {
-        if (this->algorithm == NONE)
-            setSmoothingAlgorithm(MARCHING_CUBES);
-        else if (this->algorithm == MARCHING_CUBES)
-            setSmoothingAlgorithm(NONE);
-        // this->displayMessage(QString::fromStdString("Displaying using " + std::string(this->algorithm == MARCHING_CUBES ? " Marching cubes" : "no") + " algorithm") );
-        update();
-    } else if(e->key() == Qt::Key_V) {
-        this->display_vertices = !this->display_vertices;
-        update();
-    } else if(e->key() == Qt::Key_P) {
-        this->setAddingMatterMode(!this->addingMatterMode);
-        // this->displayMessage( (addingMatterMode ? "Construction mode" : "Destruction mode") );
-        update();
-    } else if(e->key() == Qt::Key_Return) {
-        erodeMap(e->modifiers() == Qt::ShiftModifier);
-    } else if(e->key() == Qt::Key_Minus) {
-        this->setManualErosionRocksSize(std::max(2, this->erosionSize - 2));
-        // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
-        update();
-    } else if(e->key() == Qt::Key_Plus) {
-        this->setManualErosionRocksSize(std::max(2, this->erosionSize + 2));
-        // this->displayMessage(QString::fromStdString("Cursor size : " + std::to_string(this->manualErosionSize) ));
-        update();
-    } else if(e->key() == Qt::Key_Space) {
-//        displayRockTrajectories = !displayRockTrajectories;
-        // this->displayMessage(QString::fromStdString("Rock trajectories are : " + std::string(displayRockTrajectories ? "ON" : "OFF") ));
-        update();
-    } else if(e->key() == Qt::Key_0) {
-        this->createGlobalGravity();
-    } else if(e->key() == Qt::Key_Comma) {
-        this->createSandGravity();
-    } else if(e->key() == Qt::Key_1) {
-        this->startStopRecording();
-    } else if(e->key() == Qt::Key_2) {
-        for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-            vc->LoDIndex++;
-            vc->needRemeshing = true;
-        }
-        this->voxelGrid->remeshAll();
-        update();
-    } else if(e->key() == Qt::Key_3) {
-        // this->displayMessage( "Removing matter to create a tunnel" );
-//        createTunnel(true);
-    } else if(e->key() == Qt::Key_4) {
-        // this->displayMessage( "Adding matter to create a tunnel" );
-//        createTunnel(false);
-    } else if(e->key() == Qt::Key_5) {
-        this->setCamera(this->spaceColonizationInterface->visitingCamera);
-    } else if(e->key() == Qt::Key_C) {
-        this->toggleCameraMode(); //this->swapCamera(this->flyingCamera, !this->usingMainCamera);
-    }
     QGLViewer::keyPressEvent(e);
 }
 
@@ -373,99 +262,32 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     QGLViewer::mouseMoveEvent(e);
 }
 
+void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
+{
+    QGLViewer::mouseDoubleClickEvent(e);
+    checkMouseOnVoxel();
+    if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
+        std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+
+    }
+    Q_EMIT this->mouseDoubleClickedOnMap(this->mousePosWorld, this->mouseInWorld, e);
+}
+
 void Viewer::animate()
 {
-    /*if (voxelGrid) {
-        voxelGrid->computeFlowfield();
-        this->updateFlowfieldDebugMesh();
-    }*//*
-    if (this->applyLetItFall)
-        this->voxelGrid->makeItFall((this->applyLetSandFall ? -1.0 : 0.1));
-    if (this->applyLetSandFall)
-        this->voxelGrid->letGravityMakeSandFall();*/
     QGLViewer::animate();
 }
 
 Vector3 Viewer::minVoxelsShown()
 {
     Vector3 minVec(minSliceMapX, minSliceMapY, minSliceMapZ);
-    return /*Vector3(-this->voxelGrid->sizeX/2, -this->voxelGrid->sizeY/2, 0) + */Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * minVec;
+    return Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * minVec;
 }
 
 Vector3 Viewer::maxVoxelsShown()
 {
     Vector3 maxVec(maxSliceMapX, maxSliceMapY, maxSliceMapZ);
-    return /*Vector3(-this->voxelGrid->sizeX/2, -this->voxelGrid->sizeY/2, 0) + */Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * maxVec;
-}
-
-void Viewer::erodeMap(bool sendFromCam)
-{/*
-//    this->voxelGrid->computeFlowfield();
-    UnderwaterErosion erod(this->voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
-    std::shared_ptr<Vector3> pos = nullptr;
-    std::shared_ptr<Vector3> dir = nullptr;
-    if (sendFromCam)
-    {
-        dir = std::make_shared<Vector3>(1.f, .0f, .0f);/*
-        Vec a;
-        Vec b;
-        camera()->convertClickToLine(QPoint(camera()->screenWidth()/2, camera()->screenHeight()/2), a, b);
-//        pos = std::make_shared<Vector3>(a.x, a.y, a.z);
-        dir = std::make_shared<Vector3>(b.x, b.y, b.z);
-        // this->displayMessage( "Rocks launched from camera!" );*//*
-    } else {
-        pos = nullptr;
-        dir = std::make_shared<Vector3>(new Vector3(0.0, 0.0, 0.0));
-        // this->displayMessage( "Rocks launched!" );
-    }
-    std::tie(this->lastRocksLaunched, this->lastFailedRocksLaunched) = erod.Apply(pos, dir, 10, this->erosionFlowfieldFactor, this->erosionFlowfieldRandomness, true);
-
-    std::vector<Vector3> asOneVector;
-    for(std::vector<Vector3>& coords : this->lastRocksLaunched) {
-        asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
-    }
-    this->debugMeshes[ROCK_TRAILS].fromArray(asOneVector);
-    this->debugMeshes[ROCK_TRAILS].update();
-    asOneVector.clear();
-    for(std::vector<Vector3>& coords : this->lastFailedRocksLaunched) {
-        asOneVector.insert(asOneVector.end(), coords.begin(), coords.end());
-    }
-    this->debugMeshes[FAILED_ROCKS].fromArray(asOneVector);
-    this->debugMeshes[FAILED_ROCKS].update();
-
-//    updateFlowfieldDebugMesh();*/
-}
-/*
-void Viewer::recomputeFlowfield()
-{
-    this->voxelGrid->computeFlowfield();
-    updateFlowfieldDebugMesh();
-}
-*/
-void Viewer::setManualErosionRocksSize(int newSize)
-{
-    this->manualErosionSize = newSize;
-    this->mainGrabber->radius = newSize / 2.f;
-}
-
-void Viewer::throwRock()
-{
-    if (this->mouseInWorld)
-    {
-        RockErosion rock(this->manualErosionSize, this->manualErosionStrength);
-        rock.Apply(this->voxelGrid, this->mousePosWorld, addingMatterMode, true);
-    }
-    update();
-}
-
-void Viewer::computeLoD()
-{
-    for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks) {
-        vc->LoDIndex = this->LoD;
-        vc->needRemeshing = true;
-    }
-    this->voxelGrid->remeshAll();
-    this->update();
+    return Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * maxVec;
 }
 
 void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
@@ -480,13 +302,8 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         this->fogNear = 5.f;
         this->fogFar = 30.f;
         this->usingSpotlight = true;
-
-//        if (!this->inFlyMode())
-//            this->toggleCameraMode();
     }
     else {
-//        if (this->inFlyMode())
-//            this->toggleCameraMode();
         this->usingMainCamera = true;
         this->setCamera(this->mainCamera);
         this->displayParticles = false;
@@ -499,95 +316,10 @@ void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
         dynamic_cast<VisitingCamera*>(alternativeCamera)->isVisiting = useAltCamera;
     }
 }
-
-void Viewer::frameInterpolated()
-{
-}
-/*
-void Viewer::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
-{
-    if (!justUpdatePath)
-    {
-        bool addTheNewPoint = true;
-        for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
-            if (controls->manipFrame.isManipulated()) {
-                addTheNewPoint = false;
-                break;
-            }
-        }
-        if (addTheNewPoint) {
-            this->debugControlPoints[TUNNEL_PATHS].push_back(new ControlPoint(pos, 5.f, INACTIVE));
-            QObject::connect(this->debugControlPoints[TUNNEL_PATHS].back(), &ControlPoint::modified,
-                             this, [&](){ this->addCurvesControlPoint(Vector3(), true); });
-        }
-    }
-    this->currentTunnelPoints.clear();
-    for (auto& controls : this->debugControlPoints[TUNNEL_PATHS]) {
-        this->currentTunnelPoints.push_back(controls->position);
-//        controls->onUpdate([=]{ this->addCurvesControlPoint(Vector3(), true); });
-    }
-    BSpline path(this->currentTunnelPoints);
-
-    std::vector<Vector3> vertices = path.getPath(0.01);
-    std::vector<Vector3> meshVertices;
-    for (size_t i = 0; i < vertices.size() - 1; i++)
-    {
-        meshVertices.push_back(vertices[i]);
-        meshVertices.push_back(vertices[i+1]);
-    }
-    this->debugMeshes[TUNNEL_PATHS].fromArray(meshVertices);
-    this->debugMeshes[TUNNEL_PATHS].update();
-
-    update();
-}
-
-void Viewer::clearTunnelPoints()
-{
-    this->curvesErosionConstructionMode = false;
-    this->currentTunnelPoints.clear();
-    this->debugControlPoints[TUNNEL_PATHS].clear();
-    this->debugMeshes[TUNNEL_PATHS].clear();
-    update();
-}
-void Viewer::createTunnel(bool removingMatter)
-{
-    this->curvesErosionConstructionMode = false;
-    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    if (this->currentTunnelPoints.empty())
-        this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(3, !removingMatter));
-    else
-        this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateTunnel(this->currentTunnelPoints, !removingMatter, false));
-    this->currentTunnelPoints.clear();
-    this->debugControlPoints[TUNNEL_PATHS].clear();
-    this->debugMeshes[TUNNEL_PATHS].update();
-    update();
-}
-void Viewer::createCrack(bool removingMatter)
-{
-    if (this->currentTunnelPoints.size() < 2) return;
-
-    this->curvesErosionConstructionMode = false;
-    UnderwaterErosion erod(this->voxelGrid, this->curvesErosionSize, curvesErosionStrength, 10);
-    this->debugMeshes[TUNNEL_PATHS].fromArray(erod.CreateCrack(this->currentTunnelPoints[0], this->currentTunnelPoints[1], true));
-    this->currentTunnelPoints.clear();
-    this->debugControlPoints[TUNNEL_PATHS].clear();
-    this->debugMeshes[TUNNEL_PATHS].update();
-    update();
-}
-*/
 bool Viewer::checkMouseOnVoxel()
 {
     if (voxelGrid == nullptr)
         return false;
-/*
-    bool isFound = false;
-    qglviewer::Vec pos = camera()->pointUnderPixel(mousePos, isFound);
-    this->mousePosWorld = Vector3(pos.x, pos.y, pos.z);
-    this->mouseInWorld = isFound;
-    return isFound;
-
-
-*/
     camera()->convertClickToLine(mousePos, orig, dir);
     float maxDist = std::max((int)camera()->distanceToSceneCenter(), std::max(voxelGrid->getSizeX(), std::max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
@@ -608,7 +340,7 @@ bool Viewer::checkMouseOnVoxel()
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos;
-        this->mainGrabber->move(currPos); // - Vector3(voxelGrid->getSizeX()/2, voxelGrid->getSizeY()/2, 0.0);
+        this->mainGrabber->move(currPos);
     }
     return found;
 }
@@ -617,38 +349,6 @@ void Viewer::closeEvent(QCloseEvent *e) {
     this->setCamera(this->mainCamera);
     if (this->isTakingScreenshots) this->startStopRecording();
     QGLViewer::closeEvent(e);
-}
-
-bool Viewer::createGlobalGravity()
-{
-    this->voxelGrid->makeItFall();
-    update();
-    return false;
-    /*
-    this->startAnimation();
-    this->applyLetItFall = !this->applyLetItFall;
-//    if (this->applyLetItFall)
-        // this->displayMessage( "Gravity is making his job!" );
-//    else
-        // this->displayMessage( "Gravity stopped caring" );
-    update();
-    return this->applyLetItFall;*/
-}
-
-bool Viewer::createSandGravity()
-{
-    this->voxelGrid->letGravityMakeSandFall(true);
-    update();
-    return false;
-    /*
-    this->startAnimation();
-    this->applyLetSandFall = !this->applyLetSandFall;
-//    if (this->applyLetSandFall)
-        // this->displayMessage( "Sand is falling!" );
-//    else
-        // this->displayMessage( "Sand stopped falling" );
-    update();
-    return this->applyLetSandFall;*/
 }
 
 bool Viewer::startStopRecording()
@@ -677,68 +377,8 @@ bool Viewer::startStopRecording()
     update();
     return this->isTakingScreenshots;
 }
-
-void Viewer::loadMapUI()
-{
-
-    const char* vShader_voxels = ":/src/Shaders/voxels.vert";
-    const char* fShader_voxels = ":/src/Shaders/voxels.frag";
-
-    QString q_filename = QFileDialog::getOpenFileName(this, QString("Charger une carte"), QString::fromStdString(this->mapSavingFolder));
-    if (q_filename.isEmpty()) return; // Cancel the action if no file has been selected
-    std::string filename = q_filename.toStdString();
-    std::string ext = toUpper(getExtention(filename));
-    if (!this->grid)
-        this->grid = std::make_shared<Grid>();
-    if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>();
-
-    if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
-        // From heightmap
-        grid->loadFromHeightmap(filename, 127, 127, 255);
-        voxelGrid->from2DGrid(*grid);
-        voxelGrid->fromIsoData();
-    } else if (ext == "JSON") {
-        // The JSON file contains the list of actions made on a map
-        std::ifstream file(filename);
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        nlohmann::json json_content = nlohmann::json::parse(content);
-        if (!json_content.contains("actions"))
-            return;
-        for (auto action : json_content.at("actions")) {
-            // Let all the interfaces try to replay their actions
-//            karstPathInterface->replay(action);
-            spaceColonizationInterface->replay(action);
-            faultSlipInterface->replay(action);
-            gravityInterface->replay(action);
-            tunnelInterface->replay(action);
-            flowFieldInterface->replay(action);
-            manualEditionInterface->replay(action);
-            undoRedoInterface->replay(action);
-        }
-    } else {
-        // Then it's our custom voxel grid file
-        voxelGrid->retrieveMap(filename);
-        voxelGrid->fromIsoData();
-        grid->fromVoxelGrid(*voxelGrid);
-    }
-    this->setSceneCenter(voxelGrid->getDimensions() * voxelGrid->getBlockSize() / 2.f);
-    voxelGrid->displayWithMarchingCubes = (this->algorithm == MARCHING_CUBES);
-    this->voxelGrid->createMesh();
-    this->grid->createMesh();
-    for(std::shared_ptr<VoxelChunk>& vc : this->voxelGrid->chunks)
-        vc->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-    update();
-}
-void Viewer::saveMapUI()
-{
-    QString filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
-    if (this->voxelGrid)
-        voxelGrid->saveMap(filename.toStdString());
-}
-
 bool Viewer::eventFilter(QObject* obj, QEvent* event)
-{
+{/*
     if (event->type() == QEvent::KeyPress)
         this->keyPressEvent(static_cast<QKeyEvent *>(event));
     if (event->type() == QEvent::KeyRelease)
@@ -759,7 +399,8 @@ bool Viewer::eventFilter(QObject* obj, QEvent* event)
         this->timerEvent(static_cast<QTimerEvent *>(event));
 
     // Don't block any event
-    return false;
+    return false;*/
+    return QGLViewer::eventFilter(obj, event);
 }
 
 void Viewer::clipViewTemporarily(Vector3 direction, Vector3 center, bool active)

@@ -7,11 +7,18 @@
 
 class ActionInterface : public CustomInteractiveObject
 {
+    Q_OBJECT
 public:
     ActionInterface(std::string actionTypeName, QWidget* parent = nullptr);
-    ~ActionInterface();
+//    ~ActionInterface();
 
     virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
+
+    }
+    virtual QLayout* createGUI() {
+        return nullptr;
+    }
+    virtual void display() {
 
     }
 
@@ -43,6 +50,9 @@ public:
     std::string savingFilename;
     std::shared_ptr<std::fstream> savingFile;
     std::shared_ptr<std::vector<nlohmann::json>> jsonActionsHistory;
+
+Q_SIGNALS:
+    void updated();
 };
 
 #include "Utils/BSpline.h"

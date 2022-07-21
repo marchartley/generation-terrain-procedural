@@ -23,7 +23,6 @@ public:
     QLayout* createGUI();
 
 Q_SIGNALS:
-    void updated();
     void needToClipView(Vector3 direction, Vector3 center, bool active);
 
 public Q_SLOTS:

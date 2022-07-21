@@ -315,6 +315,7 @@ void ControlPoint::wheelEvent(QWheelEvent * const event, qglviewer::Camera * con
 {
     setSphereRadius(this->radius - event->angleDelta().y()/10.f);
     this->startAction(QGLViewer::MouseAction::NO_MOUSE_ACTION);
+    qglviewer::ManipulatedFrame::wheelEvent(event, camera);
 }
 
 void ControlPoint::setSphereRadius(float newRadius)

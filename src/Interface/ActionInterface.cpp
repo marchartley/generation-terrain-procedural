@@ -6,9 +6,9 @@ ActionInterface::ActionInterface(std::string actionTypeName, QWidget *parent)
 
 }
 
-ActionInterface::~ActionInterface()
-{
-}
+//ActionInterface::~ActionInterface()
+//{
+//}
 
 nlohmann::json vec3_to_json(const Vector3& vec) {
     return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});

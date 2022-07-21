@@ -40,7 +40,7 @@ public:
     std::vector<BSpline> karstPaths;
     Mesh pathsMeshes;
 
-    QHBoxLayout* createGUI();
+    QLayout* createGUI();
     QHBoxLayout* spaceColonizationLayout;
 
 Q_SIGNALS:

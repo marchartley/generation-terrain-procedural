@@ -68,7 +68,7 @@ RangeSliderHandle::RangeSliderHandle(float val, RangeSlider *_parent)
 
 void RangeSlider::sliderChange(SliderChange change)
 {
-    std::cout << "My value = " << this->value() << std::endl;
+//    std::cout << "My value = " << this->value() << std::endl;
 }
 
 void RangeSlider::resizeEvent(QResizeEvent *e)
@@ -106,7 +106,7 @@ void RangeSlider::mouseReleaseEvent(QMouseEvent *mouseEvent)
       max_handle->show();
       max_handle->handleActivated = false;
   }
-//  mouseEvent->accept();
+  FancySlider::mouseReleaseEvent(mouseEvent);
 }
 
 void RangeSlider::mousePressEvent(QMouseEvent *mouseEvent)
@@ -122,12 +122,13 @@ void RangeSlider::mousePressEvent(QMouseEvent *mouseEvent)
          max_handle->handleActivated = true;
      }
   }
-  //  mouseEvent->accept();
+  FancySlider::mousePressEvent(mouseEvent);
 }
 
 void RangeSlider::mouseMoveEvent(QMouseEvent *event)
 {
     this->alt_update();
+    FancySlider::mouseMoveEvent(event);
 }
 
 float RangeSlider::getValueUnderCursor(QPoint cur)
