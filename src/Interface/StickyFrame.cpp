@@ -39,6 +39,7 @@ StickyFrame::StickyFrame(QWidget *parent, float x0, float y0, float x1, float y1
 
 void StickyFrame::resizeEvent(QResizeEvent *e)
 {
+    QWidget::resizeEvent(e);
 }
 
 bool StickyFrame::eventFilter(QObject *obj, QEvent *event)

@@ -19,6 +19,14 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : Ac
     QObject::connect(this->waterHeightSlider.get(), &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
 }
 
+KarstPathGenerationInterface::~KarstPathGenerationInterface()
+{
+    delete karstCreator;
+    sourceControlPoint.reset();
+    fractureVector.reset();
+    waterHeightSlider.reset();
+}
+
 void KarstPathGenerationInterface::display()
 {
     if (this->isVisible()) {
@@ -195,7 +203,7 @@ void KarstPathGenerationInterface::show()
 
 
 
-QHBoxLayout *KarstPathGenerationInterface::createGUI()
+QLayout *KarstPathGenerationInterface::createGUI()
 {
     this->karstCreationLayout = new QHBoxLayout;
 

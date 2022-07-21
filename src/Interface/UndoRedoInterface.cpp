@@ -39,6 +39,7 @@ void UndoRedoInterface::keyPressEvent(QKeyEvent *event)
         if (event->key() == Qt::Key_Y)
             redo();
     }
+    ActionInterface::keyPressEvent(event);
 }
 
 

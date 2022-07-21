@@ -26,7 +26,7 @@
 class ViewerInterface : public QMainWindow{
 public:
     ViewerInterface();
-    ~ViewerInterface();
+    virtual ~ViewerInterface();
 
     void setupUi();
 
@@ -43,6 +43,8 @@ public:
     void focusOutEvent(QFocusEvent* e);
 
 public Q_SLOTS:
+    void openInterface(std::string interfaceName);
+
     void openFaultSlipInterface();
     void openFlowfieldInterface();
     void openKarstInterface();
@@ -80,84 +82,18 @@ public:
     std::shared_ptr<HeightmapErosionInterface> heightmapErosionInterface;
     std::shared_ptr<BiomeInterface> biomeInterface;
 
-    std::vector<std::shared_ptr<ActionInterface>> actionInterfaces;
+    std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 
     QMenuBar* toolbox;
 
-    QHBoxLayout* loadSaveLayout;
-    Spoiler* loadSaveBox;
-    QHBoxLayout* randomRocksLayout;
-    Spoiler* randomRocksBox;
-    QHBoxLayout* currentSimulationLayout;
-    Spoiler* currentSimulationBox;
-    QHBoxLayout* manualRocksLayout;
-    Spoiler* manualRocksBox;
-    QHBoxLayout* curvesErosionLayout;
-    Spoiler* curvesErosionBox;
-    QHBoxLayout* karstCreationLayout;
-    Spoiler* karstCreationBox;
-    QHBoxLayout* spaceColonizerLayout;
-    Spoiler* spaceColonizerBox;
-    QLayout* faultSlipLayout;
-    Spoiler* faultSlipBox;
-    QHBoxLayout* gravityLayout;
-    Spoiler* gravityBox;
-    QHBoxLayout* recordingLayout;
-    Spoiler* recordingBox;
     QHBoxLayout* displayModeLayout;
     Spoiler* displayModeBox;
-    QHBoxLayout* algorithmLayout;
-    Spoiler* algorithmBox;
-    QHBoxLayout* displayTypeLayout;
-    Spoiler* displayTypeBox;
     QHBoxLayout* LoDChooserLayout;
     Spoiler* LoDChooserBox;
-    QPushButton* loadButton;
-    QPushButton* saveButton;
-    FancySlider* randomRocksSizeSlider;
-    FancySlider* randomRocksStrengthSlider;
-    FancySlider* randomRocksQuantitySlider;
-    QPushButton* sendRandomRocksFromCam;
-    QPushButton* sendRandomRocks;
-    QCheckBox* displayRandomRocks;
-    QCheckBox* displayFailedRandomRocks;
-    FancySlider* currentSimulationFlowfieldStrengthSlider;
-    FancySlider* currentSimulationStrengthSlider;
-    FancySlider* currentSimulationRandomDirectionSlider;
-    QCheckBox* displayFlowfield;
-    QPushButton* recomputeFlowfieldButton;
-    FancySlider* manualRocksSizeSlider;
-    FancySlider* manualRocksStrengthSlider;
-    QRadioButton* addingMode;
-    QRadioButton* suppressMode;
-    QPushButton* curvesAddControlPointButton;
-    QPushButton* curvesClearControlPointButton;
-    FancySlider* curvesErosionSizeSlider;
-    FancySlider* curvesErosionStrengthSlider;
-    QPushButton* curvesErosionCreateMatter;
-    QPushButton* curvesErosionRemoveMatter;
-    QPushButton* curvesErosionCreateCrack;
-    QCheckBox* displayCurvesErosion;
-
-    QPushButton* gravityGlobalButton;
-    QPushButton* gravitySandButton;
-    QPushButton* startStopRecording;
-    QRadioButton* wireModeButton;
-    QRadioButton* fillModeButton;
-    QRadioButton* invisibleModeButton;
     RangeSlider* mapSliceSliderX;
     RangeSlider* mapSliceSliderY;
     RangeSlider* mapSliceSliderZ;
-    QRadioButton* noAlgorithmButton;
-    QRadioButton* marchingCubesButton;
-    QRadioButton* gridModeButton;
-    QRadioButton* voxelsModeButton;
-    QRadioButton* layerModeButton;
-    FancySlider* LoDChooserSlider;
     RangeSlider* isolevelSelectionSlider;
-    QPushButton* LoDChooserConfirmButton;
-
-    std::map<QWidget*, QWidget*> widgetsMapping;
 
     std::string mapSavingFolder = "../saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;

@@ -593,7 +593,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                                           }));
 }
 
-void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::vector<std::shared_ptr<ActionInterface>> actionInterfaces)
+void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
 {
     std::string ext = toUpper(getExtention(filename));
     if (!this->heightmapGrid)
@@ -607,7 +607,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
         voxelGrid->from2DGrid(*heightmapGrid);
         voxelGrid->fromIsoData();
-
+        /*
         ConstraintsSolver solver;
         int iArch1 = solver.addItem(new Vector3());
         int iArch2 = solver.addItem(new Vector3());
@@ -639,6 +639,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         ue.CreateTunnel(BSpline({pos[0], (pos[0] + pos[1]) / 2 + Vector3(0, 0, 1) * (pos[0] - pos[1]).norm(), pos[1]}), true, true);
         ue.CreateTunnel(BSpline({pos[2], pos[2] + Vector3(0, 0, 50)}), true, true);
         ue.CreateMultipleTunnels({BSpline({pos[3] + Vector3(-5, -5, 0), pos[3] + Vector3(5, 5)}), BSpline({pos[3] + Vector3(-5, 5), pos[3] + Vector3(5, -5)})}, true, true);
+        */
 
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
@@ -651,7 +652,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
             for (auto action : json_content.at("actions")) {
                 // Let all the interfaces try to replay their actions
                 for (auto& possibleAction : actionInterfaces)
-                    possibleAction->replay(action);
+                    possibleAction.second->replay(action);
             }
         }
     } else if (ext == "DATA") {

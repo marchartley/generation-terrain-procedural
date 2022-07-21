@@ -20,6 +20,7 @@ class KarstPathGenerationInterface : public ActionInterface
     Q_OBJECT
 public:
     KarstPathGenerationInterface(QWidget *parent = nullptr);
+    ~KarstPathGenerationInterface();
 //    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
 
     void display();
@@ -38,7 +39,7 @@ public:
 
     Mesh pathsMeshes;
 
-    QHBoxLayout* createGUI();
+    QLayout* createGUI();
     QHBoxLayout* karstCreationLayout;
 
 Q_SIGNALS:

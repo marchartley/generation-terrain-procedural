@@ -8,6 +8,7 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("fault
     this->faultSlip = FaultSlip();
     this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
     this->slipVector = std::make_unique<InteractiveVector>(Vector3(), Vector3());
+    this->createGUI();
 }
 
 void FaultSlipInterface::display()
@@ -144,13 +145,9 @@ QLayout *FaultSlipInterface::createGUI()
     this->faultDisplayButton = new QCheckBox("Afficher");
     faultSlipLayout->addWidget(faultApplyButton);
     faultSlipLayout->addWidget(faultSideApplied);
-    // With new interface, we display/hide directly with buttons
-//    faultSlipLayout->addWidget(faultDisplayButton);
 
 
     faultSideApplied->setChecked(this->faultSlip.positiveSideFalling);
-
-    this->setBindings();
 
     return this->faultSlipLayout;
 }
@@ -158,13 +155,13 @@ QLayout *FaultSlipInterface::createGUI()
 
 void FaultSlipInterface::setBindings()
 {
-    if (this->voxelGrid != nullptr)
-    {
+//    if (this->voxelGrid != nullptr)
+//    {
         QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
         QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
         QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
 
         QObject::connect(slipVector.get(), &InteractiveVector::modified, this, &FaultSlipInterface::updateSlipVector);
         QObject::connect(firstSlipControlPoint.get(), &ControlPoint::modified, this, &FaultSlipInterface::updatePoints);
-    }
+//    }
 }

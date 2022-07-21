@@ -49,12 +49,12 @@ void ErosionInterface::throwFromCam()
     Vector3 dir;
     pos = this->viewer->camera()->position();
     dir = this->viewer->camera()->viewDirection();
-
+/*
     /// For demonstration only, to remove right after
     if (this->viewer->karstPathInterface && this->viewer->karstPathInterface->sourceControlPoint->getPosition() != Vector3(0, 0, 0)) {
         pos = this->viewer->karstPathInterface->sourceControlPoint->getPosition();
         dir = this->viewer->karstPathInterface->karstPaths[0].getDirection(0.0);
-    }
+    }*/
     this->throwFrom(pos, dir);
 }
 void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
