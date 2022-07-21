@@ -1,5 +1,5 @@
 <RCC>
-    <qresource prefix="/models_3d">
+    <qresource prefix="/models_3d/rocks">
         <file>src/assets/models/flat_rock_SubTool1.stl</file>
         <file>src/assets/models/flat_rock_SubTool2.stl</file>
         <file>src/assets/models/flat_rock_SubTool3.stl</file>
@@ -18,5 +18,17 @@
         <file>src/assets/models/rock_SubTool11.stl</file>
         <file>src/assets/models/rock_SubTool12.stl</file>
         <file>src/assets/models/rock_SubTool13.stl</file>
+    </qresource>
+    <qresource prefix="/models_3d/corals">
+        <file>src/assets/models/coral_1_bottom_watertight_small.stl</file>
+        <file>src/assets/models/coral_1_top_watertight_small.stl</file>
+        <file>src/assets/models/coral_2_whole_watertight_small.stl</file>
+        <file>src/assets/models/coral_4_whole_watertight_small.stl</file>
+        <file>src/assets/models/coral_5_bottom_unwatertight_small.stl</file>
+        <file>src/assets/models/coral_5_top_unwatertight_small.stl</file>
+        <file>src/assets/models/coral_5_top_watertight_small.stl</file>
+        <file>src/assets/models/coral_6_watertight_fixed_small.stl</file>
+        <file>src/assets/models/coral_8_watertight_small.stl</file>
+        <file>src/assets/models/coral_9_watertight_small.stl</file>
     </qresource>
 </RCC>
