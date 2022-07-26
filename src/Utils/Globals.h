@@ -26,12 +26,25 @@ GLuint vbo[numVBOs];*/
 class random_gen {
 public:
     static std::default_random_engine random_generator;
-    static float generate(float min = 0.0, float max = 1.0) {
+    static float generate(float min, float max) {
         std::uniform_real_distribution<float> distribution(min, max);
         return distribution(random_gen::random_generator);
     }
     static float generate(float max) {
         std::uniform_real_distribution<float> distribution(0.f, max);
+        return distribution(random_gen::random_generator);
+    }
+    static float generate() {
+        std::uniform_real_distribution<float> distribution(0.f, 1.f);
+        return distribution(random_gen::random_generator);
+    }
+
+    static float generate_normal(float mu, float sigma) {
+        std::normal_distribution<float> distribution(mu, sigma);
+        return distribution(random_gen::random_generator);
+    }
+    static float generate_normal() {
+        std::uniform_real_distribution<float> distribution(0.f, 1.f);
         return distribution(random_gen::random_generator);
     }
 };

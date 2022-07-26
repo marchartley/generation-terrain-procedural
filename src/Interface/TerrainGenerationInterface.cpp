@@ -209,7 +209,7 @@ void TerrainGenerationInterface::prepareShader()
     while (iTex.hasNext()) {
         QString dir = iTex.next();
         QString basename = QFileInfo(dir).baseName();
-        if (basename == "color" || basename == "normal" || basename == "displacement") {
+        if (basename == "color" || basename == "normal"/* || basename == "displacement"*/) {
             if (dir.endsWith(".tiff")) continue; // Ignore TIFF files for now...
             std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
             QString newPath = tempTextureDir.path() + QString::fromStdString(textureClass) + QFileInfo(dir).fileName();
@@ -338,6 +338,17 @@ void TerrainGenerationInterface::prepareShader()
 //    this->heightmapGrid->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
     if (verbose)
         std::cout << "Terrain shaders and assets ready." << std::endl;
+}
+
+void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling)
+{
+    this->voxelGridOffset = newVoxelGridOffset;
+    this->voxelGridScaling = newVoxelGridScaling;
+
+//    heightmapMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+//    heightmapMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
+    marchingCubeMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+    marchingCubeMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
 }
 
 void TerrainGenerationInterface::regenerateRocksAndParticles()

@@ -30,8 +30,9 @@ public:
     std::string textureClass;
     ShapeCurve area;
     int instanceID = -1;
+
     static std::map<int, std::shared_ptr<BiomeInstance>> instancedBiomes;
-    static void registerBiome(std::shared_ptr<BiomeInstance> biome);
+    static void registerBiomeInstance(std::shared_ptr<BiomeInstance> biome);
 
     void completeArch();
     void completeTrench();
