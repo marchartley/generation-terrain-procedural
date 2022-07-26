@@ -30,6 +30,7 @@ public Q_SLOTS:
 
     void prepareShader();
 
+    void updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling);
 
 
 public:
@@ -62,6 +63,9 @@ protected:
     int numberOfRocksDisplayed = 0;
     std::vector<Mesh> possibleCorals;
     std::vector<std::tuple<int, Vector3, float>> coralsIndicesAndPositionAndSize;
+
+    Vector3 voxelGridOffset = Vector3(0, 0, 0);
+    float voxelGridScaling = 1.f;
 
     Mesh particlesMesh;
     std::vector<Vector3> randomParticlesPositions;

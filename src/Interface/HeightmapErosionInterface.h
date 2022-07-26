@@ -19,6 +19,7 @@ public:
     HeightmapErosionInterface(QWidget *parent = nullptr);
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    void affectHeightmap(std::shared_ptr<Grid> heightmap);
 
     void display();
 

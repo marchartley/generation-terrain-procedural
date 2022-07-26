@@ -19,6 +19,11 @@ void HeightmapErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxel
     QObject::connect(windDirectionSelector.get(), &InteractiveVector::modified, [&](Vector3 newVal) { this->windDirection = newVal.normalized() * 2.f; } );
 }
 
+void HeightmapErosionInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
+{
+    this->heightmap = heightmap;
+}
+
 void HeightmapErosionInterface::display()
 {
     if (hydraulicMesh.shader != nullptr)

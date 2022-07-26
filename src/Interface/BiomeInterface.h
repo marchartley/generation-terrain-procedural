@@ -64,6 +64,9 @@ public Q_SLOTS:
     Matrix3<float> prepareArche(std::shared_ptr<BiomeInstance> biome);
     Matrix3<float> preparePatateCorail(std::shared_ptr<BiomeInstance> biome);
 
+Q_SIGNALS:
+    void terrainViewModified(Vector3 newOffset, float newScaling);
+
 protected:
     Vector3 fromHeightmapPosToVoxels(Vector3 pos);
     Vector3 fromVoxelsPosToHeightmap(Vector3 pos);

@@ -81,7 +81,7 @@ std::string BiomeInstance::getTextureName()
     return this->textureClass;
 }
 
-void BiomeInstance::registerBiome(std::shared_ptr<BiomeInstance> biome)
+void BiomeInstance::registerBiomeInstance(std::shared_ptr<BiomeInstance> biome)
 {
     BiomeInstance::instancedBiomes[biome->instanceID] = biome;
 }

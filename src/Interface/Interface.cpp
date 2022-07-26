@@ -51,26 +51,30 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 #ifdef linux
-        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/biomes/mini-mayotte.json");
+        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
 #else
-        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mini-mayotte.json");
+        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
 #endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
         this->viewer->grid = this->terrainGenerationInterface->heightmapGrid;
 
-        for (auto& actionInterface : this->actionInterfaces)
+        for (auto& actionInterface : this->actionInterfaces) {
             actionInterface.second->affectVoxelGrid(this->viewer->voxelGrid);
+            actionInterface.second->affectHeightmap(this->viewer->grid);
+        }
 
         this->heightmapErosionInterface->heightmap = this->terrainGenerationInterface->heightmapGrid;
-        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
+//        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
         if (terrainGenerationInterface->biomeGenerationNeeded) {
             this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
             this->biomeInterface->generateBiomes(); // std::async([&]() -> void {this->biomeInterface->generateBiomes(); });
         }
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
+
+        QObject::connect(this->biomeInterface.get(), &BiomeInterface::terrainViewModified, this->terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
     });
 
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,

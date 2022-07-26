@@ -81,6 +81,10 @@ std::vector<BSpline> Voronoi::solve(int numberOfRelaxations)
     for (size_t i = 0; i < pointset.size(); i++) {
         points[i].x = pointset[i].x;
         points[i].y = pointset[i].y;
+        if (i == 0)
+            points[i].weight = 1.f;
+        else
+            points[i].weight = 1.f;
     }
     for (size_t i = 0; i < boundingShape.points.size(); i++) {
         boundingPoints[i].x = boundingShape.points[i].x;

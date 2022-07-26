@@ -59,7 +59,7 @@ Matrix3<float> BiomeInterface::prepareTrench(std::shared_ptr<BiomeInstance> biom
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .4f + (end - start).cross(Vector3(0, 0, 1)) * .1f));
     Vector3 midpoint2 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .6f + (end - start).cross(Vector3(0, 0, 1)) * -.1f));
-    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f, 3.f, false, voxelGrid);
+    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f * this->voxelGridScaleFactor, 3.f, false, voxelGrid);
 }
 Matrix3<float> BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> biome) {
     if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
@@ -67,7 +67,7 @@ Matrix3<float> BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> b
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 gradient = voxelGrid->getVoxelValues().gradient(getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels((start + end) * .5f)));
     Vector3 midpoint = (start + end) * .5f + gradient * (end - start).norm() * .2f;
-    return archeTunnel(BSpline({start, midpoint, end}), 5.f, 3.f, true, voxelGrid);
+    return archeTunnel(BSpline({start, midpoint, end}), 5.f * this->voxelGridScaleFactor, 3.f, true, voxelGrid);
 }
 Matrix3<float> BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
     if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
@@ -75,10 +75,10 @@ Matrix3<float> BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = start + (end - start) * .3f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint1
     Vector3 midpoint2 = start + (end - start) * .6f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint2
-    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 5.f, 10.f, true, voxelGrid);
+    return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 5.f * this->voxelGridScaleFactor, 10.f, true, voxelGrid);
 }
 Matrix3<float> BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) {
-    float radius = std::min(5.f, biome->area.containingBoxSize().norm() / 2.f);
+    float radius = std::min(5.f, biome->area.containingBoxSize().norm() / 2.f) * this->voxelGridScaleFactor;
     Vector3 patatePosition = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->position)) + Vector3(0, 0, radius/10.f);
     return archeTunnel(BSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
 }
@@ -104,6 +104,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     std::cout << "From " << voxelGridOffsetStart << " to " << voxelGridOffsetEnd << " with scale = " << voxelGridScaleFactor << std::endl;
     this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
     this->voxelGrid->fromIsoData();
+
+    auto startTime = std::chrono::system_clock::now();
 //return;
     ShapeCurve terrainArea({
                    heightmap->heights.getDimensions() * Vector3(0, 0, 0),
@@ -119,10 +121,13 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         rootBiome = predefinedBiomeInstance;
     else
         rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
-
     heightmap->biomeIndices = Matrix3<int>(heightmap->heights.getDimensions(), 0);
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
     std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
+
+    if (rootBiome->model) {
+        std::cout << rootBiome->model->toJson().dump(4, ' ') << std::endl;
+    }
 
     biomeQueue.push_back(rootBiome);
 
@@ -148,6 +153,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     possibleBiomeInstances.clear();
     selectedBiomeIDs.clear();
+
     for (auto& current : sortedBiomes) {
         ShapeCurve area = current->area;
         int level = current->getLevel();
@@ -173,7 +179,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         for (auto& p : current->area.points)
             out << "- " << p << "\n";
         current->instanceID = biomeID;
-        BiomeInstance::registerBiome(current);
+        BiomeInstance::registerBiomeInstance(current);
         possibleBiomeInstances.push_back(*current);
         biomeID++;
     }
@@ -193,14 +199,18 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
                 }
             }
             float desiredDepth = current->depthShape.getPoint(.5f).y;
-            Matrix3<float> newHeight = falloff2D.binarize() * -desiredDepth/10.f;
+            Matrix3<float> newHeight = falloff2D.binarize() * -desiredDepth/5.f;
             heightChange += newHeight;
         }
     }
     heightChange = heightChange.meanSmooth(15, 15, 1, true);
     this->heightmap->heights += heightChange;
     voxelGrid->add2DHeightModification(heightChange.subset(voxelGridOffsetStart, voxelGridOffsetEnd).resize(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1)) /* * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight())*/, 1.5f);
-//    return;
+
+//    Matrix3<float> all2DModifications(heightmapDim);
+//    Matrix3<float> all3DModifications(voxelGrid->getDimensions());
+//    bool allModif3D = false;
+//    bool allModif2D = false;
     // Now add the primitives on top
     for (auto& current : sortedBiomes) {
         Vector3 pos = current->position;
@@ -252,7 +262,11 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //            std::cout << "How the fuck did I get here? Class was " << current->classname << std::endl;
         }
 
+//        allModif2D |= modif2D;
+//        allModif3D |= modif3D;
+
         if (modif2D && !heightmapModifier.data.empty()) {
+
             voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y) * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight()), 10.f, AABBoxMin.xy());
         }
         if (modif3D && !modifications.data.empty()) {
@@ -260,6 +274,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             voxelGrid->applyModification(modifications.subset(fromHeightmapPosToVoxels(AABBoxMin).xy(), fromHeightmapPosToVoxels(AABBoxMax).xy()), fromHeightmapPosToVoxels(AABBoxMin).xy());
         }
     }
+//    auto endingTime = std::chrono::system_clock::now();
+//    std::cout << "Generation took " << std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startTime).count()/1000.f << "s" << std::endl;
 
     // Yeah whatever... Just do the translation once again
     voxelGrid->saveState();
@@ -349,6 +365,8 @@ void BiomeInterface::setVoxelGridSizeFactor(float newFactor)
         newEnd.z = maxDims.z;
     }
     this->voxelGridOffsetStart = newStart.floor();
+
+    Q_EMIT terrainViewModified(this->voxelGridOffsetStart, this->voxelGridScaleFactor);
 }
 
 void BiomeInterface::keyPressEvent(QKeyEvent* event)
@@ -582,7 +600,7 @@ void BiomeInterface::updateBiomeSelectionGui()
         auto biome = BiomeInstance::instancedBiomes[biomeID];
 //        std::ostringstream oss;
 //        oss << biome->classname << (biome->depthShape.length() > 0 ? " - profondeur : " + std::to_string(biome->depthShape.getPoint(.5f).y) + "m" : "") << " (ID : " << biome->instanceID << ")";
-        biomeSelectionGui->addItem(QString::fromStdString(biome->classname));
+        biomeSelectionGui->addItem(QString::fromStdString(std::string(biome->getLevel() * 2, ' ') + biome->classname));
 //        QLabel* nameLabel = new QLabel(QString::fromStdString(biome->classname));
 //        Vector3 textColor = HSVtoRGB(i / (float)(selectedBiomeIDs.size() - 1), 1, 1) * 255.f;
 //        std::ostringstream oss;
