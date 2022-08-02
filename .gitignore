@@ -5,6 +5,8 @@ build-Debug/*
 .pro.user.*
 screenshots/*
 
+src/third-party/
+
 # Prerequisites
 *.d
 

@@ -184,6 +184,8 @@ Vector3 BSpline::center()
 {
     if (this->points.empty()) return Vector3();
 
+    BSpline copy = *this;
+    copy.removeDuplicates();
     Vector3 center;
     for (const auto& point : this->points)
         center += point;
@@ -219,7 +221,7 @@ Vector3 BSpline::getCatmullPoint(float x)
 
     if (x == 0.f) return displayedPoints[0];
     if (x == 1.f) return displayedPoints[lastPointIndex];
-    float alpha = 2.f; // 2 = very round, 1 = quite normal, 0.5 = almost linear
+    float alpha = 1.f; // 2 = very round, 1 = quite normal, 0.5 = almost linear
 
     alpha /= 2.f;
 

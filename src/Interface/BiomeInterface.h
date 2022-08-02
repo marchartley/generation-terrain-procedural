@@ -4,12 +4,15 @@
 
 #include "Biomes/BiomeInstance.h"
 class BiomeInterface;
-#include "Interface/ControlPoint.h"
-#include "Interface/InteractiveVector.h"
+//#include "Interface/ControlPoint.h"
+//#include "Interface/InteractiveVector.h"
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
+#include "TerrainGen/Grid.h"
 #include "Interface/ActionInterface.h"
+#include "Karst/KarstHole.h"
+#include "Interface/HierarchicalListWidget.h"
 
 class BiomeReplacementDialog;
 class BiomeInterface : public ActionInterface
@@ -38,21 +41,26 @@ public:
 
     std::vector<Mesh> selectionPlanes;
     BiomeModel biomeModel;
+    BiomeModel modifiedBiomeModel;
     int tempIndex = -1;
     Vector3 tempMousePos;
 
     void setVoxelGridSizeFactor(float newFactor);
 
 public Q_SLOTS:
+    void displayAllBiomes();
+    void interchangeBiomes();
     void mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
 
     void generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance = nullptr);
     void randomize();
 
-    void replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, BiomeInstance newBiome);
+    void replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, std::shared_ptr<BiomeInstance> newBiome);
 
     void hide();
     void show();
+
+    void addTunnel(KarstHole& hole);
 
     void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
     void updateSelectionPlaneToFitBiome(int biomeID, int planeIndex);
@@ -72,12 +80,13 @@ protected:
     Vector3 fromVoxelsPosToHeightmap(Vector3 pos);
     void setBindings();
     void updateBiomeSelectionGui();
+    void deleteSelectedBiomes();
 
     std::vector<int> selectedBiomeIDs;
 //    int selectedBiomeID = -1;
     QLayout* layout = nullptr;
 
-    QListWidget* biomeSelectionGui = nullptr;
+    HierarchicalListWidget* biomeSelectionGui = nullptr;
 //    QLayout* biomeSelectionGuiLayout = nullptr;
 public:
     std::shared_ptr<BiomeInstance> rootBiome;
@@ -102,7 +111,7 @@ public Q_SLOTS:
     void confirm();
 
 public:
-    QListWidget* allAvailableBiomes;
+    HierarchicalListWidget* allAvailableBiomes;
     QPushButton* cancelButton;
     QPushButton* validButton;
     BiomeInterface* caller = nullptr;

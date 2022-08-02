@@ -258,8 +258,8 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     }
 
     Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)));
-    update();
     QGLViewer::mouseMoveEvent(e);
+    update();
 }
 
 void Viewer::mouseDoubleClickEvent(QMouseEvent *e)

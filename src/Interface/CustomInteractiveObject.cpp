@@ -6,17 +6,17 @@
 #include <QWheelEvent>
 #include <iostream>
 
-CustomInteractiveObject::CustomInteractiveObject(QWidget *parent)
+CustomInteractiveObject::CustomInteractiveObject(QWidget *parent) : QWidget(parent)
 {
     this->setParent(parent);
 
     if (parent != nullptr) {
-        // parent->installEventFilter(this);
+         parent->installEventFilter(this);
     }
 }
 
 bool CustomInteractiveObject::eventFilter(QObject* obj, QEvent* event)
-{/*
+{
     if (event->type() == QEvent::KeyPress)
         this->keyPressEvent(static_cast<QKeyEvent *>(event));
     if (event->type() == QEvent::KeyRelease)
@@ -37,6 +37,6 @@ bool CustomInteractiveObject::eventFilter(QObject* obj, QEvent* event)
         this->timerEvent(static_cast<QTimerEvent *>(event));
 
     // Don't block any event
-    return false;*/
+    return false;
     return QWidget::eventFilter(obj, event);
 }

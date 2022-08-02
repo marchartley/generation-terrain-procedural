@@ -165,7 +165,7 @@ void KarstPathGenerationInterface::updateKarstPath()
         }
     }
     this->pathsMeshes.fromArray(pathPositions);
-    if (this->karstCreator->finalPaths.size() > 0) {
+    if (this->karstCreator->finalPaths.size() > 0 && pathPositions.size() > 1) {
         this->cameraConstraint = new PathCameraConstraint(this->visitingCamera, karstPaths);
         this->visitingCamera->frame()->setConstraint(this->cameraConstraint);
         this->visitingCamera->setPosition(pathPositions[0]);

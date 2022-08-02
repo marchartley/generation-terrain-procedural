@@ -73,6 +73,7 @@ BiomeModel BiomeModel::fromJson(nlohmann::json json_content)
             Probability probaAppearence = {1.0, 0.0}; // default value
             Probability probaSize;
             Probability probaQuantity = {1.0, 0.0}; // default value
+            int priority = 0;
 //            float childrenCount = 1; // Default value
             if (child.contains("params")) {
                 if (child.at("params").contains("quantity")) {
@@ -84,9 +85,12 @@ BiomeModel BiomeModel::fromJson(nlohmann::json json_content)
                 if (child.at("params").contains("probability-appearence")) {
                     probaAppearence = Probability::fromJson(child.at("params").at("probability-appearence"));
                 }
+                if (child.at("params").contains("priority-offset")) {
+                    priority = child.at("params").at("priority-offset").get<int>();
+                }
             }
 
-            model.modelChildren.push_back({std::make_shared<BiomeModel>(BiomeModel::fromJson(child)), probaQuantity, probaAppearence, probaSize});
+            model.modelChildren.push_back({std::make_shared<BiomeModel>(BiomeModel::fromJson(child)), probaQuantity, probaAppearence, probaSize, priority});
 //            for (int i = 0; i < childrenCount; i++) {
 //                if (child.contains("model-name") || child.contains("class")) {
 //                    model.modelChildren.push_back(BiomeModel::fromJson(child));
@@ -119,6 +123,7 @@ nlohmann::json BiomeModel::toJson()
         childJson["params"]["quantity"] = biomeChild.probaQuantity.toJson();
         childJson["params"]["size"] = biomeChild.probaSize.toJson();
         childJson["params"]["probability-appearence"] = biomeChild.probaAppearence.toJson();
+        childJson["params"]["priority-offset"] = biomeChild.priorityOffset;
         children.push_back(childJson);
     }
 
@@ -137,6 +142,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
     instance->model = model;
     instance->position = biomePosition;
+    instance->priorityOffset = model->priortyOffset;
     instance->area = area.removeDuplicates();
     instance->depthShape = BSpline({Vector3(0, model->minDepth), Vector3(1, model->maxDepth)});
     instance->textureClass = model->textureClass;
@@ -149,7 +155,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     }
 
     Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve(100); // Add some relaxations to be a little bit more uniform
+    std::vector<BSpline> subarea_borders = diagram.solve(true, 100); // Add some relaxations to be a little bit more uniform
 
     std::vector<std::string> allChildrenClassnames;
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {

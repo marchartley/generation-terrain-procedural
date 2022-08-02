@@ -13,6 +13,7 @@ ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterfac
 
 void ManualEditionInterface::display()
 {
+//    std::cout << (readyToModify ? "modif" : "not modif") << std::endl;
     if (this->readyToModify) {
         this->grabber->setState((this->addingMode ? POSITIVE : NEGATIVE));
     } else {
@@ -109,7 +110,7 @@ void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
 {
     // Just used to cancel the Ctrl and Alt buttons
     if (readyToModify) {
-        if (!event->modifiers().testFlag(Qt::ControlModifier) || !event->modifiers().testFlag(Qt::AltModifier))
+        if (!event->modifiers().testFlag(Qt::ControlModifier) && !event->modifiers().testFlag(Qt::ShiftModifier))
         {
             readyToModify = false;
         } else {
@@ -120,6 +121,7 @@ void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
 
 void ManualEditionInterface::keyPressEvent(QKeyEvent *event)
 {
+//    std::cout << "Here!" << (event->isAutoRepeat() ? " on auto " : "not auto") << " - " << (event->key() == Qt::Key_Shift || event->key() == Qt::Key_Control ? "good key" : "bad key") << std::endl;
     if (!event->isAutoRepeat()) {
         this->readyToModify = true;
         if (event->key() == Qt::Key_Shift) {

@@ -19,9 +19,9 @@ enum BIOME_SLOPE_TYPE {
 };
 
 struct Probability {
-    float mean = 0.f;
-    float variance = 0.f;
-
+    float mean;
+    float variance;
+    Probability(float mean = 0.f, float variance = 0.f) : mean(mean), variance(variance) {}
     float randomValue() {
         return random_gen::generate_normal(mean, std::sqrt(variance));
     }
@@ -46,6 +46,7 @@ struct BiomeModelChild {
     Probability probaQuantity;
     Probability probaAppearence;
     Probability probaSize;
+    int priorityOffset;
 };
 class BiomeModel : public std::enable_shared_from_this<BiomeModel>
 {
@@ -68,6 +69,7 @@ public:
     float minDepth, maxDepth;
     std::string textureClass;
     std::string modelName;
+    int priortyOffset = 0;
     std::vector<BiomeModelChild> modelChildren;
 };
 

@@ -17,7 +17,7 @@
           "max": 100,
           "slope": "linear"
         },
-				"ground-texture": "underwater_ground"
+	"ground-texture": "underwater_ground"
       },
       "children": [
 				{
