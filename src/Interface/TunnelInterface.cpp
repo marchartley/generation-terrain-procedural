@@ -13,8 +13,8 @@ void TunnelInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
 
-    this->currentTunnelPoints = {Vector3(0, 0, 0), Vector3(10, 0, 0)};
-    createTunnel();
+//    this->currentTunnelPoints = {Vector3(0, 0, 0), Vector3(10, 0, 0)};
+//    createTunnel();
     //    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=](){ voxelGrid->computeFlowfield(); } );
 }
 
@@ -222,7 +222,7 @@ void TunnelInterface::createTunnel(bool removingMatter)
                                               {"erosion_strength", erosionStrength},
                                               {"path", bspline_to_json(path)}
                                           }));
-
+    Q_EMIT tunnelCreated(hole);
     Q_EMIT updated();
 }
 void TunnelInterface::createCrack(bool removingMatter)

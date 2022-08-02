@@ -13,13 +13,27 @@ public:
     BiomeInstance();
 
     static BiomeInstance fromClass(std::string className);
-    int getLevel();
+    int getLevel(bool ignorePriorityOffset = false);
     void completeIfNeeded();
 
     std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea, Vector3 newPosition = Vector3(false));
     std::shared_ptr<BiomeInstance> getPointInstance(int index);
 
     std::string getTextureName();
+    std::string getInstanceName() const;
+
+    std::vector<std::shared_ptr<BiomeInstance>> getPathToChild(std::shared_ptr<BiomeInstance> childToFind);
+    std::vector<std::shared_ptr<BiomeInstance>> getPathToParent(std::shared_ptr<BiomeInstance> parentToFind);
+    std::vector<std::shared_ptr<BiomeInstance>> getPathTo(std::shared_ptr<BiomeInstance> instanceToFind);
+
+    std::vector<std::shared_ptr<BiomeInstance>> getAllChildrenBreadthFirst();
+
+    void addInstance(std::shared_ptr<BiomeInstance> newInstance);
+    void updateSubInstances();
+
+    bool isRoot() const { return (this->parent == nullptr); }
+
+    std::shared_ptr<BiomeModel> toBiomeModel();
 
     BSpline depthShape;
     std::shared_ptr<BiomeModel> model;
@@ -29,6 +43,7 @@ public:
     std::string classname = "none";
     std::string textureClass;
     ShapeCurve area;
+    int priorityOffset = 0;
     int instanceID = -1;
 
     static std::map<int, std::shared_ptr<BiomeInstance>> instancedBiomes;

@@ -1,6 +1,6 @@
 #include "BiomeInterface.h"
 #include "TerrainModification/RockErosion.h"
-#include "Utils/Voronoi.h"
+//#include "Utils/Voronoi.h"
 #include "Utils/AdjencySolver.h"
 
 BiomeInterface::BiomeInterface(QWidget* parent)
@@ -94,6 +94,8 @@ Vector3 BiomeInterface::fromVoxelsPosToHeightmap(Vector3 pos)
 }
 void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance)
 {
+    BiomeInstance::instancedBiomes.clear();
+
     Vector3 heightmapDim = Vector3(3*31, 3*31, 1);
     this->heightmap->heights = Matrix3<float>(heightmapDim, 20.f);
     this->heightmap->maxHeight = 40.f;
@@ -125,10 +127,6 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
     std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
 
-    if (rootBiome->model) {
-        std::cout << rootBiome->model->toJson().dump(4, ' ') << std::endl;
-    }
-
     biomeQueue.push_back(rootBiome);
 
     int biomeID = 0;
@@ -136,7 +134,11 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         std::shared_ptr<BiomeInstance> current = biomeQueue.front();
         biomeQueue.erase(biomeQueue.begin());
         if (!current->valid) {
-            std::cout << "Biome #" << current->instanceID << " (" << current->classname << ") is not valid" << std::endl;
+            std::cout << "Biome " << current->getInstanceName() << " is not valid" << std::endl;
+            continue;
+        }
+        if (current->classname == "point") {
+//            std::cout << "Biome " << current->getInstanceName() << " is not valid" << std::endl;
             continue;
         }
         sortedBiomes.push_back(current);
@@ -160,13 +162,15 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //        area = area.grow(-1); // Shrink the area to be able to see all layers
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
+        BiomeInstance::registerBiomeInstance(current);
+        possibleBiomeInstances.push_back(*current);
         std::ostringstream out;
-        out << "Checking for " << current->classname << " (#" << biomeID << ") :\n";
+        out << "Checking for " << current->getInstanceName() << " :\n";
         bool atLeastOne = false;
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
                 if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->biomeIndices.checkCoord(Vector3(x, y))) {
-                    heightmap->biomeIndices.at(x, y).push_back(biomeID);
+                    heightmap->biomeIndices.at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")\n";
                     atLeastOne = true;
                 }
@@ -178,10 +182,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         out << "Area was\n";
         for (auto& p : current->area.points)
             out << "- " << p << "\n";
-        current->instanceID = biomeID;
-        BiomeInstance::registerBiomeInstance(current);
-        possibleBiomeInstances.push_back(*current);
-        biomeID++;
+//        current->instanceID = biomeID;
+//        biomeID++;
     }
     // First, level the terrain as the biomes design it
     Matrix3<float> heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
@@ -285,26 +287,37 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
 void BiomeInterface::randomize()
 {
+    /*
+    // If the main biome has already been computed, regenerate it
+    if (rootBiome->instances.size() > 0) {
+        this->modifiedBiomeModel = *rootBiome->toBiomeModel();
+        /// TODO : don't modify the original biomeModel ...
+        this->biomeModel = *(std::make_shared<BiomeModel>(modifiedBiomeModel)->clone());
+    }
+    */
     this->generateBiomes();
 }
 
-void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, BiomeInstance newBiome)
+void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace, std::shared_ptr<BiomeInstance> newBiome)
 {
     auto previousParent = biomeToReplace->parent;
     Vector3 previousPos = biomeToReplace->position;
     ShapeCurve previousArea = biomeToReplace->area;
-    int previousID = biomeToReplace->instanceID;
 
-    *biomeToReplace = *(newBiome.clone(previousArea));
-    for (auto& child : biomeToReplace->instances) {
-        child->parent = biomeToReplace;
-    }
+    auto it = std::find(previousParent->instances.begin(), previousParent->instances.end(), biomeToReplace);
+
+    // Swap the content of the pointers
+    biomeToReplace = newBiome->clone(previousArea);
+
 
     biomeToReplace->parent = previousParent;
     biomeToReplace->position = previousPos;
-    biomeToReplace->instanceID = previousID;
+    biomeToReplace->area = previousArea;
+    biomeToReplace->updateSubInstances();
+    it->swap(biomeToReplace);
+//    BiomeInstance::registerBiomeInstance(biomeToReplace); //->instanceID = previousID;
 
-    biomeToReplace->completeIfNeeded();
+//    biomeToReplace->completeIfNeeded();
 }
 
 void BiomeInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
@@ -369,6 +382,34 @@ void BiomeInterface::setVoxelGridSizeFactor(float newFactor)
     Q_EMIT terrainViewModified(this->voxelGridOffsetStart, this->voxelGridScaleFactor);
 }
 
+void BiomeInterface::displayAllBiomes()
+{
+    this->selectedBiomeIDs.clear();
+    std::vector<std::shared_ptr<BiomeInstance> > allBiomes = rootBiome->getAllChildrenBreadthFirst();
+    for (auto& biome : allBiomes) {
+        if (biome->instanceID >= 0 && !biome->isRoot())
+            selectedBiomeIDs.push_back(biome->instanceID);
+    }
+    updateBiomeSelectionGui();
+}
+
+void BiomeInterface::interchangeBiomes()
+{
+    // Only available if one instance is selected
+    if (this->biomeSelectionGui->selectedItems().size() != 1) return;
+    BiomeReplacementDialog dialog(this);
+//    for (auto& biome : possibleBiomeInstances) {
+    for (auto& [id, biome] : BiomeInstance::instancedBiomes) {
+        dialog.allAvailableBiomes->addItem(new HierarchicalListWidgetItem(biome->getInstanceName(), biome->instanceID, biome->getLevel(true)));
+    }
+    int selectedIndex = dynamic_cast<HierarchicalListWidgetItem*>(this->biomeSelectionGui->item(this->biomeSelectionGui->currentRow()))->ID; //this->biomeSelectionGui->currentRow();
+    dialog.show();
+    int replacementIndex = dialog.exec();
+    replacementIndex = tempIndex;
+    if (selectedIndex > -1 && replacementIndex > -1)
+        this->replaceBiome(BiomeInstance::instancedBiomes[/*this->selectedBiomeIDs[*/selectedIndex/*]*/], BiomeInstance::instancedBiomes/*possibleBiomeInstances*/[replacementIndex]);
+}
+
 void BiomeInterface::keyPressEvent(QKeyEvent* event)
 {
     if (this->isVisible()) {
@@ -400,6 +441,8 @@ void BiomeInterface::keyPressEvent(QKeyEvent* event)
             this->voxelGridOffsetStart.y = std::max(this->voxelGridOffsetStart.y - this->voxelGrid->getSizeY() / this->voxelGridScaleFactor, 0.f);
             setVoxelGridSizeFactor(this->voxelGridScaleFactor);
             regenMap = true;
+        } else if (event->key() == Qt::Key_Delete) {
+            this->deleteSelectedBiomes();
         }
         if (regenMap)
             this->generateBiomes(rootBiome);
@@ -474,13 +517,15 @@ void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInM
 
 void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex)
 {
-    if (biomeID == -1) {
+//    std::cout << "Display biome #" << biomeID << std::endl;
+    if (biomeID == -1 || BiomeInstance::instancedBiomes[biomeID]->isRoot()) {
         // Remove all triangles
 //        selectionPlane.fromArray(std::vector<float>{});
     } else {
 //        std::cout << "Displaing surface of " << BiomeInstance::instancedBiomes[biomeID]->classname << std::endl;
         int level = BiomeInstance::instancedBiomes[biomeID]->getLevel();
         ShapeCurve biomeArea = BiomeInstance::instancedBiomes[biomeID]->area;
+        biomeArea = biomeArea.shrink(level);
         std::vector<Vector3> upperPoints, lowerPoints;
         float maxHeight = std::numeric_limits<float>::min(),
                 minHeight = std::numeric_limits<float>::max();
@@ -526,43 +571,77 @@ void BiomeInterface::displayUniqueSelection(int selectionIndex)
 
 QLayout* BiomeInterface::createGUI()
 {
-    if (this->layout != nullptr) return this->layout;
+//    if (this->layout != nullptr) return this->layout;
 
     layout = new QVBoxLayout();
-    biomeSelectionGui = new QListWidget;
-//    biomeSelectionGui = new QGroupBox("Selection");
-//    biomeSelectionGuiLayout = new QVBoxLayout();
+    biomeSelectionGui = new HierarchicalListWidget;
 
+    QPushButton* seeAllBiomesButton = new QPushButton("Tout voir");
     QPushButton* regenerationButton = new QPushButton("Regenerer");
-    QPushButton* interchangeBiomeButton = new QPushButton("Changer un biome...");
+    QPushButton* interchangeBiomeButton = new QPushButton("Changer le biome...");
     QPushButton* randomizeButton = new QPushButton("Randomiser");
 
-//    biomeSelectionGui->setLayout(this->biomeSelectionGuiLayout);
     layout->addWidget(biomeSelectionGui);
+    layout->addWidget(seeAllBiomesButton);
     layout->addWidget(interchangeBiomeButton);
     layout->addWidget(regenerationButton);
     layout->addWidget(randomizeButton);
     updateBiomeSelectionGui();
 
+    QObject::connect(seeAllBiomesButton, &QPushButton::pressed, this, &BiomeInterface::displayAllBiomes);
     QObject::connect(regenerationButton, &QPushButton::pressed, this, [&]() -> void { this->generateBiomes(rootBiome); });
     QObject::connect(randomizeButton, &QPushButton::pressed, this, &BiomeInterface::randomize);
     QObject::connect(biomeSelectionGui, &QListWidget::currentRowChanged, this, &BiomeInterface::displayUniqueSelection);
-    QObject::connect(interchangeBiomeButton, &QPushButton::pressed, this, [&]() -> void {
-        BiomeReplacementDialog dialog(this);
-        for (auto& biome : possibleBiomeInstances) {
-            dialog.allAvailableBiomes->addItem(QString::fromStdString(biome.classname));
-        }
-        int selectedIndex = this->biomeSelectionGui->currentRow();
-        dialog.show();
-        int replacementIndex = dialog.exec();
-        replacementIndex = tempIndex;
-        if (selectedIndex > -1 && replacementIndex > -1)
-            this->replaceBiome(BiomeInstance::instancedBiomes[this->selectedBiomeIDs[selectedIndex]], possibleBiomeInstances[replacementIndex]);
+    QObject::connect(interchangeBiomeButton, &QPushButton::pressed, this, &BiomeInterface::interchangeBiomes);
+    QObject::connect(biomeSelectionGui, &HierarchicalListWidget::itemDoubleClicked, this, [&](QListWidgetItem* item) -> void {
+//        int selectedIndex = this->biomeSelectionGui->currentRow();
+        auto selectedBiomeItem = dynamic_cast<HierarchicalListWidgetItem*>(item);
+        int selectedBiomeID = selectedBiomeItem->ID;
+        auto biome = BiomeInstance::instancedBiomes[selectedBiomeID];
+        std::cout << "Selected biome : " << biome->getInstanceName() << std::endl;
     });
-    QObject::connect(biomeSelectionGui, &QListWidget::itemDoubleClicked, this, [&](QListWidgetItem* item) -> void {
-        int selectedIndex = this->biomeSelectionGui->currentRow();
-        auto biome = BiomeInstance::instancedBiomes[this->selectedBiomeIDs[selectedIndex]];
-        std::cout << "Selected biome : " << biome->classname << " with ID " << biome->instanceID << std::endl;
+    QObject::connect(biomeSelectionGui, &HierarchicalListWidget::itemChangedHierarchy, this, [&] (int ID_to_move, int relatedID, HIERARCHY_TYPE relation, QDropEvent* event) {
+        std::shared_ptr<BiomeInstance> toMove = BiomeInstance::instancedBiomes[ID_to_move];
+        bool createCopy = event != nullptr && event->keyboardModifiers().testFlag(Qt::KeyboardModifier::ControlModifier);
+        // If Ctrl is held, create a copy of the instance
+        if (createCopy) {
+            toMove = toMove->clone(toMove->area, toMove->position);
+        }
+        std::shared_ptr<BiomeInstance> related = BiomeInstance::instancedBiomes[relatedID];
+
+        if (relation == HIERARCHY_TYPE::SIBLING) {
+            // Critical case : trying to make sibling with the root, just consider it as an error and make it a child
+            if (related->parent != nullptr)
+                related = related->parent;
+            relation = HIERARCHY_TYPE::CHILD;
+        } else if (relation == HIERARCHY_TYPE::PARENT) {
+            std::shared_ptr<BiomeInstance> tmp = toMove;
+            toMove = related;
+            related = tmp;
+            relation = HIERARCHY_TYPE::CHILD;
+        }
+
+
+        std::shared_ptr<BiomeInstance> previousParent = toMove->parent;
+        if (!createCopy) {
+            // Remove the instance from the parent's tree (and save the index to possibly plug another biome to the parent)
+            auto placeToInsert = previousParent->instances.erase(std::find(previousParent->instances.begin(), previousParent->instances.end(), toMove));
+            // If we moved a biome in a lower level of his hierarchy...
+            if (toMove->getPathToChild(related).size() > 1) {
+                // Get the first child that leads to the target and change his parent
+                auto child = toMove->getPathToChild(related)[1];
+                child->parent = previousParent;
+                previousParent->instances.insert(placeToInsert, child);
+            }
+        }
+
+//        toMove->parent = related;
+//        related->instances.push_back(toMove);
+        related->addInstance(toMove);
+
+        previousParent->updateSubInstances();
+//        this->rootBiome = this->rootBiome->clone(rootBiome->area, rootBiome->position);
+        displayAllBiomes();
     });
 
     this->replaceDialog = new BiomeReplacementDialog(this);
@@ -583,6 +662,23 @@ void BiomeInterface::show()
     CustomInteractiveObject::show();
 }
 
+void BiomeInterface::addTunnel(KarstHole &hole)
+{
+    if (hole.path.points.empty()) return;
+
+    Vector3 startPoint = this->fromVoxelsPosToHeightmap(hole.path.points.front());
+//    Vector3 endPoint = this->fromVoxelsPosToHeightmap(hole.path.points.back());
+
+    if (this->heightmap->biomeIndices.checkCoord(startPoint.xy()) && !this->heightmap->biomeIndices.at(startPoint.xy()).empty()) {
+        std::shared_ptr<BiomeInstance> startingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(startPoint.xy()).back()];
+    //    std::shared_ptr<BiomeInstance> endingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(endPoint.xy()).back()];
+
+        std::shared_ptr<BiomeInstance> newArche = std::make_shared<BiomeInstance>(BiomeInstance::fromClass("arche"));
+        startingBiome->addInstance(newArche);
+        newArche->completeIfNeeded();
+    }
+}
+
 void BiomeInterface::setBindings()
 {
 
@@ -593,34 +689,52 @@ void BiomeInterface::updateBiomeSelectionGui()
 //    qDeleteAll(this->biomeSelectionGui->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
     biomeSelectionGui->clear();
 
+    std::vector<int> filteredIDs;
+
     for (size_t i = 0; i < this->selectedBiomeIDs.size(); i++) {
         int biomeID = this->selectedBiomeIDs[i];
         if (BiomeInstance::instancedBiomes.find(biomeID) == BiomeInstance::instancedBiomes.end())
             continue; // Biome not registered... This shouldn't occur.
         auto biome = BiomeInstance::instancedBiomes[biomeID];
-//        std::ostringstream oss;
-//        oss << biome->classname << (biome->depthShape.length() > 0 ? " - profondeur : " + std::to_string(biome->depthShape.getPoint(.5f).y) + "m" : "") << " (ID : " << biome->instanceID << ")";
-        biomeSelectionGui->addItem(QString::fromStdString(std::string(biome->getLevel() * 2, ' ') + biome->classname));
-//        QLabel* nameLabel = new QLabel(QString::fromStdString(biome->classname));
-//        Vector3 textColor = HSVtoRGB(i / (float)(selectedBiomeIDs.size() - 1), 1, 1) * 255.f;
-//        std::ostringstream oss;
-//        oss << "QLabel{color: rgb(" << int(textColor.x) << "," << int(textColor.y) << "," << int(textColor.z) << ");}";
-//        nameLabel->setStyleSheet(oss.str().c_str());
-//        this->biomeSelectionGuiLayout->addWidget(nameLabel);
+//        std::cout << "Adding " << biome->getInstanceName() << " #" << biome->instanceID << " (depth : " << biome->getLevel(true) << ")" << std::endl;
+        if (!biome->isRoot()) {
+            filteredIDs.push_back(biome->instanceID);
+            biomeSelectionGui->addItem(new HierarchicalListWidgetItem(biome->getInstanceName(), biome->instanceID, biome->getLevel(true)));
+        }
     }
+    this->selectedBiomeIDs = filteredIDs;
 
-//    if (this->selectedBiomeIDs.size() > 3) {
     this->selectionPlanes.resize(this->selectedBiomeIDs.size());
     for (size_t i = 0; i < this->selectedBiomeIDs.size(); i++)
         this->updateSelectionPlaneToFitBiome(this->selectedBiomeIDs[i], i);
-//    }
+    Q_EMIT updated();
+}
+
+void BiomeInterface::deleteSelectedBiomes()
+{
+    for(auto selection : this->biomeSelectionGui->selectedItems()) {
+        auto biomeSelection = dynamic_cast<HierarchicalListWidgetItem*>(selection);
+        if (biomeSelection != nullptr) {
+            int biomeID = biomeSelection->ID;
+            auto biome = BiomeInstance::instancedBiomes[biomeID];
+
+            // Remove from parent
+            biome->parent->instances.erase(std::find(biome->parent->instances.begin(), biome->parent->instances.end(), biome));
+            biome->parent->updateSubInstances();
+            biome->parent = nullptr;
+
+            // Maybe even remove it completely ?
+            BiomeInstance::instancedBiomes.erase(biomeID);
+        }
+    }
+    this->updateBiomeSelectionGui();
 }
 
 BiomeReplacementDialog::BiomeReplacementDialog(BiomeInterface* caller)
     : QDialog(), caller(caller)
 {
     QVBoxLayout * vBoxLayout = new QVBoxLayout(this);
-    allAvailableBiomes = new QListWidget(this);
+    allAvailableBiomes = new HierarchicalListWidget(this);
     cancelButton = new QPushButton("Annuler", this);
     validButton = new QPushButton("Confirmer", this);
 
@@ -650,8 +764,8 @@ void BiomeReplacementDialog::cancel()
 
 void BiomeReplacementDialog::confirm()
 {
-    if (allAvailableBiomes->currentRow()) {
-        selectedBiomeIndex = allAvailableBiomes->currentRow();
+    if (allAvailableBiomes->currentRow() >= 0) {
+        selectedBiomeIndex = dynamic_cast<HierarchicalListWidgetItem*>(allAvailableBiomes->item(allAvailableBiomes->currentRow()))->ID; //allAvailableBiomes->currentRow();
         setResult(selectedBiomeIndex);
         caller->tempIndex = selectedBiomeIndex;
         this->close();

@@ -24,6 +24,7 @@ public:
 
 Q_SIGNALS:
     void needToClipView(Vector3 direction, Vector3 center, bool active);
+    void tunnelCreated(KarstHole& tunnel);
 
 public Q_SLOTS:
     void show();

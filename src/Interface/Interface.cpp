@@ -45,6 +45,7 @@ ViewerInterface::ViewerInterface() {
         actionInterface.second->hide();
         actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
         QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&]() { this->viewer->update(); });
+//        QObject::connect()
 //        this->viewer->installEventFilter(actionInterface.second.get());
     }
 
@@ -66,11 +67,11 @@ ViewerInterface::ViewerInterface() {
             actionInterface.second->affectHeightmap(this->viewer->grid);
         }
 
-        this->heightmapErosionInterface->heightmap = this->terrainGenerationInterface->heightmapGrid;
 //        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
         if (terrainGenerationInterface->biomeGenerationNeeded) {
             this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
-            this->biomeInterface->generateBiomes(); // std::async([&]() -> void {this->biomeInterface->generateBiomes(); });
+            this->biomeInterface->generateBiomes();
+//            this->biomeInterface->randomize();
         }
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
 
@@ -96,6 +97,7 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
     QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, this->biomeInterface.get(), &BiomeInterface::mouseDoubleClickOnMapEvent);
+    QObject::connect(this->tunnelInterface.get(), &TunnelInterface::tunnelCreated, this->biomeInterface.get(), &BiomeInterface::addTunnel);
 
 //    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
 //        this->setFocus(Qt::OtherFocusReason);
@@ -107,9 +109,6 @@ ViewerInterface::~ViewerInterface()
 {
     for (auto& action : actionInterfaces)
         action.second->setParent(nullptr);
-//    this->setUpdatesEnabled(false);
-//    qDeleteAll(this->findChildren<QWidget*>("", Qt::FindDirectChildrenOnly));
-//    this->setUpdatesEnabled(true);
 }
 
 void ViewerInterface::setupUi()

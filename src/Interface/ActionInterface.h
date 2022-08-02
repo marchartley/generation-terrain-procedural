@@ -4,6 +4,7 @@
 #include "Interface/CustomInteractiveObject.h"
 #include "TerrainModification/TerrainAction.h"
 #include "TerrainGen/VoxelGrid.h"
+#include "TerrainGen/Grid.h"
 
 class ActionInterface : public CustomInteractiveObject
 {
@@ -13,7 +14,8 @@ public:
 //    ~ActionInterface();
 
     virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
-
+    }
+    virtual void affectHeightmap(std::shared_ptr<Grid> heightmap) {
     }
     virtual QLayout* createGUI() {
         return nullptr;

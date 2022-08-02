@@ -16,6 +16,27 @@ ShapeCurve::ShapeCurve(std::vector<Vector3> points)
 ShapeCurve::ShapeCurve(BSpline path)
     : BSpline(path)
 {
+    std::vector<Vector3> foundPattern;
+    for (size_t i = 0; i < path.points.size(); i++) {
+        if (i < 3)
+            foundPattern.push_back(path.points[i]);
+        else {
+            if (path.points[i] == foundPattern[0]) {
+                size_t ii;
+                for (ii = i; ii < path.points.size(); ii++) {
+                    int patternIndex = (ii - i) % foundPattern.size();
+                    if (path.points[ii] != foundPattern[patternIndex]) {
+                        break;
+                    }
+                }
+                if (ii - i > 1) {
+                    // This will ignore the last checked vertex. If you want to continue exactly, substract 1 to the distance.
+                    i = std ::distance(path.points.begin(), path.points.erase(path.points.begin() + i, path.points.begin() + ii));
+                }
+            }
+        }
+    }
+
     if (!this->closed) {
         if (!this->points.empty() && this->points.front() != this->points.back())
             this->close();
@@ -133,20 +154,21 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 
 ShapeCurve ShapeCurve::grow(float increase)
 {
-    Vector3 normal = this->planeNormal();
-    std::vector<Vector3> newPoints = this->points;
-    for (size_t i = 0; i < this->points.size(); i++) {
+    ShapeCurve copy = *this;
+    Vector3 normal = copy.planeNormal();
+    std::vector<Vector3> newPoints = copy.removeDuplicates().points;
+    for (size_t i = 0; i < copy.points.size(); i++) {
 //        Vector3 point = this->points[i];
-        Vector3 next_point = this->points[i + 1];
-        Vector3 prev_point = this->points[(this->points.size() + i - 1) % this->points.size()];
+        Vector3 next_point = copy.points[i + 1];
+        Vector3 prev_point = copy.points[(this->points.size() + i - 1) % copy.points.size()];
         Vector3 dir = (next_point - prev_point).normalize();
         /*
         float time = estimateClosestTime(this->points[i]);
         Vector3 normal = getNormal(estimateClosestTime(this->points[i]));*/
-        newPoints[i] = this->points[i] + dir.cross(normal) * increase; //+ getNormal(estimateClosestTime(this->points[i])) * increase;
+        newPoints[i] = copy.points[i] + dir.cross(normal) * increase; //+ getNormal(estimateClosestTime(this->points[i])) * increase;
     }
-    this->points = newPoints;
-    return *this;
+    copy.points = newPoints;
+    return copy;
 }
 
 ShapeCurve ShapeCurve::shrink(float decrease)

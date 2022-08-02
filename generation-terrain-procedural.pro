@@ -5,6 +5,7 @@ INCLUDEPATH *= src/
 
 unix {
     INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
+    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
     LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
 }
 win32 {
@@ -33,8 +34,11 @@ SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
+    src/Biomes/InstancesTree.cpp \
+    src/Biomes/ModelsTree.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
+    src/DataStructure/Tree.cpp \
         src/DataStructure/Vector3.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
@@ -65,6 +69,7 @@ SOURCES += \
         src/Interface/FlowFieldInterface.cpp \
         src/Interface/GravityInterface.cpp \
         src/Interface/HeightmapErosionInterface.cpp \
+    src/Interface/HierarchicalListWidget.cpp \
         src/Interface/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
@@ -127,8 +132,11 @@ HEADERS += \
     src/Biomes/BiomeInstance.h \
     src/Biomes/BiomeModel.h \
     src/Biomes/BiomeUtils.h \
+    src/Biomes/InstancesTree.h \
+    src/Biomes/ModelsTree.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
+    src/DataStructure/Tree.h \
     src/DataStructure/Vector3.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
@@ -169,6 +177,7 @@ HEADERS += \
     src/Interface/FlowFieldInterface.h \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
+    src/Interface/HierarchicalListWidget.h \
     src/Interface/InteractiveVector.h \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \

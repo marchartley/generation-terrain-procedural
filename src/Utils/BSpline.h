@@ -22,6 +22,8 @@ public:
     float estimateDistanceFrom(Vector3 pos);
     float length();
 
+    operator bool() const { return (this->points.size() > 0); };
+
     Vector3 getFrenetDirection(float x);
     Vector3 getFrenetNormal(float x);
     Vector3 getFrenetBinormal(float x);
