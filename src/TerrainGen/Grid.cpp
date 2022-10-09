@@ -129,6 +129,7 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
     std::vector<std::vector<Vector3>> traces;
     float currentMaxHeight = this->heights.max();
     this->heights /= currentMaxHeight;
+    this->heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
     // float inertia = .05f; // At zero, water will instantly change direction to flow downhill. At 1, water will never change direction.
     // float sedimentCapacityFactor = 1; // Multiplier for how much sediment a droplet can carry
@@ -140,7 +141,8 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
     for (int iteration = 0; iteration < numIterations; iteration++) {
         std::vector<Vector3> trace;
         // Create water droplet at random point on map
-        Vector3 pos(random_gen::generate(0, this->getSizeX() - 1), random_gen::generate(0, this->getSizeY() - 1), 0);
+        Vector3 initialPos(random_gen::generate(0, this->getSizeX() - 1), random_gen::generate(0, this->getSizeY() - 1), 0);
+        Vector3 pos = initialPos;
         Vector3 dir(0, 0, 0);
         float speed = initialSpeed;
         float water = initialWaterVolume;
@@ -157,6 +159,7 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
             // Calculate droplet's height and direction of flow with bilinear interpolation of surrounding heights
             float height = heights.interpolate(pos);
             Vector3 gradient = heights.gradient(pos);
+            heights.gradient(pos);
 
             // Update the droplet's direction and position (move position 1 unit regardless of speed)
             dir = (dir * inertia - gradient * (1 - inertia)).normalize();
@@ -214,8 +217,9 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
             water *= (1 - evaporateSpeed);
         }
         heights = precomputedHeights;
-        for(auto& h : heights)
-            h = std::min(std::max(h, 0.f), 1.f);
+//        for(auto& h : heights)
+//            h = std::min(std::max(h, 0.f), 1.f);
+//        std::cout << (pos - initialPos).norm() << " dist" << std::endl;
         traces.push_back(trace);
     }
     this->heights *= currentMaxHeight;
@@ -296,7 +300,8 @@ std::vector<std::vector<Vector3> > Grid::windErosion(int numberOfParticles,
     std::vector<std::vector<Vector3>> traces;
     windDirection *= Vector3(1, 1, 0); // Keep only X and Y
     // Create a heightmap for sand and a heightmap for bedrocks
-    Matrix3<float> normalizedInitialHeights = heights / 80.f; // .normalized();
+    this->heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    Matrix3<float> normalizedInitialHeights = this->heights / 80.f; // .normalized();
     float maxHeight = 80.f; // heights.max();
 //    float bedrocksProportionInGround = .0f;
     Matrix3<float> ground = normalizedInitialHeights * bedrocksProportionInGround;

@@ -1,4 +1,4 @@
-QT *= quick opengl xml widgets gui
+QT *= quick opengl xml widgets gui charts
 CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
 INCLUDEPATH *= src/
@@ -16,8 +16,8 @@ win32 {
     # OpenVDB : https://github.com/AcademySoftwareFoundation/openvdb
     # Boost and TBB are installed by VCPKG (https://github.com/microsoft/vcpkg) at the location C:\Programs_installations\vcpkg
     # For TBB on Windows, do everything on Release...
-    INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen "C:/Program Files/OpenVDB/include" C:\Programs_installations\vcpkg\installed\x64-windows\include
-    LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
+    INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0" "C:\Program Files\Python39\include" "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen "C:/Program Files/OpenVDB/include" # C:\Programs_installations\vcpkg\installed\x64-windows\include
+    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib" -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
 #    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug
 #    LIBS *= -L"C:\Program Files\OpenVDB\bin" -lopenvdb
 #    DEFINES += "OPENVDB_DLL"
@@ -51,9 +51,12 @@ SOURCES += \
         src/Graph/GraphNode.cpp \
         src/Graph/Matrix3Graph.cpp \
         src/Graph/Pathfinding.cpp \
+    src/Graph/RegularSimplicialComplex.cpp \
+    src/Graph/TopoMap.cpp \
         src/Graph/WaveFunctionCollapse.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
+    src/Graphics/DisplayGraphics.cpp \
         src/Graphics/MarchingCubes.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
@@ -159,9 +162,12 @@ HEADERS += \
     src/Graph/GraphNode.h \
     src/Graph/Matrix3Graph.h \
     src/Graph/Pathfinding.h \
+    src/Graph/RegularSimplicialComplex.h \
+    src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
+    src/Graphics/DisplayGraphics.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
     src/Graphics/Shader.h \
@@ -216,9 +222,11 @@ HEADERS += \
     src/Utils/ShapeCurve.h \
     src/Utils/Utils.h \
     src/Utils/Voronoi.h \
+    src/Utils/gnuplot-iostream.h \
     src/Utils/jc_voronoi.h \
     src/Utils/jc_voronoi_clip.h \
     src/Utils/json.h \
+    src/Utils/matplotlibcpp.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
     src/Utils/stl_reader.h

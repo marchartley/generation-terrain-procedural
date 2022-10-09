@@ -4,6 +4,10 @@ build-Release/
 build-Release/*
 build-Debug/*
 .pro.user.*
+*/.idea/*
+Python_tests/saved_runs/
+doc/
+screenshots/*
 
 # Prerequisites
 *.d

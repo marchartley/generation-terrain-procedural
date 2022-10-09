@@ -4,8 +4,17 @@ build-Release/*
 build-Debug/*
 .pro.user.*
 screenshots/*
+shared_screenshots/
+shared_images/
+
+doc/
 
 src/third-party/
+*/.idea/
+__pycache__/
+Python_tests/grid_layout_map
+Python_tests/saved_runs_old
+Python_tests/saved_runs
 
 # Prerequisites
 *.d
