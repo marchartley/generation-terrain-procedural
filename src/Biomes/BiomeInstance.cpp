@@ -209,14 +209,14 @@ std::shared_ptr<BiomeModel> BiomeInstance::toBiomeModel()
     // Get the original model used
     std::shared_ptr<BiomeModel> model = this->model->clone();
     // Modify the parameters to make it unique
-    model->modelName = this->getInstanceName();
+    model->modelName = this->classname;
     model->textureClass = this->textureClass;
 
     // Update all the sub-models
     model->modelChildren.clear();
     for (auto& child : this->instances) {
         // Don't consider the empty regions
-        if (child->classname == "point") continue;
+        if (child->model == nullptr) continue;
 
         BiomeModelChild modelChild;
         // For now, just consider that all childen are unique...

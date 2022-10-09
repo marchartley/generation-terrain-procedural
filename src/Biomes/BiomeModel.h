@@ -70,6 +70,7 @@ public:
     std::string textureClass;
     std::string modelName;
     int priortyOffset = 0;
+    Probability idealSize;
     std::vector<BiomeModelChild> modelChildren;
 };
 

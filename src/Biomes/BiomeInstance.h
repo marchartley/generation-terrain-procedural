@@ -43,6 +43,8 @@ public:
     std::string classname = "none";
     std::string textureClass;
     ShapeCurve area;
+    float idealSize;
+
     int priorityOffset = 0;
     int instanceID = -1;
 
