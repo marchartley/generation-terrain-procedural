@@ -1,0 +1,45 @@
+{
+  "model-name": "Mayotte",
+  "characteristics": {
+    "area": {
+      "min": 10,
+      "max": 30
+    },
+    "altitude-min": {
+      "mean": -20,
+      "variance": 5
+    },
+    "altitude-max": {
+      "mean": -5,
+      "variance": 2
+    }
+  },
+  "conditions": {
+    "luminosity-min": {
+      "min": 500,
+      "max": 550
+    },
+    "luminosity-max": {
+      "min": 2000,
+      "max": 2100
+    }
+  },
+  "subbiotopes": [
+    {
+      "model-name": "ile",
+      "quantity": 1
+    },
+    {
+      "model-name": "plage",
+      "quantity": 1
+    },
+    {
+      "model-name": "lagon",
+      "quantity": 1
+    },
+    {
+      "model-name": "fonds",
+      "quantity": 1
+    }
+  ]
+}
