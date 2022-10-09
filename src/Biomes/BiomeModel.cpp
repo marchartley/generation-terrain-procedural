@@ -89,8 +89,9 @@ BiomeModel BiomeModel::fromJson(nlohmann::json json_content)
                     priority = child.at("params").at("priority-offset").get<int>();
                 }
             }
-
-            model.modelChildren.push_back({std::make_shared<BiomeModel>(BiomeModel::fromJson(child)), probaQuantity, probaAppearence, probaSize, priority});
+            std::shared_ptr<BiomeModel> childModel = std::make_shared<BiomeModel>(BiomeModel::fromJson(child));
+            childModel->idealSize = probaSize;
+            model.modelChildren.push_back({childModel, probaQuantity, probaAppearence, probaSize, priority});
 //            for (int i = 0; i < childrenCount; i++) {
 //                if (child.contains("model-name") || child.contains("class")) {
 //                    model.modelChildren.push_back(BiomeModel::fromJson(child));
@@ -146,6 +147,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     instance->area = area.removeDuplicates();
     instance->depthShape = BSpline({Vector3(0, model->minDepth), Vector3(1, model->maxDepth)});
     instance->textureClass = model->textureClass;
+    instance->idealSize = (model->idealSize.mean > 0 ? model->idealSize.randomValue() : -1);
     std::vector<std::shared_ptr<BiomeModel>> children;
 
     for (auto& child : model->modelChildren) {
@@ -187,12 +189,14 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     std::vector<int> newChildrenOrder = std::vector<int>(children.size());
     for (size_t i = 0; i < newChildrenOrder.size(); i++) newChildrenOrder[i] = i;
     AdjencySolver solver;
-//    auto start = std::chrono::system_clock::now();
-    newChildrenOrder = solver.solve(diagram, allChildrenClassnames /*vectorMerge(allChildrenClassnames, allChildrenClassnames)*/, forbiddenNeighboring);
+
+    newChildrenOrder = solver.solveGeomToTopo(diagram, allChildrenClassnames /*vectorMerge(allChildrenClassnames, allChildrenClassnames)*/, forbiddenNeighboring);
+
+//    std::vector<BiomeInstance> instances
+
     // Because we may have used multiple of the data, we need to clamp the new indices
-    for (auto& ind : newChildrenOrder) ind = ind % allChildrenClassnames.size();
-//    auto end = std::chrono::system_clock::now();
-//    std::cout << "Result in " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << "s" << std::endl;
+    for (auto& ind : newChildrenOrder)
+        ind = ind % allChildrenClassnames.size();
 
     for (size_t i = 0; i < diagram.pointset.size(); i++) {
         int index = newChildrenOrder[i];
@@ -211,6 +215,12 @@ std::shared_ptr<BiomeInstance> BiomeModel::createInstance(Vector3 initialPositio
 
 std::shared_ptr<BiomeModel> BiomeModel::clone()
 {
-    std::shared_ptr<BiomeModel> model = this->shared_from_this();
+    std::shared_ptr<BiomeModel> model = std::make_shared<BiomeModel>(*this); //->shared_from_this();
+    std::vector<BiomeModelChild> deepCopiedChildren(model->modelChildren.size());
+    for (size_t i = 0; i < model->modelChildren.size(); i++) {
+        deepCopiedChildren[i] = model->modelChildren[i];
+        deepCopiedChildren[i].model = model->modelChildren[i].model->clone();
+    }
+    model->modelChildren = deepCopiedChildren;
     return model;
 }
