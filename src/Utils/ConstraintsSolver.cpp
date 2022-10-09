@@ -236,7 +236,7 @@ std::map<int, Vector3> ConstraintsSolver::solve(bool checkPossible, float deltaM
     }
 
     int iteration = 0;
-    for (iteration = 0; iteration < 5 && minError > 1.0 * number_elements * number_elements; iteration++) {
+    for (iteration = 0; iteration < this->numberIterations && minError > this->stoppingEpsilon; iteration++) {
 
         std::vector<Vector3> elements_position(number_elements);
         for (int i = 0; i < number_elements; i++) {
@@ -294,10 +294,10 @@ std::map<int, Vector3> ConstraintsSolver::solve(bool checkPossible, float deltaM
         }
         errorCounter.push_back(error);
         stepCounter.push_back(tries);
-        std::cout << "Iter #" << iteration << ": error = " << error << " after " << tries << " steps" << std::endl;
+//        std::cout << "Iter #" << iteration << ": error = " << error << " after " << tries << " steps" << std::endl;
     }
     auto endTime = std::chrono::system_clock::now();
-    std::cout << "Error: " << minError << " on iteration #" << iteration << "\nTime: " << std::chrono::duration<float>(endTime - startTime).count() << "s\nDetails:";
+//    std::cout << "Error: " << minError << " on iteration #" << iteration << "\nTime: " << std::chrono::duration<float>(endTime - startTime).count() << "s\nDetails:";
 //    for (int i = 0; i < iteration; i++) {
 //        std::cout << "\n- iter #" << (i+1) << ": Error = " << errorCounter[i] << " after " << stepCounter[i] << " steps";
 //    }

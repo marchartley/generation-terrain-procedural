@@ -22,6 +22,9 @@ public:
 
     bool checkFeasibility(bool verbose = false);
 
+    int numberIterations = 5;
+    float stoppingEpsilon = 1.f;
+
 protected:
     void addConstraintSlot();
 
