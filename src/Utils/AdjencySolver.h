@@ -10,7 +10,9 @@ class AdjencySolver
 public:
     AdjencySolver();
 
-    std::vector<int> solve(Voronoi& diagram, std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<std::string, std::string>> impossibleAdgency);
+    std::vector<int> solveGeomToTopo(Voronoi& diagram, std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<std::string, std::string>> impossibleAdjency);
+
+    void solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string>> impossibleAdjency, ShapeCurve availableSpace);
 
     Graph<std::string> graph;
     Graph<std::string> adjency;
