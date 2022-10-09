@@ -8,6 +8,11 @@
 
 #define PI 3.14159265358979323846
 
+template<class T>
+bool isIn(T& elem, std::vector<T> arr) {
+    return std::find(arr.begin(), arr.end(), elem) != arr.end();
+}
+
 std::vector<std::string> split(std::string str, char c = ' ');
 bool makedir(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);

@@ -239,6 +239,7 @@ void clip_infinite_edge(const edge_type& edge, std::vector<Vector3>* clipped_edg
 */
 std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numberOfRelaxations)
 {
+    this->boundingShape = boundingShape.removeDuplicates();
     /*
     // Preparing Input Geometries.
     std::vector<Vector3> points = this->pointset;

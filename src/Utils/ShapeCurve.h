@@ -14,9 +14,13 @@ public:
     float estimateDistanceFrom(Vector3 pos);
     float computeArea();
 
+    ShapeCurve intersect(ShapeCurve other);
+
     Vector3 planeNormal();
     ShapeCurve grow(float increase);
     ShapeCurve shrink(float decrease);
+
+    ShapeCurve& removeDuplicates();
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 };

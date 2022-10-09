@@ -13,6 +13,8 @@
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
+#include "Utils/FastNoiseLit.h"
+
 enum RESIZE_MODE {
     LINEAR = 0,
     MAX_VAL = 1,
@@ -79,7 +81,7 @@ public:
 
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
     Matrix3<T> subset(Vector3 start, Vector3 end);
-    Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
     Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
@@ -118,6 +120,13 @@ public:
 
     Matrix3<T> wrapWith(Matrix3<Vector3> wrapper);
     Matrix3<T> wrapWith(BSpline original, BSpline wrapperCurve);
+
+    Matrix3<T> wrapWithoutInterpolation(Matrix3<Vector3> wrapper);
+    Matrix3<T> wrapWithoutInterpolation(BSpline original, BSpline wrapperCurve);
+
+    static Matrix3<float> fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
+    static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
+    static Matrix3<Vector3> fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, Vector3 offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
@@ -165,7 +174,7 @@ public:
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
 
     std::vector<T> data;
-    int sizeX, sizeY, sizeZ;
+    int sizeX = 0, sizeY = 0, sizeZ = 1;
 
     bool raiseErrorOnBadCoord = true;
     T defaultValueOnBadCoord = T();
@@ -1283,7 +1292,7 @@ Matrix3<T> Matrix3<T>::wrapWith(Matrix3<Vector3> wrapper)
     // But that's not the current definition.
     Matrix3<T> result(getDimensions());
     this->raiseErrorOnBadCoord = false;
-    this->defaultValueOnBadCoord = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
     Matrix3<float> unit(result.getDimensions(), 1.f);
     Matrix3<float> unit_ctrl = unit;
@@ -1388,7 +1397,93 @@ Matrix3<T> Matrix3<T>::wrapWith(BSpline original, BSpline wrapperCurve)
 //    return tempReturn;
     return this->wrapWith(wrapper);
 
-//    Matrix3<float> unit_ctrl(this->getDimensions(), 1.f);
+    //    Matrix3<float> unit_ctrl(this->getDimensions(), 1.f);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(Matrix3<Vector3> wrapper)
+{
+//    std::cout << "Max : " << wrapper.max() << " - Min : " << wrapper.min() << std::endl;
+    Matrix3<T> result = *this; //(getDimensions());
+    this->raiseErrorOnBadCoord = false;
+    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    result.raiseErrorOnBadCoord = false;
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                Vector3& wrap = wrapper.at(pos);
+                result.at(pos + wrap) = this->at(pos);
+            }
+        }
+    }
+    return result;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(BSpline original, BSpline wrapperCurve)
+{
+    bool previousRaise = this->raiseErrorOnBadCoord;
+    T previousDefault  = this->returned_value_on_outside;
+
+    this->raiseErrorOnBadCoord = false;
+    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+
+    Matrix3<Vector3> indices(this->getDimensions());
+    for (size_t i = 0; i < this->size(); i++)
+        indices[i] = indices.getCoordAsVector3(i);
+
+    indices = indices.wrapWith(original, wrapperCurve);
+
+    Matrix3<T> values(this->getDimensions());
+    for (size_t i = 0; i < this->size(); i++) {
+        values[i] = this->at(indices[i]);
+    }
+
+    this->raiseErrorOnBadCoord = previousRaise;
+    this->returned_value_on_outside = previousDefault;
+
+    return values;
+}
+
+template<class T>
+Matrix3<float> Matrix3<T>::fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ)
+{
+    Matrix3<float> values(sizeX, sizeY, sizeZ);
+    for (size_t i = 0; i < values.size(); i++) {
+        float x, y, z;
+        std::tie(x, y, z) = values.getCoord(i);
+
+        values.at(i) = noise.GetNoise(x, y, z);
+    }
+    return values;
+}
+
+template<class T>
+Matrix3<Vector3> Matrix3<T>::fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ)
+{
+    Matrix3<Vector3> values = Matrix3<Vector3>::fbmNoise3D(noise, sizeX, sizeY, sizeZ);
+    for (auto& vec : values)
+        vec = vec.xy();
+    return values;
+}
+
+template<class T>
+Matrix3<Vector3> Matrix3<T>::fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ)
+{
+    Vector3 offsetDim1 = Vector3(   0,    0,    0);
+    Vector3 offsetDim2 = Vector3(  42,  103, 2048);
+    Vector3 offsetDim3 = Vector3(  15,  128, 1000);
+    Matrix3<Vector3> values(sizeX, sizeY, sizeZ);
+    for (size_t i = 0; i < values.size(); i++) {
+        float x, y, z;
+        std::tie(x, y, z) = values.getCoord(i);
+        // Add some offset (chosen randomly)
+        values.at(i) = Vector3(noise.GetNoise(x + offsetDim1.x, y + offsetDim1.y, z + offsetDim1.z),
+                               noise.GetNoise(x + offsetDim2.x, y + offsetDim2.y, z + offsetDim2.z),
+                               noise.GetNoise(x + offsetDim3.x, y + offsetDim3.y, z + offsetDim3.z));
+    }
+    return values;
 }
 
 template<class T>

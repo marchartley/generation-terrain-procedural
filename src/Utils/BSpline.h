@@ -22,6 +22,8 @@ public:
     float estimateDistanceFrom(Vector3 pos);
     float length();
 
+    size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
+
     operator bool() const { return (this->points.size() > 0); };
 
     Vector3 getFrenetDirection(float x);
@@ -50,7 +52,7 @@ public:
 
     BSpline computeConvexHull();
 
-    BSpline& removeDuplicates();
+    virtual BSpline& removeDuplicates();
 
     std::string toString() const;
 
