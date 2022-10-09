@@ -147,10 +147,12 @@ void Viewer::drawingProcess() {
 
     this->frame_num ++;
     glClear(GL_DEPTH_BUFFER_BIT);
-    if (this->viewerMode == ViewerMode::WIRE_MODE)
+    bool displayFill = this->viewerMode != ViewerMode::WIRE_MODE;
+    if (!displayFill) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    else
+    } else {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
 
     float pMatrix[16];
     float mvMatrix[16];
@@ -195,6 +197,7 @@ void Viewer::drawingProcess() {
         shader->setVector("max_vertice_positions", maxVoxelsShown());
         shader->setFloat("fogNear", this->fogNear);
         shader->setFloat("fogFar", this->fogFar);
+        shader->setBool("wireframeMode", !displayFill);
     });
     current_frame ++;
     if (this->interfaces.count("terrainGenerationInterface")) {
@@ -258,7 +261,12 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     }
 
     Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)));
-    QGLViewer::mouseMoveEvent(e);
+    try {
+        QGLViewer::mouseMoveEvent(e);
+    }  catch (std::exception) {
+        std::cout << "Catched this f***ing exception!" << std::endl;
+    }
+
     update();
 }
 

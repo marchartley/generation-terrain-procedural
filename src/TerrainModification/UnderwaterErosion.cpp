@@ -162,7 +162,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
             }
         }
     } else {
-        KarstHole hole(path, this->maxRockSize, startingShape, endingShape);
+        KarstHole hole(path, this->maxRockSize, this->maxRockSize, startingShape, endingShape);
         Matrix3<float> holeMatrix;
         Vector3 anchor;
         std::vector<std::vector<Vector3>> triangles = hole.generateMesh();

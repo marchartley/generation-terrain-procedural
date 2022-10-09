@@ -30,6 +30,7 @@ public Q_SLOTS:
     void hide();
 
     void throwFromCam();
+    void throwFromSide();
     void throwFrom(Vector3 pos, Vector3 dir);
 
 public:

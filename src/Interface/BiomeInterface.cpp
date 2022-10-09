@@ -159,7 +159,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     for (auto& current : sortedBiomes) {
         ShapeCurve area = current->area;
         int level = current->getLevel();
-//        area = area.grow(-1); // Shrink the area to be able to see all layers
+        area = area.grow(1.f); // Grow the area to fill all artefacts
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
         BiomeInstance::registerBiomeInstance(current);
@@ -185,6 +185,17 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //        current->instanceID = biomeID;
 //        biomeID++;
     }
+
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    noise.SetFrequency(.01f);
+    noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+    noise.SetFractalLacunarity(2.0);
+    noise.SetFractalGain(0.7);
+    noise.SetFractalWeightedStrength(0.5);
+    noise.SetFractalOctaves(1);
+    heightmap->biomeIndices = heightmap->biomeIndices.wrapWithoutInterpolation(Matrix3<Vector3>::fbmNoise2D(noise, heightmap->biomeIndices.sizeX, heightmap->biomeIndices.sizeY)  * 50.f);
+
     // First, level the terrain as the biomes design it
     Matrix3<float> heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     for (auto& current : sortedBiomes) {
@@ -287,14 +298,14 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
 void BiomeInterface::randomize()
 {
-    /*
+
     // If the main biome has already been computed, regenerate it
     if (rootBiome->instances.size() > 0) {
         this->modifiedBiomeModel = *rootBiome->toBiomeModel();
         /// TODO : don't modify the original biomeModel ...
         this->biomeModel = *(std::make_shared<BiomeModel>(modifiedBiomeModel)->clone());
     }
-    */
+    std::cout << "Generating from model :\n" << this->biomeModel.toJson().dump(4) << std::endl;
     this->generateBiomes();
 }
 
@@ -511,6 +522,10 @@ void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInM
         // Get the voxelGrid mouse position and convert it to the heightmap mouse pos
         this->tempMousePos = fromVoxelsPosToHeightmap(mousePosInMap);
         this->selectedBiomeIDs = this->heightmap->biomeIndices.at(tempMousePos.xy());
+        std::cout << "Biomes : " << (selectedBiomeIDs.empty() ? "None." : "") << std::endl;
+        for (auto ID : selectedBiomeIDs) {
+            std::cout << "- " << BiomeInstance::instancedBiomes[ID]->getInstanceName() << std::endl;
+        }
         updateBiomeSelectionGui();
     }
 }
@@ -673,10 +688,23 @@ void BiomeInterface::addTunnel(KarstHole &hole)
         std::shared_ptr<BiomeInstance> startingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(startPoint.xy()).back()];
     //    std::shared_ptr<BiomeInstance> endingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(endPoint.xy()).back()];
 
+        std::shared_ptr<BiomeModel> archeModel = nullptr;
+        for (auto& [id, biomeInstance] : BiomeInstance::instancedBiomes) {
+            Q_UNUSED(id);
+            if (biomeInstance->classname == "arche" && biomeInstance->model != nullptr) {
+                archeModel = biomeInstance->model->clone();
+                break;
+            }
+        }
+        if (archeModel == nullptr) {
+            std::cerr << "Unfortunately, no current Arche has a model, so until I define a static model for it, the regeneration of the model will not include this arche." << std::endl;
+        }
         std::shared_ptr<BiomeInstance> newArche = std::make_shared<BiomeInstance>(BiomeInstance::fromClass("arche"));
+        newArche->model = archeModel;
         startingBiome->addInstance(newArche);
         newArche->completeIfNeeded();
     }
+    Q_EMIT updated();
 }
 
 void BiomeInterface::setBindings()
@@ -697,7 +725,7 @@ void BiomeInterface::updateBiomeSelectionGui()
             continue; // Biome not registered... This shouldn't occur.
         auto biome = BiomeInstance::instancedBiomes[biomeID];
 //        std::cout << "Adding " << biome->getInstanceName() << " #" << biome->instanceID << " (depth : " << biome->getLevel(true) << ")" << std::endl;
-        if (!biome->isRoot()) {
+        if (biome != nullptr && !biome->isRoot()) {
             filteredIDs.push_back(biome->instanceID);
             biomeSelectionGui->addItem(new HierarchicalListWidgetItem(biome->getInstanceName(), biome->instanceID, biome->getLevel(true)));
         }
@@ -715,19 +743,28 @@ void BiomeInterface::deleteSelectedBiomes()
     for(auto selection : this->biomeSelectionGui->selectedItems()) {
         auto biomeSelection = dynamic_cast<HierarchicalListWidgetItem*>(selection);
         if (biomeSelection != nullptr) {
-            int biomeID = biomeSelection->ID;
-            auto biome = BiomeInstance::instancedBiomes[biomeID];
-
-            // Remove from parent
-            biome->parent->instances.erase(std::find(biome->parent->instances.begin(), biome->parent->instances.end(), biome));
-            biome->parent->updateSubInstances();
-            biome->parent = nullptr;
-
-            // Maybe even remove it completely ?
-            BiomeInstance::instancedBiomes.erase(biomeID);
+            this->deleteBiomeFromID(biomeSelection->ID);
         }
     }
     this->updateBiomeSelectionGui();
+}
+
+void BiomeInterface::deleteBiomeFromID(int ID)
+{
+    auto biome = BiomeInstance::instancedBiomes[ID];
+    if (biome != nullptr) {
+
+        // Remove from parent
+        biome->parent->instances.erase(std::find(biome->parent->instances.begin(), biome->parent->instances.end(), biome));
+        biome->parent->updateSubInstances();
+        biome->parent = nullptr;
+
+        for (auto& child : biome->instances)
+            deleteBiomeFromID(child->instanceID);
+
+    }
+    // Maybe even remove it completely ?
+    BiomeInstance::instancedBiomes.erase(ID);
 }
 
 BiomeReplacementDialog::BiomeReplacementDialog(BiomeInterface* caller)

@@ -16,7 +16,7 @@ class VoxelGrid;
 #include "DataStructure/Matrix3.h"
 
 #include "FluidSimulation/FluidSimulation.h"
-#include "src/sim-fluid-ethanjli/fluidsystem.h"
+// #include "src/sim-fluid-ethanjli/fluidsystem.h"
 
 struct NoiseMinMax {
     float min = std::numeric_limits<float>::max();
@@ -55,6 +55,7 @@ public:
     void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
     void undo();
     void redo();
+    size_t getCurrentHistoryIndex() const;
 
     int getSizeX() { return this->sizeX; }
     int getSizeY() { return this->sizeY; }
@@ -70,8 +71,8 @@ public:
 
     void remeshAll();
 
-    int numberOfChunksX() { return this->sizeX / this->chunkSize; }
-    int numberOfChunksY() { return this->sizeY / this->chunkSize; }
+    int numberOfChunksX() { return std::ceil(this->sizeX / (float)this->chunkSize); }
+    int numberOfChunksY() { return std::ceil(this->sizeY / (float)this->chunkSize); }
 
     std::string toString();
     std::string toShortString();
@@ -131,8 +132,8 @@ public:
 
     Mesh mesh;
     FluidSimulation fluidSimulation;
-    std::unique_ptr<FluidSystem> fluidSystem;
-    std::unique_ptr<VelocityField> constantFlowSource;
+    //std::unique_ptr<FluidSystem> fluidSystem;
+    //std::unique_ptr<VelocityField> constantFlowSource;
 
     int fluidSimRescale = 4;
 
