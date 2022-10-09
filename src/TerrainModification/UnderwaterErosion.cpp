@@ -73,7 +73,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, int a
         if (originalDirection.isValid())
             dir = originalDirection.normalize();
 
-        RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength));
+        RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength) * (random_gen::generate() > .5f ? 1.f : -1.f));
         std::vector<Vector3> coords;
 
         bool touched = false;

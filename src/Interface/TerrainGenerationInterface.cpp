@@ -170,8 +170,8 @@ void TerrainGenerationInterface::prepareShader()
     glGenTextures(1, &heightmapFieldTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -467,12 +467,6 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            Matrix3<float> values = voxelGrid->getVoxelValues();
-            // Not the best check, but still pretty good....
-            if (marchingCubeMesh.vertexArray.size() != values.size()) {
-                regenerateRocksAndParticles();
-            }
-            marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
@@ -487,67 +481,77 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                 marchingCubeMesh.display( GL_POINTS );
                 marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false);
             }
+            // Check if something changed on the terrain :
+            if (this->previousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
+                this->previousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+                Matrix3<float> values = voxelGrid->getVoxelValues();
+                // Not the best check, but still pretty good....
+                if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                    regenerateRocksAndParticles();
+                }
+                marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values / 6.f + .5f);
 
-            values.raiseErrorOnBadCoord = false;
-            values.defaultValueOnBadCoord = -1.f;
-            for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-                int iRock;
-                Vector3 pos;
-                float size;
-                std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
-                // Must be on ground, and have water somewhere around
-                if (values.at(pos) > 0) {
-                    bool isOnBorder = false;
-                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                    isOnBorder = true;
-                                }
-                    if (isOnBorder) {
-                        possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-                        possibleRocks[iRock].shader->setFloat("sizeFactor", size);
-                        possibleRocks[iRock].display();
+                values.raiseErrorOnBadCoord = false;
+                values.defaultValueOnBadCoord = -1.f;
+                for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
+                    int iRock;
+                    Vector3 pos;
+                    float size;
+                    std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
+                    // Must be on ground, and have water somewhere around
+                    if (values.at(pos) > 0) {
+                        bool isOnBorder = false;
+                        for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
+                            for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
+                                for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
+                                    if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
+                                        isOnBorder = true;
+                                    }
+                        if (isOnBorder) {
+                            possibleRocks[iRock].shader->setVector("instanceOffset", pos);
+                            possibleRocks[iRock].shader->setFloat("sizeFactor", size);
+                            possibleRocks[iRock].display();
+                        }
                     }
                 }
-            }
-            Matrix3<Vector3> gradientTerrain = values.gradient();
-            gradientTerrain.raiseErrorOnBadCoord = false;
-            gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
-            for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
-                int iCoral;
-                Vector3 pos;
-                float size;
-                std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
-                // Must be on ground, and have water somewhere around
-                if (values.at(pos) > 0) {
-                    bool isOnBorder = false;
-                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                    isOnBorder = true;
-                                }
-                    if (isOnBorder) {
-                        Vector3 up = -gradientTerrain.at(pos).normalize();
-                        Vector3 fwd = (up == Vector3(0, 1, 0) ? Vector3(1, 0, 0) : up.cross(Vector3(0, 1, 0)));
-                        Vector3 right = up.cross(fwd);/*
-                        std::vector<std::vector<float>> rotationMatrix({
-                                                  {fwd.x, right.x, up.x, 0},
-                                                  {fwd.y, right.y, up.y, 0},
-                                                  {fwd.z, right.z, up.z, 0},
-                                                  {0, 0, 0, 1}
-                                              });*/
-                        std::vector<std::vector<float>> rotationMatrix({
-                                                  {fwd.x, fwd.y, fwd.z, 0},
-                                                  {right.x, right.y, right.z, 0},
-                                                  {up.x, up.y, up.z, 0},
-                                                  {0, 0, 0, 1}
-                                              });
-                        possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
-                        possibleCorals[iCoral].shader->setMatrix("instanceRotation", (std::vector<std::vector<float>>)rotationMatrix);
-                        possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
-                        possibleCorals[iCoral].display();
+                Matrix3<Vector3> gradientTerrain = values.gradient();
+                gradientTerrain.raiseErrorOnBadCoord = false;
+                gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
+                for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
+                    int iCoral;
+                    Vector3 pos;
+                    float size;
+                    std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
+                    // Must be on ground, and have water somewhere around
+                    if (values.at(pos) > 0) {
+                        bool isOnBorder = false;
+                        for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
+                            for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
+                                for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
+                                    if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
+                                        isOnBorder = true;
+                                    }
+                        if (isOnBorder) {
+                            Vector3 up = -gradientTerrain.at(pos).normalize();
+                            Vector3 fwd = (up == Vector3(0, 1, 0) ? Vector3(1, 0, 0) : up.cross(Vector3(0, 1, 0)));
+                            Vector3 right = up.cross(fwd);/*
+                            std::vector<std::vector<float>> rotationMatrix({
+                                                      {fwd.x, right.x, up.x, 0},
+                                                      {fwd.y, right.y, up.y, 0},
+                                                      {fwd.z, right.z, up.z, 0},
+                                                      {0, 0, 0, 1}
+                                                  });*/
+                            std::vector<std::vector<float>> rotationMatrix({
+                                                      {fwd.x, fwd.y, fwd.z, 0},
+                                                      {right.x, right.y, right.z, 0},
+                                                      {up.x, up.y, up.z, 0},
+                                                      {0, 0, 0, 1}
+                                                  });
+                            possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
+                            possibleCorals[iCoral].shader->setMatrix("instanceRotation", (std::vector<std::vector<float>>)rotationMatrix);
+                            possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
+                            possibleCorals[iCoral].display();
+                        }
                     }
                 }
             }

@@ -132,6 +132,7 @@ uniform Material ground_material;
 uniform Material grass_material;
 
 uniform bool displayingIgnoredVoxels = false;
+uniform bool wireframeMode = false;
 
 uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
@@ -158,6 +159,20 @@ vec3 getBiomeColor(vec2 pos) {
 //    return hsv2rgb(vec3(val, 1.0, 1.0));
     return vec3(val, 1.0, 1.0);
 }
+vec3 getDensityColor(vec3 pos) {
+    float density = 0.0;
+    float resolution = 0.5;
+    for (int x = 0; x < 10; x++) {
+        for (int y = 0; y < 10; y++) {
+            for (int z = 0; z < 10; z++) {
+                vec3 newPos = pos + vec3(resolution * (x/10.0 - .5), resolution * (y/10.0 - .5), resolution * (z/10.0 - .5));
+                density += max(0.0, texture(dataFieldTex, newPos).a);
+            }
+        }
+    }
+    density  /= 10*10*10;
+    return vec3(density, density, density);
+}
 
 
 vec3 getTriPlanarBlend(vec3 _wNorm){
@@ -183,6 +198,9 @@ void main(void)
             discard;
         }
     }
+
+    if (wireframeMode && !gl_FrontFacing)
+        discard;
 
     Material material = ground_material;
     vec3 position = ginitialVertPos.xyz;
@@ -280,6 +298,8 @@ void main(void)
     if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0) * gcolor;
+    vec3 dataTexSize = textureSize(dataFieldTex, 0);
+    fragColor = vec4(getDensityColor(realFragmentPosition / dataTexSize), 1.0);
 
     if (displayingIgnoredVoxels) {
         fragColor = vec4(0, 0, 0, 0.1);

@@ -72,6 +72,7 @@ protected:
 
 
     std::chrono::system_clock::time_point startingTime;
+    size_t previousHistoryIndex = -1;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H
