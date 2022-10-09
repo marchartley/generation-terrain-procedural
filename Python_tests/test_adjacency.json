@@ -1,0 +1,6 @@
+{
+	"ile": ["ile", "plage", "lagon"],
+	"plage": ["ile", "plage", "lagon"],
+	"lagon": ["ile", "plage", "lagon", "fonds"],
+	"fonds": ["lagon", "fonds"]
+}
