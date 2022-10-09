@@ -407,7 +407,7 @@ Vector3 operator*(float a, Vector3 b) {
 
 bool operator==(Vector3 a, Vector3 b)
 {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
+    return int(a.x * 1000) == int(b.x * 1000) && int(a.y * 1000) == int(b.y * 1000) && int(a.z * 1000) == int(b.z * 1000);
 }
 
 Vector3 operator-(Vector3 v) {
