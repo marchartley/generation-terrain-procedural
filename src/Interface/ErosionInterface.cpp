@@ -49,12 +49,18 @@ void ErosionInterface::throwFromCam()
     Vector3 dir;
     pos = this->viewer->camera()->position();
     dir = this->viewer->camera()->viewDirection();
-/*
-    /// For demonstration only, to remove right after
-    if (this->viewer->karstPathInterface && this->viewer->karstPathInterface->sourceControlPoint->getPosition() != Vector3(0, 0, 0)) {
-        pos = this->viewer->karstPathInterface->sourceControlPoint->getPosition();
-        dir = this->viewer->karstPathInterface->karstPaths[0].getDirection(0.0);
-    }*/
+    this->throwFrom(pos, dir);
+}
+void ErosionInterface::throwFromSide()
+{
+    Vector3 pos;
+    Vector3 dir;
+    pos = this->viewer->camera()->position();
+    dir = this->viewer->camera()->viewDirection();
+
+    pos = Vector3(this->voxelGrid->getSizeX() * -1.f, this->voxelGrid->getSizeY() * .5f, this->voxelGrid->getSizeZ() * .5f);
+    dir = Vector3(1.f, 0.f, 0.f);
+
     this->throwFrom(pos, dir);
 }
 void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
@@ -103,6 +109,7 @@ QLayout *ErosionInterface::createGUI()
     FancySlider* rockQttSlider = new FancySlider(Qt::Horizontal, 0.f, 1000.f);
     FancySlider* rockRandomnessSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
     QPushButton* confirmButton = new QPushButton("Envoyer");
+    QPushButton* confirmFromCamButton = new QPushButton("Camera");
 
     erosionLayout->addWidget(createMultipleSliderGroup({
                                                            {"Taille", rockSizeSlider},
@@ -111,12 +118,14 @@ QLayout *ErosionInterface::createGUI()
                                                            {"Randomness", rockRandomnessSlider}
                                                        }));
     erosionLayout->addWidget(confirmButton);
+    erosionLayout->addWidget(confirmFromCamButton);
 
     QObject::connect(rockSizeSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionSize = newVal; });
     QObject::connect(rockStrengthSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionStrength = newVal; });
     QObject::connect(rockQttSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionQtt = newVal; });
     QObject::connect(rockRandomnessSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->rockRandomness = newVal; });
-    QObject::connect(confirmButton, &QPushButton::pressed, this, &ErosionInterface::throwFromCam);
+    QObject::connect(confirmButton, &QPushButton::pressed, this, &ErosionInterface::throwFromSide);
+    QObject::connect(confirmFromCamButton, &QPushButton::pressed, this, &ErosionInterface::throwFromCam);
 
     rockSizeSlider->setfValue(this->erosionSize);
     rockStrengthSlider->setfValue(this->erosionStrength);

@@ -116,7 +116,7 @@ void ManualEditionInterface::mouseMoveEvent(QMouseEvent *event)
         } else {
         }
     }
-    CustomInteractiveObject::mouseMoveEvent(event);
+//    CustomInteractiveObject::mouseMoveEvent(event);
 }
 
 void ManualEditionInterface::keyPressEvent(QKeyEvent *event)

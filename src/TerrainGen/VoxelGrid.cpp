@@ -69,6 +69,7 @@ void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectio
 //    std::cout << "New map size : " << this->getDimensions() << std::endl;
 
     Matrix3<float> gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
+    gridHeights.raiseErrorOnBadCoord = false;
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
@@ -178,6 +179,7 @@ void VoxelGrid::computeFlowfield()
         this->fluidSimulation.step();
     std::cout << "Fluid sim step : " << this->fluidSimulation.currentStep << ". Max fluid velocity : " << this->fluidSimulation.velocity.max() << std::endl;
     this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
+    this->flowField.raiseErrorOnBadCoord = false;
 
     for (auto& vc : this->chunks) {
         for (int x = vc->x; x < vc->x + vc->sizeX; x++) {
@@ -188,6 +190,7 @@ void VoxelGrid::computeFlowfield()
             }
         }
     }
+    this->flowField.raiseErrorOnBadCoord = true;
 }
 void VoxelGrid::affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize)
 {
@@ -234,8 +237,8 @@ void VoxelGrid::initMap()
 {
     this->chunkSize = std::min(this->sizeX, this->chunkSize);
 
-    sizeX -= (sizeX % chunkSize);
-    sizeY -= (sizeY % chunkSize);
+//    sizeX -= (sizeX % chunkSize);
+//    sizeY -= (sizeY % chunkSize);
 
     this->chunks.clear();
     this->flowField.clear();
@@ -513,6 +516,11 @@ void VoxelGrid::redo()
     for (auto& vc : this->chunks)
         vc->redo();
     this->remeshAll();
+}
+
+size_t VoxelGrid::getCurrentHistoryIndex() const
+{
+    return this->chunks.front()->currentHistoryIndex;
 }
 
 void VoxelGrid::display() {

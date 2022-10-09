@@ -82,6 +82,8 @@ protected:
     void updateBiomeSelectionGui();
     void deleteSelectedBiomes();
 
+    void deleteBiomeFromID(int ID);
+
     std::vector<int> selectedBiomeIDs;
 //    int selectedBiomeID = -1;
     QLayout* layout = nullptr;
