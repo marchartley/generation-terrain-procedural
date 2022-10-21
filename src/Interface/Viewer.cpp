@@ -71,10 +71,15 @@ void Viewer::init() {
     setTextIsEnabled(true);
     setMouseTracking(true);
 
-    const char* vShader_voxels = ":/src/Shaders/voxels.vert";
-    const char* fShader_voxels = ":/src/Shaders/voxels.frag";
-    const char* vNoShader = ":/src/Shaders/no_shader.vert";
-    const char* fNoShader = ":/src/Shaders/no_shader.frag";
+#ifdef linux
+    std::string pathToShaders = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+#else
+    std::string pathToShaders = "C:/codes/Qt/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+#endif
+    std::string vShader_voxels = pathToShaders + "voxels.vert";
+    std::string fShader_voxels = pathToShaders + "voxels.frag";
+    std::string vNoShader = pathToShaders + "no_shader.vert";
+    std::string fNoShader = pathToShaders + "no_shader.frag";
 
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
@@ -207,7 +212,12 @@ void Viewer::drawingProcess() {
     this->mainGrabber->display();
 
     for (auto& actionInterface : this->interfaces)
-        actionInterface.second->display();
+        if (actionInterface.first != "terrainGenerationInterface")
+            actionInterface.second->display();
+
+    if (this->interfaces.count("terrainGenerationInterface")) {
+        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
+    }
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -224,6 +234,16 @@ void Viewer::drawingProcess() {
         chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
         umask(prevMode);
 #endif
+    }
+}
+
+void Viewer::reloadAllShaders()
+{
+    Shader::applyToAllShaders([](std::shared_ptr<Shader> shader) {
+        shader->compileShadersFromSource();
+    });
+    for (auto& [name, action] : this->interfaces) {
+        action->reloadShaders();
     }
 }
 
@@ -336,12 +356,13 @@ bool Viewer::checkMouseOnVoxel()
 
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
+    auto values = voxelGrid->getVoxelValues();
     while((currPos / 2.f).norm2() < maxDist && !found)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
         if (minPos.x <= currPos.x && currPos.x <= maxPos.x && minPos.y <= currPos.y && currPos.y <= maxPos.y && minPos.z <= currPos.z && currPos.z <= maxPos.z) {
-            float isoval = voxelGrid->getVoxelValue(currPos);
-            if (isoval > 0.0)
+            float isoval = values.at(currPos);//voxelGrid->getVoxelValue(currPos);
+            if (isoval > 0.0 || (0.f <= currPos.z && currPos.z < 1.0) )
                 found = true;
         }
     }

@@ -126,6 +126,7 @@ float BSpline::estimateDistanceFrom(Vector3 pos)
 float BSpline::length()
 {
     float length = 0;
+    if (this->points.empty()) return length;
     for (size_t i = 0; i < this->points.size() - 1; i++) {
         length += (this->points[i] - this->points[i + 1]).norm();
     }

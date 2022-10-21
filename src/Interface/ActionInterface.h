@@ -23,6 +23,9 @@ public:
     virtual void display() {
 
     }
+    virtual void reloadShaders() {
+
+    }
 
     void addTerrainAction(nlohmann::json actionParameters) {
         jsonActionsHistory->push_back(nlohmann::json({

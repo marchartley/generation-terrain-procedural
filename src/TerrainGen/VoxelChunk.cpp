@@ -456,7 +456,7 @@ void VoxelChunk::applyModification(Matrix3<float> modifications, Vector3 anchor)
 
 void VoxelChunk::undo()
 {
-    if (this->voxelsValuesStack.size() > 1) {
+    if (this->voxelsValuesStack.size() > 1 && this->currentHistoryIndex > 0) {
 //        this->voxelsValuesStack.pop_back();
         this->currentHistoryIndex --;
         this->needRemeshing = true;

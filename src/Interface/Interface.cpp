@@ -24,6 +24,7 @@ ViewerInterface::ViewerInterface() {
     this->erosionInterface->viewer = this->viewer;
     this->heightmapErosionInterface = std::make_shared<HeightmapErosionInterface>(this);
     this->biomeInterface = std::make_shared<BiomeInterface>(this);
+    this->smoothInterface = std::make_shared<SmoothInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                                                                               {
@@ -38,7 +39,8 @@ ViewerInterface::ViewerInterface() {
                                                                                   { "terrainGenerationInterface", terrainGenerationInterface},
                                                                                   { "erosionInterface", erosionInterface},
                                                                                   { "heightmapErosionInterface", heightmapErosionInterface},
-                                                                                  { "biomeInterface", biomeInterface}
+                    { "biomeInterface", biomeInterface},
+                    { "smoothInterface", smoothInterface},
                                                                               });
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -53,7 +55,7 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 #ifdef linux
 //        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
-        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/volcano.png");
+        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
 #else
 //        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
         this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
@@ -137,6 +139,7 @@ void ViewerInterface::setupUi()
     QIcon erosionIcon(":/icons/src/assets/erosion.png");
     QIcon heightmapErosionIcon(":/icons/src/assets/heightmap-erosion.png");
     QIcon biomeIcon(":/icons/src/assets/biomes.png");
+    QIcon smoothIcon(":/icons/src/assets/smooth_button.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -197,6 +200,8 @@ void ViewerInterface::setupUi()
     QAction *heightmapErosionAction = new QAction(heightmapErosionIcon, "Eroder la heightmap");
 
     QAction *biomeAction = new QAction(biomeIcon, "Gérer les biomes");
+
+    QAction *smoothAction = new QAction(smoothIcon, "Adoucir le terrain");
 
 
 
@@ -266,6 +271,8 @@ void ViewerInterface::setupUi()
     toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
     toolbar->addSeparator();
     toolbar->addActions({wireModeAction, fillModeAction, noDisplayAction});
+    toolbar->addSeparator();
+    toolbar->addActions({smoothAction});
 
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
 
@@ -332,13 +339,14 @@ void ViewerInterface::setupUi()
 
     mainLayout->addWidget(viewer, 1, 0);
 
-
+    QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
     QHBoxLayout* displayOptionLayout = new QHBoxLayout();
     displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
                                                            createMultipleSliderGroupWithCheckbox({
                                                                {"Densité", {isolevelSelectionSlider, isolevelSelectionActivation}}
-                                                           })
+                                                           }),
+                                                           reloadShadersButton
                                                  }));
     QGroupBox* displayOptionBox = new QGroupBox();
     displayOptionBox->setLayout(displayOptionLayout);
@@ -368,6 +376,7 @@ void ViewerInterface::setupUi()
     QObject::connect(biomeAction, &QAction::triggered, this, &ViewerInterface::openBiomeInterface);
     QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
+    QObject::connect(smoothAction, &QAction::triggered, this->smoothInterface.get(), &SmoothInterface::applySmooth);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
         this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES);
     });
@@ -392,7 +401,9 @@ void ViewerInterface::setupUi()
     QObject::connect(noDisplayAction, &QAction::triggered, this, [&]() {
         this->viewer->setViewerMode(NO_DISPLAY);
     });
-
+    QObject::connect(reloadShadersButton, &QPushButton::pressed, this, [&]() {
+        this->viewer->reloadAllShaders();
+    });
 
 
     this->setAllValuesToFitViewerDefaults(this->viewer);
@@ -601,20 +612,25 @@ void ViewerInterface::openBiomeInterface()
     this->viewer->update();
 }
 
+void ViewerInterface::openSmoothInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "SmoothInterface") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "SmoothInterface";
+        this->smoothInterface->show();
+        this->frame->setContent(this->smoothInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
 void ViewerInterface::hideAllInteractiveParts()
 {
     for (auto& actionInterface : this->actionInterfaces)
         actionInterface.second->hide();
-    /*this->karstPathGeneration->hide();
-    this->spaceColonization->hide();
-    this->faultSlip->hide();
-    this->flowField->hide();
-    this->tunnelInterface->hide();
-    this->manualEditionInterface->hide();
-    this->gravityInterface->hide();
-    this->erosionInterface->hide();
-    this->heightmapErosionInterface->hide();
-    this->biomeInterface->hide();*/
 
     this->viewer->update();
     this->update();
