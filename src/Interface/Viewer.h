@@ -75,6 +75,7 @@ public Q_SLOTS:
     void clipViewTemporarily(Vector3 direction, Vector3 center, bool active);
 
     void drawingProcess();
+    void reloadAllShaders();
 
 //protected:
 public:
@@ -136,8 +137,8 @@ public:
     ControlPoint *mainGrabber;
 
     bool displayParticles = false;
-    float fogNear = 1000.f;
-    float fogFar = 5000.f;
+    float fogNear = 5.f; //1000.f;
+    float fogFar = 30.f; //5000.f;
     bool usingSpotlight = false;
 
     std::string mapSavingFilename = "map1.data";

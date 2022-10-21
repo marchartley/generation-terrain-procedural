@@ -21,6 +21,7 @@
 #include "Interface/ErosionInterface.h"
 #include "Interface/HeightmapErosionInterface.h"
 #include "Interface/BiomeInterface.h"
+#include "Interface/SmoothInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -55,6 +56,7 @@ public Q_SLOTS:
     void openErosionInterface();
     void openHeightmapErosionInterface();
     void openBiomeInterface();
+    void openSmoothInterface();
 
     void hideAllInteractiveParts();
 
@@ -81,6 +83,7 @@ public:
     std::shared_ptr<ErosionInterface> erosionInterface;
     std::shared_ptr<HeightmapErosionInterface> heightmapErosionInterface;
     std::shared_ptr<BiomeInterface> biomeInterface;
+    std::shared_ptr<SmoothInterface> smoothInterface;
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 

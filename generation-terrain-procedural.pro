@@ -16,8 +16,18 @@ win32 {
     # OpenVDB : https://github.com/AcademySoftwareFoundation/openvdb
     # Boost and TBB are installed by VCPKG (https://github.com/microsoft/vcpkg) at the location C:\Programs_installations\vcpkg
     # For TBB on Windows, do everything on Release...
-    INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0" "C:\Program Files\Python39\include" "C:\codes\CPP\glew-2.1.0\include" "C:\Qt\libQGLViewer-2.7.2" C:\codes\CPP\eigen "C:/Program Files/OpenVDB/include" # C:\Programs_installations\vcpkg\installed\x64-windows\include
-    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib" -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib" -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer" -lQGLViewer2 -lOpengl32
+    INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0"
+#    INCLUDEPATH *= "C:\Program Files\Python39\include"
+    INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include"
+    INCLUDEPATH *= "C:\Qt\libQGLViewer-2.7.2"
+#    INCLUDEPATH *= C:\codes\CPP\eigen
+#    INCLUDEPATH *= "C:/Program Files/OpenVDB/include"
+    # INCLUDEPATH *= C:\Programs_installations\vcpkg\installed\x64-windows\include
+#    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib"
+    LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib"
+    LIBS *= -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer"
+
+    LIBS *= -lQGLViewer2 -lOpengl32
 #    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug
 #    LIBS *= -L"C:\Program Files\OpenVDB\bin" -lopenvdb
 #    DEFINES += "OPENVDB_DLL"
@@ -54,6 +64,7 @@ SOURCES += \
     src/Graph/RegularSimplicialComplex.cpp \
     src/Graph/TopoMap.cpp \
         src/Graph/WaveFunctionCollapse.cpp \
+    src/Graphics/ComputeShader.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
     src/Graphics/DisplayGraphics.cpp \
@@ -81,6 +92,7 @@ SOURCES += \
         src/Interface/PathCameraConstraint.cpp \
         src/Interface/RangeSlider.cpp \
         src/Interface/Slider3D.cpp \
+    src/Interface/SmoothInterface.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/StickyFrame.cpp \
@@ -165,6 +177,7 @@ HEADERS += \
     src/Graph/RegularSimplicialComplex.h \
     src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \
+    src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
     src/Graphics/DisplayGraphics.h \
@@ -192,6 +205,7 @@ HEADERS += \
     src/Interface/PathCameraConstraint.h \
     src/Interface/RangeSlider.h \
     src/Interface/Slider3D.h \
+    src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/StickyFrame.h \
@@ -276,4 +290,5 @@ RESOURCES +=\
 
 FORMS +=
 
-DISTFILES +=
+DISTFILES += \
+    src/Shaders/computeMC.comp
