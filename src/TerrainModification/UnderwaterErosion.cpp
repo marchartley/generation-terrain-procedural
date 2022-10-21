@@ -35,30 +35,84 @@ void retroChangeFlowfield(std::vector<Vector3>& coords, std::vector<Vector3>& di
 //void updateParticle(Vector3& pos, Vector3& dir)
 
 std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>>
-UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, int avoidMatter, float flowfieldFactor, float randomnessFactor, bool returnEvenLostRocks)
+UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float randomnessFactor, bool fallFromSky,
+                         float gravity,
+                         float bouncingCoefficient,
+                         float bounciness,
+                         float minSpeed,
+                         float maxSpeed,
+                         float maxCapacityFactor,
+                         float erosion,
+                         float deposit,
+                         float matterDensity,
+                         float materialImpact,
+                         float airFlowfieldRotation,
+                         float waterFlowfieldRotation,
+                         float airForce,
+                         float waterForce)
 {
+
+    auto startTime = std::chrono::system_clock::now();
     std::vector<std::vector<Vector3>> debugFinishingLines;
     std::vector<std::vector<Vector3>> debugFailingLines;
+    std::vector<std::vector<Vector3>> debugLines;
     float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ))/2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     starting_distance *= 2.0; // Leave a little bit of gap
     int max_iter = 1000;
     int total_iterations = 0;
     int cpt = 0;
-    std::vector<std::tuple<Vector3, Vector3>> usefulStartingPositions;
 
-    Matrix3<float> currentMapValues = grid->getVoxelValues();
-    currentMapValues.raiseErrorOnBadCoord = false;
-    currentMapValues.defaultValueOnBadCoord = -1;
+    // Hydraulic erosion parameters
+    float maxCapacity = 1.f * this->maxRockStrength * maxCapacityFactor;
+    float erosionFactor = .01f * this->maxRockStrength * erosion;
+    float depositFactor = .01f * this->maxRockStrength * deposit;
+//    std::vector<std::tuple<Vector3, Vector3>> usefulStartingPositions;
+
+    Matrix3<float> initialMapValues = grid->getVoxelValues();
+    initialMapValues.raiseErrorOnBadCoord = false;
+    initialMapValues.defaultValueOnBadCoord = -1000;
+    // Use normals from initial map, it shouldn't change too much...
+    Matrix3<Vector3> normals = initialMapValues.binarize().toDistanceMap().gradient();
+    normals.raiseErrorOnBadCoord = false;
+
     Matrix3<float> modifications(grid->getDimensions());
+//    Matrix3<Vector3> flowfieldValues = grid->flowField;
+
+    // Matter information
+//    float matterDensity = 1600.0;
+    Matrix3<float> particlesSpeeds(grid->getDimensions(), 0.f);
+
+    Matrix3<Vector3> gravityfieldValues = Matrix3<Vector3>(grid->getDimensions(), Vector3(0, 0, -gravity));
+    gravityfieldValues.raiseErrorOnBadCoord = false;
+    gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
+
     Matrix3<Vector3> flowfieldValues = grid->flowField;
     flowfieldValues.raiseErrorOnBadCoord = false;
 
+    /* BAD PRACTICE, JUST FOR JFIG DEMO*/
+    Vector3 airDir = Vector3(0, airForce + .0001f, 0).rotate(0, 0, (airFlowfieldRotation / 180) * PI);
+    Vector3 waterDir = Vector3(0, waterForce + .0001f, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
+    for (size_t i = 0; i < flowfieldValues.size(); i++) {
+        if (grid->environmentalDensities.at(i) < 100) { // In the air
+            flowfieldValues.at(i) = airDir;
+        } else { // In water
+            flowfieldValues.at(i) = waterDir;
+        }
+    }
+    /* END BAD */
+
+    std::vector<BSpline> tunnels;
     for (int i = 0; i < this->rockAmount && max_iter > 0; i++)
     {
-        std::vector<Vector3> allCoords;
-        std::vector<Vector3> allDirs;
-        float weaknessAgainstFlowfield = 1.0;
+        BSpline tunnel;
+        Matrix3<float> currentMapValues = initialMapValues + modifications;
+        currentMapValues.raiseErrorOnBadCoord = false;
+        currentMapValues.defaultValueOnBadCoord = -1000;
+
+        float capacity = 0.f;
+
+        float flowfieldInfluence = 1.0;
         cpt ++;
         int steps = 10 * starting_distance; // An estimation of how many step we need
         Vector3 pos;
@@ -73,54 +127,137 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, int a
         if (originalDirection.isValid())
             dir = originalDirection.normalize();
 
-        RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength) * (random_gen::generate() > .5f ? 1.f : -1.f));
+        if (fallFromSky) {
+            pos = Vector3(random_gen::generate(0.f, this->grid->getSizeX()), random_gen::generate(0.f, this->grid->getSizeY()), this->grid->getSizeZ() / 2.f);
+            dir = Vector3(0, 0, -.1f);
+        }
+
+//        RockErosion rock(random_gen::generate(0.0, this->maxRockSize), random_gen::generate(0.0, this->maxRockStrength) * (random_gen::generate() > .5f ? 1.f : -1.f));
         std::vector<Vector3> coords;
 
         bool touched = false;
         bool hasBeenAtLeastOnceInside = false;
-        float dist = 0;
-        std::tuple<Vector3, Vector3> possibleUsefulPosition = std::make_tuple(pos, dir);
+        bool firstHit = true;
         while (!touched) {
             total_iterations ++;
-            if (this->grid->contains(pos + dir * dist)) {
-                Vector3 flowfield = flowfieldValues.at(pos + dir * dist);
-                float dirDotGrad = 1.0; // dir.dot(flowfield);
+//            std::cout << "Dir mag = " << dir.norm() << std::endl;
+            if (this->grid->contains(pos + dir)) {
+                float environmentDensity = this->grid->environmentalDensities.at(pos + dir);
+                float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
+                Vector3 flowfield = flowfieldValues.at(pos + dir) + gravityfieldValues.at(pos + dir) * gravityCoefficient;
 //                dir += flowfield * dirDotGrad * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
-                dir += flowfield;
-                dir.normalize(); // Maybe to remove, who knows...
+                dir += flowfield * flowfieldInfluence;
+//                dir.normalize(); // Maybe to remove, who knows...
                 hasBeenAtLeastOnceInside = true;
-
-                if (currentMapValues.at(pos) > 0.0) { // Hit a wall
+                bool justHit = false;
+                if (currentMapValues.at(pos + dir) > 0.0) { // Hit a wall
+                    Vector3 normal = normals.at(pos + dir).normalized();
 //                    rock.Apply(this->grid, pos, false, false);
-                    rock.computeErosionMatrix(modifications, pos, false, false);
-                    debugFinishingLines.push_back(coords);
-                    usefulStartingPositions.push_back(possibleUsefulPosition);
-                    touched = true;
-                    max_iter = 1000;
+//                    // USING DOT PRODUCT
+//                    // Erosion part
+//                    float amountToErode = std::max(std::min(maxCapacity - capacity, dir.normalized().dot(normal) * erosionFactor), 0.f);
+//                    // Deposition part
+//                    float amountToDeposit = std::max(std::min(capacity, (1 - dir.normalized().dot(normal)) * depositFactor), 0.f);
+                    // USING SPEED
+                    float speedRate = (dir.norm() / maxSpeed);
+                    // Erosion part
+                    float amountToErode = std::max(std::min(maxCapacity - capacity, std::min(speedRate, 1.f) * erosionFactor / (materialImpact != 0 ? currentMapValues.at(pos + dir) * materialImpact : 1.f)), 0.f);
+                    // Deposition part
+                    float amountToDeposit = std::max(std::min(capacity, (1 - speedRate) * depositFactor), 0.f);
+//                    std::cout << amountToErode << " " << amountToDeposit << std::endl;
+                    if (!firstHit) {
+                        if (amountToErode - amountToDeposit != 0) {
+                            capacity += (amountToErode - amountToDeposit);
+                            int division = 1;
+                            RockErosion erosionRock(random_gen::generate(0.0, this->maxRockSize), (amountToErode)/float(division));
+                            RockErosion depositRock(random_gen::generate(0.0, this->maxRockSize), (-amountToDeposit)/float(division));
+        //                    float previousRockSum = rock.attackMask.sum();
+        //                    rock.attackMask *= (amountToErode - amountToDeposit);
+        //                    rock.attackMask /= (previousRockSum);
+                            // Increase resolution
+                            for (int divis = 0; divis < division; divis++) {
+                                erosionRock.computeErosionMatrix(modifications, pos + (dir) * (float(divis)/float(division)), false, false);
+                                depositRock.computeErosionMatrix(modifications, pos + (dir + Vector3(0, 0, -5.f)) * (float(divis)/float(division)), false, false);
+//                                depositRock.computeErosionMatrix(modifications, pos + (dir + gravityfieldValues.at(pos + dir) * gravityCoefficient).normalized() * (float(divis)/float(division)), false, false);
+                            }
+    //                        rock.computeErosionMatrix(modifications, pos + dir, false, false);
+                        }
+                        debugFinishingLines.push_back(coords);
+                    } else {
+                        // Ignore the first collision
+                        if (currentMapValues.at(pos + dir) > 0.0) {
+                            firstHit = false;
+                            tunnel.points.clear();
+                        }
+                    }
+
+                    // Continue the rock tracing
+//                    touched = true;
+                    if (!justHit) {
+                        if (std::abs(dir.normalized().dot(normal)) == 1)
+                            normal = (normal + Vector3::random(0.1f)).normalized();
+                        Vector3 bounce = dir.reflexion(normal) * dir.norm();
+                        bounce -= normal * bounce.dot(normal) * (1.f - bounciness);
+                        dir = bounce * bouncingCoefficient;
+//                        dir = (bounce * (bounciness + .5f)*2.f * bouncingCoefficient + dir * (1 - ((bounciness + .5f)*2.f)))*.5f; // dir.reflexion(normal) * dir.norm() * bouncingCoefficient;
+                    }
+                    justHit = true;
+                    pos += dir;
+                    tunnel.points.push_back(pos);
                 }
             }
             else {
-                dir += Vector3::random() * randomnessFactor;
+                dir += Vector3::random(randomnessFactor);
                 dir.normalize();
             }
             steps --;
+            if (dir.norm2() > maxSpeed*maxSpeed)
+                dir = dir.normalize() * maxSpeed;
+            else if (dir.norm2() < minSpeed*minSpeed)
+                dir = dir.normalize() * minSpeed;
             pos += dir.normalized();
-            coords.push_back((pos - dir.normalized()));
-            allCoords.push_back(pos);
-            allDirs.push_back(dir);
-            if ((hasBeenAtLeastOnceInside && !grid->contains(pos)) || steps < 0) {
+            if (!firstHit) {
+                coords.push_back((pos - dir.normalized()));
+            }
+            if ((hasBeenAtLeastOnceInside && !grid->contains(pos)) || steps < 0 || dir.norm2() < 1e-3) {
                 // Failed to hit, is now gone
-                i--;
+//                i--;
                 max_iter --;
-                if (returnEvenLostRocks && hasBeenAtLeastOnceInside) {
-                    debugFailingLines.push_back(coords);
+//                if (!grid->contains(pos) && coords.size() > 0)
+//                    coords.pop_back();
+                if (coords.size() > 1)
+                    debugLines.push_back(coords);
+//                if (returnEvenLostRocks && hasBeenAtLeastOnceInside) {
+//                    debugFailingLines.push_back(coords);
+//                }
+                if ((steps < 0 || dir.norm2() < 1e-3) && depositFactor > 0.f) {
+                    RockErosion rock(random_gen::generate(0.0, this->maxRockSize), -capacity);
+                    rock.computeErosionMatrix(modifications, pos, false);
                 }
                 break;
             }
         }
+        tunnels.push_back(tunnel);
     }
+    /*modifications = Matrix3<float>(modifications.getDimensions(), 0.f);
+    RockErosion rock(this->maxRockSize, this->maxRockStrength);
+    for (BSpline& path : tunnels) {
+        float nb_points_on_path = path.length() / (float)(this->maxRockSize / 3.f);
+        std::vector<Vector3> coords = path.getPath(nb_points_on_path);
+        for (size_t i = 0; i < coords.size() - 1; i++) {
+            modifications = rock.computeErosionMatrix(modifications, coords[i]);
+            RockErosion speedRock(this->maxRockSize, -(coords[i - 1] - coords[i]).norm());
+            particlesSpeeds = speedRock.computeErosionMatrix(particlesSpeeds, coords[i]);
+        }
+    }*/
+//    for (size_t i = 0; i < modifications.size(); i++)
+//        if (initialMapValues[i] > 0)
+//            modifications[i] = particlesSpeeds[i] * modifications[i] / initialMapValues[i];
     this->grid->applyModification(modifications);
-    return std::make_tuple(debugFinishingLines, debugFailingLines);
+    auto endTime = std::chrono::system_clock::now();
+    std::cout << "Simulation en " << std::chrono::duration<float>(endTime - startTime).count() << "s" << std::endl;
+    return std::make_tuple(debugLines, debugFailingLines);
+//    return std::make_tuple(debugFinishingLines, debugFailingLines);
 }
 
 
