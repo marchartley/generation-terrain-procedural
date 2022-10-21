@@ -35,6 +35,9 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
+uniform vec3 min_vertice_positions;
+uniform vec3 max_vertice_positions;
+
 uniform bool useMarchingCubes;
 
 //Vertices position for fragment shader
@@ -54,8 +57,13 @@ vec3 cubePos(vec3 voxelPos, int i){
 float cubeVal(vec3 pos){
     vec3 texSize = textureSize(dataFieldTex, 0);
     if (pos.x == 0 || pos.y == 0 || pos.z == 0) return -1;
+    if (pos.x < min_vertice_positions.x || max_vertice_positions.x < pos.x ||
+        pos.y < min_vertice_positions.y || max_vertice_positions.y < pos.y ||
+        pos.z < min_vertice_positions.z || max_vertice_positions.z < pos.z) return -1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
     float val = texture(dataFieldTex, pos/texSize).a;
+    if (pos.z <= 1)
+        val = 1.0;
     val = (val < min_isolevel || val > max_isolevel) ? -1000 : val;
     return val - 0.5;
 }
