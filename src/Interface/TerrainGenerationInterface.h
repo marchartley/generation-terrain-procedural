@@ -14,11 +14,14 @@ public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
     void display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles);
+    void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void saveTerrain(std::string filename);
+
+    void reloadShaders();
 
     void replay(nlohmann::json action);
 
@@ -73,6 +76,10 @@ protected:
 
     std::chrono::system_clock::time_point startingTime;
     size_t previousHistoryIndex = -1;
+
+public:
+    Mesh waterLevelMesh;
+    float waterLevel = 0.25f;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

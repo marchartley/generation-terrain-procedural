@@ -59,6 +59,8 @@ public:
     Vector3& changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ);
     Vector3 changedBasis(Vector3 newX, Vector3 newY, Vector3 newZ);
 
+    Vector3 reflexion(Vector3 normal);
+
     float divergence() { return x + y + z; }
 
     Matrix toMatrix();
@@ -83,6 +85,8 @@ public:
     }
 
     static Vector3 random();
+    static Vector3 random(float norm);
+    static Vector3 random(float minNorm, float maxNorm);
     static Vector3 random(Vector3 maxValues);
     static Vector3 random(Vector3 minValues, Vector3 maxValues);
 

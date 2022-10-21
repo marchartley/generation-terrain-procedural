@@ -37,9 +37,9 @@ void TunnelInterface::replay(nlohmann::json action)
         bool removingMatter = parameters.at("removing_matter").get<bool>();
         KarstHolePredefinedShapes startingShape = parameters.at("starting_shape").get<KarstHolePredefinedShapes>();
         KarstHolePredefinedShapes endingShape = parameters.at("ending_shape").get<KarstHolePredefinedShapes>();
-        float width = parameters.at("width").get<float>();
-        float height = parameters.at("height").get<float>();
-        float erosionStrength = parameters.at("erosion_strength").get<float>();
+        float width = parameters.at("width").get<float>() * random_gen::generate(0.1f, 2.f);
+        float height = parameters.at("height").get<float>() * random_gen::generate(0.1f, 2.f);
+        float erosionStrength = parameters.at("erosion_strength").get<float>() * random_gen::generate(0.1f, 2.f);
         BSpline path = json_to_bspline(parameters.at("path"));
 
         UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);

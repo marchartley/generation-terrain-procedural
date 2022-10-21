@@ -123,6 +123,16 @@ Vector3 Vector3::random() {
     return v;
 }
 
+Vector3 Vector3::random(float norm)
+{
+    return Vector3::random() * norm;
+}
+
+Vector3 Vector3::random(float minNorm, float maxNorm)
+{
+    return Vector3::random() * random_gen::generate(minNorm, maxNorm);
+}
+
 Vector3 Vector3::random(Vector3 maxValues)
 {
     return Vector3::random(Vector3(), maxValues);
@@ -249,6 +259,13 @@ Vector3 Vector3::changedBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
     Vector3 newVec;
     newVec += newX * this->x + newY * this->y + newZ * this->z;
     return newVec;
+}
+
+Vector3 Vector3::reflexion(Vector3 normal)
+{
+    float dot = normal.dot(*this);
+    Vector3 n2d = normal * 2.f * dot;
+    return *this - n2d;
 }
 
 //Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
