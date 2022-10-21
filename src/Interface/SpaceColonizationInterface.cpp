@@ -53,10 +53,10 @@ void SpaceColonizationInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 startingPoint = json_to_vec3(parameters.at("starting_point"));
+        Vector3 startingPoint = json_to_vec3(parameters.at("starting_point")) + Vector3::random(0.f, 20.f);
         std::vector<Vector3> control_points;
         for (auto& ctrl_json : parameters.at("control_points"))
-            control_points.push_back(json_to_vec3(ctrl_json));
+            control_points.push_back(json_to_vec3(ctrl_json) + Vector3::random(0.f, 20.f));
         float width = parameters.at("width").get<float>();
         float randomness = parameters.at("randomness").get<float>();
         float segmentLength = parameters.at("segment_length").get<float>();

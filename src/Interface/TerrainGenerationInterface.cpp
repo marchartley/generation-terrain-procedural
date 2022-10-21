@@ -21,20 +21,32 @@ void TerrainGenerationInterface::prepareShader()
     if (verbose)
         std::cout << "Preparing main shaders..." << std::endl;
 
-    const char* vShader_mc_voxels = ":/src/Shaders/MarchingCubes.vert";
-    const char* gShader_mc_voxels = ":/src/Shaders/MarchingCubes.geom";
-    const char* fShader_mc_voxels = ":/src/Shaders/MarchingCubes.frag";
+#ifdef linux
+    std::string pathToShaders = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+#else
+    std::string pathToShaders = "C:/codes/Qt/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+#endif
+    std::string vShader_mc_voxels = pathToShaders + "MarchingCubes.vert";
+    std::string gShader_mc_voxels = pathToShaders + "MarchingCubes.geom";
+    std::string fShader_mc_voxels = pathToShaders + "MarchingCubes.frag";
 
-    const char* vShader_grid = ":/src/Shaders/grid.vert";
-    const char* gShader_grid = ":/src/Shaders/grid.geom";
-    const char* fShader_grid = ":/src/Shaders/grid.frag";
+    std::string vShader_grid = pathToShaders + "grid.vert";
+    std::string gShader_grid = pathToShaders + "grid.geom";
+    std::string fShader_grid = pathToShaders + "grid.frag";
 
-    const char* vRockShader = ":/src/Shaders/rockShader.vert";
-    const char* fRockShader = ":/src/Shaders/rockShader.frag";
+    std::string vRockShader = pathToShaders + "rockShader.vert";
+    std::string fRockShader = pathToShaders + "rockShader.frag";
 
-    const char* vParticleShader = ":/src/Shaders/particle.vert";
-    const char* fParticleShader = ":/src/Shaders/particle.frag";
-    const char* gParticleShader = ":/src/Shaders/particle.geom";
+    std::string vParticleShader = pathToShaders + "particle.vert";
+    std::string fParticleShader = pathToShaders + "particle.frag";
+    std::string gParticleShader = pathToShaders + "particle.geom";
+
+    std::string vWaterShader = pathToShaders + "no_shader.vert";
+    std::string fWaterShader = pathToShaders + "no_shader.frag";
+
+    waterLevelMesh = Mesh(std::make_shared<Shader>(vWaterShader, fWaterShader));
+    waterLevelMesh.shader->setVector("color", std::vector<float>{1., 1., 1., .1});
+    waterLevelMesh.cullFace = false;
 
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
                             true, GL_TRIANGLES);
@@ -393,6 +405,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmapGrid->biomeIndices.sizeX, heightmapGrid->biomeIndices.sizeY, 0,
         GL_ALPHA_INTEGER_EXT, GL_INT, ((Matrix3<float>)(heightmapGrid->biomeIndices) / 10.f).data.data());
     }*/
+
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
@@ -406,6 +419,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
 //            GL_RED, GL_FLOAT, heightmapGrid->heights.data.data());//heightData.data.data());
     float maxHeight = heightmapGrid->heights.max();
     this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
+    this->heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
     float *heightmapData = new float[heightmapGrid->heights.size() * 4];
     Matrix3<Vector3> gradients = heightmapGrid->heights.gradient();
     int maxColorTextureIndex = 0;
@@ -470,6 +484,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
+            marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
             marchingCubeMesh.display( GL_POINTS );
             if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
                 marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
@@ -570,8 +585,19 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             this->layerGrid->display();
         }
     }*/
-    /*
-    */
+}
+
+void TerrainGenerationInterface::displayWaterLevel()
+{
+    waterLevelMesh.fromArray({
+                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
+                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ())
+                             });
+    waterLevelMesh.display();
 }
 
 void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting)
@@ -670,17 +696,31 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                     possibleAction.second->replay(action);
             }
         }
-    } else if (ext == "DATA") {
+    } else /*if (ext == "DATA" || ext.empty())*/ {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
         voxelGrid->fromIsoData();
-        heightmapGrid->fromVoxelGrid(*voxelGrid);
-    } else {
+        // Sorry heightmap... You take too long...
+//        heightmapGrid->fromVoxelGrid(*voxelGrid);
+
+    } /*else {
         // In any other case, consider that nothing has been done, cancel.
         return;
-    }
+    }*/
     this->voxelGrid->createMesh();
     this->heightmapGrid->createMesh();
+
+
+    voxelGrid->flowField = Matrix3<Vector3>(voxelGrid->environmentalDensities.getDimensions());
+    for (size_t i = 0; i < voxelGrid->environmentalDensities.size(); i++) {
+        if (voxelGrid->environmentalDensities.getCoordAsVector3(i).z < voxelGrid->environmentalDensities.sizeZ * waterLevel) {
+            voxelGrid->environmentalDensities[i] = 1000.f; // Water density
+            voxelGrid->flowField[i] = Vector3(0, -.3f, 0.f); // Water flow
+        } else {
+            voxelGrid->environmentalDensities[i] = 1.f; // Air density
+            voxelGrid->flowField[i] = Vector3(0, .1f, 0.f); // Air flow
+        }
+    }
 
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
@@ -763,6 +803,11 @@ void TerrainGenerationInterface::saveTerrain(std::string filename)
         // Otherwise it's our custom voxel grid file
         voxelGrid->saveMap(filename);
     }
+}
+
+void TerrainGenerationInterface::reloadShaders()
+{
+    prepareShader();
 }
 
 

@@ -49,10 +49,10 @@ protected:
 //    ControlPoint *secondSlipControlPoint;
     std::unique_ptr<InteractiveVector> slipVector;
 
-    QHBoxLayout* faultSlipLayout = nullptr;
-    QPushButton* faultApplyButton;
-    QCheckBox* faultSideApplied;
-    QCheckBox* faultDisplayButton;
+//    QHBoxLayout* faultSlipLayout = nullptr;
+//    QPushButton* faultApplyButton;
+//    QCheckBox* faultSideApplied;
+//    QCheckBox* faultDisplayButton;
 
     void setBindings();
 };

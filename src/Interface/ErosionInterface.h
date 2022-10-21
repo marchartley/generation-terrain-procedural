@@ -30,6 +30,7 @@ public Q_SLOTS:
     void hide();
 
     void throwFromCam();
+    void throwFromSky();
     void throwFromSide();
     void throwFrom(Vector3 pos, Vector3 dir);
 
@@ -42,10 +43,26 @@ protected:
     Mesh rocksPathSuccess;
     Mesh rocksPathFailure;
 
-    float erosionSize = 2.f;
-    float erosionStrength = .5f;
-    int erosionQtt = 1000;
+    float erosionSize = 8.f;
+    float erosionStrength = .1f;
+    int erosionQtt = 500;
     float rockRandomness = .1f;
+
+    float gravity = 1.f;
+    float bouncingCoefficient = .5f;
+    float bounciness = .5f;
+    float minSpeed = .1f;
+    float maxSpeed = 1.f;
+    float maxCapacityFactor = 1.f;
+    float erosionFactor = 1.f;
+    float depositFactor = 1.f;
+    float matterDensity = 1000.f;
+    float materialImpact = 0.f;
+
+    float airFlowfieldRotation = 0.f;
+    float waterFlowfieldRotation = 180.f;
+    float airForce = 1.f;
+    float waterForce = 1.f;
 
     QHBoxLayout* erosionLayout = nullptr;
 };

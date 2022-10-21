@@ -24,5 +24,6 @@
         <file>src/assets/karst_peytavie_button.png</file>
         <file>src/assets/heightmap-erosion.png</file>
         <file>src/assets/biomes.png</file>
+        <file>src/assets/smooth_button.png</file>
     </qresource>
 </RCC>

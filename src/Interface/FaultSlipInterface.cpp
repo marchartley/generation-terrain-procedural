@@ -58,10 +58,10 @@ void FaultSlipInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 slippingDirection = json_to_vec3(parameters.at("slipping_direction"));
-        float slippingDistance = parameters.at("slipping_distance").get<float>();
-        Vector3 firstPointPos = json_to_vec3(parameters.at("first_point_pos"));
-        Vector3 secondPointPos = json_to_vec3(parameters.at("second_point_pos"));
+        Vector3 slippingDirection = json_to_vec3(parameters.at("slipping_direction")) + Vector3::random();
+        float slippingDistance = parameters.at("slipping_distance").get<float>() * (1 + random_gen::generate(-1.f, 1.f));
+        Vector3 firstPointPos = json_to_vec3(parameters.at("first_point_pos")) + Vector3::random(10.f);
+        Vector3 secondPointPos = json_to_vec3(parameters.at("second_point_pos")) + Vector3::random(10.f);
         bool positiveSideFalling = parameters.at("positive_side").get<bool>();
 
         this->faultSlip.slippingDirection = slippingDirection;
@@ -91,7 +91,7 @@ void FaultSlipInterface::computeFaultSlip()
     float slippingDistance = 1.f;
     Vector3 firstPointPos = this->firstSlipControlPoint->getPosition();
     Vector3 secondPointPos = this->slipVector->getStartingVector();
-    bool positiveSideFalling = this->faultSideApplied->isChecked();
+    bool positiveSideFalling = this->faultSlip.positiveSideFalling; //this->faultSideApplied->isChecked();
     this->faultSlip.slippingDirection = slippingDirection;
     this->faultSlip.slippingDistance = slippingDistance;
     this->faultSlip.firstPointFault = firstPointPos;
@@ -136,20 +136,25 @@ void FaultSlipInterface::show()
 
 QLayout *FaultSlipInterface::createGUI()
 {
-    if (this->faultSlipLayout != nullptr) return faultSlipLayout;
+//    if (this->faultSlipLayout != nullptr) return faultSlipLayout;
 
-    this->faultSlipLayout = new QHBoxLayout;
+    QHBoxLayout* faultSlipLayout = new QHBoxLayout;
 
-    this->faultApplyButton = new QPushButton("Chuter");
-    this->faultSideApplied = new QCheckBox("Partie de droite chute");
-    this->faultDisplayButton = new QCheckBox("Afficher");
+    QPushButton* faultApplyButton = new QPushButton("Chuter");
+    QCheckBox* faultSideApplied = new QCheckBox("Partie de droite chute");
+//    QCheckBox* faultDisplayButton = new QCheckBox("Afficher");
     faultSlipLayout->addWidget(faultApplyButton);
     faultSlipLayout->addWidget(faultSideApplied);
 
 
+
     faultSideApplied->setChecked(this->faultSlip.positiveSideFalling);
 
-    return this->faultSlipLayout;
+    QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
+    QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
+//    QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
+
+    return faultSlipLayout;
 }
 
 
@@ -157,9 +162,6 @@ void FaultSlipInterface::setBindings()
 {
 //    if (this->voxelGrid != nullptr)
 //    {
-        QObject::connect(faultApplyButton, &QPushButton::pressed, this, [=](){ this->computeFaultSlip(); } );
-        QObject::connect(faultSideApplied, &QCheckBox::toggled, this, &FaultSlipInterface::setSideAffected);
-        QObject::connect(faultDisplayButton, &QCheckBox::toggled, this, &FaultSlipInterface::setVisibility);
 
         QObject::connect(slipVector.get(), &InteractiveVector::modified, this, &FaultSlipInterface::updateSlipVector);
         QObject::connect(firstSlipControlPoint.get(), &ControlPoint::modified, this, &FaultSlipInterface::updatePoints);
