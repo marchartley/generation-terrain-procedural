@@ -26,7 +26,7 @@ Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, Vector3 pos, Vector3
 //    pos.x = (pos.x - offset.x) * scaling; // clamp(pos.x / scaling - offset.x, 0.f, grid->getDimensions().x - 1);
 //    pos.y = (pos.y - offset.y) * scaling; // clamp(pos.y / scaling - offset.y, 0.f, grid->getDimensions().y - 1);
     pos.z = std::max(pos.z, 0.f); // In case of small imprecision
-    while (grid->getVoxelValue(pos) > 0) {
+    while (grid->getVoxelValues().at(pos) > 0) {
         pos += Vector3(0, 0, 1); // Move the position one voxel heigher
         if (!grid->contains(pos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
             pos.z = 0;

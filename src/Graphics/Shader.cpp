@@ -7,6 +7,35 @@ std::shared_ptr<Shader> Shader::default_shader = nullptr;
 std::set<std::shared_ptr<Shader>> Shader::allShaders;
 
 Shader::Shader()
+    : Shader("", "", "")
+{
+
+}
+Shader::Shader(std::string vertexShaderFilename)
+    : Shader(vertexShaderFilename, "", "")
+{
+
+}
+Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename)
+    : Shader(vertexShaderFilename, fragmentShaderFilename, "")
+{
+
+}
+Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename,
+       std::string geometryShaderFilename)
+    : vertexShaderFilename(vertexShaderFilename), fragmentShaderFilename(fragmentShaderFilename),
+      geometryShaderFilename(geometryShaderFilename)
+{
+    this->compileShadersFromSource();
+}
+Shader::Shader(Shader& copy) {
+    this->vertexShaderFilename = copy.vertexShaderFilename;
+    this->fragmentShaderFilename = copy.fragmentShaderFilename;
+    this->geometryShaderFilename = copy.geometryShaderFilename;
+    this->compileShadersFromSource();
+}
+/*
+Shader::Shader()
     : Shader(nullptr, nullptr, nullptr)
 {
 
@@ -28,45 +57,69 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
 {
     this->compileShadersFromSource();
 }
-Shader::Shader(Shader& copy) {
-    this->vertexShaderFilename = copy.vertexShaderFilename;
-    this->fragmentShaderFilename = copy.fragmentShaderFilename;
-    this->geometryShaderFilename = copy.geometryShaderFilename;
-    this->compileShadersFromSource();
+
+Shader::Shader(std::string vertexShaderFilename)
+    : Shader(vertexShaderFilename.c_str())
+{
+
 }
+
+Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename)
+    : Shader(vertexShaderFilename.c_str(), fragmentShaderFilename.c_str())
+{
+
+}
+
+Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename, std::string geometryShaderFilename)
+    : Shader(vertexShaderFilename.c_str(), fragmentShaderFilename.c_str(), geometryShaderFilename.c_str())
+{
+
+}*/
 void Shader::compileShadersFromSource()
 {
 #if useModernOpenGL || !useModernOpenGL
     this->programID = GlobalsGL::f()->glCreateProgram();
-    if (vertexShaderFilename != nullptr)
+    if (vertexShaderFilename != "")
     {
-        this->vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
         std::string content = Shader::readShaderSource(vertexShaderFilename);
-        const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(this->vShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(this->vShader);
-        GlobalsGL::f()->glAttachShader(this->programID, this->vShader);
-        GlobalsGL::printShaderErrors(this->vShader);
+        if (!content.empty()) {
+            this->vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
+            const char* src = content.c_str();
+            GlobalsGL::f()->glShaderSource(this->vShader, 1, &src, NULL);
+            GlobalsGL::f()->glCompileShader(this->vShader);
+            GlobalsGL::f()->glAttachShader(this->programID, this->vShader);
+            GlobalsGL::printShaderErrors(this->vShader);
+        } else {
+            vertexShaderFilename = "";
+        }
     }
-    if (fragmentShaderFilename != nullptr)
+    if (fragmentShaderFilename != "")
     {
         std::string content = Shader::readShaderSource(fragmentShaderFilename);
-        this->fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
-        const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(this->fShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(this->fShader);
-        GlobalsGL::f()->glAttachShader(this->programID, this->fShader);
-        GlobalsGL::printShaderErrors(this->fShader);
+        if (!content.empty()) {
+            this->fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
+            const char* src = content.c_str();
+            GlobalsGL::f()->glShaderSource(this->fShader, 1, &src, NULL);
+            GlobalsGL::f()->glCompileShader(this->fShader);
+            GlobalsGL::f()->glAttachShader(this->programID, this->fShader);
+            GlobalsGL::printShaderErrors(this->fShader);
+        } else {
+            fragmentShaderFilename = "";
+        }
     }
-    if (geometryShaderFilename != nullptr)
+    if (geometryShaderFilename != "")
     {
         std::string content = Shader::readShaderSource(geometryShaderFilename);
-        this->gShader = GlobalsGL::f()->glCreateShader(GL_GEOMETRY_SHADER);
-        const char* src = content.c_str();
-        GlobalsGL::f()->glShaderSource(this->gShader, 1, &src, NULL);
-        GlobalsGL::f()->glCompileShader(this->gShader);
-        GlobalsGL::f()->glAttachShader(this->programID, this->gShader);
-        GlobalsGL::printShaderErrors(this->gShader);
+        if (!content.empty()) {
+            this->gShader = GlobalsGL::f()->glCreateShader(GL_GEOMETRY_SHADER);
+            const char* src = content.c_str();
+            GlobalsGL::f()->glShaderSource(this->gShader, 1, &src, NULL);
+            GlobalsGL::f()->glCompileShader(this->gShader);
+            GlobalsGL::f()->glAttachShader(this->programID, this->gShader);
+            GlobalsGL::printShaderErrors(this->gShader);
+        } else {
+            geometryShaderFilename = "";
+        }
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
@@ -300,8 +353,10 @@ std::string Shader::readShaderSource(std::string filename)
     QString qFilename = QString::fromStdString(filename);
     if (!QFile::exists(qFilename))
         qFilename = ":" + qFilename;
-    if (!QFile::exists(qFilename))
+    if (!QFile::exists(qFilename)) {
         std::cerr << "The shader " << filename << " doesn't exist!" << std::endl;
+        return "";
+    }
     QFile file(qFilename);
     file.open(QIODevice::ReadOnly | QIODevice::Text);
     std::string line;

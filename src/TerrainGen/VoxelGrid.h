@@ -146,8 +146,13 @@ public:
 
     Vector3 sea_current = Vector3(1.f, 0.0, 0.0);
 
+    Matrix3<float> environmentalDensities;
+
 protected:
     float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
+
+    int _cachedHistoryIndex = -1;
+    Matrix3<float> _cachedVoxelValues;
 };
 
 #endif // VOXELGRID_H
