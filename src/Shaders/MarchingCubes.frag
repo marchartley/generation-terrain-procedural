@@ -102,6 +102,8 @@ uniform bool clipPlaneActive;
 uniform vec3 clipPlanePosition;
 uniform vec3 clipPlaneDirection;
 
+uniform float waterRelativeHeight = 0.0;
+
 uniform vec3 subterrainOffset = vec3(0, 0, 0);
 uniform float subterrainScale = 1.0;
 
@@ -146,11 +148,30 @@ uniform int maxBiomesColorTextures;
 uniform sampler2D allBiomesNormalTextures;
 uniform int maxBiomesNormalTextures;
 
+//vec4 sandColor = vec4(.761, .698, .502, 1.0);
+//vec4 mudColor = vec4(.430, .320, .250, 1.0);
+//vec4 rockColor = vec4(.755, .754, .748, 1.0);
+
+//float densities[5] = float[5](0.3, 0.5, 0.8, 0.9, 1.2);
+//vec4 colors[5] = vec4[5](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.430, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
+
+float densities[4] = float[4](0.3, 0.5, 0.6, 0.7);
+vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
+int texIndices[4] = int[4](6, 5, 4, 2);
+//float sandDensity = 0.5;
+//float mudDensity = 0.6;
+//float rockDensity = 0.7;
+
 vec3 hsv2rgb(vec3 c)
 {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
     vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+}
+
+float sigmoid(float x, float _null) {
+    // Approximaton
+    return 0.5 + x * (1.0 - abs(x) * 0.5);
 }
 
 vec3 getBiomeColor(vec2 pos) {
@@ -159,19 +180,60 @@ vec3 getBiomeColor(vec2 pos) {
 //    return hsv2rgb(vec3(val, 1.0, 1.0));
     return vec3(val, 1.0, 1.0);
 }
-vec3 getDensityColor(vec3 pos) {
+float getDensity(vec3 pos, float resolution) {
     float density = 0.0;
-    float resolution = 0.5;
-    for (int x = 0; x < 10; x++) {
-        for (int y = 0; y < 10; y++) {
-            for (int z = 0; z < 10; z++) {
-                vec3 newPos = pos + vec3(resolution * (x/10.0 - .5), resolution * (y/10.0 - .5), resolution * (z/10.0 - .5));
-                density += max(0.0, texture(dataFieldTex, newPos).a);
+    float surrounding = 3.f;
+    for (float x = 0; x < surrounding; x++) {
+        for (float y = 0; y < surrounding; y++) {
+            for (float z = 0; z < surrounding; z++) {
+                float divisor = float(int(surrounding*.5f));
+                vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
+//                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
+                float val = texture(dataFieldTex, newPos).a;
+                density = max(density, val);
             }
         }
     }
-    density  /= 10*10*10;
-    return vec3(density, density, density);
+    return density;
+}
+int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
+    float density = getDensity(pos/ terrainSize, 1.0 / terrainSize.x);
+//    density /= 1.0 + (min(depth, 0.0) / 200.0);
+//    density *= 1.0 + (max(-depth, 0.0) / 100.0);
+    float power = 1.0;
+    int index = -1;
+    if (density <= densities[0]) {
+        index = texIndices[0];
+    } else if (density >= densities[densities.length() - 1]) {
+        index = texIndices[densities.length() - 1];
+    } else {
+        for (int i = 0; i < densities.length() - 1; i++)
+            index = (densities[i] <= density && density < densities[i + 1] ? (density < (densities[i] + densities[i + 1])/2.0 ? texIndices[i] : texIndices[i+1]) : index);
+    }
+    return index;
+}
+vec4 getDensityColor(vec3 pos, vec3 terrainSize) {
+    float density = getDensity(pos/ terrainSize, 1.0 / terrainSize.x);
+    float power = 1.0;
+    vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+    if (density <= densities[0]) {
+        color *= colors[0];
+    } else if (density >= densities[densities.length() - 1]) {
+        color *= colors[colors.length() - 1];
+    } else {
+        for (int i = 0; i < densities.length() - 1; i++)
+            color *= (densities[i] <= density && density < densities[i + 1] ? mix(colors[i], colors[i + 1], (density - densities[i])/(densities[i + 1] - densities[i])) : vec4(1.0, 1.0, 1.0, 1.0));
+    }
+//    if (density <= sandDensity) {
+//        color *= sandColor;
+//    } else if (density > sandDensity && density <= mudDensity) {
+//        color *= mix(sandColor, mudColor, pow((density - sandDensity)/(mudDensity - sandDensity), power));
+//    } else if (density > mudDensity && density <= rockDensity) {
+//        color *= mix(mudColor, rockColor, pow((density - mudDensity)/(rockDensity - mudDensity), power));
+//    } else  {
+//        color *= rockColor;
+//    }
+    return color;
 }
 
 
@@ -218,12 +280,19 @@ void main(void)
     vec3 H = normalize(varyingHalfH);
 
     vec3 realFragmentPosition = (ginitialVertPos.xyz / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
+    vec3 dataTexSize = textureSize(dataFieldTex, 0);
 
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     vec2 fbmWrap = clamp(ginitialVertPos.xy + 2.0 * (fbm3ToVec2(realFragmentPosition) - vec2(.5, .5)) * 5.0 * subterrainScale, vec2(0.51, 0.51), texSize - vec2(0.51, 0.51)) - ginitialVertPos.xy;
     float biomeColorValue = texture(heightmapFieldTex, (realFragmentPosition.xy + fbmWrap)/texSize).r;
     float realBiomeColorValue = texture(heightmapFieldTex, (realFragmentPosition.xy)/texSize).r;
     float biomeNormalValue = texture(heightmapFieldTex, (realFragmentPosition.xy + fbmWrap)/texSize).r;
+
+    float depth = (waterRelativeHeight * textureSize(dataFieldTex, 0).z - realFragmentPosition.z); // Depth from surface
+
+//    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
+//    realBiomeColorValue = float(getDensityIndex(realFragmentPosition, dataTexSize, depth)) / maxBiomesColorTextures;
+//    biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
     float scale = 10.0;
     vec3 blending = getTriPlanarBlend(grealNormal);
@@ -271,21 +340,20 @@ void main(void)
     vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     float dist_source = length(light.position - ginitialVertPos) / 50.0;
     float dist_cam = length(cam_pos - vertEyeSpacePos) / 50.0;
-    float albedo = 3.14;
-//    float albedo = 1.0;
+//    float albedo = 3.14;
+    float albedo = 1.0;
 
-    float depth = (textureSize(dataFieldTex, 0).z - realFragmentPosition.z) / 100.0; // Depth from surface, the "90" is hard-coded and should b given by the program
     vec4 attenuation_coef = vec4(vec3(0.000245, 0.0027, 0.0020) * depth, 1.0);
-    vec4 absorbtion_coef = vec4(vec3(0.210, 0.75, 0.95), 1.0);
+    vec4 absorbtion_coef = vec4(vec3(0.210, 0.075, 0.095), 1.0);
 //    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
-//    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005), 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
+//    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005) * depth, 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
     vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
     vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
 
     float fogStart = fogNear;
     float fogEnd = fogFar;
-    float dist = length(vertEyeSpacePos);
-    float fogFactor = clamp(((fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0);
+    float dist = length(vertEyeSpacePos) / 100000;
+    float fogFactor = 1.0; // depth < 0.0 ? clamp(((1 - (depth / 10.0)) * (fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0) : 0.0;
 
     float lumin = 1.0;
     if (isSpotlight && false) {
@@ -298,8 +366,17 @@ void main(void)
     if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0) * gcolor;
-    vec3 dataTexSize = textureSize(dataFieldTex, 0);
-    fragColor = vec4(getDensityColor(realFragmentPosition / dataTexSize), 1.0);
+
+//    fragColor = material_color * gcolor;
+//    if (depth > 0)
+//        fragColor *= vec4(0.8, 1.0, 0.9, 1.0);
+//    fragColor = vec4(texture(dataFieldTex, (realFragmentPosition + vec3(-1, -1, -1)) / dataTexSize, 0).a,
+//                     texture(dataFieldTex, (realFragmentPosition + vec3(0, 0, 0)) / dataTexSize, 0).a,
+//                     texture(dataFieldTex, (realFragmentPosition + vec3(1, 1, 1)) / dataTexSize, 0).a,
+//                     1.0);
+//    return;
+    fragColor *= getDensityColor(realFragmentPosition, dataTexSize);
+//    fragColor *= (depth < 0.0 ? vec4(0.5, 0.8, 0.9, 1.0) : vec4(1.0, 1.0, 1.0, 1.0));
 
     if (displayingIgnoredVoxels) {
         fragColor = vec4(0, 0, 0, 0.1);
