@@ -79,12 +79,17 @@ void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectio
                     float grid_height = gridHeights.at((xChunk * chunkSize + x), (yChunk * chunkSize + y)) * (this->sizeZ / (grid.getMaxHeight() * 2));
                     int z = int(grid_height);
                     // Add some positive noise for h < height
-                    for (int i = 0; i < z; i++) {
+                    int i = 0;
+                    for (; i < z-2; i++) {
                         float noise_val = getNoiseValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), i);
                         data[iChunk].at(x, y, i) = abs(noise_val);
                     }
+                    for (; i < z; i++) {
+                        float noise_val = .3f; //= getNoiseValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), i);
+                        data[iChunk].at(x, y, i) = abs(noise_val);
+                    }
                     // Add negative noise for h > height
-                    for (int i = z; i < this->getSizeZ(); i++) {
+                    for (; i < this->getSizeZ(); i++) {
                         float noise_val = getNoiseValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), i);
                         data[iChunk].at(x, y, i) = -abs(noise_val);
                     }
@@ -264,6 +269,8 @@ void VoxelGrid::initMap()
     float diffusion = 0.1f;
     float viscosity = 0.01f;
     this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, dt, diffusion, viscosity, 10);
+
+    this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1000); // Fill with water density
 }
 
 void VoxelGrid::createMesh()
@@ -635,11 +642,15 @@ void VoxelGrid::computeVoxelGroups()
 
 Matrix3<float> VoxelGrid::getVoxelValues()
 {
-    Matrix3<float> values(this->sizeX, this->sizeY, this->sizeZ);
-    for (auto& vc : this->chunks) {
-        values.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+    if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
+        this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
+
+        this->_cachedVoxelValues = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        for (auto& vc : this->chunks) {
+            this->_cachedVoxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+        }
     }
-    return values;
+    return this->_cachedVoxelValues;
 }
 
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {
@@ -664,11 +675,12 @@ float VoxelGrid::getVoxelValue(Vector3 pos) {
 }
 
 float VoxelGrid::getVoxelValue(float x, float y, float z) {
-    int iChunk, voxPosX, voxPosY, _z;
+    /*int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
         return this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z);
-    return -1;
+    return -1;*/
+    return this->getVoxelValues().at(x, y, z);
 }
 void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
     this->setVoxelValue(pos.x, pos.y, pos.z, newVal);

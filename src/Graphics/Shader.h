@@ -12,6 +12,7 @@ class Shader;
 #include "Graphics/ShaderElement.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Matrix.h"
+#include <string>
 
 class Shader
 {
@@ -20,10 +21,14 @@ public:
     static std::set<std::shared_ptr<Shader>> allShaders;
     Shader();
     Shader(Shader& copy);
-    Shader(const char* vertexShaderFilename);
-    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
-    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
-           const char* geometryShaderFilename);
+    Shader(std::string vertexShaderFilename);
+    Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename);
+    Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename,
+           std::string geometryShaderFilename);
+//    Shader(const char* vertexShaderFilename);
+//    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
+//    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
+//           const char* geometryShaderFilename);
     void compileShadersFromSource();
 
     bool use(bool update_source_files = false);
@@ -46,15 +51,14 @@ public:
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
-
     static std::string readShaderSource(std::string filename);
 
     std::map<int, GLuint> textureSlotIndices;
 
     unsigned int programID = 0;
-    const char* vertexShaderFilename;
-    const char* fragmentShaderFilename;
-    const char* geometryShaderFilename;
+    std::string vertexShaderFilename = "";
+    std::string fragmentShaderFilename = "";
+    std::string geometryShaderFilename = "";
 
     int lightCount = 0;
 
