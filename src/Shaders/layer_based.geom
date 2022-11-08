@@ -29,7 +29,7 @@ out float gdensity;
 
 float getDensityPerMaterial(int material)
 {
-    float density = 0.0;
+    float density = 0.01;
     if (material == 0) {
         density = -10.0;
     } else if (material == 1) {
@@ -39,13 +39,9 @@ float getDensityPerMaterial(int material)
     } else if (material == 3) {
         density = 0.75;
     } else if (material == 4) {
-        density = 1.5;
+        density = 1.4;
     } else if (material == 5) {
         density = 2.5;
-    } else if (material == 6) {
-        density = 4.0;
-    } else {
-        density = 8.0;
     }
     return density;
 }
@@ -80,9 +76,11 @@ vec4 getPosition(vec4 position, vec3 _offset)
 void main(void) {
     vec4 texture_position = vec4(initialVertPos[0].xyz, 1.0);
     vec4 position = vec4(texture_position.xy, 0.0, 1.0);
-//    position *= 1.2;
 
-    gdensity = getDensityPerMaterial(int(texelFetch(matIndicesTex, ivec3(texture_position.xyz), 0).a));
+    gdensity = getDensityPerMaterial(int(round(texelFetch(matIndicesTex, ivec3(texture_position.xyz), 0).a)));
+
+    if (gdensity <= 0.0) return; // Don't send to the frag shader if it's water/air
+//    gdensity = max(0.0, gdensity + 0.5);
 
 //    if (!useMarchingCubes) {
     if (true) {

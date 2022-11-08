@@ -21,39 +21,11 @@ LayerBasedGrid::LayerBasedGrid() : LayerBasedGrid(10, 10, 1.f)
 
 }
 LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
-    //: sizeX(nx), sizeY(ny), sizeZ(nz)
 {
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(nx, ny, 1, {{TerrainTypes::BEDROCK, nz}}); // Initial terrain = 1 layer of bedrock
 }
 
 void LayerBasedGrid::createMesh() {
-/*
-//    this->computeGroups();
-
-    std::vector<Vector3> voxelVertices;
-    std::vector<Vector3> colors;
-    this->applyToVoxels([&](std::shared_ptr<Voxel> v) -> void {
-        if ((bool)*v) {
-            // Add the vertices to the global mesh
-            std::vector<Vector3> vertice = v->getMeshVertices();
-            voxelVertices.insert(voxelVertices.end(), vertice.begin(), vertice.end());
-            // Add the colors to each vertex
-            int X = 6; // Start with 6 faces
-
-            for(auto& n : v->neighbors)
-                if (n.second && (bool)*n.second)
-                    X--;    // Remove a face per neighbor
-            X *= 6; // Multiply the number of face by the 6 vertex that defines it (2 triangles)
-            for (int x = 0; x < X; x++) {
-                colors.push_back(Vector3(random_gen::generate(), random_gen::generate(), random_gen::generate())); //(v->isOnGround ? 1.0 : 0.0), (v->isOnGround ? 0.0 : 1.0), 1.0));
-//                        colors->push_back(HSVtoRGB((voxels[i][j][k]->group/((float)Voxel::voxelGroups.size()+1)), 1.0, 1.0));
-            }
-        }
-    });
-
-    this->mesh.colorsArray = colors;
-    this->mesh.fromArray(voxelVertices);
-    this->mesh.update();*/
 }
 
 void LayerBasedGrid::display() {
@@ -259,7 +231,7 @@ void LayerBasedGrid::thermalErosion()
                             if (!layers.checkCoord(nPos)) continue;
 
                             float currentNHeight = 0.f;
-                            for (size_t neighbor = 0; neighbor < layers.at(nPos).size(); neighbor++) {
+                            for (size_t neighbor = 0; neighbor < layers.at(nPos).size() && currentNHeight < higherPos; neighbor++) {
                                 TerrainTypes nType = layers.at(nPos)[neighbor].first;
                                 float nHeight = layers.at(nPos)[neighbor].second;
                                 float nDensity = LayerBasedGrid::densityFromMaterial(nType);
@@ -285,6 +257,18 @@ void LayerBasedGrid::thermalErosion()
 
                                 currentNHeight = higherNPos;
                             }
+
+                            if (currentNHeight < higherPos) {
+                                float sharedMatter = std::min(sharableMatter, higherPos - currentNHeight);
+                                if (sharedMatter > 0.01f) {
+                                    sharableMatter -= sharedMatter;
+
+                                    layers.at(nPos).insert(layers.at(nPos).end(), {type, sharedMatter});
+
+//                                    higherPos -= sharedMatter;
+                                    stack[i].second -= sharedMatter;
+                                }
+                            }
                         }
                     }
                 }
@@ -292,7 +276,7 @@ void LayerBasedGrid::thermalErosion()
             }
         }
     }
-    this->cleanLayers();
+    this->reorderLayers();
 }
 
 void LayerBasedGrid::cleanLayers(float minLayerHeight)
@@ -329,7 +313,7 @@ void LayerBasedGrid::add(Patch2D &patch, TerrainTypes material, bool applyDistan
             this->addLayer(Vector3(x, y), height * strength, material);
         }
     }
-    this->reorderLayers();
+//    this->reorderLayers();
     return;
 }
 

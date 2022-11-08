@@ -729,6 +729,12 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     };
     Patch2D sandLayer = Patch2D(terrainSize * .5f, bedrockArea, noisySandLayer);
 
+    std::function noisySmallSandLayer = [&](Vector3 pos) {
+        float noiseValue = noise.GetNoise(pos.x * .5f + 500.f, pos.y * .5f + 500.f) * 2.f + 2.f;
+        return noiseValue;
+    };
+    Patch2D smallSandLayer = Patch2D(terrainSize * .5f, bedrockArea, noisySmallSandLayer);
+
 
     std::function noisyRock = [&](Vector3 pos) {
         float noiseValue = noise.GetNoise(pos.x * 2.f + 5000.f, pos.y * 2.f + 5000.f) * 3.f;
@@ -758,7 +764,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                             Vector3(-1, 1),
                                             Vector3(1, 1),
                                             Vector3(1, -1)
-                                        }).scale(20.f);
+                                        }).scale(15.f);
     Patch2D sand = Patch2D(terrainSize * .5f, sandArea, noisySandBump);
 
 
@@ -771,7 +777,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     newVoxels = layerGrid->voxelize(terrainSize.z);
     voxelGrid->applyModification(newVoxels - oldVoxels);
     oldVoxels = newVoxels;
-//    return;
+
 
     layerGrid->add(sandLayer, TerrainTypes::SAND, false);
     newVoxels = layerGrid->voxelize(terrainSize.z);
@@ -794,15 +800,15 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         voxelGrid->applyModification(newVoxels - oldVoxels);
         oldVoxels = newVoxels;
     }
-    //    layerGrid->add(sand, TerrainTypes::SAND, true, 1.f);
+//        layerGrid->add(sand, TerrainTypes::SAND, true, 1.f);
     layerGrid->add(sandLayer, TerrainTypes::SAND, false);
     newVoxels = layerGrid->voxelize(terrainSize.z);
     voxelGrid->applyModification(newVoxels - oldVoxels);
     oldVoxels = newVoxels;
 
 
-//    for (int i = 0; i < 100; i++)
-//        layerGrid->thermalErosion();
+    for (int i = 0; i < 10; i++)
+        layerGrid->thermalErosion();
     layerGrid->cleanLayers();
     newVoxels = layerGrid->voxelize(terrainSize.z);
     voxelGrid->applyModification(newVoxels - oldVoxels);
@@ -898,50 +904,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_noise", false}
                                           }));
 }
-/*
-Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, Vector3 pos) {
-    pos.z = std::max(pos.z, 0.f); // In case of small imprecision
-    while (grid->getVoxelValue(pos) > 0) {
-        pos += Vector3(0, 0, 1); // Move the position one voxel heigher
-        if (!grid->contains(pos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
-            pos.z = 0;
-            break;
-        }
-    }
-    return pos;
-}
-std::shared_ptr<BiomeInstance> recursivelyCreateBiome(nlohmann::json json_content, Vector3 biomePosition, ShapeCurve area) {
-    std::string biomeClass = json_content.at("class").get<std::string>();
-    // Should be able to retrieve the parameters of the biome...
-    std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
-    instance->position = biomePosition;
-    instance->area = area;
-    auto children = json_content.at("children");
-    Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve();
-    for (size_t i = 0; i < children.size(); i++) {
-        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiome(children[i], diagram.pointset[i], subarea_borders[i]);
-        childBiome->parent = instance;
-        instance->instances.push_back(childBiome);
-    }
-    return instance;
-}
-Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
-    Matrix3<float> erosionMatrix(grid->getDimensions());
-    float nb_points_on_path = path.length() / (size/5.f);
-    RockErosion rock(size, strength);
-    for (const auto& pos : path.getPath(nb_points_on_path)) {
-        erosionMatrix = rock.computeErosionMatrix(erosionMatrix, pos);
-    }
-    erosionMatrix = erosionMatrix.abs();
-    erosionMatrix.toDistanceMap();
-    erosionMatrix.normalize();
-    for (float& m : erosionMatrix) {
-        m = interpolation::linear(m, 0.f, 1.0) * strength * (addingMatter ? 1.f : -1.f);
-//        m = interpolation::quadratic(interpolation::linear(m, 0.f, 5.f)); //(sigmoid(m) - s_0) / (s_1 - s_0);
-    }
-    return erosionMatrix;
-}*/
+
 void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
 {
     if (!this->heightmap)

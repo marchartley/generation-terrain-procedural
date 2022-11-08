@@ -10,9 +10,9 @@ class Voxel;
 
 enum TerrainTypes {
     AIR = 0,
-    DIRT = 1,
-    WATER = 2,
-    SAND = 3,
+    WATER = 1,
+    SAND = 2,
+    DIRT = 3,
     ROCK = 4,
     BEDROCK = 5,
     LAST

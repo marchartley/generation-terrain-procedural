@@ -164,10 +164,6 @@ float densities[4] = float[4](0.5, 0.6, 1.0, 2.0);
 vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
 int texIndices[4] = int[4](6, 5, 4, 2);
 
-//float sandDensity = 0.5;
-//float mudDensity = 0.6;
-//float rockDensity = 0.7;
-
 vec3 hsv2rgb(vec3 c)
 {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -187,7 +183,7 @@ vec3 getBiomeColor(vec2 pos) {
     return vec3(val, 1.0, 1.0);
 }
 float getDensity(vec3 pos, float resolution) {
-    if (textureSize(dataFieldTex, 0).x > 0) {
+    if (gdensity == 0) {
         float density = 0.0;
         float surrounding = 3.f;
         for (float x = 0; x < surrounding; x++) {
@@ -208,10 +204,8 @@ float getDensity(vec3 pos, float resolution) {
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
     float density = getDensity(pos / terrainSize, 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
-//    density /= 1.0 + (min(depth, 0.0) / 200.0);
-//    density *= 1.0 + (max(-depth, 0.0) / 100.0);
     float power = 1.0;
-    int index = -1;
+    int index = 0;
     if (density <= densities[0]) {
         index = texIndices[0];
     } else if (density >= densities[densities.length() - 1]) {
@@ -222,6 +216,7 @@ int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
     }
     return index;
 }
+/*
 vec4 getDensityColor(vec3 pos, vec3 terrainSize) {
     float density = getDensity(pos/ terrainSize, 1.0 / terrainSize.x);
     float power = 1.0;
@@ -245,7 +240,7 @@ vec4 getDensityColor(vec3 pos, vec3 terrainSize) {
 //    }
     return color;
 }
-
+*/
 
 vec3 getTriPlanarBlend(vec3 _wNorm){
     // in wNorm is the world-space normal of the fragment
@@ -294,7 +289,7 @@ void main(void)
     vec3 R = reflect(-L, N);
     vec3 H = normalize(varyingHalfH);
 
-    vec3 realFragmentPosition = ((ginitialVertPos.xyz - vec3(0.001)) / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
+    vec3 realFragmentPosition = (ginitialVertPos.xyz / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
     vec3 dataTexSize = textureSize(dataFieldTex, 0);
 
     vec2 texSize = textureSize(heightmapFieldTex, 0);
@@ -305,12 +300,8 @@ void main(void)
 
     float depth = (waterRelativeHeight * textureSize(dataFieldTex, 0).z - realFragmentPosition.z); // Depth from surface
 
-    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
     realBiomeColorValue = float(getDensityIndex(realFragmentPosition, dataTexSize, depth)) / maxBiomesColorTextures;
-
-//    fragColor = vec4(vec3(biomeColorValue, biomeColorValue, biomeColorValue), 1.0);
-//    fragColor = vec4(fract(realFragmentPosition), 1.0);
-//    return;
+    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
 
     biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
