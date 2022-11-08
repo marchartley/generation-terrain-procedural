@@ -5,10 +5,10 @@ GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity",
     this->createGUI();
 }
 
-void GravityInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void GravityInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
-}
+}*/
 
 void GravityInterface::display()
 {

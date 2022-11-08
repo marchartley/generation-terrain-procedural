@@ -360,6 +360,13 @@ BSpline BSpline::computeConvexHull()
     return stack;
 }
 
+BSpline &BSpline::translate(Vector3 translation)
+{
+    for (auto& point : points)
+        point += translation;
+    return *this;
+}
+
 BSpline& BSpline::removeDuplicates()
 {
     std::vector<Vector3> newPoints;

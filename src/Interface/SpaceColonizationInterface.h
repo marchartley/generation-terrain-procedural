@@ -33,7 +33,7 @@ public:
     void keyPressEvent(QKeyEvent* event);
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
     std::unique_ptr<ControlPoint> startingPoint;
     std::vector<std::unique_ptr<ControlPoint>> controlPoints;

@@ -6,6 +6,7 @@ build-Debug/*
 screenshots/*
 shared_screenshots/
 shared_images/
+.cccc/
 
 doc/
 

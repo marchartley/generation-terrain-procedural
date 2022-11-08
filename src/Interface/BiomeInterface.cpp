@@ -331,14 +331,14 @@ void BiomeInterface::replaceBiome(std::shared_ptr<BiomeInstance> biomeToReplace,
 //    biomeToReplace->completeIfNeeded();
 }
 
-void BiomeInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void BiomeInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
 }
 void BiomeInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
 {
     this->heightmap = heightmap;
-}
+}*/
 
 void BiomeInterface::replay(nlohmann::json action)
 {

@@ -13,16 +13,15 @@ HeightmapErosionInterface::HeightmapErosionInterface(QWidget *parent)
 
 void HeightmapErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
-    this->voxelGrid = voxelGrid;
-
+    ActionInterface::affectVoxelGrid(voxelGrid);
     this->windDirectionSelector->setPositions(Vector3(0, 0, voxelGrid->getSizeZ()), (windDirection.normalized() * voxelGrid->getSizeX() / 10.f) * Vector3(1, 1, 0) + Vector3(0, 0, voxelGrid->getSizeZ()));
     QObject::connect(windDirectionSelector.get(), &InteractiveVector::modified, [&](Vector3 newVal) { this->windDirection = newVal.normalized() * 2.f; } );
 }
 
-void HeightmapErosionInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
+/*void HeightmapErosionInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
 {
     this->heightmap = heightmap;
-}
+}*/
 
 void HeightmapErosionInterface::display()
 {

@@ -162,3 +162,20 @@ float deg2rad(float deg)
 {
     return (deg * PI) / 180.f;
 }
+
+float gaussian(Vector3 size, Vector3 position, float sigma)
+{
+    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
+    float sqrSigma = sigma * sigma;
+    position -= (size * .5f);
+    float gaussian = std::exp(-position.norm2()/(2*sqrSigma)) * oneOverSqrt2Pi;
+    return gaussian;
+}
+
+float normalizedGaussian(Vector3 size, Vector3 position, float sigma)
+{
+    float maxValue = gaussian(size, size * .5f, sigma);
+    if (maxValue > 0.f)
+        return gaussian(size, position, sigma) / maxValue;
+    return 0.f;
+}

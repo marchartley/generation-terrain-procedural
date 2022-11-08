@@ -22,13 +22,20 @@ ShapeCurve::ShapeCurve(BSpline path)
     }
 }
 
+ShapeCurve &ShapeCurve::translate(Vector3 translation)
+{
+    for (auto& point : points)
+        point += translation;
+    return *this;
+}
+
 bool ShapeCurve::inside(Vector3 pos, bool useNativeShape)
 {
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
         pointsUsed = this->points;
-        if (!this->points.empty())
-            pointsUsed.insert(pointsUsed.end(), this->points.front());
+//        if (!this->points.empty())
+//            pointsUsed.insert(pointsUsed.end(), this->points.front());
     } else {
         pointsUsed = this->getPath(10);
     }
@@ -269,6 +276,13 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
             break;
     }
     return returnedPoints;
+}
+
+ShapeCurve &ShapeCurve::scale(float factor)
+{
+    for (auto& vert : this->points)
+        vert *= factor;
+    return *this;
 }
 
 

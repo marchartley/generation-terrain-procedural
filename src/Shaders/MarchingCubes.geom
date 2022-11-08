@@ -12,7 +12,7 @@
 #extension GL_EXT_gpu_shader4 : enable
 
 layout ( points ) in;
-layout ( triangle_strip, max_vertices = 16 ) out;
+layout ( triangle_strip, max_vertices = 24 ) out;
 
 //Volume data field texture
 uniform sampler3D dataFieldTex;
@@ -82,6 +82,11 @@ vec3 vertexInterp(float isolevel, vec3 v0, float l0, vec3 v1, float l1){
     return mix(v0, v1, (isolevel-l0)/(l1-l0));
 }
 
+vec4 getPosition(vec4 position, vec3 _offset)
+{
+    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+}
+
 int getCubeIndex(vec3 voxPos, out vec3 normal) {
     int cubeindex = 0;
     float cubeVal0 = cubeVal(voxPos, 0);
@@ -141,7 +146,10 @@ void main(void) {
 
     if (!useMarchingCubes) {
         if (cubeVal(position.xyz) < isolevel) return;
-        ginitialVertPos = position.xyz;
+        if (position.x + 1 < min_vertice_positions.x || position.x > max_vertice_positions.x ||
+            position.y + 1 < min_vertice_positions.y || position.y > max_vertice_positions.y ||
+            position.z + 1 < min_vertice_positions.z || position.z > max_vertice_positions.z)
+            return;
         bool nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  0,  1)) < -1000);
         bool nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  0, -1)) < -1000);
         bool nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 1,  0,  0)) < -1000);
@@ -150,55 +158,98 @@ void main(void) {
         bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  1,  0)) < -1000);
         // Front
         grealNormal = vec3(0, -1, 0);
+
         if (nFront) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 0)).xyz;
             EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
+            EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 0)).xyz;
+            EmitVertex();
+            EndPrimitive();
         }
         // Left-front corner
-        if (nFront || nRight) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 0, 0, 0));
-            EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 0, 1, 0));
-            EmitVertex();
-        }
+//        if (nFront || nRight) {
+//            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
+//            ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
+//            EmitVertex();
+//            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0));
+//            ginitialVertPos = getPosition(position, vec3(1, 0, 0)).xyz;
+//            EmitVertex();
+//        }
         // Right
         grealNormal = vec3(1, 0, 0);
         if (nRight || nBack) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 1, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 1, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 0)).xyz;
             EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 1)).xyz;
+            EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 0)).xyz;
+            EmitVertex();
+            EndPrimitive();
         }
         // Right
         grealNormal = vec3(0, 1, 0);
-        if (nBack || nLeft) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 1, 0, 0));
+//        if (nBack || nLeft) {
+        if (nBack) {
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 1, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 0)).xyz;
             EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 1)).xyz;
+            EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 0)).xyz;
+            EmitVertex();
+            EndPrimitive();
         }
         // Back
         grealNormal = vec3(-1, 0, 0);
         if (nLeft) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 0)).xyz;
             EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 1)).xyz;
+            EmitVertex();
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 0)).xyz;
+            EmitVertex();
+            EndPrimitive();
         }
-        EndPrimitive();
 
         // Bottom
         grealNormal = vec3(0, 0, -1);
         if (nBottom) {
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 0)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 0, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 0)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 1, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 0)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 1, 0, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 0));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 0)).xyz;
             EmitVertex();
             EndPrimitive();
         }
@@ -207,13 +258,17 @@ void main(void) {
 
         if (nTop) {
             grealNormal = vec3(0, 0, 1);
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 0, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 0, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 0, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(0, 1, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(0, 1, 1)).xyz;
             EmitVertex();
-            gl_Position = proj_matrix * mv_matrix * (position + vec4(1, 1, 1, 0));
+            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1));
+            ginitialVertPos = getPosition(position, vec3(1, 1, 1)).xyz;
             EmitVertex();
             EndPrimitive();
         }

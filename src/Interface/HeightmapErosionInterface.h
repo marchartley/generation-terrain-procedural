@@ -19,7 +19,7 @@ public:
     HeightmapErosionInterface(QWidget *parent = nullptr);
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    void affectHeightmap(std::shared_ptr<Grid> heightmap);
+//    void affectHeightmap(std::shared_ptr<Grid> heightmap);
 
     void display();
 
@@ -36,8 +36,8 @@ public Q_SLOTS:
     void windErosion();
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
-    std::shared_ptr<Grid> heightmap;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<Grid> heightmap;
 
 protected:
     Mesh hydraulicMesh;

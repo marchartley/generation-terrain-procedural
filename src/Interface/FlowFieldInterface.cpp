@@ -5,10 +5,10 @@ FlowFieldInterface::FlowFieldInterface(QWidget *parent) : ActionInterface("flowf
     this->createGUI();
 }
 
-void FlowFieldInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void FlowFieldInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
-}
+}*/
 
 void FlowFieldInterface::display()
 {

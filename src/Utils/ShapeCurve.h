@@ -19,10 +19,13 @@ public:
     Vector3 planeNormal();
     ShapeCurve grow(float increase);
     ShapeCurve shrink(float decrease);
+    ShapeCurve& translate(Vector3 translation);
 
     ShapeCurve& removeDuplicates();
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
+
+    ShapeCurve& scale(float factor);
 };
 
 #endif // SHAPECURVE_H

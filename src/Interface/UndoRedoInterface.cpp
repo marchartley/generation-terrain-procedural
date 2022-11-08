@@ -7,10 +7,10 @@ UndoRedoInterface::UndoRedoInterface(QWidget *parent) : ActionInterface("undo-re
     this->createGUI();
 }
 
-void UndoRedoInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void UndoRedoInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
-}
+}*/
 
 void UndoRedoInterface::display()
 {

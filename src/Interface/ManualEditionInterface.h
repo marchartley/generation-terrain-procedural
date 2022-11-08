@@ -18,7 +18,7 @@ public:
     void display();
     void replay(nlohmann::json action);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     QLayout* createGUI();
 
 public Q_SLOTS:
@@ -42,7 +42,7 @@ public:
 
     bool readyToModify = false;
 
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
     int manualEditionSize = 10;
     float manualEditionStrength = 2.f;

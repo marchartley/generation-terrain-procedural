@@ -98,4 +98,7 @@ U remap(T val, T oldMin, T oldMax, U newMin, U newMax)
     return lerp(oldProgress, newMin, newMax);
 }
 
+float gaussian(Vector3 size, Vector3 position, float sigma);
+float normalizedGaussian(Vector3 size, Vector3 position, float sigma);
+
 #endif // UTILS_H

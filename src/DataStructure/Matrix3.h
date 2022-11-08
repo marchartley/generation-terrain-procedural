@@ -87,7 +87,7 @@ public:
     Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
     Matrix3<T> concat(Matrix3<T> matrixToConcat);
 
-    Matrix3<float> toDistanceMap();
+    Matrix3<float> toDistanceMap(bool ignoreZlayer = false);
 
     template<typename U>
     Matrix3<T> convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
@@ -1144,7 +1144,7 @@ Matrix3<T>& Matrix3<T>::min(Matrix3<T> otherMatrix, int left, int up, int front)
 }
 
 template<class T>
-Matrix3<float> Matrix3<T>::toDistanceMap()
+Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer)
 {
     Matrix3<float> distances(this->sizeX, this->sizeY, this->sizeZ, std::numeric_limits<float>::max() - 10000);
     distances.raiseErrorOnBadCoord = false;
@@ -1166,6 +1166,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dz = -1; dz <= 1; dz++) {
+                            if (ignoreZlayer && dz != 0) continue;
                             // Weighted distance transform
 //                            currentVal = std::min(currentVal, distances.at(dx, dy, dz) + predefinedDistances[std::abs(dx) + std::abs(dy) + std::abs(dz)]);
                             currentVal = std::min(currentVal, distances.at(x+dx, y+dy, z+dz) + (float)std::sqrt(dx*dx + dy*dy + dz*dz));
@@ -1188,6 +1189,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap()
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dz = -1; dz <= 1; dz++) {
+                            if (ignoreZlayer && dz != 0) continue;
                             currentVal = std::min(currentVal, distances.at(x+dx, y+dy, z+dz) + (float)std::sqrt(dx*dx + dy*dy + dz*dz));
                         }
                     }

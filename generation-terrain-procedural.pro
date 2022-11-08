@@ -69,6 +69,7 @@ SOURCES += \
         src/Graphics/DebugShader.cpp \
     src/Graphics/DisplayGraphics.cpp \
         src/Graphics/MarchingCubes.cpp \
+    src/Graphics/RayMarching.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
         src/Graphics/ShaderElement.cpp \
@@ -183,6 +184,7 @@ HEADERS += \
     src/Graphics/DisplayGraphics.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
+    src/Graphics/RayMarching.h \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
@@ -291,4 +293,7 @@ RESOURCES +=\
 FORMS +=
 
 DISTFILES += \
-    src/Shaders/computeMC.comp
+    src/Shaders/computeMC.comp \
+    src/Shaders/layer_based.geom \
+    src/Shaders/test_raymarching_voxels.frag \
+    src/Shaders/test_raymarching_voxels.vert

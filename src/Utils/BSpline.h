@@ -52,6 +52,8 @@ public:
 
     BSpline computeConvexHull();
 
+    BSpline& translate(Vector3 translation);
+
     virtual BSpline& removeDuplicates();
 
     std::string toString() const;

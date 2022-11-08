@@ -14,17 +14,25 @@ class LayerBasedGrid;
 #include <tuple>
 #include "Graphics/Mesh.h"
 #include "Utils/FastNoiseLit.h"
+#include "Utils/ShapeCurve.h"
+
+class Patch2D;
+class Patch3D;
 
 class LayerBasedGrid
 {
 public:
     LayerBasedGrid();
-    LayerBasedGrid(int nx, int ny, float nz);
+    LayerBasedGrid(int nx, int ny, float nz = 1);
 
     void createMesh();
     void display();
     TerrainTypes getValue(Vector3 pos);
     TerrainTypes getValue(float x, float y, float z);
+
+    void addLayer(Vector3 position, float height, TerrainTypes material);
+
+    void reorderLayers();
 
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
 
@@ -37,12 +45,40 @@ public:
     Mesh mesh;
 
     void from2DGrid(Grid grid);
-    void fromVoxelGrid(VoxelGrid voxelGrid);
+    void fromVoxelGrid(VoxelGrid& voxelGrid);
+
+    VoxelGrid toVoxelGrid();
+    Matrix3<float> voxelize(int fixedHeight = -1);
+
+    std::pair<Matrix3<int>, Matrix3<float> > getMaterialAndHeightsGrid();
+
+    void thermalErosion();
+
+    void cleanLayers(float minLayerHeight = 0.1f);
+
+    void add(Patch2D& patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
     static float densityFromMaterial(TerrainTypes material);
 };
+
+
+
+class Patch2D
+{
+public:
+    Patch2D();
+    Patch2D(Vector3 pos, ShapeCurve shape, std::function<float(Vector3)> heightFunction);
+
+    float getHeight(Vector3 position);
+
+    Vector3 position;
+    ShapeCurve shape;
+    std::function<float(Vector3)> heightFunction;
+};
+
+
 /*
 class LayerBasedGrid;
 

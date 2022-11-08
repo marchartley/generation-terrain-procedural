@@ -12,6 +12,7 @@ class Shader;
 #include "Graphics/ShaderElement.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Matrix.h"
+//#include <glm/glm.hpp>
 #include <string>
 
 class Shader
@@ -29,7 +30,7 @@ public:
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
 //           const char* geometryShaderFilename);
-    void compileShadersFromSource();
+    void compileShadersFromSource(std::map<std::string, std::string> addedDefinitions = std::map<std::string, std::string>());
 
     bool use(bool update_source_files = false);
 
@@ -37,6 +38,9 @@ public:
     void setInt(std::string pname, int value);
     void setFloat(std::string pname, float value);
     void setVector(std::string pname, Vector3 value);
+    void setVector(std::string pname, glm::vec2 value);
+//    void setVector(std::string pname, glm::vec3 value);
+    void setVector(std::string pname, glm::vec4 value);
     void setVector(std::string pname, float* value, int n);
     void setLightSource(std::string pname, LightSource& value);
     void addLightSource(std::string pname, LightSource& value);
@@ -52,6 +56,7 @@ public:
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
     static std::string readShaderSource(std::string filename);
+    static std::string addDefinitionsToSource(std::string src, std::map<std::string, std::string> newDefinitions);
 
     std::map<int, GLuint> textureSlotIndices;
 
@@ -60,6 +65,8 @@ public:
     std::string fragmentShaderFilename = "";
     std::string geometryShaderFilename = "";
 
+    std::map<std::string, std::string> definitions;
+
     int lightCount = 0;
 
     int vShader = -1;
@@ -67,6 +74,11 @@ public:
     int gShader = -1;
 
 
+    void setMat4(std::string pname, glm::mat4& values)
+    {
+        GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
+                                           1, GL_FALSE, &values[0][0]);
+    }
     template<typename T>
     void setMatrix(std::string pname, std::vector<std::vector<T>> values)
     {

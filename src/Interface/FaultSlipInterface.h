@@ -22,7 +22,7 @@ public:
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void replay(nlohmann::json action);
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 //    std::shared_ptr<FaultSlip> faultSlip;
     FaultSlip faultSlip;
 
