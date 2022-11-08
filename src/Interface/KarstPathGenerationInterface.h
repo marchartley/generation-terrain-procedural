@@ -33,7 +33,7 @@ public:
 //    bool isHidden;
 
     void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
     std::vector<BSpline> karstPaths;
 

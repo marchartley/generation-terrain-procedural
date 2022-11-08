@@ -37,10 +37,10 @@ void ManualEditionInterface::replay(nlohmann::json action)
     }
 }
 
-void ManualEditionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void ManualEditionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
-}
+}*/
 
 void ManualEditionInterface::show()
 {

@@ -62,14 +62,16 @@ ViewerInterface::ViewerInterface() {
 #endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
-        this->viewer->grid = this->terrainGenerationInterface->heightmapGrid;
+        this->viewer->grid = this->terrainGenerationInterface->heightmap;
+        this->viewer->layerGrid = this->terrainGenerationInterface->layerGrid;
 
         for (auto& actionInterface : this->actionInterfaces) {
             actionInterface.second->affectVoxelGrid(this->viewer->voxelGrid);
             actionInterface.second->affectHeightmap(this->viewer->grid);
+            actionInterface.second->affectLayerGrid(this->viewer->layerGrid);
         }
 
-//        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmapGrid);
+//        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmap);
         if (terrainGenerationInterface->biomeGenerationNeeded) {
             this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
             this->biomeInterface->generateBiomes();
@@ -302,21 +304,21 @@ void ViewerInterface::setupUi()
     sliderXactivation->setChecked(true);
     QObject::connect(sliderXactivation, &QCheckBox::toggled, this, [&](bool active) {
         if (active) { this->viewer->minSliceMapX = this->mapSliceSliderX->min_value(); this->viewer->maxSliceMapX = this->mapSliceSliderX->max_value(); }
-        else        { this->viewer->minSliceMapX = 0.f;                                this->viewer->maxSliceMapX = 1.f; }
+        else        { this->viewer->minSliceMapX = -10.f;                              this->viewer->maxSliceMapX = 10.f; }
         this->viewer->update();
     });
     QCheckBox* sliderYactivation = new QCheckBox("Activer");
     sliderYactivation->setChecked(true);
     QObject::connect(sliderYactivation, &QCheckBox::toggled, this, [&](bool active) {
         if (active) { this->viewer->minSliceMapY = this->mapSliceSliderY->min_value(); this->viewer->maxSliceMapY = this->mapSliceSliderY->max_value(); }
-        else        { this->viewer->minSliceMapY = 0.f;                                this->viewer->maxSliceMapY = 1.f; }
+        else        { this->viewer->minSliceMapY = -10.f;                              this->viewer->maxSliceMapY = 10.f; }
         this->viewer->update();
     });
     QCheckBox* sliderZactivation = new QCheckBox("Activer");
     sliderZactivation->setChecked(true);
     QObject::connect(sliderZactivation, &QCheckBox::toggled, this, [&](bool active) {
         if (active) { this->viewer->minSliceMapZ = this->mapSliceSliderZ->min_value(); this->viewer->maxSliceMapZ = this->mapSliceSliderZ->max_value(); }
-        else        { this->viewer->minSliceMapZ = 0.f;                                this->viewer->maxSliceMapZ = 1.f; }
+        else        { this->viewer->minSliceMapZ = -10.f;                              this->viewer->maxSliceMapZ = 10.f; }
         this->viewer->update();
     });
     displayModeLayout->addWidget(createMultipleSliderGroupWithCheckbox({

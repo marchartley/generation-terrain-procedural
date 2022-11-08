@@ -10,7 +10,7 @@ class UndoRedoInterface : public ActionInterface
 public:
     UndoRedoInterface(QWidget *parent = nullptr);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
     void replay(nlohmann::json action);
@@ -27,7 +27,7 @@ public Q_SLOTS:
     bool redo();
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
 };

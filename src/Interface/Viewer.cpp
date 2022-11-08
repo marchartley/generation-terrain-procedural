@@ -10,6 +10,8 @@
 #include "Interface/TerrainGenerationInterface.h"
 #include "Interface/VisitingCamera.h"
 #include <QTemporaryDir>
+#include "Graphics/RayMarching.h"
+
 #ifdef linux
     #include "sys/stat.h"
 #endif
@@ -81,6 +83,19 @@ void Viewer::init() {
     std::string vNoShader = pathToShaders + "no_shader.vert";
     std::string fNoShader = pathToShaders + "no_shader.frag";
 
+    std::string vRayMarch = pathToShaders + "test_raymarching_voxels.vert";
+    std::string fRayMarch = pathToShaders + "test_raymarching_voxels.frag";
+    this->raymarchingShader = std::make_shared<Shader>(vRayMarch, fRayMarch);
+    this->raymarchingShader->compileShadersFromSource({
+
+                                                      });
+    this->raymarchingQuad = Mesh({Vector3(-1.0f, -1.0f, 0.f),
+                                  Vector3(1.0f, -1.0f, 0.f),
+                                  Vector3(1.0f,  1.0f, 0.f),
+                                 Vector3(-1.0f, -1.0f, 0.f),
+                                 Vector3( 1.0f,  1.0f, 0.f),
+                                 Vector3(-1.0f,  1.0f)}, raymarchingShader);
+
     glEnable              ( GL_DEBUG_OUTPUT );
     GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
 
@@ -140,10 +155,81 @@ void Viewer::init() {
     }
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
+    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
+//    sceneUBO = ShaderUBO("scene_buf", 1, sizeof(rt_scene));
+//    sceneUBO.affectShader(raymarchingQuad.shader);
     QGLViewer::init();
 }
 
 void Viewer::draw() {
+//    QGLViewer::draw();
+    /*
+    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
+    raymarchingQuad.shader->use();
+    float pMatrix[16];
+    float mvMatrix[16];
+    camera()->getProjectionMatrix(pMatrix);
+    camera()->getModelViewMatrix(mvMatrix);
+    glm::mat4 mv_matrix(mvMatrix[0], mvMatrix[1], mvMatrix[2], mvMatrix[3], mvMatrix[4], mvMatrix[5], mvMatrix[6], mvMatrix[7], mvMatrix[8], mvMatrix[9], mvMatrix[10], mvMatrix[11], mvMatrix[12], mvMatrix[13], mvMatrix[14], mvMatrix[15]);
+    glm::mat4 proj_matrix(pMatrix[0], pMatrix[1], pMatrix[2], pMatrix[3], pMatrix[4], pMatrix[5], pMatrix[6], pMatrix[7], pMatrix[8], pMatrix[9], pMatrix[10], pMatrix[11], pMatrix[12], pMatrix[13], pMatrix[14], pMatrix[15]);
+    glm::vec3 cam_pos = Vector3(camera()->position());
+    rt_scene scene("scene", raymarchingQuad.shader);
+    scene.proj_matrix = proj_matrix;
+    scene.mv_matrix = mv_matrix;
+    scene.bg_color =  glm::vec4(1.f, 0.f, 0.f, 1.f);
+    scene.canvas_width = this->width();
+    scene.canvas_height = this->height();
+    scene.camera_pos = glm::vec4(cam_pos, 0.0);
+    scene.update();
+
+    rt_material mat;
+    mat.color = glm::vec4(1.f, 0.f, 0.f, 1.f);
+    mat.absorb = glm::vec4(.5f, .5f, .5f, 0.f);
+    mat.diffuse = 1.f;
+    mat.refraction = 0.f;
+    mat.reflection = 0.f;
+    mat.specular = 16;
+    mat.kd = .5f;
+    mat.ks = .5f;
+
+    rt_sphere sphere("spheres[0]", raymarchingQuad.shader);
+    sphere.mat = mat;
+    sphere.obj = glm::vec4(20.f, 0.f, 0.f, 20.f);
+    sphere.quat_rotation = glm::vec4(0, 0, 0, 1);
+    sphere.textureNum = 0;
+    sphere.hollow = false;
+    sphere.update();
+
+    rt_sphere sphere2("spheres[1]", raymarchingQuad.shader);
+    sphere2.mat = mat;
+    sphere2.obj = glm::vec4(30.f, 0.f, 0.f, 20.f);
+    sphere2.quat_rotation = glm::vec4(0, 0, 0, 1);
+    sphere2.textureNum = 0;
+    sphere2.hollow = false;
+    sphere2.update();
+
+    rt_box box("boxes[0]", raymarchingQuad.shader);
+    box.mat = mat;
+    box.pos = glm::vec4(0.f, 20.f, 0.f, 0.f);
+    box.form = glm::vec4(10.f, 30.f, 100.f, 0.f);
+    box.quat_rotation = glm::vec4(0, 0, 0, 1);
+    box.textureNum = 0;
+    box.update();
+
+    rt_light_direct light("lights_direct[0]", raymarchingQuad.shader);
+    light.direction = glm::vec4(.1f, .1f, .9f, 1.f);
+    light.color =  glm::vec4(1.f, 1.f, 1.f, 1.f);
+    light.intensity = 1.f;
+    light.update();
+
+    raymarchingQuad.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
+
+    Matrix3<int> materials; Matrix3<float> matHeights;
+    std::tie(materials, matHeights) = voxelGrid->getLayersRepresentations();
+    raymarchingQuad.shader->setTexture3D("matIndicesTex", 1, materials);
+    raymarchingQuad.shader->setTexture3D("matHeightsTex", 2, matHeights);
+
+    this->raymarchingQuad.display();*/
     this->drawingProcess();
 }
 void Viewer::drawingProcess() {
@@ -215,9 +301,9 @@ void Viewer::drawingProcess() {
         if (actionInterface.first != "terrainGenerationInterface")
             actionInterface.second->display();
 
-    if (this->interfaces.count("terrainGenerationInterface")) {
-        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
-    }
+//    if (this->interfaces.count("terrainGenerationInterface")) {
+//        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
+//    }
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -357,12 +443,13 @@ bool Viewer::checkMouseOnVoxel()
     bool found = false;
     Vector3 currPos(orig.x, orig.y, orig.z);
     auto values = voxelGrid->getVoxelValues();
+    values.raiseErrorOnBadCoord = false;
     while((currPos / 2.f).norm2() < maxDist && !found)
     {
         currPos += Vector3(dir.x, dir.y, dir.z);
         if (minPos.x <= currPos.x && currPos.x <= maxPos.x && minPos.y <= currPos.y && currPos.y <= maxPos.y && minPos.z <= currPos.z && currPos.z <= maxPos.z) {
             float isoval = values.at(currPos);//voxelGrid->getVoxelValue(currPos);
-            if (isoval > 0.0 || (0.f <= currPos.z && currPos.z < 1.0) )
+            if (isoval > 0.0) // || (0.f <= currPos.z && currPos.z < 1.0) )
                 found = true;
         }
     }

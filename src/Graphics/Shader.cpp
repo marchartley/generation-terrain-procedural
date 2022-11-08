@@ -75,13 +75,13 @@ Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilen
 {
 
 }*/
-void Shader::compileShadersFromSource()
+void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDefinitions)
 {
 #if useModernOpenGL || !useModernOpenGL
     this->programID = GlobalsGL::f()->glCreateProgram();
     if (vertexShaderFilename != "")
     {
-        std::string content = Shader::readShaderSource(vertexShaderFilename);
+        std::string content = Shader::addDefinitionsToSource(Shader::readShaderSource(vertexShaderFilename), addedDefinitions);
         if (!content.empty()) {
             this->vShader = GlobalsGL::f()->glCreateShader(GL_VERTEX_SHADER);
             const char* src = content.c_str();
@@ -95,7 +95,7 @@ void Shader::compileShadersFromSource()
     }
     if (fragmentShaderFilename != "")
     {
-        std::string content = Shader::readShaderSource(fragmentShaderFilename);
+        std::string content = Shader::addDefinitionsToSource(Shader::readShaderSource(fragmentShaderFilename), addedDefinitions);
         if (!content.empty()) {
             this->fShader = GlobalsGL::f()->glCreateShader(GL_FRAGMENT_SHADER);
             const char* src = content.c_str();
@@ -109,7 +109,7 @@ void Shader::compileShadersFromSource()
     }
     if (geometryShaderFilename != "")
     {
-        std::string content = Shader::readShaderSource(geometryShaderFilename);
+        std::string content = Shader::addDefinitionsToSource(Shader::readShaderSource(geometryShaderFilename), addedDefinitions);
         if (!content.empty()) {
             this->gShader = GlobalsGL::f()->glCreateShader(GL_GEOMETRY_SHADER);
             const char* src = content.c_str();
@@ -166,6 +166,24 @@ void Shader::setVector(std::string pname, Vector3 value)
 {
     if (!this->use()) return;
     this->setVector(pname, value, 3);
+}
+
+void Shader::setVector(std::string pname, glm::vec2 value)
+{
+    if (!this->use()) return;
+    GlobalsGL::f()->glUniform2fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
+}
+
+//void Shader::setVector(std::string pname, glm::vec3 value)
+//{
+//    if (!this->use()) return;
+//    GlobalsGL::f()->glUniform3fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
+//}
+
+void Shader::setVector(std::string pname, glm::vec4 value)
+{
+    if (!this->use()) return;
+    GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }
 void Shader::setVector(std::string pname, float value[], int n)
 {
@@ -308,6 +326,9 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
 {
+    for (auto& val : texture)
+        val = std::max(val, 0.f);
+    glEnable(GL_TEXTURE_3D);
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
@@ -320,6 +341,8 @@ void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
 
     GlobalsGL::f()->glActiveTexture(textureSlot);
     glBindTexture(GL_TEXTURE_3D, texIndex);
+//    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -367,4 +390,17 @@ std::string Shader::readShaderSource(std::string filename)
     }
     file.close();
     return content;
+}
+
+std::string Shader::addDefinitionsToSource(std::string src, std::map<std::string, std::string> newDefinitions)
+{
+    auto start = src.find("#version");
+    if (start == std::string::npos)
+        return src;
+
+    start = src.find("\n", start) + 1;
+    for (auto& [name, val] : newDefinitions) {
+        src.insert(start, "#define " + name + " " + val + "\n");
+    }
+    return src;
 }

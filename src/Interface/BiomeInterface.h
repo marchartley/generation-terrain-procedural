@@ -23,8 +23,8 @@ public:
 
     void display();
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    void affectHeightmap(std::shared_ptr<Grid> heightmap);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectHeightmap(std::shared_ptr<Grid> heightmap);
 
     void replay(nlohmann::json action);
 
@@ -33,9 +33,6 @@ public:
     void keyReleaseEvent(QKeyEvent* event);
     void wheelEvent(QWheelEvent* event);
     void mousePressEvent(QMouseEvent* event);
-
-    std::shared_ptr<VoxelGrid> voxelGrid;
-    std::shared_ptr<Grid> heightmap;
 
     QLayout* createGUI();
 

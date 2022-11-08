@@ -14,8 +14,13 @@ public:
 //    ~ActionInterface();
 
     virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
+        this->voxelGrid = voxelGrid;
     }
     virtual void affectHeightmap(std::shared_ptr<Grid> heightmap) {
+        this->heightmap = heightmap;
+    }
+    virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
+        this->layerGrid = layerGrid;
     }
     virtual QLayout* createGUI() {
         return nullptr;
@@ -55,6 +60,10 @@ public:
     std::string savingFilename;
     std::shared_ptr<std::fstream> savingFile;
     std::shared_ptr<std::vector<nlohmann::json>> jsonActionsHistory;
+
+    std::shared_ptr<VoxelGrid> voxelGrid;
+    std::shared_ptr<Grid> heightmap;
+    std::shared_ptr<LayerBasedGrid> layerGrid;
 
 Q_SIGNALS:
     void updated();

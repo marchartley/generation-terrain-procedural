@@ -35,7 +35,7 @@ public Q_SLOTS:
     void throwFrom(Vector3 pos, Vector3 dir);
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<UnderwaterErosion> erosion;
     Viewer* viewer;
 

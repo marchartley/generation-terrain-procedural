@@ -7,7 +7,7 @@
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
     : blockSize(blockSize), noise_shifting(noise_shifting) {
     this->sizeZ = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
-    chunkSize += 1; // More useful for the LoDs
+//    chunkSize += 1; // More useful for the LoDs // TODO : CORRECT THIS TO BE ABLE TO FILL IN THE LAYERED TERRAIN
     this->sizeX = nx * (chunkSize);
     this->sizeY = ny * (chunkSize);
     this->initMap();
@@ -102,11 +102,11 @@ void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectio
     this->_smoothingNeeded = true;
 }
 
-void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased)
+void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 {
     this->sizeX = layerBased.getSizeX();
     this->sizeY = layerBased.getSizeY();
-    this->sizeZ = layerBased.getSizeZ();
+    this->sizeZ = (fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight);
     this->initMap();
 
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
@@ -116,7 +116,9 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased)
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < this->getSizeZ(); z++) {
-                        data[iChunk].at(x, y, z) = LayerBasedGrid::densityFromMaterial(layerBased.getValue(x, y, z));
+                        TerrainTypes type = layerBased.getValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), z);
+                        float density = LayerBasedGrid::densityFromMaterial(type);
+                        data[iChunk].at(x, y, z) = density;
                     }
                 }
             }
@@ -124,7 +126,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased)
         }
     }
     this->tempData = data;
-    this->_smoothingNeeded = true;
+    this->_smoothingNeeded = false;
 }
 
 std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
@@ -649,6 +651,7 @@ Matrix3<float> VoxelGrid::getVoxelValues()
         for (auto& vc : this->chunks) {
             this->_cachedVoxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
         }
+        this->updateLayersRepresentation();
     }
     return this->_cachedVoxelValues;
 }
@@ -846,10 +849,68 @@ void VoxelGrid::retrieveMap(std::string filename)
     }
     this->tempData = data;
 }
-
 float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
 {
     return noiseMinMax.remap(this->noise.GetNoise((float)x, (float)y, (float)z), -2.0 + noise_shift, 2.0 + noise_shift);
+}
+
+
+std::pair<Matrix3<int>, Matrix3<float> > VoxelGrid::getLayersRepresentations()
+{
+    return {_materialLayers, _heightLayers};
+
+}
+
+int getMaterialPerVoxelValue(float value, const std::vector<float>& materials) {
+    int material = 0;
+    while (value > materials[material] && material < int(materials.size() - 1))
+        material ++;
+    return material;
+}
+void VoxelGrid::updateLayersRepresentation()
+{
+    std::vector<float> materialsLimits = {.0f, 1.f}; // .5f, 1.5f, 2.5f};
+
+    Matrix3<std::vector<int> > materials(this->getSizeX(), this->getSizeY(), 1, {0}); // Add a "null" material with height 0
+    Matrix3<std::vector<float> > heights(this->getSizeX(), this->getSizeY(), 1, {0});
+    int maxStackSize = 0;
+
+    auto voxelValues = getVoxelValues();
+
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            auto start = std::chrono::system_clock::now();
+            int currentMaterial = getMaterialPerVoxelValue(voxelValues.at(x, y, 0), materialsLimits);
+            float previousHeight = 0.f;
+            for (int z = 0; z < this->getSizeZ(); z++) {
+                int newMaterial = getMaterialPerVoxelValue(voxelValues.at(x, y, z), materialsLimits);
+                // If there is a change of material or that we reached the top, register
+                if (currentMaterial != newMaterial || z == this->getSizeZ() - 1) {
+                    materials.at(x, y).push_back(currentMaterial);
+                    heights.at(x, y).push_back(z - previousHeight);
+                    previousHeight = z;
+                    currentMaterial = newMaterial;
+                    maxStackSize = std::max(maxStackSize, int(materials.at(x, y).size()));
+                }
+            }
+            auto end = std::chrono::system_clock::now();
+//            std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+        }
+    }
+
+    // Transform the vectors into matrix
+
+    _materialLayers = Matrix3<int>(this->getSizeX(), this->getSizeY(), maxStackSize);
+    _heightLayers = Matrix3<float>(this->getSizeX(), this->getSizeY(), maxStackSize);
+
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            for (size_t i = 1; i < materials.at(x, y).size(); i++) { // Start at 1 to remove the "null" layer
+                _materialLayers.at(x, y, i) = materials.at(x, y)[i];
+                _heightLayers.at(x, y, i) = heights.at(x, y)[i];
+            }
+        }
+    }
 }
 
 

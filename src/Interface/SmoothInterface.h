@@ -9,7 +9,7 @@ class SmoothInterface : public ActionInterface
 public:
     SmoothInterface(QWidget *parent = nullptr);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
     void replay(nlohmann::json action);
@@ -23,7 +23,7 @@ public Q_SLOTS:
     void hide();
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
     QHBoxLayout* smoothLayout;

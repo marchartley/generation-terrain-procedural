@@ -112,6 +112,7 @@ out vec4 fragColor;
 in vec3 grealNormal;
 in vec3 ginitialVertPos;
 in vec4 gcolor;
+in float gdensity;
 
 struct PositionalLight {
     vec4 ambiant;
@@ -155,9 +156,14 @@ uniform int maxBiomesNormalTextures;
 //float densities[5] = float[5](0.3, 0.5, 0.8, 0.9, 1.2);
 //vec4 colors[5] = vec4[5](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.430, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
 
-float densities[4] = float[4](0.3, 0.5, 0.6, 0.7);
+//float densities[4] = float[4](0.3, 0.5, 0.6, 0.7);
+//vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
+//int texIndices[4] = int[4](6, 5, 4, 2);
+
+float densities[4] = float[4](0.5, 0.6, 1.0, 2.0);
 vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
 int texIndices[4] = int[4](6, 5, 4, 2);
+
 //float sandDensity = 0.5;
 //float mudDensity = 0.6;
 //float rockDensity = 0.7;
@@ -181,23 +187,27 @@ vec3 getBiomeColor(vec2 pos) {
     return vec3(val, 1.0, 1.0);
 }
 float getDensity(vec3 pos, float resolution) {
-    float density = 0.0;
-    float surrounding = 3.f;
-    for (float x = 0; x < surrounding; x++) {
-        for (float y = 0; y < surrounding; y++) {
-            for (float z = 0; z < surrounding; z++) {
-                float divisor = float(int(surrounding*.5f));
-                vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
-//                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
-                float val = texture(dataFieldTex, newPos).a;
-                density = max(density, val);
+    if (textureSize(dataFieldTex, 0).x > 0) {
+        float density = 0.0;
+        float surrounding = 3.f;
+        for (float x = 0; x < surrounding; x++) {
+            for (float y = 0; y < surrounding; y++) {
+                for (float z = 0; z < surrounding; z++) {
+                    float divisor = float(int(surrounding*.5f));
+                    vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
+    //                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
+                    float val = texture(dataFieldTex, newPos).a;
+                    density = max(density, val);
+                }
             }
         }
+        return (density - 0.5);
+    } else {
+        return gdensity;
     }
-    return density;
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
-    float density = getDensity(pos/ terrainSize, 1.0 / terrainSize.x);
+    float density = getDensity(pos / terrainSize, 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
 //    density /= 1.0 + (min(depth, 0.0) / 200.0);
 //    density *= 1.0 + (max(-depth, 0.0) / 100.0);
     float power = 1.0;
@@ -251,8 +261,13 @@ float wyvill(float x) {
 }
 void main(void)
 {
-
-    if (min_vertice_positions.x > ginitialVertPos.x || ginitialVertPos.x > max_vertice_positions.x || min_vertice_positions.y > ginitialVertPos.y || ginitialVertPos.y > max_vertice_positions.y || min_vertice_positions.z > ginitialVertPos.z || ginitialVertPos.z > max_vertice_positions.z)
+    float epsilon = 0.0001;
+    if (min_vertice_positions.x - epsilon > ginitialVertPos.x ||
+            ginitialVertPos.x > max_vertice_positions.x + epsilon ||
+            min_vertice_positions.y - epsilon > ginitialVertPos.y ||
+            ginitialVertPos.y > max_vertice_positions.y + epsilon ||
+            min_vertice_positions.z - epsilon > ginitialVertPos.z ||
+            ginitialVertPos.z > max_vertice_positions.z + epsilon)
         discard;
 
     if (clipPlaneActive) {
@@ -279,7 +294,7 @@ void main(void)
     vec3 R = reflect(-L, N);
     vec3 H = normalize(varyingHalfH);
 
-    vec3 realFragmentPosition = (ginitialVertPos.xyz / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
+    vec3 realFragmentPosition = ((ginitialVertPos.xyz - vec3(0.001)) / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
     vec3 dataTexSize = textureSize(dataFieldTex, 0);
 
     vec2 texSize = textureSize(heightmapFieldTex, 0);
@@ -290,9 +305,14 @@ void main(void)
 
     float depth = (waterRelativeHeight * textureSize(dataFieldTex, 0).z - realFragmentPosition.z); // Depth from surface
 
-//    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
-//    realBiomeColorValue = float(getDensityIndex(realFragmentPosition, dataTexSize, depth)) / maxBiomesColorTextures;
-//    biomeNormalValue = biomeColorValue;
+    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
+    realBiomeColorValue = float(getDensityIndex(realFragmentPosition, dataTexSize, depth)) / maxBiomesColorTextures;
+
+//    fragColor = vec4(vec3(biomeColorValue, biomeColorValue, biomeColorValue), 1.0);
+//    fragColor = vec4(fract(realFragmentPosition), 1.0);
+//    return;
+
+    biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
     float scale = 10.0;
     vec3 blending = getTriPlanarBlend(grealNormal);
@@ -375,7 +395,7 @@ void main(void)
 //                     texture(dataFieldTex, (realFragmentPosition + vec3(1, 1, 1)) / dataTexSize, 0).a,
 //                     1.0);
 //    return;
-    fragColor *= getDensityColor(realFragmentPosition, dataTexSize);
+//    fragColor *= getDensityColor(realFragmentPosition, dataTexSize);
 //    fragColor *= (depth < 0.0 ? vec4(0.5, 0.8, 0.9, 1.0) : vec4(1.0, 1.0, 1.0, 1.0));
 
     if (displayingIgnoredVoxels) {
@@ -388,7 +408,7 @@ void main(void)
         vec2 colorTextureOffset     = vec2(biomeColorValue, 0);
         vec2 realColorTextureOffset = vec2(realBiomeColorValue, 0);
         // biome val == real biome val => no need to have a mix (alpha = 0)
-        float alpha = 1 - wyvill(length(fbmWrap)/5.0) * (biomeColorValue == realBiomeColorValue ? 0.0 : 1.0);
+        float alpha = 1 - clamp(wyvill(length(fbmWrap)/5.0), 0.0, 1.0) * (biomeColorValue == realBiomeColorValue ? 0.0 : 1.0);
 //        fragColor = vec4(alpha, alpha, alpha, 1.0);
 //        return;
         vec3 xaxis = mix(texture2D(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),

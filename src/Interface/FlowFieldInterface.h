@@ -12,7 +12,7 @@ class FlowFieldInterface : public ActionInterface
 public:
     FlowFieldInterface(QWidget *parent = nullptr);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
 
@@ -28,7 +28,7 @@ public Q_SLOTS:
     void updateFlowfieldDebugMesh();
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
     Mesh flowMesh;

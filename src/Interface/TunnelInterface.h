@@ -14,7 +14,7 @@ class TunnelInterface : public ActionInterface
 public:
     TunnelInterface(QWidget *parent = nullptr);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
     void display();
     void replay(nlohmann::json action);
@@ -47,7 +47,7 @@ public Q_SLOTS:
     void wheelEvent(QWheelEvent* event);
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
 
     KarstHolePredefinedShapes startingShape;
     KarstHolePredefinedShapes endingShape;

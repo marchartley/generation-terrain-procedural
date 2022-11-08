@@ -13,6 +13,8 @@ enum TerrainTypes {
     DIRT = 1,
     WATER = 2,
     SAND = 3,
+    ROCK = 4,
+    BEDROCK = 5,
     LAST
 };
 

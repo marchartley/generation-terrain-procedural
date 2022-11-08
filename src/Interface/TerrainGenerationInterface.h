@@ -37,8 +37,9 @@ public Q_SLOTS:
 
 
 public:
-    std::shared_ptr<VoxelGrid> voxelGrid;
-    std::shared_ptr<Grid> heightmapGrid;
+//    std::shared_ptr<VoxelGrid> voxelGrid;
+//    std::shared_ptr<Grid> heightmapGrid;
+//    std::shared_ptr<LayerBasedGrid> layerGrid;
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
 
@@ -57,6 +58,8 @@ protected:
     Mesh heightmapMesh;
     GLuint heightmapFieldTex, biomeFieldTex;
     GLuint edgeTableTex, triTableTex;
+
+    Mesh layersMesh;
 
     GLuint allBiomesColorTextures, allBiomesNormalTextures, allBiomesDisplacementTextures;
 

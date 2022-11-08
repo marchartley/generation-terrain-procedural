@@ -46,9 +46,10 @@ void FaultSlipInterface::remesh()
 
 void FaultSlipInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
+    ActionInterface::affectVoxelGrid(voxelGrid);
     this->firstSlipControlPoint->move(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ));
     this->slipVector->setPositions(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ / 2.f));
-    this->voxelGrid = voxelGrid;
+//    this->voxelGrid = voxelGrid;
     this->remesh();
 
     this->setBindings();

@@ -38,7 +38,7 @@ public:
     VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     ~VoxelGrid();
     void from2DGrid(Grid grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
-    void fromLayerBased(LayerBasedGrid layerBased);
+    void fromLayerBased(LayerBasedGrid layerBased, int fixedHeight = -1);
     std::shared_ptr<VoxelGrid> fromIsoData();
 
     void initMap();
@@ -125,7 +125,7 @@ public:
     std::vector<std::shared_ptr<VoxelChunk>> chunks;
     float noise_shifting;
 
-    int chunkSize = 30;
+    int chunkSize = 20;
     bool displayWithMarchingCubes = false;
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
@@ -148,11 +148,18 @@ public:
 
     Matrix3<float> environmentalDensities;
 
+    std::pair<Matrix3<int>, Matrix3<float> > getLayersRepresentations();
+
 protected:
     float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
 
     int _cachedHistoryIndex = -1;
     Matrix3<float> _cachedVoxelValues;
+
+    void updateLayersRepresentation();
+//    Matrix3<std::vector<std::pair<int, float>>> _layersRepresentation;
+    Matrix3<int> _materialLayers;
+    Matrix3<float> _heightLayers;
 };
 
 #endif // VOXELGRID_H

@@ -9,14 +9,14 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
 
 }
 
-void TunnelInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+/*void TunnelInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     this->voxelGrid = voxelGrid;
 
 //    this->currentTunnelPoints = {Vector3(0, 0, 0), Vector3(10, 0, 0)};
 //    createTunnel();
     //    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=](){ voxelGrid->computeFlowfield(); } );
-}
+}*/
 
 void TunnelInterface::display()
 {

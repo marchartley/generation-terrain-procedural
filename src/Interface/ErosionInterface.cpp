@@ -12,7 +12,7 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 
 void ErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
 {
-    this->voxelGrid = voxelGrid;
+    ActionInterface::affectVoxelGrid(voxelGrid);
     this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid, erosionSize, erosionStrength, erosionQtt);
 
     const char* vNoShader = ":/src/Shaders/no_shader.vert";

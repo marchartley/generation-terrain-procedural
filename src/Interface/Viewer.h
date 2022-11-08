@@ -151,6 +151,10 @@ public:
     bool temporaryClipPlaneActivated = false;
     Vector3 clipPlanePosition;
     Vector3 clipPlaneDirection;
+
+    std::shared_ptr<Shader> raymarchingShader;
+    ShaderUBO sceneUBO;
+    Mesh raymarchingQuad;
 };
 
 
