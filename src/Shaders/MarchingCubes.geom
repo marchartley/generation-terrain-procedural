@@ -158,7 +158,6 @@ void main(void) {
         bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  1,  0)) < -1000);
         // Front
         grealNormal = vec3(0, -1, 0);
-
         if (nFront) {
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
             ginitialVertPos = getPosition(position, vec3(0, 0, 1)).xyz;
@@ -174,18 +173,9 @@ void main(void) {
             EmitVertex();
             EndPrimitive();
         }
-        // Left-front corner
-//        if (nFront || nRight) {
-//            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
-//            ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
-//            EmitVertex();
-//            gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 0));
-//            ginitialVertPos = getPosition(position, vec3(1, 0, 0)).xyz;
-//            EmitVertex();
-//        }
         // Right
         grealNormal = vec3(1, 0, 0);
-        if (nRight || nBack) {
+        if (nRight) {
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1));
             ginitialVertPos = getPosition(position, vec3(1, 0, 1)).xyz;
             EmitVertex();
@@ -200,9 +190,8 @@ void main(void) {
             EmitVertex();
             EndPrimitive();
         }
-        // Right
+        // Back
         grealNormal = vec3(0, 1, 0);
-//        if (nBack || nLeft) {
         if (nBack) {
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1));
             ginitialVertPos = getPosition(position, vec3(1, 1, 1)).xyz;
@@ -218,7 +207,7 @@ void main(void) {
             EmitVertex();
             EndPrimitive();
         }
-        // Back
+        // Left
         grealNormal = vec3(-1, 0, 0);
         if (nLeft) {
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1));
@@ -255,7 +244,6 @@ void main(void) {
         }
 
         // Top
-
         if (nTop) {
             grealNormal = vec3(0, 0, 1);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
