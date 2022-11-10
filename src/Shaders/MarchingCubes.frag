@@ -184,6 +184,8 @@ vec3 getBiomeColor(vec2 pos) {
 }
 float getDensity(vec3 pos, float resolution) {
     if (gdensity == 0) {
+        vec3 texSize = vec3(textureSize(dataFieldTex, 0));
+        vec3 offset = 0.6 / texSize;
         float density = 0.0;
         float surrounding = 3.f;
         for (float x = 0; x < surrounding; x++) {
@@ -192,7 +194,7 @@ float getDensity(vec3 pos, float resolution) {
                     float divisor = float(int(surrounding*.5f));
                     vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
     //                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
-                    float val = texture(dataFieldTex, newPos).a;
+                    float val = texture(dataFieldTex, newPos - offset).a;
                     density = max(density, val);
                 }
             }
@@ -256,14 +258,14 @@ float wyvill(float x) {
 }
 void main(void)
 {
-    float epsilon = 0.0001;
-    if (min_vertice_positions.x - epsilon > ginitialVertPos.x ||
-            ginitialVertPos.x > max_vertice_positions.x + epsilon ||
-            min_vertice_positions.y - epsilon > ginitialVertPos.y ||
-            ginitialVertPos.y > max_vertice_positions.y + epsilon ||
-            min_vertice_positions.z - epsilon > ginitialVertPos.z ||
-            ginitialVertPos.z > max_vertice_positions.z + epsilon)
-        discard;
+//    float epsilon = 0.0001;
+//    if (min_vertice_positions.x - epsilon > ginitialVertPos.x ||
+//            ginitialVertPos.x > max_vertice_positions.x + epsilon ||
+//            min_vertice_positions.y - epsilon > ginitialVertPos.y ||
+//            ginitialVertPos.y > max_vertice_positions.y + epsilon ||
+//            min_vertice_positions.z - epsilon > ginitialVertPos.z ||
+//            ginitialVertPos.z > max_vertice_positions.z + epsilon)
+//        discard;
 
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {

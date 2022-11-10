@@ -16,6 +16,7 @@ class LayerBasedGrid;
 #include "Utils/FastNoiseLit.h"
 #include "Utils/ShapeCurve.h"
 
+class Patch;
 class Patch2D;
 class Patch3D;
 
@@ -56,7 +57,8 @@ public:
 
     void cleanLayers(float minLayerHeight = 0.1f);
 
-    void add(Patch2D& patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
+    void add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
+    void add(Patch3D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
@@ -65,17 +67,55 @@ public:
 
 
 
-class Patch2D
+class Patch
+{
+public:
+    Patch();
+    Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, float densityValue = 1.f);
+    Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, std::function<float(Vector3)> compositionFunction, float densityValue = 1.f);
+    virtual ~Patch();
+
+    virtual float getMaxHeight(Vector3 position) = 0;
+    virtual float evaluate(Vector3 position) = 0;
+    float get(Vector3 position) {
+        return compositionFunction(position) * this->densityValue;
+    }
+
+    Vector3 position;
+    Vector3 boundMin;
+    Vector3 boundMax;
+    std::function<float(Vector3)> evalFunction;
+    float densityValue;
+    std::function<float(Vector3)> compositionFunction;
+};
+
+class Patch2D: public Patch
 {
 public:
     Patch2D();
-    Patch2D(Vector3 pos, ShapeCurve shape, std::function<float(Vector3)> heightFunction);
+    Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> heightFunction, float densityValue = 1.f);
+    Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> heightFunction, std::function<float(Vector3)> compositionFunction, float densityValue = 1.f);
 
-    float getHeight(Vector3 position);
+    float getMaxHeight(Vector3 position);
+    float evaluate(Vector3 position);
 
-    Vector3 position;
-    ShapeCurve shape;
-    std::function<float(Vector3)> heightFunction;
+//    ShapeCurve shape;
+
+};
+
+class Patch3D: public Patch
+{
+public:
+    Patch3D();
+    Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, float densityValue = 1.f);
+    Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, std::function<float(Vector3)> compositionFunction, float densityValue = 1.f);
+
+    float getMaxHeight(Vector3 position);
+    float evaluate(Vector3 position);
+
+    static Patch3D stack(Patch& P1, Patch& P2);
+    static Patch3D replace(Patch& P1, Patch& P2);
+    static Patch3D blend(Patch& P1, Patch& P2);
 };
 
 

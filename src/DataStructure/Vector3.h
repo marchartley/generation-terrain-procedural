@@ -24,6 +24,8 @@ public:
 
     static Vector3 min();
     static Vector3 max();
+    static Vector3 min(Vector3 a, Vector3 b);
+    static Vector3 max(Vector3 a, Vector3 b);
 
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
     friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v);
