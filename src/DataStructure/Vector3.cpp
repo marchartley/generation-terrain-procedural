@@ -173,6 +173,16 @@ Vector3 Vector3::max()
                    std::numeric_limits<float>::max());
 }
 
+Vector3 Vector3::min(Vector3 a, Vector3 b)
+{
+    return Vector3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
+}
+
+Vector3 Vector3::max(Vector3 a, Vector3 b)
+{
+    return Vector3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+}
+
 
 Vector3& Vector3::rotate(float angle_x, float angle_y, float angle_z) {
     return this->rotate(Vector3(angle_x, angle_y, angle_z));
