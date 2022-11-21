@@ -91,6 +91,7 @@ SOURCES += \
         src/Interface/KarstPathGenerationInterface.cpp \
         src/Interface/ManualEditionInterface.cpp \
         src/Interface/PathCameraConstraint.cpp \
+    src/Interface/PrimitivePatchesInterface.cpp \
         src/Interface/RangeSlider.cpp \
         src/Interface/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
@@ -205,6 +206,7 @@ HEADERS += \
     src/Interface/KarstPathGenerationInterface.h \
     src/Interface/ManualEditionInterface.h \
     src/Interface/PathCameraConstraint.h \
+    src/Interface/PrimitivePatchesInterface.h \
     src/Interface/RangeSlider.h \
     src/Interface/Slider3D.h \
     src/Interface/SmoothInterface.h \

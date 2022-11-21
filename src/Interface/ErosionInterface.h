@@ -64,6 +64,8 @@ protected:
     float airForce = 1.f;
     float waterForce = 1.f;
 
+    int numberOfIterations = 10;
+
     QHBoxLayout* erosionLayout = nullptr;
 };
 

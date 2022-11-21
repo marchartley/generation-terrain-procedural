@@ -9,8 +9,8 @@
 #include "Interface/RangeSlider.h"
 
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall = false);
-QGroupBox* createMultipleSliderGroup(std::map<std::string, QSlider*> labelsAndSliders);
-QGroupBox* createMultipleSliderGroupWithCheckbox(std::map<std::string, std::pair<QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
+QGroupBox* createMultipleSliderGroup(std::unordered_map<std::string, QSlider*> labelsAndSliders);
+QGroupBox* createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string, std::pair<QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
 QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets);
 QGroupBox* createOptionalSlider(RangeSlider* slider, std::string checkboxLabel = "Activer", bool activatedByDefault = true,
                                 std::function<void(bool, RangeSlider*)> onToggleCallback = [](bool active, RangeSlider* slider) -> void {});

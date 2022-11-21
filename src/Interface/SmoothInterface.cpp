@@ -26,6 +26,7 @@ void SmoothInterface::replay(nlohmann::json action)
 bool SmoothInterface::applySmooth()
 {
     this->voxelGrid->smoothVoxels();
+    this->heightmap->fromVoxelGrid(*voxelGrid);
 
     this->addTerrainAction(nlohmann::json({}));
     Q_EMIT updated();

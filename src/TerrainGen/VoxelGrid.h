@@ -53,8 +53,8 @@ public:
     Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
     void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
     void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
-    void undo();
-    void redo();
+    bool undo();
+    bool redo();
     size_t getCurrentHistoryIndex() const;
 
     int getSizeX() { return this->sizeX; }
@@ -118,6 +118,8 @@ public:
 
     void saveMap(std::string filename);
     void retrieveMap(std::string filename);
+
+    Vector3 getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
 //protected:
     int sizeX, sizeY, sizeZ;

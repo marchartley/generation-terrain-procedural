@@ -50,43 +50,47 @@ void ErosionInterface::throwFromSky()
     UnderwaterErosion erod = UnderwaterErosion(voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
-    std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(Vector3(false), Vector3(false), this->rockRandomness, true,
-                                                                      gravity,
-                                                                      bouncingCoefficient,
-                                                                      bounciness,
-                                                                      minSpeed,
-                                                                      maxSpeed,
-                                                                      maxCapacityFactor,
-                                                                      erosionFactor,
-                                                                      depositFactor,
-                                                                      matterDensity + .1f,
-                                                                      materialImpact,
-                                                                      airFlowfieldRotation,
-                                                                      waterFlowfieldRotation,
-                                                                      airForce,
-                                                                      waterForce
-                                                                      );
 
-    std::vector<Vector3> asOneVector;
-    for(std::vector<Vector3>& points : lastRocksLaunched) {
-        BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
-        for (size_t i = 0; i < path.points.size() - 1; i++) {
-            asOneVector.push_back(path.points[i]);
-            asOneVector.push_back(path.points[i + 1]);
-        }
-    }
-    this->rocksPathSuccess.fromArray(asOneVector);
-    asOneVector.clear();
-    for(std::vector<Vector3>& points : lastFailedRocksLaunched) {
-        BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
-        for (size_t i = 0; i < path.points.size() - 1; i++) {
-            asOneVector.push_back(path.points[i]);
-            asOneVector.push_back(path.points[i + 1]);
-        }
-    }
-    this->rocksPathFailure.fromArray(asOneVector);
+    for (int iteration = 0; iteration < numberOfIterations; iteration++) {
+        std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(Vector3(false), Vector3(false), this->rockRandomness, true,
+                                                                          gravity,
+                                                                          bouncingCoefficient,
+                                                                          bounciness,
+                                                                          minSpeed,
+                                                                          maxSpeed,
+                                                                          maxCapacityFactor,
+                                                                          erosionFactor,
+                                                                          depositFactor,
+                                                                          matterDensity + .1f,
+                                                                          materialImpact,
+                                                                          airFlowfieldRotation,
+                                                                          waterFlowfieldRotation,
+                                                                          airForce,
+                                                                          waterForce
+                                                                          );
 
-    Q_EMIT this->updated();
+        std::vector<Vector3> asOneVector;
+        for(std::vector<Vector3>& points : lastRocksLaunched) {
+            BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
+            for (size_t i = 0; i < path.points.size() - 1; i++) {
+                asOneVector.push_back(path.points[i]);
+                asOneVector.push_back(path.points[i + 1]);
+            }
+        }
+        this->rocksPathSuccess.fromArray(asOneVector);
+        asOneVector.clear();
+        for(std::vector<Vector3>& points : lastFailedRocksLaunched) {
+            BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
+            for (size_t i = 0; i < path.points.size() - 1; i++) {
+                asOneVector.push_back(path.points[i]);
+                asOneVector.push_back(path.points[i + 1]);
+            }
+        }
+        this->rocksPathFailure.fromArray(asOneVector);
+
+        this->heightmap->fromVoxelGrid(*voxelGrid);
+        Q_EMIT this->updated();
+    }
 }
 void ErosionInterface::throwFromCam()
 {
@@ -113,51 +117,54 @@ void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
     UnderwaterErosion erod = UnderwaterErosion(voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
-    std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(pos, dir, this->rockRandomness, false,
-                                                                      gravity,
-                                                                      bouncingCoefficient,
-                                                                      bounciness,
-                                                                      minSpeed,
-                                                                      maxSpeed,
-                                                                      maxCapacityFactor,
-                                                                      erosionFactor,
-                                                                      depositFactor,
-                                                                      matterDensity + 0.1f,
-                                                                      materialImpact,
-                                                                      airFlowfieldRotation,
-                                                                      waterFlowfieldRotation,
-                                                                      airForce,
-                                                                      waterForce
-                                                                      );
-    std::vector<Vector3> asOneVector;
-    for(std::vector<Vector3>& points : lastRocksLaunched) {
-        BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
-        for (size_t i = 0; i < path.points.size() - 1; i++) {
-            asOneVector.push_back(path.points[i]);
-            asOneVector.push_back(path.points[i + 1]);
+    for (int iteration = 0; iteration < numberOfIterations; iteration++) {
+        std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(pos, dir, this->rockRandomness, false,
+                                                                          gravity,
+                                                                          bouncingCoefficient,
+                                                                          bounciness,
+                                                                          minSpeed,
+                                                                          maxSpeed,
+                                                                          maxCapacityFactor,
+                                                                          erosionFactor,
+                                                                          depositFactor,
+                                                                          matterDensity + 0.1f,
+                                                                          materialImpact,
+                                                                          airFlowfieldRotation,
+                                                                          waterFlowfieldRotation,
+                                                                          airForce,
+                                                                          waterForce
+                                                                          );
+        std::vector<Vector3> asOneVector;
+        for(std::vector<Vector3>& points : lastRocksLaunched) {
+            BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
+            for (size_t i = 0; i < path.points.size() - 1; i++) {
+                asOneVector.push_back(path.points[i]);
+                asOneVector.push_back(path.points[i + 1]);
+            }
         }
-    }
-    this->rocksPathSuccess.fromArray(asOneVector);
-    asOneVector.clear();
-    for(std::vector<Vector3>& points : lastFailedRocksLaunched) {
-        BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
-        for (size_t i = 0; i < path.points.size() - 1; i++) {
-            asOneVector.push_back(path.points[i]);
-            asOneVector.push_back(path.points[i + 1]);
+        this->rocksPathSuccess.fromArray(asOneVector);
+        asOneVector.clear();
+        for(std::vector<Vector3>& points : lastFailedRocksLaunched) {
+            BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
+            for (size_t i = 0; i < path.points.size() - 1; i++) {
+                asOneVector.push_back(path.points[i]);
+                asOneVector.push_back(path.points[i + 1]);
+            }
         }
+        this->rocksPathFailure.fromArray(asOneVector);
+
+        this->addTerrainAction(nlohmann::json({
+                                                  {"position", vec3_to_json(pos) },
+                                                  {"direction", vec3_to_json(dir) },
+                                                  {"size", erosionSize},
+                                                  {"strength", erosionStrength},
+                                                  {"randomness", rockRandomness},
+                                                  {"quantity", erosionQtt}
+                                              }));
+
+        this->heightmap->fromVoxelGrid(*voxelGrid);
+        Q_EMIT this->updated();
     }
-    this->rocksPathFailure.fromArray(asOneVector);
-
-    this->addTerrainAction(nlohmann::json({
-                                              {"position", vec3_to_json(pos) },
-                                              {"direction", vec3_to_json(dir) },
-                                              {"size", erosionSize},
-                                              {"strength", erosionStrength},
-                                              {"randomness", rockRandomness},
-                                              {"quantity", erosionQtt}
-                                          }));
-
-    Q_EMIT this->updated();
 }
 
 QLayout *ErosionInterface::createGUI()
@@ -184,6 +191,8 @@ QLayout *ErosionInterface::createGUI()
     FancySlider* airForceSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .1f);
     FancySlider* waterForceSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .1f);
 
+    FancySlider* iterationSlider = new FancySlider(Qt::Orientation::Horizontal, 1.f, 100.f);
+
     QPushButton* confirmButton = new QPushButton("Envoyer");
     QPushButton* confirmFromCamButton = new QPushButton("Camera");
     QPushButton* confirmFromSkyButton = new QPushButton("Pluie");
@@ -192,20 +201,21 @@ QLayout *ErosionInterface::createGUI()
                                                            {"Taille", rockSizeSlider},
                                                            {"Strength", rockStrengthSlider},
                                                            {"Quantity", rockQttSlider},
-                                                           {"gravitySlider", gravitySlider},
-                                                           {"bouncingCoefficientSlider", bouncingCoefficientSlider},
-                                                           {"bouncinessSlider", bouncinessSlider},
-                                                           {"minSpeedSlider", minSpeedSlider},
-                                                           {"maxSpeedSlider", maxSpeedSlider},
-                                                           {"maxCapacityFactorSlider", maxCapacityFactorSlider},
-                                                           {"erosionFactorSlider", erosionFactorSlider},
-                                                           {"depositFactorSlider", depositFactorSlider},
-                                                           {"matterDensitySlider", matterDensitySlider},
-                                                           {"materialImpactSlider", materialImpactSlider},
-                                                           {"airRotation", airFlowfieldRotationSlider},
-                                                           {"waterRotation", waterFlowfieldRotationSlider},
-                                                           {"airForce", airForceSlider},
-                                                           {"waterForce", waterForceSlider}
+                                                           {"gravity", gravitySlider},
+                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
+                                                           {"bounciness", bouncinessSlider},
+                                                           {"minSpeed", minSpeedSlider},
+                                                           {"maxSpeed", maxSpeedSlider},
+                                                           {"max Capacity Factor", maxCapacityFactorSlider},
+                                                           {"erosion Factor", erosionFactorSlider},
+                                                           {"deposit Factor", depositFactorSlider},
+                                                           {"matter Density", matterDensitySlider},
+                                                           {"material Impact", materialImpactSlider},
+                                                           {"air Rotation", airFlowfieldRotationSlider},
+                                                           {"water Rotation", waterFlowfieldRotationSlider},
+                                                           {"air Force", airForceSlider},
+                                                           {"water Force", waterForceSlider},
+                                                           {"nb iterations", iterationSlider}
                                                        }));
     erosionLayout->addWidget(confirmButton);
     erosionLayout->addWidget(confirmFromCamButton);
@@ -230,6 +240,8 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(waterFlowfieldRotationSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->waterFlowfieldRotation = newVal; });
     QObject::connect(airForceSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->airForce = newVal; });
     QObject::connect(waterForceSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->waterForce = newVal; });
+    QObject::connect(iterationSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->numberOfIterations = (int) newVal; });
+
     QObject::connect(confirmButton, &QPushButton::pressed, this, &ErosionInterface::throwFromSide);
     QObject::connect(confirmFromCamButton, &QPushButton::pressed, this, &ErosionInterface::throwFromCam);
     QObject::connect(confirmFromSkyButton, &QPushButton::pressed, this, &ErosionInterface::throwFromSky);
@@ -252,6 +264,7 @@ QLayout *ErosionInterface::createGUI()
     waterFlowfieldRotationSlider->setfValue(this->waterFlowfieldRotation);
     airForceSlider->setfValue(this->airForce);
     waterForceSlider->setfValue(this->waterForce);
+    iterationSlider->setfValue(this->numberOfIterations);
 
     return erosionLayout;
 }

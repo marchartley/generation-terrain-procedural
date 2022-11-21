@@ -454,22 +454,26 @@ void VoxelChunk::applyModification(Matrix3<float> modifications, Vector3 anchor)
     this->needRemeshing = true;
 }
 
-void VoxelChunk::undo()
+bool VoxelChunk::undo()
 {
     if (this->voxelsValuesStack.size() > 1 && this->currentHistoryIndex > 0) {
 //        this->voxelsValuesStack.pop_back();
         this->currentHistoryIndex --;
         this->needRemeshing = true;
+        return true;
     }
+    return false;
 }
 
-void VoxelChunk::redo()
+bool VoxelChunk::redo()
 {
     if (this->currentHistoryIndex < this->voxelsValuesStack.size()) {
 //        this->voxelsValuesStack.pop_back();
         this->currentHistoryIndex ++;
         this->needRemeshing = true;
+        return true;
     }
+    return false;
 }
 
 
@@ -503,8 +507,13 @@ float VoxelChunk::getVoxelValue(Vector3 pos)
 
 Matrix3<float> VoxelChunk::getVoxelValues()
 {
-    Matrix3<float> voxelValues(this->sizeX, this->sizeY, this->sizeZ);
-    for (size_t i = 0; i < this->currentHistoryIndex; i++)
-        voxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
-    return voxelValues;
+
+    if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
+        this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
+
+        this->_cachedVoxelValues = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        for (size_t i = 0; i < this->currentHistoryIndex; i++)
+            _cachedVoxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
+    }
+    return this->_cachedVoxelValues;
 }

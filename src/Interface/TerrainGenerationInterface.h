@@ -82,7 +82,7 @@ protected:
 
 public:
     Mesh waterLevelMesh;
-    float waterLevel = 0.25f;
+    float waterLevel = 0.f;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

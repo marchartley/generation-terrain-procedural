@@ -25,6 +25,7 @@ ViewerInterface::ViewerInterface() {
     this->heightmapErosionInterface = std::make_shared<HeightmapErosionInterface>(this);
     this->biomeInterface = std::make_shared<BiomeInterface>(this);
     this->smoothInterface = std::make_shared<SmoothInterface>(this);
+    this->patchesInterface = std::make_shared<PrimitivePatchesInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                                                                               {
@@ -39,8 +40,9 @@ ViewerInterface::ViewerInterface() {
                                                                                   { "terrainGenerationInterface", terrainGenerationInterface},
                                                                                   { "erosionInterface", erosionInterface},
                                                                                   { "heightmapErosionInterface", heightmapErosionInterface},
-                    { "biomeInterface", biomeInterface},
-                    { "smoothInterface", smoothInterface},
+                                                                                    { "biomeInterface", biomeInterface},
+                                                                                    { "smoothInterface", smoothInterface},
+                    { "primitivePatchInterface", patchesInterface},
                                                                               });
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -69,6 +71,11 @@ ViewerInterface::ViewerInterface() {
             actionInterface.second->affectVoxelGrid(this->viewer->voxelGrid);
             actionInterface.second->affectHeightmap(this->viewer->grid);
             actionInterface.second->affectLayerGrid(this->viewer->layerGrid);
+
+            QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
+                this->viewer->update();
+                qApp->processEvents();
+            });
         }
 
 //        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmap);
@@ -102,6 +109,10 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
     QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, this->biomeInterface.get(), &BiomeInterface::mouseDoubleClickOnMapEvent);
     QObject::connect(this->tunnelInterface.get(), &TunnelInterface::tunnelCreated, this->biomeInterface.get(), &BiomeInterface::addTunnel);
+    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
+                     this->patchesInterface.get(), &PrimitivePatchesInterface::mouseClickedOnMapEvent);
+    QObject::connect(this->viewer, &Viewer::mouseMovedOnMap,
+                     this->patchesInterface.get(), &PrimitivePatchesInterface::mouseMovedOnMap);
 
 //    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
 //        this->setFocus(Qt::OtherFocusReason);
@@ -142,6 +153,7 @@ void ViewerInterface::setupUi()
     QIcon heightmapErosionIcon(":/icons/src/assets/heightmap-erosion.png");
     QIcon biomeIcon(":/icons/src/assets/biomes.png");
     QIcon smoothIcon(":/icons/src/assets/smooth_button.png");
+    QIcon patchesIcon(":/icons/src/assets/feature_primitives_button.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -182,10 +194,10 @@ void ViewerInterface::setupUi()
 
     QAction *layerBasedAction = new QAction(layerBasedIcon, "Stacks (Layer based)");
     layerBasedAction->setCheckable(true);
+    layerBasedAction->setChecked(true);
 
     QAction *voxelGridAction = new QAction(voxelGridIcon, "Grille 3D (voxel grid)");
     voxelGridAction->setCheckable(true);
-    voxelGridAction->setChecked(true);
 
     QAction *wireModeAction = new QAction(wireModeIcon, "Affichage fil de fer");
     wireModeAction->setCheckable(true);
@@ -204,6 +216,8 @@ void ViewerInterface::setupUi()
     QAction *biomeAction = new QAction(biomeIcon, "Gérer les biomes");
 
     QAction *smoothAction = new QAction(smoothIcon, "Adoucir le terrain");
+
+    QAction *patchesAction = new QAction(patchesIcon, "Ajouter des patchs");
 
 
 
@@ -242,7 +256,7 @@ void ViewerInterface::setupUi()
     physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
 
     QMenu* diggingMenu = new QMenu("Creuser");
-    diggingMenu->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
+    diggingMenu->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction, patchesAction});
 
     QMenuBar* menu = new QMenuBar(this);
     menu->addMenu(fileMenu);
@@ -270,7 +284,7 @@ void ViewerInterface::setupUi()
     toolbar->addSeparator();
     toolbar->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
     toolbar->addSeparator();
-    toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction});
+    toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction, patchesAction});
     toolbar->addSeparator();
     toolbar->addActions({wireModeAction, fillModeAction, noDisplayAction});
     toolbar->addSeparator();
@@ -379,6 +393,7 @@ void ViewerInterface::setupUi()
     QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(smoothAction, &QAction::triggered, this->smoothInterface.get(), &SmoothInterface::applySmooth);
+    QObject::connect(patchesAction, &QAction::triggered, this, &ViewerInterface::openPatchesInterface);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
         this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES);
     });
@@ -624,6 +639,21 @@ void ViewerInterface::openSmoothInterface()
         lastPanelOpenedByStickyFrame = "SmoothInterface";
         this->smoothInterface->show();
         this->frame->setContent(this->smoothInterface->createGUI());
+        this->frame->show();
+    }
+    this->viewer->update();
+}
+
+void ViewerInterface::openPatchesInterface()
+{
+    this->hideAllInteractiveParts();
+    if (lastPanelOpenedByStickyFrame == "PatchesInterface") {
+        lastPanelOpenedByStickyFrame = "";
+        this->frame->hide();
+    } else {
+        lastPanelOpenedByStickyFrame = "PatchesInterface";
+        this->patchesInterface->show();
+        this->frame->setContent(this->patchesInterface->createGUI());
         this->frame->show();
     }
     this->viewer->update();

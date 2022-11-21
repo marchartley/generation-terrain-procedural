@@ -701,8 +701,9 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     // TODO : REMOVE THIS PART VERY SOON !!
 
-    Vector3 terrainSize = Vector3(40, 40, 40);
-    layerGrid->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(terrainSize.x, terrainSize.y);
+    Vector3 terrainSize = Vector3(100, 100, 40);
+    this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 5.f);
+//    layerGrid->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(terrainSize.x, terrainSize.y);
 //    LayerBasedGrid layerGrid(terrainSize.x, terrainSize.y, 1.f);
     voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
     voxelGrid->fromIsoData();
@@ -711,9 +712,14 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     FastNoiseLite noise;
     noise = voxelGrid->noise;
     std::function noisyBedrock = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 2.f + 2.f;
+        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 10.f + 10.f;
         return noiseValue;
     };
+    layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);
+    layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
+    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
+    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
+    /*
     ShapeCurve bedrockArea = ShapeCurve({
                                             Vector3(-1, -1),
                                             Vector3(-1, 1),
@@ -774,7 +780,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         float value = (pos - radius).norm2() - radius * radius;
         return -value;
     };
-    Patch3D sphere = Patch3D(terrainSize.xy() * .5, Vector3(0.f, 0.f, 0.f), Vector3(20.f, 20.f, 20.f), sphereFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
+    Patch3D sphere = Patch3D(terrainSize.xy() * .25f, Vector3(0.f, 0.f, 0.f), Vector3(20.f, 20.f, 20.f), sphereFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT));
+    Patch3D sphere2 = Patch3D(terrainSize.xy() * .25f + Vector3(10.f, 0.f, 0.f), Vector3(0.f, 0.f, 0.f), Vector3(20.f, 20.f, 20.f), sphereFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
 
     std::function levelFunction = [](Vector3 pos) {
         return 15.f - pos.z;
@@ -790,12 +797,15 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                             Vector3(0, 1, 0),
                                             Vector3(1, 1, 0),
                                             Vector3(1, 0, 0)
-                                        }).scale(25.f);
+                                        }).scale(40.f);
 //    Patch2D level = Patch2D(terrainSize.xy() * .5f, levelArea, levelFunction);
-    Patch2D level = Patch2D(Vector3(5, 5, 0), Vector3(0.f, 0.f, 0.f), Vector3(25.f, 25.f, 15.f), levelFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK));
+    Patch3D level = Patch3D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 40.f, 15.f), levelFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
 
-    std::function level2Function = [](Vector3 pos) {
-        return 5.f - pos.z;
+    std::function level2Function = [&](Vector3 pos) {
+        return 5.f - (pos.z + noise.GetNoise(pos.x * 10.01f + 1000.f, pos.y * 10.1f + 1000.f) * 5.f);
+    };
+    std::function level3Function = [&](Vector3 pos) {
+        return 5.f - (pos.z + noise.GetNoise(pos.x * 10.01f + 100.f, pos.y * 10.1f + 100.f) * 5.f);
     };
     ShapeCurve level2Area = ShapeCurve({
                                             Vector3(0, 0, 0),
@@ -805,11 +815,18 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                         }).scale(10.f);
 //    Patch2D level = Patch2D(terrainSize.xy() * .5f, levelArea, levelFunction);
     Patch2D level2 = Patch2D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 10.f, 5.f), level2Function, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK));
-    Patch2D level3 = Patch2D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 10.f, 5.f), level2Function, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
+    Patch2D level3 = Patch2D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 10.f, 5.f), level3Function, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT));
 
-    Patch3D myStackA = Patch3D::blend(level, sphere);
-    Patch3D myStackB = Patch3D::replace(myStackA, level2);
-    Patch3D myStackC = Patch3D::stack(myStackB, level3);
+    std::function platformFunction = [](Vector3 pos) {
+        if (pos.z < 10.f) return 0.f;
+        float val = 15.f - pos.z;
+        return val;
+    };
+    Patch3D platform = Patch3D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 40.f, 25.f), platformFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::AIR));
+
+//    Patch3D myStackA = Patch3D::replace(sphere, platform);
+//    Patch3D myStackB = Patch3D::stack(myStackA, level3);
+//    Patch3D myStackC = Patch3D::stack(myStackB, level3);
 //    Patch3D myStackC = Patch3D::stack(level2, level3);
 
     auto oldVoxels = layerGrid->voxelize(terrainSize.z);
@@ -820,11 +837,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 //    voxelGrid->applyModification(newVoxels - oldVoxels);
 //    oldVoxels = newVoxels;
 
-    layerGrid->add(myStackC, TerrainTypes::BEDROCK, false);
+    layerGrid->add(sphere, TerrainTypes::BEDROCK, false);
     newVoxels = layerGrid->voxelize(terrainSize.z);
     voxelGrid->applyModification(newVoxels - oldVoxels);
     oldVoxels = newVoxels;
-
+*/
     /*
     layerGrid->add(bedrock, TerrainTypes::BEDROCK, false);
     newVoxels = layerGrid->voxelize(terrainSize.z);
@@ -868,7 +885,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     oldVoxels = newVoxels;
     */
 
-    return;
+//    return;
 
     // END OF SHITTY PART
 

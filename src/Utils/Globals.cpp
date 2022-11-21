@@ -110,6 +110,7 @@ void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type,
     UNUSED(type);
     UNUSED(length);
     UNUSED(userParam);
+    return;
     if (id == 131154) return; // Ignore "Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering." due to screenshots
     if (severity == GL_DEBUG_SEVERITY_HIGH || severity == GL_DEBUG_SEVERITY_MEDIUM || severity == GL_DEBUG_SEVERITY_LOW) {
         std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");
