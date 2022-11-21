@@ -5,6 +5,8 @@
 #include <QCheckBox>
 #include <QApplication>
 
+#include <unordered_map>
+
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall)
 {
     QLabel* lab = new QLabel(QString::fromStdString(label));
@@ -21,7 +23,7 @@ QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmal
 
     return group;
 }
-QGroupBox* createMultipleSliderGroup(std::map<std::string, QSlider*> labelsAndSliders)
+QGroupBox* createMultipleSliderGroup(std::unordered_map<std::string, QSlider*> labelsAndSliders)
 {
     QGridLayout* layout = new QGridLayout();
     QGroupBox* group = new QGroupBox;
@@ -97,7 +99,7 @@ QGroupBox* createOptionalSlider(RangeSlider *slider, std::string checkboxLabel, 
     */
 }
 
-QGroupBox *createMultipleSliderGroupWithCheckbox(std::map<std::string, std::pair<QSlider *, QCheckBox *>> labelsAndSlidersAndActivables)
+QGroupBox *createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string, std::pair<QSlider *, QCheckBox *>> labelsAndSlidersAndActivables)
 {
     QGridLayout* layout = new QGridLayout();
     QGroupBox* group = new QGroupBox;

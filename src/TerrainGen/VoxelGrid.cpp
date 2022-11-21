@@ -513,18 +513,22 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
     */
 }
 
-void VoxelGrid::undo()
+bool VoxelGrid::undo()
 {
+    bool effective = false;
     for (auto& vc : this->chunks)
-        vc->undo();
+        effective = vc->undo();
     this->remeshAll();
+    return effective;
 }
 
-void VoxelGrid::redo()
+bool VoxelGrid::redo()
 {
+    bool effective = false;
     for (auto& vc : this->chunks)
-        vc->redo();
+        effective = vc->redo();
     this->remeshAll();
+    return effective;
 }
 
 size_t VoxelGrid::getCurrentHistoryIndex() const
@@ -848,6 +852,30 @@ void VoxelGrid::retrieveMap(std::string filename)
         }
     }
     this->tempData = data;
+}
+
+Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    if (!minPos.isValid()) minPos = Vector3();
+    if (!maxPos.isValid()) maxPos = this->getDimensions();
+
+    Vector3 currPos = origin;
+    auto values = this->getVoxelValues();
+    values.raiseErrorOnBadCoord = false;
+    float distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    // Continue while we are in the grid or we are heading towards the grid
+    while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
+    {
+        float isoval = values.at(currPos);
+        if (isoval > 0.0) {
+            return currPos;
+        }
+        currPos += dir;
+        distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    }
+    return Vector3(false);
 }
 float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
 {

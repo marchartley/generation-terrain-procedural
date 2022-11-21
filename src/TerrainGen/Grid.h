@@ -19,6 +19,7 @@ public:
 
     int getSizeX() {return heights.sizeX;}
     int getSizeY() {return heights.sizeY;}
+    Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getMaxHeight()); }
 
     Matrix3<float> getHeights() { return this->heights; }
     float getHeight(int x, int y) { return this->heights.at(x, y); }

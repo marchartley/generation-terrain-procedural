@@ -23,6 +23,7 @@ LayerBasedGrid::LayerBasedGrid() : LayerBasedGrid(10, 10, 1.f)
 LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
 {
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(nx, ny, 1, {{TerrainTypes::BEDROCK, nz}}); // Initial terrain = 1 layer of bedrock
+    this->previousState = layers;
 }
 
 void LayerBasedGrid::createMesh() {
@@ -339,14 +340,18 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
         for (auto& val : distanceMap)
             val = std::pow(val, distancePower);
     }
-    float zResolution = 1.0f;
+    float zResolution = .10f;
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
             while ( z < maxZ) {
                 float eval = patch.evaluate(Vector3(x, y, z) - patch.position);
                 if (eval != 0.f) {
-                    this->addLayer(Vector3(x, y), zResolution, LayerBasedGrid::materialFromDensity(patch.get(Vector3(x, y, z) - patch.position)));
+                    float layerDens = patch.get(Vector3(x, y, z) - patch.position);
+                    if (layerDens > 0) {
+                        int a = 0;
+                    }
+                    this->addLayer(Vector3(x, y), zResolution, LayerBasedGrid::materialFromDensity(layerDens));
                 } else {
                     this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
                 }
@@ -354,7 +359,7 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
             }
         }
     }
-//    this->reorderLayers();
+    this->reorderLayers();
     return;
 }
 
@@ -386,19 +391,47 @@ Patch::Patch()
 Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, float densityValue)
     : Patch(pos, boundMin, boundMax, evalFunction, [&](Vector3 pos) { return this->evaluate(pos); }, densityValue)
 {
-
+    this->compositionFunction = [&](Vector3 pos) {
+        float eval = this->evaluate(pos);
+        return eval;
+    };
 }
 
 Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
-    : position(pos), boundMin(boundMin), boundMax(boundMax), evalFunction(evalFunction), densityValue(densityValue), compositionFunction(compositionFunction)
+    : Patch(pos, boundMin, boundMax, evalFunction, compositionFunction, [&](Vector3 _pos) { return 1.f; }, densityValue)
 {
-
+    this->alphaDistanceFunction = [&](Vector3 _pos) {
+        float distPower = 2.f;
+        float minDistance = 0.8f;
+        float distance = -Vector3::signedDistanceToBoundaries(_pos, this->boundMin, this->boundMax);
+        float maxDistance = ((this->boundMax - this->boundMin) * .5f).maxComp();
+        float ratio = 1.f - std::clamp(distance / maxDistance, 0.f, 1.f);
+        return 1.f - (ratio <= minDistance ? 0.f : std::pow((ratio - minDistance) / (1.f - minDistance), distPower));
+    };
 }
 
-Patch::~Patch()
+Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
+    : position(pos), boundMin(boundMin), boundMax(boundMax), evalFunction(evalFunction), densityValue(densityValue), compositionFunction(compositionFunction), alphaDistanceFunction(alphaDistanceFunction)
 {
-
+    this->_cachedHeights = Matrix3<float>(boundMax - boundMin, -1000.f);
+    this->_cachedHeights.raiseErrorOnBadCoord = false;
+    this->_cachedHeights.defaultValueOnBadCoord = 0.f;
 }
+
+float Patch::getMaxHeight(Vector3 position)
+{
+    return 0.f;
+}
+
+float Patch::evaluate(Vector3 position)
+{
+    return 0.f;
+}
+
+//Patch::~Patch()
+//{
+
+//}
 
 
 Patch2D::Patch2D()
@@ -415,6 +448,12 @@ Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<
 
 Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> heightFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
     : Patch(pos, boundMin, boundMax, heightFunction, compositionFunction, densityValue)
+{
+
+}
+
+Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> heightFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
+    : Patch(pos, boundMin, boundMax, heightFunction, compositionFunction, alphaDistanceFunction, densityValue)
 {
 
 }
@@ -459,13 +498,38 @@ Patch3D::Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<
 
 }
 
+Patch3D::Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
+    : Patch(pos, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction, densityValue)
+{
+}
+
+Patch3D::Patch3D(const Patch3D &copy)
+{
+    this->position = copy.position;
+    this->boundMin = copy.boundMin;
+    this->boundMax = copy.boundMax;
+    this->evalFunction = copy.evalFunction;
+    this->compositionFunction = copy.compositionFunction;
+    this->alphaDistanceFunction = copy.alphaDistanceFunction;
+    this->densityValue = copy.densityValue;
+    float test = compositionFunction(Vector3(10,10,10));
+    std::cout << test << std::endl;
+    this->_cachedHeights = Matrix3<float>(boundMax - boundMin, -1000.f);
+    this->_cachedHeights.raiseErrorOnBadCoord = false;
+    this->_cachedHeights.defaultValueOnBadCoord = 0.f;
+}
+
 float Patch3D::getMaxHeight(Vector3 position)
 {
-    float resolution = 0.1;
-    float maxHeight = boundMax.z;
-    while (maxHeight >= boundMin.z && evaluate(Vector3(position.x, position.y, maxHeight)) <= 0.f)
-        maxHeight -= resolution;
-    return maxHeight;
+    if (this->_cachedHeights.at(position.xy()) < -1.f) {
+        float resolution = 0.1;
+        float maxHeight = this->boundMax.z;
+        while (maxHeight >= boundMin.z && evaluate(Vector3(position.x, position.y, maxHeight)) <= 0.f)
+            maxHeight -= resolution;
+        this->_cachedHeights.at(position.xy()) = maxHeight;
+        return maxHeight;
+    }
+    return this->_cachedHeights.at(position.xy());
 }
 
 float Patch3D::evaluate(Vector3 position)
@@ -476,98 +540,145 @@ float Patch3D::evaluate(Vector3 position)
     return (this->evalFunction(p) > 0.f ? 1.f : 0.f);
 }
 
-Patch3D Patch3D::stack(Patch& P1, Patch& P2)
+Patch3D Patch3D::stack(Patch3D *P1, Patch3D *P2)
 {
-    Vector3 P1center = P1.position;
-    Vector3 P2center = P2.position;
+    Vector3 P1center = P1->position;
+    Vector3 P2center = P2->position;
 
-    Vector3 boundMin = Vector3::min(P1.boundMin + P1center, P2.boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1.boundMax + P1center, P2.boundMax + P2center);
+    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
+    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
     // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1.boundMax.z - P1.boundMin.z) + (P2.boundMax.z - P2.boundMin.z);
+    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
 
     Vector3 newCenter = boundMin;
 
     boundMax -= newCenter;
     boundMin -= newCenter;
 
-    std::function<float(Vector3)> evalFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float val1 = P1.evaluate(pos - (P1center - newCenter));
-        float val2 = P2.evaluate(pos - Vector3(0, 0, zOffset) - (P2center - newCenter));
+    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float zOffset = P1->getMaxHeight(pos1);
+        pos2.z -= zOffset;
+        float val1 = P1->evaluate(pos1);
+        float val2 = P2->evaluate(pos2);
         return (val1 + val2 > 0.f ? 1.f : 0.f);
     };
 
-    std::function<float(Vector3)> compositionFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float val1 = P1.get(pos - (P1center - newCenter));
-        float val2 = P2.get(pos - Vector3(0, 0, zOffset) - (P2center - newCenter));
-        return val1 + val2;
+    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float zOffset = P1->getMaxHeight(pos1);
+        pos2.z -= zOffset;
+        float val1 = P1->get(pos1);
+        float val2 = P2->get(pos2);
+        return (val1 > 0.f ? val1 : val2);
     };
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction);
+
+    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float zOffset = P1->getMaxHeight(pos1);
+        pos2.z -= zOffset;
+        return std::clamp(std::max(P1->getAlphaValue(pos), P2->getAlphaValue(pos)), 0.f, 1.f);
+    };
+
+    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
 }
 
-Patch3D Patch3D::replace(Patch& P1, Patch& P2)
+Patch3D Patch3D::replace(Patch3D *P1, Patch3D *P2)
 {
-    Vector3 P1center = P1.position;
-    Vector3 P2center = P2.position;
+    Vector3 P1center = P1->position;
+    Vector3 P2center = P2->position;
 
-    Vector3 boundMin = Vector3::min(P1.boundMin + P1center, P2.boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1.boundMax + P1center, P2.boundMax + P2center);
+    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
+    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
     // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1.boundMax.z - P1.boundMin.z) + (P2.boundMax.z - P2.boundMin.z);
+    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
 
     Vector3 newCenter = boundMin;
 
     boundMax -= newCenter;
     boundMin -= newCenter;
 
-    std::function<float(Vector3)> evalFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-//        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float val1 = P1.evaluate(pos - (P1center - newCenter));
-        float val2 = P2.evaluate(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
+    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float val1 = P1->evaluate(pos1);
+        float val2 = P2->evaluate(pos2);
         return (val1 + val2 > 0.f ? 1.f : 0.f);
     };
 
-    std::function<float(Vector3)> compositionFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-//        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float check_val2 = P2.evaluate(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
-        float val1 = P1.get(pos - (P1center - newCenter));
-        float val2 = P2.get(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
-        return (check_val2 > 0.f ? val2 : val1);
+    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float val1 = P1->get(pos1);
+        float val2 = P2->get(pos2);
+        float check_val2 = val2;
+
+        float alpha2 = P2->getAlphaValue(pos2);
+
+        return (std::abs(check_val2) > 0.f ? val1 * (1.f - alpha2) + val2 * alpha2 : val1);
     };
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction);
+    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float zOffset = P1->getMaxHeight(pos1);
+        pos2.z -= zOffset;
+        return std::clamp(std::max(P1->getAlphaValue(pos1), P2->getAlphaValue(pos2)), 0.f, 1.f);
+    };
+    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
 }
 
-Patch3D Patch3D::blend(Patch& P1, Patch& P2)
+Patch3D Patch3D::blend(Patch3D *P1, Patch3D *P2)
 {
-    Vector3 P1center = P1.position;
-    Vector3 P2center = P2.position;
+    Vector3 P1center = P1->position;
+    Vector3 P2center = P2->position;
 
-    Vector3 boundMin = Vector3::min(P1.boundMin + P1center, P2.boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1.boundMax + P1center, P2.boundMax + P2center);
+    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
+    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
     // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1.boundMax.z - P1.boundMin.z) + (P2.boundMax.z - P2.boundMin.z);
+    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
 
     Vector3 newCenter = boundMin;
 
     boundMax -= newCenter;
     boundMin -= newCenter;
 
-    std::function<float(Vector3)> evalFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-//        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float val1 = P1.evaluate(pos - (P1center - newCenter));
-        float val2 = P2.evaluate(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
+    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float val1 = P1->evaluate(pos1);
+        float val2 = P2->evaluate(pos2);
         return (val1 + val2 > 0.f ? 1.f : 0.f);
     };
 
-    std::function<float(Vector3)> compositionFunction = [&P1, &P2, P1center, P2center, newCenter](Vector3 pos) {
-//        float zOffset = P1.getMaxHeight(pos - (P1center - newCenter));
-        float check_val1 = P1.evaluate(pos - (P1center - newCenter));
-        float check_val2 = P2.evaluate(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
-        float val1 = P1.get(pos - (P1center - newCenter));
-        float val2 = P2.get(pos /*- Vector3(0, 0, zOffset)*/ - (P2center - newCenter));
-        return (check_val1 > 0.f && check_val2 > 0.f ? (val1 + val2) * .5f : (check_val1 > 0.f ? val1 : val2));
+    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float alpha1 = P1->getAlphaValue(pos1);
+        float alpha2 = P2->getAlphaValue(pos2);
+        float val1 = P1->get(pos1);
+        float val2 = P2->get(pos2);
+        if (val1 <= 0.f) {
+            alpha1 = 0.f;
+            alpha2 = 1.f;
+        } else if (val2 <= 0.f) {
+            alpha1 = 1.f;
+            alpha2 = 0.f;
+        }
+        return (alpha1 * val1 + alpha2 * val2) / (alpha1 + alpha2);
+//        float check_val1 = val1;
+//        float check_val2 = val2;
+
+//        return (check_val1 > 0.f && check_val2 > 0.f ? (val1 + val2) * .5f : (check_val1 > 0.f ? val1 : val2));
     };
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction);
+    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
+        Vector3 pos1 = pos - (P1center - newCenter);
+        Vector3 pos2 = pos - (P2center - newCenter);
+        float zOffset = P1->getMaxHeight(pos1);
+        pos2.z -= zOffset;
+        return std::clamp(std::max(P1->getAlphaValue(pos1), P2->getAlphaValue(pos2)), 0.f, 1.f);
+    };
+    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
 }

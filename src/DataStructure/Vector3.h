@@ -95,6 +95,14 @@ public:
 
     static Vector3 nabla;
 
+    float maxComp() { return std::max({x, y, z}); };
+    float minComp() { return std::min({x, y, z}); };
+
+
+    static bool isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos);
+    static float signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
+    static float distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
+
     bool isValid() const { return this->valid && (this->x == this->x && this->y == this->y && this->z == this->z); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }

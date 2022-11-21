@@ -477,3 +477,31 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v) {
 }
 
 Vector3 std::abs(Vector3 o) { return o.abs(); }
+
+bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
+    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
+}
+float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+{
+    pos -= minPos;
+    maxPos -= minPos;
+
+    if (ignoreZdimension) {
+        pos = pos.xy();
+        maxPos = maxPos.xy();
+    }
+
+    Vector3 d = pos.abs() - maxPos;
+    return Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f);
+//    return -(Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f));
+//    return Vector3::distanceToBoundaries(pos, minPos, maxPos, ignoreZdimension) * (Vector3::isInBox(pos, minPos, maxPos) ? 1.f : -1.f);
+}
+
+float Vector3::distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+{
+    return std::abs(Vector3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
+//    float x = std::min(std::abs(pos.x), std::abs(maxPos.x - pos.x));
+//    float y = std::min(std::abs(pos.y), std::abs(maxPos.y - pos.y));
+//    float z = std::min(std::abs(pos.z), std::abs(maxPos.z - pos.z)) * (ignoreZdimension ? 0.f : 1.f);
+//    return std::max({x, y, z});
+}

@@ -25,6 +25,8 @@ public:
     void display();
     void createMesh(bool applyMarchingCubes = true, bool updateMesh = true);
 
+    size_t getCurrentHistoryIndex() const { return this->currentHistoryIndex; }
+
     void updateLoDsAvailable();
 
     void makeItFall();
@@ -32,8 +34,8 @@ public:
     void computeGroups();
 
     void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
-    void undo();
-    void redo();
+    bool undo();
+    bool redo();
 
     void resetVoxelsNeighbors();
     void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
@@ -82,6 +84,8 @@ public:
     std::vector<Vector3> voxelsValuesAnchorStack;
 
 
+    int _cachedHistoryIndex = -1;
+    Matrix3<float> _cachedVoxelValues;
 //    static CubeMesh cubeMesh;
 };
 

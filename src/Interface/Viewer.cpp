@@ -18,7 +18,7 @@
 Viewer::Viewer(QWidget *parent): Viewer(
         std::make_shared<Grid>(),
         std::make_shared<VoxelGrid>(),
-        std::shared_ptr<LayerBasedGrid>(nullptr), // new LayerBasedGrid(10, 10, 50),
+        std::make_shared<LayerBasedGrid>(),
         VOXEL_MODE,
         FILL_MODE,
         parent
@@ -395,13 +395,25 @@ void Viewer::animate()
 Vector3 Viewer::minVoxelsShown()
 {
     Vector3 minVec(minSliceMapX, minSliceMapY, minSliceMapZ);
-    return Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * minVec;
+    if (this->mapMode == MapMode::VOXEL_MODE)
+        return voxelGrid->getDimensions() * minVec;
+    else if (this->mapMode == MapMode::LAYER_MODE)
+        return layerGrid->getDimensions() * minVec;
+    else if (this->mapMode == MapMode::GRID_MODE)
+        return grid->getDimensions() * minVec;
+    return Vector3();
 }
 
 Vector3 Viewer::maxVoxelsShown()
 {
     Vector3 maxVec(maxSliceMapX, maxSliceMapY, maxSliceMapZ);
-    return Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * maxVec;
+    if (this->mapMode == MapMode::VOXEL_MODE)
+        return voxelGrid->getDimensions() * maxVec;
+    else if (this->mapMode == MapMode::LAYER_MODE)
+        return layerGrid->getDimensions() * maxVec;
+    else if (this->mapMode == MapMode::GRID_MODE)
+        return grid->getDimensions() * maxVec;
+    return Vector3();
 }
 
 void Viewer::swapCamera(qglviewer::Camera *altCamera, bool useAltCamera)
@@ -435,6 +447,7 @@ bool Viewer::checkMouseOnVoxel()
     if (voxelGrid == nullptr)
         return false;
     camera()->convertClickToLine(mousePos, orig, dir);
+    /*
     float maxDist = std::max((int)camera()->distanceToSceneCenter(), std::max(voxelGrid->getSizeX(), std::max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
     maxDist *= maxDist;
 
@@ -452,7 +465,10 @@ bool Viewer::checkMouseOnVoxel()
             if (isoval > 0.0) // || (0.f <= currPos.z && currPos.z < 1.0) )
                 found = true;
         }
-    }
+    }*/
+    Vector3 currPos = voxelGrid->getFirstIntersectingVoxel(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    bool found = currPos.isValid();
+//    std::cout << found << std::endl;
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos;
