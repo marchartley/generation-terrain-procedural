@@ -73,7 +73,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
     initialMapValues.raiseErrorOnBadCoord = false;
     initialMapValues.defaultValueOnBadCoord = -1000;
     // Use normals from initial map, it shouldn't change too much...
-    Matrix3<Vector3> normals = initialMapValues.binarize().toDistanceMap().gradient();
+    Matrix3<Vector3> normals = initialMapValues.gradient(); //initialMapValues.binarize().toDistanceMap().gradient();
     normals.raiseErrorOnBadCoord = false;
 
     Matrix3<float> modifications(grid->getDimensions());
@@ -116,6 +116,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
         cpt ++;
         int steps = 10 * starting_distance; // An estimation of how many step we need
         Vector3 pos;
+        Vector3 firstHitPos;
         if (!startingPoint.isValid()) {
             pos = Vector3(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(0.0, 1.0));
             pos.normalize();
@@ -152,20 +153,21 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
                 bool justHit = false;
                 if (currentMapValues.at(pos + dir) > 0.0) { // Hit a wall
                     Vector3 normal = normals.at(pos + dir).normalized();
+                    float speedRate = (dir.norm() / maxSpeed);
+                    float coef = 1.f; // std::max(std::abs(normal.x), std::abs(normal.y));
 //                    rock.Apply(this->grid, pos, false, false);
 //                    // USING DOT PRODUCT
 //                    // Erosion part
-//                    float amountToErode = std::max(std::min(maxCapacity - capacity, dir.normalized().dot(normal) * erosionFactor), 0.f);
+                    float amountToErode = std::max(std::min(maxCapacity - capacity, coef * speedRate * (std::abs(dir.normalized().dot(normal))) * erosionFactor * (1.f - std::abs(normal.dot(Vector3(0, 0, 1))))), 0.f);
 //                    // Deposition part
-//                    float amountToDeposit = std::max(std::min(capacity, (1 - dir.normalized().dot(normal)) * depositFactor), 0.f);
+                    float amountToDeposit = std::max(std::min(capacity, coef * speedRate * (1 - std::abs(dir.normalized().dot(normal))) * depositFactor), 0.f);
                     // USING SPEED
-                    float speedRate = (dir.norm() / maxSpeed);
                     // Erosion part
-                    float amountToErode = std::max(std::min(maxCapacity - capacity, std::min(speedRate, 1.f) * erosionFactor / (materialImpact != 0 ? currentMapValues.at(pos + dir) * materialImpact : 1.f)), 0.f);
+//                    float amountToErode = std::max(std::min(maxCapacity - capacity, coef * std::min(speedRate, 1.f) * erosionFactor / (materialImpact != 0 ? currentMapValues.at(pos + dir) * materialImpact : 1.f)), 0.f);
                     // Deposition part
-                    float amountToDeposit = std::max(std::min(capacity, (1 - speedRate) * depositFactor), 0.f);
+//                    float amountToDeposit = std::max(std::min(capacity, (1 - speedRate) * depositFactor * coef), 0.f);
 //                    std::cout << amountToErode << " " << amountToDeposit << std::endl;
-                    if (!firstHit) {
+                    if (!firstHit /*&& (firstHitPos - pos).norm2() > maxRockSize*maxRockSize*/) {
                         if (amountToErode - amountToDeposit != 0) {
                             capacity += (amountToErode - amountToDeposit);
                             int division = 1;
@@ -185,6 +187,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
                         debugFinishingLines.push_back(coords);
                     } else {
                         // Ignore the first collision
+                        firstHitPos = pos;
                         if (currentMapValues.at(pos + dir) > 0.0) {
                             firstHit = false;
                             tunnel.points.clear();
@@ -232,7 +235,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
 //                }
                 if ((steps < 0 || dir.norm2() < 1e-3) && depositFactor > 0.f) {
                     RockErosion rock(random_gen::generate(0.0, this->maxRockSize), -capacity);
-                    rock.computeErosionMatrix(modifications, pos, false);
+                    rock.computeErosionMatrix(modifications, pos - Vector3(0, 0, this->maxRockSize), false);
                 }
                 break;
             }

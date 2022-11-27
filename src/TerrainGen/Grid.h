@@ -8,6 +8,7 @@ class Grid;
 #include "TerrainGen/VoxelGrid.h"
 #include "Graphics/Mesh.h"
 #include "DataStructure/Matrix3.h"
+#include "TerrainGen/LayerBasedGrid.h"
 
 class Grid {
 public:
@@ -23,6 +24,7 @@ public:
 
     Matrix3<float> getHeights() { return this->heights; }
     float getHeight(int x, int y) { return this->heights.at(x, y); }
+    float getHeight(Vector3 pos) { return this->getHeight(pos.x, pos.y); }
     float getMaxHeight();
     float getTileSize() { return this->tileSize; }
     Vector3 getNormal(int x, int y) { return this->normals.at(x, y); }
@@ -52,11 +54,14 @@ public:
     void createMesh();
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
+    void fromLayerGrid(LayerBasedGrid& layerGrid);
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
     void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1, float tileSize = 0.1);
     void saveHeightmap(std::string heightmap_filename);
+
+    Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
 //protected:
     void computeNormals();

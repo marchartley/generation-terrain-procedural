@@ -110,10 +110,12 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
     this->initMap();
 
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
+    Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight);
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            for (int x = 0; x < chunkSize; x++) {
+            data[iChunk] = precomputedVoxelGrid.subset((xChunk * chunkSize), (yChunk * chunkSize), 0, ((xChunk + 1) * chunkSize), ((yChunk + 1) * chunkSize), this->getSizeZ());
+            /*for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < this->getSizeZ(); z++) {
                         TerrainTypes type = layerBased.getValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), z);
@@ -121,7 +123,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
                         data[iChunk].at(x, y, z) = density;
                     }
                 }
-            }
+            }*/
             iChunk ++;
         }
     }
@@ -877,9 +879,14 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector
     }
     return Vector3(false);
 }
+
+Vector3 VoxelGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    return this->getFirstIntersectingVoxel(origin, dir, minPos, maxPos);
+}
 float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
 {
-    return noiseMinMax.remap(this->noise.GetNoise((float)x, (float)y, (float)z), -2.0 + noise_shift, 2.0 + noise_shift);
+    return noiseMinMax.remap(this->noise.GetNoise((float)x, (float)y, (float)z), -1.0 + noise_shift, 1.0 + noise_shift);
 }
 
 

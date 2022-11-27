@@ -19,8 +19,10 @@ void ErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
     const char* fNoShader = ":/src/Shaders/no_shader.frag";
 
     this->rocksPathFailure = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
+    this->rocksPathFailure.useIndices = false;
     this->rocksPathFailure.shader->setVector("color", std::vector<float>({.7f, .2f, .1f, .5f}));
     this->rocksPathSuccess = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
+    this->rocksPathSuccess.useIndices = false;
     this->rocksPathSuccess.shader->setVector("color", std::vector<float>({.1f, .7f, .2f, .5f}));
 }
 
@@ -50,8 +52,10 @@ void ErosionInterface::throwFromSky()
     UnderwaterErosion erod = UnderwaterErosion(voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
-
+    this->rocksPathSuccess.clear();
+    this->rocksPathFailure.clear();
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
+        std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
         std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(Vector3(false), Vector3(false), this->rockRandomness, true,
                                                                           gravity,
                                                                           bouncingCoefficient,
@@ -68,10 +72,16 @@ void ErosionInterface::throwFromSky()
                                                                           airForce,
                                                                           waterForce
                                                                           );
-
         std::vector<Vector3> asOneVector;
-        for(std::vector<Vector3>& points : lastRocksLaunched) {
-            BSpline path = BSpline(points).simplifyByRamerDouglasPeucker(0.1f);
+        for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
+            for (size_t j = 0; j < lastRocksLaunched[i].size() - 1; j++) {
+                asOneVector.push_back(lastRocksLaunched[i][j]);
+                asOneVector.push_back(lastRocksLaunched[i][j + 1]);
+            }
+        }
+        this->rocksPathSuccess.fromArray(asOneVector);
+        /*for(std::vector<Vector3>& points : lastRocksLaunched) {
+            BSpline path = BSpline(points); //.simplifyByRamerDouglasPeucker(0.1f);
             for (size_t i = 0; i < path.points.size() - 1; i++) {
                 asOneVector.push_back(path.points[i]);
                 asOneVector.push_back(path.points[i + 1]);
@@ -86,9 +96,10 @@ void ErosionInterface::throwFromSky()
                 asOneVector.push_back(path.points[i + 1]);
             }
         }
-        this->rocksPathFailure.fromArray(asOneVector);
+        this->rocksPathFailure.fromArray(asOneVector);*/
 
-        this->heightmap->fromVoxelGrid(*voxelGrid);
+//        this->voxelGrid->smoothVoxels();
+//        this->heightmap->fromVoxelGrid(*voxelGrid);
         Q_EMIT this->updated();
     }
 }
@@ -118,6 +129,7 @@ void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
+        std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
         std::tie(lastRocksLaunched, lastFailedRocksLaunched) = erod.Apply(pos, dir, this->rockRandomness, false,
                                                                           gravity,
                                                                           bouncingCoefficient,
@@ -162,6 +174,7 @@ void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
                                                   {"quantity", erosionQtt}
                                               }));
 
+//        this->voxelGrid->smoothVoxels();
         this->heightmap->fromVoxelGrid(*voxelGrid);
         Q_EMIT this->updated();
     }
