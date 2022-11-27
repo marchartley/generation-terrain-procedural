@@ -47,11 +47,19 @@ public:
 
     Mesh mesh;
 
+    float getHeight(float x, float y);
+    float getHeight(Vector3 pos);
+
     void from2DGrid(Grid grid);
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
     VoxelGrid toVoxelGrid();
-    Matrix3<float> voxelize(int fixedHeight = -1);
+    Matrix3<float> voxelize(int fixedHeight = -1, float kernelSize = 1.f);
+    std::map<TerrainTypes, float> getKernel(Vector3 pos, float kernelSize);
+    std::pair<TerrainTypes, float> getMaterialAndHeight(Vector3 pos);
+
+    Vector3 getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
+    Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
     std::pair<Matrix3<int>, Matrix3<float> > getMaterialAndHeightsGrid();
 

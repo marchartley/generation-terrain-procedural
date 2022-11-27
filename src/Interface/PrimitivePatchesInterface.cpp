@@ -147,8 +147,9 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bo
         storedPatches.push_back(currentPatch);
 
         this->layerGrid->add(*currentPatch, TerrainTypes::AIR, false);
-        auto newVoxels = layerGrid->voxelize(this->voxelGrid->getSizeZ());
+        auto newVoxels = layerGrid->voxelize(this->voxelGrid->getSizeZ(), 3.f);
         voxelGrid->applyModification(newVoxels - voxelGrid->getVoxelValues());
+        heightmap->fromLayerGrid(*this->layerGrid);
     }
 }
 

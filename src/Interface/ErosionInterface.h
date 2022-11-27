@@ -61,7 +61,7 @@ protected:
 
     float airFlowfieldRotation = 0.f;
     float waterFlowfieldRotation = 180.f;
-    float airForce = 1.f;
+    float airForce = 0.f;
     float waterForce = 1.f;
 
     int numberOfIterations = 10;

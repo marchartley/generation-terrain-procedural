@@ -123,6 +123,7 @@ public:
     float maxSliceMapY = 1.f;
     float minSliceMapZ = 0.f;
     float maxSliceMapZ = 1.f;
+    int voxelsSmoothedOnBorders = 1;
 
     PositionalLight light;
 

@@ -48,6 +48,8 @@ out vec3 ginitialVertPos;
 out vec3 grealNormal;
 out vec4 gcolor;
 
+uniform int voxels_displayed_on_borders = 1;
+
 //Get vertex i position within current marching cube
 vec3 cubePos(vec3 voxelPos, int i){
     return vec4(vec4(voxelPos + vertDecals[i], 1.0)).xyz;
@@ -82,9 +84,16 @@ vec3 vertexInterp(float isolevel, vec3 v0, float l0, vec3 v1, float l1){
     return mix(v0, v1, (isolevel-l0)/(l1-l0));
 }
 
+float mincomp(vec2 v) { return min(v.x, v.y); }
+float maxcomp(vec2 v) { return max(v.x, v.y); }
+float mincomp(vec3 v) { return min(min(v.x, v.y), v.z); }
+float maxcomp(vec3 v) { return max(max(v.x, v.y), v.z); }
 vec4 getPosition(vec4 position, vec3 _offset)
 {
-    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xyz - min_vertice_positions)), mincomp(abs(position.xyz + vec3(1.0) - max_vertice_positions))) : 1.0);
+    vec3 off = _offset * (clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 1.0));
+    return clamp(position + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+//    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
 }
 
 int getCubeIndex(vec3 voxPos, out vec3 normal) {
@@ -145,17 +154,35 @@ void main(void) {
     gl_Position = proj_matrix * mv_matrix * position;
 
     if (!useMarchingCubes) {
-        if (cubeVal(position.xyz) < isolevel) return;
+        if (cubeVal(position.xyz) < isolevel)
+            return;
         if (position.x + 1 < min_vertice_positions.x || position.x > max_vertice_positions.x ||
             position.y + 1 < min_vertice_positions.y || position.y > max_vertice_positions.y ||
             position.z + 1 < min_vertice_positions.z || position.z > max_vertice_positions.z)
             return;
-        bool nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  0,  1)) < -1000);
-        bool nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  0, -1)) < -1000);
-        bool nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 1,  0,  0)) < -1000);
-        bool nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3(-1,  0,  0)) < -1000);
-        bool nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0, -1,  0)) < -1000);
-        bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel); // ^^ cubeVal(position.xyz + vec3( 0,  1,  0)) < -1000);
+        bool nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel) || position.z + (voxels_displayed_on_borders + 1) > max_vertice_positions.z;
+        bool nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel) || position.z - (voxels_displayed_on_borders + 1) < min_vertice_positions.z;
+        bool nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel) || position.x + (voxels_displayed_on_borders + 1) > max_vertice_positions.x;
+        bool nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel) || position.x - (voxels_displayed_on_borders + 1) < min_vertice_positions.x;
+        bool nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel) || position.y - (voxels_displayed_on_borders + 1) < min_vertice_positions.y;
+        bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel) || position.y + (voxels_displayed_on_borders + 1) > max_vertice_positions.y;
+
+//bool nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel) || position.x - (voxels_displayed_on_borders + 1) < min_vertice_positions.x || position.x + (voxels_displayed_on_borders + 1) > max_vertice_positions.x ||
+//position.y - (voxels_displayed_on_borders + 1) < min_vertice_positions.y || position.y + (voxels_displayed_on_borders + 1) > max_vertice_positions.y ||
+//position.z - (voxels_displayed_on_borders + 1) < min_vertice_positions.z || position.z + (voxels_displayed_on_borders + 1) > max_vertice_positions.z;
+//bool nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel);
+//bool nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel);
+//bool nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel);
+//bool nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel);
+//bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel);
+//        for (int n = 1; n < voxels_displayed_on_borders; n++) {
+//            nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel);
+//            nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel);
+//            nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel);
+//            nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel);
+//            nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel);
+//            nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel);
+//        }
         // Front
         grealNormal = vec3(0, -1, 0);
         if (nFront) {

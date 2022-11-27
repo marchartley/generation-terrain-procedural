@@ -507,6 +507,15 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         } else {
 //            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
 
+            Matrix3<float> heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
+            std::vector<Vector3> positions(heightData.size());
+            for (size_t i = 0; i < positions.size(); i++) {
+                positions[i] = heightData.getCoordAsVector3(i);
+                heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
+            }
+            heightmapMesh.useIndices = false;
+            heightmapMesh.fromArray(positions);
+            heightmapMesh.update();
             this->heightmapMesh.display(GL_POINTS);
 //            this->heightmap->mesh.shader->setFloat("time", time);
 //            this->heightmap->display(true);
@@ -705,194 +714,32 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 5.f);
 //    layerGrid->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(terrainSize.x, terrainSize.y);
 //    LayerBasedGrid layerGrid(terrainSize.x, terrainSize.y, 1.f);
-    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
-    voxelGrid->fromIsoData();
+//    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
+//    voxelGrid->fromIsoData();
 
     // Bedrock as noise function
     FastNoiseLite noise;
     noise = voxelGrid->noise;
     std::function noisyBedrock = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 10.f + 10.f;
+        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 1.f + 1.f;
         return noiseValue;
     };
     layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);
-    layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
-    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
-    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
-    /*
-    ShapeCurve bedrockArea = ShapeCurve({
-                                            Vector3(-1, -1),
-                                            Vector3(-1, 1),
-                                            Vector3(1, 1),
-                                            Vector3(1, -1)
-                                        }).scale(20.f);
-    Patch2D bedrock = Patch2D(terrainSize * .5f, Vector3(-20.f, 20.f, 0.f), Vector3(20.f, 20.f, 5.f), noisyBedrock);
+//    layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
+//    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
+//    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
 
-
-    std::function noisySandLayer = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * .5f + 500.f, pos.y * .5f + 500.f) * 2.f + 6.f;
-        return noiseValue;
-    };
-    Patch2D sandLayer = Patch2D(terrainSize * .5f, Vector3(-20.f, -20.f, 0.f), Vector3(20.f, 20.f, 10.f), noisySandLayer);
-
-    std::function noisySmallSandLayer = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * .5f + 500.f, pos.y * .5f + 500.f) * 2.f + 2.f;
-        return noiseValue;
-    };
-    Patch2D smallSandLayer = Patch2D(terrainSize * .5f, Vector3(-20.f, -20.f, 0.f), Vector3(20.f, 20.f, 5.f), noisySmallSandLayer);
-
-
-    std::function noisyRock = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f + 5000.f, pos.y * 2.f + 5000.f) * 3.f;
-        noiseValue += normalizedGaussian(Vector3(5, 5), pos + Vector3(5, 5) * .5f, 2.f) * 5.f;
-        return noiseValue;
-    };
-    std::function antiRockNoise = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f + 5000.f, pos.y * 2.f + 5000.f) * 3.f;
-        noiseValue += (1.f - normalizedGaussian(Vector3(5, 5), pos + Vector3(5, 5) * .5f, 1.f)) * 2.f;
-        return noiseValue;
-    };
-    ShapeCurve rockArea = ShapeCurve({
-                                            Vector3(-1, -1),
-                                            Vector3(-1, 1),
-                                            Vector3(1, 1),
-                                            Vector3(1, -1)
-                                        }).scale(5.f);
-
-
-    std::function noisySandBump = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f + 1000.f, pos.y * 2.f + 1000.f) * 1.f;
-        noiseValue += normalizedGaussian(Vector3(30, 30), pos, 15.f) * 5.f;
-        return noiseValue;
-    };
-    ShapeCurve sandArea = ShapeCurve({
-                                            Vector3(-1, -1),
-                                            Vector3(-1, 1),
-                                            Vector3(1, 1),
-                                            Vector3(1, -1)
-                                        }).scale(15.f);
-    Patch2D sand = Patch2D(terrainSize * .5f, Vector3(-15.f, -15.f, 0.f), Vector3(15.f, 15.f, 7.f), noisySandBump);
-
-
-    std::function sphereFunction = [&](Vector3 pos) {
-        float radius = 10.f;
-        Vector3 center(radius, radius, radius);
-        float value = (pos - radius).norm2() - radius * radius;
-        return -value;
-    };
-    Patch3D sphere = Patch3D(terrainSize.xy() * .25f, Vector3(0.f, 0.f, 0.f), Vector3(20.f, 20.f, 20.f), sphereFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT));
-    Patch3D sphere2 = Patch3D(terrainSize.xy() * .25f + Vector3(10.f, 0.f, 0.f), Vector3(0.f, 0.f, 0.f), Vector3(20.f, 20.f, 20.f), sphereFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
-
-    std::function levelFunction = [](Vector3 pos) {
-        return 15.f - pos.z;
-    };
-//    ShapeCurve levelArea = ShapeCurve({
-//                                            Vector3(-1, -1),
-//                                            Vector3(-1, 1),
-//                                            Vector3(1, 1),
-//                                            Vector3(1, -1)
-//                                        }).scale(15.f);
-    ShapeCurve levelArea = ShapeCurve({
-                                            Vector3(0, 0, 0),
-                                            Vector3(0, 1, 0),
-                                            Vector3(1, 1, 0),
-                                            Vector3(1, 0, 0)
-                                        }).scale(40.f);
-//    Patch2D level = Patch2D(terrainSize.xy() * .5f, levelArea, levelFunction);
-    Patch3D level = Patch3D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 40.f, 15.f), levelFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND));
-
-    std::function level2Function = [&](Vector3 pos) {
-        return 5.f - (pos.z + noise.GetNoise(pos.x * 10.01f + 1000.f, pos.y * 10.1f + 1000.f) * 5.f);
-    };
-    std::function level3Function = [&](Vector3 pos) {
-        return 5.f - (pos.z + noise.GetNoise(pos.x * 10.01f + 100.f, pos.y * 10.1f + 100.f) * 5.f);
-    };
-    ShapeCurve level2Area = ShapeCurve({
-                                            Vector3(0, 0, 0),
-                                            Vector3(0, 1, 0),
-                                            Vector3(4, 1, 0),
-                                            Vector3(4, 0, 0)
-                                        }).scale(10.f);
-//    Patch2D level = Patch2D(terrainSize.xy() * .5f, levelArea, levelFunction);
-    Patch2D level2 = Patch2D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 10.f, 5.f), level2Function, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK));
-    Patch2D level3 = Patch2D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 10.f, 5.f), level3Function, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT));
-
-    std::function platformFunction = [](Vector3 pos) {
-        if (pos.z < 10.f) return 0.f;
-        float val = 15.f - pos.z;
-        return val;
-    };
-    Patch3D platform = Patch3D(Vector3(0, 0, 0), Vector3(0.f, 0.f, 0.f), Vector3(40.f, 40.f, 25.f), platformFunction, LayerBasedGrid::densityFromMaterial(TerrainTypes::AIR));
-
-//    Patch3D myStackA = Patch3D::replace(sphere, platform);
-//    Patch3D myStackB = Patch3D::stack(myStackA, level3);
-//    Patch3D myStackC = Patch3D::stack(myStackB, level3);
-//    Patch3D myStackC = Patch3D::stack(level2, level3);
-
-    auto oldVoxels = layerGrid->voxelize(terrainSize.z);
-    auto newVoxels = oldVoxels;
-
-//    layerGrid->add(bedrock, TerrainTypes::BEDROCK, false);
-//    newVoxels = layerGrid->voxelize(terrainSize.z);
-//    voxelGrid->applyModification(newVoxels - oldVoxels);
-//    oldVoxels = newVoxels;
-
-    layerGrid->add(sphere, TerrainTypes::BEDROCK, false);
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-*/
-    /*
-    layerGrid->add(bedrock, TerrainTypes::BEDROCK, false);
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-
-
-    layerGrid->add(sandLayer, TerrainTypes::SAND, false);
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-
-    layerGrid->add(bedrock, TerrainTypes::BEDROCK, false);
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-
-    for (int i = 0; i < 10; i++) {
-        Vector3 pos = Vector3::random(Vector3(layerGrid->getSizeX(), layerGrid->getSizeY()));
-        Patch2D antiRock = Patch2D(pos, rockArea, antiRockNoise);
-        Patch2D rock = Patch2D(pos, rockArea, noisyRock);
-        layerGrid->add(antiRock, TerrainTypes::WATER, true, .5f);
-        layerGrid->add(antiRock, TerrainTypes::WATER, true, .5f);
-        layerGrid->add(rock, TerrainTypes::ROCK, true, .5f);
-        newVoxels = layerGrid->voxelize(terrainSize.z);
-        voxelGrid->applyModification(newVoxels - oldVoxels);
-        oldVoxels = newVoxels;
-    }
-//        layerGrid->add(sand, TerrainTypes::SAND, true, 1.f);
-    layerGrid->add(sandLayer, TerrainTypes::SAND, false);
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-
-
-    for (int i = 0; i < 10; i++)
-        layerGrid->thermalErosion();
-    layerGrid->cleanLayers();
-    newVoxels = layerGrid->voxelize(terrainSize.z);
-    voxelGrid->applyModification(newVoxels - oldVoxels);
-    oldVoxels = newVoxels;
-    */
-
-//    return;
+    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
+    voxelGrid->fromIsoData();
+    heightmap->fromLayerGrid(*layerGrid);
+    return;
 
     // END OF SHITTY PART
 
 
     if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmap->loadFromHeightmap(filename, 127, 127, 40);
+        heightmap->loadFromHeightmap(filename, 128, 128, 40);
 
         voxelGrid->from2DGrid(*heightmap);
         voxelGrid->fromIsoData();
@@ -948,8 +795,10 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
         voxelGrid->fromIsoData();
+        voxelGrid->smoothVoxels();
+        voxelGrid->smoothVoxels();
         // Sorry heightmap... You take too long...
-//        heightmap->fromVoxelGrid(*voxelGrid);
+        heightmap->fromVoxelGrid(*voxelGrid);
 
     } /*else {
         // In any other case, consider that nothing has been done, cancel.
@@ -957,6 +806,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     }*/
     this->voxelGrid->createMesh();
     this->heightmap->createMesh();
+    layerGrid->from2DGrid(*heightmap);
 
 
     voxelGrid->flowField = Matrix3<Vector3>(voxelGrid->environmentalDensities.getDimensions());
@@ -974,6 +824,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_file", filename},
                                               {"from_noise", false}
                                           }));
+    Q_EMIT this->updated();
 }
 
 void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)

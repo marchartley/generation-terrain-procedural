@@ -286,6 +286,7 @@ void Viewer::drawingProcess() {
         shader->setBool("display_light_source", true);
         shader->setVector("min_vertice_positions", minVoxelsShown());
         shader->setVector("max_vertice_positions", maxVoxelsShown());
+        shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
         shader->setFloat("fogNear", this->fogNear);
         shader->setFloat("fogFar", this->fogFar);
         shader->setBool("wireframeMode", !displayFill);
@@ -301,9 +302,9 @@ void Viewer::drawingProcess() {
         if (actionInterface.first != "terrainGenerationInterface")
             actionInterface.second->display();
 
-//    if (this->interfaces.count("terrainGenerationInterface")) {
-//        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
-//    }
+    if (this->interfaces.count("terrainGenerationInterface")) {
+        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
+    }
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -339,7 +340,14 @@ void Viewer::mousePressEvent(QMouseEvent *e)
     QGLViewer::mousePressEvent(e);
     checkMouseOnVoxel();
     if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
-        std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+        if (this->mapMode == MapMode::VOXEL_MODE) {
+            std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+        } else if (this->mapMode == MapMode::LAYER_MODE) {
+            auto [mat, height] = this->layerGrid->getMaterialAndHeight(mousePosWorld);
+            std::cout << "Stack (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << LayerBasedGrid::densityFromMaterial(mat) << " for height " << height << std::endl;
+        } else if (this->mapMode == MapMode::GRID_MODE) {
+            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->grid->getHeight(mousePosWorld) << std::endl;
+        }
 
     }
     Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e);
@@ -466,7 +474,14 @@ bool Viewer::checkMouseOnVoxel()
                 found = true;
         }
     }*/
-    Vector3 currPos = voxelGrid->getFirstIntersectingVoxel(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    Vector3 currPos(false);
+    if (this->mapMode == MapMode::VOXEL_MODE) {
+        currPos = voxelGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    } else if (this->mapMode == MapMode::GRID_MODE) {
+        currPos = grid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    } else if (this->mapMode == MapMode::LAYER_MODE) {
+        currPos = layerGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    }
     bool found = currPos.isValid();
 //    std::cout << found << std::endl;
     this->mouseInWorld = found;

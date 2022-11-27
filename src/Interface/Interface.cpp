@@ -60,7 +60,8 @@ ViewerInterface::ViewerInterface() {
         this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
 #else
 //        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
-        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
+        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/river.png");
 #endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
@@ -314,6 +315,13 @@ void ViewerInterface::setupUi()
     this->mapSliceSliderX = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
     this->mapSliceSliderY = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
     this->mapSliceSliderZ = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
+    this->mapSliceSmooth = new QCheckBox("Shrink on borders");
+    mapSliceSmooth->setChecked(viewer->voxelsSmoothedOnBorders > 1);
+    QObject::connect(mapSliceSmooth, &QCheckBox::toggled, this, [&](bool active) {
+        if (active) { this->viewer->voxelsSmoothedOnBorders = 5;}
+        else { this->viewer->voxelsSmoothedOnBorders = 1; }
+        this->viewer->update();
+    });
     QCheckBox* sliderXactivation = new QCheckBox("Activer");
     sliderXactivation->setChecked(true);
     QObject::connect(sliderXactivation, &QCheckBox::toggled, this, [&](bool active) {
@@ -335,11 +343,12 @@ void ViewerInterface::setupUi()
         else        { this->viewer->minSliceMapZ = -10.f;                              this->viewer->maxSliceMapZ = 10.f; }
         this->viewer->update();
     });
-    displayModeLayout->addWidget(createMultipleSliderGroupWithCheckbox({
+    displayModeLayout->addWidget(createVerticalGroup({createMultipleSliderGroupWithCheckbox({
                                                                {"X", {mapSliceSliderX, sliderXactivation}},
                                                                {"Y", {mapSliceSliderY, sliderYactivation}},
                                                                {"Z", {mapSliceSliderZ, sliderZactivation}}
-                                                           }));
+                                                           }),
+                                                      mapSliceSmooth}));
 
     this->isolevelSelectionSlider = new RangeSlider(Qt::Orientation::Horizontal, 0.f, 3.f, 0.1f);
     QCheckBox* isolevelSelectionActivation = new QCheckBox("Activer");

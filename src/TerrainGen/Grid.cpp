@@ -483,6 +483,16 @@ void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
     this->createMesh();
 }
 
+void Grid::fromLayerGrid(LayerBasedGrid &layerGrid)
+{
+    this->heights = Matrix3<float>(layerGrid.getSizeX(), layerGrid.getSizeY());
+    for (size_t x = 0; x < this->getSizeX(); x++) {
+        for (size_t y = 0; y < this->getSizeY(); y++) {
+            this->heights.at(x, y) = layerGrid.getHeight(x, y);
+        }
+    }
+}
+
 void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
 {
     this->tileSize = tileSize;
@@ -507,7 +517,7 @@ void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, flo
     Matrix3<float> map(imgW, imgH);
     for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
-            float value = (float)data[x + y * imgW];
+            float value = (float)data[x + y * imgW]; // [(imgW - x) + y * imgW];
             map.at(x, y) = value;
             max = std::max(max, value);
         }
@@ -551,4 +561,30 @@ void Grid::saveHeightmap(std::string heightmap_filename)
     else {
         std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
     }
+}
+
+Vector3 Grid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    if (!minPos.isValid()) minPos = Vector3();
+    if (!maxPos.isValid()) maxPos = this->getDimensions();
+
+    Vector3 currPos = origin;
+//    auto values = this->getVoxelValues();
+//    values.raiseErrorOnBadCoord = false;
+    float distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    // Continue while we are in the grid or we are heading towards the grid
+    while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
+    {
+        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+            float isoval = this->getHeight(currPos.xy()) - currPos.z;
+            if (isoval > 0.0) {
+                return currPos;
+            }
+        }
+        currPos += dir;
+        distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    }
+    return Vector3(false);
 }

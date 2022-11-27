@@ -100,6 +100,7 @@ public:
     RangeSlider* mapSliceSliderY;
     RangeSlider* mapSliceSliderZ;
     RangeSlider* isolevelSelectionSlider;
+    QCheckBox* mapSliceSmooth;
 
     std::string mapSavingFolder = "../saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;

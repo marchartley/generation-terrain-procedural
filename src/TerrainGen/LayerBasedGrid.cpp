@@ -125,7 +125,28 @@ float LayerBasedGrid::getSizeZ()
     return maxHeight;
 //    for (auto materialPair : this->layers[0])
 //        height += materialPair.second;
-//    return height;
+    //    return height;
+}
+
+float LayerBasedGrid::getHeight(float x, float y)
+{
+    float currentHeight = 0.f;
+    bool startCounting = false;
+    auto& materials = this->layers.at(x, y);
+    for (int i = materials.size() - 1; i >= 0; i--) {
+        auto [mat, height] = materials[i];
+        if (!startCounting)
+            startCounting = (mat != AIR && mat != WATER);
+        if (startCounting) {
+            currentHeight += height;
+        }
+    }
+    return currentHeight;
+}
+
+float LayerBasedGrid::getHeight(Vector3 pos)
+{
+    return this->getHeight(pos.x, pos.y);
 }
 
 void LayerBasedGrid::from2DGrid(Grid grid)
@@ -135,7 +156,7 @@ void LayerBasedGrid::from2DGrid(Grid grid)
     for (int x = 0; x < grid.getSizeX(); x++) {
         for (int y = 0; y < grid.getSizeY(); y++) {
             this->layers.at(x, y) = {
-                { TerrainTypes::DIRT, grid.getHeight(x, y) },
+                { TerrainTypes::SAND, grid.getHeight(x, y) },
                 { TerrainTypes::WATER, grid.maxHeight - grid.getHeight(x, y) }
             };
         }
@@ -171,13 +192,27 @@ VoxelGrid LayerBasedGrid::toVoxelGrid()
     return vox;
 }
 
-Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight)
+Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
 {
     float maxHeight = (fixedHeight == -1 ? this->getSizeZ() : fixedHeight);
     Matrix3<float> values = Matrix3<float>(this->getSizeX(), this->getSizeY(), maxHeight, LayerBasedGrid::densityFromMaterial(TerrainTypes::WATER));
 
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
+            for (int z = 0; z < maxHeight; z++) {
+                auto materialAndVolume = this->getKernel(Vector3(x, y, z), kernelSize);
+                float solidMaterial = 0.f;
+                float airMaterial = 0.f;
+                for (auto& [mat, vol] : materialAndVolume) {
+                    if (mat == AIR || mat == WATER)
+                        airMaterial += vol;
+                    else
+                        solidMaterial += vol;
+                }
+                float val = (2.f * solidMaterial / (solidMaterial + airMaterial)) - 1.f;
+                values.at(x, y, z) = (val > 0.f ? LayerBasedGrid::densityFromMaterial(SAND) : LayerBasedGrid::densityFromMaterial(AIR));
+            }
+            /*
             auto& stack = this->layers.at(x, y);
             float currentHeight = 0.f;
             for (size_t i = 0; i < stack.size(); i++) {
@@ -188,10 +223,90 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight)
                     values.at(x, y, z) = density;
                 }
                 currentHeight += height;
-            }
+            }*/
         }
     }
     return values;
+}
+
+std::map<TerrainTypes, float> LayerBasedGrid::getKernel(Vector3 pos, float kernelSize)
+{
+    std::map<TerrainTypes, float> finalDensities;
+    float halfK = kernelSize * .5f;
+    float minX = std::max(pos.x - halfK, 0.f);
+    float maxX = std::min(pos.x + halfK, float(this->getSizeX()));
+    float minY = std::max(pos.y - halfK, 0.f);
+    float maxY = std::min(pos.y + halfK, float(this->getSizeY()));
+    float minZ = std::max(pos.z - halfK, 0.f);
+    float maxZ = pos.z + halfK; // No way to know the Z max in a fast way
+
+    for (int x = std::floor(minX); x < std::ceil(maxX); x++) {
+        for (int y = std::floor(minY); y < std::ceil(maxY); y++) {
+            float widthX = 1.f; //std::min(x+1.f, maxX) - std::max(x+0.f, minX);
+            float widthY = 1.f; // std::min(y+1.f, maxY) - std::max(y+0.f, minY);
+            float currentHeight = 0.f;
+            int currentStack = 0;
+            while (currentHeight < maxZ && currentStack < this->layers.at(x, y).size()) {
+                auto [blockMaterial, blockHeight] = this->layers.at(x, y)[currentStack];
+                float start = clamp(currentHeight, minZ, maxZ);
+                float end   = clamp(currentHeight + blockHeight, minZ, maxZ);
+                float volume = (end - start) * (widthX * widthY);
+                currentHeight += blockHeight;
+                if (finalDensities.count(blockMaterial) == 0)
+                    finalDensities[blockMaterial] = 0.f;
+                finalDensities[blockMaterial] += volume;
+                currentStack++;
+            }
+            if (finalDensities.count(AIR) == 0)
+                finalDensities[AIR] = 0.f;
+            finalDensities[AIR] += std::max(0.f, maxZ - currentHeight) * (widthX * widthY);
+        }
+    }
+    return finalDensities;
+}
+
+std::pair<TerrainTypes, float> LayerBasedGrid::getMaterialAndHeight(Vector3 pos)
+{
+    if (!this->layers.checkCoord(pos.xy()))
+        return {TerrainTypes::AIR, 0.f};
+    float currentHeight = 0;
+    for (auto materialTuple : this->layers.at(pos.xy())) {
+        if (currentHeight <= pos.z && pos.z < currentHeight + materialTuple.second)
+            return materialTuple;
+        currentHeight += materialTuple.second;
+    }
+    // No material found at this position, let's assume z < 0 is ground and z > max is water
+//    return (pos.z < 0 ? {TerrainTypes::DIRT, 0.f} : {TerrainTypes::WATER, 0.f});
+    return {TerrainTypes::WATER, 0.f};
+}
+
+Vector3 LayerBasedGrid::getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    if (!minPos.isValid()) minPos = Vector3();
+    if (!maxPos.isValid()) maxPos = this->getDimensions();
+
+    Vector3 currPos = origin;
+//    auto values = this->getVoxelValues();
+//    values.raiseErrorOnBadCoord = false;
+    float distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    // Continue while we are in the grid or we are heading towards the grid
+    while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
+    {
+        float isoval = LayerBasedGrid::densityFromMaterial(this->getMaterialAndHeight(currPos).first);
+        if (isoval > 0.0) {
+            return currPos;
+        }
+        currPos += dir;
+        distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    }
+    return Vector3(false);
+}
+
+Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    return this->getFirstIntersectingStack(origin, dir, minPos, maxPos);
 }
 
 std::pair<Matrix3<int>, Matrix3<float> > LayerBasedGrid::getMaterialAndHeightsGrid()
@@ -359,7 +474,7 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
             }
         }
     }
-    this->reorderLayers();
+//    this->reorderLayers();
     return;
 }
 

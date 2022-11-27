@@ -21,6 +21,8 @@ uniform vec3 max_vertice_positions;
 
 uniform bool useMarchingCubes;
 
+uniform int voxels_displayed_on_borders = 5;
+
 in vec3 initialVertPos[];
 
 out vec3 ginitialVertPos;
@@ -67,9 +69,17 @@ float getHeight(vec3 texPos)
     return texelFetch(matHeightsTex, ivec3(texPos), 0).a;
 }
 
+float mincomp(vec2 v) { return min(v.x, v.y); }
+float maxcomp(vec2 v) { return max(v.x, v.y); }
+float mincomp(vec3 v) { return min(min(v.x, v.y), v.z); }
+float maxcomp(vec3 v) { return max(max(v.x, v.y), v.z); }
 vec4 getPosition(vec4 position, vec3 _offset)
 {
-    return clamp(position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xy - min_vertice_positions.xy)), mincomp(abs(position.xy + vec2(1.0) - max_vertice_positions.xy))) : 2.0);
+    float factor = clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 2.0);
+    vec3 off = _offset * vec3(factor, factor, 2.0) * .5 - vec3(.5, .5, 0.0);
+    return position + vec4(.5, .5, .0, .0) + vec4(off, 0.0);
+//    return clamp(position + vec4(.5, .5, .0, .0) + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
 }
 
 //Geometry Shader entry point
