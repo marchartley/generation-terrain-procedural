@@ -2,6 +2,7 @@
 #define PRIMITIVEPATCHESINTERFACE_H
 
 #include "ActionInterface.h"
+#include "Interface/HierarchicalListWidget.h"
 
 enum PRIMITIVE_SHAPE {
     SPHERE = 0,
@@ -64,6 +65,30 @@ protected:
 
     Vector3 functionSize = Vector3(1, 1, 1);
     void updateFunctionSize();
+
+
+    HierarchicalListWidget* allPrimitives;
+    void updatePrimitiveList();
+};
+
+
+class PatchReplacementDialog : public QDialog {
+    Q_OBJECT
+public:
+    PatchReplacementDialog(PrimitivePatchesInterface *caller = nullptr);
+
+
+public Q_SLOTS:
+    void open();
+    void cancel();
+    void confirm();
+
+public:
+    HierarchicalListWidget* allPrimitives;
+    QPushButton* cancelButton;
+    QPushButton* validButton;
+    PrimitivePatchesInterface* caller = nullptr;
+    int selectedPrimitiveIndex = -1;
 };
 
 #endif // PRIMITIVEPATCHESINTERFACE_H
