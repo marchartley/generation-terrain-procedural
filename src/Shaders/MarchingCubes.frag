@@ -185,7 +185,7 @@ vec3 getBiomeColor(vec2 pos) {
 float getDensity(vec3 pos, float resolution) {
     if (gdensity == 0) {
         vec3 texSize = vec3(textureSize(dataFieldTex, 0));
-        vec3 offset = 0.6 / texSize;
+        vec3 offsets = 0.6 / texSize;
         float density = 0.0;
         float surrounding = 3.f;
         for (float x = 0; x < surrounding; x++) {
@@ -194,7 +194,7 @@ float getDensity(vec3 pos, float resolution) {
                     float divisor = float(int(surrounding*.5f));
                     vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
     //                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
-                    float val = texture(dataFieldTex, newPos - offset).a;
+                    float val = texture(dataFieldTex, newPos - offsets).a;
                     density = max(density, val);
                 }
             }
@@ -207,16 +207,16 @@ float getDensity(vec3 pos, float resolution) {
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
     float density = getDensity(pos / terrainSize, 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
     float power = 1.0;
-    int index = 0;
+    int texIndex = 0;
     if (density <= densities[0]) {
-        index = texIndices[0];
+        texIndex = texIndices[0];
     } else if (density >= densities[densities.length() - 1]) {
-        index = texIndices[densities.length() - 1];
+        texIndex = texIndices[densities.length() - 1];
     } else {
         for (int i = 0; i < densities.length() - 1; i++)
-            index = (densities[i] <= density && density < densities[i + 1] ? (density < (densities[i] + densities[i + 1])/2.0 ? texIndices[i] : texIndices[i+1]) : index);
+            texIndex = (densities[i] <= density && density < densities[i + 1] ? (density < (densities[i] + densities[i + 1])/2.0 ? texIndices[i] : texIndices[i+1]) : texIndex);
     }
-    return index;
+    return texIndex;
 }
 /*
 vec4 getDensityColor(vec3 pos, vec3 terrainSize) {
