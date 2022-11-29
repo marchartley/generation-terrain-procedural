@@ -51,6 +51,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     QPushButton* resetButton = new QPushButton("Reset");
 
+    allPrimitives = new HierarchicalListWidget(this);
+
     layout->addWidget(createVerticalGroup({
                                                     createSphereButton,
                                                     createBlockButton,
@@ -69,6 +71,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     {"Sigma", sigmaSlider}
                                           }));
     layout->addWidget(resetButton);
+    layout->addWidget(allPrimitives);
 
     QObject::connect(createSphereButton, &QRadioButton::toggled, this, [&]() { this->setSelectedShape(PRIMITIVE_SHAPE::SPHERE); });
     QObject::connect(createBlockButton, &QRadioButton::toggled, this, [&]() { this->setSelectedShape(PRIMITIVE_SHAPE::BLOCK); });
@@ -145,11 +148,13 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bo
             thisResult = *patch;
         }
         storedPatches.push_back(currentPatch);
+        currentPatch->name = (currentShapeSelected == PRIMITIVE_SHAPE::BLOCK ? "Block" : currentShapeSelected == PRIMITIVE_SHAPE::GAUSSIAN ? "Gaussian" : "Sphere");
 
         this->layerGrid->add(*currentPatch, TerrainTypes::AIR, false);
-        auto newVoxels = layerGrid->voxelize(this->voxelGrid->getSizeZ(), 3.f);
-        voxelGrid->applyModification(newVoxels - voxelGrid->getVoxelValues());
-        heightmap->fromLayerGrid(*this->layerGrid);
+        this->updatePrimitiveList();
+//        auto newVoxels = layerGrid->voxelize(this->voxelGrid->getSizeZ(), 3.f);
+//        voxelGrid->applyModification(newVoxels - voxelGrid->getVoxelValues());
+//        heightmap->fromLayerGrid(*this->layerGrid);
     }
 }
 
@@ -241,4 +246,64 @@ std::function<float (Vector3)> PrimitivePatchesInterface::gaussianFunction(float
 void PrimitivePatchesInterface::updateFunctionSize()
 {
 
+}
+
+void PrimitivePatchesInterface::updatePrimitiveList()
+{
+    allPrimitives->clear();
+    for (auto& prim : storedPatches) {
+        allPrimitives->addItem(new HierarchicalListWidgetItem(prim->toString(), prim->index, 0));
+    }
+}
+
+
+
+
+
+
+
+
+
+PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller)
+    : QDialog(), caller(caller)
+{
+    QVBoxLayout * vBoxLayout = new QVBoxLayout(this);
+    allPrimitives = new HierarchicalListWidget(this);
+    cancelButton = new QPushButton("Annuler", this);
+    validButton = new QPushButton("Confirmer", this);
+
+    vBoxLayout->addWidget(allPrimitives);
+    vBoxLayout->addWidget(cancelButton);
+    vBoxLayout->addWidget(validButton);
+
+    QObject::connect(cancelButton, &QPushButton::pressed, this, &PatchReplacementDialog::cancel);
+    QObject::connect(validButton, &QPushButton::pressed, this, &PatchReplacementDialog::confirm);
+
+    setLayout(vBoxLayout);
+    setSizeGripEnabled(true);
+}
+
+void PatchReplacementDialog::open()
+{
+    QDialog::open();
+}
+
+void PatchReplacementDialog::cancel()
+{
+    selectedPrimitiveIndex = -1;
+    setResult(-1);
+//    caller->tempIndex = -1;
+    this->close();
+}
+
+void PatchReplacementDialog::confirm()
+{
+    if (allPrimitives->currentRow() >= 0) {
+        selectedPrimitiveIndex = dynamic_cast<HierarchicalListWidgetItem*>(allPrimitives->item(allPrimitives->currentRow()))->ID; //allAvailableBiomes->currentRow();
+        setResult(selectedPrimitiveIndex);
+//        caller->tempIndex = selectedPrimitiveIndex;
+        this->close();
+    } else {
+        cancel();
+    }
 }

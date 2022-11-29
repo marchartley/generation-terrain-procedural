@@ -309,23 +309,28 @@ Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 min
     return this->getFirstIntersectingStack(origin, dir, minPos, maxPos);
 }
 
-std::pair<Matrix3<int>, Matrix3<float> > LayerBasedGrid::getMaterialAndHeightsGrid()
+std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
-    int maxStackSize = 0;
-    for (auto& cell : layers)
-        maxStackSize = std::max(maxStackSize, int(cell.size()));
+    if (currentHistoryIndex != _historyIndex)
+    {
+        int maxStackSize = 0;
+        for (auto& cell : layers)
+            maxStackSize = std::max(maxStackSize, int(cell.size()));
 
-    Matrix3<int> materials(this->getSizeX(), this->getSizeY(), maxStackSize);
-    Matrix3<float> heights(materials.getDimensions());
+        Matrix3<int> materials(this->getSizeX(), this->getSizeY(), maxStackSize);
+        Matrix3<float> heights(materials.getDimensions());
 
-    for (size_t i = 0; i < layers.size(); i++) {
-        for (size_t iStack = 0; iStack < layers[i].size(); iStack++) {
-            Vector3 index = layers.getCoordAsVector3(i) + Vector3(0, 0, iStack);
-            materials.at(index) = (int) layers[i][iStack].first;
-            heights.at(index) = (float) layers[i][iStack].second;
+        for (size_t i = 0; i < layers.size(); i++) {
+            for (size_t iStack = 0; iStack < layers[i].size(); iStack++) {
+                Vector3 index = layers.getCoordAsVector3(i) + Vector3(0, 0, iStack);
+                materials.at(index) = (int) layers[i][iStack].first;
+                heights.at(index) = (float) layers[i][iStack].second;
+            }
         }
+        this->_cachedMaterialAndHeights = {materials, heights};
+        currentHistoryIndex = _historyIndex;
     }
-    return {materials, heights};
+    return this->_cachedMaterialAndHeights;
 }
 
 void LayerBasedGrid::thermalErosion()
@@ -433,6 +438,7 @@ void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanc
         }
     }
 //    this->reorderLayers();
+    _historyIndex ++;
     return;
 }
 
@@ -475,6 +481,7 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
         }
     }
 //    this->reorderLayers();
+    _historyIndex ++;
     return;
 }
 
@@ -497,6 +504,8 @@ float LayerBasedGrid::densityFromMaterial(TerrainTypes material)
     return (valMin + valMax) / 2.f;
 }
 
+
+int Patch::currentMaxIndex = -1;
 Patch::Patch()
     : Patch(Vector3(0, 0, 0), Vector3(-1, -1, -1), Vector3(1, 1, 1), [](Vector3 _pos) {return 0.f; })
 {
@@ -531,6 +540,9 @@ Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<floa
     this->_cachedHeights = Matrix3<float>(boundMax - boundMin, -1000.f);
     this->_cachedHeights.raiseErrorOnBadCoord = false;
     this->_cachedHeights.defaultValueOnBadCoord = 0.f;
+
+    Patch::currentMaxIndex ++;
+    this->index = Patch::currentMaxIndex;
 }
 
 float Patch::getMaxHeight(Vector3 position)

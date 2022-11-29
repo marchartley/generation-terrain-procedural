@@ -61,7 +61,7 @@ public:
     Vector3 getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
-    std::pair<Matrix3<int>, Matrix3<float> > getMaterialAndHeightsGrid();
+    std::pair<Matrix3<int>, Matrix3<float>> getMaterialAndHeightsGrid();
 
     void thermalErosion();
 
@@ -69,6 +69,11 @@ public:
 
     void add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
     void add(Patch3D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
+
+    int currentHistoryIndex = 0;
+    int _historyIndex = -1;
+
+    std::pair<Matrix3<int>, Matrix3<float> > _cachedMaterialAndHeights;
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
@@ -111,6 +116,13 @@ public:
     std::function<float(Vector3)> alphaDistanceFunction;
 
     Matrix3<float> _cachedHeights;
+
+    std::string toString() { return this->name + " #" + std::to_string(this->index); }
+
+    std::string name = "Primitive";
+    int index = -1;
+
+    static int currentMaxIndex;
 };
 
 class Patch2D: public Patch
