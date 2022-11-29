@@ -42,7 +42,7 @@ Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
 
 }
 Viewer::Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent)
-    : Viewer(nullptr, g, nullptr, VOXEL_MODE, FILL_MODE, parent) {
+    : Viewer(nullptr, g, nullptr, LAYER_MODE, FILL_MODE, parent) {
 
 }
 Viewer::~Viewer()
@@ -233,6 +233,9 @@ void Viewer::draw() {
     this->drawingProcess();
 }
 void Viewer::drawingProcess() {
+    auto allProcessStart = std::chrono::system_clock::now();
+    std::map<std::shared_ptr<ActionInterface>, std::chrono::milliseconds> interfacesTimings;
+//    std::chrono::milliseconds test;
     // Update the mouse position in the grid
     this->checkMouseOnVoxel();
 
@@ -293,18 +296,30 @@ void Viewer::drawingProcess() {
     });
     current_frame ++;
     if (this->interfaces.count("terrainGenerationInterface")) {
+        auto start = std::chrono::high_resolution_clock::now();
         static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->display(this->mapMode, this->algorithm, this->displayParticles);
+        auto end = std::chrono::high_resolution_clock::now();
+        interfacesTimings[this->interfaces["terrainGenerationInterface"]] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     this->mainGrabber->display();
 
-    for (auto& actionInterface : this->interfaces)
-        if (actionInterface.first != "terrainGenerationInterface")
+    for (auto& actionInterface : this->interfaces) {
+        if (actionInterface.first != "terrainGenerationInterface") {
+            auto start = std::chrono::high_resolution_clock::now();
             actionInterface.second->display();
+            auto end = std::chrono::high_resolution_clock::now();
+            interfacesTimings[actionInterface.second] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        }
+    }
 
     if (this->interfaces.count("terrainGenerationInterface")) {
+        auto start = std::chrono::high_resolution_clock::now();
         static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
+        auto end = std::chrono::high_resolution_clock::now();
+        interfacesTimings[this->interfaces["terrainGenerationInterface"]] += std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
+    std::cout << "--" << std::endl;
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -322,6 +337,18 @@ void Viewer::drawingProcess() {
         umask(prevMode);
 #endif
     }
+
+
+    auto allProcessEnd = std::chrono::system_clock::now();
+
+    bool displayTiming = false;
+    if (displayTiming) {
+        std::cout << "Total time/frame : " << std::chrono::duration_cast<std::chrono::milliseconds>(allProcessEnd - allProcessStart).count() << "ms" << std::endl;
+        for (auto& [interf, time] : interfacesTimings) {
+            std::cout << "\t" << interf->actionType << " : " << time.count() << "ms" << std::endl;
+        }
+    }
+    std::cout << "Real FPS : " << this->currentFPS() << std::endl;
 }
 
 void Viewer::reloadAllShaders()
@@ -363,7 +390,9 @@ void Viewer::keyReleaseEvent(QKeyEvent *e)
     QGLViewer::keyReleaseEvent(e);
 }
 void Viewer::mouseMoveEvent(QMouseEvent* e)
-{
+{    
+    auto start = std::chrono::system_clock::now();
+
     this->mousePos = e->pos();
 
     if (this->checkMouseOnVoxel())
@@ -382,6 +411,9 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     }
 
     update();
+
+    auto end = std::chrono::system_clock::now();
+    std::cout << "Total time on MouseMoveEvent : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 }
 
 void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
