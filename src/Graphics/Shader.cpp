@@ -123,6 +123,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
+
 #endif
 }
 
@@ -133,16 +134,16 @@ bool Shader::use(bool update_source_file)
         this->compileShadersFromSource();
     }
 
+    GlobalsGL::checkOpenGLError();
     if (programID > 0) {
-        GlobalsGL::checkOpenGLError();
         GlobalsGL::f()->glUseProgram(this->programID);
         GlobalsGL::printProgramErrors(this->programID);
         GlobalsGL::printShaderErrors(this->vShader);
         GlobalsGL::printShaderErrors(this->fShader);
-        GlobalsGL::checkOpenGLError();
-        return true;
+//        return true;
     }
-    return false;
+    GlobalsGL::checkOpenGLError();
+    return programID > 0;
 }
 
 void Shader::setBool(std::string pname, bool value)
@@ -252,10 +253,12 @@ void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
+    bool justUpdateTexture = true;
     if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;
+        justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
     GlobalsGL::f()->glActiveTexture(textureSlot);
@@ -266,8 +269,13 @@ void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, texture.sizeX, texture.sizeY, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    if (justUpdateTexture) {
+        GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, texture.sizeX, texture.sizeY,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    } else {
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, texture.sizeX, texture.sizeY, 0,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    }
     this->setInt(pname, index);
 
     for (int i = 0; i < texture.sizeX; i++)
@@ -280,10 +288,12 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
+    bool justUpdateTexture = true;
     if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;
+        justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
     GlobalsGL::f()->glActiveTexture(textureSlot);
@@ -294,8 +304,13 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    if (justUpdateTexture) {
+        GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    } else {
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    }
     this->setInt(pname, index);
 }
 
@@ -304,10 +319,12 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
+    bool justUpdateTexture = true;
     if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;
+        justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
     GlobalsGL::f()->glActiveTexture(textureSlot);
@@ -318,8 +335,13 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    if (justUpdateTexture) {
+        GlobalsGL::f()->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    } else {
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, width, height, 0,
+        GL_ALPHA_INTEGER_EXT, GL_INT, data);
+    }
     this->setInt(pname, index);
 }
 
@@ -332,10 +354,12 @@ void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
     int textureSlot = GL_TEXTURE0 + index;
 
     GLuint texIndex;
+    bool justUpdateTexture = false; // true;
     if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;
+        justUpdateTexture = false;
     }
     texIndex = textureSlotIndices[textureSlot];
 
@@ -348,8 +372,13 @@ void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, texture.sizeX, texture.sizeY, texture.sizeZ, 0,
-    GL_ALPHA, GL_FLOAT, texture.data.data());
+    if (justUpdateTexture) {
+        GlobalsGL::f()->glTexSubImage3D(GL_TEXTURE_3D, 0, 0, 0, 0, texture.sizeX, texture.sizeY, texture.sizeZ,
+        GL_ALPHA, GL_FLOAT, texture.data.data());
+    } else {
+        GlobalsGL::f()->glTexImage3D( GL_TEXTURE_3D, 0, GL_ALPHA32F_ARB, texture.sizeX, texture.sizeY, texture.sizeZ, 0,
+        GL_ALPHA, GL_FLOAT, texture.data.data());
+    }
     this->setInt(pname, index);
 }
 

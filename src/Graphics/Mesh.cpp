@@ -294,16 +294,20 @@ void Mesh::update()
     if (!this->shader && Shader::default_shader) {
         this->shader = std::make_shared<Shader>(*Shader::default_shader);
     }
-    if (Shader::allShaders.find(this->shader) == Shader::allShaders.end()) {
+    if (this->shader && Shader::allShaders.find(this->shader) == Shader::allShaders.end()) {
         Shader::allShaders.insert(this->shader);
     }
-    pushToBuffer();
+    if (this->shader) {
+        pushToBuffer();
+    }
 
 }
 
 void Mesh::pushToBuffer()
 {
 #if useModernOpenGL
+        this->shader->use();
+//        if(!this->shader->use()) return;
         GlobalsGL::f()->glBindVertexArray(this->vao); //GlobalsGL::vao[this->bufferID]);
         // Vertex
         GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, this->vbo[0]); // GlobalsGL::vbo[this->bufferID * 10 + 0]);
@@ -327,6 +331,7 @@ void Mesh::pushToBuffer()
             GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, this->colorsArrayFloat.size() * sizeof(float), &this->colorsArrayFloat.front(), GL_STATIC_DRAW);
         GlobalsGL::f()->glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, 0);
         GlobalsGL::f()->glEnableVertexAttribArray(3);
+//        if(this->shader->use()) return;
 #endif
     this->bufferReady = true;
 }
@@ -340,6 +345,7 @@ void Mesh::display(GLenum shape, float lineWeight)
         this->shader->use();
         this->shader->setBool("cullFace", this->cullFace);
     }
+    if(!this->shader->use()) return;
     //    glEnable(GL_DEPTH_TEST);
     //    glDepthFunc(GL_LEQUAL);
     GLfloat previousLineWidth[1];
