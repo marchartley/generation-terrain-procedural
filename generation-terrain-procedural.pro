@@ -107,6 +107,7 @@ SOURCES += \
         src/Karst/KarstHoleProfile.cpp \
         src/Karst/KarstPathsGeneration.cpp \
         src/TerrainGen/Grid.cpp \
+    src/TerrainGen/ImplicitPatch.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
         src/TerrainGen/VoxelChunk.cpp \
         src/TerrainGen/VoxelGrid.cpp \
@@ -221,6 +222,7 @@ HEADERS += \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \
     src/TerrainGen/Grid.h \
+    src/TerrainGen/ImplicitPatch.h \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/VoxelChunk.h \
     src/TerrainGen/VoxelGrid.h \

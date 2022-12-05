@@ -525,6 +525,8 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
+            Matrix3<float> values = voxelGrid->getVoxelValues();
+            marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
@@ -543,7 +545,6 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             // Check if something changed on the terrain :
             if (this->previousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
                 this->previousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
-                Matrix3<float> values = voxelGrid->getVoxelValues();
                 // Not the best check, but still pretty good....
                 if (marchingCubeMesh.vertexArray.size() != values.size()) {
                     regenerateRocksAndParticles();
@@ -626,6 +627,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         if (this->layerGrid == nullptr) {
             std::cerr << "No layer based grid to display" << std::endl;
         } else {
+            layersMesh.cullFace = true;
             layersMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             layersMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
@@ -642,7 +644,6 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             layersMesh.fromArray(layersPoints);
             layersMesh.update();
             this->layersMesh.display(GL_POINTS);
-//            this->layerGrid->display();
         }
     }
 }
@@ -710,25 +711,47 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     // TODO : REMOVE THIS PART VERY SOON !!
 
-    Vector3 terrainSize = Vector3(100, 100, 40);
-    this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 5.f);
 //    layerGrid->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(terrainSize.x, terrainSize.y);
 //    LayerBasedGrid layerGrid(terrainSize.x, terrainSize.y, 1.f);
 //    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
 //    voxelGrid->fromIsoData();
 
     // Bedrock as noise function
-    FastNoiseLite noise;
-    noise = voxelGrid->noise;
+    FastNoiseLite noise = voxelGrid->noise;
     std::function noisyBedrock = [&](Vector3 pos) {
-        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 1.f + 1.f;
+        float noiseValue = noise.GetNoise(pos.x * 2.f, pos.y * 2.f) * 10.f + 10.f;
         return noiseValue;
     };
-    layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);
-//    layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
-//    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
-//    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
 
+//    ImplicitPatch* I0 = new ImplicitPatch; I0->name = "I0";
+//    ImplicitPatch* B1 = new ImplicitPatch(Vector3(), Vector3(30, 30, 0), Vector3(15, 15, 5), ImplicitPatch::createBlockFunction(15, 15, 3)); B1->name = "B1";
+//    ImplicitPatch* B3 = new ImplicitPatch(Vector3(), Vector3(30, 30, 0), Vector3(15, 15, 5), ImplicitPatch::createBlockFunction(15, 15, 3)); B3->name = "B3";
+//    ImplicitPatch* S2 = new ImplicitPatch(ImplicitPatch::createStack(I0, B1)); S2->name = "S2";
+//    ImplicitPatch* S4 = new ImplicitPatch(ImplicitPatch::createStack(S2, B3)); S4->name = "S4";
+//    layerGrid->add(S4, SAND, false);
+
+    float radius = 20.f;
+    Vector3 terrainSize = Vector3(4*radius, 4*radius, 40);
+    this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 1.f);
+
+
+    Vector3 posA = Vector3(0.f, 0.f, 0.f);
+    Vector3 posB = Vector3(radius * 2.f, 0.f, 0.f);
+    ImplicitPatch* sphere1 = new ImplicitPatch(posA, Vector3(), Vector3(radius, radius, radius) * 4.f, ImplicitPatch::createSphereFunction(radius)); sphere1->name = "S1";
+    ImplicitPatch* sphere2 = new ImplicitPatch(posB, Vector3(), Vector3(radius, radius, radius) * 4.f, ImplicitPatch::createSphereFunction(radius)); sphere2->name = "S2";
+    ImplicitPatch* blend = new ImplicitPatch(ImplicitPatch::createBlending(sphere1, sphere2)); blend->name = "blend";
+    layerGrid->add(blend, SAND, false);
+
+//    layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);
+    /*layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
+    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
+    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
+
+    layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);
+    layerGrid->add(Patch2D(Vector3(-10, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::ROCK)), TerrainTypes::ROCK, false);
+    layerGrid->add(Patch2D(Vector3(0, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::DIRT)), TerrainTypes::DIRT, false);
+    layerGrid->add(Patch2D(Vector3(-10, -10, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::SAND)), TerrainTypes::SAND, false);
+*/
     voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
     voxelGrid->fromIsoData();
     heightmap->fromLayerGrid(*layerGrid);
@@ -806,7 +829,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     }*/
     this->voxelGrid->createMesh();
     this->heightmap->createMesh();
-    layerGrid->from2DGrid(*heightmap);
+//    layerGrid->from2DGrid(*heightmap);
 
 
     voxelGrid->flowField = Matrix3<Vector3>(voxelGrid->environmentalDensities.getDimensions());

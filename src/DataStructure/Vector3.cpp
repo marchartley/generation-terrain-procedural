@@ -479,7 +479,8 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v) {
 Vector3 std::abs(Vector3 o) { return o.abs(); }
 
 bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
-    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
+    return (minPos.x <= pos.x && pos.x <= maxPos.x) && (minPos.y <= pos.y && pos.y <= maxPos.y) && (minPos.z <= pos.z && pos.z <= maxPos.z);
+//    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
 }
 float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
 {

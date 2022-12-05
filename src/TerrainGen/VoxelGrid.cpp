@@ -114,7 +114,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            data[iChunk] = precomputedVoxelGrid.subset((xChunk * chunkSize), (yChunk * chunkSize), 0, ((xChunk + 1) * chunkSize), ((yChunk + 1) * chunkSize), this->getSizeZ());
+            data[iChunk] = precomputedVoxelGrid.subset((xChunk * chunkSize), (xChunk + 1) * chunkSize, (yChunk * chunkSize), (yChunk + 1) * chunkSize, 0, this->getSizeZ());
             /*for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
                     for (int z = 0; z < this->getSizeZ(); z++) {
@@ -160,6 +160,7 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
         this->smoothVoxels();
         this->_smoothingNeeded = false;
     }
+    this->_cachedHistoryIndex = -1; // Force refresh of "getVoxelValues"
 //    this->computeFlowfield();
     return this->shared_from_this();
 }

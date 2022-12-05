@@ -96,14 +96,17 @@ QLayout* GravityInterface::createGUI()
     this->gravityLayout = new QHBoxLayout;
 
     gravityComputeButton = new QPushButton("Calculer");
+    QPushButton* gravityLayersButton = new QPushButton("Rearrange layers");
 //    gravityDisplayButton = new QCheckBox("Afficher");
     gravityLayout->addWidget(gravityComputeButton);
+    gravityLayout->addWidget(gravityLayersButton);
 //    gravityLayout->addWidget(gravityDisplayButton);
 
 //    gravityDisplayButton->setChecked(this->visible);
 
 //    QObject::connect(gravityDisplayButton, &QCheckBox::toggled, this, &GravityInterface::setVisibility);
     QObject::connect(gravityComputeButton, &QPushButton::pressed, this, &GravityInterface::createSandGravity);
+    QObject::connect(gravityLayersButton, &QPushButton::pressed, this, [&]() { this->layerGrid->reorderLayers();});
 
     return this->gravityLayout;
 }

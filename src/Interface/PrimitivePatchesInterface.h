@@ -1,8 +1,12 @@
 #ifndef PRIMITIVEPATCHESINTERFACE_H
 #define PRIMITIVEPATCHESINTERFACE_H
 
+class ImplicitPatch;
+class PatchReplacementDialog;
+
 #include "ActionInterface.h"
 #include "Interface/HierarchicalListWidget.h"
+#include "Interface/ControlPoint.h"
 
 enum PRIMITIVE_SHAPE {
     SPHERE = 0,
@@ -40,7 +44,19 @@ public Q_SLOTS:
 
     void resetPatch();
 
+    void updateMapWithCurrentPatch();
+
+    void setSelectedWidth(float newVal);
+    void setSelectedHeight(float newVal);
+    void setSelectedDepth(float newVal);
+    void setSelectedSigma(float newVal);
+
 protected:
+    ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
+    ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitPatch* replacedPatch = nullptr);
+    ImplicitPatch* findPrimitiveById(int ID);
+    ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
+
     PRIMITIVE_SHAPE currentShapeSelected = PRIMITIVE_SHAPE::SPHERE;
     PATCH_OPERATION currentOperation = PATCH_OPERATION::STACK;
     float selectedDensity = 1.5f;
@@ -51,9 +67,13 @@ protected:
     float selectedSigma = 10.f;
 
     Mesh previewMesh;
+    Mesh patchAABBoxMesh;
+
+    ImplicitPatch* mainPatch;
 
     Patch3D* currentPatch;
-    std::vector<Patch3D*> storedPatches;
+//    std::vector<Patch3D*> storedPatches;
+    std::vector<ImplicitPatch*> storedPatches;
 
     std::function<float(Vector3)> currentSelectionFunction;
 
@@ -67,15 +87,22 @@ protected:
     void updateFunctionSize();
 
 
-    HierarchicalListWidget* allPrimitives;
+    HierarchicalListWidget* primitiveSelectionGui;
     void updatePrimitiveList();
+    void cleanPatch(ImplicitPatch* patch);
+
+    friend class PatchReplacementDialog;
+
+    std::unique_ptr<ControlPoint> primitiveControlPoint;
+
+    ImplicitPatch* currentlyManipulatedPatch = nullptr;
 };
 
 
 class PatchReplacementDialog : public QDialog {
     Q_OBJECT
 public:
-    PatchReplacementDialog(PrimitivePatchesInterface *caller = nullptr);
+    PatchReplacementDialog(PrimitivePatchesInterface *caller = nullptr, ImplicitPatch* patchToModify = nullptr);
 
 
 public Q_SLOTS:
@@ -84,11 +111,12 @@ public Q_SLOTS:
     void confirm();
 
 public:
-    HierarchicalListWidget* allPrimitives;
+    HierarchicalListWidget* allPrimitivesList;
     QPushButton* cancelButton;
     QPushButton* validButton;
     PrimitivePatchesInterface* caller = nullptr;
-    int selectedPrimitiveIndex = -1;
+//    int selectedPrimitiveIndex = -1;
+    ImplicitPatch* patch = nullptr;
 };
 
 #endif // PRIMITIVEPATCHESINTERFACE_H
