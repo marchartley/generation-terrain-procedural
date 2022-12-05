@@ -203,14 +203,18 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
                 auto materialAndVolume = this->getKernel(Vector3(x, y, z), kernelSize);
                 float solidMaterial = 0.f;
                 float airMaterial = 0.f;
+                float totalDensity = 0.f;
                 for (auto& [mat, vol] : materialAndVolume) {
-                    if (mat == AIR || mat == WATER)
+                    if (mat == AIR || mat == WATER) {
                         airMaterial += vol;
-                    else
+                    } else {
                         solidMaterial += vol;
+                    }
+                    totalDensity += vol * LayerBasedGrid::densityFromMaterial(mat);
                 }
-                float val = (2.f * solidMaterial / (solidMaterial + airMaterial)) - 1.f;
-                values.at(x, y, z) = (val > 0.f ? LayerBasedGrid::densityFromMaterial(SAND) : LayerBasedGrid::densityFromMaterial(AIR));
+//                float val = (2.f * solidMaterial / (solidMaterial + airMaterial)) - 1.f;
+//                values.at(x, y, z) = (val > 0.f ? LayerBasedGrid::densityFromMaterial(SAND) : LayerBasedGrid::densityFromMaterial(AIR));
+                values.at(x, y, z) = (totalDensity / (airMaterial + solidMaterial)); // Total density / total volume
             }
             /*
             auto& stack = this->layers.at(x, y);
@@ -404,6 +408,8 @@ void LayerBasedGrid::thermalErosion()
 void LayerBasedGrid::cleanLayers(float minLayerHeight)
 {
     for (auto& stack : layers) {
+        while (stack.size() > 0 && (stack.back().first == WATER || stack.back().first == AIR))
+            stack.pop_back();
         for (size_t i = 0; i < stack.size(); i++) {
             if (stack[i].second < minLayerHeight) {
                 stack.erase(stack.begin() + i);
@@ -411,12 +417,12 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
         }
     }
 }
-
+/*
 void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
 {
 //    auto [minPos, maxPos] = patch.shape.AABBox();
-    Vector3 minPos = patch.boundMin;
-    Vector3 maxPos = patch.boundMax;
+    Vector3 minPos = patch.position;
+    Vector3 maxPos = patch.dimension;
     minPos += patch.position;
     maxPos += patch.position;
     int minX = std::max(0, int(minPos.x));
@@ -444,8 +450,8 @@ void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanc
 
 void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
 {
-    Vector3 minPos = patch.boundMin;
-    Vector3 maxPos = patch.boundMax;
+    Vector3 minPos = patch.position;
+    Vector3 maxPos = patch.dimension;
     minPos += patch.position;
     maxPos += patch.position;
     int minX = std::max(0, int(minPos.x));
@@ -483,6 +489,69 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 //    this->reorderLayers();
     _historyIndex ++;
     return;
+}*/
+
+void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
+{
+    Vector3 minPos = patch->position - patch->getDimensions();
+    Vector3 maxPos = patch->dimension + patch->getDimensions();
+    minPos += patch->position;
+    maxPos += patch->position;
+    int minX = std::max(0, int(minPos.x));
+    int maxX = std::min(this->getSizeX(), int(maxPos.x));
+    int minY = std::max(0, int(minPos.y));
+    int maxY = std::min(this->getSizeY(), int(maxPos.y));
+    float minZ = std::max(0.f, minPos.z);
+    float maxZ = float(maxPos.z); // std::min(this->getSizeZ(), float(maxPos.z));
+    /*Matrix3<float> distanceMap = Matrix3<float>(maxX - minX, maxY - minY, 1, 1.f);
+    if (applyDistanceFalloff) {
+        distanceMap = distanceMap.toDistanceMap(true);
+        distanceMap.normalize();
+        for (auto& val : distanceMap)
+            val = std::pow(val, distancePower);
+    }*/
+    float zResolution = 1.f;
+    int nbEvaluations = 0;
+    auto start = std::chrono::system_clock::now();
+    for (int x = minX; x < maxX; x++) {
+        for (int y = minY; y < maxY; y++) {
+            float z = minZ;
+            while ( z < maxZ) {
+                nbEvaluations++;
+                auto densityAndProportion = patch->getDensityAtPosition(Vector3(x, y, z));
+                float selectedDensity = 0.f;
+                float totalValue = 0.f;
+                float maxValue = 0.f;
+                for (const auto& [dens, value] : densityAndProportion) {
+                    if (value > maxValue) {
+                        selectedDensity = dens;
+                        maxValue = value;
+                    }
+                    totalValue += value;
+                }
+                if (totalValue >= .5f)
+                    this->addLayer(Vector3(x, y), zResolution, LayerBasedGrid::materialFromDensity(selectedDensity));
+                else
+                    this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
+                /*
+                float eval = patch->evaluate(Vector3(x, y, z));
+                if (eval >= 0.5f) {
+//                    float layerDens = patch->get(Vector3(x, y, z) - patch->position);
+                    this->addLayer(Vector3(x, y), zResolution, material); // LayerBasedGrid::materialFromDensity(layerDens));
+                } else {
+                    this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
+                }*/
+                z += zResolution;
+            }
+        }
+    }
+    auto end = std::chrono::system_clock::now();
+    auto totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    std::cout << "Evaluation time: " << totalTime << "ms for " << nbEvaluations << " points (mean = " << totalTime/(float)nbEvaluations << "ms/eval)" << std::endl;
+    this->cleanLayers();
+//    this->reorderLayers();
+    _historyIndex ++;
+    return;
 }
 
 TerrainTypes LayerBasedGrid::materialFromDensity(float density)
@@ -504,308 +573,3 @@ float LayerBasedGrid::densityFromMaterial(TerrainTypes material)
     return (valMin + valMax) / 2.f;
 }
 
-
-int Patch::currentMaxIndex = -1;
-Patch::Patch()
-    : Patch(Vector3(0, 0, 0), Vector3(-1, -1, -1), Vector3(1, 1, 1), [](Vector3 _pos) {return 0.f; })
-{
-
-}
-
-Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, evalFunction, [&](Vector3 pos) { return this->evaluate(pos); }, densityValue)
-{
-    this->compositionFunction = [&](Vector3 pos) {
-        float eval = this->evaluate(pos);
-        return eval;
-    };
-}
-
-Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, evalFunction, compositionFunction, [&](Vector3 _pos) { return 1.f; }, densityValue)
-{
-    this->alphaDistanceFunction = [&](Vector3 _pos) {
-        float distPower = 2.f;
-        float minDistance = 0.8f;
-        float distance = -Vector3::signedDistanceToBoundaries(_pos, this->boundMin, this->boundMax);
-        float maxDistance = ((this->boundMax - this->boundMin) * .5f).maxComp();
-        float ratio = 1.f - std::clamp(distance / maxDistance, 0.f, 1.f);
-        return 1.f - (ratio <= minDistance ? 0.f : std::pow((ratio - minDistance) / (1.f - minDistance), distPower));
-    };
-}
-
-Patch::Patch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
-    : position(pos), boundMin(boundMin), boundMax(boundMax), evalFunction(evalFunction), densityValue(densityValue), compositionFunction(compositionFunction), alphaDistanceFunction(alphaDistanceFunction)
-{
-    this->_cachedHeights = Matrix3<float>(boundMax - boundMin, -1000.f);
-    this->_cachedHeights.raiseErrorOnBadCoord = false;
-    this->_cachedHeights.defaultValueOnBadCoord = 0.f;
-
-    Patch::currentMaxIndex ++;
-    this->index = Patch::currentMaxIndex;
-}
-
-float Patch::getMaxHeight(Vector3 position)
-{
-    return 0.f;
-}
-
-float Patch::evaluate(Vector3 position)
-{
-    return 0.f;
-}
-
-//Patch::~Patch()
-//{
-
-//}
-
-
-Patch2D::Patch2D()
-    : Patch2D(Vector3(0, 0, 0), Vector3(-1, -1, 0), Vector3(1, 1, 0), [](Vector3 _pos) {return 0.f; })
-{
-
-}
-
-Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> heightFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, heightFunction, densityValue)
-{
-
-}
-
-Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> heightFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, heightFunction, compositionFunction, densityValue)
-{
-
-}
-
-Patch2D::Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> heightFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, heightFunction, compositionFunction, alphaDistanceFunction, densityValue)
-{
-
-}
-
-float Patch2D::getMaxHeight(Vector3 position)
-{
-    Vector3 p = position; // - this->position;
-    if (boundMin.x > p.x || p.x > boundMax.x || boundMin.y > p.y || p.y > boundMax.y/* || boundMin.z > p.z || p.z > boundMax.z*/)
-        return 0.f;
-//    if (this->shape.grow(.1f).translate(Vector3(.001f, 0.f)).inside(p))
-    return this->evalFunction(p.xy());
-//    return 0.f;
-}
-
-float Patch2D::evaluate(Vector3 position)
-{
-    Vector3 p = position; // - this->position;
-//    if (!shape.inside(p.xy())) return 0.f;
-
-    if (boundMin.x > p.x || p.x > boundMax.x || boundMin.y > p.y || p.y > boundMax.y/* || boundMin.z > p.z || p.z > boundMax.z*/)
-        return 0.f;
-
-    float val = this->getMaxHeight(p.xy());
-    return (val > p.z ? 1.f : 0.f);
-}
-
-Patch3D::Patch3D()
-    : Patch3D(Vector3(0, 0, 0), Vector3(-1, -1, -1), Vector3(1, 1, 1), [](Vector3 _pos) {return 0.f; })
-{
-
-}
-
-Patch3D::Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, evalFunction, densityValue)
-{
-
-}
-
-Patch3D::Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, evalFunction, compositionFunction, densityValue)
-{
-
-}
-
-Patch3D::Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
-    : Patch(pos, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction, densityValue)
-{
-}
-
-Patch3D::Patch3D(const Patch3D &copy)
-{
-    this->position = copy.position;
-    this->boundMin = copy.boundMin;
-    this->boundMax = copy.boundMax;
-    this->evalFunction = copy.evalFunction;
-    this->compositionFunction = copy.compositionFunction;
-    this->alphaDistanceFunction = copy.alphaDistanceFunction;
-    this->densityValue = copy.densityValue;
-    float test = compositionFunction(Vector3(10,10,10));
-    std::cout << test << std::endl;
-    this->_cachedHeights = Matrix3<float>(boundMax - boundMin, -1000.f);
-    this->_cachedHeights.raiseErrorOnBadCoord = false;
-    this->_cachedHeights.defaultValueOnBadCoord = 0.f;
-}
-
-float Patch3D::getMaxHeight(Vector3 position)
-{
-    if (this->_cachedHeights.at(position.xy()) < -1.f) {
-        float resolution = 0.1;
-        float maxHeight = this->boundMax.z;
-        while (maxHeight >= boundMin.z && evaluate(Vector3(position.x, position.y, maxHeight)) <= 0.f)
-            maxHeight -= resolution;
-        this->_cachedHeights.at(position.xy()) = maxHeight;
-        return maxHeight;
-    }
-    return this->_cachedHeights.at(position.xy());
-}
-
-float Patch3D::evaluate(Vector3 position)
-{
-    Vector3 p = position; // - this->position;
-    if (boundMin.x > p.x || p.x > boundMax.x || boundMin.y > p.y || p.y > boundMax.y || boundMin.z > p.z || p.z > boundMax.z)
-        return 0.f;
-    return (this->evalFunction(p) > 0.f ? 1.f : 0.f);
-}
-
-Patch3D Patch3D::stack(Patch3D *P1, Patch3D *P2)
-{
-    Vector3 P1center = P1->position;
-    Vector3 P2center = P2->position;
-
-    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
-    // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
-
-    Vector3 newCenter = boundMin;
-
-    boundMax -= newCenter;
-    boundMin -= newCenter;
-
-    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float zOffset = P1->getMaxHeight(pos1);
-        pos2.z -= zOffset;
-        float val1 = P1->evaluate(pos1);
-        float val2 = P2->evaluate(pos2);
-        return (val1 + val2 > 0.f ? 1.f : 0.f);
-    };
-
-    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float zOffset = P1->getMaxHeight(pos1);
-        pos2.z -= zOffset;
-        float val1 = P1->get(pos1);
-        float val2 = P2->get(pos2);
-        return (val1 > 0.f ? val1 : val2);
-    };
-
-    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float zOffset = P1->getMaxHeight(pos1);
-        pos2.z -= zOffset;
-        return std::clamp(std::max(P1->getAlphaValue(pos), P2->getAlphaValue(pos)), 0.f, 1.f);
-    };
-
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
-}
-
-Patch3D Patch3D::replace(Patch3D *P1, Patch3D *P2)
-{
-    Vector3 P1center = P1->position;
-    Vector3 P2center = P2->position;
-
-    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
-    // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
-
-    Vector3 newCenter = boundMin;
-
-    boundMax -= newCenter;
-    boundMin -= newCenter;
-
-    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float val1 = P1->evaluate(pos1);
-        float val2 = P2->evaluate(pos2);
-        return (val1 + val2 > 0.f ? 1.f : 0.f);
-    };
-
-    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float val1 = P1->get(pos1);
-        float val2 = P2->get(pos2);
-        float check_val2 = val2;
-
-        float alpha2 = P2->getAlphaValue(pos2);
-
-        return (std::abs(check_val2) > 0.f ? val1 * (1.f - alpha2) + val2 * alpha2 : val1);
-    };
-    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float zOffset = P1->getMaxHeight(pos1);
-        pos2.z -= zOffset;
-        return std::clamp(std::max(P1->getAlphaValue(pos1), P2->getAlphaValue(pos2)), 0.f, 1.f);
-    };
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
-}
-
-Patch3D Patch3D::blend(Patch3D *P1, Patch3D *P2)
-{
-    Vector3 P1center = P1->position;
-    Vector3 P2center = P2->position;
-
-    Vector3 boundMin = Vector3::min(P1->boundMin + P1center, P2->boundMin + P2center);
-    Vector3 boundMax = Vector3::max(P1->boundMax + P1center, P2->boundMax + P2center);
-    // Stacking means that the height can double (at most)
-    boundMax.z = boundMin.z + (P1->boundMax.z - P1->boundMin.z) + (P2->boundMax.z - P2->boundMin.z);
-
-    Vector3 newCenter = boundMin;
-
-    boundMax -= newCenter;
-    boundMin -= newCenter;
-
-    std::function<float(Vector3)> evalFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float val1 = P1->evaluate(pos1);
-        float val2 = P2->evaluate(pos2);
-        return (val1 + val2 > 0.f ? 1.f : 0.f);
-    };
-
-    std::function<float(Vector3)> compositionFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float alpha1 = P1->getAlphaValue(pos1);
-        float alpha2 = P2->getAlphaValue(pos2);
-        float val1 = P1->get(pos1);
-        float val2 = P2->get(pos2);
-        if (val1 <= 0.f) {
-            alpha1 = 0.f;
-            alpha2 = 1.f;
-        } else if (val2 <= 0.f) {
-            alpha1 = 1.f;
-            alpha2 = 0.f;
-        }
-        return (alpha1 * val1 + alpha2 * val2) / (alpha1 + alpha2);
-//        float check_val1 = val1;
-//        float check_val2 = val2;
-
-//        return (check_val1 > 0.f && check_val2 > 0.f ? (val1 + val2) * .5f : (check_val1 > 0.f ? val1 : val2));
-    };
-    std::function<float(Vector3)> alphaDistanceFunction = [P1, P2, P1center, P2center, newCenter](Vector3 pos) {
-        Vector3 pos1 = pos - (P1center - newCenter);
-        Vector3 pos2 = pos - (P2center - newCenter);
-        float zOffset = P1->getMaxHeight(pos1);
-        pos2.z -= zOffset;
-        return std::clamp(std::max(P1->getAlphaValue(pos1), P2->getAlphaValue(pos2)), 0.f, 1.f);
-    };
-    return Patch3D(newCenter, boundMin, boundMax, evalFunction, compositionFunction, alphaDistanceFunction);
-}

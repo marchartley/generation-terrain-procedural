@@ -16,6 +16,7 @@ public:
     std::vector<float> positionsFloat;
 
     static std::vector<Vector3> cubesVertices;
+    static std::vector<Vector3> cubesEdgesVertices;
 };
 
 
