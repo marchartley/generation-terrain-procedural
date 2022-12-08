@@ -97,9 +97,14 @@ float ImplicitPatch::evaluate(Vector3 position)
     float evaluationValue = 0.f;
     if (this->compositionOperation == NONE) {
         evaluationValue =  this->evalFunction(position);
-        float distance = std::clamp(((position / this->getDimensions()) - Vector3(.5, .5, .5)).abs().maxComp() - .5f, 0.f, 1.f);
+        Vector3 normalizedPosition = position / this->getDimensions();
+        Vector3 centeredPosition = normalizedPosition - Vector3(.5f, .5f, .5f);
+        Vector3 absPos = centeredPosition.abs();
+        float maxComp = absPos.maxComp();
+        float distance = std::clamp(maxComp - .5f, 0.f, 1.f);
         float distanceFalloff = interpolation::wyvill(/*1.f - */distance);
-        evaluationValue = evaluationValue * distanceFalloff;
+        float isoFalloff = distanceFalloff;// - .5f;
+        evaluationValue = evaluationValue * isoFalloff; // * distanceFalloff;
     } else {
         float evalA = this->composableA->evaluate(this->getPositionToEvaluateComposableA(position));
         float evalB = this->composableB->evaluate(this->getPositionToEvaluateComposableB(position));
@@ -162,8 +167,7 @@ float ImplicitPatch::evaluateFromValues(float evaluationA, float evaluationB)
             break;
         }
         case CompositionFunction::BLEND: {
-            float blendPower = 5.f;
-            evaluationValue = std::pow(std::pow(evaluationA, blendPower) + std::pow(evaluationB, blendPower), 1.f/blendPower);
+            evaluationValue = std::pow(std::pow(evaluationA, this->blendingFactor) + std::pow(evaluationB, this->blendingFactor), 1.f/this->blendingFactor);
             break;
         }
         case CompositionFunction::REPLACE: {
@@ -205,11 +209,12 @@ std::map<float, float> ImplicitPatch::getDensityAtPosition(Vector3 position)
             }
         }
         float myEval = this->evaluateFromValues(totalA, totalB);
+        finalEvalutation = {{(totalA > totalB ? densityA : densityB), myEval}};/*
         if (myEval >= 0.5f) {
             finalEvalutation = {{(totalA > totalB ? densityA : densityB), myEval}};
         } else {
             finalEvalutation = {{-1.f, myEval}};
-        }
+        }*/
         /*
         for (const auto& [densA, valueA] : densityAndEvalA) {
             if (finalEvalutation.count(densA) == 0)
@@ -323,7 +328,7 @@ std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float width, f
         return std::max(0.f, 1.f - std::abs(height * .5f - pos.z));
     };
     return levelFunction;*/
-    return convert2DfunctionTo3Dfunction([height](Vector3 pos) { return height; }); // Using the constant 2D function
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([height](Vector3 pos) { return height; }); // Using the constant 2D function
 }
 
 std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height)
@@ -331,7 +336,7 @@ std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma
 //    std::function gauss = [sigma, height, this](Vector3 pos) {
 //        return (normalizedGaussian(this->functionSize.xy(), pos.xy(), sigma) * height) - pos.z;
 //    };
-    return convert2DfunctionTo3Dfunction([width, depth, sigma, height](Vector3 pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, sigma, height](Vector3 pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
 }
 
 std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (Vector3)> func)

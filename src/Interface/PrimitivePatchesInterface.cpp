@@ -58,6 +58,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QRadioButton* stackingButton = new QRadioButton("Stack");
     QRadioButton* blendingButton = new QRadioButton("Blend");
     QRadioButton* replacingButton = new QRadioButton("Replace");
+    FancySlider* blendingFactorSlider = new FancySlider(Qt::Orientation::Horizontal, 0.1f, 10.f, .1f);
 
     FancySlider* widthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 25.f, .1f);
     FancySlider* depthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 25.f, .1f);
@@ -71,7 +72,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
     layout->addWidget(createVerticalGroup({
                                                     createSphereButton,
                                                     createBlockButton,
-                                                    createGaussianButton
+                                                    createGaussianButton,
+                                                    createSliderGroup("Blend factor", blendingFactorSlider)
                                                 }));
     layout->addWidget(createSliderGroup("Density", densitySlider));
     layout->addWidget(createVerticalGroup({
@@ -100,6 +102,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(heightSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->selectedHeight = newVal; });
     QObject::connect(depthSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->selectedDepth = newVal; });
     QObject::connect(sigmaSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->selectedSigma = newVal; });
+    QObject::connect(blendingFactorSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->selectedBlendingFactor = newVal; });
 
     QObject::connect(resetButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::resetPatch);
 
@@ -110,6 +113,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     stackingButton->setChecked(this->currentOperation == PATCH_OPERATION::STACK);
     blendingButton->setChecked(this->currentOperation == PATCH_OPERATION::BLEND);
     replacingButton->setChecked(this->currentOperation == PATCH_OPERATION::REPLACE);
+    blendingFactorSlider->setfValue(this->selectedBlendingFactor);
 
     densitySlider->setfValue(this->selectedDensity);
     widthSlider->setfValue(this->selectedWidth);
@@ -403,6 +407,10 @@ void PrimitivePatchesInterface::setSelectedSigma(float newVal) {
     this->selectedSigma = newVal;
     this->setSelectedShape(this->currentShapeSelected); // Just update the mesh and "functionSize"
 }
+void PrimitivePatchesInterface::setSelectedBlendingFactor(float newVal) {
+    this->selectedBlendingFactor = newVal;
+    this->setSelectedShape(this->currentShapeSelected); // Just update the mesh and "functionSize"
+}
 
 ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 position, ImplicitPatch *replacedPatch)
 {
@@ -441,6 +449,7 @@ ImplicitPatch *PrimitivePatchesInterface::createOperationPatchFromParameters(Imp
         operation->name = "Stacking";
     } else if (currentOperation == PATCH_OPERATION::BLEND) {
         operation = new ImplicitPatch(ImplicitPatch::createBlending(composableA, composableB));
+        operation->blendingFactor = this->selectedBlendingFactor;
         operation->name = "Blending";
     } else if (currentOperation == PATCH_OPERATION::REPLACE) {
         operation = new ImplicitPatch(ImplicitPatch::createReplacement(composableA, composableB));
@@ -595,6 +604,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
     QRadioButton* blendingButton = new QRadioButton("Blend");
     QRadioButton* replacingButton = new QRadioButton("Replace");
 //    QRadioButton* noneButton = new QRadioButton("None");
+    FancySlider* blendingFactorSlider = new FancySlider(Qt::Orientation::Horizontal, 0.1f, 10.f, .1f);
 
     FancySlider* widthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 25.f, .1f);
     FancySlider* depthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 25.f, .1f);
@@ -613,7 +623,8 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         layout->addWidget(createVerticalGroup({
                                                         stackingButton,
                                                         blendingButton,
-                                                        replacingButton
+                                                        replacingButton,
+                                                        createSliderGroup("Blending factor", blendingFactorSlider)
                                                     }));
     } else {
         layout->addWidget(createVerticalGroup({
@@ -640,6 +651,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
     stackingButton->setChecked(caller->currentOperation == PATCH_OPERATION::STACK);
     blendingButton->setChecked(caller->currentOperation == PATCH_OPERATION::BLEND);
     replacingButton->setChecked(caller->currentOperation == PATCH_OPERATION::REPLACE);
+    blendingFactorSlider->setfValue(patch->blendingFactor);
 
     densitySlider->setfValue(patch->densityValue);
     widthSlider->setfValue(patch->dimension.x);
@@ -657,6 +669,7 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
     QObject::connect(stackingButton, &QRadioButton::toggled, this, [=]() { caller->setCurrentOperation(PATCH_OPERATION::STACK); });
     QObject::connect(blendingButton, &QRadioButton::toggled, this, [=]() { caller->setCurrentOperation(PATCH_OPERATION::BLEND); });
     QObject::connect(replacingButton, &QRadioButton::toggled, this, [=]() { caller->setCurrentOperation(PATCH_OPERATION::REPLACE); });
+    QObject::connect(blendingFactorSlider, &FancySlider::floatValueChanged, this->caller, &PrimitivePatchesInterface::setSelectedBlendingFactor);
 
     QObject::connect(widthSlider, &FancySlider::floatValueChanged, this->caller, &PrimitivePatchesInterface::setSelectedWidth);
     QObject::connect(heightSlider, &FancySlider::floatValueChanged, this->caller, &PrimitivePatchesInterface::setSelectedHeight);
