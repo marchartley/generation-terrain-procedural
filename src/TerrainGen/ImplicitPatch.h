@@ -50,6 +50,7 @@ public:
     std::function<float(Vector3)> compositionFunction;
     Matrix3<float> distanceTransform;
     std::function<float(Vector3)> alphaDistanceFunction;
+    float blendingFactor = 1.f;
 
     Vector3 getDimensions() const { return this->dimension/* - this->boundMin*/; }
 

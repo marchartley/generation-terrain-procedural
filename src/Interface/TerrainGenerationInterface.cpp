@@ -737,9 +737,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     Vector3 posA = Vector3(0.f, 0.f, 0.f);
     Vector3 posB = Vector3(radius * 2.f, 0.f, 0.f);
+    ImplicitPatch* identity = new ImplicitPatch;
     ImplicitPatch* sphere1 = new ImplicitPatch(posA, Vector3(), Vector3(radius, radius, radius) * 4.f, ImplicitPatch::createSphereFunction(radius)); sphere1->name = "S1";
+    ImplicitPatch* stack0 = new ImplicitPatch(ImplicitPatch::createStack(identity, sphere1));
     ImplicitPatch* sphere2 = new ImplicitPatch(posB, Vector3(), Vector3(radius, radius, radius) * 4.f, ImplicitPatch::createSphereFunction(radius)); sphere2->name = "S2";
-    ImplicitPatch* blend = new ImplicitPatch(ImplicitPatch::createBlending(sphere1, sphere2)); blend->name = "blend";
+    ImplicitPatch* blend = new ImplicitPatch(ImplicitPatch::createBlending(stack0, sphere2)); blend->name = "blend"; blend->blendingFactor = 2.f;
     layerGrid->add(blend, SAND, false);
 
 //    layerGrid->add(Patch2D(Vector3(0, 0, 0), Vector3(), terrainSize * 2.f, noisyBedrock, LayerBasedGrid::densityFromMaterial(TerrainTypes::BEDROCK)), TerrainTypes::BEDROCK, false);

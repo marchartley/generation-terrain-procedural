@@ -50,6 +50,7 @@ public Q_SLOTS:
     void setSelectedHeight(float newVal);
     void setSelectedDepth(float newVal);
     void setSelectedSigma(float newVal);
+    void setSelectedBlendingFactor(float newVal);
 
 protected:
     ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
@@ -65,6 +66,7 @@ protected:
     float selectedDepth = 10.f;
     float selectedHeight = 10.f;
     float selectedSigma = 10.f;
+    float selectedBlendingFactor = 1.f;
 
     Mesh previewMesh;
     Mesh patchAABBoxMesh;
