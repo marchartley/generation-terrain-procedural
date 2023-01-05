@@ -1,0 +1,59 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 1.0,
+		"composableA": {
+			"blendingFactor": 1.0,
+			"densityValue": 1.0,
+			"dimension": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"index": 0,
+			"name": "Identity",
+			"operator": "None",
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"shape": "None",
+			"sigmaValue": 1.0
+		},
+		"composableB": {
+			"blendingFactor": 1.0,
+			"densityValue": 1.5,
+			"dimension": {
+				"x": 20.0,
+				"y": 20.0,
+				"z": 20.0
+			},
+			"index": 7,
+			"name": "Sphere",
+			"operator": "None",
+			"position": {
+				"x": 31.854934692382813,
+				"y": 29.762550354003906,
+				"z": 0.823582112789154
+			},
+			"shape": "Sphere",
+			"sigmaValue": 5.0
+		},
+		"densityValue": 1.0,
+		"dimension": {
+			"x": 51.85493469238281,
+			"y": 49.762550354003906,
+			"z": 20.82358169555664
+		},
+		"index": 8,
+		"name": "Blend",
+		"operator": "Blend",
+		"position": {
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		},
+		"shape": "None",
+		"sigmaValue": 1.0
+	}
+}

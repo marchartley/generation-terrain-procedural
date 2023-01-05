@@ -110,7 +110,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
     this->initMap();
 
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
-    Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight);
+    Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight/*, 0.1f*/);
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -661,6 +661,176 @@ Matrix3<float> VoxelGrid::getVoxelValues()
         this->updateLayersRepresentation();
     }
     return this->_cachedVoxelValues;
+}
+
+Mesh VoxelGrid::getGeometry()
+{
+    auto triTable = MarchingCubes::triangleTable;
+//    auto edges = MarchingCubes::cubeEdges;
+    auto values = this->getVoxelValues();
+
+    float offsetX = 0.f;
+    float offsetY = 0.f;
+    float offsetZ = 0.f;
+    Vector3 scale(1.f, 1.f, 1.f);
+    float isolevel = 0.f;
+
+    Vector3 vertDecals[8] = {
+        Vector3(0.0, 0.0, 0.0),
+        Vector3(1.0, 0.0, 0.0),
+        Vector3(1.0, 1.0, 0.0),
+        Vector3(0.0, 1.0, 0.0),
+        Vector3(0.0, 0.0, 1.0),
+        Vector3(1.0, 0.0, 1.0),
+        Vector3(1.0, 1.0, 1.0),
+        Vector3(0.0, 1.0, 1.0)
+    };
+    std::function cubePos = [&](Vector3 voxelPos, int i) -> Vector3 {
+        return voxelPos + vertDecals[i];
+    };
+
+    //Get vertex i value within current marching cube
+    std::function cubeVal = [&](Vector3 pos) -> float {
+        if (!values.checkCoord(pos)) return -1.f;
+        return values.at(pos);
+    };
+    //Get vertex i value within current marching cube
+    std::function cubeVali = [&](Vector3 voxelPos, int i) -> float {
+        return cubeVal(cubePos(voxelPos, i));
+    };
+
+    //Get triangle table value
+    std::function triTableValue = [&](int i, int j) -> int{
+        return triTable[i][j];
+    };
+
+    //Compute interpolated vertex along an edge
+    std::function vertexInterp = [&](float isolevel, Vector3 v0, float l0, Vector3 v1, float l1) -> Vector3 {
+        float iso = std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
+        return v0 * iso + v1 * (1.f - iso);
+//        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
+    };
+
+    std::function getPosition = [&](Vector3 position, Vector3 _offset) -> Vector3 {
+    //    return position + vec4(_offset, 0.0);
+        _offset += Vector3(offsetX, offsetY, offsetZ);
+        position *= scale;
+
+//        float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xyz - min_vertice_positions)), mincomp(abs(position.xyz + vec3(1.0) - max_vertice_positions))) : 1.0);
+        Vector3 off = _offset * 1.f; // (clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 1.0));
+        return position + off; //clamp(position + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    };
+
+    std::function getCubeIndex = [&](Vector3 voxPos, vec3 normal) -> int {
+        int cubeindex = 0;
+        float cubeVal0 = cubeVali(voxPos, 0);
+        float cubeVal1 = cubeVali(voxPos, 1);
+        float cubeVal2 = cubeVali(voxPos, 2);
+        float cubeVal3 = cubeVali(voxPos, 3);
+        float cubeVal4 = cubeVali(voxPos, 4);
+        float cubeVal5 = cubeVali(voxPos, 5);
+        float cubeVal6 = cubeVali(voxPos, 6);
+        float cubeVal7 = cubeVali(voxPos, 7);
+        float refined_isolevel = isolevel + 0.0001;
+        //Determine the index into the edge table which
+        //tells us which vertices are inside of the surface
+        cubeindex  = int(cubeVal0 < refined_isolevel);
+        cubeindex += int(cubeVal1 < refined_isolevel)*2;
+        cubeindex += int(cubeVal2 < refined_isolevel)*4;
+        cubeindex += int(cubeVal3 < refined_isolevel)*8;
+        cubeindex += int(cubeVal4 < refined_isolevel)*16;
+        cubeindex += int(cubeVal5 < refined_isolevel)*32;
+        cubeindex += int(cubeVal6 < refined_isolevel)*64;
+        cubeindex += int(cubeVal7 < refined_isolevel)*128;
+
+        normal = vec3(0, 0, 0);
+
+        if (cubeindex != 0 && cubeindex != 255) {
+            vec3 vertlist[12];
+
+            //Find the vertices where the surface intersects the cube
+            vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+            vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+            vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+            vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+            vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+            vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+            vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+            vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+            vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+            vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+            vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+            vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+
+
+//            vec3 edge1 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 1)];
+//            vec3 edge2 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 2)];
+//            normal = normalize(cross(edge1, edge2));
+        }
+        return cubeindex;
+    };
+
+    Mesh marched;
+    float refined_isolevel = isolevel + 0.0001;
+    Vector3 vertlist[12];
+    for (int x = 0; x < values.sizeX; x++) {
+        for (int y = 0; y < values.sizeY; y++) {
+            for (int z = 0; z < values.sizeZ; z++) {
+                Vector3 position = Vector3(x, y, z);
+                Vector3 voxPos = position;
+
+                float cubeVal0 = cubeVali(voxPos, 0);
+                float cubeVal1 = cubeVali(voxPos, 1);
+                float cubeVal2 = cubeVali(voxPos, 2);
+                float cubeVal3 = cubeVali(voxPos, 3);
+                float cubeVal4 = cubeVali(voxPos, 4);
+                float cubeVal5 = cubeVali(voxPos, 5);
+                float cubeVal6 = cubeVali(voxPos, 6);
+                float cubeVal7 = cubeVali(voxPos, 7);
+
+                Vector3 normal;
+                int cubeindex = getCubeIndex(voxPos, normal);
+
+                //Cube is entirely in/out of the surface
+                if (cubeindex == 0 || cubeindex == 255)
+                    continue;
+
+                //Find the vertices where the surface intersects the cube
+                vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+                vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+                vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+                vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+                vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+                vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+                vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+                vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+                vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+                vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+                vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+                vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+
+                int i = 0;
+                while(true){
+                    if(triTableValue(cubeindex, i) != -1){
+                        position = vertlist[triTableValue(cubeindex, i+0)];
+                        marched.vertexArray.push_back(position);
+
+                        position = vertlist[triTableValue(cubeindex, i+1)];
+                        marched.vertexArray.push_back(position);
+
+                        position = vertlist[triTableValue(cubeindex, i+2)];
+                        marched.vertexArray.push_back(position);
+                    }else{
+                        break;
+                    }
+
+                    i = i + 3;
+                }
+            }
+        }
+    }
+    return marched;
 }
 
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {

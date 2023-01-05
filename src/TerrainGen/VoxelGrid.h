@@ -83,6 +83,8 @@ public:
     void computeVoxelGroups();
     Matrix3<float> getVoxelValues();
 
+    Mesh getGeometry();
+
     std::tuple<int, int, int, int> getChunksAndVoxelIndices(Vector3 pos);
     std::tuple<int, int, int, int> getChunksAndVoxelIndices(float x, float y, float z);
     float getVoxelValue(Vector3 pos);

@@ -6,9 +6,10 @@
 //class random_gen;
 //class GlobalsGL;
 
-#include <GL/glew.h>
+//#include <GL/glew.h>
 #include <random>
 //#include <QOpenGLContext>
+#include <QOpenGLFunctions_4_5_Core>
 #include <QtWidgets>
 //#include <QOpenGLFunctions>
 #include <fstream>
@@ -54,8 +55,10 @@ public:
     static QOpenGLContext *_context;
     static QOpenGLContext *context();
     static QOpenGLFunctions* _f;
-    static QOpenGLExtraFunctions *f(); // Alias for ef()
+    static QOpenGLFunctions_4_5_Core *f(); // Alias for ef()
     static QOpenGLExtraFunctions* _ef;
+    static QOpenGLFunctions_4_5_Core* f45();
+    static QOpenGLFunctions_4_5_Core* _ef45;
     static QOpenGLExtraFunctions *ef();
     static GLuint _renderingProgram;
     static GLuint renderingProgram();
@@ -79,6 +82,6 @@ public:
     static bool printShaderErrors(GLuint shader);
     static bool printProgramErrors(int program);
 
-    static void GLAPIENTRY MessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam );
+//    static void GLAPIENTRY MessageCallback( GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam );
 };
 #endif // GLOBALS_H

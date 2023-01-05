@@ -184,4 +184,9 @@ namespace std {
     };
 }
 
+
+#include "Utils/json.h"
+nlohmann::json vec3_to_json(const Vector3& vec);
+Vector3 json_to_vec3(nlohmann::json json);
+
 #endif // VECTOR3_H

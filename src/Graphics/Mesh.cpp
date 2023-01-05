@@ -1,5 +1,6 @@
 #include "Graphics/Mesh.h"
 
+#include "Graphics/MarchingCubes.h"
 #include "Utils/stl_reader.h"
 
 std::vector<Mesh*> Mesh::all_meshes;
@@ -275,6 +276,97 @@ void Mesh::computeColors()
     this->needToUpdateColors = true;
 }
 
+Mesh Mesh::extractGeometryFromShaders(Matrix3<float>& values)
+{
+    /*
+    GLuint vertices_positions_buffer;
+    GlobalsGL::f()->glGenBuffers(1, &vertices_positions_buffer);
+    GlobalsGL::f()->glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, vertices_positions_buffer);
+
+    GLuint feedback_buffer;
+    GlobalsGL::f()->glGenTransformFeedbacks(1, &feedback_buffer);
+
+    GLuint myTBO;               // Transform Buffer Object (TBO)
+    GlobalsGL::f()->glGenBuffers(1, &myTBO);          // Generate an OpenGL buffer
+
+    GlobalsGL::f()->glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, feedback_buffer);
+    GlobalsGL::f()->glBeginTransformFeedback(GL_TRIANGLES);
+
+    this->display();
+
+    GlobalsGL::f()->glEndTransformFeedback();
+
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, vertices_positions_buffer);
+
+    GLint dataSize_feedback = 0;
+    GLint dataSize_vertices = 0;
+    GlobalsGL::f()->glGetNamedBufferParameteriv(feedback_buffer, GL_BUFFER_SIZE, &dataSize_feedback);
+    GlobalsGL::f()->glGetNamedBufferParameteriv(vertices_positions_buffer, GL_BUFFER_SIZE, &dataSize_vertices);
+    std::cout << "Feedback has " << dataSize_feedback << "b data \t" << "Vertices has " << dataSize_feedback << "b data" << std::endl;
+    *//*
+    int maxNumEdgesFeedback = this->vertexArray.size() * 5; // 3 * (unitSphere.GetNumTriangles() + unitSphere.GetNumTrianglesInSlice());
+    int sizeOfEdgeFeedback = 3 * sizeof(float); //3 * sizeof(int) + 4 * sizeof(float);
+    int maxSizeOfFeedback = sizeOfEdgeFeedback* maxNumEdgesFeedback;
+
+    GlobalsGL::f()->glBindBuffer(GL_ARRAY_BUFFER, myTBO);
+    GlobalsGL::f()->glBufferData(GL_ARRAY_BUFFER, maxSizeOfFeedback, (void*)0, GL_STATIC_READ);
+    GlobalsGL::f()->glBindBufferBase(GL_TRANSFORM_FEEDBACK_BUFFER, 0, myTBO);
+    unsigned int myTBOquery;          // Will hold an OpenGL query object
+    GlobalsGL::f()->glGenQueries(1, &myTBOquery);
+    Mesh copy;
+
+    GlobalsGL::f()->glEnable(GL_RASTERIZER_DISCARD);
+//    GlobalsGL::f()->glUseProgram(copy.shader->programID);
+//    this->shader->use();
+//    GlobalsGL::f()->glBindTransformFeedback(GL_TRANSFORM_FEEDBACK, feedback_buffer);
+    GlobalsGL::f()->glBeginQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN, myTBOquery);
+    GlobalsGL::f()->glBeginTransformFeedback(GL_TRIANGLES);
+    this->display();
+//    GlobalsGL::f()->glFlush();
+    GlobalsGL::f()->glEndTransformFeedback();
+    GlobalsGL::f()->glEndQuery(GL_TRANSFORM_FEEDBACK_PRIMITIVES_WRITTEN);
+    unsigned int dataSize;
+    GlobalsGL::f()->glGetQueryObjectuiv(myTBOquery, GL_QUERY_RESULT, &dataSize);
+    GlobalsGL::f()->glDisable(GL_RASTERIZER_DISCARD);
+
+//    GLint dataSize = 0;
+//    GlobalsGL::f()->glGetNamedBufferParameteriv(feedback_buffer, GL_BUFFER_SIZE, &dataSize);
+//    dataSize /= sizeof(float);
+//    float *data = new float[dataSize / sizeof(float)];
+    float *data = new float[dataSize * 1];
+
+    GlobalsGL::f()->glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeOfEdgeFeedback*dataSize, data);
+//    GlobalsGL::f()->glGetNamedBufferSubData(feedback_buffer, 0, dataSize, data);
+    */
+    Mesh copy = this->applyMarchingCubes(values);/*
+    copy.vertexArray.clear();
+    for (size_t i = 0; i < dataSize / (3 * sizeof(float)); i++) {
+        Vector3 pos = Vector3(
+                    data[3 * i + 0],
+                    data[3 * i + 1],
+                    data[3 * i + 2]);
+        copy.vertexArray.push_back(pos);
+    }
+    std::cout << copy.vertexArray.size() / 3 << " triangles to store" << std::endl;*/
+    std::ofstream off;
+    off.open("test.off");
+    off << copy.toOFF();
+    off.close();
+
+    std::ofstream stl;
+    stl.open("test.stl");
+    stl << copy.toSTL();
+    stl.close();
+
+//    GlobalsGL::f()->glDeleteTransformFeedbacks(1, &feedback_buffer);
+//    GlobalsGL::f()->glDeleteBuffers(1, &myTBO);
+//    GlobalsGL::f()->glDeleteBuffers(1, &vertices_positions_buffer);
+
+//    GlobalsGL::f()->glDeleteQueries(1, &myTBOquery);
+//    return copy;
+    return *this;
+}
+
 void Mesh::setShaderToAllMeshesWithoutShader(Shader newShader)
 {
     /*for (Mesh*& mesh : Mesh::all_meshes) {
@@ -434,4 +526,243 @@ std::string Mesh::toOFF()
     for (size_t i = 0; i < vertexArray.size(); i += 3)
         out += "3 " + std::to_string(i + 0) + " " + std::to_string(i + 1) + " " + std::to_string(i + 2) + "\n";
     return out;
+}
+
+std::string Mesh::toSTL()
+{
+    std::string objName = "mesh-output";
+    //binary file
+    std::string header_info = "solid " + objName;
+
+    std::ostringstream file;
+
+    file << header_info << std::endl;
+    bool wasUsingIndices = this->useIndices;
+    this->useIndices = false;
+    this->computeNormals();
+    for (size_t _i = 0; _i < this->vertexArray.size() / 3; _i++) { // (const auto& t : Triangles) {
+        size_t i = 3 * _i;
+        Vector3 n = (this->normalsArray[i] + this->normalsArray[i+1] + this->normalsArray[i+2])/3.f;
+        Vector3 v1 = this->vertexArray[i + 0];
+        Vector3 v2 = this->vertexArray[i + 1];
+        Vector3 v3 = this->vertexArray[i + 2];
+        file << "\t" << "facet normal" << " " << n.x << " " << n.y << " " << n.z << "\n";
+        file << "\t\t" << "outer loop" << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v1.x << " " << v1.y << " " << v1.z << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v2.x << " " << v2.y << " " << v2.z << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v3.x << " " << v3.y << " " << v3.z << "\n";
+        file << "\t\t" << "endloop" << "\n";
+        file << "\t" << "endfacet" << "\n";
+    }
+    file << "endsolid" << " " << objName << "\n";
+    this->useIndices = wasUsingIndices;
+    return file.str();
+    /*char head[80];
+    std::strncpy(head,header_info.c_str(),sizeof(head)-1);
+    char attribute[2] = "0";
+    unsigned long nTriLong = triangles.size() ;
+
+//    std::ofstream myfile;
+    char* myText = new char[80 + 4 + 50 * nTriLong]; // Head = 80 + number facets = 4 + 50 per triangle
+
+
+    myfile.open((Filename + "-out.stl").c_str(),  std::ios::out | std::ios::binary);
+    myfile.write(head,sizeof(head));
+    myfile.write((char*)&nTriLong,4);
+
+    //write down every triangle
+    for (std::vector<tri>::iterator it = triangles.begin(); it!=triangles.end(); it++){
+        //normal vector coordinates
+
+        myfile.write((char*)&it->m_n.m_x, 4);
+        myfile.write((char*)&it->m_n.m_y, 4);
+        myfile.write((char*)&it->m_n.m_z, 4);
+
+        //p1 coordinates
+        myfile.write((char*)&it->m_p1.m_x, 4);
+        myfile.write((char*)&it->m_p1.m_y, 4);
+        myfile.write((char*)&it->m_p1.m_z, 4);
+
+        //p2 coordinates
+        myfile.write((char*)&it->m_p2.m_x, 4);
+        myfile.write((char*)&it->m_p2.m_y, 4);
+        myfile.write((char*)&it->m_p2.m_z, 4);
+
+        //p3 coordinates
+        myfile.write((char*)&it->m_p3.m_x, 4);
+        myfile.write((char*)&it->m_p3.m_y, 4);
+        myfile.write((char*)&it->m_p3.m_z, 4);
+
+        myfile.write(attribute,2);
+    }
+
+    myfile.close();*/
+}
+
+Mesh Mesh::applyMarchingCubes(Matrix3<float>& values)
+{
+    auto triTable = MarchingCubes::triangleTable;
+    auto edges = MarchingCubes::cubeEdges;
+    float offsetX = 0.f;
+    float offsetY = 0.f;
+    float offsetZ = 0.f;
+    Vector3 scale(1.f, 1.f, 1.f);
+    float isolevel = 0.f;
+
+    Vector3 vertDecals[8] = {
+        Vector3(0.0, 0.0, 0.0),
+        Vector3(1.0, 0.0, 0.0),
+        Vector3(1.0, 1.0, 0.0),
+        Vector3(0.0, 1.0, 0.0),
+        Vector3(0.0, 0.0, 1.0),
+        Vector3(1.0, 0.0, 1.0),
+        Vector3(1.0, 1.0, 1.0),
+        Vector3(0.0, 1.0, 1.0)
+    };
+    std::function cubePos = [&](Vector3 voxelPos, int i) -> Vector3 {
+        return voxelPos + vertDecals[i];
+    };
+
+    //Get vertex i value within current marching cube
+    std::function cubeVal = [&](Vector3 pos) -> float {
+        if (!values.checkCoord(pos)) return -1.f;
+        return values.at(pos);
+    };
+    //Get vertex i value within current marching cube
+    std::function cubeVali = [&](Vector3 voxelPos, int i) -> float {
+        return cubeVal(cubePos(voxelPos, i));
+    };
+
+    //Get triangle table value
+    std::function triTableValue = [&](int i, int j) -> int{
+        return triTable[i][j];
+    };
+
+    //Compute interpolated vertex along an edge
+    std::function vertexInterp = [&](float isolevel, Vector3 v0, float l0, Vector3 v1, float l1) -> Vector3 {
+        float iso = std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
+        return v0 * iso + v1 * (1.f - iso);
+//        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
+    };
+
+    std::function getPosition = [&](Vector3 position, Vector3 _offset) -> Vector3 {
+    //    return position + vec4(_offset, 0.0);
+        _offset += Vector3(offsetX, offsetY, offsetZ);
+        position *= scale;
+
+//        float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xyz - min_vertice_positions)), mincomp(abs(position.xyz + vec3(1.0) - max_vertice_positions))) : 1.0);
+        Vector3 off = _offset * 1.f; // (clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 1.0));
+        return position + off; //clamp(position + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    };
+
+    std::function getCubeIndex = [&](Vector3 voxPos, vec3 normal) -> int {
+        int cubeindex = 0;
+        float cubeVal0 = cubeVali(voxPos, 0);
+        float cubeVal1 = cubeVali(voxPos, 1);
+        float cubeVal2 = cubeVali(voxPos, 2);
+        float cubeVal3 = cubeVali(voxPos, 3);
+        float cubeVal4 = cubeVali(voxPos, 4);
+        float cubeVal5 = cubeVali(voxPos, 5);
+        float cubeVal6 = cubeVali(voxPos, 6);
+        float cubeVal7 = cubeVali(voxPos, 7);
+        float refined_isolevel = isolevel + 0.0001;
+        //Determine the index into the edge table which
+        //tells us which vertices are inside of the surface
+        cubeindex  = int(cubeVal0 < refined_isolevel);
+        cubeindex += int(cubeVal1 < refined_isolevel)*2;
+        cubeindex += int(cubeVal2 < refined_isolevel)*4;
+        cubeindex += int(cubeVal3 < refined_isolevel)*8;
+        cubeindex += int(cubeVal4 < refined_isolevel)*16;
+        cubeindex += int(cubeVal5 < refined_isolevel)*32;
+        cubeindex += int(cubeVal6 < refined_isolevel)*64;
+        cubeindex += int(cubeVal7 < refined_isolevel)*128;
+
+        normal = vec3(0, 0, 0);
+
+        if (cubeindex != 0 && cubeindex != 255) {
+            vec3 vertlist[12];
+
+            //Find the vertices where the surface intersects the cube
+            vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+            vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+            vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+            vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+            vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+            vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+            vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+            vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+            vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+            vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+            vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+            vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+
+
+            vec3 edge1 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 1)];
+            vec3 edge2 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 2)];
+//            normal = normalize(cross(edge1, edge2));
+        }
+        return cubeindex;
+    };
+
+    Mesh marched;
+    float refined_isolevel = isolevel + 0.0001;
+    Vector3 vertlist[12];
+    for (int x = 0; x < values.sizeX; x++) {
+        for (int y = 0; y < values.sizeY; y++) {
+            for (int z = 0; z < values.sizeZ; z++) {
+                Vector3 position = Vector3(x, y, z);
+                Vector3 voxPos = position;
+
+                float cubeVal0 = cubeVali(voxPos, 0);
+                float cubeVal1 = cubeVali(voxPos, 1);
+                float cubeVal2 = cubeVali(voxPos, 2);
+                float cubeVal3 = cubeVali(voxPos, 3);
+                float cubeVal4 = cubeVali(voxPos, 4);
+                float cubeVal5 = cubeVali(voxPos, 5);
+                float cubeVal6 = cubeVali(voxPos, 6);
+                float cubeVal7 = cubeVali(voxPos, 7);
+
+                Vector3 normal;
+                int cubeindex = getCubeIndex(voxPos, normal);
+
+                //Cube is entirely in/out of the surface
+                if (cubeindex == 0 || cubeindex == 255)
+                    continue;
+
+                //Find the vertices where the surface intersects the cube
+                vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+                vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+                vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+                vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+                vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+                vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+                vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+                vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+                vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+                vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+                vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+                vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+
+                int i = 0;
+                while(true){
+                    if(triTableValue(cubeindex, i) != -1){
+                        position = vertlist[triTableValue(cubeindex, i+0)];
+                        marched.vertexArray.push_back(position);
+
+                        position = vertlist[triTableValue(cubeindex, i+1)];
+                        marched.vertexArray.push_back(position);
+
+                        position = vertlist[triTableValue(cubeindex, i+2)];
+                        marched.vertexArray.push_back(position);
+                    }else{
+                        break;
+                    }
+
+                    i = i + 3;
+                }
+            }
+        }
+    }
+    return marched;
 }

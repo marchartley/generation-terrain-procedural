@@ -98,13 +98,14 @@ void RegularSimplicialComplex::display()
             }
         }
     }
-
+/*
     Plotter plt;
     for (size_t iPlot = 0; iPlot < plots.size(); iPlot++)
         plt.addPlot(plots[iPlot], "", plots_colors[iPlot]);
 //    plt.addScatter(scatter, "", scatter_labels, {PlotColor::GRAY});
 
     plt.exec();
+    */
 }
 
 int RegularSimplicialComplex::maxNodesValues()

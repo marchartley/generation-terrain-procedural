@@ -38,6 +38,11 @@ uniform mat4 norm_matrix;
 uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
+uniform float offsetX;
+uniform float offsetY;
+uniform float offsetZ;
+uniform vec3 scale = vec3(1.0);
+
 uniform bool useMarchingCubes;
 
 //Vertices position for fragment shader
@@ -47,6 +52,8 @@ in vec3 realNormal[];
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
 out vec4 gcolor;
+out float gdensity;
+//out vec4 gPosition;
 
 uniform int voxels_displayed_on_borders = 1;
 
@@ -64,8 +71,8 @@ float cubeVal(vec3 pos){
         pos.z < min_vertice_positions.z || max_vertice_positions.z < pos.z) return -1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
     float val = texture(dataFieldTex, pos/texSize).a;
-    if (pos.z <= 1)
-        val = 1.0;
+//    if (pos.z <= 1)
+//        val = 1.0;
     val = (val < min_isolevel || val > max_isolevel) ? -1000 : val;
     return val - 0.5;
 }
@@ -81,7 +88,7 @@ int triTableValue(int i, int j){
 
 //Compute interpolated vertex along an edge
 vec3 vertexInterp(float isolevel, vec3 v0, float l0, vec3 v1, float l1){
-    return mix(v0, v1, (isolevel-l0)/(l1-l0));
+    return mix(v0, v1, clamp((isolevel-l0)/(l1-l0), 0.0, 1.0)) * scale + vec3(offsetX, offsetY, offsetZ);
 }
 
 float mincomp(vec2 v) { return min(v.x, v.y); }
@@ -90,6 +97,10 @@ float mincomp(vec3 v) { return min(min(v.x, v.y), v.z); }
 float maxcomp(vec3 v) { return max(max(v.x, v.y), v.z); }
 vec4 getPosition(vec4 position, vec3 _offset)
 {
+//    return position + vec4(_offset, 0.0);
+    _offset += vec3(offsetX, offsetY, offsetZ);
+    position *= vec4(scale, 1.0);
+
     float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xyz - min_vertice_positions)), mincomp(abs(position.xyz + vec3(1.0) - max_vertice_positions))) : 1.0);
     vec3 off = _offset * (clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 1.0));
     return clamp(position + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
@@ -149,10 +160,20 @@ int getCubeIndex(vec3 voxPos, out vec3 normal) {
 void main(void) {
     vec4 position = vec4(initialVertPos[0], 1.0);
     vec3 voxPos = position.xyz;
+/*
+    float cubeVal0 = cubeVal(voxPos, 0);
+    float cubeVal1 = cubeVal(voxPos, 1);
+    float cubeVal2 = cubeVal(voxPos, 2);
+    float cubeVal3 = cubeVal(voxPos, 3);
+    float cubeVal4 = cubeVal(voxPos, 4);
+    float cubeVal5 = cubeVal(voxPos, 5);
+    float cubeVal6 = cubeVal(voxPos, 6);
+    float cubeVal7 = cubeVal(voxPos, 7);
+
+    gdensity = -1.f;
     gcolor = vec4(1, 1, 1, 1);
-
     gl_Position = proj_matrix * mv_matrix * position;
-
+*/
     if (!useMarchingCubes) {
         if (cubeVal(position.xyz) < isolevel)
             return;
@@ -167,27 +188,12 @@ void main(void) {
         bool nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel) || position.y - (voxels_displayed_on_borders + 1) < min_vertice_positions.y;
         bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel) || position.y + (voxels_displayed_on_borders + 1) > max_vertice_positions.y;
 
-//bool nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel) || position.x - (voxels_displayed_on_borders + 1) < min_vertice_positions.x || position.x + (voxels_displayed_on_borders + 1) > max_vertice_positions.x ||
-//position.y - (voxels_displayed_on_borders + 1) < min_vertice_positions.y || position.y + (voxels_displayed_on_borders + 1) > max_vertice_positions.y ||
-//position.z - (voxels_displayed_on_borders + 1) < min_vertice_positions.z || position.z + (voxels_displayed_on_borders + 1) > max_vertice_positions.z;
-//bool nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel);
-//bool nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel);
-//bool nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel);
-//bool nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel);
-//bool nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel);
-//        for (int n = 1; n < voxels_displayed_on_borders; n++) {
-//            nTop    = (cubeVal(position.xyz + vec3( 0,  0,  1)) < isolevel);
-//            nBottom = (cubeVal(position.xyz + vec3( 0,  0, -1)) < isolevel);
-//            nRight  = (cubeVal(position.xyz + vec3( 1,  0,  0)) < isolevel);
-//            nLeft   = (cubeVal(position.xyz + vec3(-1,  0,  0)) < isolevel);
-//            nFront  = (cubeVal(position.xyz + vec3( 0, -1,  0)) < isolevel);
-//            nBack   = (cubeVal(position.xyz + vec3( 0,  1,  0)) < isolevel);
-//        }
         // Front
         grealNormal = vec3(0, -1, 0);
         if (nFront) {
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1));
             ginitialVertPos = getPosition(position, vec3(0, 0, 1)).xyz;
+//            gdensity =
             EmitVertex();
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0));
             ginitialVertPos = getPosition(position, vec3(0, 0, 0)).xyz;

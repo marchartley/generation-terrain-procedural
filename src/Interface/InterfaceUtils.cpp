@@ -115,3 +115,28 @@ QGroupBox *createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string,
     group->resize(group->size());
     return group;
 }
+
+QGroupBox *createHorizontalGroup(std::vector<QWidget *> widgets)
+{
+    QHBoxLayout* layout = new QHBoxLayout;
+    QGroupBox* group = new QGroupBox;
+    for (QWidget*& w : widgets)
+        layout->addWidget(w);
+    group->setLayout(layout);
+    return group;
+}
+
+QGroupBox *createMultiColumnGroup(std::vector<QWidget *> widgets, int nbColumns)
+{
+    QGridLayout* layout = new QGridLayout;
+    QGroupBox* group = new QGroupBox;
+//    for (QWidget*& w : widgets)
+    for (size_t i = 0; i < widgets.size(); i++) {
+        auto& w = widgets[i];
+        int row = int (i / nbColumns);
+        int col = i % nbColumns;
+        layout->addWidget(w, row, col);
+    }
+    group->setLayout(layout);
+    return group;
+}

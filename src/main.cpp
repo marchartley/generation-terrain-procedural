@@ -12,9 +12,9 @@
 #include <random>
 #include <string>
 
-#include "Graphics/DisplayGraphics.h"
-#include "Graph/TopoMap.h"
-#include "Graph/RegularSimplicialComplex.h"
+//#include "Graphics/DisplayGraphics.h"
+//#include "Graph/TopoMap.h"
+//#include "Graph/RegularSimplicialComplex.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,6 +23,33 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
+
+    /*BSpline opCurve = BSpline({
+                                  Vector3(.0f, .5f),
+                                  Vector3(.3f, .5f),
+                                  Vector3(1.f, 1.f),
+//                                  Vector3(2.f, 2.f),
+//                                  Vector3(1.f, 1.f),
+                                  Vector3(.5f, .3f),
+                                  Vector3(.5f, .0f)
+                              });
+    Plotter* plot = new Plotter;
+    plot->addPlot(opCurve.getPath(50));
+    plot->exec();
+    delete plot;
+    return 0;*/
+    /*
+    Vector3 gridRes(151, 151, 1);
+    Matrix3<float> grid(gridRes);
+    for (int x = 0; x < gridRes.x; x++) {
+        for (int y = 0; y < gridRes.y; y++) {
+            Vector3 pos = Vector3(x, y) / gridRes;
+            float dist = opCurve.estimateSignedDistanceFrom(pos);
+            grid.at(x, y) = 1.f - std::clamp(dist + .5f, 0.f, 1.f);
+        }
+    }
+    std::cout << grid.displayAsPlot(0, 0, {"-", "+"}, {{.5f, "0"}}, 0.005f) << std::endl;
+    return 0;*/
 
 //    RegularSimplicialComplex grid(10, 10);
 //    grid.getNode(2, 3)->value = 0;
@@ -45,7 +72,7 @@ int main(int argc, char *argv[])
 //    return 0;
 
     QGLFormat glFormat;
-    glFormat.setVersion(4, 1);
+    glFormat.setVersion(4, 5);
     glFormat.setProfile(QGLFormat::CoreProfile);
     glFormat.setSampleBuffers(true);
     glFormat.setDefaultFormat(glFormat);

@@ -484,6 +484,7 @@ bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
 }
 float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
 {
+    // TODO : Need to be improved one day
     pos -= minPos;
     maxPos -= minPos;
 
@@ -491,9 +492,60 @@ float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 m
         pos = pos.xy();
         maxPos = maxPos.xy();
     }
+    if (Vector3::isInBox(pos, Vector3(), maxPos)) {
+        if (ignoreZdimension)
+            return -std::min({pos.x, pos.y, maxPos.x - pos.x, maxPos.y - pos.y});
+        else
+            return -std::min({pos.x, pos.y, pos.z, maxPos.x - pos.x, maxPos.y - pos.y, maxPos.z - pos.z});
+    } else {
+        if (ignoreZdimension)
+            return -std::min({pos.x, pos.y, maxPos.x - pos.x, maxPos.y - pos.y});
+        else
+            return -std::min({pos.x, pos.y, pos.z, maxPos.x - pos.x, maxPos.y - pos.y, maxPos.z - pos.z});
+    }
+    /*
+    Vector3 halfRectDim = (maxPos - minPos) * .5f;
+    pos = (pos - (minPos)).abs() - halfRectDim;
 
-    Vector3 d = pos.abs() - maxPos;
-    return Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f);
+    if (ignoreZdimension) {
+        pos = pos.xy();
+        halfRectDim = halfRectDim.xy();
+    }
+    Vector3 posMinHalf = pos;
+    float distOut = posMinHalf.norm();
+    float distIn = pos.norm();
+//    return Vector3::max(pos.abs(), Vector3()).norm();
+    return (halfRectDim - pos.abs()).maxComp();
+
+
+
+    pos -= minPos;
+    maxPos -= minPos;
+
+    Vector3 q = pos.abs() - maxPos; //abs(p) - b;
+    float maxQ = Vector3::max(q, Vector3()).maxComp();
+    float minQ = std::min(q.maxComp(), 0.f);
+    return maxQ + minQ; // length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
+    */
+    /*
+    if (ignoreZdimension) {
+        pos = pos.xy();
+        maxPos = maxPos.xy();
+    }
+    Vector3 posMinusMax = pos - maxPos;
+
+    float res = 0.f;
+    if (Vector3::isInBox(pos, Vector3(), maxPos)) {
+        res = -std::max(-pos.minComp(), -((maxPos - pos).maxComp()));
+    } else {
+        res = std::min(pos.minComp(), -((pos - maxPos).maxComp()));
+    }
+    return res;*/
+
+//    Vector3 d = pos.abs() - maxPos;
+//    return Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f);
+
+
 //    return -(Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f));
 //    return Vector3::distanceToBoundaries(pos, minPos, maxPos, ignoreZdimension) * (Vector3::isInBox(pos, minPos, maxPos) ? 1.f : -1.f);
 }
@@ -505,4 +557,14 @@ float Vector3::distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos,
 //    float y = std::min(std::abs(pos.y), std::abs(maxPos.y - pos.y));
 //    float z = std::min(std::abs(pos.z), std::abs(maxPos.z - pos.z)) * (ignoreZdimension ? 0.f : 1.f);
 //    return std::max({x, y, z});
+}
+
+
+nlohmann::json vec3_to_json(const Vector3& vec) {
+    return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});
+}
+
+Vector3 json_to_vec3(nlohmann::json json)
+{
+    return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
 }

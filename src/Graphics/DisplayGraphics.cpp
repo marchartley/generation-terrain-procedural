@@ -1,6 +1,6 @@
 #include "DisplayGraphics.h"
 #include <iostream>
-
+/*
 
 ChartView::ChartView(QWidget *parent) : QChartView(nullptr, parent)
 {}
@@ -202,15 +202,6 @@ void Plotter::draw()
         }
         this->chartView->chart()->addSeries(series);
 
-        /*for (size_t j = 0; j < this->scatter_data[i].size(); j++) {
-            if (PlotColorToQColor.count(this->scatter_colors[i][j])) {
-                QGraphicsItem *it = this->chartView->itemAt(this->chartView->mapFromScene(this->chartView->chart()->mapToPosition(series->at(j))));
-                if(QGraphicsEllipseItem *ellipse = qgraphicsitem_cast<QGraphicsEllipseItem*>(it)){
-                    QColor color = QColor::fromRgb(QRandomGenerator::global()->generate());;
-                    ellipse->setBrush(color);
-                }
-            }
-        }*/
         if (series->name().isEmpty()) {
             this->chartView->chart()->legend()->markers(series)[0]->setVisible(false);
         }
@@ -340,3 +331,4 @@ void TextItem::setText(const QString &text) {
 }
 
 void TextItem::setAnchor(QPointF point) { _anchor = point; }
+*/

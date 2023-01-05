@@ -69,12 +69,4 @@ Q_SIGNALS:
     void updated();
 };
 
-#include "Utils/BSpline.h"
-#include "Karst/KarstHoleProfile.h"
-nlohmann::json vec3_to_json(const Vector3& vec);
-Vector3 json_to_vec3(nlohmann::json json);
-nlohmann::json bspline_to_json(const BSpline& spline);
-BSpline json_to_bspline(nlohmann::json json);
-nlohmann::json karst_profile_to_json(KarstHoleProfile profile);
-KarstHoleProfile json_to_karst_profile(nlohmann::json json);
 #endif // ACTIONINTERFACE_H

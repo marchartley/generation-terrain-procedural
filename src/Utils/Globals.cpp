@@ -11,6 +11,7 @@ std::default_random_engine random_gen::random_generator;
 QOpenGLContext* GlobalsGL::_context;
 QOpenGLFunctions* GlobalsGL::_f;
 QOpenGLExtraFunctions* GlobalsGL::_ef;
+QOpenGLFunctions_4_5_Core* GlobalsGL::_ef45;
 GLuint GlobalsGL::_renderingProgram;
 GLuint GlobalsGL::vao[numVAOs];
 GLuint GlobalsGL::vbo[numVBOs];
@@ -22,12 +23,28 @@ QOpenGLContext* GlobalsGL::context() {
         GlobalsGL::_context = QOpenGLContext::currentContext();
     return GlobalsGL::_context;
 }
-QOpenGLExtraFunctions* GlobalsGL::f() {
-    return GlobalsGL::ef();
+QOpenGLFunctions_4_5_Core* GlobalsGL::f() {
+    return f45();
+//    return GlobalsGL::ef();
+}
+
+QOpenGLFunctions_4_5_Core *GlobalsGL::f45()
+{
+    if (GlobalsGL::_ef45 == nullptr) {
+        _ef45 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_5_Core>();
+        if(!_ef45) {
+            std::cerr << "No access to GL 4.5 functions" << std::endl;
+        }
+        _ef45->initializeOpenGLFunctions();
+//        _ef45->glInvalidateFramebuffer()
+//        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
+    }
+    return GlobalsGL::_ef45;
 }
 QOpenGLExtraFunctions* GlobalsGL::ef() {
-    if (GlobalsGL::_ef == nullptr)
+    if (GlobalsGL::_ef == nullptr) {
         GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
+    }
     return GlobalsGL::_ef;
 }
 void GlobalsGL::generateBuffers()
@@ -101,6 +118,7 @@ bool GlobalsGL::printProgramErrors(int program)
 #endif
     return false;
 }
+/*
 void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type,
                                             GLuint id, GLenum severity,
                                             GLsizei length, const GLchar* message,
@@ -116,4 +134,4 @@ void GLAPIENTRY GlobalsGL::MessageCallback( GLenum source, GLenum type,
         std::string s_severity = (severity == GL_DEBUG_SEVERITY_HIGH ? "High" : severity == GL_DEBUG_SEVERITY_MEDIUM ? "Medium" : "Low");
         std::cout << "Error " << id << " [severity=" << s_severity << "]: " << message << std::endl;
     }
-}
+}*/

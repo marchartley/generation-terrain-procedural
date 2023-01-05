@@ -1,12 +1,16 @@
-QT *= quick opengl xml widgets gui charts
-CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
+QT *= opengl widgets gui charts xml quick
+CONFIG += qt opengl warn_on thread console rtti embed_manifest_exe no_keywords
 
 INCLUDEPATH *= src/
 
 unix {
-    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
+    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2
+#    INCLUDEPATH *= /home/simulateurrsm/Documents/eigen
+    #INCLUDEPATH *= "/home/simulateurrsm/Documents/App downloads/tbb/include"
     INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer
+    LIBS *= -lQGLViewer-qt5
+    #LIBS *= -ltbb -ltbbmalloc
 }
 win32 {
     # I installed the sources of:

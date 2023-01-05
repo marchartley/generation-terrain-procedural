@@ -23,6 +23,7 @@
 #include "Interface/BiomeInterface.h"
 #include "Interface/SmoothInterface.h"
 #include "Interface/PrimitivePatchesInterface.h"
+//#include "Interface/TerrainSavingInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -59,6 +60,7 @@ public Q_SLOTS:
     void openBiomeInterface();
     void openSmoothInterface();
     void openPatchesInterface();
+//    void openSavingInterface();
 
     void hideAllInteractiveParts();
 
@@ -87,6 +89,7 @@ public:
     std::shared_ptr<BiomeInterface> biomeInterface;
     std::shared_ptr<SmoothInterface> smoothInterface;
     std::shared_ptr<PrimitivePatchesInterface> patchesInterface;
+//    std::shared_ptr<TerrainSavingInterface> savingInterface;
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 
@@ -102,7 +105,7 @@ public:
     RangeSlider* isolevelSelectionSlider;
     QCheckBox* mapSliceSmooth;
 
-    std::string mapSavingFolder = "../saved_maps/";
+    std::string mapSavingFolder = "saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;
 };
 
