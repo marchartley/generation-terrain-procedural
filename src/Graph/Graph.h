@@ -210,6 +210,8 @@ std::shared_ptr<GraphNode<T> > Graph<T>::findNodeByID(int ID)
 template<class T>
 void Graph<T>::draw()
 {
+    /*
+     * TODO : Install QT Charts to have access to the plotter
     Plotter plt;
     std::vector<Vector3> nodesPos;
     std::vector<std::string> labels;
@@ -225,5 +227,6 @@ void Graph<T>::draw()
     }
     plt.addScatter(nodesPos,  "", labels);
     plt.exec();
+    */
 }
 #endif // GRAPH_H

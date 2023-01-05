@@ -183,11 +183,11 @@ vec3 getBiomeColor(vec2 pos) {
     return vec3(val, 1.0, 1.0);
 }
 float getDensity(vec3 pos, float resolution) {
-    if (gdensity == 0) {
+    if (gdensity <= 0) {
         vec3 texSize = vec3(textureSize(dataFieldTex, 0));
-        vec3 offsets = 0.6 / texSize;
+        vec3 offsets = vec3(0.0); // 0.5 / texSize;
         float density = 0.0;
-        float surrounding = 3.f;
+        float surrounding = 1.f;
         for (float x = 0; x < surrounding; x++) {
             for (float y = 0; y < surrounding; y++) {
                 for (float z = 0; z < surrounding; z++) {
@@ -205,6 +205,7 @@ float getDensity(vec3 pos, float resolution) {
     }
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
+//    return 1;
     float density = getDensity(pos / terrainSize, 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
     float power = 1.0;
     int texIndex = 0;
@@ -258,14 +259,6 @@ float wyvill(float x) {
 }
 void main(void)
 {
-//    float epsilon = 0.0001;
-//    if (min_vertice_positions.x - epsilon > ginitialVertPos.x ||
-//            ginitialVertPos.x > max_vertice_positions.x + epsilon ||
-//            min_vertice_positions.y - epsilon > ginitialVertPos.y ||
-//            ginitialVertPos.y > max_vertice_positions.y + epsilon ||
-//            min_vertice_positions.z - epsilon > ginitialVertPos.z ||
-//            ginitialVertPos.z > max_vertice_positions.z + epsilon)
-//        discard;
 
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {

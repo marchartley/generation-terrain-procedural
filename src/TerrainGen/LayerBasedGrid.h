@@ -73,6 +73,8 @@ public:
     */
     void add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
 
+    Mesh getGeometry();
+
     int currentHistoryIndex = 0;
     int _historyIndex = 0;
 

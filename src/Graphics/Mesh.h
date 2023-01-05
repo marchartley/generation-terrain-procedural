@@ -47,6 +47,9 @@ public:
     std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
 
     std::string toOFF();
+    std::string toSTL();
+
+    Mesh applyMarchingCubes(Matrix3<float> &values);
 
 
     unsigned int bufferID;
@@ -78,6 +81,8 @@ public:
     GLenum displayShape;
 
     bool cullFace = true;
+
+    Mesh extractGeometryFromShaders(Matrix3<float> &values);
 
     static void setShaderToAllMeshesWithoutShader(Shader newShader);
 

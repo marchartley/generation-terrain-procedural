@@ -588,3 +588,28 @@ Vector3 Grid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vecto
     }
     return Vector3(false);
 }
+
+Mesh Grid::getGeometry()
+{
+    std::vector<Vector3> vertices;
+    vertices.resize(6 * (this->getSizeX() - 1) * (this->getSizeY() - 1) );
+    auto heights = this->getHeights();
+
+    size_t i = 0;
+    for (int x = 0; x < this->getSizeX() - 1; x++) {
+        for (int y = 0; y < this->getSizeY() - 1; y++) {
+            vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
+            vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
+            vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
+
+            vertices[i + 3] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
+            vertices[i + 4] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
+            vertices[i + 5] = Vector3(x + 1, y + 1, heights.at(x + 1, y + 1));
+
+            i += 6;
+        }
+    }
+    Mesh m;
+    m.fromArray(vertices);
+    return m;
+}

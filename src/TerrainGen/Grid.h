@@ -63,6 +63,8 @@ public:
 
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
+    Mesh getGeometry();
+
 //protected:
     void computeNormals();
     Matrix3<float> heights;

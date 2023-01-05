@@ -12,6 +12,8 @@ QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmal
 QGroupBox* createMultipleSliderGroup(std::unordered_map<std::string, QSlider*> labelsAndSliders);
 QGroupBox* createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string, std::pair<QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
 QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets);
+QGroupBox* createHorizontalGroup(std::vector<QWidget*> widgets);
+QGroupBox* createMultiColumnGroup(std::vector<QWidget*> widgets, int nbColumns = 2);
 QGroupBox* createOptionalSlider(RangeSlider* slider, std::string checkboxLabel = "Activer", bool activatedByDefault = true,
                                 std::function<void(bool, RangeSlider*)> onToggleCallback = [](bool active, RangeSlider* slider) -> void {});
 

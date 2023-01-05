@@ -75,7 +75,7 @@ Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilen
 {
 
 }*/
-void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDefinitions)
+void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDefinitions, std::vector<std::string> feedbackValues)
 {
 #if useModernOpenGL || !useModernOpenGL
     this->programID = GlobalsGL::f()->glCreateProgram();
@@ -120,6 +120,14 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
         } else {
             geometryShaderFilename = "";
         }
+    }
+
+    if (geometryShaderFilename != "" && !feedbackValues.empty())
+    {
+        GLchar** variables = new GLchar*[feedbackValues.size()];
+        for (size_t i = 0; i < feedbackValues.size(); i++)
+            variables[i] = (GLchar*)feedbackValues[i].c_str();
+        GlobalsGL::f()->glTransformFeedbackVaryings(this->programID, feedbackValues.size(), variables, GL_INTERLEAVED_ATTRIBS);
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);

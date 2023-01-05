@@ -142,7 +142,7 @@ def main():
                 # regions = [Region(Vector2D(graph.positions[i, 0], graph.positions[i, 1]), randomAreas[i], 30, i) for i in
                 #            range(len(graph.nodes))]
                 print(networkXpositions)
-                regions = [Region(Vector2D(networkXpositions[i][0], networkXpositions[i][1]²), randomAreas[i], 30, i) for i in
+                regions = [Region(Vector2D(networkXpositions[i][0], networkXpositions[i][1]), randomAreas[i], 30, i) for i in
                            range(len(graph.nodes))]
 
                 for i, region in enumerate(regions):

@@ -164,9 +164,9 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
             allChildrenClassnames.push_back(children[i]->modelName);
     }
 #ifdef linux
-    std::ifstream file("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
+    std::ifstream file("saved_maps/neighboring_constraints.json");
 #else
-    std::ifstream file("C:/codes/Qt/generation-terrain-procedural/saved_maps/neighboring_constraints.json");
+    std::ifstream file("saved_maps/neighboring_constraints.json");
 #endif
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     nlohmann::json neighboring = nlohmann::json::parse(content);

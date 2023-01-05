@@ -3,6 +3,7 @@
 
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
+#include "Utils/json.h"
 
 class ImplicitPatch
 {
@@ -15,8 +16,10 @@ public:
 
     void deleteComposables();
     ImplicitPatch clone();
+    void cleanCache();
 
     float getMaxHeight(Vector3 position);
+    float getMinHeight(Vector3 position);
     float evaluate(Vector3 position);
     float evaluateFromValues(float evaluationA, float evaluationB);
     /*float get(Vector3 position) {
@@ -28,6 +31,15 @@ public:
     Vector3 getPositionToEvaluateComposableA(Vector3 pos);
     Vector3 getPositionToEvaluateComposableB(Vector3 pos);
 
+    Vector3 getMinPosition();
+    Vector3 getMaxPosition();
+
+    void defineFunctionsBasedOnPredefinedShape();
+
+    nlohmann::json toJson() const;
+    static ImplicitPatch* fromJson(nlohmann::json json_content);
+
+
     float getAlphaValue(Vector3 pos) {
         float alpha = this->alphaDistanceFunction(pos);
         return alpha;
@@ -37,7 +49,22 @@ public:
         STACK,
         BLEND,
         REPLACE,
+        NEG_STACKING,
+        STACK_IN_WATER,
         NONE
+    };
+
+    enum PredefinedShapes {
+        Sphere,
+        Block,
+        Gaussian,
+        Rock,
+        Mountain,
+        Dune,
+        Basin,
+        Cave,
+        Arch,
+        None
     };
 
     bool isIdentity() { return this->compositionOperation == NONE && this->getDimensions() == Vector3(); }
@@ -51,12 +78,16 @@ public:
     Matrix3<float> distanceTransform;
     std::function<float(Vector3)> alphaDistanceFunction;
     float blendingFactor = 1.f;
+    float sigmaValue = 1.f;
+
+    PredefinedShapes shape = None;
 
     Vector3 getDimensions() const { return this->dimension/* - this->boundMin*/; }
 
-    Matrix3<float> _cachedHeights;
+    Matrix3<float> _cachedMaxHeight;
+    Matrix3<float> _cachedMinHeight;
 
-    std::string toString() { return this->name + " #" + std::to_string(this->index); }
+    std::string toString();
 
     std::string name = "Primitive";
     int index = -1;
@@ -64,59 +95,38 @@ public:
     ImplicitPatch* composableA = nullptr;
     ImplicitPatch* composableB = nullptr;
     CompositionFunction compositionOperation = NONE;
+    std::string used_json_filename = "";
 
 
     static ImplicitPatch createStack(ImplicitPatch *P1, ImplicitPatch *P2);
     static ImplicitPatch createReplacement(ImplicitPatch* P1, ImplicitPatch* P2);
     static ImplicitPatch createBlending(ImplicitPatch* P1, ImplicitPatch* P2);
+    static ImplicitPatch createNegStacking(ImplicitPatch* P1, ImplicitPatch* P2);
+    static ImplicitPatch createStackInWater(ImplicitPatch* P1, ImplicitPatch* P2);
+    void initCachedAttributes(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr);
 
 
     static int currentMaxIndex;
 
-    static std::function<float(Vector3)> createSphereFunction(float radius);
-    static std::function<float(Vector3)> createBlockFunction(float width, float depth, float height);
+    static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createBlockFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createGaussianFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createRockFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createMountainFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createDuneFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createBasinFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createCaveFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createArchFunction(float sigma, float width, float depth, float height);
 //    static std::function<float(Vector3)> ...;
 
     static std::function<float(Vector3)> convert2DfunctionTo3Dfunction(std::function<float(Vector3)> func);
 };
-/*
-class Patch2D: public ImplicitPatch
-{
-public:
-    Patch2D();
-    Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> heightFunction, float densityValue = 1.f);
-    Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> heightFunction, std::function<float(Vector3)> compositionFunction, float densityValue = 1.f);
-    Patch2D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> heightFunction, std::function<float(Vector3)> compositionFunction, std::function<float(Vector3)> alphaDistanceFunction, float densityValue = 1.f);
-//    ~Patch2D() {}
 
-    float getMaxHeight(Vector3 position);
-    float evaluate(Vector3 position);
+ImplicitPatch::CompositionFunction compositionOperationFromString(std::string name);
+std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction operation);
+ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name);
+std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape);
 
-
-    Vector3 boundMin;
-};
-
-class Patch3D: public ImplicitPatch
-{
-public:
-    Patch3D();
-    Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, float densityValue = 1.f);
-    Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, std::function<float(Vector3)> compositionFunction, float densityValue = 1.f);
-    Patch3D(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float(Vector3)> evalFunction, std::function<float(Vector3)> compositionFunction, std::function<float(Vector3)> alphaDistanceFunction, float densityValue = 1.f);
-    Patch3D(const Patch3D& copy);
-//    ~Patch3D() {}
-
-    float getMaxHeight(Vector3 position);
-    float evaluate(Vector3 position);
-
-    static Patch3D stack(Patch3D *P1, Patch3D *P2);
-    static Patch3D replace(Patch3D* P1, Patch3D* P2);
-    static Patch3D blend(Patch3D* P1, Patch3D* P2);
-
-    Vector3 boundMin;
-};
-*/
 
 
 #endif // IMPLICITPATCH_H

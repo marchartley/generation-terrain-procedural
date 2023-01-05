@@ -1,6 +1,6 @@
 #ifndef DISPLAYGRAPHICS_H
 #define DISPLAYGRAPHICS_H
-
+/*
 #include "DataStructure/Vector3.h"
 #include<QtCharts>
 #include<QChartView>
@@ -119,6 +119,6 @@ private:
     QString _text;
     QRectF _textRect;
     QPointF _anchor;
-};
+};*/
 
 #endif // DISPLAYGRAPHICS_H

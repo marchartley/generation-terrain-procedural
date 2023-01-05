@@ -1,0 +1,43 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 1.0,
+		"composableA": {
+			"path": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/implicit_patches_2.json"
+		},
+		"composableB": {
+			"blendingFactor": 1.0,
+			"densityValue": -1.3000000715255737,
+			"dimension": {
+				"x": 25.0,
+				"y": 25.0,
+				"z": 25.0
+			},
+			"index": 20,
+			"name": "Sphere",
+			"operator": "None",
+			"position": {
+				"x": 49.905548095703125,
+				"y": 17.139877319335938,
+				"z": 0.4001292586326599
+			},
+			"shape": "Sphere",
+			"sigmaValue": 1.0
+		},
+		"densityValue": 1.0,
+		"dimension": {
+			"x": 77.70765686035156,
+			"y": 64.95220947265625,
+			"z": 25.866775512695313
+		},
+		"index": 21,
+		"name": "Replacement",
+		"operator": "Replace",
+		"position": {
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		},
+		"shape": "None",
+		"sigmaValue": 1.0
+	}
+}

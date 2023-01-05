@@ -8,6 +8,7 @@ class PatchReplacementDialog;
 #include "Interface/HierarchicalListWidget.h"
 #include "Interface/ControlPoint.h"
 
+/*
 enum PRIMITIVE_SHAPE {
     SPHERE = 0,
     BLOCK = 1,
@@ -17,7 +18,7 @@ enum PATCH_OPERATION {
     STACK = 0,
     BLEND = 1,
     REPLACE = 2
-};
+};*/
 
 class PrimitivePatchesInterface : public ActionInterface
 {
@@ -30,6 +31,8 @@ public:
 
     void replay(nlohmann::json action);
 
+    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+
     QLayout* createGUI();
 
     void show();
@@ -39,8 +42,8 @@ public Q_SLOTS:
     void mouseMovedOnMap(Vector3 newPosition);
     void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
 
-    void setSelectedShape(PRIMITIVE_SHAPE newShape, Vector3 newPosition = Vector3());
-    void setCurrentOperation(PATCH_OPERATION newOperation);
+    void setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition = Vector3());
+    void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
 
     void resetPatch();
 
@@ -52,20 +55,30 @@ public Q_SLOTS:
     void setSelectedSigma(float newVal);
     void setSelectedBlendingFactor(float newVal);
 
+    void savePatchesAsFile(std::string filename);
+    void loadPatchesFromFile(std::string filename);
+    void hotReloadFile();
+
+    void updateSelectedPrimitiveItem(QListWidgetItem *current, QListWidgetItem *previous);
+    void openPrimitiveModificationDialog(QListWidgetItem* item);
+    void modifyPrimitiveHierarchy(int ID_to_move, int relatedID, HIERARCHY_TYPE relation, QDropEvent* event);
+
 protected:
     ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
     ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitPatch* replacedPatch = nullptr);
     ImplicitPatch* findPrimitiveById(int ID);
     ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
 
-    PRIMITIVE_SHAPE currentShapeSelected = PRIMITIVE_SHAPE::SPHERE;
-    PATCH_OPERATION currentOperation = PATCH_OPERATION::STACK;
+    QDateTime lastTimeFileHasBeenModified;
+
+    ImplicitPatch::PredefinedShapes currentShapeSelected = ImplicitPatch::PredefinedShapes::Sphere;
+    ImplicitPatch::CompositionFunction currentOperation = ImplicitPatch::CompositionFunction::BLEND;
     float selectedDensity = 1.5f;
 
-    float selectedWidth = 10.f;
-    float selectedDepth = 10.f;
-    float selectedHeight = 10.f;
-    float selectedSigma = 10.f;
+    float selectedWidth = 20.f;
+    float selectedDepth = 20.f;
+    float selectedHeight = 20.f;
+    float selectedSigma = 5.f;
     float selectedBlendingFactor = 1.f;
 
     Mesh previewMesh;
@@ -98,6 +111,14 @@ protected:
     std::unique_ptr<ControlPoint> primitiveControlPoint;
 
     ImplicitPatch* currentlyManipulatedPatch = nullptr;
+
+    std::string mainFilename;
+    bool enableHotReloading = false;
+
+    void displayDebuggingVoxels();
+    Matrix3<float> debuggingVoxels;
+    Mesh debuggingVoxelsMesh;
+    bool debugMeshDisplayed = false;
 };
 
 

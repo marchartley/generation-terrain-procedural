@@ -200,7 +200,7 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
             for (int z = 0; z < maxHeight; z++) {
-                auto materialAndVolume = this->getKernel(Vector3(x, y, z), kernelSize);
+                auto materialAndVolume = this->getKernel(Vector3(x +.5f, y + .5f, z +.5f), kernelSize);
                 float solidMaterial = 0.f;
                 float airMaterial = 0.f;
                 float totalDensity = 0.f;
@@ -493,16 +493,25 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 
 void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
 {
+    /*
     Vector3 minPos = patch->position - patch->getDimensions();
     Vector3 maxPos = patch->dimension + patch->getDimensions();
     minPos += patch->position;
     maxPos += patch->position;
+    */
+    Vector3 minPos = patch->getMinPosition();
+    Vector3 maxPos = patch->getMaxPosition();
+    maxPos.z = patch->getDimensions().z; // This stores stacking operations in its height
+    Vector3 dim = maxPos - minPos;
+    minPos -= dim;
+    maxPos += dim;
     int minX = std::max(0, int(minPos.x));
     int maxX = std::min(this->getSizeX(), int(maxPos.x));
     int minY = std::max(0, int(minPos.y));
     int maxY = std::min(this->getSizeY(), int(maxPos.y));
     float minZ = std::max(0.f, minPos.z);
     float maxZ = float(maxPos.z); // std::min(this->getSizeZ(), float(maxPos.z));
+    std::cout << "Evaluation from " << Vector3(minX, minY, minZ) << " to " << Vector3(maxX, maxY, maxZ) << std::endl;
     /*Matrix3<float> distanceMap = Matrix3<float>(maxX - minX, maxY - minY, 1, 1.f);
     if (applyDistanceFalloff) {
         distanceMap = distanceMap.toDistanceMap(true);
@@ -552,6 +561,37 @@ void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool apply
 //    this->reorderLayers();
     _historyIndex ++;
     return;
+}
+
+Mesh LayerBasedGrid::getGeometry()
+{
+    std::vector<Vector3> vertices;
+
+    auto layersAndHeights = this->getMaterialAndHeightsGrid();
+    auto layers = layersAndHeights.first;
+    auto heights = layersAndHeights.second;
+
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            float currentHeight = 0.f;
+
+            for (int i = 0; i < layers.sizeZ; i++) {
+                auto cube = CubeMesh::cubesVertices;
+                float height = heights.at(x, y, i);
+
+                for (auto& vert : cube) {
+                    vert = vert * Vector3(1.f, 1.f, height) + Vector3(0.f, 0.f, currentHeight);
+                }
+                currentHeight += height;
+
+                vertices.insert(vertices.end(), cube.begin(), cube.end());
+            }
+        }
+    }
+
+    Mesh m;
+    m.fromArray(vertices);
+    return m;
 }
 
 TerrainTypes LayerBasedGrid::materialFromDensity(float density)

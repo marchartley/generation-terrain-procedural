@@ -197,6 +197,7 @@ public:
     Matrix3& init(std::vector<T> data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
     std::string displayValues();
+    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {"#", "=", "-", " "}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5);
 };
 
 #include <sstream>
@@ -208,7 +209,40 @@ std::string Matrix3<T>::displayValues()
         out << "[Z-level = " << z << "] : \n";
         for (int y = 0; y < this->sizeY; y++) {
             for (int x = 0; x < this->sizeX; x++) {
-                out << std::setw(5) << at(x, y, z) << "\t";
+                out << std::setw(2) << at(x, y, z) << "\t";
+            }
+            out << "\n";
+        }
+    }
+    return out.str();
+}
+
+template<class T>
+std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon)
+{
+    if (min == 0.f && max == 0.f) {
+        min = this->min();
+        max = this->max();
+    }
+    patterns.push_back(" ");
+    std::stringstream out;
+    for (int z = 0; z < this->sizeZ; z++) {
+        out << "[Z-level = " << z << "] : \n";
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int x = 0; x < this->sizeX; x++) {
+                T val = this->at(x, y, z);
+                bool specialCharUsed = false;
+                for (const auto& [targetValue, character] : specialCharactersAtValue) {
+                    if (targetValue - specialCharEpsilon <= val && val <= targetValue + specialCharEpsilon) {
+                        out << character << " ";
+                        specialCharUsed = true;
+                        break; // Don't add other characters
+                    }
+                }
+                if (!specialCharUsed) {
+                    float prop = interpolation::linear(val, min, max);
+                    out << patterns[int(prop * float(patterns.size() - 1))] << " ";
+                }
             }
             out << "\n";
         }

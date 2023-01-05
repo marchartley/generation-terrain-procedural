@@ -1,0 +1,173 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 1.0,
+		"composableA": {
+			"blendingFactor": 1.0,
+			"composableA": {
+				"blendingFactor": 1.0,
+				"composableA": {
+					"blendingFactor": 1.0,
+					"composableA": {
+						"blendingFactor": 1.0,
+						"densityValue": 1.0,
+						"dimension": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 0,
+						"name": "Identity",
+						"operator": "None",
+						"position": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"shape": "None",
+						"sigmaValue": 1.0
+					},
+					"composableB": {
+						"blendingFactor": 1.0,
+						"densityValue": 1.5,
+						"dimension": {
+							"x": 25.0,
+							"y": 25.0,
+							"z": 25.0
+						},
+						"index": 2,
+						"name": "Sphere",
+						"operator": "None",
+						"position": {
+							"x": 32.04404067993164,
+							"y": 24.220653533935547,
+							"z": 0.6050928235054016
+						},
+						"shape": "Sphere",
+						"sigmaValue": 1.0
+					},
+					"densityValue": 1.0,
+					"dimension": {
+						"x": 57.04404067993164,
+						"y": 49.22065353393555,
+						"z": 25.0
+					},
+					"index": 3,
+					"name": "Stacking",
+					"operator": "Stack",
+					"position": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"shape": "None",
+					"sigmaValue": 1.0
+				},
+				"composableB": {
+					"blendingFactor": 1.0,
+					"densityValue": 1.5,
+					"dimension": {
+						"x": 25.0,
+						"y": 25.0,
+						"z": 25.0
+					},
+					"index": 5,
+					"name": "Sphere",
+					"operator": "None",
+					"position": {
+						"x": 39.65767288208008,
+						"y": 3.4717350006103516,
+						"z": 0.8667745590209961
+					},
+					"shape": "Sphere",
+					"sigmaValue": 1.0
+				},
+				"densityValue": 1.0,
+				"dimension": {
+					"x": 64.65766906738281,
+					"y": 49.22065353393555,
+					"z": 25.866775512695313
+				},
+				"index": 6,
+				"name": "Blending",
+				"operator": "Blend",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "None",
+				"sigmaValue": 1.0
+			},
+			"composableB": {
+				"blendingFactor": 1.0,
+				"densityValue": 1.5,
+				"dimension": {
+					"x": 25.0,
+					"y": 10.0,
+					"z": 10.0
+				},
+				"index": 8,
+				"name": "Block",
+				"operator": "None",
+				"position": {
+					"x": 52.70765686035156,
+					"y": 54.952213287353516,
+					"z": 0.8904037475585938
+				},
+				"shape": "Block",
+				"sigmaValue": 1.0
+			},
+			"densityValue": 1.0,
+			"dimension": {
+				"x": 77.70765686035156,
+				"y": 64.95220947265625,
+				"z": 25.866775512695313
+			},
+			"index": 9,
+			"name": "Blending",
+			"operator": "Blend",
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"shape": "None",
+			"sigmaValue": 1.0
+		},
+		"composableB": {
+			"blendingFactor": 1.0,
+			"densityValue": 1.5,
+			"dimension": {
+				"x": 25.0,
+				"y": 25.0,
+				"z": 25.0
+			},
+			"index": 11,
+			"name": "Block",
+			"operator": "None",
+			"position": {
+				"x": 9.17123031616211,
+				"y": 5.559661865234375,
+				"z": 0.6821622848510742
+			},
+			"shape": "Block",
+			"sigmaValue": 1.0
+		},
+		"densityValue": 1.0,
+		"dimension": {
+			"x": 77.70765686035156,
+			"y": 64.95220947265625,
+			"z": 25.866775512695313
+		},
+		"index": 12,
+		"name": "Blending",
+		"operator": "Blend",
+		"position": {
+			"x": 0.0,
+			"y": 0.0,
+			"z": 0.0
+		},
+		"shape": "None",
+		"sigmaValue": 1.0
+	}
+}

@@ -74,9 +74,9 @@ void Viewer::init() {
     setMouseTracking(true);
 
 #ifdef linux
-    std::string pathToShaders = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
 #else
-    std::string pathToShaders = "C:/codes/Qt/generation-terrain-procedural/src/Shaders/"; // ":/src/Shaders/"
+    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
 #endif
     std::string vShader_voxels = pathToShaders + "voxels.vert";
     std::string fShader_voxels = pathToShaders + "voxels.frag";
@@ -97,7 +97,7 @@ void Viewer::init() {
                                  Vector3(-1.0f,  1.0f)}, raymarchingShader);
 
     glEnable              ( GL_DEBUG_OUTPUT );
-    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 );
+//    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
     ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
@@ -123,11 +123,11 @@ void Viewer::init() {
 
 
 #ifdef _WIN32
-    this->screenshotFolder = "C:/codes/Qt/generation-terrain-procedural/screenshots/";
-    this->mapSavingFolder = "C:/codes/Qt/generation-terrain-procedural/saved_maps/";
+    this->screenshotFolder = "screenshots/";
+    this->mapSavingFolder = "saved_maps/";
 #elif linux
-    this->screenshotFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/screenshots/";
-    this->mapSavingFolder = "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/";
+    this->screenshotFolder = "screenshots/";
+    this->mapSavingFolder = "saved_maps/";
 #endif
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
@@ -319,7 +319,7 @@ void Viewer::drawingProcess() {
         auto end = std::chrono::high_resolution_clock::now();
         interfacesTimings[this->interfaces["terrainGenerationInterface"]] += std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
-    std::cout << "--" << std::endl;
+//    std::cout << "--" << std::endl;
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -348,7 +348,7 @@ void Viewer::drawingProcess() {
             std::cout << "\t" << interf->actionType << " : " << time.count() << "ms" << std::endl;
         }
     }
-    std::cout << "Real FPS : " << this->currentFPS() << std::endl;
+//    std::cout << "Real FPS : " << this->currentFPS() << std::endl;
 }
 
 void Viewer::reloadAllShaders()
@@ -413,7 +413,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
     update();
 
     auto end = std::chrono::system_clock::now();
-    std::cout << "Total time on MouseMoveEvent : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+//    std::cout << "Total time on MouseMoveEvent : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
 }
 
 void Viewer::mouseDoubleClickEvent(QMouseEvent *e)

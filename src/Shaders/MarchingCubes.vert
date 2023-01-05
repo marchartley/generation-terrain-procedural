@@ -66,6 +66,7 @@ uniform float fogNear;
 uniform float fogFar;
 uniform float offsetX;
 uniform float offsetY;
+uniform float offsetZ;
 
 uniform vec4 globalAmbiant;
 uniform PositionalLight light;
@@ -83,7 +84,7 @@ out vec3 realNormal;
 
 void main(void)
 {
-    vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + instanceOffset.z);
+//    vec3 position = vec3(position.x + offsetX + instanceOffset.x, position.y + offsetY + instanceOffset.y, position.z + offsetZ + instanceOffset.z);
 
     initialVertPos = vec3(position);
     realNormal = normal;

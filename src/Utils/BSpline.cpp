@@ -69,20 +69,20 @@ Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
 
 Vector3 BSpline::getDerivative(float x)
 {
-    float previousTime = std::max(0.f, x - 0.001f);
-    float nextTime = std::min(1.f, x + 0.001f);
+    float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
+    float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
 
     return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
 
 Vector3 BSpline::getSecondDerivative(float x)
 {
-    float previousTime = std::max(0.f, x - 0.001f);
-    float nextTime = std::min(1.f, x + 0.001f);
+    float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
+    float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
     return (getDerivative(nextTime) - getDerivative(previousTime)).normalized();
 }
 
-float BSpline::estimateClosestTime(Vector3 pos)
+float BSpline::estimateClosestTime(Vector3 pos, float epsilon)
 {
     if (this->points.size() == 0) {
         return 0;
@@ -99,9 +99,9 @@ float BSpline::estimateClosestTime(Vector3 pos)
     float precision = precisionFactor;
     float searchRangeMin = 0.f;
 
-    while (precision > 1e-6) {
+    while (precision > epsilon) {
         for (int i = 0; i < numberOfChecks + 1; i++) {
-            float time = searchRangeMin + (i * precision);
+            float time = std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
             float distance = (getPoint(time) - pos).norm2();
             if (distance < minDistance) {
                 minDistance = distance;
@@ -114,13 +114,25 @@ float BSpline::estimateClosestTime(Vector3 pos)
     return closestTime;
 }
 
-Vector3 BSpline::estimateClosestPos(Vector3 pos)
+Vector3 BSpline::estimateClosestPos(Vector3 pos, float epsilon)
 {
-    return this->getPoint(this->estimateClosestTime(pos));
+    // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
+    return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
 }
-float BSpline::estimateDistanceFrom(Vector3 pos)
+float BSpline::estimateDistanceFrom(Vector3 pos, float epsilon)
 {
-    return (this->estimateClosestPos(pos) - pos).norm();
+    return (this->estimateClosestPos(pos, epsilon) - pos).norm();
+}
+
+float BSpline::estimateSignedDistanceFrom(Vector3 pos, float epsilon)
+{
+    // Only available for 2D paths, otherwise there's no sense
+    float t = this->estimateClosestTime(pos, epsilon);
+    Vector3 normal = this->getNormal(t);
+    Vector3 posOnCurve = this->getPoint(t);
+    float dist = (posOnCurve - pos).norm();
+    float sign = (normal.dot(posOnCurve - pos) > 0.f ? 1.f : -1.f);
+    return dist * sign;
 }
 
 float BSpline::length()
@@ -395,4 +407,24 @@ std::ostream& operator<<(std::ostream& io, const BSpline& s) {
 std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
     io << s->toString();
     return io;
+}
+
+
+nlohmann::json bspline_to_json(const BSpline& spline) {
+    std::vector<nlohmann::json> points;
+    for (const auto& p : spline.points) {
+        points.push_back(vec3_to_json(p));
+    }
+    return nlohmann::json({
+                              {"points", points},
+                              {"closed", spline.closed}
+                          });
+}
+BSpline json_to_bspline(nlohmann::json json) {
+    BSpline spline;
+    for (auto& point : json.at("points"))
+        spline.points.push_back(json_to_vec3(point));
+    if (json.at("closed").get<bool>())
+        spline.close();
+    return spline;
 }

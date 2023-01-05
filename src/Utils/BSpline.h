@@ -17,9 +17,10 @@ public:
     Vector3 getPoint(float x, Vector3 a, Vector3 b);
     Vector3 getDerivative(float x);
     Vector3 getSecondDerivative(float x);
-    float estimateClosestTime(Vector3 pos);
-    Vector3 estimateClosestPos(Vector3 pos);
-    float estimateDistanceFrom(Vector3 pos);
+    float estimateClosestTime(Vector3 pos, float epsilon = 1e-5);
+    Vector3 estimateClosestPos(Vector3 pos, float epsilon = 1e-3);
+    float estimateDistanceFrom(Vector3 pos, float epsilon = 1e-3);
+    float estimateSignedDistanceFrom(Vector3 pos, float epsilon = 1e-3);
     float length();
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
@@ -64,5 +65,10 @@ public:
     std::vector<Vector3> points;
     bool closed = false;
 };
+
+
+#include "Utils/json.h"
+nlohmann::json bspline_to_json(const BSpline& spline);
+BSpline json_to_bspline(nlohmann::json json);
 
 #endif // BSPLINE_H

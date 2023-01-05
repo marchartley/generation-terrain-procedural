@@ -30,7 +30,7 @@ public:
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
 //           const char* geometryShaderFilename);
-    void compileShadersFromSource(std::map<std::string, std::string> addedDefinitions = std::map<std::string, std::string>());
+    void compileShadersFromSource(std::map<std::string, std::string> addedDefinitions = std::map<std::string, std::string>(), std::vector<std::string> feedbackValues = {"ginitialVertPos"});
 
     bool use(bool update_source_files = false);
 

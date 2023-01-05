@@ -49,4 +49,7 @@ public:
     Vector3 scaling = Vector3(1.f, 1.f, 1.f);
 };
 
+#include "Utils/json.h"
+nlohmann::json karst_profile_to_json(KarstHoleProfile profile);
+KarstHoleProfile json_to_karst_profile(nlohmann::json json);
 #endif // KARSTHOLEPROFILE_H

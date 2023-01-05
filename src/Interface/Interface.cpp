@@ -26,6 +26,7 @@ ViewerInterface::ViewerInterface() {
     this->biomeInterface = std::make_shared<BiomeInterface>(this);
     this->smoothInterface = std::make_shared<SmoothInterface>(this);
     this->patchesInterface = std::make_shared<PrimitivePatchesInterface>(this);
+//    this->savingInterface = std::make_shared<TerrainSavingInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                                                                               {
@@ -42,6 +43,7 @@ ViewerInterface::ViewerInterface() {
                                                                                   { "heightmapErosionInterface", heightmapErosionInterface},
                                                                                     { "biomeInterface", biomeInterface},
                                                                                     { "smoothInterface", smoothInterface},
+//                    { "terrainSavingInterface", savingInterface},
                     { "primitivePatchInterface", patchesInterface},
                                                                               });
     viewer->interfaces = this->actionInterfaces;
@@ -56,12 +58,12 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 #ifdef linux
-//        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
-        this->terrainGenerationInterface->createTerrainFromFile("/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
 #else
-//        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/biomes/mayotte.json");
-//        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/heightmaps/one_slope.png");
-        this->terrainGenerationInterface->createTerrainFromFile("C:/codes/Qt/generation-terrain-procedural/saved_maps/river.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 #endif
         this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
@@ -155,6 +157,7 @@ void ViewerInterface::setupUi()
     QIcon biomeIcon(":/icons/src/assets/biomes.png");
     QIcon smoothIcon(":/icons/src/assets/smooth_button.png");
     QIcon patchesIcon(":/icons/src/assets/feature_primitives_button.png");
+    QIcon savingGeometryIcon(":/icons/src/assets/feature_primitives_button.png");
     // Actions
     QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
     openAction->setShortcuts(QKeySequence::Open);
@@ -220,6 +223,8 @@ void ViewerInterface::setupUi()
 
     QAction *patchesAction = new QAction(patchesIcon, "Ajouter des patchs");
 
+    QAction *savingGeometryAction = new QAction(savingGeometryIcon, "Save geometry");
+
 
 
     QMenu* fileMenu = new QMenu("File");
@@ -252,6 +257,7 @@ void ViewerInterface::setupUi()
 
     QMenu* recordingMenu = new QMenu("Enregistrements");
     recordingMenu->addActions({recordingAction});
+    recordingMenu->addActions({savingGeometryAction});
 
     QMenu* physicsMenu = new QMenu("Physiques");
     physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
@@ -281,7 +287,7 @@ void ViewerInterface::setupUi()
     toolbar->addSeparator();
     toolbar->addActions({biomeAction});
     toolbar->addSeparator();
-    toolbar->addActions({recordingAction});
+    toolbar->addActions({recordingAction, savingGeometryAction});
     toolbar->addSeparator();
     toolbar->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
     toolbar->addSeparator();
@@ -403,6 +409,7 @@ void ViewerInterface::setupUi()
     QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
     QObject::connect(smoothAction, &QAction::triggered, this->smoothInterface.get(), &SmoothInterface::applySmooth);
     QObject::connect(patchesAction, &QAction::triggered, this, &ViewerInterface::openPatchesInterface);
+//    QObject::connect(savingGeometryAction, &QAction::triggered, this, &ViewerInterface::openSavingInterface);
     QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
         this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES);
     });
@@ -667,6 +674,21 @@ void ViewerInterface::openPatchesInterface()
     }
     this->viewer->update();
 }
+
+//void ViewerInterface::openSavingInterface()
+//{
+//    this->hideAllInteractiveParts();
+//    if (lastPanelOpenedByStickyFrame == "terrainSavingInterface") {
+//        lastPanelOpenedByStickyFrame = "";
+//        this->frame->hide();
+//    } else {
+//        lastPanelOpenedByStickyFrame = "terrainSavingInterface";
+//        this->savingInterface->show();
+//        this->frame->setContent(this->savingInterface->createGUI());
+//        this->frame->show();
+//    }
+//    this->viewer->update();
+//}
 
 void ViewerInterface::hideAllInteractiveParts()
 {
