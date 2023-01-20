@@ -17,7 +17,7 @@ class ErosionInterface : public ActionInterface
 public:
     ErosionInterface(QWidget *parent = nullptr);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
 
     void display();
 

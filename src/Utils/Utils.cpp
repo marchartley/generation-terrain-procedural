@@ -147,6 +147,23 @@ std::string toLower(std::string s)
     return res;
 }
 
+std::string toCapitalize(std::string s)
+{
+    std::string res = s;
+    bool needCapital = true;
+    std::vector<char> replacedBySpace = {'_', '-'};
+    for (auto& c : res) {
+        if (isIn(c, replacedBySpace)) {
+            c = ' ';
+            needCapital = true;
+        } else {
+            c = (needCapital ? toupper(c) : tolower(c));
+            needCapital = false;
+        }
+    }
+    return res;
+}
+
 std::string getExtention(std::string file)
 {
     std::string ext = file.substr(file.find_last_of('.') + 1);

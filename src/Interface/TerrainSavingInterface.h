@@ -21,7 +21,7 @@ public Q_SLOTS:
     void saveTerrainGeometry(std::string filename = "");
 
 public:
-    std::string mainFilename = "map";
+    std::string mainFilename = "saved_maps/Geometry/map";
     bool saveHeightmap = true;
     bool saveVoxels = true;
     bool saveLayers = true;

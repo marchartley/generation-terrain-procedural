@@ -49,8 +49,8 @@ void FlowFieldInterface::updateFlowfieldDebugMesh()
     for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->sizeX-1; x+= this->voxelGrid->fluidSimRescale) {
         for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->sizeY-1; y+= this->voxelGrid->fluidSimRescale) {
             for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->sizeZ - 1; z+= this->voxelGrid->fluidSimRescale) {
-                normals.push_back(Vector3(x, y, z) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
-                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + .5); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f)); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
+                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + Vector3(.5f, .5f, .5f)); // - Vector3(this->voxelGrid->sizeX/2.0, this->voxelGrid->sizeY/2.0));
             }
         }
     }

@@ -26,7 +26,8 @@ ViewerInterface::ViewerInterface() {
     this->biomeInterface = std::make_shared<BiomeInterface>(this);
     this->smoothInterface = std::make_shared<SmoothInterface>(this);
     this->patchesInterface = std::make_shared<PrimitivePatchesInterface>(this);
-//    this->savingInterface = std::make_shared<TerrainSavingInterface>(this);
+    this->savingInterface = std::make_shared<TerrainSavingInterface>(this);
+    this->meshInstanceAmplificationInterface = std::make_shared<MeshInstanceAmplificationInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                                                                               {
@@ -43,42 +44,51 @@ ViewerInterface::ViewerInterface() {
                                                                                   { "heightmapErosionInterface", heightmapErosionInterface},
                                                                                     { "biomeInterface", biomeInterface},
                                                                                     { "smoothInterface", smoothInterface},
-//                    { "terrainSavingInterface", savingInterface},
+                    { "terrainSavingInterface", savingInterface},
+                    { "meshInstanceAmplificationInterface", meshInstanceAmplificationInterface},
                     { "primitivePatchInterface", patchesInterface},
                                                                               });
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
         actionInterface.second->hide();
         actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
-        QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&]() { this->viewer->update(); });
+//        QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&]() { this->viewer->update(); });
 //        QObject::connect()
 //        this->viewer->installEventFilter(actionInterface.second.get());
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
-#ifdef linux
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
-#else
+
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
         this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
-#endif
-        this->terrainGenerationInterface->prepareShader();
+
+//        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
         this->viewer->grid = this->terrainGenerationInterface->heightmap;
         this->viewer->layerGrid = this->terrainGenerationInterface->layerGrid;
 
         for (auto& actionInterface : this->actionInterfaces) {
-            actionInterface.second->affectVoxelGrid(this->viewer->voxelGrid);
-            actionInterface.second->affectHeightmap(this->viewer->grid);
-            actionInterface.second->affectLayerGrid(this->viewer->layerGrid);
+            actionInterface.second->affectTerrains(viewer->grid, viewer->voxelGrid, viewer->layerGrid);
+//            actionInterface.second->affectVoxelGrid(this->viewer->voxelGrid);
+//            actionInterface.second->affectHeightmap(this->viewer->grid);
+//            actionInterface.second->affectLayerGrid(this->viewer->layerGrid);
+            actionInterface.second->reloadShaders();
 
             QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
                 this->viewer->update();
                 qApp->processEvents();
             });
+
+            for (auto& otherActionInterface : this->actionInterfaces) {
+                QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {
+                    QObject::blockSignals(true);
+                    otherActionInterface.second->afterTerrainUpdated();
+                    QObject::blockSignals(false);
+                    this->viewer->update();
+                });
+            }
         }
 
 //        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmap);
@@ -131,140 +141,16 @@ ViewerInterface::~ViewerInterface()
 
 void ViewerInterface::setupUi()
 {
-    // Icons
-    QIcon openIcon(":/icons/src/assets/open_button.png");
-    QIcon faultSlipIcon(":/icons/src/assets/fault-slip_button.png");
-    QIcon flowfieldIcon(":/icons/src/assets/flowfield_button.png");
-    QIcon gravityIcon(":/icons/src/assets/gravity_button.png");
-    QIcon karstIcon(":/icons/src/assets/karst_button.png");
-    QIcon karstPeytavieIcon(":/icons/src/assets/karst_peytavie_button.png");
-    QIcon recordingIcon(":/icons/src/assets/recording_button.png");
-    QIcon savingIcon(":/icons/src/assets/save_button.png");
-    QIcon tunnelIcon(":/icons/src/assets/tunnel_button.png");
-    QIcon manualEditIcon(":/icons/src/assets/manual-edit_button.png");
-    QIcon undoIcon(":/icons/src/assets/undo_button.png");
-    QIcon redoIcon(":/icons/src/assets/redo_button.png");
-    QIcon marchingCubesIcon(":/icons/src/assets/display-marching-cubes_button.png");
-    QIcon rawVoxelsIcon(":/icons/src/assets/display-voxels_button.png");
-    QIcon heightmapIcon(":/icons/src/assets/heightmap_button.png");
-    QIcon layerBasedIcon(":/icons/src/assets/layerbased_button.png");
-    QIcon voxelGridIcon(":/icons/src/assets/voxelgrid_button.png");
-    QIcon noDisplayIcon(":/icons/src/assets/no_display.png");
-    QIcon wireModeIcon(":/icons/src/assets/wire_mode.png");
-    QIcon fillModeIcon(":/icons/src/assets/fill_mode.png");
-    QIcon erosionIcon(":/icons/src/assets/erosion.png");
-    QIcon heightmapErosionIcon(":/icons/src/assets/heightmap-erosion.png");
-    QIcon biomeIcon(":/icons/src/assets/biomes.png");
-    QIcon smoothIcon(":/icons/src/assets/smooth_button.png");
-    QIcon patchesIcon(":/icons/src/assets/feature_primitives_button.png");
-    QIcon savingGeometryIcon(":/icons/src/assets/feature_primitives_button.png");
-    // Actions
-    QAction *openAction = new QAction(openIcon, "Ouvrir une map existante");
-    openAction->setShortcuts(QKeySequence::Open);
-
-    QAction *faultSlipAction = new QAction(faultSlipIcon, "Glissements de terrains");
-
-    QAction *flowfieldAction = new QAction(flowfieldIcon, "Simulation de courant");
-
-    QAction *gravityAction = new QAction(gravityIcon, "Gravité");
-
-    QAction *karstAction = new QAction(karstIcon, "Création de karsts par colonization d'espace");
-
-    QAction *karstPeytavieAction = new QAction(karstPeytavieIcon, "Création de karsts par graphe");
-
-    QAction *recordingAction = new QAction(recordingIcon, "Enregistrement vidéo");
-
-    QAction *savingAction = new QAction(savingIcon, "Sauvegarder la map");
-    savingAction->setShortcuts(QKeySequence::Save);
-
-    QAction *tunnelAction = new QAction(tunnelIcon, "Création de tunnels");
-
-    QAction *manualEditAction = new QAction(manualEditIcon, "Manipulations manuelles");
-
-    QAction *undoAction = new QAction(undoIcon, "Undo");
-    undoAction->setShortcuts(QKeySequence::Undo);
-
-    QAction *redoAction = new QAction(redoIcon, "Redo");
-    redoAction->setShortcuts(QKeySequence::Redo);
-
-    QAction *marchingCubesAction = new QAction(marchingCubesIcon, "Affichage lisse (Marching cubes)");
-    marchingCubesAction->setCheckable(true);
-
-    QAction *rawVoxelsAction = new QAction(rawVoxelsIcon, "Affichage brut (voxels)");
-    rawVoxelsAction->setCheckable(true);
-
-    QAction *heightmapAction = new QAction(heightmapIcon, "Grille 2D (carte de hauteur)");
-    heightmapAction->setCheckable(true);
-
-    QAction *layerBasedAction = new QAction(layerBasedIcon, "Stacks (Layer based)");
-    layerBasedAction->setCheckable(true);
-    layerBasedAction->setChecked(true);
-
-    QAction *voxelGridAction = new QAction(voxelGridIcon, "Grille 3D (voxel grid)");
-    voxelGridAction->setCheckable(true);
-
-    QAction *wireModeAction = new QAction(wireModeIcon, "Affichage fil de fer");
-    wireModeAction->setCheckable(true);
-
-    QAction *fillModeAction = new QAction(fillModeIcon, "Affichage normal");
-    fillModeAction->setCheckable(true);
-
-    QAction *noDisplayAction = new QAction(noDisplayIcon, "Cacher la carte");
-    noDisplayAction->setCheckable(true);
-    fillModeAction->setChecked(true);
-
-    QAction *erosionAction = new QAction(erosionIcon, "Eroder la carte");
-
-    QAction *heightmapErosionAction = new QAction(heightmapErosionIcon, "Eroder la heightmap");
-
-    QAction *biomeAction = new QAction(biomeIcon, "Gérer les biomes");
-
-    QAction *smoothAction = new QAction(smoothIcon, "Adoucir le terrain");
-
-    QAction *patchesAction = new QAction(patchesIcon, "Ajouter des patchs");
-
-    QAction *savingGeometryAction = new QAction(savingGeometryIcon, "Save geometry");
-
-
+    QToolBar* toolbar = new QToolBar("Main tools");
+    this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
 
     QMenu* fileMenu = new QMenu("File");
-    fileMenu->addActions({openAction, savingAction});
-
     QMenu* editMenu = new QMenu("Edit");
-    editMenu->addActions({undoAction, redoAction});
-
     QMenu* viewMenu = new QMenu("Affichage");
-
-    QActionGroup* terrainSmoothGroup = new QActionGroup(viewMenu);
-    terrainSmoothGroup->addAction(marchingCubesAction);
-    terrainSmoothGroup->addAction(rawVoxelsAction);
-    viewMenu->addActions(terrainSmoothGroup->actions());
-
-    QActionGroup* terrainDisplayGroup = new QActionGroup(viewMenu);
-    terrainDisplayGroup->addAction(wireModeAction);
-    terrainDisplayGroup->addAction(fillModeAction);
-    terrainDisplayGroup->addAction(noDisplayAction);
-    viewMenu->addActions(terrainDisplayGroup->actions());
-
     QMenu* modelMenu = new QMenu("Model");
-
-    QActionGroup* terrainTypeGroup = new QActionGroup(modelMenu);
-    terrainTypeGroup->addAction(voxelGridAction);
-    terrainTypeGroup->addAction(heightmapAction);
-    terrainTypeGroup->addAction(layerBasedAction);
-    modelMenu->addActions(terrainTypeGroup->actions());
-    modelMenu->addActions({biomeAction});
-
     QMenu* recordingMenu = new QMenu("Enregistrements");
-    recordingMenu->addActions({recordingAction});
-    recordingMenu->addActions({savingGeometryAction});
-
     QMenu* physicsMenu = new QMenu("Physiques");
-    physicsMenu->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
-
     QMenu* diggingMenu = new QMenu("Creuser");
-    diggingMenu->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction, patchesAction});
-
     QMenuBar* menu = new QMenuBar(this);
     menu->addMenu(fileMenu);
     menu->addMenu(editMenu);
@@ -273,39 +159,97 @@ void ViewerInterface::setupUi()
     menu->addMenu(physicsMenu);
     menu->addMenu(diggingMenu);
     menu->addMenu(modelMenu);
-
     this->setMenuBar(menu);
 
-    QToolBar* toolbar = new QToolBar("Main tools");
-    toolbar->addActions({openAction, savingAction});
-    toolbar->addSeparator();
-    toolbar->addActions({undoAction, redoAction});
-    toolbar->addSeparator();
-    toolbar->addActions({marchingCubesAction, rawVoxelsAction});
-    toolbar->addSeparator();
-    toolbar->addActions({heightmapAction, voxelGridAction, layerBasedAction});
-    toolbar->addSeparator();
-    toolbar->addActions({biomeAction});
-    toolbar->addSeparator();
-    toolbar->addActions({recordingAction, savingGeometryAction});
-    toolbar->addSeparator();
-    toolbar->addActions({gravityAction, flowfieldAction, erosionAction, heightmapErosionAction});
-    toolbar->addSeparator();
-    toolbar->addActions({tunnelAction, karstAction, karstPeytavieAction, manualEditAction, faultSlipAction, patchesAction});
-    toolbar->addSeparator();
-    toolbar->addActions({wireModeAction, fillModeAction, noDisplayAction});
-    toolbar->addSeparator();
-    toolbar->addActions({smoothAction});
+    std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu*>> interfacesToOpen = {
+        {
+            faultSlip,                              "fault-slip_button.png",
+            "Fault slips",                          diggingMenu},
+        {flowField,                             "flowfield_button.png",         "Currents simulation",                  physicsMenu},
+        {tunnelInterface,                       "tunnel_button.png",            "Tunnels creation",                     diggingMenu},
+        {manualEditionInterface,                "manual-edit_button.png",       "Manual editing",                       diggingMenu},
+        {gravityInterface,                      "gravity_button.png",           "Gravity",                              physicsMenu},
+        {heightmapErosionInterface,             "heightmap-erosion.png",        "Erosion on heightmap",                 physicsMenu},
+        {biomeInterface,                        "biomes.png",                   "Biotopes system",                      modelMenu},
+        {patchesInterface,                      "feature_primitive_button.png", "Feature primitives",                   diggingMenu},
+        {savingInterface,                       "save_geometry.png",            "Save the geometry",                    viewMenu},
+        {
+            erosionInterface,                      "erosion.png",
+            "Erosion on 3D terrain",                physicsMenu},
+        {
+            meshInstanceAmplificationInterface,         "amplification_instances.png",
+            "Amplify the terrain with meshes",          viewMenu},
+        {
+            spaceColonization,                          "karst_button.png",
+            "Create karsts using space colonization",   diggingMenu
+        },
+        {
+            karstPathGeneration,                        "karst_peytavie_button.png",
+            "Create karsts with graphs",                diggingMenu
+        }
+    };
+    std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu* , std::function<void(void)>>> actionsToUse = {
+        {undoRedoInterface, "undo_button.png", "Undo last action", editMenu, [=]() { undoRedoInterface->undo(); }},
+        {undoRedoInterface, "redo_button.png", "Redo last action", editMenu, [=]() { undoRedoInterface->redo(); }},
+        {nullptr, "open_button.png", "Open an existing map", fileMenu, [=]() { this->openMapUI(); }},
+        {nullptr, "save_button.png", "Save the current map", fileMenu, [=]() { this->saveMapUI(); }},
+        {nullptr, "recording_button.png", "Start / stop recording the screen", recordingMenu, [=]() {this->viewer->startStopRecording(); }},
+        {nullptr, "display-marching-cubes_button.png", "Use the Marching Cubes algorithm", viewMenu, [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES); } },
+        {nullptr, "display-voxels_button.png", "Use raw voxels", viewMenu, [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::NONE); } },
+        {nullptr, "heightmap_button.png", "Display using heightmap structure", modelMenu, [=]() { this->viewer->setMapMode(MapMode::GRID_MODE); } },
+        {nullptr, "layerbased_button.png", "Display using layered structure", modelMenu, [=]() { this->viewer->setMapMode(MapMode::LAYER_MODE); } },
+        {nullptr, "voxelgrid_button.png", "Display using voxels structure", modelMenu, [=]() { this->viewer->setMapMode(MapMode::VOXEL_MODE);} },
+        {nullptr, "no_display.png", "Hide map", viewMenu, [=]() { this->viewer->setViewerMode(NO_DISPLAY);} },
+        {nullptr, "wire_mode.png", "Display wireframe", viewMenu, [=]() { this->viewer->setViewerMode(WIRE_MODE); } },
+        {nullptr, "fill_mode.png", "Display solid", viewMenu, [=]() { this->viewer->setViewerMode(FILL_MODE); } },
+        {smoothInterface, "smooth_button.png", "Smooth the terrain", modelMenu, [=]() { smoothInterface->applySmooth(); } }
+//        {terrainGenerationInterface, "", "", },
+    };
 
-    this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
+    for (auto& informations : interfacesToOpen) {
+        auto& interfaceObject = std::get<0>(informations);
+        auto& iconFilename = std::get<1>(informations);
+        auto& description = std::get<2>(informations);
+        auto& menu = std::get<3>(informations);
+        QIcon icon(QString::fromStdString(":/icons/src/assets/" + iconFilename));
+        QAction* action = new QAction(icon, QString::fromStdString(description));
+        menu->addAction(action);
+//        toolbar->addAction(action);
+        QObject::connect(action, &QAction::triggered, this, [=]() { this->openInterface(interfaceObject); });
+    }
+    for (auto& informations : actionsToUse) {
+//        auto& interfaceObject = std::get<0>(informations);
+        auto& iconFilename = std::get<1>(informations);
+        auto& description = std::get<2>(informations);
+        auto& menu = std::get<3>(informations);
+        auto& function = std::get<4>(informations);
+        QIcon icon(QString::fromStdString(":/icons/src/assets/" + iconFilename));
+        QAction* action = new QAction(icon, QString::fromStdString(description));
+        menu->addAction(action);
+//        toolbar->addAction(action);
+        QObject::connect(action, &QAction::triggered, this, function);
+    }
+
+    toolbar->addActions(fileMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(editMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(viewMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(recordingMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(physicsMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(diggingMenu->actions());
+    toolbar->addSeparator();
+    toolbar->addActions(modelMenu->actions());
 
     QStatusBar* status = new QStatusBar(this);
     this->setStatusBar(status);
 
     QDockWidget* displayOptionWidget = new QDockWidget("Affichage", this);
     displayOptionWidget->setFeatures(QDockWidget::DockWidgetFloatable);
-    displayOptionWidget->setLayout(new QVBoxLayout());
-    this->addDockWidget(Qt::DockWidgetArea::BottomDockWidgetArea, displayOptionWidget);
+    this->addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, displayOptionWidget);
 
     this->viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -313,7 +257,6 @@ void ViewerInterface::setupUi()
     mainLayout->setColumnStretch(0, 99);
     mainLayout->setColumnStretch(1,  1);
 
-    controlLayout = new QVBoxLayout;
     this->displayModeLayout = new QHBoxLayout;
     this->displayModeBox = new Spoiler("Affichage");
     this->LoDChooserLayout = new QHBoxLayout;
@@ -371,7 +314,7 @@ void ViewerInterface::setupUi()
     mainLayout->addWidget(viewer, 1, 0);
 
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
-    QHBoxLayout* displayOptionLayout = new QHBoxLayout();
+    QVBoxLayout* displayOptionLayout = new QVBoxLayout();
     displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
                                                            createMultipleSliderGroupWithCheckbox({
@@ -392,52 +335,9 @@ void ViewerInterface::setupUi()
     frame = new StickyFrame(this->viewer, 0, -1, -1, 1, false);
     frame->hide();
 
-    QObject::connect(openAction, &QAction::triggered, this, &ViewerInterface::openMapUI);
-    QObject::connect(savingAction, &QAction::triggered, this, &ViewerInterface::saveMapUI);
-    QObject::connect(faultSlipAction, &QAction::triggered, this, &ViewerInterface::openFaultSlipInterface);
-    QObject::connect(flowfieldAction, &QAction::triggered, this, &ViewerInterface::openFlowfieldInterface);
-    QObject::connect(karstAction, &QAction::triggered, this, &ViewerInterface::openKarstInterface);
-    QObject::connect(karstPeytavieAction, &QAction::triggered, this, &ViewerInterface::openKarstPeytavieInterface);
-    QObject::connect(recordingAction, &QAction::triggered, this->viewer, &Viewer::startStopRecording);
-    QObject::connect(gravityAction, &QAction::triggered, this, &ViewerInterface::openGravityInterface);
-    QObject::connect(tunnelAction, &QAction::triggered, this, &ViewerInterface::openTunnelInterface);
-    QObject::connect(manualEditAction, &QAction::triggered, this, &ViewerInterface::openManualEditionInterface);
-    QObject::connect(erosionAction, &QAction::triggered, this, &ViewerInterface::openErosionInterface);
-    QObject::connect(heightmapErosionAction, &QAction::triggered, this, &ViewerInterface::openHeightmapErosionInterface);
-    QObject::connect(biomeAction, &QAction::triggered, this, &ViewerInterface::openBiomeInterface);
-    QObject::connect(undoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::undo);
-    QObject::connect(redoAction, &QAction::triggered, this->undoRedoInterface.get(), &UndoRedoInterface::redo);
-    QObject::connect(smoothAction, &QAction::triggered, this->smoothInterface.get(), &SmoothInterface::applySmooth);
-    QObject::connect(patchesAction, &QAction::triggered, this, &ViewerInterface::openPatchesInterface);
-//    QObject::connect(savingGeometryAction, &QAction::triggered, this, &ViewerInterface::openSavingInterface);
-    QObject::connect(marchingCubesAction, &QAction::triggered, this, [&]() {
-        this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES);
-    });
-    QObject::connect(rawVoxelsAction, &QAction::triggered, this, [&]() {
-        this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::NONE);
-    });
-    QObject::connect(heightmapAction, &QAction::triggered, this, [&]() {
-        this->viewer->setMapMode(MapMode::GRID_MODE);
-    });
-    QObject::connect(layerBasedAction, &QAction::triggered, this, [&]() {
-        this->viewer->setMapMode(MapMode::LAYER_MODE);
-    });
-    QObject::connect(voxelGridAction, &QAction::triggered, this, [&]() {
-        this->viewer->setMapMode(MapMode::VOXEL_MODE);
-    });
-    QObject::connect(wireModeAction, &QAction::triggered, this, [&]() {
-        this->viewer->setViewerMode(WIRE_MODE);
-    });
-    QObject::connect(fillModeAction, &QAction::triggered, this, [&]() {
-        this->viewer->setViewerMode(FILL_MODE);
-    });
-    QObject::connect(noDisplayAction, &QAction::triggered, this, [&]() {
-        this->viewer->setViewerMode(NO_DISPLAY);
-    });
     QObject::connect(reloadShadersButton, &QPushButton::pressed, this, [&]() {
         this->viewer->reloadAllShaders();
     });
-
 
     this->setAllValuesToFitViewerDefaults(this->viewer);
     this->setupBindings();
@@ -484,211 +384,21 @@ void ViewerInterface::focusOutEvent(QFocusEvent *e)
     QMainWindow::focusOutEvent(e);
 }
 
-void ViewerInterface::openInterface(std::string interfaceName)
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == interfaceName) {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = interfaceName;
-        this->faultSlip->show();
-        this->frame->setContent(this->actionInterfaces[interfaceName]->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
 
-void ViewerInterface::openFaultSlipInterface()
+void ViewerInterface::openInterface(std::shared_ptr<ActionInterface> object)
 {
     this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "FaultSlip") {
-        lastPanelOpenedByStickyFrame = "";
+    if (lastOpenedInterface && lastOpenedInterface == object) {
+        lastOpenedInterface = nullptr;
         this->frame->hide();
     } else {
-        lastPanelOpenedByStickyFrame = "FaultSlip";
-        this->faultSlip->show();
-        this->frame->setContent(this->faultSlip->createGUI());
+        lastOpenedInterface = object;
+        object->show();
+        this->frame->setContent(object->createGUI());
         this->frame->show();
     }
     this->viewer->update();
 }
-
-void ViewerInterface::openFlowfieldInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "FlowField") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "FlowField";
-        this->flowField->show();
-        this->frame->setContent(this->flowField->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openKarstInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "Karsts") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "Karsts";
-        this->spaceColonization->show();
-        this->frame->setContent(this->spaceColonization->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-void ViewerInterface::openKarstPeytavieInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "Karsts-Peytavie") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "Karsts-Peytavie";
-        this->karstPathGeneration->show();
-        this->frame->setContent(this->karstPathGeneration->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-void ViewerInterface::openTunnelInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "Tunnels") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "Tunnels";
-        this->tunnelInterface->show();
-        this->frame->setContent(this->tunnelInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-void ViewerInterface::openManualEditionInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "ManualEdition") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "ManualEdition";
-        this->manualEditionInterface->show();
-        this->frame->setContent(this->manualEditionInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-void ViewerInterface::openGravityInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "Gravity") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "Gravity";
-        this->gravityInterface->show();
-        this->frame->setContent(this->gravityInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openErosionInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "Erosion") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "Erosion";
-        this->erosionInterface->show();
-        this->frame->setContent(this->erosionInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openHeightmapErosionInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "HeightmapErosion") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "HeightmapErosion";
-        this->heightmapErosionInterface->show();
-        this->frame->setContent(this->heightmapErosionInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openBiomeInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "BiomeGeneration") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "BiomeGeneration";
-        this->biomeInterface->show();
-        this->frame->setContent(this->biomeInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openSmoothInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "SmoothInterface") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "SmoothInterface";
-        this->smoothInterface->show();
-        this->frame->setContent(this->smoothInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-void ViewerInterface::openPatchesInterface()
-{
-    this->hideAllInteractiveParts();
-    if (lastPanelOpenedByStickyFrame == "PatchesInterface") {
-        lastPanelOpenedByStickyFrame = "";
-        this->frame->hide();
-    } else {
-        lastPanelOpenedByStickyFrame = "PatchesInterface";
-        this->patchesInterface->show();
-        this->frame->setContent(this->patchesInterface->createGUI());
-        this->frame->show();
-    }
-    this->viewer->update();
-}
-
-//void ViewerInterface::openSavingInterface()
-//{
-//    this->hideAllInteractiveParts();
-//    if (lastPanelOpenedByStickyFrame == "terrainSavingInterface") {
-//        lastPanelOpenedByStickyFrame = "";
-//        this->frame->hide();
-//    } else {
-//        lastPanelOpenedByStickyFrame = "terrainSavingInterface";
-//        this->savingInterface->show();
-//        this->frame->setContent(this->savingInterface->createGUI());
-//        this->frame->show();
-//    }
-//    this->viewer->update();
-//}
 
 void ViewerInterface::hideAllInteractiveParts()
 {

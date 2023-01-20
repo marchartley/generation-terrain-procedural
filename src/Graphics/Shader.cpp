@@ -122,7 +122,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
         }
     }
 
-    if (geometryShaderFilename != "" && !feedbackValues.empty())
+    if (!feedbackValues.empty())
     {
         GLchar** variables = new GLchar*[feedbackValues.size()];
         for (size_t i = 0; i < feedbackValues.size(); i++)
@@ -174,7 +174,7 @@ void Shader::setFloat(std::string pname, float value)
 void Shader::setVector(std::string pname, Vector3 value)
 {
     if (!this->use()) return;
-    this->setVector(pname, value, 3);
+    this->setVector(pname, (float*)value, 3);
 }
 
 void Shader::setVector(std::string pname, glm::vec2 value)

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <vector>
 #include <QGLViewer/vec.h>
+#include <QGLViewer/quaternion.h>
 #include "DataStructure/Matrix.h"
 #include "third-party/glm/glm.hpp"
 
@@ -15,8 +16,8 @@ public:
     Vector3(const Vector3& copy);
     Vector3(Vector3* copy);
     Vector3(qglviewer::Vec other);
-    Vector3(bool valid);
-    Vector3(const float* coords, bool valid = true);
+    explicit Vector3(bool valid);
+    explicit Vector3(const float* coords, bool valid = true);
 
     static std::vector<float> toArray(Vector3 v);
     static std::vector<float> toArray(std::vector<Vector3> vs);
@@ -26,6 +27,10 @@ public:
     static Vector3 max();
     static Vector3 min(Vector3 a, Vector3 b);
     static Vector3 max(Vector3 a, Vector3 b);
+    static Vector3 min(std::vector<Vector3> allVectors);
+    static Vector3 max(std::vector<Vector3> allVectors);
+
+    static std::vector<Vector3> getAABBoxVertices(Vector3 mini, Vector3 maxi);
 
     friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
     friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v);
@@ -33,6 +38,8 @@ public:
     float dot(Vector3 o);
     Vector3 cross(Vector3 o);
     Vector3 rounded(int precision = 0) const;
+    Vector3 roundedUp(int precision = 0) const;
+    Vector3 roundedDown(int precision = 0) const;
     Vector3 floor() const;
     Vector3 ceil() const;
 
@@ -57,6 +64,7 @@ public:
     Vector3& translate(Vector3 move);
     Vector3 translated(float move_x, float move_y, float move_z);
     Vector3 translated(Vector3 move);
+    Vector3& applyTransform(Matrix transformMatrix);
 //    Vector3& setDirection(Vector3 dir, Vector3 upVector = Vector3(0, 0, 1));
 
     Vector3& changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ);
@@ -67,6 +75,9 @@ public:
     float divergence() { return x + y + z; }
 
     Matrix toMatrix();
+
+    static Vector3 quaternionToEuler(qglviewer::Quaternion quaternion);
+    static Vector3 quaternionToEuler(float x, float y, float z, float w);
 
     static Vector3 lerp(float t, Vector3 min, Vector3 max) {
         return min + (max - min) * t;
@@ -106,30 +117,36 @@ public:
     bool isValid() const { return this->valid && (this->x == this->x && this->y == this->y && this->z == this->z); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
-    operator float*() const { return new float[3]{this->x, this->y, this->z}; }
+    explicit operator float*() const { return new float[3]{this->x, this->y, this->z}; }
     operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
     Vector3& operator+=(const Vector3& o);
     Vector3& operator-=(const Vector3& o);
     Vector3& operator*=(Vector3 o);
-    Vector3 operator/(Vector3 o);
+//    Vector3 operator/(Vector3 o);
     Vector3& operator/=(Vector3 o);
-    Vector3 operator*(float o);
+//    Vector3 operator*(float o) const;
     Vector3& operator*=(float o);
-    Vector3 operator/(float o);
+//    Vector3 operator/(float o);
     Vector3& operator/=(float o);
-    Vector3 operator+(float o);
+//    Vector3 operator+(float o);
     Vector3& operator+=(float o);
-    Vector3 operator-(float o);
+//    Vector3 operator-(float o);
     Vector3& operator-=(float o);
     friend Vector3 operator+(Vector3 a, Vector3 b);
     friend Vector3 operator-(Vector3 a, Vector3 b);
     friend Vector3 operator*(Vector3 a, Vector3 o);
-//    friend Vector3 operator/(Vector3 a, Vector3 o);
+    friend Vector3 operator/(Vector3 a, Vector3 o);
 
-    friend Vector3 operator+(float a, Vector3 b);
-    friend Vector3 operator-(float a, Vector3 b);
+//    friend Vector3 operator+(float a, Vector3 b);
+//    friend Vector3 operator-(float a, Vector3 b);
     friend Vector3 operator*(float a, Vector3 b);
+    friend Vector3 operator/(float a, Vector3 b);
+
+//    friend Vector3 operator+(Vector3 b, float a);
+//    friend Vector3 operator-(Vector3 b, float a);
+    friend Vector3 operator*(Vector3 b, float a);
+    friend Vector3 operator/(Vector3 b, float a);
 
     friend Vector3 operator-(Vector3 v);
 
@@ -157,7 +174,7 @@ public:
 protected:
     bool valid = true;
 
-};
+    };
 
 /*class Vector3Hash
 {

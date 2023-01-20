@@ -22,6 +22,13 @@ public:
     virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
         this->layerGrid = layerGrid;
     }
+
+    virtual void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid) {
+        this->affectHeightmap(heightmap);
+        this->affectVoxelGrid(voxelGrid);
+        this->affectLayerGrid(layerGrid);
+    }
+
     virtual QLayout* createGUI() {
         return nullptr;
     }
@@ -67,6 +74,12 @@ public:
 
 Q_SIGNALS:
     void updated();
+    void terrainUpdated();
+
+public Q_SLOTS:
+    virtual void afterTerrainUpdated() {
+
+    }
 };
 
 #endif // ACTIONINTERFACE_H

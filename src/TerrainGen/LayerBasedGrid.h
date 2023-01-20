@@ -6,20 +6,21 @@ class LayerBasedGrid;
 #include <tuple>
 
 #include "Graphics/Mesh.h"
-#include "TerrainGen/Grid.h"
-#include "TerrainGen/VoxelChunk.h"
+//#include "TerrainGen/Grid.h"
+//#include "TerrainGen/VoxelChunk.h"
 #include "DataStructure/Voxel.h"
 #include <vector>
 #include <map>
 #include <tuple>
 #include "Graphics/Mesh.h"
-#include "Utils/FastNoiseLit.h"
-#include "Utils/ShapeCurve.h"
+//#include "Utils/FastNoiseLit.h"
+//#include "Utils/ShapeCurve.h"
 #include "TerrainGen/ImplicitPatch.h"
 
 class ImplicitPatch;
 class Patch2D;
 class Patch3D;
+
 
 class LayerBasedGrid
 {
@@ -71,7 +72,7 @@ public:
     void add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
     void add(Patch3D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
     */
-    void add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
+    void add(ImplicitPatch* patch, TerrainTypes material = TerrainTypes::SAND, bool applyDistanceFalloff = true, float distancePower = 1.f);
 
     Mesh getGeometry();
 
@@ -83,6 +84,11 @@ public:
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
     static float densityFromMaterial(TerrainTypes material);
+    static float minDensityFromMaterial(TerrainTypes material);
+    static float maxDensityFromMaterial(TerrainTypes material);
+
+    static std::vector<TerrainTypes> invisibleLayers;
+    static std::vector<TerrainTypes> instanciableLayers;
 };
 
 #endif // LAYERBASEDGRID_H

@@ -71,24 +71,49 @@ QLayout *TerrainSavingInterface::createGUI()
 
 void TerrainSavingInterface::saveTerrainGeometry(std::string filename)
 {
+    bool verbose = true;
     if (filename == "")
         filename = this->mainFilename;
 
     std::ofstream file;
-
+    if (verbose)
+        std::cout << "Saving geometry..." << std::endl;
     Mesh m;
-    m = this->heightmap->getGeometry();
-    file.open(filename + "-heightmap" + ".stl");
-    file << m.toOFF();
-    file.close();
+    auto start = std::chrono::system_clock::now();
+    auto end = std::chrono::system_clock::now();
+    if (this->saveHeightmap) {
+    start = std::chrono::system_clock::now();
+        m = this->heightmap->getGeometry();
+        file.open(filename + "-heightmap" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+        if (verbose)
+            std::cout << "Heightmap in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    }
 
-    m = this->voxelGrid->getGeometry();
-    file.open(filename + "-voxels" + ".stl");
-    file << m.toOFF();
-    file.close();
+    if (this->saveVoxels) {
+        start = std::chrono::system_clock::now();
+        m = this->voxelGrid->getGeometry();
+        file.open(filename + "-voxels" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+        if (verbose)
+            std::cout << "Voxels in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    }
 
-    m = this->layerGrid->getGeometry();
-    file.open(filename + "-layers" + ".stl");
-    file << m.toOFF();
-    file.close();
+    if (this->saveLayers) {
+        start = std::chrono::system_clock::now();
+        m = this->layerGrid->getGeometry();
+        file.open(filename + "-layers" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+        if (verbose)
+            std::cout << "Layers in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    }
+
+    if (verbose)
+        std::cout << "Done." << std::endl;
 }

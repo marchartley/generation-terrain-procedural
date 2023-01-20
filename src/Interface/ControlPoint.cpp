@@ -152,6 +152,11 @@ void ControlPoint::afterUpdate(std::function<void ()> func)
 
 void ControlPoint::updateSphere()
 {
+    if (this->useManipFrame && (this->isManipulated() == true && this->currentlyManipulated == false)) {
+        this->initialPosition = this->getPosition();
+        this->initialRotation = this->getRotation();
+    }
+
     if(this->onUpdateCallback) { // && this->useManipFrame && this->/*manipFrame.*/isManipulated())
         if (prevPosition != getPosition()) {
             this->prevPosition = getPosition();
@@ -165,6 +170,14 @@ void ControlPoint::updateSphere()
     }
     if (this->useManipFrame && (this->isManipulated() == false && this->currentlyManipulated == true)) {
         Q_EMIT this->afterModified();
+
+        if ((this->getPosition() - initialPosition).norm2() > 0) {
+            Q_EMIT this->translationApplied(this->getPosition() - initialPosition);
+        }
+        if ((this->getRotation() - initialRotation).abs().maxComp() > 0) {
+            Q_EMIT this->rotationApplied(this->getRotation() - initialRotation);
+            this->setRotation(qglviewer::Quaternion()); // Back to identity (?)
+        }
     }
     this->currentlyManipulated = this->isManipulated();
 

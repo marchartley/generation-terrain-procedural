@@ -235,7 +235,7 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
     if (tymin > tymax) std::swap(tymin, tymax);
 
     if ((tmin > tymax) || (tymin > tmax))
-        return false;
+        return Vector3(false);
 
     if (tymin > tmin)
         tmin = tymin;
@@ -249,7 +249,7 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
     if (tzmin > tzmax) std::swap(tzmin, tzmax);
 
     if ((tmin > tzmax) || (tzmin > tmax))
-        return false;
+        return Vector3(false);
 
     if (tzmin > tmin)
         tmin = tzmin;
@@ -259,7 +259,7 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
 
     if (tmin < 0) {
         if (tmax < 0) {
-            return false;
+            return Vector3(false);
         } else {
             return orig + dir * tmax;
         }

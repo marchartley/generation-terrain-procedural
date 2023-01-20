@@ -120,7 +120,7 @@ PositionalLight::PositionalLight(float ambiant[4], float diffuse[4], float specu
 void PositionalLight::update()
 {
     LightSource::update();
-    this->shader->setVector((name + ".position").c_str(), position, 3);
+    this->shader->setVector((name + ".position").c_str(), position);
 }
 Material::Material()
 {

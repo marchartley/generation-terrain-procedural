@@ -194,10 +194,10 @@ public:
     Vector3 getWrappedPosition(Vector3 pos);
     Vector3 getRepeatPosition(Vector3 pos);
 
-    Matrix3& init(std::vector<T> data, size_t sizeX, size_t sizeY, size_t sizeZ);
+    Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
     std::string displayValues();
-    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {"#", "=", "-", " "}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5);
+    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X");
 };
 
 #include <sstream>
@@ -218,13 +218,15 @@ std::string Matrix3<T>::displayValues()
 }
 
 template<class T>
-std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon)
+std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError)
 {
+    if (patterns.empty())
+        patterns = {"#", "=", "-", "."};
+
     if (min == 0.f && max == 0.f) {
         min = this->min();
         max = this->max();
     }
-    patterns.push_back(" ");
     std::stringstream out;
     for (int z = 0; z < this->sizeZ; z++) {
         out << "[Z-level = " << z << "] : \n";
@@ -241,7 +243,10 @@ std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> pat
                 }
                 if (!specialCharUsed) {
                     float prop = interpolation::linear(val, min, max);
-                    out << patterns[int(prop * float(patterns.size() - 1))] << " ";
+                    if (prop < 0.f || prop > 1.f || isnan(prop))
+                        out << charForError << " ";
+                    else
+                        out << patterns[int(prop * float(patterns.size() - 1))] << " ";
                 }
             }
             out << "\n";
@@ -492,9 +497,6 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, Vector3 coord) {
     Vector3 floorPos = coord.floor();
     Vector3 offset = coord - floorPos;
 
-    if (floorPos == Vector3(24, 0, 0))
-        int a = 0;
-
     this->at(floorPos + Vector3(0, 0, 0)) += value * (1 - offset.x) * (1 - offset.y) * (1 - offset.z);
     this->at(floorPos + Vector3(0, 0, 1)) += value * (1 - offset.x) * (1 - offset.y) * (    offset.z);
     this->at(floorPos + Vector3(0, 1, 0)) += value * (1 - offset.x) * (    offset.y) * (1 - offset.z);
@@ -517,7 +519,7 @@ Vector3 Matrix3<T>::gradient(Vector3 position)
 {
     this->raiseErrorOnBadCoord = false;
     Vector3 flooredPos = position.floor();
-    Vector3 offset = position - flooredPos;
+//    Vector3 offset = position - flooredPos;
 
     return Vector3(
                 (at(flooredPos + Vector3(1, 0, 0)) - at(flooredPos)), // * offset.x,
@@ -551,7 +553,7 @@ Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
 }
 
 template<class T>
-Matrix3<T>& Matrix3<T>::init(std::vector<T> data, size_t sizeX, size_t sizeY, size_t sizeZ)
+Matrix3<T>& Matrix3<T>::init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ)
 {
     this->data = data;
     this->sizeX = sizeX;

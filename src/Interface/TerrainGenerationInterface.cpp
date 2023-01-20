@@ -18,14 +18,29 @@ void TerrainGenerationInterface::prepareShader()
 {
     bool verbose = true;
 
-    if (verbose)
-        std::cout << "Preparing main shaders..." << std::endl;
+    colorTexturesIndex = {
+        {"algae", 0},
+        {"beach_sand", 1},
+        {"coral", 2},
+        {"coral2", 3},
+        {"mountain_rocks", 4},
+        {"underwater_ground", 5},
+        {"underwater_sand", 6}
+    };
+    std::map<TerrainTypes, std::string> materialToTexture = {
+        {WATER, ""},
+        {AIR, ""},
+        {CORAL, "coral"},
+        {SAND, "beach_sand"},
+        {DIRT, "underwater_sand"},
+        {ROCK, "underwater_ground"},
+        {BEDROCK, "mountain_rocks"},
+    };
 
-#ifdef linux
-    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
-#else
-    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
-#endif
+//    if (verbose)
+//        std::cout << "Preparing main shaders..." << std::endl;
+
+    std::string pathToShaders = "src/Shaders/";
     std::string vShader_mc_voxels = pathToShaders + "MarchingCubes.vert";
     std::string gShader_mc_voxels = pathToShaders + "MarchingCubes.geom";
     std::string fShader_mc_voxels = pathToShaders + "MarchingCubes.frag";
@@ -134,40 +149,6 @@ void TerrainGenerationInterface::prepareShader()
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
 
-    if (verbose)
-        std::cout << "Loading 3D models :" << std::endl;
-
-    QTemporaryDir tempDirCorals;
-    QDirIterator itCorals(":/models_3d/corals/", QDir::Files, QDirIterator::Subdirectories);
-    this->possibleCorals = std::vector<Mesh>();
-    std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (itCorals.hasNext()) {
-        QString dir = itCorals.next();
-        if (verbose)
-            std::cout << "- " << dir.toStdString() << "... " << std::flush;
-        QString newPath = tempDirCorals.path() + QFileInfo(dir).fileName();
-        QFile::copy(dir, newPath);
-        Mesh m = Mesh(coralsShader);
-        // Normalize it and move it upward so the anchor is on the ground
-        possibleCorals.push_back(m.fromStl(newPath.toStdString()).normalize().translate(0.f, 0.f, .25f));
-        if (verbose)
-            std::cout << m.vertexArray.size()/3 << " tris, done." << std::endl;
-    }
-    QTemporaryDir tempDirRocks;
-    QDirIterator itRocks(":/models_3d/rocks/", QDir::Files, QDirIterator::Subdirectories);
-    this->possibleRocks = std::vector<Mesh>();
-    std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (itRocks.hasNext()) {
-        QString dir = itRocks.next();
-        if (verbose)
-            std::cout << "- " << dir.toStdString() << "... " << std::flush;
-        QString newPath = tempDirRocks.path() + QFileInfo(dir).fileName();
-        QFile::copy(dir, newPath);
-        Mesh m = Mesh(rocksShader);
-        possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize());
-        if (verbose)
-            std::cout << m.vertexArray.size()/3 << " tris, done." << std::endl;
-    }
     this->regenerateRocksAndParticles();
     this->particlesMesh = Mesh(this->randomParticlesPositions,
                                std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
@@ -205,8 +186,8 @@ void TerrainGenerationInterface::prepareShader()
     glGenTextures(1, &heightmapFieldTex);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
@@ -233,63 +214,94 @@ void TerrainGenerationInterface::prepareShader()
     layersMesh.shader->setInt("biomeFieldTex", 4);
 
     if (verbose)
-        std::cout << "Loading terrain textures :" << std::endl;
-    QTemporaryDir tempTextureDir;
-    QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
+        std::cout << "Loading terrain textures... " << std::flush;
+//    QTemporaryDir tempTextureDir;
+    QDirIterator iTex("src/assets/textures/", QDir::Files, QDirIterator::Subdirectories);
+//    QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
     Matrix3<Vector3> allColorTextures;
     Matrix3<Vector3> allNormalTextures;
     Matrix3<Vector3> allDisplacementTextures;
     int indexColorTextureClass = 0;
     int indexNormalTextureClass = 0;
     int indexDisplacementTextureClass = 0;
+
+    std::vector<QString> filesToLoad;
     while (iTex.hasNext()) {
         QString dir = iTex.next();
         QString basename = QFileInfo(dir).baseName();
-        if (basename == "color" || basename == "normal"/* || basename == "displacement"*/) {
+        if (basename == "color" || basename == "normal") { // || basename == "displacement") {
             if (dir.endsWith(".tiff")) continue; // Ignore TIFF files for now...
+            filesToLoad.push_back(dir);
+        }
+    }
+    size_t nbFiles = filesToLoad.size();
+    std::vector<Matrix3<Vector3>> texturesMaps(nbFiles);
+    int textureSizes = 128;
+    auto startTime = std::chrono::system_clock::now();
+    #pragma omp parallel for
+    for (size_t i = 0; i < nbFiles; i++) {
+        QString dir = filesToLoad[i];
+        QString basename = QFileInfo(dir).baseName();
             std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-            QString newPath = tempTextureDir.path() + QString::fromStdString(textureClass) + QFileInfo(dir).fileName();
-            QFile::copy(dir, newPath);
             int imgW, imgH, c;
-            unsigned char *data = stbi_load(newPath.toStdString().c_str(), &imgW, &imgH, &c, 3);
-            if (verbose)
-                std::cout << "- " << dir.toStdString().c_str() << " (" << textureClass << ") ..." << std::flush;
-            Matrix3<Vector3> map(imgW, imgH);
+            unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
+            texturesMaps[i] = Matrix3<Vector3>(imgW, imgH);
             for (int x = 0; x < imgW; x++) {
                 for (int y = 0; y < imgH; y++) {
                     unsigned char r = data[3 * (x + y * imgW) + 0];
                     unsigned char g = data[3 * (x + y * imgW) + 1];
                     unsigned char b = data[3 * (x + y * imgW) + 2];
-                    map.at(x, y) = Vector3(r, g, b);
+                    texturesMaps[i].at(x, y) = Vector3(r, g, b);
                 }
             }
-            map = map.resize(512, 512, 1, RESIZE_MODE::LINEAR);
+            texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
             stbi_image_free(data);
-            if (basename == "color") {
-                colorTexturesIndex[textureClass] = indexColorTextureClass++;
-                if (allColorTextures.empty()) {
-                    allColorTextures = map;
-                } else {
-                    allColorTextures = allColorTextures.concat(map);
-                }
-            } else if (basename == "normal") {
-                normalTexturesIndex[textureClass] = indexNormalTextureClass++;
-                if (allNormalTextures.empty()) {
-                    allNormalTextures = map;
-                } else {
-                    allNormalTextures = allNormalTextures.concat(map);
-                }
-            } else if (basename == "displacement") {
-                displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
-                if (allDisplacementTextures.empty()) {
-                    allDisplacementTextures = map;
-                } else {
-                    allDisplacementTextures = allDisplacementTextures.concat(map);
-                }
-            }
-            if (verbose)
-                std::cout << "Done." << std::endl;
+    }
+    allColorTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
+    allNormalTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
+    allDisplacementTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
+    auto endTempTime = std::chrono::system_clock::now();
+    for (size_t i = 0; i < nbFiles; i++) {
+        QString dir = filesToLoad[i];
+        QString basename = QFileInfo(dir).baseName();
+        std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
+        Matrix3<Vector3>& map = texturesMaps[i];
+        int index = colorTexturesIndex[textureClass];
+        if (basename == "color") {
+            allColorTextures.paste(map, Vector3(textureSizes * index, 0));
+        } else if (basename == "normal") {
+            allNormalTextures.paste(map, Vector3(textureSizes * index, 0));
+        } else if (basename == "displacement") {
+            allDisplacementTextures.paste(map, Vector3(textureSizes * index, 0));
         }
+                /*
+        if (basename == "color") {
+            colorTexturesIndex[textureClass] = indexColorTextureClass++;
+            if (allColorTextures.empty()) {
+                allColorTextures = map;
+            } else {
+                allColorTextures = allColorTextures.concat(map);
+            }
+        } else if (basename == "normal") {
+//            normalTexturesIndex[textureClass] = indexNormalTextureClass++;
+            if (allNormalTextures.empty()) {
+                allNormalTextures = map;
+            } else {
+                allNormalTextures = allNormalTextures.concat(map);
+            }
+        } else if (basename == "displacement") {
+//            displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
+            if (allDisplacementTextures.empty()) {
+                allDisplacementTextures = map;
+            } else {
+                allDisplacementTextures = allDisplacementTextures.concat(map);
+            }
+        }*/
+    }
+    auto endTime = std::chrono::system_clock::now();
+    if (verbose) {
+        std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms " << std::endl;
+        std::cout << "( " << std::chrono::duration_cast<std::chrono::milliseconds>(endTempTime - startTime).count() << "ms for the parallel and " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - endTempTime).count() << "ms for sequential)" << std::endl;
     }
 
     allColorTextures /= 255.f;
@@ -333,9 +345,9 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("allBiomesColorTextures", 5);
     layersMesh.shader->setInt("allBiomesColorTextures", 5);
 
-    heightmapMesh.shader->setInt("maxBiomesColorTextures", indexColorTextureClass);
-    marchingCubeMesh.shader->setInt("maxBiomesColorTextures", indexColorTextureClass);
-    layersMesh.shader->setInt("maxBiomesColorTextures", indexColorTextureClass);
+    heightmapMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
+    layersMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
 
     glGenTextures(1, &allBiomesNormalTextures);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
@@ -353,9 +365,9 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("allBiomesNormalTextures", 6);
     layersMesh.shader->setInt("allBiomesNormalTextures", 6);
 
-    heightmapMesh.shader->setInt("maxBiomesNormalTextures", indexNormalTextureClass);
-    marchingCubeMesh.shader->setInt("maxBiomesNormalTextures", indexNormalTextureClass);
-    layersMesh.shader->setInt("maxBiomesNormalTextures", indexNormalTextureClass);
+    heightmapMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
+    layersMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
 
     glGenTextures(1, &allBiomesDisplacementTextures);
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
@@ -373,9 +385,42 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("allBiomesDisplacementTextures", 7);
     layersMesh.shader->setInt("allBiomesDisplacementTextures", 7);
 
-    heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
-    marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
-    layersMesh.shader->setInt("maxBiomesDisplacementTextures", indexDisplacementTextureClass);
+    heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
+    marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
+    layersMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
+
+    /*
+     * // TODO one day : put the material data in a texture to be used in the shaders
+    std::vector<TerrainTypes> materialTypes = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
+    float* dataForMaterialTypes = new float(materialTypes.size() * 4);
+    for (size_t i = 0; i < materialTypes.size(); i++) {
+        dataForMaterialTypes[3 * i + 0] = LayerBasedGrid::minDensityFromMaterial(materialTypes[i]);
+        dataForMaterialTypes[3 * i + 1] = LayerBasedGrid::maxDensityFromMaterial(materialTypes[i]);
+        dataForMaterialTypes[3 * i + 2] = (materialToTexture[materialTypes[i]] == "" ? 0 : 1); // Displayed or not
+        dataForMaterialTypes[3 * i + 3] = (materialToTexture[materialTypes[i]] == "" ? 0 : colorTexturesIndex[materialToTexture[materialTypes[i]]]);
+    }
+    glGenTextures(1, &biomesAndDensitiesTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE8);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, biomesAndDensitiesTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, materialTypes.size(), 1, 0,
+    GL_RGBA, GL_FLOAT, dataForMaterialTypes);
+    heightmapMesh.shader->setInt("biomesAndDensitiesTex", 8);
+    marchingCubeMesh.shader->setInt("biomesAndDensitiesTex", 8);
+    layersMesh.shader->setInt("biomesAndDensitiesTex", 8);
+    */
+
+    /*for (auto& [lab, ID] : colorTexturesIndex) {
+        std::cout << " -> " << lab << " : " << ID << std::endl;
+    }
+    Plotter plt;
+    plt.addImage(allColorTextures);
+    plt.exec();*/
 
     updateDisplayedView(voxelGridOffset, voxelGridScaling);
 
@@ -398,36 +443,19 @@ void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset,
     layersMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
 }
 
+void TerrainGenerationInterface::afterTerrainUpdated()
+{
+
+}
+
 void TerrainGenerationInterface::regenerateRocksAndParticles()
 {
-    Matrix3<float> values = this->voxelGrid->getVoxelValues();
-
-    std::vector<Vector3> points(values.size());
-    for (size_t i = 0; i < values.size(); i++)
-        points[i] = values.getCoordAsVector3(i);
-    marchingCubeMesh.fromArray(points);
-    this->rocksIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>(numberOfRocksDisplayed);
-    for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-        rocksIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
-                                              int(random_gen::generate(0, possibleRocks.size())),
-                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
-                                              random_gen::generate(5.f, 15.f)
-                                                     );
-    }
-    this->coralsIndicesAndPositionAndSize = std::vector<std::tuple<int, Vector3, float>>(numberOfRocksDisplayed);
-    for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
-        coralsIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
-                                              int(random_gen::generate(0, possibleCorals.size())),
-                                              Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
-                                              random_gen::generate(5.f, 15.f)
-                                                     );
-    }
-    this->randomParticlesPositions = std::vector<Vector3>(numberOfRocksDisplayed * 10);
+    this->randomParticlesPositions = std::vector<Vector3>(1000);
     for (size_t i = 0; i < randomParticlesPositions.size(); i++) {
         randomParticlesPositions[i] = Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
     }
     if (this->particlesMesh.shader != nullptr)
-        this->particlesMesh.shader->setFloat("maxTerrainHeight", values.sizeZ);
+        this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
     this->startingTime = std::chrono::system_clock::now();
 }
 
@@ -543,76 +571,11 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                 marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false);
             }
             // Check if something changed on the terrain :
-            if (this->previousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
-                this->previousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+            if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
+                this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
                 // Not the best check, but still pretty good....
                 if (marchingCubeMesh.vertexArray.size() != values.size()) {
                     regenerateRocksAndParticles();
-                }
-//                marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-
-                values.raiseErrorOnBadCoord = false;
-                values.defaultValueOnBadCoord = -1.f;
-                for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-                    int iRock;
-                    Vector3 pos;
-                    float size;
-                    std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
-                    // Must be on ground, and have water somewhere around
-                    if (values.at(pos) > 0) {
-                        bool isOnBorder = false;
-                        for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                            for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                                for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                    if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                        isOnBorder = true;
-                                    }
-                        if (isOnBorder) {
-                            possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-                            possibleRocks[iRock].shader->setFloat("sizeFactor", size);
-                            possibleRocks[iRock].display();
-                        }
-                    }
-                }
-                Matrix3<Vector3> gradientTerrain = values.gradient();
-                gradientTerrain.raiseErrorOnBadCoord = false;
-                gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
-                for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
-                    int iCoral;
-                    Vector3 pos;
-                    float size;
-                    std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
-                    // Must be on ground, and have water somewhere around
-                    if (values.at(pos) > 0) {
-                        bool isOnBorder = false;
-                        for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                            for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                                for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                    if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                        isOnBorder = true;
-                                    }
-                        if (isOnBorder) {
-                            Vector3 up = -gradientTerrain.at(pos).normalize();
-                            Vector3 fwd = (up == Vector3(0, 1, 0) ? Vector3(1, 0, 0) : up.cross(Vector3(0, 1, 0)));
-                            Vector3 right = up.cross(fwd);/*
-                            std::vector<std::vector<float>> rotationMatrix({
-                                                      {fwd.x, right.x, up.x, 0},
-                                                      {fwd.y, right.y, up.y, 0},
-                                                      {fwd.z, right.z, up.z, 0},
-                                                      {0, 0, 0, 1}
-                                                  });*/
-                            std::vector<std::vector<float>> rotationMatrix({
-                                                      {fwd.x, fwd.y, fwd.z, 0},
-                                                      {right.x, right.y, right.z, 0},
-                                                      {up.x, up.y, up.z, 0},
-                                                      {0, 0, 0, 1}
-                                                  });
-                            possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
-                            possibleCorals[iCoral].shader->setMatrix("instanceRotation", (std::vector<std::vector<float>>)rotationMatrix);
-                            possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
-                            possibleCorals[iCoral].display();
-                        }
-                    }
                 }
             }
             if (displayParticles) {
@@ -632,17 +595,21 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             layersMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             layersMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-            Matrix3<int> materials; Matrix3<float> matHeights;
-            std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
-            layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
-            layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
 
-            std::vector<Vector3> layersPoints(materials.size());
-            for (size_t i = 0; i < layersPoints.size(); i++) {
-                layersPoints[i] = materials.getCoordAsVector3(i);
+            if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex) {
+                this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
+                Matrix3<int> materials; Matrix3<float> matHeights;
+                std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
+                layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
+                layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
+
+                std::vector<Vector3> layersPoints(materials.size());
+                for (size_t i = 0; i < layersPoints.size(); i++) {
+                    layersPoints[i] = materials.getCoordAsVector3(i);
+                }
+                layersMesh.fromArray(layersPoints);
+                layersMesh.update();
             }
-            layersMesh.fromArray(layersPoints);
-            layersMesh.update();
             this->layersMesh.display(GL_POINTS);
         }
     }
@@ -718,16 +685,62 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     Vector3 terrainSize = Vector3(4*radius, 4*radius, 40);
     this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 1.f);
 
-    ImplicitPatch* init = new ImplicitPatch;
-    ImplicitPatch* p1 = new ImplicitPatch(Vector3(-10, -10, 0), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p1->name = "sphere1";
-    ImplicitPatch* s1 = new ImplicitPatch(ImplicitPatch::createStack(init, p1)); s1->name ="stack1";
-    ImplicitPatch* p2 = new ImplicitPatch(Vector3(-10, -10, 0), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p2->name = "sphere2";
-    ImplicitPatch* s2 = new ImplicitPatch(ImplicitPatch::createStack(s1, p2)); s2->name = "stack2";
-    this->layerGrid->add(s2, TerrainTypes::BEDROCK, false);
+//    ImplicitPatch* init = new ImplicitPrimitive;
+//    ImplicitPatch* p1 = new ImplicitPatch(Vector3(0, 0, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p1->name = "sphere1"; p1->densityValue = 0.1f;
+//    ImplicitPatch* s1 = new ImplicitPatch(ImplicitPatch::createStack(init, p1, ImplicitPatch::FIXED)); s1->name ="stack1";
+//    ImplicitPatch* p2 = new ImplicitPatch(Vector3(20, 20, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p2->name = "sphere2"; p2->densityValue = 3.f;
+//    ImplicitPatch* s2 = new ImplicitPatch(ImplicitPatch::createStack(s1, p2, ImplicitPatch::ABOVE)); s2->name = "stack2";
+
+    /*
+    ImplicitPrimitive* water = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* air = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* coral = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* sand = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* dirt = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* rock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+    ImplicitPrimitive* bedrock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+*/
+    std::vector<TerrainTypes> materials = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
+    std::vector<ImplicitPrimitive*> primitives(materials.size());
+    std::vector<ImplicitOperator*> blends(primitives.size() - 1);
+    /*
+    water->setDimensions(Vector3(20, 20, 20)); water->position = Vector3(0, -10, 0); water->name = "Water"; water->material = TerrainTypes::WATER;
+    air->setDimensions(Vector3(20, 20, 20)); air->position = Vector3(0, 10, 0); air->name = "Air"; air->material = TerrainTypes::AIR;
+    coral->setDimensions(Vector3(20, 20, 20)); coral->position = Vector3(0, 30, 0); coral->name = "Coral"; coral->material = TerrainTypes::CORAL;
+    sand->setDimensions(Vector3(20, 20, 20)); sand->position = Vector3(20, -10, 0); sand->name = "Sand"; sand->material = TerrainTypes::SAND;
+    dirt->setDimensions(Vector3(20, 20, 20)); dirt->position = Vector3(20, 10, 0); dirt->name = "Dirt"; dirt->material = TerrainTypes::DIRT;
+    rock->setDimensions(Vector3(20, 20, 20)); rock->position = Vector3(20, 30, 0); rock->name = "Rock"; rock->material = TerrainTypes::ROCK;
+    bedrock->setDimensions(Vector3(20, 20, 20)); bedrock->position = Vector3(0, -10, 0); bedrock->name = "Bedrock"; bedrock->material = TerrainTypes::BEDROCK;*/
+    for (size_t i = 0; i < primitives.size(); i++) {
+        primitives[i] = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);
+        primitives[i]->position = Vector3(-10, -10, 0); //Vector3(-10 + 20 * float(i % (primitives.size() / 2)), 0 + 20 * float(i / (primitives.size() / 2)), 0);
+        primitives[i]->setDimensions(Vector3(20, 20, 20));
+        primitives[i]->name = stringFromMaterial(materials[i]) + " sphere";
+        primitives[i]->material = materials[i];
+    }
+    for (size_t i = 0; i < blends.size(); i++) {
+        auto& blend = blends[i];
+        blend = new ImplicitOperator;
+        blend->composeFunction = ImplicitPatch::BLEND;
+        blend->positionalB = ImplicitPatch::FIXED_POS;
+        blend->name = "Blend " + std::to_string(i + 1);
+        blend->blendingFactor = 2.f;
+        if (i == 0) {
+            blend->composableA = primitives[0];
+            blend->composableB = primitives[1];
+        } else {
+            blend->composableA = blends[i - 1];
+            blend->composableB = primitives[i + 1];
+        }
+        blend->updateCache();
+    }
+    this->layerGrid->add(blends.back());
 
     voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
     voxelGrid->fromIsoData();
     heightmap->fromLayerGrid(*layerGrid);
+
+    Q_EMIT this->terrainUpdated();
     return;
 
     // END OF SHITTY PART
@@ -779,7 +792,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
         nlohmann::json json_content = nlohmann::json::parse(content);
         if (!json_content.contains("actions")) {
-            this->createTerrainFromBiomes(json_content);
+            if (json_content.contains(ImplicitPatch::json_identifier)) {
+                this->createTerrainFromImplicitPatches(json_content);
+            } else {
+                this->createTerrainFromBiomes(json_content);
+            }
         } else {
             for (auto action : json_content.at("actions")) {
                 // Let all the interfaces try to replay their actions
@@ -839,6 +856,12 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
     this->biomeGenerationNeeded = true;
     this->biomeGenerationModelData = json_content;
 
+}
+
+void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
+{
+    // Dunno...
+    // TODO : Link to the PrimitivePatchInterface
 }
 
 void TerrainGenerationInterface::saveTerrain(std::string filename)

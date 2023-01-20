@@ -8,17 +8,6 @@ class PatchReplacementDialog;
 #include "Interface/HierarchicalListWidget.h"
 #include "Interface/ControlPoint.h"
 
-/*
-enum PRIMITIVE_SHAPE {
-    SPHERE = 0,
-    BLOCK = 1,
-    GAUSSIAN = 2
-};
-enum PATCH_OPERATION {
-    STACK = 0,
-    BLEND = 1,
-    REPLACE = 2
-};*/
 
 class PrimitivePatchesInterface : public ActionInterface
 {
@@ -31,7 +20,8 @@ public:
 
     void replay(nlohmann::json action);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
 
     QLayout* createGUI();
 
@@ -44,6 +34,7 @@ public Q_SLOTS:
 
     void setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition = Vector3());
     void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
+    void setCurrentPositioning(ImplicitPatch::PositionalLabel positioning);
 
     void resetPatch();
 
@@ -55,6 +46,8 @@ public Q_SLOTS:
     void setSelectedSigma(float newVal);
     void setSelectedBlendingFactor(float newVal);
 
+    void addNoiseOnSelectedPatch();
+
     void savePatchesAsFile(std::string filename);
     void loadPatchesFromFile(std::string filename);
     void hotReloadFile();
@@ -62,6 +55,8 @@ public Q_SLOTS:
     void updateSelectedPrimitiveItem(QListWidgetItem *current, QListWidgetItem *previous);
     void openPrimitiveModificationDialog(QListWidgetItem* item);
     void modifyPrimitiveHierarchy(int ID_to_move, int relatedID, HIERARCHY_TYPE relation, QDropEvent* event);
+
+    void openFileForNewPatch();
 
 protected:
     ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
@@ -73,28 +68,27 @@ protected:
 
     ImplicitPatch::PredefinedShapes currentShapeSelected = ImplicitPatch::PredefinedShapes::Sphere;
     ImplicitPatch::CompositionFunction currentOperation = ImplicitPatch::CompositionFunction::BLEND;
-    float selectedDensity = 1.5f;
+    ImplicitPatch::PositionalLabel currentPositioning = ImplicitPatch::PositionalLabel::ABOVE;
+//    float selectedDensity = 1.5f;
+    TerrainTypes selectedTerrainType = TerrainTypes::ROCK;
 
     float selectedWidth = 20.f;
     float selectedDepth = 20.f;
     float selectedHeight = 20.f;
     float selectedSigma = 5.f;
-    float selectedBlendingFactor = 1.f;
+    float selectedBlendingFactor = 2.f;
+    bool applyIntersection = false;
 
     Mesh previewMesh;
     Mesh patchAABBoxMesh;
 
     ImplicitPatch* mainPatch;
+    ImplicitPatch* desiredPatchFromFile = nullptr;
 
-    Patch3D* currentPatch;
-//    std::vector<Patch3D*> storedPatches;
+//    Patch3D* currentPatch;
     std::vector<ImplicitPatch*> storedPatches;
 
-    std::function<float(Vector3)> currentSelectionFunction;
-
-    std::function<float(Vector3)> blockFunction(float height);
-    std::function<float(Vector3)> sphereFunction(float radius);
-    std::function<float(Vector3)> gaussianFunction(float sigma, float height);
+//    std::function<float(Vector3)> currentSelectionFunction;
 
     Vector3 currentPos;
 
@@ -111,6 +105,7 @@ protected:
     std::unique_ptr<ControlPoint> primitiveControlPoint;
 
     ImplicitPatch* currentlyManipulatedPatch = nullptr;
+    ImplicitPatch* currentlySelectedPatch = nullptr;
 
     std::string mainFilename;
     bool enableHotReloading = false;
@@ -119,6 +114,10 @@ protected:
     Matrix3<float> debuggingVoxels;
     Mesh debuggingVoxelsMesh;
     bool debugMeshDisplayed = false;
+
+    int nbPrimitives = 0;
+    int nbUnaryOperators = 0;
+    int nbBinaryOperators = 0;
 };
 
 
@@ -134,11 +133,9 @@ public Q_SLOTS:
     void confirm();
 
 public:
-    HierarchicalListWidget* allPrimitivesList;
     QPushButton* cancelButton;
     QPushButton* validButton;
     PrimitivePatchesInterface* caller = nullptr;
-//    int selectedPrimitiveIndex = -1;
     ImplicitPatch* patch = nullptr;
 };
 

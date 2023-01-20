@@ -18,6 +18,8 @@ class HierarchicalListWidget : public QListWidget
 public:
     HierarchicalListWidget(QWidget* parent = nullptr);
 
+    void setCurrentItem(int indexToSelect);
+
 Q_SIGNALS:
     void itemChangedHierarchy(int changedItemID, int relationItemID, HIERARCHY_TYPE newRelation, QDropEvent* event = nullptr);
 

@@ -211,4 +211,8 @@ void main(void)
     if (!gl_FrontFacing)
         lumin *= 0.6;
     fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0);
+
+
+    // Cancel all :
+    fragColor = material_color;
 }

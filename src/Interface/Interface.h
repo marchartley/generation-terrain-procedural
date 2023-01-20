@@ -23,7 +23,8 @@
 #include "Interface/BiomeInterface.h"
 #include "Interface/SmoothInterface.h"
 #include "Interface/PrimitivePatchesInterface.h"
-//#include "Interface/TerrainSavingInterface.h"
+#include "Interface/TerrainSavingInterface.h"
+#include "Interface/MeshInstanceAmplificationInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -46,7 +47,9 @@ public:
     void focusOutEvent(QFocusEvent* e);
 
 public Q_SLOTS:
-    void openInterface(std::string interfaceName);
+    void openInterface(std::string interfaceName, std::shared_ptr<ActionInterface> object);
+    void openInterface(std::shared_ptr<ActionInterface> object);
+    /*void openInterface(std::string interfaceName);
 
     void openFaultSlipInterface();
     void openFlowfieldInterface();
@@ -60,7 +63,8 @@ public Q_SLOTS:
     void openBiomeInterface();
     void openSmoothInterface();
     void openPatchesInterface();
-//    void openSavingInterface();
+    void openSavingInterface();
+    void openMeshInstanceAmplificationInterface();*/
 
     void hideAllInteractiveParts();
 
@@ -72,7 +76,6 @@ public:
     std::string lastPanelOpenedByStickyFrame;
 
     QGridLayout* mainLayout;
-    QVBoxLayout* controlLayout;
     Viewer* viewer;
 
     std::shared_ptr<KarstPathGenerationInterface> karstPathGeneration;
@@ -89,7 +92,8 @@ public:
     std::shared_ptr<BiomeInterface> biomeInterface;
     std::shared_ptr<SmoothInterface> smoothInterface;
     std::shared_ptr<PrimitivePatchesInterface> patchesInterface;
-//    std::shared_ptr<TerrainSavingInterface> savingInterface;
+    std::shared_ptr<TerrainSavingInterface> savingInterface;
+    std::shared_ptr<MeshInstanceAmplificationInterface> meshInstanceAmplificationInterface;
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 
@@ -104,6 +108,8 @@ public:
     RangeSlider* mapSliceSliderZ;
     RangeSlider* isolevelSelectionSlider;
     QCheckBox* mapSliceSmooth;
+
+    std::shared_ptr<ActionInterface> lastOpenedInterface;
 
     std::string mapSavingFolder = "saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;

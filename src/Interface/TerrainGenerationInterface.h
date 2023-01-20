@@ -19,6 +19,7 @@ public:
     void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
+    void createTerrainFromImplicitPatches(nlohmann::json json_content);
     void saveTerrain(std::string filename);
 
     void reloadShaders();
@@ -34,6 +35,8 @@ public Q_SLOTS:
     void prepareShader();
 
     void updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling);
+
+    void afterTerrainUpdated();
 
 
 public:
@@ -58,17 +61,11 @@ protected:
     Mesh heightmapMesh;
     GLuint heightmapFieldTex, biomeFieldTex;
     GLuint edgeTableTex, triTableTex;
+    GLuint biomesAndDensitiesTex;
 
     Mesh layersMesh;
 
     GLuint allBiomesColorTextures, allBiomesNormalTextures, allBiomesDisplacementTextures;
-
-    // TODO : Transform this into a "particle" system
-    std::vector<Mesh> possibleRocks;
-    std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
-    int numberOfRocksDisplayed = 0;
-    std::vector<Mesh> possibleCorals;
-    std::vector<std::tuple<int, Vector3, float>> coralsIndicesAndPositionAndSize;
 
     Vector3 voxelGridOffset = Vector3(0, 0, 0);
     float voxelGridScaling = 1.f;
@@ -78,7 +75,8 @@ protected:
 
 
     std::chrono::system_clock::time_point startingTime;
-    size_t previousHistoryIndex = -1;
+    size_t voxelsPreviousHistoryIndex = -1;
+    size_t layersPreviousHistoryIndex = -1;
 
 public:
     Mesh waterLevelMesh;

@@ -177,6 +177,23 @@ Mesh& Mesh::translate(float translation_x, float translation_y, float translatio
     return translate(Vector3(translation_x, translation_y, translation_z));
 }
 
+Mesh& Mesh::rotate(Vector3 rotation)
+{
+    for (auto& p : this->vertexArray)
+        p.rotate(rotation);
+
+
+    this->vertexArrayFloat = Vector3::toArray(this->vertexArray);
+    this->needToUpdatePositions = true;
+
+    return *this;
+}
+
+Mesh& Mesh::rotate(float rotation_x, float rotation_y, float rotation_Z)
+{
+    return this->rotate(Vector3(rotation_x, rotation_y, rotation_Z));
+}
+
 void Mesh::computeIndices(std::vector<int> indices)
 {
     if (!useIndices)
@@ -656,7 +673,7 @@ Mesh Mesh::applyMarchingCubes(Matrix3<float>& values)
     //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
     };
 
-    std::function getCubeIndex = [&](Vector3 voxPos, vec3 normal) -> int {
+    std::function getCubeIndex = [&](Vector3 voxPos, Vector3 normal) -> int {
         int cubeindex = 0;
         float cubeVal0 = cubeVali(voxPos, 0);
         float cubeVal1 = cubeVali(voxPos, 1);
@@ -678,28 +695,28 @@ Mesh Mesh::applyMarchingCubes(Matrix3<float>& values)
         cubeindex += int(cubeVal6 < refined_isolevel)*64;
         cubeindex += int(cubeVal7 < refined_isolevel)*128;
 
-        normal = vec3(0, 0, 0);
+        normal = Vector3(0, 0, 0);
 
         if (cubeindex != 0 && cubeindex != 255) {
             vec3 vertlist[12];
 
             //Find the vertices where the surface intersects the cube
-            vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
-            vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
-            vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
-            vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
-            vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
-            vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
-            vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
-            vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
-            vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
-            vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
-            vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
-            vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+            vertlist[0] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+            vertlist[1] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+            vertlist[2] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+            vertlist[3] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+            vertlist[4] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+            vertlist[5] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+            vertlist[6] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+            vertlist[7] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+            vertlist[8] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+            vertlist[9] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+            vertlist[10] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+            vertlist[11] = (vec3)vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
 
 
-            vec3 edge1 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 1)];
-            vec3 edge2 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 2)];
+//            vec3 edge1 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 1)];
+//            vec3 edge2 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 2)];
 //            normal = normalize(cross(edge1, edge2));
         }
         return cubeindex;

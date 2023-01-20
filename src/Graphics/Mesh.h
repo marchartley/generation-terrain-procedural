@@ -25,6 +25,8 @@ public:
     Mesh& scale(Vector3 factor);
     Mesh& translate(Vector3 translation);
     Mesh& translate(float translation_x, float translation_y, float translation_z);
+    Mesh& rotate(Vector3 rotation);
+    Mesh& rotate(float rotation_x, float rotation_y, float rotation_Z);
 
     void clear();
     Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);

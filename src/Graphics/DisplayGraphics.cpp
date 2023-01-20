@@ -1,6 +1,6 @@
 #include "DisplayGraphics.h"
 #include <iostream>
-/*
+
 
 ChartView::ChartView(QWidget *parent) : QChartView(nullptr, parent)
 {}
@@ -173,11 +173,53 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
+void Plotter::addImage(Matrix3<Vector3> image, bool normalize)
+{
+    unsigned char* data = new unsigned char[image.size() * 4];
+
+    for (size_t i = 0; i < image.size(); ++i) {
+        data[int(4 * i + 2)] = (unsigned char)(image[i].x * 255);
+        data[int(4 * i + 1)] = (unsigned char)(image[i].y * 255);
+        data[int(4 * i + 0)] = (unsigned char)(image[i].z * 255);
+        data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
+    }
+
+//    QImage i;
+//    (data, image.sizeX, image.sizeY);
+    this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+}
+
 void Plotter::draw()
 {
 //    QTransform prevState = this->chartView->transform();
     auto prevState = this->chartView->chart()->transformations();
     this->chartView->chart()->removeAllSeries();
+
+    if (this->backImage != nullptr) {
+        int width = static_cast<int>(this->chartView->chart()->plotArea().width());
+        int height = static_cast<int>(this->chartView->chart()->plotArea().height());
+        int ViewW = static_cast<int>(chartView->width());
+        int ViewH = static_cast<int>(chartView->height());
+
+        //scale the image to fit plot area
+        QImage scaledImage = backImage->scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+//        *backImage = backImage->scaled(QSize(width, height));
+
+        //We have to translate the image because setPlotAreaBackGround
+        //starts the image in the top left corner of the view not the
+        //plot area. So, to offset we will make a new image the size of
+        //view and offset our image within that image with white
+        QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
+        translated.fill(Qt::white);
+        QPainter painter(&translated);
+        QPointF TopLeft = this->chartView->chart()->plotArea().topLeft();
+        painter.drawImage(TopLeft, scaledImage);
+
+        //Display image in background
+//        this->chartView->chart()->setPlotAreaBackgroundBrush(scaledImage);
+        this->chartView->chart()->setPlotAreaBackgroundBrush(translated);
+        this->chartView->chart()->setPlotAreaBackgroundVisible(true);
+    }
     for (size_t i = 0; i < this->plot_data.size(); i++) {
         QLineSeries *series = new QLineSeries();
         if (this->plot_names.size() > 0 && this->plot_names.size() == this->plot_data.size())
@@ -242,6 +284,18 @@ void Plotter::saveFig(std::string filename)
 {
     QPixmap p = this->chartView->grab();
     p.save(QString::fromStdString(filename), "PNG");
+}
+
+void Plotter::resizeEvent(QResizeEvent *event)
+{
+    QDialog::resizeEvent(event);
+    this->draw();
+}
+
+void Plotter::showEvent(QShowEvent *event)
+{
+    QDialog::showEvent(event);
+    this->draw();
 }
 
 void Plotter::updateLabelsPositions()
@@ -331,4 +385,4 @@ void TextItem::setText(const QString &text) {
 }
 
 void TextItem::setAnchor(QPointF point) { _anchor = point; }
-*/
+
