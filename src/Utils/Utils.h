@@ -9,7 +9,7 @@
 #define PI 3.14159265358979323846
 
 template<class T>
-bool isIn(T& elem, std::vector<T> arr) {
+bool isIn(T elem, std::vector<T> arr) {
     return std::find(arr.begin(), arr.end(), elem) != arr.end();
 }
 
@@ -19,6 +19,7 @@ Vector3 HSVtoRGB(float H, float S,float V);
 
 std::string toUpper(std::string s);
 std::string toLower(std::string s);
+std::string toCapitalize(std::string s);
 std::string getExtention(std::string file);
 
 float rad2deg(float rad);

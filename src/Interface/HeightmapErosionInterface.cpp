@@ -11,9 +11,9 @@ HeightmapErosionInterface::HeightmapErosionInterface(QWidget *parent)
     windDirectionSelector = std::make_unique<InteractiveVector>();
 }
 
-void HeightmapErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+void HeightmapErosionInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
-    ActionInterface::affectVoxelGrid(voxelGrid);
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
     this->windDirectionSelector->setPositions(Vector3(0, 0, voxelGrid->getSizeZ()), (windDirection.normalized() * voxelGrid->getSizeX() / 10.f) * Vector3(1, 1, 0) + Vector3(0, 0, voxelGrid->getSizeZ()));
     QObject::connect(windDirectionSelector.get(), &InteractiveVector::modified, [&](Vector3 newVal) { this->windDirection = newVal.normalized() * 2.f; } );
 }
@@ -123,7 +123,7 @@ QGroupBox *HeightmapErosionInterface::createHydraulicErosionGUI()
     FancySlider* gravitySlider = new FancySlider(Qt::Horizontal, 0, 10, .1f);
     FancySlider* inertiaSlider = new FancySlider(Qt::Horizontal, 0, 1, .001f);
     FancySlider* sedimentCapacityFactorSlider = new FancySlider(Qt::Horizontal, 0, 5, .1f);
-    QCheckBox* applyDepositCheckbox = new QCheckBox;
+    QCheckBox* applyDepositCheckbox = new QCheckBox("With deposit");
     QPushButton* hydraulicErosionButton = new QPushButton("Erosion hydraulique");
 
     layout->addWidget(createMultipleSliderGroup({
@@ -246,7 +246,7 @@ QGroupBox *HeightmapErosionInterface::createWindErosionGUI()
 
 QLayout *HeightmapErosionInterface::createGUI()
 {
-    if (this->erosionLayout != nullptr) return erosionLayout;
+//    if (this->erosionLayout != nullptr) return erosionLayout;
     this->erosionLayout = new QHBoxLayout();
 
 //    QPushButton* hydraulicErosionButton = new QPushButton("Erosion hydraulique");

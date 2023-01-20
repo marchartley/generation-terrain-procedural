@@ -24,6 +24,48 @@ int main(int argc, char *argv[])
 #endif
     QApplication app(argc, argv);
 
+    /*
+    Matrix3<Vector3> img(10, 10);
+    for (int i = 0; i < img.sizeX; i++) {
+        for (int j = 0; j < img.sizeY; j++) {
+            img.at(i, j) = Vector3(float(i) / float(img.sizeX), float(j) / float(img.sizeY), 0.5f);//Vector3::random().abs();
+        }
+    }
+    Plotter plt;
+    plt.addImage(img);
+    return plt.exec();
+    */
+    /*
+    std::function blend = [](float valA, float valB) -> float {
+        float n = 2.f;
+        return std::pow(std::pow(valA, n) + std::pow(valB, n), 1/n);
+    };
+
+    int X = 20, Y = 20;
+    Matrix3<float> matA(X, Y);
+    Matrix3<float> matB(X, Y);
+    Matrix3<float> matAB(X, Y);
+    float delta = 0.001;
+    for (int x = 0; x < X; x++) {
+        for (int y = 0; y < Y; y++) {
+            float _x = x / float(X - 1), _y = 1.f - (y / float(Y - 1));
+//            float blendVal = blend(_x, _y);
+            Vector3 derivee = Vector3(
+                        blend(_x + delta, _y) - blend(_x - delta, _y),
+                        blend(_x, _y + delta) - blend(_x, _y - delta)
+                        ).normalize();
+
+            float contribA = derivee.x / (derivee.x + derivee.y);
+            float contribB = derivee.y / (derivee.x + derivee.y);
+            matA.at(x, y) = contribA;
+            matB.at(x, y) = contribB;
+        }
+    }
+
+    std::cout << matA.displayAsPlot(0.f, 1.f, {}, {{.5f, "/"}}) << std::endl;
+
+    return 0;
+*/
     /*BSpline opCurve = BSpline({
                                   Vector3(.0f, .5f),
                                   Vector3(.3f, .5f),

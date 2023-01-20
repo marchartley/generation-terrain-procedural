@@ -610,6 +610,7 @@ Mesh Grid::getGeometry()
         }
     }
     Mesh m;
+    m.useIndices = false;
     m.fromArray(vertices);
     return m;
 }

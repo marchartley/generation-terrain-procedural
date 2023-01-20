@@ -1,4 +1,5 @@
 #include "GravityInterface.h"
+#include "Interface/InterfaceUtils.h"
 
 GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity", parent)
 {
@@ -96,17 +97,34 @@ QLayout* GravityInterface::createGUI()
     this->gravityLayout = new QHBoxLayout;
 
     gravityComputeButton = new QPushButton("Calculer");
-    QPushButton* gravityLayersButton = new QPushButton("Rearrange layers");
+    QPushButton* arrangingLayersButton = new QPushButton("Rearrange layers");
+    QPushButton* gravityLayersButton = new QPushButton("Apply gravity on layers");
 //    gravityDisplayButton = new QCheckBox("Afficher");
-    gravityLayout->addWidget(gravityComputeButton);
-    gravityLayout->addWidget(gravityLayersButton);
+    gravityLayout->addWidget(createVerticalGroup({
+                                                     gravityComputeButton,
+                                                     gravityLayersButton,
+                                                     arrangingLayersButton
+                                                 }));
 //    gravityLayout->addWidget(gravityDisplayButton);
 
 //    gravityDisplayButton->setChecked(this->visible);
 
 //    QObject::connect(gravityDisplayButton, &QCheckBox::toggled, this, &GravityInterface::setVisibility);
     QObject::connect(gravityComputeButton, &QPushButton::pressed, this, &GravityInterface::createSandGravity);
-    QObject::connect(gravityLayersButton, &QPushButton::pressed, this, [&]() { this->layerGrid->reorderLayers();});
+    QObject::connect(gravityLayersButton, &QPushButton::pressed, this, [&]() {
+        this->layerGrid->thermalErosion();
+        this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
+        voxelGrid->fromIsoData();
+        this->heightmap->fromLayerGrid(*this->layerGrid);
+        Q_EMIT this->terrainUpdated();
+    });
+    QObject::connect(arrangingLayersButton, &QPushButton::pressed, this, [&]() {
+        this->layerGrid->reorderLayers();
+        this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
+        this->voxelGrid->fromIsoData();
+        this->heightmap->fromLayerGrid(*this->layerGrid);
+        Q_EMIT this->terrainUpdated();
+    });
 
     return this->gravityLayout;
 }

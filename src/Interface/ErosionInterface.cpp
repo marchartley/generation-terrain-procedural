@@ -10,13 +10,14 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 
 }
 
-void ErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+//void ErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
+void ErosionInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
-    ActionInterface::affectVoxelGrid(voxelGrid);
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
     this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid, erosionSize, erosionStrength, erosionQtt);
 
-    const char* vNoShader = ":/src/Shaders/no_shader.vert";
-    const char* fNoShader = ":/src/Shaders/no_shader.frag";
+    const char* vNoShader = "src/Shaders/no_shader.vert";
+    const char* fNoShader = "src/Shaders/no_shader.frag";
 
     this->rocksPathFailure = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->rocksPathFailure.useIndices = false;

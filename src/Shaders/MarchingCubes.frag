@@ -144,6 +144,7 @@ uniform mat4 norm_matrix;
 
 uniform sampler2D biomeFieldTex;
 uniform sampler2D heightmapFieldTex;
+uniform sampler2D biomesAndDensitiesTex;
 uniform sampler2D allBiomesColorTextures;
 uniform int maxBiomesColorTextures;
 uniform sampler2D allBiomesNormalTextures;
@@ -162,7 +163,7 @@ uniform int maxBiomesNormalTextures;
 
 float densities[4] = float[4](0.5, 0.6, 1.0, 2.0);
 vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
-int texIndices[4] = int[4](6, 5, 4, 2);
+int texIndices[4] = int[4](6, 1, 5, 4);
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -187,7 +188,7 @@ float getDensity(vec3 pos, float resolution) {
         vec3 texSize = vec3(textureSize(dataFieldTex, 0));
         vec3 offsets = vec3(0.0); // 0.5 / texSize;
         float density = 0.0;
-        float surrounding = 1.f;
+        float surrounding = 2.f;
         for (float x = 0; x < surrounding; x++) {
             for (float y = 0; y < surrounding; y++) {
                 for (float z = 0; z < surrounding; z++) {
@@ -206,7 +207,7 @@ float getDensity(vec3 pos, float resolution) {
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
 //    return 1;
-    float density = getDensity(pos / terrainSize, 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
+    float density = getDensity((pos /*- vec3(1)*/) / (terrainSize /*+ vec3(1)*/), 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
     float power = 1.0;
     int texIndex = 0;
     if (density <= densities[0]) {
@@ -259,7 +260,6 @@ float wyvill(float x) {
 }
 void main(void)
 {
-
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
             discard;
@@ -295,9 +295,10 @@ void main(void)
 
     float depth = (waterRelativeHeight * textureSize(dataFieldTex, 0).z - realFragmentPosition.z); // Depth from surface
 
+//    fragColor = vec4(maxBiomesColorTextures / 7.0, 0.0, 0.0, 1.0);
+//    return;
     realBiomeColorValue = float(getDensityIndex(realFragmentPosition, dataTexSize, depth)) / maxBiomesColorTextures;
-    biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
-
+    biomeColorValue = realBiomeColorValue; //biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
     biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
     float scale = 10.0;
@@ -389,14 +390,11 @@ void main(void)
         return;
     }
 
-//    fragColor = vec4(getBiomeColor(ginitialVertPos.xy), 1.0);
     if (biomeColorValue < 1.0) {
         vec2 colorTextureOffset     = vec2(biomeColorValue, 0);
         vec2 realColorTextureOffset = vec2(realBiomeColorValue, 0);
         // biome val == real biome val => no need to have a mix (alpha = 0)
         float alpha = 1 - clamp(wyvill(length(fbmWrap)/5.0), 0.0, 1.0) * (biomeColorValue == realBiomeColorValue ? 0.0 : 1.0);
-//        fragColor = vec4(alpha, alpha, alpha, 1.0);
-//        return;
         vec3 xaxis = mix(texture2D(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          texture2D(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          alpha).rgb;

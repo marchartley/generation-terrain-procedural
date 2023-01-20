@@ -288,7 +288,7 @@ std::vector<std::vector<int> > KarstHoleProfile::computeTrianglesIndices(const s
         bool valid = true;
         for (size_t j = 0; j < remaining_nodes.size() && valid; j++) {
             // Count the number of intersection from the midpoint to somewhere outside
-            if (Collision::intersectionBetweenTwoSegments(ray, midpoint, points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]])) {
+            if (Collision::intersectionBetweenTwoSegments(ray, midpoint, points[remaining_nodes[j]], points[remaining_nodes[(j + 1) % remaining_nodes.size()]]).isValid()) {
                 number_of_intersections++;
             }
             // Also, check if the "previous-next" line intersects any other edge (except at the exact position of points)

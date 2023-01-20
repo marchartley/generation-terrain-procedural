@@ -9,12 +9,16 @@
 class Voxel;
 
 enum TerrainTypes {
-    AIR = 0,
-    WATER = 1,
-    SAND = 2,
-    DIRT = 3,
-    ROCK = 4,
-    BEDROCK = 5,
+    AIR,
+    STRONG_WATER,
+    LIGHT_WATER,
+    TURBULENT_WATER,
+    WATER,
+    CORAL,
+    SAND,
+    DIRT,
+    ROCK,
+    BEDROCK,
     LAST
 };
 
@@ -23,11 +27,11 @@ enum VOXEL_NEIGHBOR {
 };
 
 #include "TerrainGen/Grid.h"
-#include "Vertex.h"
+//#include "Vertex.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include <memory>
 
-
+/*
 class Voxel : public std::enable_shared_from_this<Voxel> {
 public:
     Voxel();
@@ -85,47 +89,5 @@ public:
             func(v.second);
         }
     }
-    /*template <typename F>
-    inline void applyToNeighbors(F func) {
-        for(auto& v : this->neighbors) {
-            func(v.second);
-        }
-    }*/
-    /*
-    std::shared_ptr<Voxel> getNeighbor(VOXEL_NEIGHBOR dir);
-    void InsertNeighborsIfNotOnGround(std::unordered_set<std::shared_ptr<Voxel>>& set);
-    int CountNeighbors();
-    */
-    /*
-    enum Func {
-        InsertIfNotOnGround = 1,
-        DecrementIfIsAir = 2
-    };
-    template <typename T>
-    void applyToNeighbors(Func functionToApply, T& param) {
-        for (int x = this->globalX()-1; x <= this->globalX()+1; x++) {
-            for (int y = this->globalY()-1; y <= this->globalY()+1; y++) {
-                for (int z = this->globalZ()-1; z <= this->globalZ()+1; z++) {
-                    std::shared_ptr<Voxel> v = this->parent->parent->getVoxel(x, y, z);
-                    if(v != this) {
-                        switch(functionToApply) {
-                        case InsertIfNotOnGround:
-                        if(v != nullptr && (bool)*v && !v->isOnGround) {
-                            param.insert(v);
-                        }
-                        break;
-                        case DecrementIfIsAir:
-                        if(v == nullptr || !(bool)*v) {
-                            param --;
-                        }
-                        break;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    */
-
-};
+};*/
 #endif // VOXEL_H

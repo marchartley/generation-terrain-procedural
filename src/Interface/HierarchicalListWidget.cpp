@@ -11,6 +11,20 @@ HierarchicalListWidget::HierarchicalListWidget(QWidget *parent)
     this->setSelectionMode(QAbstractItemView::SingleSelection);
 }
 
+void HierarchicalListWidget::setCurrentItem(int indexToSelect)
+{
+    this->clearSelection();
+    for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
+        HierarchicalListWidgetItem* item = dynamic_cast<HierarchicalListWidgetItem*>(_child);
+        if (item != nullptr) {
+            if (item->ID == indexToSelect) {
+                item->setSelected(true);
+                return;
+            }
+        }
+    }
+}
+
 void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)
 {
 

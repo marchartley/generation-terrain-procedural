@@ -1,6 +1,7 @@
 #include "DataStructure/Vector3.h"
 #include <math.h>
 #include "Utils/Globals.h"
+#include "Utils/Utils.h"
 
 Vector3 Vector3::nabla = Vector3(1.f, 1.f, 1.f).normalize();
 
@@ -83,6 +84,38 @@ Matrix Vector3::toMatrix()
     return Matrix(3, 1, (float*)(*this));
 }
 
+Vector3 Vector3::quaternionToEuler(qglviewer::Quaternion quaternion)
+{
+//    std::cout << "Axis : " << Vector3(quaternion.axis()) << "\nAngle : " << quaternion.angle() << std::endl;
+//    QQuaternion q(quaternion.angle(), quaternion.axis().x, quaternion.axis().y, quaternion.axis().z);
+//    auto angles = q.toEulerAngles();
+//    return Vector3(deg2rad(angles.x()), deg2rad(angles.y()), deg2rad(angles.z()));
+    return Vector3::quaternionToEuler(quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
+}
+
+Vector3 Vector3::quaternionToEuler(float x, float y, float z, float w)
+{
+//    std::cout << "x: " << x << "\ny: " << y << "\nz: " << z << "\nw: " << w << std::endl;
+    Vector3 angles;
+
+    // roll (x-axis rotation)
+    double sinr_cosp = 2 * (w * x + y * z);
+    double cosr_cosp = 1 - 2 * (x * x + y * y);
+    angles.x = std::atan2(sinr_cosp, cosr_cosp);
+
+    // pitch (y-axis rotation)
+    double sinp = std::sqrt(1 + 2 * (w * y - x * z));
+    double cosp = std::sqrt(1 - 2 * (w * y - x * z));
+    angles.y = 2 * std::atan2(sinp, cosp) - M_PI / 2;
+
+    // yaw (z-axis rotation)
+    double siny_cosp = 2 * (w * z + x * y);
+    double cosy_cosp = 1 - 2 * (y * y + z * z);
+    angles.z = std::atan2(siny_cosp, cosy_cosp);
+
+    return angles;
+}
+
 float Vector3::dot(Vector3 o) {
     return (this->x * o.x) + (this->y * o.y) + (this->z * o.z);
 }
@@ -94,11 +127,24 @@ Vector3 Vector3::cross(Vector3 o) {
 }
 Vector3 Vector3::rounded(int precision) const
 {
-    Vector3 v = *this;
+    return this->roundedDown(precision);
+    /*Vector3 v = *this;
     v.x = (int)(v.x * pow(10, precision)) / (float)(pow(10, precision));
     v.y = (int)(v.y * pow(10, precision)) / (float)(pow(10, precision));
     v.z = (int)(v.z * pow(10, precision)) / (float)(pow(10, precision));
-    return v;
+    return v;*/
+}
+
+Vector3 Vector3::roundedUp(int precision) const
+{
+    float power = std::pow(10, precision);
+    return ((*this) * power).ceil() / power;
+}
+
+Vector3 Vector3::roundedDown(int precision) const
+{
+    float power = std::pow(10, precision);
+    return ((*this) * power).floor() / power;
 }
 Vector3 Vector3::floor() const
 {
@@ -175,12 +221,53 @@ Vector3 Vector3::max()
 
 Vector3 Vector3::min(Vector3 a, Vector3 b)
 {
+    if (!a.isValid()) return b;
+    if (!b.isValid()) return a;
     return Vector3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 }
 
 Vector3 Vector3::max(Vector3 a, Vector3 b)
 {
+    if (!a.isValid()) return b;
+    if (!b.isValid()) return a;
     return Vector3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
+}
+
+Vector3 Vector3::min(std::vector<Vector3> allVectors)
+{
+    if (allVectors.empty())
+        return Vector3(false);
+    Vector3 res = allVectors[0];
+    for (size_t i = 1; i < allVectors.size(); i++)
+        res = Vector3::min(res, allVectors[i]);
+    return res;
+}
+
+Vector3 Vector3::max(std::vector<Vector3> allVectors)
+{
+    if (allVectors.empty())
+        return Vector3(false);
+    Vector3 res = allVectors[0];
+    for (size_t i = 1; i < allVectors.size(); i++)
+        res = Vector3::max(res, allVectors[i]);
+    return res;
+}
+
+std::vector<Vector3> Vector3::getAABBoxVertices(Vector3 mini, Vector3 maxi)
+{
+    float minX = mini.x, maxX = maxi.x,
+            minY = mini.y, maxY = maxi.y,
+            minZ = mini.z, maxZ = maxi.z;
+    return {
+        Vector3(minX, minY, minZ),
+        Vector3(minX, minY, maxZ),
+        Vector3(minX, maxY, minZ),
+        Vector3(minX, maxY, maxZ),
+        Vector3(maxX, minY, minZ),
+        Vector3(maxX, minY, maxZ),
+        Vector3(maxX, maxY, minZ),
+        Vector3(maxX, maxY, maxZ)
+    };
 }
 
 
@@ -204,11 +291,12 @@ Vector3& Vector3::rotate(Vector3 eulerAngles) {
                     0, 0, 1
                 }).data());
     Matrix R = Rx.product(Ry).product(Rz);
-    Matrix newCoords = R.product(this->toMatrix());
+    return this->applyTransform(R);
+    /*Matrix newCoords = R.product(this->toMatrix());
     this->x = newCoords[0][0];
     this->y = newCoords[1][0];
     this->z = newCoords[2][0];
-    return *this;
+    return *this;*/
 }
 Vector3 Vector3::rotated(float angle_x, float angle_y, float angle_z) {
     return this->rotated(Vector3(angle_x, angle_y, angle_z));
@@ -228,11 +316,12 @@ Vector3& Vector3::rotate(float angle, Vector3 direction) {
                    v.x*v.y*(1-c)+v.z*s, v.y*v.y*(1-c)+c, v.y*v.z*(1-c)-v.x*s,
                    v.x*v.z*(1-c)-v.y*s, v.y*v.z*(1-c)+v.x*s, v.z*v.z*(1-c)+c
                }).data());
-    Matrix newCoords = R.product(this->toMatrix());
+    return this->applyTransform(R);
+    /*Matrix newCoords = R.product(this->toMatrix());
     this->x = newCoords[0][0];
     this->y = newCoords[1][0];
     this->z = newCoords[2][0];
-    return *this;
+    return *this;*/
 }
 Vector3 Vector3::rotated(float angle, float dir_x, float dir_y, float dir_z) {
     return this->rotated(angle, Vector3(dir_x, dir_y, dir_z));
@@ -253,6 +342,15 @@ Vector3 Vector3::translated(float move_x, float move_y, float move_z) {
 Vector3 Vector3::translated(Vector3 move) {
     Vector3 v = *this;
     return v.translate(move);
+}
+
+Vector3& Vector3::applyTransform(Matrix transformMatrix)
+{
+    Matrix newCoords = transformMatrix.product(this->toMatrix());
+    this->x = newCoords[0][0];
+    this->y = newCoords[1][0];
+    this->z = newCoords[2][0];
+    return *this;
 }
 
 Vector3 &Vector3::changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
@@ -345,21 +443,25 @@ Vector3& Vector3::operator-=(const Vector3& o) {
     this->z -= o.z;
     return *this;
 }
-Vector3 operator*(Vector3 a, Vector3 b) {
-    a *= b;
-    return a;
-}
+//Vector3 operator*(Vector3 a, Vector3 b) {
+//    a *= b;
+//    return a;
+//}
+//Vector3 operator/(Vector3 a, Vector3 b) {
+//    a /= b;
+//    return a;
+//}
 Vector3& Vector3::operator*=(Vector3 o) {
     this->x *= o.x;
     this->y *= o.y;
     this->z *= o.z;
     return *this;
 }
-Vector3 Vector3::operator/(Vector3 o) {
-    Vector3 v = *this;
-    v /= o;
-    return v;
-}
+//Vector3 Vector3::operator/(Vector3 o) {
+//    Vector3 v = *this;
+//    v /= o;
+//    return v;
+//}
 Vector3& Vector3::operator/=(Vector3 o) {
     this->x /= o.x;
     this->y /= o.y;
@@ -370,44 +472,44 @@ Vector3 operator/(Vector3 a, Vector3 b) {
     a /= b;
     return a;
 }*/
-Vector3 Vector3::operator*(float o) {
-    Vector3 v = *this;
-    v *= o;
-    return v;
-}
+//Vector3 Vector3::operator*(float o) const {
+//    Vector3 v = *this;
+//    v *= o;
+//    return v;
+//}
 Vector3& Vector3::operator*=(float o) {
     this->x *= o;
     this->y *= o;
     this->z *= o;
     return *this;
 }
-Vector3 Vector3::operator/(float o) {
-    Vector3 v = *this;
-    v /= o;
-    return v;
-}
+//Vector3 Vector3::operator/(float o) {
+//    Vector3 v = *this;
+//    v /= o;
+//    return v;
+//}
 Vector3& Vector3::operator/=(float o) {
     this->x /= o;
     this->y /= o;
     this->z /= o;
     return *this;
 }
-Vector3 Vector3::operator+(float o) {
-    Vector3 v = *this;
-    v += o;
-    return v;
-}
+//Vector3 Vector3::operator+(float o) {
+//    Vector3 v = *this;
+//    v += o;
+//    return v;
+//}
 Vector3& Vector3::operator+=(float o) {
     this->x += o;
     this->y += o;
     this->z += o;
     return *this;
 }
-Vector3 Vector3::operator-(float o) {
-    Vector3 v = *this;
-    v -= o;
-    return v;
-}
+//Vector3 Vector3::operator-(float o) {
+//    Vector3 v = *this;
+//    v -= o;
+//    return v;
+//}
 Vector3& Vector3::operator-=(float o) {
     this->x -= o;
     this->y -= o;
@@ -422,14 +524,37 @@ Vector3& Vector3::operator=(const Vector3& o) {
     return *this;
 }
 
-Vector3 operator+(float a, Vector3 b) {
-    return b + a;
+Vector3 operator/(Vector3 a, Vector3 b) {
+    return a /= b;
 }
-Vector3 operator-(float a, Vector3 b) {
-    return b * -1.f + a;
+Vector3 operator*(Vector3 a, Vector3 b) {
+    return a *= b;
 }
+//Vector3 operator+(float a, Vector3 b) {
+//    return b + a;
+//}
+//Vector3 operator-(float a, Vector3 b) {
+//    return b * -1.f + a;
+//}
 Vector3 operator*(float a, Vector3 b) {
-    return b * a;
+    return b *= a;
+}
+
+Vector3 operator/(float a, Vector3 b) {
+    return b /= a;
+}
+
+//Vector3 operator+(Vector3 b, float a) {
+//    return b + a;
+//}
+//Vector3 operator-(Vector3 b, float a) {
+//    return b * -1.f + a;
+//}
+Vector3 operator*(Vector3 b, float a) {
+    return b *= a;
+}
+Vector3 operator/(Vector3 b, float a) {
+    return b /= a;
 }
 
 bool operator==(Vector3 a, Vector3 b)
@@ -482,6 +607,9 @@ bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
     return (minPos.x <= pos.x && pos.x <= maxPos.x) && (minPos.y <= pos.y && pos.y <= maxPos.y) && (minPos.z <= pos.z && pos.z <= maxPos.z);
 //    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
 }
+
+// Inside : positive
+// Outside: negative
 float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
 {
     // TODO : Need to be improved one day

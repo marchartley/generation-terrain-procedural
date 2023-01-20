@@ -707,7 +707,7 @@ Mesh VoxelGrid::getGeometry()
     //Compute interpolated vertex along an edge
     std::function vertexInterp = [&](float isolevel, Vector3 v0, float l0, Vector3 v1, float l1) -> Vector3 {
         float iso = std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
-        return v0 * iso + v1 * (1.f - iso);
+        return v0 * (1.f - iso) + v1 * iso;
 //        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
     };
 
@@ -772,6 +772,7 @@ Mesh VoxelGrid::getGeometry()
     };
 
     Mesh marched;
+    marched.useIndices = false;
     float refined_isolevel = isolevel + 0.0001;
     Vector3 vertlist[12];
     for (int x = 0; x < values.sizeX; x++) {

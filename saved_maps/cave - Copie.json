@@ -1,0 +1,226 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 2.0,
+		"composableA": {
+			"blendingFactor": 2.0,
+			"composableA": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"blendingFactor": 2.0,
+					"composableA": {
+						"blendingFactor": 2.0,
+						"composableA": {
+							"blendingFactor": 2.0,
+							"composableA": {
+								"densityValue": 1.0,
+								"dimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"index": 0,
+								"name": "Identity",
+								"position": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"shape": "None",
+								"sigmaValue": -1.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"composableB": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 50.0,
+									"y": 50.0,
+									"z": 32.400001525878906
+								},
+								"index": 6,
+								"name": "Block",
+								"position": {
+									"x": 27.371105194091797,
+									"y": 13.405197143554688,
+									"z": 0.0
+								},
+								"shape": "Block",
+								"sigmaValue": -1.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"index": 7,
+							"name": "Replace",
+							"operator": "Replace",
+							"positionalB": "FIXED_POS",
+							"type": "compose"
+						},
+						"composableB": {
+							"composableA": {
+								"densityValue": -5.0,
+								"dimensions": {
+									"x": 50.0,
+									"y": 50.0,
+									"z": 32.400001525878906
+								},
+								"index": 8,
+								"name": "Cave",
+								"position": {
+									"x": 25.971485137939453,
+									"y": 46.925384521484375,
+									"z": 0.0
+								},
+								"shape": "Cave",
+								"sigmaValue": -1.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"index": 10,
+							"name": "Translation",
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 0.0,
+								"y": -20.500423431396484,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"index": 9,
+						"name": "Replace",
+						"operator": "Replace",
+						"positionalB": "FIXED_POS",
+						"type": "compose"
+					},
+					"composableB": {
+						"densityValue": 0.10000000149011612,
+						"dimensions": {
+							"x": 10.699999809265137,
+							"y": 10.699999809265137,
+							"z": 10.300000190734863
+						},
+						"index": 11,
+						"name": "Rock",
+						"position": {
+							"x": 40.431243896484375,
+							"y": 48.41490173339844,
+							"z": 0.0
+						},
+						"shape": "Rock",
+						"sigmaValue": -1.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"index": 12,
+					"name": "Replace",
+					"operator": "Replace",
+					"positionalB": "INSIDE_BOTTOM",
+					"type": "compose"
+				},
+				"composableB": {
+					"densityValue": 0.10000000149011612,
+					"dimensions": {
+						"x": 10.699999809265137,
+						"y": 10.699999809265137,
+						"z": 10.300000190734863
+					},
+					"index": 13,
+					"name": "Sphere",
+					"position": {
+						"x": 39.641353607177734,
+						"y": 53.47551727294922,
+						"z": 0.0
+					},
+					"shape": "Sphere",
+					"sigmaValue": -1.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 14,
+				"name": "Replace",
+				"operator": "Replace",
+				"positionalB": "INSIDE_BOTTOM",
+				"type": "compose"
+			},
+			"composableB": {
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 10.699999809265137,
+					"y": 10.699999809265137,
+					"z": 10.300000190734863
+				},
+				"index": 15,
+				"name": "Sphere",
+				"position": {
+					"x": 50.96611022949219,
+					"y": 50.178253173828125,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": -1.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"index": 16,
+			"name": "Replace",
+			"operator": "Replace",
+			"positionalB": "INSIDE_BOTTOM",
+			"type": "compose"
+		},
+		"composableB": {
+			"densityValue": 0.10000000149011612,
+			"dimensions": {
+				"x": 10.699999809265137,
+				"y": 10.699999809265137,
+				"z": 10.300000190734863
+			},
+			"index": 17,
+			"name": "Sphere",
+			"position": {
+				"x": 39.71813201904297,
+				"y": 55.35645294189453,
+				"z": 0.0
+			},
+			"shape": "Sphere",
+			"sigmaValue": -1.0,
+			"supportDimensions": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "primitive"
+		},
+		"index": 18,
+		"name": "Replace",
+		"operator": "Replace",
+		"positionalB": "INSIDE_TOP",
+		"type": "compose"
+	}
+}

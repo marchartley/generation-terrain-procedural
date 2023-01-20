@@ -2,7 +2,8 @@ build/
 build-Release/
 build-Release/*
 build-Debug/*
-.pro.user.*
+build-Profile/*
+*.pro.user.*
 screenshots/*
 shared_screenshots/
 shared_images/
@@ -80,3 +81,6 @@ src/assets/textures/coral2/Material_737.png
 src/assets/textures/mountain_rocks/Material_1607.jpg
 src/assets/textures/underwater_ground/Material_1283.jpg
 src/assets/textures/underwater_sand/Material_1573.jpg
+
+saved_maps/Geometry/*
+shared_images\*

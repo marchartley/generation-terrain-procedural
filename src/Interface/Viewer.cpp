@@ -73,11 +73,8 @@ void Viewer::init() {
     setTextIsEnabled(true);
     setMouseTracking(true);
 
-#ifdef linux
-    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
-#else
-    std::string pathToShaders = "src/Shaders/"; // ":/src/Shaders/"
-#endif
+    std::string pathToShaders = "src/Shaders/";
+
     std::string vShader_voxels = pathToShaders + "voxels.vert";
     std::string fShader_voxels = pathToShaders + "voxels.frag";
     std::string vNoShader = pathToShaders + "no_shader.vert";

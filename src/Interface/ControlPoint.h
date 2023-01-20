@@ -46,6 +46,9 @@ Q_SIGNALS:
     void modified();
     void afterModified();
 
+    void translationApplied(Vector3);
+    void rotationApplied(Vector3);
+
 public Q_SLOTS:
     void hide();
     void show();
@@ -61,6 +64,7 @@ public:
     void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
     void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
+    Vector3 getRotation() const { return Vector3::quaternionToEuler(this->rotation()); }
     Vector3 getPosition() const { return this->position(); }
     Vector3 getFluidMovement() const {
         if (positionsHistory.empty()) return Vector3();
@@ -81,6 +85,9 @@ public:
     GrabberState state;
     bool useManipFrame;
     bool currentlyManipulated;
+
+    Vector3 initialPosition;
+    Vector3 initialRotation;
 
     Mesh mesh;
     Sphere shape;

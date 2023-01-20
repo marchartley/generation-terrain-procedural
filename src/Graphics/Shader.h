@@ -30,7 +30,7 @@ public:
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename,
 //           const char* geometryShaderFilename);
-    void compileShadersFromSource(std::map<std::string, std::string> addedDefinitions = std::map<std::string, std::string>(), std::vector<std::string> feedbackValues = {"ginitialVertPos"});
+    void compileShadersFromSource(std::map<std::string, std::string> addedDefinitions = std::map<std::string, std::string>(), std::vector<std::string> feedbackValues = {});
 
     bool use(bool update_source_files = false);
 
@@ -126,10 +126,10 @@ public:
     template<typename T>
     void setMatrix(std::string pname, T values[], int n, int m)
     {
-        if (this == nullptr) {
+//        if (this == nullptr) {
 //            std::cerr << "No shader defined" << std::endl;
-            return;
-        }
+//            return;
+//        }
         if (!this->use()) return;
         std::string numberOfElements = std::to_string(n) + "x" + std::to_string(m);
         if (numberOfElements == "2x2")

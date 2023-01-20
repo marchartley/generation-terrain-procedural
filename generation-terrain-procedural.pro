@@ -1,16 +1,19 @@
-QT *= opengl widgets gui charts xml quick
-CONFIG += qt opengl warn_on thread console rtti embed_manifest_exe no_keywords
+QT *= quick opengl xml widgets gui charts
+CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
 INCLUDEPATH *= src/
 
+QMAKE_CXXFLAGS += -fopenmp
+LIBS += -fopenmp
+
 unix {
-    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2
-#    INCLUDEPATH *= /home/simulateurrsm/Documents/eigen
-    #INCLUDEPATH *= "/home/simulateurrsm/Documents/App downloads/tbb/include"
-    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer
-    LIBS *= -lQGLViewer-qt5
-    #LIBS *= -ltbb -ltbbmalloc
+#    INCLUDEPATH *= /export/home/scharf/mhartley/codes/libQGLViewer-2.9.1 #/home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
+    #INCLUDEPATH *= src/third-party/boost_1_79_0/boost
+#    LIBS *= -L/export/home/scharf/mhartley/codes/libQGLViewer-2.9.1/QGLViewer
+    LIBS *= -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+#    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
+#    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
+#    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
 }
 win32 {
     # I installed the sources of:
@@ -94,6 +97,7 @@ SOURCES += \
         src/Interface/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
         src/Interface/ManualEditionInterface.cpp \
+    src/Interface/MeshInstanceAmplificationInterface.cpp \
         src/Interface/PathCameraConstraint.cpp \
     src/Interface/PrimitivePatchesInterface.cpp \
         src/Interface/RangeSlider.cpp \
@@ -103,6 +107,7 @@ SOURCES += \
         src/Interface/Spoiler.cpp \
         src/Interface/StickyFrame.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
+        src/Interface/TerrainSavingInterface.cpp \
         src/Interface/TunnelInterface.cpp \
         src/Interface/UndoRedoInterface.cpp \
         src/Interface/Viewer.cpp \
@@ -130,13 +135,11 @@ SOURCES += \
         src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
         src/main.cpp
-        #src/sim-fluid-ethanjli/fluidsystem.cpp \
-        #src/sim-fluid-ethanjli/math.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
-    models_3d.qrc \
-    terrain_textures.qrc \
+#    models_3d.qrc \
+#    terrain_textures.qrc \
     tunnels_icons.qrc
 
 # Additional import path used to resolve QML modules in Qt Creator's code model
@@ -210,6 +213,7 @@ HEADERS += \
     src/Interface/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
     src/Interface/ManualEditionInterface.h \
+    src/Interface/MeshInstanceAmplificationInterface.h \
     src/Interface/PathCameraConstraint.h \
     src/Interface/PrimitivePatchesInterface.h \
     src/Interface/RangeSlider.h \
@@ -219,6 +223,7 @@ HEADERS += \
     src/Interface/Spoiler.h \
     src/Interface/StickyFrame.h \
     src/Interface/TerrainGenerationInterface.h \
+    src/Interface/TerrainSavingInterface.h \
     src/Interface/TunnelInterface.h \
     src/Interface/UndoRedoInterface.h \
     src/Interface/Viewer.h \
@@ -261,7 +266,28 @@ HEADERS += \
 #    src/sim-fluid-ethanjli/vectorfield.h \
 #    src/sim-fluid-ethanjli/vectorfield.tpp
 
-RESOURCES +=\
+
+#RESOURCES +=\
+#    src/assets/handle.png \
+#    src/assets/fault-slip_button.png \
+#    src/assets/flowfield_button.png \
+#    src/assets/gravity_button.png \
+#    src/assets/karst_button.png \
+#    src/assets/open_button.png \
+#    src/assets/recording_button.png \
+#    src/assets/save_button.png \
+#    src/assets/tunnel_button.png
+
+
+##DISTFILES +=
+
+#FORMS +=
+
+DISTFILES += \
+    src/Shaders/computeMC.comp \
+    src/Shaders/layer_based.geom \
+    src/Shaders/test_raymarching_voxels.frag \
+    src/Shaders/test_raymarching_voxels.vert \
     src/Shaders/MarchingCubes.frag \
     src/Shaders/MarchingCubes.geom \
     src/Shaders/MarchingCubes.vert \
@@ -282,26 +308,5 @@ RESOURCES +=\
     src/Shaders/particle.geom \
     src/Shaders/voxels.frag \
     src/Shaders/voxels.vert \
-    src/assets/manual-edit_button.png\
     src/Shaders/rockShader.frag \
-    src/Shaders/rockShader.vert \
-    src/assets/handle.png \
-    src/assets/fault-slip_button.png \
-    src/assets/flowfield_button.png \
-    src/assets/gravity_button.png \
-    src/assets/karst_button.png \
-    src/assets/open_button.png \
-    src/assets/recording_button.png \
-    src/assets/save_button.png \
-    src/assets/tunnel_button.png
-
-
-#DISTFILES +=
-
-FORMS +=
-
-DISTFILES += \
-    src/Shaders/computeMC.comp \
-    src/Shaders/layer_based.geom \
-    src/Shaders/test_raymarching_voxels.frag \
-    src/Shaders/test_raymarching_voxels.vert
+    src/Shaders/rockShader.vert

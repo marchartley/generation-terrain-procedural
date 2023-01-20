@@ -1,19 +1,36 @@
 #include "TerrainGen/LayerBasedGrid.h"
 
-#include "TerrainModification/UnderwaterErosion.h"
+//#include "TerrainModification/UnderwaterErosion.h"
 
-#include "Graphics/Shader.h"
+//#include "Graphics/Shader.h"
 
-#include "Utils/FastNoiseLit.h"
-#include "Utils/Globals.h"
+//#include "Utils/FastNoiseLit.h"
+//#include "Utils/Globals.h"
 
 std::map<TerrainTypes, std::pair<float, float>> LayerBasedGrid::materialLimits = {
-    {TerrainTypes::AIR, {-10.f, -1.f} },
-    {TerrainTypes::WATER, {-1.f, 0.f}},
-    {TerrainTypes::SAND, {0.f, .5f}},
-    {TerrainTypes::DIRT, {.5f, 1.f}},
-    {TerrainTypes::ROCK, {1.f, 2.f}},
-    {TerrainTypes::BEDROCK, {2.f, 3.f}},
+    {AIR, {-10.f, -8.f} },
+    {STRONG_WATER, {-8.f, -7.f}},
+    {LIGHT_WATER, {-7.f, -6.f}},
+    {TURBULENT_WATER, {-6.f, -5.f}},
+    {WATER, {-5.f, 0.f}},
+    {CORAL, {0.f, .2f}},
+    {SAND, {.2f, .5f}},
+    {DIRT, {.5f, 1.f}},
+    {ROCK, {1.f, 2.f}},
+    {BEDROCK, {2.f, 3.f}},
+};
+
+std::vector<TerrainTypes> LayerBasedGrid::invisibleLayers = {
+    AIR,
+    WATER,
+    STRONG_WATER,
+    LIGHT_WATER,
+    TURBULENT_WATER
+};
+
+std::vector<TerrainTypes> LayerBasedGrid::instanciableLayers = {
+    BEDROCK,
+    CORAL
 };
 
 LayerBasedGrid::LayerBasedGrid() : LayerBasedGrid(10, 10, 1.f)
@@ -82,15 +99,18 @@ void LayerBasedGrid::addLayer(Vector3 position, float height, TerrainTypes mater
 }*/
 void LayerBasedGrid::reorderLayers()
 {
-    for (auto& stack : layers) {
+    size_t nbStacks = layers.size();
+    #pragma omp parallel for
+    for (size_t iStack = 0; iStack < nbStacks; iStack++) {
+        auto& stack = layers[iStack];
         bool reorderingNeeded = true;
         while (reorderingNeeded) {
             reorderingNeeded = false;
             for (size_t i = 0; i < stack.size() - 1; i++) {
-                float densA = LayerBasedGrid::densityFromMaterial(stack[i].first);
-                float densB = LayerBasedGrid::densityFromMaterial(stack[i + 1].first);
 //                if (densA > 0.f && densB > 0.f) { // If it's AIR or WATER, don't do anything, I guess
-                if ((stack[i].first == TerrainTypes::SAND || stack[i + 1].first == TerrainTypes::SAND) && (densA <= 0.f || densB < 0.f)) {
+                if ((stack[i].first == TerrainTypes::SAND || stack[i + 1].first == TerrainTypes::SAND) && (isIn(stack[i].first, LayerBasedGrid::invisibleLayers) || isIn(stack[i+1].first, LayerBasedGrid::invisibleLayers))) {
+                    float densA = LayerBasedGrid::densityFromMaterial(stack[i].first);
+                    float densB = LayerBasedGrid::densityFromMaterial(stack[i + 1].first);
                     if (densA < densB) {
                         auto tmp = stack[i];
                         stack[i] = stack[i + 1];
@@ -101,10 +121,13 @@ void LayerBasedGrid::reorderLayers()
                 if (stack[i].first == stack[i + 1].first) {
                     stack[i].second += stack[i + 1].second;
                     stack.erase(stack.begin() + i + 1);
+                    reorderingNeeded = true;
                 }
             }
         }
     }
+    this->_historyIndex++;
+    this->cleanLayers();
 }
 
 float LayerBasedGrid::getSizeZ()
@@ -117,7 +140,7 @@ float LayerBasedGrid::getSizeZ()
         for (size_t i = 0; i < stack.size() - 1; i++) {
             height += stack[i].second;
         }
-        if (stack.back().first != TerrainTypes::AIR && stack.back().first != TerrainTypes::WATER) {
+        if (!isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) { // != TerrainTypes::AIR && stack.back().first != TerrainTypes::WATER) {
             height += stack.back().second;
         }
         maxHeight = std::max(maxHeight, height);
@@ -136,7 +159,7 @@ float LayerBasedGrid::getHeight(float x, float y)
     for (int i = materials.size() - 1; i >= 0; i--) {
         auto [mat, height] = materials[i];
         if (!startCounting)
-            startCounting = (mat != AIR && mat != WATER);
+            startCounting = !isIn(mat, LayerBasedGrid::invisibleLayers); //(mat != AIR && mat != WATER);
         if (startCounting) {
             currentHeight += height;
         }
@@ -197,15 +220,22 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
     float maxHeight = (fixedHeight == -1 ? this->getSizeZ() : fixedHeight);
     Matrix3<float> values = Matrix3<float>(this->getSizeX(), this->getSizeY(), maxHeight, LayerBasedGrid::densityFromMaterial(TerrainTypes::WATER));
 
-    for (int x = 0; x < values.sizeX; x++) {
-        for (int y = 0; y < values.sizeY; y++) {
-            for (int z = 0; z < maxHeight; z++) {
+    int sizeX = values.sizeX;
+    int sizeY = values.sizeY;
+    int sizeZ = maxHeight;
+//    auto start = std::chrono::system_clock::now();
+    #pragma omp parallel for collapse(3)
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
                 auto materialAndVolume = this->getKernel(Vector3(x +.5f, y + .5f, z +.5f), kernelSize);
                 float solidMaterial = 0.f;
                 float airMaterial = 0.f;
                 float totalDensity = 0.f;
                 for (auto& [mat, vol] : materialAndVolume) {
-                    if (mat == AIR || mat == WATER) {
+                    if (isIn(mat, LayerBasedGrid::invisibleLayers)) { //mat == AIR || mat == WATER) {
+                        airMaterial += vol;
+                    } else if (isIn(mat, LayerBasedGrid::instanciableLayers)) { // For rocks and corals
                         airMaterial += vol;
                     } else {
                         solidMaterial += vol;
@@ -230,6 +260,8 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
             }*/
         }
     }
+//    auto end = std::chrono::system_clock::now();
+//    std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(end -start).count() << "ms" << std::endl;
     return values;
 }
 
@@ -339,6 +371,7 @@ std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGri
 
 void LayerBasedGrid::thermalErosion()
 {
+    this->cleanLayers();
     for (int x = 0; x < layers.sizeX; x++) {
         for (int y = 0; y < layers.sizeY; y++) {
             auto& stack = layers.at(x, y);
@@ -407,8 +440,10 @@ void LayerBasedGrid::thermalErosion()
 
 void LayerBasedGrid::cleanLayers(float minLayerHeight)
 {
-    for (auto& stack : layers) {
-        while (stack.size() > 0 && (stack.back().first == WATER || stack.back().first == AIR))
+    size_t nbStacks = layers.size();
+    for (size_t iStack = 0; iStack < nbStacks; iStack++) {
+        auto& stack = layers[iStack];
+        while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
             stack.pop_back();
         for (size_t i = 0; i < stack.size(); i++) {
             if (stack[i].second < minLayerHeight) {
@@ -493,18 +528,13 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 
 void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
 {
-    /*
-    Vector3 minPos = patch->position - patch->getDimensions();
-    Vector3 maxPos = patch->dimension + patch->getDimensions();
-    minPos += patch->position;
-    maxPos += patch->position;
-    */
-    Vector3 minPos = patch->getMinPosition();
-    Vector3 maxPos = patch->getMaxPosition();
-    maxPos.z = patch->getDimensions().z; // This stores stacking operations in its height
-    Vector3 dim = maxPos - minPos;
-    minPos -= dim;
-    maxPos += dim;
+    auto AABBox = patch->getSupportBBox();
+    Vector3 minPos = AABBox.first; // patch->getMinPosition();
+    Vector3 maxPos = AABBox.second; // patch->getMaxPosition();
+//    maxPos.z = patch->getDimensions().z; // This stores stacking operations in its height
+//    Vector3 dim = maxPos - minPos;
+//    minPos -= dim;
+//    maxPos += dim;
     int minX = std::max(0, int(minPos.x));
     int maxX = std::min(this->getSizeX(), int(maxPos.x));
     int minY = std::max(0, int(minPos.y));
@@ -522,24 +552,35 @@ void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool apply
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
+//    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
             while ( z < maxZ) {
                 nbEvaluations++;
-                auto densityAndProportion = patch->getDensityAtPosition(Vector3(x, y, z));
-                float selectedDensity = 0.f;
+                auto densityAndProportion = patch->getMaterials(Vector3(x, y, z)); //patch->getDensityAtPosition(Vector3(x, y, z));
+//                float selectedDensity = 0.f;
+                TerrainTypes selectedMaterial;
                 float totalValue = 0.f;
                 float maxValue = 0.f;
-                for (const auto& [dens, value] : densityAndProportion) {
+
+                // Just testing rules
+//                densityAndProportion[BEDROCK] *= 0.9f;
+//                float bedAndTurb = densityAndProportion[BEDROCK] + densityAndProportion[TURBULENT_WATER];
+//                densityAndProportion[BEDROCK] -= bedAndTurb * .25f;
+//                densityAndProportion[TURBULENT_WATER] -= bedAndTurb * .25f;
+//                densityAndProportion[SAND] += bedAndTurb * .25f;
+                // End testing rules
+                for (const auto& [material, value] : densityAndProportion) {
                     if (value > maxValue) {
-                        selectedDensity = dens;
+//                        selectedDensity = LayerBasedGrid::densityFromMaterial(material);
+                        selectedMaterial = material;
                         maxValue = value;
                     }
                     totalValue += value;
                 }
                 if (totalValue >= .5f)
-                    this->addLayer(Vector3(x, y), zResolution, LayerBasedGrid::materialFromDensity(selectedDensity));
+                    this->addLayer(Vector3(x, y), zResolution, selectedMaterial); //LayerBasedGrid::materialFromDensity(selectedDensity));
                 else
                     this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
                 /*
@@ -567,29 +608,34 @@ Mesh LayerBasedGrid::getGeometry()
 {
     std::vector<Vector3> vertices;
 
-    auto layersAndHeights = this->getMaterialAndHeightsGrid();
-    auto layers = layersAndHeights.first;
-    auto heights = layersAndHeights.second;
+//    auto layersAndHeights = this->getMaterialAndHeightsGrid();
+//    auto layers = layersAndHeights.first;
+//    auto heights = layersAndHeights.second;
 
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
+            auto layers = this->layers.at(x, y);
             float currentHeight = 0.f;
 
-            for (int i = 0; i < layers.sizeZ; i++) {
-                auto cube = CubeMesh::cubesVertices;
-                float height = heights.at(x, y, i);
+            for (size_t i = 0; i < layers.size(); i++) {
+                float height = layers[i].second; //heights.at(x, y, i);
+                TerrainTypes material = layers[i].first; //(TerrainTypes) layers.at(x, y, i);
+                if (!isIn(material, LayerBasedGrid::invisibleLayers)) { //material != TerrainTypes::AIR && material != TerrainTypes::WATER) {
+                    auto cube = CubeMesh::cubesVertices;
 
-                for (auto& vert : cube) {
-                    vert = vert * Vector3(1.f, 1.f, height) + Vector3(0.f, 0.f, currentHeight);
+                    for (auto& vert : cube) {
+                        vert = vert * Vector3(1.f, 1.f, height) + Vector3(x, y, currentHeight);
+                    }
+                    vertices.insert(vertices.end(), cube.begin(), cube.end());
                 }
                 currentHeight += height;
 
-                vertices.insert(vertices.end(), cube.begin(), cube.end());
             }
         }
     }
 
     Mesh m;
+    m.useIndices = false;
     m.fromArray(vertices);
     return m;
 }
@@ -611,5 +657,19 @@ float LayerBasedGrid::densityFromMaterial(TerrainTypes material)
     float valMin, valMax;
     std::tie(valMin, valMax) = LayerBasedGrid::materialLimits[material];
     return (valMin + valMax) / 2.f;
+}
+
+float LayerBasedGrid::minDensityFromMaterial(TerrainTypes material)
+{
+    float valMin, valMax;
+    std::tie(valMin, valMax) = LayerBasedGrid::materialLimits[material];
+    return valMin;
+}
+
+float LayerBasedGrid::maxDensityFromMaterial(TerrainTypes material)
+{
+    float valMin, valMax;
+    std::tie(valMin, valMax) = LayerBasedGrid::materialLimits[material];
+    return valMax;
 }
 

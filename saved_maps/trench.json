@@ -1,0 +1,101 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 0.10000000149011612,
+		"composableA": {
+			"blendingFactor": 2.0,
+			"composableA": {
+				"densityValue": -2.5,
+				"dimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"index": 54,
+				"material": "WATER",
+				"name": "Identity",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "None",
+				"sigmaValue": -1.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"composableB": {
+				"composableA": {
+					"densityValue": 2.5,
+					"dimensions": {
+						"x": 50.0,
+						"y": 50.0,
+						"z": 50.0
+					},
+					"index": 55,
+					"material": "BEDROCK",
+					"name": "Noise2d",
+					"position": {
+						"x": 12.952144622802734,
+						"y": 9.014545440673828,
+						"z": 0.0
+					},
+					"shape": "Block",
+					"sigmaValue": -1.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 33,
+				"name": "Translation",
+				"rotation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"translation": {
+					"x": -18.77803611755371,
+					"y": -18.932716369628906,
+					"z": 0.0
+				},
+				"type": "unary"
+			},
+			"index": 56,
+			"name": "Blend",
+			"operator": "Blend",
+			"positionalB": "ABOVE",
+			"type": "compose",
+			"useIntersection": false
+		},
+		"composableB": {
+			"composableA": {
+				"file": "C:/codes/Qt/Shared_folder_IRIT_Seafile/generation-terrain-procedural/saved_maps/water_currents.json"
+			},
+			"index": 68,
+			"name": "",
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 5.685951232910156,
+				"y": 4.86345100402832,
+				"z": 0.0
+			},
+			"type": "unary"
+		},
+		"index": 69,
+		"name": "Blend",
+		"operator": "Blend",
+		"positionalB": "FIXED_POS",
+		"type": "compose",
+		"useIntersection": true
+	}
+}

@@ -269,7 +269,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
 {
     BSpline curve = BSpline(numberPoints); // Random curve
     for (Vector3& coord : curve.points)
-        coord = ((coord + 1.0) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
+        coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
 }
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges,

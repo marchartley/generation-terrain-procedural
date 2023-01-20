@@ -1,59 +1,149 @@
 {
 	"implicitPatches": {
-		"blendingFactor": 1.0,
+		"blendingFactor": 2.0,
 		"composableA": {
-			"blendingFactor": 1.0,
-			"densityValue": 1.0,
-			"dimension": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
+			"blendingFactor": 2.0,
+			"composableA": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"blendingFactor": 2.0,
+					"composableA": {
+						"densityValue": 1.0,
+						"dimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 0,
+						"name": "Identity",
+						"position": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"shape": "None",
+						"sigmaValue": -1.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"composableB": {
+						"densityValue": 1.5,
+						"dimensions": {
+							"x": 20.0,
+							"y": 20.0,
+							"z": 20.0
+						},
+						"index": 6,
+						"name": "Sphere",
+						"position": {
+							"x": 42.28150939941406,
+							"y": 28.503326416015625,
+							"z": 0.0
+						},
+						"shape": "Sphere",
+						"sigmaValue": -1.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"index": 7,
+					"name": "Blend",
+					"operator": "Blend",
+					"positionalB": "ABOVE",
+					"type": "compose"
+				},
+				"composableB": {
+					"densityValue": 1.5,
+					"dimensions": {
+						"x": 20.0,
+						"y": 20.0,
+						"z": 20.0
+					},
+					"index": 8,
+					"name": "Sphere",
+					"position": {
+						"x": 26.464996337890625,
+						"y": 29.648696899414063,
+						"z": 0.0
+					},
+					"shape": "Sphere",
+					"sigmaValue": -1.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 9,
+				"name": "Blend",
+				"operator": "Blend",
+				"positionalB": "FIXED_POS",
+				"type": "compose"
 			},
-			"index": 0,
-			"name": "Identity",
-			"operator": "None",
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
+			"composableB": {
+				"densityValue": 1.5,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"index": 10,
+				"name": "Sphere",
+				"position": {
+					"x": -0.5059833526611328,
+					"y": 59.76988983154297,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": -1.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
 			},
-			"shape": "None",
-			"sigmaValue": 1.0
+			"index": 11,
+			"name": "Blend",
+			"operator": "Blend",
+			"positionalB": "FIXED_POS",
+			"type": "compose"
 		},
 		"composableB": {
-			"blendingFactor": 1.0,
 			"densityValue": 1.5,
-			"dimension": {
+			"dimensions": {
 				"x": 20.0,
 				"y": 20.0,
 				"z": 20.0
 			},
-			"index": 7,
+			"index": 12,
 			"name": "Sphere",
-			"operator": "None",
 			"position": {
-				"x": 31.854934692382813,
-				"y": 29.762550354003906,
-				"z": 0.823582112789154
+				"x": 63.05669403076172,
+				"y": -2.554100513458252,
+				"z": 0.0
 			},
 			"shape": "Sphere",
-			"sigmaValue": 5.0
+			"sigmaValue": -1.0,
+			"supportDimensions": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "primitive"
 		},
-		"densityValue": 1.0,
-		"dimension": {
-			"x": 51.85493469238281,
-			"y": 49.762550354003906,
-			"z": 20.82358169555664
-		},
-		"index": 8,
+		"index": 13,
 		"name": "Blend",
 		"operator": "Blend",
-		"position": {
-			"x": 0.0,
-			"y": 0.0,
-			"z": 0.0
-		},
-		"shape": "None",
-		"sigmaValue": 1.0
+		"positionalB": "FIXED_POS",
+		"type": "compose"
 	}
 }

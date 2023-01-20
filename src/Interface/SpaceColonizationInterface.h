@@ -32,7 +32,8 @@ public:
 
     void keyPressEvent(QKeyEvent* event);
 
-    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 
     std::unique_ptr<ControlPoint> startingPoint;
