@@ -6,130 +6,25 @@
 			"composableA": {
 				"blendingFactor": 2.0,
 				"composableA": {
-					"densityValue": 1.0,
-					"dimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"index": 57,
-					"name": "Identity",
-					"position": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"shape": "None",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
-				"composableB": {
-					"densityValue": 5.0,
-					"dimensions": {
-						"x": 50.0,
-						"y": 50.0,
-						"z": 21.399999618530273
-					},
-					"index": 58,
-					"name": "Noise2d",
-					"position": {
-						"x": 34.75672912597656,
-						"y": 10.87259292602539,
-						"z": 0.0
-					},
-					"shape": "Noise2D",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
-				"index": 59,
-				"name": "Blend",
-				"operator": "Blend",
-				"positionalB": "FIXED_POS",
-				"type": "compose"
-			},
-			"composableB": {
-				"blendingFactor": 2.0,
-				"composableA": {
-					"blendingFactor": 2.0,
+					"blendingFactor": 10.0,
 					"composableA": {
+						"blendingFactor": 2.0,
 						"composableA": {
-							"composableA": {
-								"densityValue": -0.9000000357627869,
-								"dimensions": {
-									"x": 50.0,
-									"y": 22.100000381469727,
-									"z": 7.599999904632568
-								},
-								"index": 60,
-								"name": "Block",
-								"position": {
-									"x": 44.80188751220703,
-									"y": 25.715431213378906,
-									"z": 0.0
-								},
-								"shape": "Block",
-								"sigmaValue": -1.0,
-								"supportDimensions": {
-									"x": 0.0,
-									"y": 0.0,
-									"z": 0.0
-								},
-								"type": "primitive"
-							},
-							"index": 63,
-							"name": "Translation",
-							"rotation": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"translation": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 3.820034980773926
-							},
-							"type": "unary"
-						},
-						"index": 62,
-						"name": "Translation",
-						"rotation": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"translation": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 5.704057693481445
-						},
-						"type": "unary"
-					},
-					"composableB": {
-						"composableA": {
-							"densityValue": 0.10000000149011612,
+							"densityValue": -2.5,
 							"dimensions": {
-								"x": 9.5,
-								"y": 10.300000190734863,
-								"z": 7.599999904632568
-							},
-							"index": 66,
-							"name": "Sphere",
-							"position": {
-								"x": 60.960052490234375,
-								"y": 38.107872009277344,
+								"x": 0.0,
+								"y": 0.0,
 								"z": 0.0
 							},
-							"shape": "Sphere",
+							"index": 46,
+							"material": "WATER",
+							"name": "Identity",
+							"position": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"shape": "None",
 							"sigmaValue": -1.0,
 							"supportDimensions": {
 								"x": 0.0,
@@ -138,8 +33,300 @@
 							},
 							"type": "primitive"
 						},
-						"index": 70,
+						"composableB": {
+							"densityValue": 1.5,
+							"dimensions": {
+								"x": 100.0,
+								"y": 100.0,
+								"z": 33.70000076293945
+							},
+							"index": 47,
+							"material": "ROCK",
+							"name": "Noise2d",
+							"position": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"shape": "Noise2D",
+							"sigmaValue": 1.100000023841858,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
+						},
+						"index": 48,
+						"name": "Blend",
+						"operator": "Blend",
+						"positionalB": "ABOVE",
+						"type": "compose",
+						"useIntersection": false
+					},
+					"composableB": {
+						"composableA": {
+							"composableA": {
+								"densityValue": -5.5,
+								"dimensions": {
+									"x": 26.899999618530273,
+									"y": 200.0,
+									"z": 6.700000286102295
+								},
+								"index": 49,
+								"material": "CURRENT_BOTTOM",
+								"name": "Block",
+								"position": {
+									"x": 38.33263397216797,
+									"y": 0.08306121826171875,
+									"z": 0.0
+								},
+								"shape": "Block",
+								"sigmaValue": 1.100000023841858,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"distortion": {
+								"x": 1.399999976158142,
+								"y": 20.0,
+								"z": 10.0
+							},
+							"index": 142,
+							"name": "Wrapping",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 53,
 						"name": "Translation",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"translation": {
+							"x": -22.33989906311035,
+							"y": -69.260498046875,
+							"z": 4.606386184692383
+						},
+						"type": "unary"
+					},
+					"index": 50,
+					"name": "Replace",
+					"operator": "Blend",
+					"positionalB": "FIXED_POS",
+					"type": "compose",
+					"useIntersection": true
+				},
+				"composableB": {
+					"composableA": {
+						"densityValue": -2.5,
+						"dimensions": {
+							"x": 22.100000381469727,
+							"y": 200.0,
+							"z": 11.5
+						},
+						"index": 51,
+						"material": "WATER",
+						"name": "Block",
+						"position": {
+							"x": 38.447021484375,
+							"y": 0.4734344482421875,
+							"z": 0.0
+						},
+						"shape": "Block",
+						"sigmaValue": 0.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 54,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": -20.17523956298828,
+						"y": -75.9872817993164,
+						"z": 9.263349533081055
+					},
+					"type": "unary"
+				},
+				"index": 52,
+				"name": "Replace",
+				"operator": "Blend",
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": true
+			},
+			"composableB": {
+				"composableA": {
+					"densityValue": -2.5,
+					"dimensions": {
+						"x": 32.20000076293945,
+						"y": 200.0,
+						"z": 19.700000762939453
+					},
+					"index": 57,
+					"material": "WATER",
+					"name": "Block",
+					"position": {
+						"x": 38.809478759765625,
+						"y": 2.3560562133789063,
+						"z": 0.0
+					},
+					"shape": "Block",
+					"sigmaValue": 1.100000023841858,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"distortion": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"index": 59,
+				"name": "Translation",
+				"noise": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"rotation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"translation": {
+					"x": -22.975383758544922,
+					"y": -74.86181640625,
+					"z": 12.766950607299805
+				},
+				"type": "unary"
+			},
+			"index": 58,
+			"name": "Replace",
+			"operator": "Blend",
+			"positionalB": "FIXED_POS",
+			"type": "compose",
+			"useIntersection": true
+		},
+		"composableB": {
+			"blendingFactor": 2.0,
+			"composableA": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"composableA": {
+						"file": "C:/codes/Qt/Shared_folder_IRIT_Seafile/generation-terrain-procedural/saved_maps/implicit_patches.json"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 99,
+					"name": "",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 7.841768264770508,
+						"y": -34.345123291015625,
+						"z": 2.835155725479126
+					},
+					"type": "unary"
+				},
+				"composableB": {
+					"composableA": {
+						"composableA": {
+							"densityValue": 1.5,
+							"dimensions": {
+								"x": 10.699999809265137,
+								"y": 10.699999809265137,
+								"z": 9.5
+							},
+							"index": 135,
+							"material": "ROCK",
+							"name": "Rock",
+							"position": {
+								"x": 18.964887619018555,
+								"y": 56.46583557128906,
+								"z": 0.0
+							},
+							"shape": "Rock",
+							"sigmaValue": 5.0,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
+						},
+						"distortion": {
+							"x": 2.0,
+							"y": 20.0,
+							"z": 10.0
+						},
+						"index": 228,
+						"name": "Wrapping",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
 						"rotation": {
 							"x": 0.0,
 							"y": 0.0,
@@ -148,78 +335,260 @@
 						"translation": {
 							"x": 0.0,
 							"y": 0.0,
-							"z": -3.253884792327881
+							"z": 0.0
 						},
 						"type": "unary"
 					},
-					"index": 67,
-					"name": "Replace",
-					"operator": "Replace",
-					"positionalB": "INSIDE_BOTTOM",
-					"type": "compose"
-				},
-				"composableB": {
-					"densityValue": 0.10000000149011612,
-					"dimensions": {
-						"x": 9.5,
-						"y": 10.300000190734863,
-						"z": 7.599999904632568
-					},
-					"index": 68,
-					"name": "Sphere",
-					"position": {
-						"x": 64.86222839355469,
-						"y": 26.467683792114258,
-						"z": 0.0
-					},
-					"shape": "Sphere",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
+					"distortion": {
 						"x": 0.0,
 						"y": 0.0,
 						"z": 0.0
 					},
-					"type": "primitive"
+					"index": 139,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 1.7443448305130005
+					},
+					"type": "unary"
 				},
-				"index": 69,
-				"name": "Replace",
-				"operator": "Replace",
-				"positionalB": "INSIDE_BOTTOM",
-				"type": "compose"
+				"index": 136,
+				"name": "Blend",
+				"operator": "One_side_blend",
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
 			},
-			"index": 61,
+			"composableB": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"composableA": {
+						"composableA": {
+							"composableA": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 10.699999809265137,
+									"y": 10.699999809265137,
+									"z": 9.5
+								},
+								"index": 133,
+								"material": "ROCK",
+								"name": "Rock",
+								"position": {
+									"x": 26.94767951965332,
+									"y": 61.21635437011719,
+									"z": 0.0
+								},
+								"shape": "Rock",
+								"sigmaValue": 5.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"distortion": {
+								"x": 2.0,
+								"y": 20.0,
+								"z": 10.0
+							},
+							"index": 227,
+							"name": "Wrapping",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 138,
+						"name": "Translation",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"translation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.4157896041870117
+						},
+						"type": "unary"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 137,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 2.2784979343414307
+					},
+					"type": "unary"
+				},
+				"composableB": {
+					"composableA": {
+						"composableA": {
+							"composableA": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 10.699999809265137,
+									"y": 10.699999809265137,
+									"z": 9.5
+								},
+								"index": 222,
+								"material": "ROCK",
+								"name": "Rock",
+								"position": {
+									"x": 24.70525550842285,
+									"y": 61.69056701660156,
+									"z": 0.0
+								},
+								"shape": "Rock",
+								"sigmaValue": 5.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"distortion": {
+								"x": 5.0,
+								"y": 20.0,
+								"z": 10.0
+							},
+							"index": 226,
+							"name": "Wrapping",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 225,
+						"name": "Translation",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"translation": {
+							"x": 1.8037357330322266,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "unary"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 224,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 3.2445926666259766,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "unary"
+				},
+				"index": 223,
+				"name": "Blend",
+				"operator": "Blend",
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
+			},
+			"index": 134,
 			"name": "Blend",
-			"operator": "Blend",
+			"operator": "One_side_blend",
 			"positionalB": "FIXED_POS",
-			"type": "compose"
+			"type": "compose",
+			"useIntersection": false
 		},
-		"composableB": {
-			"densityValue": 0.10000000149011612,
-			"dimensions": {
-				"x": 9.5,
-				"y": 10.300000190734863,
-				"z": 7.599999904632568
-			},
-			"index": 64,
-			"name": "Sphere",
-			"position": {
-				"x": 50.12982177734375,
-				"y": 23.862178802490234,
-				"z": 0.0
-			},
-			"shape": "Sphere",
-			"sigmaValue": -1.0,
-			"supportDimensions": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
-			"type": "primitive"
-		},
-		"index": 65,
+		"index": 100,
 		"name": "Replace",
 		"operator": "Replace",
-		"positionalB": "INSIDE_BOTTOM",
-		"type": "compose"
+		"positionalB": "FIXED_POS",
+		"type": "compose",
+		"useIntersection": false
 	}
 }

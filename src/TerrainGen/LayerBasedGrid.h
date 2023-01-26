@@ -89,6 +89,8 @@ public:
 
     static std::vector<TerrainTypes> invisibleLayers;
     static std::vector<TerrainTypes> instanciableLayers;
+
+    std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> transformationRules;
 };
 
 #endif // LAYERBASEDGRID_H

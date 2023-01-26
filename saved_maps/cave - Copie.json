@@ -12,14 +12,19 @@
 						"composableA": {
 							"blendingFactor": 2.0,
 							"composableA": {
-								"densityValue": 1.0,
+								"densityValue": 1.5,
 								"dimensions": {
 									"x": 0.0,
 									"y": 0.0,
 									"z": 0.0
 								},
 								"index": 0,
+								"material": "ROCK",
 								"name": "Identity",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"position": {
 									"x": 0.0,
 									"y": 0.0,
@@ -42,7 +47,12 @@
 									"z": 32.400001525878906
 								},
 								"index": 6,
+								"material": "ROCK",
 								"name": "Block",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"position": {
 									"x": 27.371105194091797,
 									"y": 13.405197143554688,
@@ -60,19 +70,29 @@
 							"index": 7,
 							"name": "Replace",
 							"operator": "Replace",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"positionalB": "FIXED_POS",
-							"type": "compose"
+							"type": "compose",
+							"useIntersection": false
 						},
 						"composableB": {
 							"composableA": {
-								"densityValue": -5.0,
+								"densityValue": -2.5,
 								"dimensions": {
 									"x": 50.0,
 									"y": 50.0,
 									"z": 32.400001525878906
 								},
 								"index": 8,
+								"material": "WATER",
 								"name": "Cave",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"position": {
 									"x": 25.971485137939453,
 									"y": 46.925384521484375,
@@ -87,8 +107,22 @@
 								},
 								"type": "primitive"
 							},
+							"distortion": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
 							"index": 10,
 							"name": "Translation",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
@@ -104,8 +138,13 @@
 						"index": 9,
 						"name": "Replace",
 						"operator": "Replace",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"positionalB": "FIXED_POS",
-						"type": "compose"
+						"type": "compose",
+						"useIntersection": false
 					},
 					"composableB": {
 						"densityValue": 0.10000000149011612,
@@ -115,7 +154,12 @@
 							"z": 10.300000190734863
 						},
 						"index": 11,
+						"material": "CORAL",
 						"name": "Rock",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"position": {
 							"x": 40.431243896484375,
 							"y": 48.41490173339844,
@@ -133,8 +177,13 @@
 					"index": 12,
 					"name": "Replace",
 					"operator": "Replace",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
 					"positionalB": "INSIDE_BOTTOM",
-					"type": "compose"
+					"type": "compose",
+					"useIntersection": false
 				},
 				"composableB": {
 					"densityValue": 0.10000000149011612,
@@ -144,7 +193,12 @@
 						"z": 10.300000190734863
 					},
 					"index": 13,
+					"material": "CORAL",
 					"name": "Sphere",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
 					"position": {
 						"x": 39.641353607177734,
 						"y": 53.47551727294922,
@@ -162,8 +216,13 @@
 				"index": 14,
 				"name": "Replace",
 				"operator": "Replace",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
 				"positionalB": "INSIDE_BOTTOM",
-				"type": "compose"
+				"type": "compose",
+				"useIntersection": false
 			},
 			"composableB": {
 				"densityValue": 0.10000000149011612,
@@ -173,7 +232,12 @@
 					"z": 10.300000190734863
 				},
 				"index": 15,
+				"material": "CORAL",
 				"name": "Sphere",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
 				"position": {
 					"x": 50.96611022949219,
 					"y": 50.178253173828125,
@@ -191,8 +255,13 @@
 			"index": 16,
 			"name": "Replace",
 			"operator": "Replace",
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
 			"positionalB": "INSIDE_BOTTOM",
-			"type": "compose"
+			"type": "compose",
+			"useIntersection": false
 		},
 		"composableB": {
 			"densityValue": 0.10000000149011612,
@@ -202,7 +271,12 @@
 				"z": 10.300000190734863
 			},
 			"index": 17,
+			"material": "CORAL",
 			"name": "Sphere",
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
 			"position": {
 				"x": 39.71813201904297,
 				"y": 55.35645294189453,
@@ -220,7 +294,12 @@
 		"index": 18,
 		"name": "Replace",
 		"operator": "Replace",
+		"optionalCurve": {
+			"closed": false,
+			"points": []
+		},
 		"positionalB": "INSIDE_TOP",
-		"type": "compose"
+		"type": "compose",
+		"useIntersection": false
 	}
 }

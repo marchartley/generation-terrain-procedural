@@ -1,0 +1,107 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 2.0,
+		"composableA": {
+			"blendingFactor": 2.0,
+			"composableA": {
+				"densityValue": -2.5,
+				"dimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"index": 33,
+				"material": "WATER",
+				"name": "Identity",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "None",
+				"sigmaValue": -1.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"composableB": {
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 20.0,
+					"y": 50.0,
+					"z": 20.0
+				},
+				"index": 34,
+				"material": "CURRENT_BOTTOM",
+				"name": "Cylinder",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Cylinder",
+				"sigmaValue": 5.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"index": 35,
+			"name": "Blend",
+			"operator": "Blend",
+			"positionalB": "ABOVE",
+			"type": "compose",
+			"useIntersection": false
+		},
+		"composableB": {
+			"composableA": {
+				"densityValue": 1.5,
+				"dimensions": {
+					"x": 20.0,
+					"y": 50.0,
+					"z": 20.0
+				},
+				"index": 36,
+				"material": "CURRENT_TOP",
+				"name": "Cylinder",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Cylinder",
+				"sigmaValue": 5.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"index": 38,
+			"name": "Translation",
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 20.0
+			},
+			"type": "unary"
+		},
+		"index": 37,
+		"name": "Blend",
+		"operator": "Blend",
+		"positionalB": "FIXED_POS",
+		"type": "compose",
+		"useIntersection": false
+	}
+}

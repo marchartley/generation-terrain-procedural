@@ -29,7 +29,7 @@ void ChartView::mousePressEvent(QMouseEvent *event)
 
     Q_EMIT this->clickedOnValue(vecLocal);
 
-    return QChartView::mousePressEvent(event);
+    QChartView::mousePressEvent(event);
 }
 void ChartView::mouseMoveEvent(QMouseEvent *event)
 {
@@ -124,6 +124,9 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     this->saveButton = new QPushButton("Save");
     this->layout()->addWidget(this->saveButton);
 
+    this->setWindowModality(Qt::WindowModality::NonModal);
+    this->setModal(false);
+
     QObject::connect(this->saveButton, &QPushButton::pressed, [&]() {
         QString q_filename = QFileDialog::getSaveFileName(this, QString("Save plot"));
         if (!q_filename.isEmpty())
@@ -175,12 +178,15 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
 
 void Plotter::addImage(Matrix3<Vector3> image, bool normalize)
 {
+    if (normalize) {
+        image.normalize();
+    }
     unsigned char* data = new unsigned char[image.size() * 4];
 
     for (size_t i = 0; i < image.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(image[i].x * 255);
-        data[int(4 * i + 1)] = (unsigned char)(image[i].y * 255);
-        data[int(4 * i + 0)] = (unsigned char)(image[i].z * 255);
+        data[int(4 * i + 2)] = (unsigned char)(std::clamp(image[i].x, 0.f, 1.f) * 255);
+        data[int(4 * i + 1)] = (unsigned char)(std::clamp(image[i].y, 0.f, 1.f) * 255);
+        data[int(4 * i + 0)] = (unsigned char)(std::clamp(image[i].z, 0.f, 1.f) * 255);
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
@@ -189,11 +195,30 @@ void Plotter::addImage(Matrix3<Vector3> image, bool normalize)
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 }
 
+void Plotter::addImage(Matrix3<float> image, bool normalize)
+{
+    Matrix3<Vector3> copy(image.getDimensions());
+    for (size_t i = 0; i < copy.size(); i++) {
+        copy[i] = Vector3(image[i], image[i], image[i]);
+    }
+    return this->addImage(copy, normalize);
+}
+
 void Plotter::draw()
 {
 //    QTransform prevState = this->chartView->transform();
     auto prevState = this->chartView->chart()->transformations();
     this->chartView->chart()->removeAllSeries();
+    while (!this->chartView->chart()->axes().empty()) {
+        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
+    }
+    if (!title.empty())
+        this->chartView->chart()->setTitle(QString::fromStdString(title));
+
+    for (auto& labels : this->graphicLabels)
+        for (auto& lab : labels)
+            delete lab;
+    this->graphicLabels.clear();
 
     if (this->backImage != nullptr) {
         int width = static_cast<int>(this->chartView->chart()->plotArea().width());
@@ -248,17 +273,6 @@ void Plotter::draw()
             this->chartView->chart()->legend()->markers(series)[0]->setVisible(false);
         }
     }
-    while (!this->chartView->chart()->axes().empty()) {
-        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
-    }
-    this->chartView->chart()->createDefaultAxes();
-    if (!title.empty())
-        this->chartView->chart()->setTitle(QString::fromStdString(title));
-
-    for (auto& labels : this->graphicLabels)
-        for (auto& lab : labels)
-            delete lab;
-    this->graphicLabels.clear();
     for (size_t iScatter = 0; iScatter < this->scatter_labels.size(); iScatter++) {
         this->graphicLabels.push_back(std::vector<QGraphicsTextItem*>());
         for (size_t iPoint = 0; iPoint < this->scatter_labels[iScatter].size(); iPoint++) {
@@ -268,6 +282,7 @@ void Plotter::draw()
     }
 //    this->chartView->setTransform(prevState);
 //    this->chartView->chart()->setTransformations(prevState);
+    this->chartView->chart()->createDefaultAxes();
     this->chartView->chart()->zoomOut();
     this->chartView->update();
 }

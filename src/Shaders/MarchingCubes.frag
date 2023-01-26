@@ -187,13 +187,13 @@ float getDensity(vec3 pos, float resolution) {
     if (gdensity <= 0) {
         vec3 texSize = vec3(textureSize(dataFieldTex, 0));
         vec3 offsets = vec3(0.0); // 0.5 / texSize;
-        float density = 0.0;
-        float surrounding = 2.f;
-        for (float x = 0; x < surrounding; x++) {
-            for (float y = 0; y < surrounding; y++) {
-                for (float z = 0; z < surrounding; z++) {
-                    float divisor = float(int(surrounding*.5f));
-                    vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * (resolution / divisor);
+        float density = texture(dataFieldTex, pos).a;
+        float surrounding = 3.f;
+        for (float x = 0; x < surrounding + 1.0; x += 1.0) {
+            for (float y = 0; y < surrounding + 1.0; y += 1.0) {
+                for (float z = 0; z < surrounding + 1.0; z += 1.0) {
+                    float divisor = 0.1; //float(int(surrounding*.5f));
+                    vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) / texSize; // * (resolution / divisor);
     //                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
                     float val = texture(dataFieldTex, newPos - offsets).a;
                     density = max(density, val);

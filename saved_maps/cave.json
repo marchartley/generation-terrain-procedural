@@ -2,7 +2,6 @@
 	"implicitPatches": {
 		"blendingFactor": 2.0,
 		"composableA": {
-			"blendingFactor": 2.0,
 			"composableA": {
 				"blendingFactor": 2.0,
 				"composableA": {
@@ -25,6 +24,10 @@
 										"index": 0,
 										"material": "ROCK",
 										"name": "Identity",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
 										"position": {
 											"x": 0.0,
 											"y": 0.0,
@@ -40,15 +43,19 @@
 										"type": "primitive"
 									},
 									"composableB": {
-										"densityValue": 1.5,
+										"densityValue": 2.5,
 										"dimensions": {
 											"x": 50.0,
-											"y": 50.0,
+											"y": 80.0,
 											"z": 32.400001525878906
 										},
 										"index": 6,
-										"material": "ROCK",
+										"material": "BEDROCK",
 										"name": "Block",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
 										"position": {
 											"x": 27.371105194091797,
 											"y": 13.405197143554688,
@@ -66,27 +73,203 @@
 									"index": 7,
 									"name": "Replace",
 									"operator": "Replace",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
 									"positionalB": "FIXED_POS",
 									"type": "compose",
 									"useIntersection": false
 								},
 								"composableB": {
+									"blendingFactor": 2.0,
 									"composableA": {
-										"densityValue": -5.5,
-										"dimensions": {
-											"x": 50.0,
-											"y": 50.0,
-											"z": 32.400001525878906
+										"composableA": {
+											"densityValue": -9.0,
+											"dimensions": {
+												"x": 50.0,
+												"y": 50.0,
+												"z": 32.400001525878906
+											},
+											"index": 8,
+											"material": "AIR",
+											"name": "Cave",
+											"optionalCurve": {
+												"closed": false,
+												"points": []
+											},
+											"position": {
+												"x": 25.971485137939453,
+												"y": 46.925384521484375,
+												"z": 0.0
+											},
+											"shape": "Cave",
+											"sigmaValue": -1.0,
+											"supportDimensions": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"type": "primitive"
 										},
-										"index": 8,
-										"material": "AIR",
-										"name": "Cave",
-										"position": {
-											"x": 25.971485137939453,
-											"y": 46.925384521484375,
+										"distortion": {
+											"x": 0.0,
+											"y": 0.0,
 											"z": 0.0
 										},
-										"shape": "Cave",
+										"index": 10,
+										"name": "Translation",
+										"noise": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"rotation": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"translation": {
+											"x": 0.0,
+											"y": -29.439687728881836,
+											"z": 7.798820495605469
+										},
+										"type": "unary"
+									},
+									"composableB": {
+										"composableA": {
+											"composableA": {
+												"densityValue": 1.5,
+												"dimensions": {
+													"x": 20.0,
+													"y": 20.0,
+													"z": 20.0
+												},
+												"index": 43,
+												"material": "ROCK",
+												"name": "Sphere",
+												"optionalCurve": {
+													"closed": false,
+													"points": []
+												},
+												"position": {
+													"x": 1.8054189682006836,
+													"y": 48.93814468383789,
+													"z": 0.0
+												},
+												"shape": "Sphere",
+												"sigmaValue": 5.0,
+												"supportDimensions": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0
+												},
+												"type": "primitive"
+											},
+											"distortion": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"index": 46,
+											"name": "Translation",
+											"noise": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"optionalCurve": {
+												"closed": false,
+												"points": []
+											},
+											"rotation": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"translation": {
+												"x": -130.28494262695313,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"type": "unary"
+										},
+										"distortion": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"index": 45,
+										"name": "Translation",
+										"noise": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"rotation": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"translation": {
+											"x": 293.6961669921875,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "unary"
+									},
+									"index": 44,
+									"name": "Blend",
+									"operator": "Blend",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"positionalB": "ABOVE",
+									"type": "compose",
+									"useIntersection": false
+								},
+								"index": 9,
+								"name": "Replace",
+								"operator": "Replace",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": true
+							},
+							"composableB": {
+								"composableA": {
+									"composableA": {
+										"densityValue": 0.75,
+										"dimensions": {
+											"x": 10.0,
+											"y": 10.699999809265137,
+											"z": 10.300000190734863
+										},
+										"index": 11,
+										"material": "DIRT",
+										"name": "Rock",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"position": {
+											"x": 40.431243896484375,
+											"y": 48.41490173339844,
+											"z": 0.0
+										},
+										"shape": "Mountain",
 										"sigmaValue": -1.0,
 										"supportDimensions": {
 											"x": 0.0,
@@ -95,43 +278,94 @@
 										},
 										"type": "primitive"
 									},
-									"index": 10,
-									"name": "Translation",
-									"rotation": {
+									"distortion": {
 										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"index": 49,
+									"name": "Rotation",
+									"noise": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"rotation": {
+										"x": 3.1414999961853027,
 										"y": 0.0,
 										"z": 0.0
 									},
 									"translation": {
 										"x": 0.0,
-										"y": -20.500423431396484,
+										"y": 0.0,
 										"z": 0.0
 									},
 									"type": "unary"
 								},
-								"index": 9,
-								"name": "Replace",
-								"operator": "Replace",
-								"positionalB": "FIXED_POS",
-								"type": "compose",
-								"useIntersection": false
+								"distortion": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"index": 104,
+								"name": "Translation",
+								"noise": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"rotation": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"translation": {
+									"x": -1.5087890625,
+									"y": -4.986419677734375,
+									"z": 17.503936767578125
+								},
+								"type": "unary"
 							},
-							"composableB": {
-								"densityValue": 0.10000000149011612,
+							"index": 12,
+							"name": "Replace",
+							"operator": "Replace",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"positionalB": "FIXED_POS",
+							"type": "compose",
+							"useIntersection": false
+						},
+						"composableB": {
+							"composableA": {
+								"densityValue": 1.5,
 								"dimensions": {
 									"x": 10.699999809265137,
 									"y": 10.699999809265137,
 									"z": 10.300000190734863
 								},
-								"index": 11,
-								"material": "CORAL",
-								"name": "Rock",
+								"index": 13,
+								"material": "ROCK",
+								"name": "Sphere",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"position": {
-									"x": 40.431243896484375,
-									"y": 48.41490173339844,
+									"x": 39.641353607177734,
+									"y": 53.47551727294922,
 									"z": 0.0
 								},
-								"shape": "Rock",
+								"shape": "Sphere",
 								"sigmaValue": -1.0,
 								"supportDimensions": {
 									"x": 0.0,
@@ -140,26 +374,63 @@
 								},
 								"type": "primitive"
 							},
-							"index": 12,
-							"name": "Replace",
-							"operator": "Replace",
-							"positionalB": "INSIDE_BOTTOM",
-							"type": "compose",
-							"useIntersection": false
+							"distortion": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"index": 108,
+							"name": "Translation",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 5.403078079223633,
+								"y": -14.363849639892578,
+								"z": 6.5155396370894774e-15
+							},
+							"type": "unary"
 						},
-						"composableB": {
-							"densityValue": 0.10000000149011612,
+						"index": 14,
+						"name": "Replace",
+						"operator": "Replace",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"positionalB": "FIXED_POS",
+						"type": "compose",
+						"useIntersection": false
+					},
+					"composableB": {
+						"composableA": {
+							"densityValue": 1.5,
 							"dimensions": {
 								"x": 10.699999809265137,
 								"y": 10.699999809265137,
 								"z": 10.300000190734863
 							},
-							"index": 13,
-							"material": "CORAL",
+							"index": 15,
+							"material": "ROCK",
 							"name": "Sphere",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"position": {
-								"x": 39.641353607177734,
-								"y": 53.47551727294922,
+								"x": 50.96611022949219,
+								"y": 50.178253173828125,
 								"z": 0.0
 							},
 							"shape": "Sphere",
@@ -171,26 +442,63 @@
 							},
 							"type": "primitive"
 						},
-						"index": 14,
-						"name": "Replace",
-						"operator": "Replace",
-						"positionalB": "INSIDE_BOTTOM",
-						"type": "compose",
-						"useIntersection": false
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 110,
+						"name": "Translation",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"translation": {
+							"x": -0.18880462646484375,
+							"y": -2.9449462890625,
+							"z": 8.856620542204222e-15
+						},
+						"type": "unary"
 					},
-					"composableB": {
-						"densityValue": 0.10000000149011612,
+					"index": 16,
+					"name": "Replace",
+					"operator": "Replace",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"positionalB": "FIXED_POS",
+					"type": "compose",
+					"useIntersection": false
+				},
+				"composableB": {
+					"composableA": {
+						"densityValue": 1.5,
 						"dimensions": {
 							"x": 10.699999809265137,
 							"y": 10.699999809265137,
 							"z": 10.300000190734863
 						},
-						"index": 15,
-						"material": "CORAL",
+						"index": 17,
+						"material": "ROCK",
 						"name": "Sphere",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"position": {
-							"x": 50.96611022949219,
-							"y": 50.178253173828125,
+							"x": 39.71813201904297,
+							"y": 55.35645294189453,
 							"z": 0.0
 						},
 						"shape": "Sphere",
@@ -202,61 +510,95 @@
 						},
 						"type": "primitive"
 					},
-					"index": 16,
-					"name": "Replace",
-					"operator": "Replace",
-					"positionalB": "INSIDE_BOTTOM",
-					"type": "compose",
-					"useIntersection": false
-				},
-				"composableB": {
-					"densityValue": 0.10000000149011612,
-					"dimensions": {
-						"x": 10.699999809265137,
-						"y": 10.699999809265137,
-						"z": 10.300000190734863
-					},
-					"index": 17,
-					"material": "CORAL",
-					"name": "Sphere",
-					"position": {
-						"x": 39.71813201904297,
-						"y": 55.35645294189453,
-						"z": 0.0
-					},
-					"shape": "Sphere",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
+					"distortion": {
 						"x": 0.0,
 						"y": 0.0,
 						"z": 0.0
 					},
-					"type": "primitive"
+					"index": 116,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 0.8311443328857422,
+						"y": -11.41702651977539,
+						"z": -1.967414226257641e-15
+					},
+					"type": "unary"
 				},
 				"index": 18,
 				"name": "Replace",
 				"operator": "Replace",
-				"positionalB": "INSIDE_TOP",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"positionalB": "FIXED_POS",
 				"type": "compose",
 				"useIntersection": false
 			},
-			"composableB": {
+			"distortion": {
+				"x": 1.0,
+				"y": 20.0,
+				"z": 10.0
+			},
+			"index": 54,
+			"name": "Noise",
+			"noise": {
+				"x": 0.25,
+				"y": 20.0,
+				"z": 10.0
+			},
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "unary"
+		},
+		"composableB": {
+			"composableA": {
 				"densityValue": 1.5,
 				"dimensions": {
 					"x": 20.0,
 					"y": 20.0,
 					"z": 20.0
 				},
-				"index": 35,
+				"index": 112,
 				"material": "ROCK",
 				"name": "Sphere",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
 				"position": {
-					"x": 7.677865982055664,
-					"y": 26.701988220214844,
+					"x": 26.53026580810547,
+					"y": 40.66801452636719,
 					"z": 0.0
 				},
 				"shape": "Sphere",
-				"sigmaValue": -1.0,
+				"sigmaValue": 5.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
@@ -264,41 +606,42 @@
 				},
 				"type": "primitive"
 			},
-			"index": 36,
-			"name": "Blend",
-			"operator": "Blend",
-			"positionalB": "ABOVE",
-			"type": "compose",
-			"useIntersection": false
-		},
-		"composableB": {
-			"densityValue": 0.10000000149011612,
-			"dimensions": {
-				"x": 20.0,
-				"y": 20.0,
-				"z": 20.0
-			},
-			"index": 37,
-			"material": "CORAL",
-			"name": "Sphere",
-			"position": {
-				"x": 6.6513671875,
-				"y": 53.47673416137695,
-				"z": 0.0
-			},
-			"shape": "Sphere",
-			"sigmaValue": -1.0,
-			"supportDimensions": {
+			"distortion": {
 				"x": 0.0,
 				"y": 0.0,
 				"z": 0.0
 			},
-			"type": "primitive"
+			"index": 115,
+			"name": "Translation",
+			"noise": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 16.359302520751953,
+				"y": -8.024551391601563,
+				"z": 21.24883460998535
+			},
+			"type": "unary"
 		},
-		"index": 38,
+		"index": 113,
 		"name": "Blend",
 		"operator": "Blend",
-		"positionalB": "ABOVE",
+		"optionalCurve": {
+			"closed": false,
+			"points": []
+		},
+		"positionalB": "FIXED_POS",
 		"type": "compose",
 		"useIntersection": false
 	}

@@ -1,12 +1,12 @@
 {
 	"implicitPatches": {
-		"blendingFactor": 20.0,
+		"blendingFactor": 2.0,
 		"composableA": {
-			"blendingFactor": 20.0,
+			"blendingFactor": 2.0,
 			"composableA": {
-				"blendingFactor": 20.0,
+				"blendingFactor": 2.0,
 				"composableA": {
-					"densityValue": -0.5,
+					"densityValue": -2.5,
 					"dimensions": {
 						"x": 0.0,
 						"y": 0.0,
@@ -21,7 +21,7 @@
 						"z": 0.0
 					},
 					"shape": "None",
-					"sigmaValue": -1.0,
+					"sigmaValue": 11.0,
 					"supportDimensions": {
 						"x": 0.0,
 						"y": 0.0,
@@ -30,26 +30,26 @@
 					"type": "primitive"
 				},
 				"composableB": {
-					"densityValue": -0.5,
+					"densityValue": 0.3499999940395355,
 					"dimensions": {
 						"x": 20.0,
-						"y": 50.0,
-						"z": 20.0
+						"y": 100.0,
+						"z": 5.0
 					},
 					"index": 22,
-					"material": "TURBULENT_WATER",
+					"material": "CURRENT_BOTTOM",
 					"name": "Block",
 					"position": {
-						"x": -10.0,
-						"y": -25.0,
-						"z": 0.0
-					},
-					"shape": "Block",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
 						"x": 0.0,
 						"y": 0.0,
 						"z": 0.0
+					},
+					"shape": "Block",
+					"sigmaValue": 11.0,
+					"supportDimensions": {
+						"x": 20.0,
+						"y": 100.0,
+						"z": 10.0
 					},
 					"type": "primitive"
 				},
@@ -61,26 +61,26 @@
 				"useIntersection": false
 			},
 			"composableB": {
-				"densityValue": -0.5,
+				"densityValue": 0.75,
 				"dimensions": {
 					"x": 20.0,
-					"y": 50.0,
-					"z": 20.0
+					"y": 100.0,
+					"z": 10.0
 				},
 				"index": 24,
-				"material": "STRONG_WATER",
+				"material": "CURRENT_MIDDLE",
 				"name": "Block",
 				"position": {
-					"x": -10.0,
-					"y": -25.0,
-					"z": 0.0
-				},
-				"shape": "Block",
-				"sigmaValue": -1.0,
-				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
 					"z": 0.0
+				},
+				"shape": "Block",
+				"sigmaValue": 11.0,
+				"supportDimensions": {
+					"x": 20.0,
+					"y": 100.0,
+					"z": 20.0
 				},
 				"type": "primitive"
 			},
@@ -92,26 +92,26 @@
 			"useIntersection": false
 		},
 		"composableB": {
-			"densityValue": -0.5,
+			"densityValue": 2.5,
 			"dimensions": {
 				"x": 20.0,
-				"y": 50.0,
-				"z": 20.0
+				"y": 100.0,
+				"z": 10.0
 			},
 			"index": 26,
-			"material": "LIGHT_WATER",
+			"material": "CURRENT_TOP",
 			"name": "Block",
 			"position": {
-				"x": -10.0,
-				"y": -25.0,
-				"z": 0.0
-			},
-			"shape": "Block",
-			"sigmaValue": -1.0,
-			"supportDimensions": {
 				"x": 0.0,
 				"y": 0.0,
 				"z": 0.0
+			},
+			"shape": "Block",
+			"sigmaValue": 11.0,
+			"supportDimensions": {
+				"x": 20.0,
+				"y": 100.0,
+				"z": 20.0
 			},
 			"type": "primitive"
 		},

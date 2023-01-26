@@ -107,3 +107,13 @@ void CubeMesh::display(GLenum shape)
         GlobalsGL::checkOpenGLError();
     }
 }
+
+std::vector<Vector3> CubeMesh::createTriangles(Vector3 minPos, Vector3 maxPos)
+{
+    std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
+    Vector3 dim = maxPos - minPos;
+    for (auto& p : box) {
+        p = p * dim + minPos;
+    }
+    return box;
+}

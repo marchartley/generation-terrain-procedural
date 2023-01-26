@@ -1,0 +1,399 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 1.0,
+		"composableA": {
+			"composableA": {
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 100.0,
+					"y": 100.0,
+					"z": 7.400001525878906
+				},
+				"index": 189,
+				"material": "SAND",
+				"name": "Block",
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Block",
+				"sigmaValue": 10.199999809265137,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"distortion": {
+				"x": 0.0,
+				"y": 20.0,
+				"z": 10.0
+			},
+			"index": 93,
+			"name": "Wrapping",
+			"noise": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "unary"
+		},
+		"composableB": {
+			"composableA": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"blendingFactor": 2.0,
+					"composableA": {
+						"blendingFactor": 2.0,
+						"composableA": {
+							"blendingFactor": 2.0,
+							"composableA": {
+								"blendingFactor": 2.0,
+								"composableA": {
+									"densityValue": -2.5,
+									"dimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"index": 123,
+									"material": "WATER",
+									"name": "Identity",
+									"position": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"shape": "None",
+									"sigmaValue": -1.0,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"composableB": {
+									"composableA": {
+										"densityValue": 1.5,
+										"dimensions": {
+											"x": 13.699999809265137,
+											"y": 16.80000114440918,
+											"z": 17.899999618530273
+										},
+										"index": 124,
+										"material": "ROCK",
+										"name": "Rock",
+										"position": {
+											"x": 11.967233657836914,
+											"y": 7.403926849365234,
+											"z": 0.0
+										},
+										"shape": "Rock",
+										"sigmaValue": 10.199999809265137,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"distortion": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"index": 59,
+									"name": "Translation",
+									"noise": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"rotation": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"translation": {
+										"x": 0.0,
+										"y": 19.892391204833984,
+										"z": 0.0
+									},
+									"type": "unary"
+								},
+								"index": 125,
+								"name": "Blend",
+								"operator": "Blend",
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": false
+							},
+							"composableB": {
+								"composableA": {
+									"densityValue": 1.5,
+									"dimensions": {
+										"x": 25.200000762939453,
+										"y": 29.0,
+										"z": 17.899999618530273
+									},
+									"index": 126,
+									"material": "ROCK",
+									"name": "Rock",
+									"position": {
+										"x": 12.830034255981445,
+										"y": 35.83704376220703,
+										"z": 0.0
+									},
+									"shape": "Rock",
+									"sigmaValue": 10.199999809265137,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"distortion": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"index": 60,
+								"name": "Translation",
+								"noise": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"rotation": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"translation": {
+									"x": 5.448320388793945,
+									"y": -10.655197143554688,
+									"z": 0.0
+								},
+								"type": "unary"
+							},
+							"index": 127,
+							"name": "Blend",
+							"operator": "Blend",
+							"positionalB": "FIXED_POS",
+							"type": "compose",
+							"useIntersection": false
+						},
+						"composableB": {
+							"composableA": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 18.30000114440918,
+									"y": 36.29999923706055,
+									"z": 15.600000381469727
+								},
+								"index": 128,
+								"material": "ROCK",
+								"name": "Rock",
+								"position": {
+									"x": 36.90496826171875,
+									"y": 4.777805328369141,
+									"z": 0.0
+								},
+								"shape": "Rock",
+								"sigmaValue": 10.199999809265137,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"distortion": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"index": 61,
+							"name": "Translation",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"translation": {
+								"x": 0.0,
+								"y": 25.751161575317383,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"index": 129,
+						"name": "Blend",
+						"operator": "Blend",
+						"positionalB": "FIXED_POS",
+						"type": "compose",
+						"useIntersection": false
+					},
+					"composableB": {
+						"composableA": {
+							"densityValue": 1.5,
+							"dimensions": {
+								"x": 18.30000114440918,
+								"y": 26.30000114440918,
+								"z": 6.099999904632568
+							},
+							"index": 130,
+							"material": "ROCK",
+							"name": "Rock",
+							"position": {
+								"x": 43.99928283691406,
+								"y": 37.35797882080078,
+								"z": 0.0
+							},
+							"shape": "Rock",
+							"sigmaValue": 10.199999809265137,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
+						},
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 91,
+						"name": "Translation",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"translation": {
+							"x": 0.0,
+							"y": -23.135936737060547,
+							"z": 3.5196025371551514
+						},
+						"type": "unary"
+					},
+					"index": 131,
+					"name": "Blend",
+					"operator": "Blend",
+					"positionalB": "FIXED_POS",
+					"type": "compose",
+					"useIntersection": false
+				},
+				"composableB": {
+					"composableA": {
+						"densityValue": 1.5,
+						"dimensions": {
+							"x": 34.400001525878906,
+							"y": 26.30000114440918,
+							"z": 14.100000381469727
+						},
+						"index": 132,
+						"material": "ROCK",
+						"name": "Rock",
+						"position": {
+							"x": 42.517757415771484,
+							"y": 48.25455093383789,
+							"z": 0.0
+						},
+						"shape": "Rock",
+						"sigmaValue": 10.199999809265137,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 92,
+					"name": "Translation",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"translation": {
+						"x": 9.603569030761719,
+						"y": -41.165008544921875,
+						"z": -2.0315542221069336
+					},
+					"type": "unary"
+				},
+				"index": 133,
+				"name": "Blend",
+				"operator": "Blend",
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
+			},
+			"distortion": {
+				"x": 2.5,
+				"y": 20.0,
+				"z": 10.0
+			},
+			"index": 134,
+			"name": "Noise",
+			"noise": {
+				"x": 0.05000000074505806,
+				"y": 20.0,
+				"z": 10.0
+			},
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"translation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "unary"
+		},
+		"index": 190,
+		"name": "Blend",
+		"operator": "Blend",
+		"positionalB": "FIXED_POS",
+		"type": "compose",
+		"useIntersection": false
+	}
+}

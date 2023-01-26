@@ -118,6 +118,7 @@ SOURCES += \
         src/TerrainGen/Grid.cpp \
     src/TerrainGen/ImplicitPatch.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
+    src/TerrainGen/TerrainModel.cpp \
         src/TerrainGen/VoxelChunk.cpp \
         src/TerrainGen/VoxelGrid.cpp \
         src/TerrainModification/FaultSlip.cpp \
@@ -233,6 +234,7 @@ HEADERS += \
     src/TerrainGen/Grid.h \
     src/TerrainGen/ImplicitPatch.h \
     src/TerrainGen/LayerBasedGrid.h \
+    src/TerrainGen/TerrainModel.h \
     src/TerrainGen/VoxelChunk.h \
     src/TerrainGen/VoxelGrid.h \
     src/TerrainModification/FaultSlip.h \

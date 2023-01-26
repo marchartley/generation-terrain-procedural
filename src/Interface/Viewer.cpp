@@ -107,7 +107,7 @@ void Viewer::init() {
                 new float[4]{.5, .5, .5, 1.},
                 new float[4]{.2, .2, .2, 1.},
                 new float[4]{.5, .5, .5, 1.},
-                Vector3(0.0, 0.0, 100.0)
+                Vector3(0.0, 0.0, -100.0)
                 );
 
     this->setAnimationPeriod(0);
