@@ -4,10 +4,11 @@
 #include "DataStructure/Vector3.h"
 #include "Graphics/Mesh.h"
 
-class TerrainModel : public std::enable_shared_from_this<TerrainModel>
+class TerrainModel// : public std::enable_shared_from_this<TerrainModel>
 {
 public:
     TerrainModel();
+    virtual ~TerrainModel();
 
 
     virtual void saveMap(std::string filename) = 0;
@@ -18,7 +19,7 @@ public:
     virtual Mesh getGeometry() = 0;
 
     virtual std::string toString() = 0;
-    virtual std::string toShortString();
+    virtual std::string toShortString() = 0;
 
     virtual int getHeight(int x, int y) = 0;
 
