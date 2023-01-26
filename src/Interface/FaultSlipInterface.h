@@ -19,7 +19,7 @@ public:
     void display();
     void remesh();
 
-    void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
 
     void replay(nlohmann::json action);
 //    std::shared_ptr<VoxelGrid> voxelGrid;

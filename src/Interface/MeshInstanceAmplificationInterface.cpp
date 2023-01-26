@@ -226,7 +226,7 @@ QLayout* MeshInstanceAmplificationInterface::createGUI()
 std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::getAvailablePositionsForMaterial(TerrainTypes target)
 {
     std::vector<std::pair<Vector3, Vector3> > positions;
-    auto materialsAndHeightsGrid = layerGrid->layers;
+    auto materialsAndHeightsGrid = layerGrid->getLayers();
     for (int x = 0; x < layerGrid->getSizeX(); x++) {
         for (int y = 0; y < layerGrid->getSizeY(); y++) {
             auto materialsAndHeights = materialsAndHeightsGrid.at(x, y);

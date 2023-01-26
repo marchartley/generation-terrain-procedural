@@ -12,8 +12,8 @@
 #include "Utils/stb_image_write.h"
 
 
-Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
-    : maxHeight(maxHeight), tileSize(tileSize) {
+Heightmap::Heightmap(int nx, int ny, float maxHeight/*, float tileSize*/)
+    : maxHeight(maxHeight)/*, tileSize(tileSize)*/ {
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetFrequency(0.01);
@@ -24,37 +24,33 @@ Grid::Grid(int nx, int ny, float maxHeight, float tileSize)
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(10);
 
-    // Make a first pass, to get some noise
-    float min = 1000, max = -1000;
-    this->normals = Matrix3<Vector3>(nx, ny);
+//    this->normals = Matrix3<Vector3>(nx, ny);
     this->heights = Matrix3<float>(nx, ny);
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             float z = noise.GetNoise((float)x, (float)y);
             this->heights.at(x, y) = z;
-            min = min < z ? min : z;
-            max = max > z ? max : z;
         }
     }
-    this->heights = ((this->heights - min) / (max - min)) * maxHeight;
-    this->computeNormals();
+    this->heights = this->heights.normalize() * maxHeight;
+//    this->computeNormals();
 
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
-Grid::Grid(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
-    : maxHeight(max_height), tileSize(tileSize)
+Heightmap::Heightmap(std::string heightmap_filename, int nx, int ny, float max_height/*, float tileSize*/)
+    : maxHeight(max_height)/*, tileSize(tileSize)*/
 {
-    this->loadFromHeightmap(heightmap_filename, nx, ny, max_height, tileSize);
+    this->loadFromHeightmap(heightmap_filename, nx, ny, max_height/*, tileSize*/);
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
-Grid::Grid() : Grid(10, 10, 5.0) {
+Heightmap::Heightmap() : Heightmap(10, 10, 5.0) {
 
 }
 
-void Grid::createMesh()
-{
+//void Grid::createMesh()
+//{
     /*
     std::vector<Vector3> vecs;
 
@@ -71,10 +67,10 @@ void Grid::createMesh()
     }
     this->mesh.fromArray(vecs);
     */
-}
+//}
 
-void Grid::computeNormals() {
-    return;
+//void Grid::computeNormals() {
+//    return;
     /*
     this->normals = Matrix3<Vector3>(this->getSizeX(), this->getSizeY());
     this->heights.raiseErrorOnBadCoord = false;
@@ -102,20 +98,20 @@ void Grid::computeNormals() {
             this->normals.at(x, y).normalize();
         }
     }*/
-}
+//}
 
-void Grid::display(bool displayNormals) {
-    this->mesh.display();
-}
+//void Grid::display(bool displayNormals) {
+//    this->mesh.display();
+//}
 
-float Grid::getMaxHeight()
+float Heightmap::getMaxHeight()
 {
     return this->maxHeight; //this->heights.max();
 }
 
 
 // Greatly inspired by Sebastian Lague https://github.com/SebLague/Hydraulic-Erosion
-std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
+std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                                                          int erosionRadius,
                                                          int maxDropletLifetime,
                                                          float erodeSpeed,
@@ -231,7 +227,7 @@ std::vector<std::vector<Vector3>> Grid::hydraulicErosion(int numIterations,
     return traces;
 }
 
-void Grid::thermalErosion(float erosionCoef, float minSlope)
+void Heightmap::thermalErosion(float erosionCoef, float minSlope)
 {
     minSlope *= getMaxHeight();
     bool prevError = heights.raiseErrorOnBadCoord;
@@ -287,7 +283,7 @@ void windCascade(Vector3 pos, Matrix3<float>& ground, Matrix3<float>& sand, floa
         }
     }
 }
-std::vector<std::vector<Vector3> > Grid::windErosion(int numberOfParticles,
+std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
                                                      Vector3 windDirection,
                                                      float bedrocksProportionInGround,
                                                      float suspension,
@@ -419,7 +415,12 @@ std::vector<std::vector<Vector3> > Grid::windErosion(int numberOfParticles,
     return traces;
 }
 
-void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpointsInFaults, float faultHeight)
+void Heightmap::raise(Matrix3<float> elevation)
+{
+    this->heights += elevation;
+}
+
+void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpointsInFaults, float faultHeight)
 {
     std::vector<BSpline> faults;
     for (int i = 0; i < numberOfFaults; i++) {
@@ -457,7 +458,7 @@ void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpo
             float totalInfluence = 0;
             for (size_t i = 0; i < faults.size(); i++) {
                 float coef = 1.f; // / (float)(i + 1);
-                float distanceToBorder = std::min(getSizeX() - x, std::min(x, std::min(getSizeY() - y, y)));
+                float distanceToBorder = std::min(int(getSizeX() - x), std::min(x, std::min(int(getSizeY() - y), y)));
                 totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 5.f) - interpolation::fault_distance(distanceToBorder, 10.f)) * coef;
             }
             faultsImpact.at(pos) = totalInfluence / (float)numberOfFaults;
@@ -466,7 +467,7 @@ void Grid::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOfSubpo
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms" << std::endl;
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
-void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
+void Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     Matrix3<float> voxels = voxelGrid.getVoxelValues();
 
     this->heights = Matrix3<float>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
@@ -479,11 +480,11 @@ void Grid::fromVoxelGrid(VoxelGrid &voxelGrid) {
                 }
         }
     }
-    this->computeNormals();
-    this->createMesh();
+//    this->computeNormals();
+//    this->createMesh();
 }
 
-void Grid::fromLayerGrid(LayerBasedGrid &layerGrid)
+void Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
 {
     this->heights = Matrix3<float>(layerGrid.getSizeX(), layerGrid.getSizeY());
     for (size_t x = 0; x < this->getSizeX(); x++) {
@@ -493,9 +494,9 @@ void Grid::fromLayerGrid(LayerBasedGrid &layerGrid)
     }
 }
 
-void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height, float tileSize)
+void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height/*, float tileSize*/)
 {
-    this->tileSize = tileSize;
+//    this->tileSize = tileSize;
     this->maxHeight = max_height;
     int imgW, imgH, nbChannels;
     unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
@@ -531,10 +532,10 @@ void Grid::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, flo
         map *= (maxHeight / max);
     }
     this->heights = map;
-    this->computeNormals();
+//    this->computeNormals();
 }
 
-void Grid::saveHeightmap(std::string heightmap_filename)
+void Heightmap::saveHeightmap(std::string heightmap_filename)
 {
     std::string ext = toUpper(getExtention(heightmap_filename));
     int width = this->getSizeX();
@@ -563,7 +564,7 @@ void Grid::saveHeightmap(std::string heightmap_filename)
     }
 }
 
-Vector3 Grid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 Heightmap::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
 {
     if (!minPos.isValid()) minPos = Vector3();
     if (!maxPos.isValid()) maxPos = this->getDimensions();
@@ -589,7 +590,7 @@ Vector3 Grid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vecto
     return Vector3(false);
 }
 
-Mesh Grid::getGeometry()
+Mesh Heightmap::getGeometry()
 {
     std::vector<Vector3> vertices;
     vertices.resize(6 * (this->getSizeX() - 1) * (this->getSizeY() - 1) );

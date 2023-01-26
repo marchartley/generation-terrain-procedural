@@ -25,10 +25,10 @@ RockErosion::RockErosion(int size, float maxStrength)
 }
 
 void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode, bool applyRemeshing) {
-    Matrix3<float> erosionMatrix(grid->sizeX, grid->sizeY, grid->sizeZ);
+    Matrix3<float> erosionMatrix(grid->getDimensions());
     grid->applyModification(this->computeErosionMatrix(erosionMatrix, pos, addingMatterMode));
-    if (applyRemeshing)
-        grid->remeshAll();
+//    if (applyRemeshing)
+//        grid->remeshAll();
 }
 
 Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)

@@ -16,7 +16,7 @@ public:
     void display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles);
     void displayWaterLevel();
 
-    void createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
+    void createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void createTerrainFromImplicitPatches(nlohmann::json json_content);

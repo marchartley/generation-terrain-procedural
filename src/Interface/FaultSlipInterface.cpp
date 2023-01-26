@@ -25,7 +25,7 @@ void FaultSlipInterface::display()
 void FaultSlipInterface::remesh()
 {
     Vector3 minAABB = Vector3(0, 0, 0);
-    Vector3 maxAABB = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
+    Vector3 maxAABB = voxelGrid->getDimensions(); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
 
     Vector3 p1 = this->firstSlipControlPoint->getPosition();
     Vector3 p2 = this->slipVector->getStartingVector();
@@ -44,11 +44,11 @@ void FaultSlipInterface::remesh()
     this->planeMesh.update();
 }
 
-void FaultSlipInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void FaultSlipInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
-    this->firstSlipControlPoint->move(Vector3(voxelGrid->sizeX / 2.f, 0, voxelGrid->sizeZ));
-    this->slipVector->setPositions(Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ / 2.f));
+    this->firstSlipControlPoint->move(voxelGrid->getDimensions() * Vector3(.5f, 0.f, 1.f)); //Vector3(voxelGrid->getSizeX() / 2.f, 0, voxelGrid->getSizeZ()));
+    this->slipVector->setPositions(voxelGrid->getDimensions() * Vector3(0.f, .5f, 1.f), voxelGrid->getDimensions() * Vector3(0.f, .5f, .5f)); //Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ / 2.f));
 //    this->voxelGrid = voxelGrid;
     this->remesh();
 

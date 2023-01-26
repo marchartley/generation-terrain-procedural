@@ -16,14 +16,14 @@ public:
     virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
         this->voxelGrid = voxelGrid;
     }
-    virtual void affectHeightmap(std::shared_ptr<Grid> heightmap) {
+    virtual void affectHeightmap(std::shared_ptr<Heightmap> heightmap) {
         this->heightmap = heightmap;
     }
     virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
         this->layerGrid = layerGrid;
     }
 
-    virtual void affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid) {
+    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid) {
         this->affectHeightmap(heightmap);
         this->affectVoxelGrid(voxelGrid);
         this->affectLayerGrid(layerGrid);
@@ -69,7 +69,7 @@ public:
     std::shared_ptr<std::vector<nlohmann::json>> jsonActionsHistory;
 
     std::shared_ptr<VoxelGrid> voxelGrid;
-    std::shared_ptr<Grid> heightmap;
+    std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<LayerBasedGrid> layerGrid;
 
 Q_SIGNALS:

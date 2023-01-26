@@ -16,7 +16,7 @@
     #include "sys/stat.h"
 #endif
 Viewer::Viewer(QWidget *parent): Viewer(
-        std::make_shared<Grid>(),
+        std::make_shared<Heightmap>(),
         std::make_shared<VoxelGrid>(),
         std::make_shared<LayerBasedGrid>(),
         VOXEL_MODE,
@@ -28,7 +28,7 @@ Viewer::Viewer(QWidget *parent): Viewer(
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
 }
-Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
+Viewer::Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
                ViewerMode mode, QWidget *parent)
     : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
@@ -37,7 +37,7 @@ Viewer::Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid,
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
 }
-Viewer::Viewer(std::shared_ptr<Grid> g, QWidget *parent)
+Viewer::Viewer(std::shared_ptr<Heightmap> g, QWidget *parent)
     : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
 
 }
@@ -138,7 +138,7 @@ void Viewer::init() {
         this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
 //        // this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
     }
-
+/*
     if (grid != nullptr) {
         this->grid->createMesh();
         this->grid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
@@ -149,7 +149,7 @@ void Viewer::init() {
     }
     if (voxelGrid != nullptr) {
 
-    }
+    }*/
 
     Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
     GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
@@ -250,7 +250,7 @@ void Viewer::drawingProcess() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->light.position = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
+    this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
     //this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 100);
 
     float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};

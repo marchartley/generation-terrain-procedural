@@ -33,6 +33,6 @@ void FaultSlip::Apply(std::shared_ptr<VoxelGrid> grid, bool applyRemeshing)
         }
     }
     grid->applyModification(transportMatrix);
-    if (applyRemeshing)
-        grid->remeshAll();
+//    if (applyRemeshing)
+//        grid->remeshAll();
 }

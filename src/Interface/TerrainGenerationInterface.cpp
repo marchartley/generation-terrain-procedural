@@ -173,14 +173,15 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("heightmapFieldTex", 3);
     layersMesh.shader->setInt("heightmapFieldTex", 3);
 
-    float *heightmapData = new float[heightmap->heights.size() * 4];
-    Matrix3<Vector3> gradients = heightmap->heights.gradient();
-    for (size_t i = 0; i < heightmap->heights.size(); i++) {
+    Matrix3<float> heights = heightmap->getHeights();
+    float *heightmapData = new float[heights.size() * 4];
+    Matrix3<Vector3> gradients = heights.gradient();
+    for (size_t i = 0; i < heights.size(); i++) {
         gradients[i] = (gradients[i].normalized() + Vector3(1, 1, 1)) / 2.f;
         heightmapData[i * 4 + 0] = gradients[i].x;
         heightmapData[i * 4 + 1] = gradients[i].y;
         heightmapData[i * 4 + 2] = gradients[i].z;
-        heightmapData[i * 4 + 3] = heightmap->heights[i];
+        heightmapData[i * 4 + 3] = heights[i];
     }
 
     glGenTextures(1, &heightmapFieldTex);
@@ -207,8 +208,8 @@ void TerrainGenerationInterface::prepareShader()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmap->biomeIndices.sizeX, heightmap->biomeIndices.sizeY, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, heightmap->biomeIndices.data.data());
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, heightmap->getBiomeIndices().data.data());
     heightmapMesh.shader->setInt("biomeFieldTex", 4);
     marchingCubeMesh.shader->setInt("biomeFieldTex", 4);
     layersMesh.shader->setInt("biomeFieldTex", 4);
@@ -452,7 +453,7 @@ void TerrainGenerationInterface::regenerateRocksAndParticles()
 {
     this->randomParticlesPositions = std::vector<Vector3>(1000);
     for (size_t i = 0; i < randomParticlesPositions.size(); i++) {
-        randomParticlesPositions[i] = Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
+        randomParticlesPositions[i] = Vector3::random(voxelGrid->getDimensions()); //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
     }
     if (this->particlesMesh.shader != nullptr)
         this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
@@ -465,8 +466,8 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
     /*if (this->heightmap != nullptr) {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE4);
         glBindTexture(GL_TEXTURE_2D, biomeFieldTex);
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmap->biomeIndices.sizeX, heightmap->biomeIndices.sizeY, 0,
-        GL_ALPHA_INTEGER_EXT, GL_INT, ((Matrix3<float>)(heightmap->biomeIndices) / 10.f).data.data());
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY, 0,
+        GL_ALPHA_INTEGER_EXT, GL_INT, ((Matrix3<float>)(heightmap->getBiomeIndices()) / 10.f).data.data());
     }*/
 
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
@@ -480,11 +481,12 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 //            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmap->getSizeX(), heightmap->getSizeY(), 0,
 //            GL_RED, GL_FLOAT, heightmap->heights.data.data());//heightData.data.data());
-    float maxHeight = heightmap->heights.max();
+    Matrix3<float> heights = heightmap->getHeights();
+    float maxHeight = heights.max();
     this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
     this->heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-    float *heightmapData = new float[heightmap->heights.size() * 4];
-    Matrix3<Vector3> gradients = heightmap->heights.gradient();
+    float *heightmapData = new float[heights.size() * 4];
+    Matrix3<Vector3> gradients = heights.gradient();
     int maxColorTextureIndex = 0;
     for (auto biome : colorTexturesIndex) {
         maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
@@ -497,16 +499,16 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
     for (auto biome : displacementTexturesIndex) {
         maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
     }
-    int maxBiomeID = 0; //std::max(1, heightmap->biomeIndices.max());
-    for (const auto& biomeValues : heightmap->biomeIndices)
+    int maxBiomeID = 0; //std::max(1, heightmap->getBiomeIndices().max());
+    for (const auto& biomeValues : heightmap->getBiomeIndices())
         maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
-    Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->biomeIndices; //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
-    for (size_t i = 0; i < heightmap->heights.size(); i++) {
+    Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->getBiomeIndices(); //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
+    for (size_t i = 0; i < heights.size(); i++) {
 //        int biomeID = (resizedBiomeIndices[i].empty() ? 0 : resizedBiomeIndices[i].back());
         float colorTextureOffset = 1.f;
         float normalTextureOffset = 1.f;
         float displacementTextureOffset = 1.f;
-        if (resizedBiomeIndices.getDimensions() == heightmap->heights.getDimensions()) {
+        if (resizedBiomeIndices.getDimensions() == heights.getDimensions()) {
             auto biome = (!resizedBiomeIndices[i].empty() ? BiomeInstance::instancedBiomes[resizedBiomeIndices[i].back()] : nullptr);
             if (biome != nullptr && !biome->getTextureName().empty()) {
                 if (colorTexturesIndex.find(biome->getTextureName()) != colorTexturesIndex.end())
@@ -522,7 +524,7 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
         heightmapData[i * 4 + 0] = colorTextureOffset;
         heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
         heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-        heightmapData[i * 4 + 3] = heightmap->heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
+        heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
     }
 
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
@@ -632,28 +634,30 @@ void TerrainGenerationInterface::displayWaterLevel()
     waterLevelMesh.display();
 }
 
-void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, float blockSize, float noise_shifting)
+void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
 {
-    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz, blockSize, noise_shifting);
-    tempMap->fromIsoData();
+//    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz/*, blockSize*/, noise_shifting);
+//    tempMap->fromIsoData();
+    VoxelGrid tempMap = VoxelGrid(nx, ny, nz, noise_shifting);
 
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
     if (!this->heightmap)
-        this->heightmap = std::make_shared<Grid>();
+        this->heightmap = std::make_shared<Heightmap>();
     if (!this->layerGrid)
         this->layerGrid = std::make_shared<LayerBasedGrid>();
 
     // Okay, super dirty but I don't know how to manage shared_ptr...
-    this->voxelGrid->sizeX = tempMap->sizeX;
-    this->voxelGrid->sizeY = tempMap->sizeY;
-    this->voxelGrid->sizeZ = tempMap->sizeZ;
-    this->voxelGrid->blockSize = tempMap->blockSize;
-    this->voxelGrid->chunkSize = tempMap->chunkSize;
-    this->voxelGrid->noise_shifting = tempMap->noise_shifting;
-    this->voxelGrid->initMap();
-    this->voxelGrid->tempData = tempMap->tempData;
-    this->voxelGrid->fromIsoData();
+//    this->voxelGrid->sizeX = tempMap->sizeX;
+//    this->voxelGrid->sizeY = tempMap->sizeY;
+//    this->voxelGrid->sizeZ = tempMap->sizeZ;
+//    this->voxelGrid->blockSize = tempMap->blockSize;
+//    this->voxelGrid->chunkSize = tempMap->chunkSize;
+//    this->voxelGrid->noise_shifting = tempMap->noise_shifting;
+//    this->voxelGrid->initMap();
+//    this->voxelGrid->tempData = tempMap->tempData;
+//    this->voxelGrid->fromIsoData();
+    *voxelGrid = tempMap;
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
 
@@ -663,7 +667,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                                                    {"nx", nx},
                                                    {"ny", ny},
                                                    {"nz", nz},
-                                                   {"block_size", blockSize},
+//                                                   {"block_size", blockSize},
                                                    {"noise_shifting", noise_shifting}
                                                }}
                                           }));
@@ -673,7 +677,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 {
     std::string ext = toUpper(getExtention(filename));
     if (!this->heightmap)
-        this->heightmap = std::make_shared<Grid>();
+        this->heightmap = std::make_shared<Heightmap>();
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
     if (!this->layerGrid)
@@ -817,11 +821,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         // In any other case, consider that nothing has been done, cancel.
         return;
     }*/
-    this->voxelGrid->createMesh();
-    this->heightmap->createMesh();
+//    this->voxelGrid->createMesh();
+//    this->heightmap->createMesh();
 //    layerGrid->from2DGrid(*heightmap);
 
-
+/*
     voxelGrid->flowField = Matrix3<Vector3>(voxelGrid->environmentalDensities.getDimensions());
     for (size_t i = 0; i < voxelGrid->environmentalDensities.size(); i++) {
         if (voxelGrid->environmentalDensities.getCoordAsVector3(i).z < voxelGrid->environmentalDensities.sizeZ * waterLevel) {
@@ -831,7 +835,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
             voxelGrid->environmentalDensities[i] = 1.f; // Air density
             voxelGrid->flowField[i] = Vector3(0, .1f, 0.f); // Air flow
         }
-    }
+    }*/
 
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
@@ -843,12 +847,14 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
 {
     if (!this->heightmap)
-        this->heightmap = std::make_shared<Grid>();
+        this->heightmap = std::make_shared<Heightmap>();
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
 
-    this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
-    this->heightmap->maxHeight = 40.f;
+    *heightmap = Heightmap(124, 124, 40.f);
+    heightmap->raise(Matrix3<float>(heightmap->getSizeX(), heightmap->getSizeY(), 1.f, 20.f));
+//    this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
+//    this->heightmap->maxHeight = 40.f;
 
     this->voxelGrid->from2DGrid(*this->heightmap);
     this->voxelGrid->fromIsoData();
@@ -896,9 +902,9 @@ void TerrainGenerationInterface::replay(nlohmann::json action)
             int nx = parameters.at("nx").get<int>();
             int ny = parameters.at("ny").get<int>();
             int nz = parameters.at("nz").get<int>();
-            int blockSize = parameters.at("block_size").get<float>();
+//            int blockSize = parameters.at("block_size").get<float>();
             int noise_shifting = parameters.at("noise_shifting").get<float>();
-            this->createTerrainFromNoise(nx, ny, nz, blockSize, noise_shifting);
+            this->createTerrainFromNoise(nx, ny, nz/*, blockSize*/, noise_shifting);
         } else {
             std::string filename = parameters.at("from_file").get<std::string>();
             this->createTerrainFromFile(filename);

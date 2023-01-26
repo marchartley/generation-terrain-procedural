@@ -50,13 +50,6 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
     };
 }
 
-void LayerBasedGrid::createMesh() {
-}
-
-void LayerBasedGrid::display() {
-    this->mesh.display();
-}
-
 TerrainTypes LayerBasedGrid::getValue(Vector3 pos)
 {
     return getValue(pos.x, pos.y, pos.z);
@@ -174,12 +167,12 @@ float LayerBasedGrid::getHeight(float x, float y)
     return currentHeight;
 }
 
-float LayerBasedGrid::getHeight(Vector3 pos)
-{
-    return this->getHeight(pos.x, pos.y);
-}
+//float LayerBasedGrid::getHeight(Vector3 pos)
+//{
+//    return this->getHeight(pos.x, pos.y);
+//}
 
-void LayerBasedGrid::from2DGrid(Grid grid)
+void LayerBasedGrid::from2DGrid(Heightmap grid)
 {
     // The materials for now will only be dirt and water
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(grid.getSizeX(), grid.getSizeY(), 1);
@@ -187,7 +180,7 @@ void LayerBasedGrid::from2DGrid(Grid grid)
         for (int y = 0; y < grid.getSizeY(); y++) {
             this->layers.at(x, y) = {
                 { TerrainTypes::SAND, grid.getHeight(x, y) },
-                { TerrainTypes::WATER, grid.maxHeight - grid.getHeight(x, y) }
+                { TerrainTypes::WATER, grid.getMaxHeight() - grid.getHeight(x, y) }
             };
         }
     }
@@ -533,29 +526,19 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
     return;
 }*/
 
-void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
+void LayerBasedGrid::add(ImplicitPatch* patch)
 {
     auto AABBox = patch->getSupportBBox();
-    Vector3 minPos = AABBox.first; // patch->getMinPosition();
-    Vector3 maxPos = AABBox.second; // patch->getMaxPosition();
-//    maxPos.z = patch->getDimensions().z; // This stores stacking operations in its height
-//    Vector3 dim = maxPos - minPos;
-//    minPos -= dim;
-//    maxPos += dim;
+    Vector3 minPos = AABBox.first;
+    Vector3 maxPos = AABBox.second;
+
     int minX = std::max(0, int(minPos.x));
-    int maxX = std::min(this->getSizeX(), int(maxPos.x));
+    int maxX = std::min(int(this->getSizeX()), int(maxPos.x));
     int minY = std::max(0, int(minPos.y));
-    int maxY = std::min(this->getSizeY(), int(maxPos.y));
+    int maxY = std::min(int(this->getSizeY()), int(maxPos.y));
     float minZ = std::max(0.f, minPos.z);
-    float maxZ = float(maxPos.z); // std::min(this->getSizeZ(), float(maxPos.z));
+    float maxZ = float(maxPos.z);
     std::cout << "Evaluation from " << Vector3(minX, minY, minZ) << " to " << Vector3(maxX, maxY, maxZ) << std::endl;
-    /*Matrix3<float> distanceMap = Matrix3<float>(maxX - minX, maxY - minY, 1, 1.f);
-    if (applyDistanceFalloff) {
-        distanceMap = distanceMap.toDistanceMap(true);
-        distanceMap.normalize();
-        for (auto& val : distanceMap)
-            val = std::pow(val, distancePower);
-    }*/
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
