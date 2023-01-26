@@ -10,36 +10,40 @@ public:
     TerrainModel();
     virtual ~TerrainModel();
 
+    virtual void initMap() = 0;
+
+    virtual bool undo() = 0;
+    virtual bool redo() = 0;
 
     virtual void saveMap(std::string filename) = 0;
     virtual void retrieveMap(std::string filename) = 0;
+    virtual Mesh getGeometry() = 0;
 
     virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false)) = 0;
-
-    virtual Mesh getGeometry() = 0;
 
     virtual std::string toString() = 0;
     virtual std::string toShortString() = 0;
 
-    virtual int getHeight(int x, int y) = 0;
+    virtual float getHeight(float x, float y) = 0;
+    virtual float getHeight(Vector3 pos);
 
-    bool contains(Vector3 v);
-    bool contains(float x, float y, float z);
+    virtual bool contains(Vector3 v);
+    virtual bool contains(float x, float y, float z);
 
-    virtual bool undo() = 0;
-    virtual bool redo() = 0;
-    size_t getCurrentHistoryIndex() const;
+    virtual size_t getCurrentHistoryIndex() const;
 
-    int getSizeX() { return this->getDimensions().x; }
-    int getSizeY() { return this->getDimensions().y; }
-    int getSizeZ() { return this->getDimensions().z; }
-    Vector3 getDimensions() { return this->dimensions; }
+    virtual float getSizeX() = 0;
+    virtual float getSizeY() = 0;
+    virtual float getSizeZ() = 0;
+    virtual Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
 
-    virtual void initMap() = 0;
 
 //    int sizeX, sizeY, sizeZ;
     int _cachedHistoryIndex = -1;
-    Vector3 dimensions;
+    int currentHistoryIndex = 0;
+    int _historyIndex = 0;
+
+//    Vector3 dimensions;
     Vector3 scaling = Vector3(1.f, 1.f, 1.f);
     Vector3 translation;
 };

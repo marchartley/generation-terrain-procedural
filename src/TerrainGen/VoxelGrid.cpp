@@ -1,20 +1,20 @@
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
-#include "Graphics/Shader.h"
-#include "Utils/Utils.h"
-
-VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting)
-    : blockSize(blockSize), noise_shifting(noise_shifting) {
-    this->sizeZ = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
+VoxelGrid::VoxelGrid(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
+    : /*blockSize(blockSize),*/ noise_shifting(noise_shifting) {
+    this->_cachedVoxelValues = Matrix3<float>(nx * chunkSize, ny * chunkSize, nz * chunkSize + 1, 1.f);
+    this->initMap();
+    /*
+    this->getSizeZ() = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
 //    chunkSize += 1; // More useful for the LoDs // TODO : CORRECT THIS TO BE ABLE TO FILL IN THE LAYERED TERRAIN
-    this->sizeX = nx * (chunkSize);
-    this->sizeY = ny * (chunkSize);
+    this->getSizeX() = nx * (chunkSize);
+    this->getSizeY() = ny * (chunkSize);
     this->initMap();
 
 
 
-    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(chunkSize, chunkSize, this->sizeZ));
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(chunkSize, chunkSize, this->getSizeZ()));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -34,10 +34,10 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifti
             iChunk ++;
         }
     }
-    this->tempData = data;
+    this->tempData = data;*/
 }
 
-VoxelGrid::VoxelGrid(Grid& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), grid.getTileSize()) {
+VoxelGrid::VoxelGrid(Heightmap& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), 1.f/*, grid.getTileSize()*/) {
     this->from2DGrid(grid);
 }
 VoxelGrid::VoxelGrid() : VoxelGrid(1, 1, 1, 1.0) {
@@ -47,14 +47,14 @@ VoxelGrid::~VoxelGrid()
 {
     this->chunks.clear();
 }
-void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
+void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
         subsectionStart = Vector3();
         subsectionEnd = Vector3(grid.getSizeX(), grid.getSizeY());
-//        this->sizeX = grid.getSizeX();
-//        this->sizeY = grid.getSizeY();
-//        this->sizeZ = grid.getMaxHeight() /* * scaleFactor*/ * 2;
+//        this->getSizeX() = grid.getSizeX();
+//        this->getSizeY() = grid.getSizeY();
+//        this->getSizeZ() = grid.getMaxHeight() /* * scaleFactor*/ * 2;
     } else {
         // Otherwise, we want a subset of the map, we just need to clamp the dimensions
         subsectionStart.x = std::max(subsectionStart.x, 0.f);
@@ -62,21 +62,44 @@ void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectio
         subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
         subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
     }
-    this->sizeX = (subsectionEnd.x - subsectionStart.x) * scaleFactor; //grid.getSizeX();
-    this->sizeY = (subsectionEnd.y - subsectionStart.y) * scaleFactor; //grid.getSizeY();
-    this->sizeZ = grid.getMaxHeight() /* * scaleFactor*/ * 2; // Give space for arches or things
+    this->_cachedVoxelValues = Matrix3<float>((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, grid.getMaxHeight(), 0.f);
+//    this->getSizeX() = (subsectionEnd.x - subsectionStart.x) * scaleFactor; //grid.getSizeX();
+//    this->getSizeY() = (subsectionEnd.y - subsectionStart.y) * scaleFactor; //grid.getSizeY();
+//    this->getSizeZ() = grid.getMaxHeight() /* * scaleFactor*/ * 2; // Give space for arches or things
     this->initMap();
 //    std::cout << "New map size : " << this->getDimensions() << std::endl;
 
     Matrix3<float> gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
     gridHeights.raiseErrorOnBadCoord = false;
-    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            float grid_height = gridHeights.at(x, y) * (this->getSizeZ() / (grid.getMaxHeight() * 2));
+            int z = int(grid_height);
+            // Add some positive noise for h < height
+            int i = 0;
+            for (; i < z-2; i++) {
+                float noise_val = getNoiseValue(x, y, i);
+                _cachedVoxelValues.at(x, y, i) = abs(noise_val);
+            }
+            for (; i < z; i++) {
+                float noise_val = .3f; //= getNoiseValue((xChunk * chunkSize + x), (yChunk * chunkSize + y), i);
+                _cachedVoxelValues.at(x, y, i) = abs(noise_val);
+            }
+            // Add negative noise for h > height
+            for (; i < this->getSizeZ(); i++) {
+                float noise_val = getNoiseValue(x, y, i);
+                _cachedVoxelValues.at(x, y, i) = -abs(noise_val);
+            }
+        }
+    }
+    /*
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
             for (int x = 0; x < chunkSize; x++) {
                 for (int y = 0; y < chunkSize; y++) {
-                    float grid_height = gridHeights.at((xChunk * chunkSize + x), (yChunk * chunkSize + y)) * (this->sizeZ / (grid.getMaxHeight() * 2));
+                    float grid_height = gridHeights.at((xChunk * chunkSize + x), (yChunk * chunkSize + y)) * (this->getSizeZ() / (grid.getMaxHeight() * 2));
                     int z = int(grid_height);
                     // Add some positive noise for h < height
                     int i = 0;
@@ -100,17 +123,20 @@ void VoxelGrid::from2DGrid(Grid grid, Vector3 subsectionStart, Vector3 subsectio
     }
     this->tempData = data;
     this->_smoothingNeeded = true;
+    */
 }
 
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 {
-    this->sizeX = layerBased.getSizeX();
-    this->sizeY = layerBased.getSizeY();
-    this->sizeZ = (fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight);
+    this->_cachedVoxelValues = layerBased.voxelize(fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight);
+//    this->_cachedVoxelValues = Matrix3<float>(layerBased.getSizeX(), layerBased.getSizeY(), (fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight));
+//    this->getSizeX() = layerBased.getSizeX();
+//    this->getSizeY() = layerBased.getSizeY();
+//    this->getSizeZ() = (fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight);
     this->initMap();
-
-    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->sizeZ));
-    Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight/*, 0.1f*/);
+/*
+    std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
+    Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight);
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -123,21 +149,25 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
                         data[iChunk].at(x, y, z) = density;
                     }
                 }
-            }*/
+            }*//*
             iChunk ++;
         }
     }
     this->tempData = data;
     this->_smoothingNeeded = false;
+    */
 }
 
-std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
+//std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
+VoxelGrid* VoxelGrid::fromIsoData()
 {
-    std::vector<Matrix3<float>> isoData = this->tempData;
+//    std::vector<Matrix3<float>> isoData = this->tempData;
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), isoData[iChunk], this->shared_from_this());
+//            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), isoData[iChunk], this); //->shared_from_this());
+
+            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), this->_cachedVoxelValues.subset((xChunk * chunkSize), (xChunk + 1) * chunkSize, (yChunk * chunkSize), (yChunk + 1) * chunkSize, 0, this->getSizeZ()), this); //->shared_from_this());
             this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
             this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
             iChunk++;
@@ -145,8 +175,8 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
     }
     for(size_t i = 0; i < this->chunks.size(); i++) {
         if (int(i) > this->numberOfChunksY() - 1) {
-            this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->sizeY / chunkSize)];
-            this->chunks[i - int(this->sizeY/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
+            this->chunks[i]->neighboring_chunks[LEFT] = this->chunks[i - int(this->getSizeY() / chunkSize)];
+            this->chunks[i - int(this->getSizeY()/chunkSize)]->neighboring_chunks[RIGHT] = this->chunks[i];
         }
         if (i % this->numberOfChunksY() >= 1) {
             this->chunks[i]->neighboring_chunks[FRONT] = this->chunks[i - 1];
@@ -162,16 +192,16 @@ std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
     }
     this->_cachedHistoryIndex = -1; // Force refresh of "getVoxelValues"
 //    this->computeFlowfield();
-    return this->shared_from_this();
+    return this; // ->shared_from_this();
 }
 
 void VoxelGrid::computeFlowfield()
 {
 //    DyeField constantDyeSource(fluidSystem->fullDim);
-    Matrix3<float> obstacleMap(this->sizeX, this->sizeY, this->sizeZ, false);
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
+    Matrix3<float> obstacleMap(this->getSizeX(), this->getSizeY(), this->getSizeZ(), false);
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            for (int z = 0; z < this->getSizeZ(); z++) {
                 obstacleMap(x, y, z) = (this->getVoxelValue(x, y, z) > 0.0 ? 1.f : 0.f);
             }
         }
@@ -188,7 +218,7 @@ void VoxelGrid::computeFlowfield()
     for (int i = 0; i < 30; i++)
         this->fluidSimulation.step();
     std::cout << "Fluid sim step : " << this->fluidSimulation.currentStep << ". Max fluid velocity : " << this->fluidSimulation.velocity.max() << std::endl;
-    this->flowField = this->fluidSimulation.getVelocities(this->sizeX, this->sizeY, this->sizeZ);
+    this->flowField = this->fluidSimulation.getVelocities(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     this->flowField.raiseErrorOnBadCoord = false;
 
     for (auto& vc : this->chunks) {
@@ -245,7 +275,7 @@ void VoxelGrid::affectFlowfieldAround(float x, float y, float z, float alphaEffe
 
 void VoxelGrid::initMap()
 {
-    this->chunkSize = std::min(this->sizeX, this->chunkSize);
+    this->chunkSize = std::min(int(this->getSizeX()), this->chunkSize);
 
 //    sizeX -= (sizeX % chunkSize);
 //    sizeY -= (sizeY % chunkSize);
@@ -257,15 +287,15 @@ void VoxelGrid::initMap()
 
     // Create and configure FastNoise object
     this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    this->noise.SetFrequency(blockSize / (float) sizeX);
+    this->noise.SetFrequency(/*blockSize*/ 1.f / (float) this->getSizeX());
     this->noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     this->noise.SetFractalLacunarity(2.0);
     this->noise.SetFractalGain(0.7);
     this->noise.SetFractalWeightedStrength(0.5);
     this->noise.SetFractalOctaves(10);
-    for (int x = 0; x < this->sizeX; x++)
-        for (int y = 0; y < this->sizeY; y++)
-            for (int h = 0; h < this->sizeZ; h++)
+    for (int x = 0; x < this->getSizeX(); x++)
+        for (int y = 0; y < this->getSizeY(); y++)
+            for (int h = 0; h < this->getSizeZ(); h++)
                 noiseMinMax.update(this->noise.GetNoise((float)x, (float)y, (float)h));
 
     this->chunks = std::vector<std::shared_ptr<VoxelChunk>>(this->numberOfChunksX() * this->numberOfChunksY());
@@ -273,11 +303,11 @@ void VoxelGrid::initMap()
     float dt = 0.1f;
     float diffusion = 0.1f;
     float viscosity = 0.01f;
-    this->fluidSimulation = FluidSimulation(this->sizeX / this->fluidSimRescale, this->sizeY / this->fluidSimRescale, this->sizeZ / this->fluidSimRescale, dt, diffusion, viscosity, 10);
+    this->fluidSimulation = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, 10);
 
     this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1000); // Fill with water density
 }
-
+/*
 void VoxelGrid::createMesh()
 {
     for(std::shared_ptr<VoxelChunk>& vc : this->chunks)
@@ -286,7 +316,7 @@ void VoxelGrid::createMesh()
     }
     remeshAll();
 }
-
+*/
 void VoxelGrid::makeItFall(float erosionStrength)
 {
     computeVoxelGroups();
@@ -295,9 +325,9 @@ void VoxelGrid::makeItFall(float erosionStrength)
             vc->makeItFall();
         }
     }
-    remeshAll();
+//    remeshAll();
     if (erosionStrength > 0.0) {
-        UnderwaterErosion erod(this->shared_from_this(), 10, erosionStrength, 100);
+        UnderwaterErosion erod(this, 10, erosionStrength, 100); // (this->shared_from_this(), 10, erosionStrength, 100);
         erod.Apply();
     }
 }
@@ -309,24 +339,24 @@ void VoxelGrid::letGravityMakeSandFall(bool remesh)
     }*/
     this->letGravityMakeSandFallWithFlow();
     this->applyModification(this->shareSandWithNeighbors());
-    if (remesh)
-        remeshAll();
+//    if (remesh)
+//        remeshAll();
     auto duration = std::chrono::duration<float>(std::chrono::system_clock::now() - start);
     std::cout << duration.count() << " s for making sand fall once" << std::endl;
 }
 void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
 {
-    Matrix3<float> transportMatrix(this->sizeX, this->sizeY, this->sizeZ);
-    Matrix3<float> currentTransportMatrix(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> transportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    Matrix3<float> currentTransportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     Matrix3<float> voxelValues = this->getVoxelValues();
-    Matrix3<Vector3> flow(this->sizeX, this->sizeY, this->sizeZ, this->sea_current); // To change with real flow
+    Matrix3<Vector3> flow(this->getSizeX(), this->getSizeY(), this->getSizeZ(), this->sea_current); // To change with real flow
     float gravityForce = 1.f;
 //    Matrix3<Vector3> flow = this->flowField;
     float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
 
     int iter = 0;
     do {
-        currentTransportMatrix = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        currentTransportMatrix = Matrix3<float>(this->getSizeX(), this->getSizeY(), this->getSizeZ());
         std::vector<Vector3> sandyPositions;
         for (size_t i = 0; i < voxelValues.size(); i++) {
             if (sandLowerLimit <= voxelValues[i] + transportMatrix[i] && voxelValues[i] + transportMatrix[i] < sandUpperLimit) {
@@ -380,12 +410,12 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
 Matrix3<float> VoxelGrid::shareSandWithNeighbors()
 {
     Matrix3<float> allVoxels = this->getVoxelValues();
-    Matrix3<float> transport(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<float> transport(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     allVoxels.raiseErrorOnBadCoord = false;
     allVoxels.defaultValueOnBadCoord = std::numeric_limits<float>::max();
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
+    for (int x = 0; x < this->getSizeX(); x++) {
+        for (int y = 0; y < this->getSizeY(); y++) {
+            for (int z = 0; z < this->getSizeZ(); z++) {
                 // Maybe check if val is movable (0 < val < 1.0)
                 float voxelValue = allVoxels.at(x, y, z);
                 if (voxelValue <= 0.0 || 1.0 <= voxelValue) continue;
@@ -436,7 +466,7 @@ void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
             Matrix3<float> subset = modifications.subset(relativeA.x, relativeB.x, relativeA.y, relativeB.y, relativeA.z, relativeB.z);
 //            std::cout << "Submatrix total weight : " << subset.sum() << std::endl;
             vc->applyModification(subset, A);
-//            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->sizeZ));
+//            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->getSizeZ()));
         }
     }
 }
@@ -521,7 +551,7 @@ bool VoxelGrid::undo()
     bool effective = false;
     for (auto& vc : this->chunks)
         effective = vc->undo();
-    this->remeshAll();
+//    this->remeshAll();
     return effective;
 }
 
@@ -530,7 +560,7 @@ bool VoxelGrid::redo()
     bool effective = false;
     for (auto& vc : this->chunks)
         effective = vc->redo();
-    this->remeshAll();
+//    this->remeshAll();
     return effective;
 }
 
@@ -538,20 +568,17 @@ size_t VoxelGrid::getCurrentHistoryIndex() const
 {
     return this->chunks.front()->currentHistoryIndex;
 }
-
+/*
 void VoxelGrid::display() {
 
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
     {
         vc->display();
     }
-    /*
-    std::cout << "Voxel grid has " << this->mesh.vertexArrayFloat.size() << " points" << std::endl;
-    this->mesh.display(GL_POINTS);*/
-}
+}*/
 
-int VoxelGrid::getHeight(int x, int y) {
-    for (int z = this->sizeZ - 1; z >= 0; z--)
+float VoxelGrid::getHeight(float x, float y) {
+    for (int z = this->getSizeZ() - 1; z >= 0; z--)
         if (this->getVoxelValue(x, y, z) > 0.f)
             return z;
     return 0;
@@ -562,11 +589,11 @@ bool VoxelGrid::contains(Vector3 v) {
 }
 
 bool VoxelGrid::contains(float x, float y, float z) {
-    return (0 <= x && x < this->sizeX && 0 <= y && y < this->sizeY && 0 <= z && z < this->sizeZ);
+    return (0 <= x && x < this->getSizeX() && 0 <= y && y < this->getSizeY() && 0 <= z && z < this->getSizeZ());
 }
 
-void VoxelGrid::remeshAll()
-{
+//void VoxelGrid::remeshAll()
+//{
     /*
     for (std::shared_ptr<VoxelChunk>& vc : this->chunks) {
         vc->createMesh(this->displayWithMarchingCubes);
@@ -603,14 +630,14 @@ void VoxelGrid::remeshAll()
     mesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
     mesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
     */
-}
+//}
 
 void VoxelGrid::computeVoxelGroups()
 {
     int currentMarker = 0;
     std::set<int> neighbors_coords;
-    Matrix3<int> connected(this->sizeX, this->sizeY, this->sizeZ);
-    Matrix3<int> labels(this->sizeX, this->sizeY, this->sizeZ, -1);
+    Matrix3<int> connected(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    Matrix3<int> labels(this->getSizeX(), this->getSizeY(), this->getSizeZ(), -1);
     Matrix3<float> voxelValues = this->getVoxelValues();
 
     for (size_t i = 0; i < voxelValues.size(); i++) {
@@ -654,11 +681,11 @@ Matrix3<float> VoxelGrid::getVoxelValues()
     if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
         this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
 
-        this->_cachedVoxelValues = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        this->_cachedVoxelValues = Matrix3<float>(this->getSizeX(), this->getSizeY(), this->getSizeZ());
         for (auto& vc : this->chunks) {
             this->_cachedVoxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
         }
-        this->updateLayersRepresentation();
+//        this->updateLayersRepresentation();
     }
     return this->_cachedVoxelValues;
 }
@@ -849,7 +876,7 @@ std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x, floa
 
     if (xChunk < 0 || yChunk < 0 || _x >= getSizeX() || _y >= getSizeY() || _z >= this->getSizeZ())
         return std::make_tuple(-1, -1, -1, -1); // -1 = not good coord
-    return std::make_tuple(xChunk * (this->sizeY / chunkSize) + yChunk, voxPosX, voxPosY, _z);
+    return std::make_tuple(xChunk * (this->getSizeY() / chunkSize) + yChunk, voxPosX, voxPosY, _z);
 }
 float VoxelGrid::getVoxelValue(Vector3 pos) {
     return this->getVoxelValue(pos.x, pos.y, pos.z);
@@ -892,7 +919,7 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
 }
 Matrix3<Vector3> VoxelGrid::getFlowfield()
 {
-    Matrix3<Vector3> values(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<Vector3> values(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     for (auto& vc : this->chunks) {
         values.paste(vc->flowField, vc->x, vc->y, 0);
     }
@@ -968,7 +995,7 @@ void VoxelGrid::setVoxelIsOnGround(float x, float y, float z, bool newVal)
 int VoxelGrid::getMaxLoD()
 {
     if (chunks.size() > 0 && chunks[0]) {
-        int maxLoD = this->sizeX;
+        int maxLoD = this->getSizeX();
         for (std::shared_ptr<VoxelChunk>& vc : this->chunks)
             if (int(vc->LoDs.size() - 1) < maxLoD)
                 maxLoD = vc->LoDs.size() - 1;
@@ -993,7 +1020,7 @@ void VoxelGrid::saveMap(std::string filename)
 {
     std::ofstream out;
     out.open(filename);
-    out << this->sizeX << " " << this->sizeY << " " << this->sizeZ << " " << this->chunkSize << "\n";
+    out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << " " << this->chunkSize << "\n";
     for (auto& vc : chunks) {
         for (int x = 0; x < vc->sizeX; x++)
             for (int y = 0; y < vc->sizeY; y++)
@@ -1006,9 +1033,21 @@ void VoxelGrid::retrieveMap(std::string filename)
 {
     std::ifstream in;
     in.open(filename);
-    in >> this->sizeX >> this->sizeY >> this->sizeZ >> this->chunkSize;
+    int _x = this->getSizeX(), _y = this->getSizeY(), _z = this->getSizeZ();
+    in >> _x >> _y >> _z >> this->chunkSize;
+    this->_cachedVoxelValues = Matrix3<float>(_x, _y, _z, 0.f);
     initMap();
 
+    for (int x = 0; x < _x; x++) {
+        for (int y = 0; y < _y; y++) {
+            for (int z = 0; z < _z; z++) {
+                float map_val;
+                in >> map_val;
+                this->_cachedVoxelValues.at(x, y, z) = map_val;
+            }
+        }
+    }
+    /*
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
@@ -1025,7 +1064,7 @@ void VoxelGrid::retrieveMap(std::string filename)
             iChunk ++;
         }
     }
-    this->tempData = data;
+    this->tempData = data;*/
 }
 
 Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
@@ -1061,7 +1100,7 @@ float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
     return noiseMinMax.remap(this->noise.GetNoise((float)x, (float)y, (float)z), -1.0 + noise_shift, 1.0 + noise_shift);
 }
 
-
+/*
 std::pair<Matrix3<int>, Matrix3<float> > VoxelGrid::getLayersRepresentations()
 {
     return {_materialLayers, _heightLayers};
@@ -1119,27 +1158,32 @@ void VoxelGrid::updateLayersRepresentation()
         }
     }
 }
-
+*/
 
 
 #include <sstream>
 std::string VoxelGrid::toString()
 {
+    /*
     std::ostringstream ret;
     ret << "{";
     ret << "\n\t\"sizeX\": \"" << sizeX << "\",\n\t\"sizeY\": \"" << sizeY << "\",\n\t\"sizeZ\": \"" << sizeZ;
     ret << "\",\n\t\"blockSize\": \"" << blockSize << "\",\n\t\"noise_shifting\": \"" << noise_shifting;
     ret << "\",\n\t\"chunkSize\": \"" << chunkSize << "\",\n\t\"numberOfVoxels\": \"" << sizeX*sizeY*sizeZ;
     ret << "\",\n\t\"numberOfChunks\": \"" << chunks.size() << "\"\n}";
-    return ret.str();
+    return ret.str();*/
+    return "";
 }
 std::string VoxelGrid::toShortString()
 {
+    /*
     std::ostringstream ret;
     ret << "X" << sizeX << "Y" << sizeY << "Z" << sizeZ;
     ret << "BS" << blockSize << "NS" << noise_shifting;
     ret << "CS" << chunkSize;
     return ret.str();
+    */
+    return "";
 }
 
 void VoxelGrid::smoothVoxels()

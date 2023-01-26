@@ -12,7 +12,8 @@ class UnderwaterErosion
 {
 public:
     UnderwaterErosion();
-    UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRockSize, float maxRockStrength, int rockAmount);
+//    UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRockSize, float maxRockStrength, int rockAmount);
+    UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount);
 
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     std::tuple<std::vector<std::vector<Vector3>>, std::vector<std::vector<Vector3>>> Apply(Vector3 startingPoint = Vector3(false),
@@ -43,7 +44,8 @@ public:
     std::vector<Vector3> CreateTunnel(KarstHole& tunnel, bool addingMatter = false, bool applyChanges = true);
 
 
-    std::shared_ptr<VoxelGrid> grid;
+//    std::shared_ptr<VoxelGrid> grid;
+    VoxelGrid* grid;
     int maxRockSize;
     int rockAmount;
     float maxRockStrength;

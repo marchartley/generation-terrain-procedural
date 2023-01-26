@@ -97,7 +97,7 @@ ViewerInterface::ViewerInterface() {
             this->biomeInterface->generateBiomes();
 //            this->biomeInterface->randomize();
         }
-        viewer->setSceneCenter(viewer->voxelGrid->getDimensions() * viewer->voxelGrid->getBlockSize() / 2.f);
+        viewer->setSceneCenter(viewer->voxelGrid->getDimensions()/* * viewer->voxelGrid->getBlockSize()*/ / 2.f);
 
         QObject::connect(this->biomeInterface.get(), &BiomeInterface::terrainViewModified, this->terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
     });

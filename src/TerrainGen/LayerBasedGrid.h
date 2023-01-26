@@ -16,20 +16,14 @@ class LayerBasedGrid;
 //#include "Utils/FastNoiseLit.h"
 //#include "Utils/ShapeCurve.h"
 #include "TerrainGen/ImplicitPatch.h"
+#include "TerrainGen/TerrainModel.h"
 
-class ImplicitPatch;
-class Patch2D;
-class Patch3D;
-
-
-class LayerBasedGrid
+class LayerBasedGrid : public TerrainModel
 {
 public:
     LayerBasedGrid();
     LayerBasedGrid(int nx, int ny, float nz = 1);
 
-    void createMesh();
-    void display();
     TerrainTypes getValue(Vector3 pos);
     TerrainTypes getValue(float x, float y, float z);
 
@@ -37,22 +31,9 @@ public:
 
     void reorderLayers();
 
-    Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
-    Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;
-
-    int getSizeX() { return layers.sizeX; }
-    int getSizeY() { return layers.sizeY; }
-    float getSizeZ();
-    Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
-//    int sizeX, sizeY;
-//    float sizeZ;
-
-    Mesh mesh;
-
     float getHeight(float x, float y);
-    float getHeight(Vector3 pos);
 
-    void from2DGrid(Grid grid);
+    void from2DGrid(Heightmap grid);
     void fromVoxelGrid(VoxelGrid& voxelGrid);
 
     VoxelGrid toVoxelGrid();
@@ -68,18 +49,10 @@ public:
     void thermalErosion();
 
     void cleanLayers(float minLayerHeight = 0.1f);
-/*
-    void add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
-    void add(Patch3D patch, TerrainTypes material, bool applyDistanceFalloff = true, float distancePower = 1.f);
-    */
-    void add(ImplicitPatch* patch, TerrainTypes material = TerrainTypes::SAND, bool applyDistanceFalloff = true, float distancePower = 1.f);
+
+    void add(ImplicitPatch* patch);
 
     Mesh getGeometry();
-
-    int currentHistoryIndex = 0;
-    int _historyIndex = 0;
-
-    std::pair<Matrix3<int>, Matrix3<float> > _cachedMaterialAndHeights;
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
@@ -91,6 +64,30 @@ public:
     static std::vector<TerrainTypes> instanciableLayers;
 
     std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> transformationRules;
+
+
+    float getSizeX() { return this->layers.sizeX; }
+    float getSizeY() { return this->layers.sizeY; }
+    float getSizeZ();
+
+    void initMap() {};
+
+    bool undo() { return false; };
+    bool redo() { return false; };
+
+    void saveMap(std::string filename) {};
+    void retrieveMap(std::string filename) {};
+
+    std::string toString() { return this->toShortString(); };
+    std::string toShortString() { return "Layered terrain : " + std::to_string(this->getDimensions().x) + "x" + std::to_string(this->getDimensions().y) + "x" + std::to_string(this->getDimensions().z); };
+
+    void reset() { this->layers = previousState; }
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }
+protected:
+    std::pair<Matrix3<int>, Matrix3<float> > _cachedMaterialAndHeights;
+
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
+    Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;
 };
 
 #endif // LAYERBASEDGRID_H

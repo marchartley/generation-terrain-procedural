@@ -49,12 +49,12 @@ void KarstPathGenerationInterface::replay(nlohmann::json action)
     }
 }
 
-void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
 //    this->voxelGrid = voxelGrid;
     this->AABBoxMinPos = Vector3(0, 0, 0);
-    this->AABBoxMaxPos = Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ) * voxelGrid->blockSize;
+    this->AABBoxMaxPos = voxelGrid->getDimensions(); // Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ); // * voxelGrid->blockSize;
     this->fractureVector->setPositions(AABBoxMinPos, Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z));
     this->waterHeightSlider->setPositions(AABBoxMinPos + Vector3(-10, -10, 0), Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z) + Vector3(-10, -10, 0));
     this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
@@ -74,7 +74,7 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Grid> heightma
 
 
     Matrix3<float> voxels = voxelGrid->getVoxelValues();
-    Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+    Matrix3<int> availableGrid(voxelGrid->getDimensions(), 0.f); // (voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
@@ -85,7 +85,7 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Grid> heightma
             }
         }
     }
-    this->karstCreator = new KarstPathsGeneration(availableGrid, Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
+    this->karstCreator = new KarstPathsGeneration(availableGrid, voxelGrid->getDimensions(), 20.f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
 }
 
 void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
@@ -120,7 +120,7 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
 void KarstPathGenerationInterface::computeKarst()
 {
     if (karstCreator->graph.nodes.empty()) return;
-    Matrix3<float> porosityMap(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
+    Matrix3<float> porosityMap(voxelGrid->getDimensions(), 1.f); // voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
     Matrix3<float> voxelValues = voxelGrid->getVoxelValues();
     for (int x = 0; x < porosityMap.sizeX; x++) {
         for (int y = 0; y < porosityMap.sizeY; y++) {
@@ -177,7 +177,7 @@ void KarstPathGenerationInterface::updateKarstPath()
 
 void KarstPathGenerationInterface::createKarst()
 {
-    UnderwaterErosion erod(this->voxelGrid, 10.f, 2.f, 10);
+    UnderwaterErosion erod(this->voxelGrid.get(), 10.f, 2.f, 10);
     erod.CreateMultipleTunnels(this->karstPaths);
     //    Q_EMIT this->update();
 }

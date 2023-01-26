@@ -17,6 +17,7 @@ class VoxelGrid;
 
 #include "FluidSimulation/FluidSimulation.h"
 // #include "src/sim-fluid-ethanjli/fluidsystem.h"
+#include "TerrainGen/TerrainModel.h"
 
 struct NoiseMinMax {
     float min = std::numeric_limits<float>::max();
@@ -31,21 +32,17 @@ struct NoiseMinMax {
     }
 };
 
-class VoxelGrid : public std::enable_shared_from_this<VoxelGrid> {
+class VoxelGrid : public TerrainModel {
 public:
     VoxelGrid();
-    VoxelGrid(Grid& grid);
-    VoxelGrid(int nx, int ny, int nz, float blockSize, float noise_shifting = 0.0);
+    VoxelGrid(Heightmap& grid);
+    VoxelGrid(int nx, int ny, int nz, float noise_shifting = 0.0);
     ~VoxelGrid();
-    void from2DGrid(Grid grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
+    void from2DGrid(Heightmap grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
     void fromLayerBased(LayerBasedGrid layerBased, int fixedHeight = -1);
-    std::shared_ptr<VoxelGrid> fromIsoData();
+    VoxelGrid *fromIsoData();
 
     void initMap();
-
-    void display();
-
-    void createMesh();
 
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
@@ -57,22 +54,17 @@ public:
     bool redo();
     size_t getCurrentHistoryIndex() const;
 
-    int getSizeX() { return this->sizeX; }
-    int getSizeY() { return this->sizeY; }
-    int getSizeZ() { return this->sizeZ; }
-    Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
-    float getBlockSize() { return this->blockSize; }
+    int numberOfChunksX() { return std::ceil(this->getSizeX() / (float)this->chunkSize); }
+    int numberOfChunksY() { return std::ceil(this->getSizeY() / (float)this->chunkSize); }
 
-    std::vector<Matrix3<float>> tempData;
-    int getHeight(int x, int y);
+//    std::vector<Matrix3<float>> tempData;
+    float getHeight(float x, float y);
 
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
 
-    void remeshAll();
+//    void remeshAll();
 
-    int numberOfChunksX() { return std::ceil(this->sizeX / (float)this->chunkSize); }
-    int numberOfChunksY() { return std::ceil(this->sizeY / (float)this->chunkSize); }
 
     std::string toString();
     std::string toShortString();
@@ -124,27 +116,22 @@ public:
     Vector3 getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
-//protected:
-    int sizeX, sizeY, sizeZ;
-    float blockSize;
-    std::vector<std::shared_ptr<VoxelChunk>> chunks;
-    float noise_shifting;
-
-    int chunkSize = 20;
-    bool displayWithMarchingCubes = false;
-    FastNoiseLite noise;
-    NoiseMinMax noiseMinMax;
-
-    Mesh mesh;
-    FluidSimulation fluidSimulation;
-    //std::unique_ptr<FluidSystem> fluidSystem;
-    //std::unique_ptr<VelocityField> constantFlowSource;
+    float getSizeX() { return _cachedVoxelValues.sizeX; }
+    float getSizeY() { return _cachedVoxelValues.sizeY; }
+    float getSizeZ() { return _cachedVoxelValues.sizeZ; }
 
     int fluidSimRescale = 4;
 
-
+    int getChunkSize() const { return this->chunkSize; }
+    Matrix3<float> getEnvironmentalDensities() { return this->environmentalDensities; }
+protected:
+    std::vector<std::shared_ptr<VoxelChunk>> chunks;
+    float noise_shifting;
+    int chunkSize = 20;
+    FastNoiseLite noise;
+    NoiseMinMax noiseMinMax;
+    FluidSimulation fluidSimulation;
     bool _smoothingNeeded = false; // Just used when we come from a 2D grid.
-
     Matrix3<Vector3> flowField;
     Matrix3<int> distanceField;
     Matrix3<float> pressureField;
@@ -153,18 +140,9 @@ public:
 
     Matrix3<float> environmentalDensities;
 
-    std::pair<Matrix3<int>, Matrix3<float> > getLayersRepresentations();
-
-protected:
     float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
-
     int _cachedHistoryIndex = -1;
     Matrix3<float> _cachedVoxelValues;
-
-    void updateLayersRepresentation();
-//    Matrix3<std::vector<std::pair<int, float>>> _layersRepresentation;
-    Matrix3<int> _materialLayers;
-    Matrix3<float> _heightLayers;
 };
 
 #endif // VOXELGRID_H

@@ -5,7 +5,7 @@
 #include <chrono>
 #include "Utils/Utils.h"
 
-VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<float> iso_data, std::shared_ptr<VoxelGrid> parent)
+VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<float> iso_data, VoxelGrid *parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), sizeZ(height), parent(parent) {
 
     this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->sizeZ, -1);

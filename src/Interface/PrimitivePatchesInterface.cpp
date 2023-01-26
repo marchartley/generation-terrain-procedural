@@ -65,7 +65,7 @@ void PrimitivePatchesInterface::replay(nlohmann::json action)
 
 }
 
-void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
 
@@ -574,7 +574,8 @@ void PrimitivePatchesInterface::resetPatch()
 
 void PrimitivePatchesInterface::updateMapWithCurrentPatch()
 {
-    this->layerGrid->layers = this->layerGrid->previousState;
+//    this->layerGrid->layers = this->layerGrid->previousState;
+    this->layerGrid->reset();
 //    this->mainPatch->cleanCache();
     this->layerGrid->add(this->mainPatch/*, SAND, false*/);
     voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());

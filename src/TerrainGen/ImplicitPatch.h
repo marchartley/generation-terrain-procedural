@@ -1,6 +1,12 @@
 #ifndef IMPLICITPATCH_H
 #define IMPLICITPATCH_H
 
+class ImplicitPatch;
+class ImplicitPrimitive;
+class ImplicitOperator;
+class ImplicitUnaryOperator;
+class ImplicitCSG;
+
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Voxel.h"
@@ -12,11 +18,6 @@
 
 //class TerrainMaterial;
 
-class ImplicitPatch;
-class ImplicitPrimitive;
-class ImplicitOperator;
-class ImplicitUnaryOperator;
-class ImplicitCSG;
 
 /*
 class TerrainMaterial {

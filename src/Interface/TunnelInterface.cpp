@@ -42,7 +42,7 @@ void TunnelInterface::replay(nlohmann::json action)
         float erosionStrength = parameters.at("erosion_strength").get<float>() * random_gen::generate(0.1f, 2.f);
         BSpline path = json_to_bspline(parameters.at("path"));
 
-        UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
+        UnderwaterErosion erod(this->voxelGrid.get(), 0, erosionStrength, 0);
         KarstHole hole(path, width, height, startingShape, endingShape);
         erod.CreateTunnel(hole, !removingMatter);
     }
@@ -205,7 +205,7 @@ void TunnelInterface::createTunnel(bool removingMatter)
 {
     if (this->currentTunnelPoints.empty()) return;
 
-    UnderwaterErosion erod(this->voxelGrid, 0, erosionStrength, 0);
+    UnderwaterErosion erod(this->voxelGrid.get(), 0, erosionStrength, 0);
     BSpline path(this->currentTunnelPoints);
     KarstHole hole(path, this->tunnelWidth, this->tunnelHeight, startingShape, endingShape);
     this->tunnelPreview.fromArray(erod.CreateTunnel(hole, !removingMatter, true));

@@ -18,8 +18,7 @@ class VoxelChunk : public std::enable_shared_from_this<VoxelChunk>
 {
 public:
     VoxelChunk();
-//    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<TerrainTypes> data, std::shared_ptr<VoxelGrid> parent);
-    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<float> iso_data, std::shared_ptr<VoxelGrid> parent);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<float> iso_data, VoxelGrid* parent);
     ~VoxelChunk();
 
     void display();
@@ -73,7 +72,8 @@ public:
     std::map<VOXEL_NEIGHBOR, std::shared_ptr<VoxelChunk>> neighboring_chunks;
     bool lastChunkOnX = false, lastChunkOnY = false;
 
-    std::shared_ptr<VoxelGrid> parent;
+//    std::shared_ptr<VoxelGrid> parent;
+    VoxelGrid* parent = nullptr;
 
     Mesh mesh;
     bool needRemeshing = true;

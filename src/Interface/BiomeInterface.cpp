@@ -97,8 +97,10 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     BiomeInstance::instancedBiomes.clear();
 
     Vector3 heightmapDim = Vector3(3*31, 3*31, 1);
-    this->heightmap->heights = Matrix3<float>(heightmapDim, 20.f);
-    this->heightmap->maxHeight = 40.f;
+//    this->heightmap->heights = Matrix3<float>(heightmapDim, 20.f);
+//    this->heightmap->maxHeight = 40.f;
+    this->heightmap = std::make_shared<Heightmap>(heightmapDim.x, heightmapDim.y, 40.f);
+    heightmap->raise(Matrix3<float>(heightmapDim, 20.f));
 
     Vector3 voxelGridOffsetEnd = (voxelGridOffsetStart + heightmapDim / voxelGridScaleFactor).floor();
     voxelGridOffsetEnd.z = 1; // Force the Z component to be 1, instead of being rounded to 0 in the division
@@ -110,12 +112,12 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     auto startTime = std::chrono::system_clock::now();
 //return;
     ShapeCurve terrainArea({
-                   heightmap->heights.getDimensions() * Vector3(0, 0, 0),
-                   heightmap->heights.getDimensions() * Vector3(1, 0, 0),
-                   heightmap->heights.getDimensions() * Vector3(1, 1, 0),
-                   heightmap->heights.getDimensions() * Vector3(0, 1, 0)
+                   heightmap->getDimensions() * Vector3(0, 0, 0),
+                   heightmap->getDimensions() * Vector3(1, 0, 0),
+                   heightmap->getDimensions() * Vector3(1, 1, 0),
+                   heightmap->getDimensions() * Vector3(0, 1, 0)
                });
-    Vector3 initialSpawn = heightmap->heights.getDimensions() / 2.f + Vector3(10, 0, 0);
+    Vector3 initialSpawn = heightmap->getDimensions() / 2.f + Vector3(10, 0, 0);
 
     // All the biome hierarchy is created from the json
     // Each biome has a class name, a position and his biome children
@@ -123,7 +125,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         rootBiome = predefinedBiomeInstance;
     else
         rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
-    heightmap->biomeIndices = Matrix3<int>(heightmap->heights.getDimensions(), 0);
+    heightmap->getBiomeIndices() = Matrix3<int>(heightmap->getDimensions(), 0);
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
     std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
 
@@ -169,8 +171,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         bool atLeastOne = false;
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
-                if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->biomeIndices.checkCoord(Vector3(x, y))) {
-                    heightmap->biomeIndices.at(x, y).push_back(current->instanceID);
+                if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
+                    heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")\n";
                     atLeastOne = true;
                 }
@@ -194,7 +196,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     noise.SetFractalGain(0.7);
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(1);
-    heightmap->biomeIndices = heightmap->biomeIndices.wrapWithoutInterpolation(Matrix3<Vector3>::fbmNoise2D(noise, heightmap->biomeIndices.sizeX, heightmap->biomeIndices.sizeY)  * 50.f);
+    heightmap->getBiomeIndices() = heightmap->getBiomeIndices().wrapWithoutInterpolation(Matrix3<Vector3>::fbmNoise2D(noise, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY)  * 50.f);
 
     // First, level the terrain as the biomes design it
     Matrix3<float> heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
@@ -217,7 +219,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         }
     }
     heightChange = heightChange.meanSmooth(15, 15, 1, true);
-    this->heightmap->heights += heightChange;
+    this->heightmap->raise(heightChange);
     voxelGrid->add2DHeightModification(heightChange.subset(voxelGridOffsetStart, voxelGridOffsetEnd).resize(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1)) /* * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight())*/, 1.5f);
 
 //    Matrix3<float> all2DModifications(heightmapDim);
@@ -229,7 +231,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         Vector3 pos = current->position;
 //        Vector3 surfacePos = getSurfacePosition(voxelGrid, pos);
         ShapeCurve area = current->area;
-        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->maxHeight);
+        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->getMaxHeight());
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
         Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 1.f);
@@ -354,9 +356,9 @@ void BiomeInterface::mouseMoveEvent(QMouseEvent* event)
 void BiomeInterface::setVoxelGridSizeFactor(float newFactor)
 {
     newFactor = std::max(newFactor, 1.f);
-    Vector3 currentEnd = this->voxelGridOffsetStart + (this->heightmap->heights.getDimensions() / this->voxelGridScaleFactor);
+    Vector3 currentEnd = this->voxelGridOffsetStart + (this->heightmap->getDimensions() / this->voxelGridScaleFactor);
     Vector3 currentCenter = (currentEnd + this->voxelGridOffsetStart) / 2.f;
-    Vector3 maxDims = this->heightmap->heights.getDimensions();
+    Vector3 maxDims = this->heightmap->getDimensions();
 
     this->voxelGridScaleFactor = newFactor;
 
@@ -423,6 +425,7 @@ void BiomeInterface::interchangeBiomes()
 
 void BiomeInterface::keyPressEvent(QKeyEvent* event)
 {
+    /*
     if (this->isVisible()) {
         bool regenMap = false;
         if (event->key() == Qt::Key_Plus) {
@@ -459,6 +462,7 @@ void BiomeInterface::keyPressEvent(QKeyEvent* event)
             this->generateBiomes(rootBiome);
     }
     Q_EMIT updated();
+    */
     ActionInterface::keyPressEvent(event);
 }
 void BiomeInterface::keyReleaseEvent(QKeyEvent* event)
@@ -482,7 +486,7 @@ void BiomeInterface::mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mous
         // We consider that we got the mouse position just before from the mouseClickedOnMapEvent
 
         // Move the offset so the new center matches the clicked position
-        this->voxelGridOffsetStart = mousePosition - (this->heightmap->heights.getDimensions() / (this->voxelGridScaleFactor * 2.f));
+        this->voxelGridOffsetStart = mousePosition - (this->heightmap->getDimensions() / (this->voxelGridScaleFactor * 2.f));
         float newFactor = this->voxelGridScaleFactor;
         if (event->button() == Qt::MouseButton::LeftButton) {
             newFactor += 1.f;
@@ -521,7 +525,7 @@ void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInM
 
         // Get the voxelGrid mouse position and convert it to the heightmap mouse pos
         this->tempMousePos = fromVoxelsPosToHeightmap(mousePosInMap);
-        this->selectedBiomeIDs = this->heightmap->biomeIndices.at(tempMousePos.xy());
+        this->selectedBiomeIDs = this->heightmap->getBiomeIndices().at(tempMousePos.xy());
         std::cout << "Biomes : " << (selectedBiomeIDs.empty() ? "None." : "") << std::endl;
         for (auto ID : selectedBiomeIDs) {
             std::cout << "- " << BiomeInstance::instancedBiomes[ID]->getInstanceName() << std::endl;
@@ -684,9 +688,9 @@ void BiomeInterface::addTunnel(KarstHole &hole)
     Vector3 startPoint = this->fromVoxelsPosToHeightmap(hole.path.points.front());
 //    Vector3 endPoint = this->fromVoxelsPosToHeightmap(hole.path.points.back());
 
-    if (this->heightmap->biomeIndices.checkCoord(startPoint.xy()) && !this->heightmap->biomeIndices.at(startPoint.xy()).empty()) {
-        std::shared_ptr<BiomeInstance> startingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(startPoint.xy()).back()];
-    //    std::shared_ptr<BiomeInstance> endingBiome = BiomeInstance::instancedBiomes[this->heightmap->biomeIndices.at(endPoint.xy()).back()];
+    if (this->heightmap->getBiomeIndices().checkCoord(startPoint.xy()) && !this->heightmap->getBiomeIndices().at(startPoint.xy()).empty()) {
+        std::shared_ptr<BiomeInstance> startingBiome = BiomeInstance::instancedBiomes[this->heightmap->getBiomeIndices().at(startPoint.xy()).back()];
+    //    std::shared_ptr<BiomeInstance> endingBiome = BiomeInstance::instancedBiomes[this->heightmap->getBiomeIndices().at(endPoint.xy()).back()];
 
         std::shared_ptr<BiomeModel> archeModel = nullptr;
         for (auto& [id, biomeInstance] : BiomeInstance::instancedBiomes) {

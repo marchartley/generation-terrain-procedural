@@ -3,31 +3,28 @@
 
 #include "DataStructure/Vector3.h"
 
-class Grid;
+class Heightmap;
 
 #include "TerrainGen/VoxelGrid.h"
 #include "Graphics/Mesh.h"
 #include "DataStructure/Matrix3.h"
 #include "TerrainGen/LayerBasedGrid.h"
+#include "TerrainGen/TerrainModel.h"
 
-class Grid {
+class Heightmap : public TerrainModel {
 public:
-    Grid();
-    Grid(int nx, int ny, float max_height, float tileSize = 0.1);
-    Grid(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1, float tileSize = 0.1);
-
-    void display(bool displayNormals = false);
-
-    int getSizeX() {return heights.sizeX;}
-    int getSizeY() {return heights.sizeY;}
-    Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getMaxHeight()); }
+    Heightmap();
+    Heightmap(int nx, int ny, float max_height);
+    Heightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1);
 
     Matrix3<float> getHeights() { return this->heights; }
-    float getHeight(int x, int y) { return this->heights.at(x, y); }
+    float getHeight(float x, float y) { return this->heights.at(x, y); }
     float getHeight(Vector3 pos) { return this->getHeight(pos.x, pos.y); }
+
     float getMaxHeight();
-    float getTileSize() { return this->tileSize; }
-    Vector3 getNormal(int x, int y) { return this->normals.at(x, y); }
+    float getSizeX() { return this->heights.sizeX; }
+    float getSizeY() { return this->heights.sizeY; }
+    float getSizeZ() { return this->getHeights().max() * this->maxHeight; }
 
     /// Erosion functions (should be in another class, I guess...)
     std::vector<std::vector<Vector3>> hydraulicErosion(int numIterations = 1000,
@@ -51,28 +48,35 @@ public:
                                                   float scale = 40.f,
                                                   float dt = .1f);
 
-    void createMesh();
+    void raise(Matrix3<float> elevation);
 
     void fromVoxelGrid(VoxelGrid& voxelGrid);
     void fromLayerGrid(LayerBasedGrid& layerGrid);
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
-    void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1, float tileSize = 0.1);
+    void saveMap(std::string filename) { return this->saveHeightmap(filename); }
+    void retrieveMap(std::string filename) { return this->loadFromHeightmap(filename, getSizeX(), getSizeY(), maxHeight/*, tileSize*/); }
+    void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1/*, float tileSize = 0.1*/);
     void saveHeightmap(std::string heightmap_filename);
 
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
     Mesh getGeometry();
 
-//protected:
-    void computeNormals();
+    void initMap() {};
+
+    bool undo() { return false; };
+    bool redo() { return false; };
+
+    std::string toString() { return this->toShortString(); };
+    std::string toShortString() { return "Grid: " + std::to_string(getDimensions().x) + "x" + std::to_string(getDimensions().y); };
+
+    Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
+
+protected:
     Matrix3<float> heights;
-    Matrix3<Vector3> normals;
     float maxHeight;
-    float tileSize;
-    std::vector<float> vertexArrayFloat;
-    Mesh mesh;
     Matrix3<std::vector<int>> biomeIndices;
 };
 

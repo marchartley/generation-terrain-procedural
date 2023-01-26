@@ -2,102 +2,32 @@
 	"implicitPatches": {
 		"blendingFactor": 2.0,
 		"composableA": {
-			"blendingFactor": 2.0,
-			"composableA": {
-				"densityValue": -2.5,
-				"dimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"index": 24,
-				"material": "WATER",
-				"name": "Identity",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"position": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"shape": "None",
-				"sigmaValue": -1.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
+			"densityValue": -2.5,
+			"dimensions": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
 			},
-			"composableB": {
-				"composableA": {
-					"densityValue": 1.5,
-					"dimensions": {
-						"x": 20.0,
-						"y": 20.0,
-						"z": 20.0
-					},
-					"index": 16,
-					"material": "ROCK",
-					"name": "Sphere",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"position": {
-						"x": 25.545093536376953,
-						"y": 23.468158721923828,
-						"z": 0.0
-					},
-					"shape": "Sphere",
-					"sigmaValue": 5.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
-				"distortion": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"index": 18,
-				"name": "Noise",
-				"noise": {
-					"x": 0.19999998807907104,
-					"y": 20.0,
-					"z": 10.0
-				},
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"rotation": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"translation": {
-					"x": 0.0,
-					"y": -2.2195262908935547,
-					"z": 5.827485084533691
-				},
-				"type": "unary"
-			},
-			"index": 17,
-			"name": "Blend",
-			"operator": "Blend",
+			"index": 23,
+			"material": "WATER",
+			"name": "Identity",
 			"optionalCurve": {
 				"closed": false,
 				"points": []
 			},
-			"positionalB": "ABOVE",
-			"type": "compose",
-			"useIntersection": false
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"shape": "None",
+			"sigmaValue": -1.0,
+			"supportDimensions": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"type": "primitive"
 		},
 		"composableB": {
 			"densityValue": 1.5,
@@ -106,7 +36,7 @@
 				"y": 20.0,
 				"z": 20.0
 			},
-			"index": 20,
+			"index": 16,
 			"material": "ROCK",
 			"name": "Sphere",
 			"optionalCurve": {
@@ -114,8 +44,8 @@
 				"points": []
 			},
 			"position": {
-				"x": 12.520158767700195,
-				"y": 34.92228698730469,
+				"x": 45.27771759033203,
+				"y": 29.570316314697266,
 				"z": 0.0
 			},
 			"shape": "Sphere",
@@ -127,7 +57,7 @@
 			},
 			"type": "primitive"
 		},
-		"index": 21,
+		"index": 17,
 		"name": "Blend",
 		"operator": "Blend",
 		"optionalCurve": {

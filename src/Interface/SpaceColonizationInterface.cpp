@@ -69,7 +69,7 @@ void SpaceColonizationInterface::replay(nlohmann::json action)
         colonizer->nodeMaxDistance = maxDistance;
         this->colonizer->process();
         this->updateKarstPath();
-        UnderwaterErosion erod(this->voxelGrid, width, 3.f, 10);
+        UnderwaterErosion erod(this->voxelGrid.get(), width, 3.f, 10);
         erod.CreateMultipleTunnels(this->karstPaths, false, usingSpheres);
 
     }
@@ -107,12 +107,12 @@ void SpaceColonizationInterface::keyPressEvent(QKeyEvent *event)
     ActionInterface::keyPressEvent(event);
 }
 
-void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
 //    this->voxelGrid = voxelGrid;
     Matrix3<float> voxels = voxelGrid->getVoxelValues();
-    Matrix3<int> availableGrid(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+    Matrix3<int> availableGrid(voxelGrid->getDimensions(), 0.f); //(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
@@ -134,8 +134,8 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Grid> heightmap,
 //    for (auto& pt : keyPoints)
 //        pt.z = 80; // TO REMOVE
     this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, startPos, 10.f);
-    this->colonizer->nodeMinDistance = this->voxelGrid->blockSize;
-    this->colonizer->nodeMaxDistance = this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
+    this->colonizer->nodeMinDistance = 1.f; // this->voxelGrid->blockSize;
+    this->colonizer->nodeMaxDistance = this->voxelGrid->getChunkSize() * 5; // this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
 
     for (size_t i = 0; i < keyPoints.size(); i++) {
         this->controlPoints.push_back(std::make_unique<ControlPoint>(keyPoints[i], 5.f));
@@ -201,7 +201,7 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
 {
     if (this->karstPaths.empty())
         this->updateKarstPath();
-    UnderwaterErosion erod(this->voxelGrid, this->karstWidth, 3.f, 10);
+    UnderwaterErosion erod(this->voxelGrid.get(), this->karstWidth, 3.f, 10);
     erod.CreateMultipleTunnels(this->karstPaths, false, usingSpheres);
 
     std::string nodes, links;

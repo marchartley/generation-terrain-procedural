@@ -1,5 +1,5 @@
 #include "Utils/Globals.h"
-#include "TerrainModification/UnderwaterErosion.h"
+#include "UnderwaterErosion.h"
 #include "TerrainModification/RockErosion.h"
 #include "Utils/BSpline.h"
 #include "Karst/KarstHole.h"
@@ -11,7 +11,7 @@ UnderwaterErosion::UnderwaterErosion()
 {
 
 }
-UnderwaterErosion::UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRockSize, float maxRockStrength, int rockAmount)
+UnderwaterErosion::UnderwaterErosion(VoxelGrid *grid, int maxRockSize, float maxRockStrength, int rockAmount)
     : grid(grid), maxRockSize(maxRockSize), rockAmount(rockAmount), maxRockStrength(maxRockStrength)
 {
 
@@ -56,7 +56,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
     std::vector<std::vector<Vector3>> debugFinishingLines;
     std::vector<std::vector<Vector3>> debugFailingLines;
     std::vector<std::vector<Vector3>> debugLines;
-    float starting_distance = pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ))/2.0, 2);
+    float starting_distance = pow(grid->getDimensions().maxComp()/2.0, 2); // pow(std::max(grid->sizeX, std::max(grid->sizeY, grid->sizeZ))/2.0, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     starting_distance *= 2.0; // Leave a little bit of gap
     int max_iter = 1000;
@@ -87,14 +87,14 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
     gravityfieldValues.raiseErrorOnBadCoord = false;
     gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
 
-    Matrix3<Vector3> flowfieldValues = grid->flowField;
+    Matrix3<Vector3> flowfieldValues = grid->getFlowfield();
     flowfieldValues.raiseErrorOnBadCoord = false;
 
     /* BAD PRACTICE, JUST FOR JFIG DEMO*/
     Vector3 airDir = Vector3(0, airForce + .0001f, 0).rotate(0, 0, (airFlowfieldRotation / 180) * PI);
     Vector3 waterDir = Vector3(0, waterForce + .0001f, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
     for (size_t i = 0; i < flowfieldValues.size(); i++) {
-        if (grid->environmentalDensities.at(i) < 100) { // In the air
+        if (grid->getEnvironmentalDensities().at(i) < 100) { // In the air
             flowfieldValues.at(i) = airDir;
         } else { // In water
             flowfieldValues.at(i) = waterDir;
@@ -143,7 +143,7 @@ UnderwaterErosion::Apply(Vector3 startingPoint, Vector3 originalDirection, float
             total_iterations ++;
 //            std::cout << "Dir mag = " << dir.norm() << std::endl;
             if (this->grid->contains(pos + dir)) {
-                float environmentDensity = this->grid->environmentalDensities.at(pos + dir);
+                float environmentDensity = this->grid->getEnvironmentalDensities().at(pos + dir);
                 float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
                 Vector3 flowfield = flowfieldValues.at(pos + dir) + gravityfieldValues.at(pos + dir) * gravityCoefficient;
 //                dir += flowfield * dirDotGrad * flowfieldFactor * (dist == 0 ? weaknessAgainstFlowfield : 1.0);
@@ -269,13 +269,13 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
 {
     BSpline curve = BSpline(numberPoints); // Random curve
     for (Vector3& coord : curve.points)
-        coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
+        coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * grid->getDimensions(); //Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
 }
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMatter, bool usingSpheres, bool applyChanges,
                                                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    Matrix3<float> erosionMatrix(grid->getDimensions()); //(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     bool modificationDoesSomething = true;
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
@@ -333,15 +333,15 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(BSpline path, bool addingMa
     if (modificationDoesSomething) {
         grid->applyModification(erosionMatrix);
     }
-    if (applyChanges)
-        grid->remeshAll();
+//    if (applyChanges)
+//        grid->remeshAll();
     return coords;
 }
 
 std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter, bool usingSpheres, bool applyChanges,
                                                                             KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
-    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    Matrix3<float> erosionMatrix(grid->getDimensions()); // this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
                                                      Vector3(0.5, 0.5),
@@ -392,8 +392,8 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
         }
     }
     grid->applyModification(erosionMatrix);
-    if (applyChanges)
-        grid->remeshAll();
+//    if (applyChanges)
+//        grid->remeshAll();
     return allCoords;
 }
 
@@ -401,7 +401,8 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
 {
     float rx = 3.f, ry = 3.f, rz = 3.f;
     Vector3 ratio(rx, ry, rz);
-    Matrix3<int> resizedMap = this->grid->getVoxelValues().resize(this->grid->sizeX / rx, this->grid->sizeY / ry, this->grid->sizeZ / rz).binarize();
+    Matrix3<int> resizedMap = this->grid->getVoxelValues().resize(grid->getDimensions() / ratio).binarize();
+//    Matrix3<int> resizedMap = this->grid->getVoxelValues().resize(this->grid->sizeX / rx, this->grid->sizeY / ry, this->grid->sizeZ / rz).binarize();
     Matrix3Graph graph = Matrix3Graph(resizedMap).computeSurface().randomizeEdges(.5f);
     Vector3 clampedStart = start / ratio;
     clampedStart.x = std::clamp(clampedStart.x, 0.f, resizedMap.sizeX - 1.f);
@@ -427,7 +428,7 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, 
 
 std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool addingMatter, bool applyChanges)
 {
-    Matrix3<float> erosionMatrix(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
+    Matrix3<float> erosionMatrix(grid->getDimensions()); //(this->grid->sizeX, this->grid->sizeY, this->grid->sizeZ);
     bool modificationDoesSomething = true;
     BSpline width = BSpline(std::vector<Vector3>({
                                                      Vector3(0.0, 1.0),
@@ -466,8 +467,8 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
     if (modificationDoesSomething) {
         grid->applyModification(erosionMatrix);
     }
-    if (applyChanges)
-        grid->remeshAll();
+//    if (applyChanges)
+//        grid->remeshAll();
     return coords;
 }
 

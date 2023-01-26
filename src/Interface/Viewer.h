@@ -50,8 +50,8 @@ class Viewer : public QGLViewer {
     Q_OBJECT
 public:
     Viewer(QWidget *parent = nullptr);
-    Viewer(std::shared_ptr<Grid> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
-    Viewer(std::shared_ptr<Grid> g, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Heightmap> g, QWidget *parent = nullptr);
     Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
 
@@ -66,8 +66,8 @@ public Q_SLOTS:
     void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; update(); }
     void setMapMode(MapMode newMode) { this->mapMode = newMode; update(); }
     void setSmoothingAlgorithm(SmoothingAlgorithm newAlgo) { this->algorithm = newAlgo;
-                                                             voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
-                                                             voxelGrid->createMesh();
+//                                                             voxelGrid->displayWithMarchingCubes = this->algorithm == MARCHING_CUBES;
+//                                                             voxelGrid->createMesh();
                                                             update();}
 
     void swapCamera(qglviewer::Camera* altCamera, bool useAltCamera);
@@ -100,7 +100,7 @@ public:
     SmoothingAlgorithm algorithm = MARCHING_CUBES;
 
 //private:
-    std::shared_ptr<Grid> grid;
+    std::shared_ptr<Heightmap> grid;
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<LayerBasedGrid> layerGrid;
     bool display_vertices = true;

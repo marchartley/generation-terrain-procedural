@@ -11,10 +11,10 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 }
 
 //void ErosionInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
-void ErosionInterface::affectTerrains(std::shared_ptr<Grid> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
-    this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid, erosionSize, erosionStrength, erosionQtt);
+    this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid.get(), erosionSize, erosionStrength, erosionQtt);
 
     const char* vNoShader = "src/Shaders/no_shader.vert";
     const char* fNoShader = "src/Shaders/no_shader.frag";
@@ -43,14 +43,14 @@ void ErosionInterface::replay(nlohmann::json action)
         int qtt = parameters.at("quantity").get<int>() + random_gen::generate(0.f, 100.f);
         float strength = parameters.at("strength").get<float>() + random_gen::generate(0.f, 1.f);
         float randomness = parameters.at("randomness").get<float>() + random_gen::generate(0.f, .1f);
-        UnderwaterErosion erod(this->voxelGrid, size, strength, qtt);
+        UnderwaterErosion erod(this->voxelGrid.get(), size, strength, qtt);
         erod.Apply(pos, dir, randomness);
     }
 }
 
 void ErosionInterface::throwFromSky()
 {
-    UnderwaterErosion erod = UnderwaterErosion(voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
+    UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
     this->rocksPathSuccess.clear();
@@ -126,7 +126,7 @@ void ErosionInterface::throwFromSide()
 }
 void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
 {
-    UnderwaterErosion erod = UnderwaterErosion(voxelGrid, this->erosionSize, this->erosionStrength, this->erosionQtt);
+    UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
 
     std::vector<std::vector<Vector3>> lastRocksLaunched, lastFailedRocksLaunched;
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
