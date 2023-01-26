@@ -77,7 +77,8 @@ public:
     void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(Matrix3<Vector3> image, bool normalize = true);
+    void addImage(Matrix3<Vector3> image, bool normalize = false);
+    void addImage(Matrix3<float> image, bool normalize = false);
 
     void draw();
     int exec();

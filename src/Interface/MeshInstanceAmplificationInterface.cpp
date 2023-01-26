@@ -19,7 +19,6 @@ void MeshInstanceAmplificationInterface::display()
         } else {
             std::cout << "Nothing" << std::endl;
         }*/
-
         if (displayRocks) {
             for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
                 int iRock;
@@ -163,7 +162,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     if (this->numberOfLoadedRocks != -1) nbRocks = std::min(nbRocks, (size_t)numberOfLoadedRocks);
     this->possibleRocks = std::vector<Mesh>(nbRocks);
 #pragma omp parallel for
-    for (size_t i = 0; i < nbCorals; i++) {
+    for (size_t i = 0; i < nbRocks; i++) {
         QString& dir = rocksPaths[i];
         // Normalize it and move it upward so the anchor is on the ground
         possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();

@@ -28,9 +28,14 @@ public:
     void show();
     void hide();
 
+    void keyPressEvent(QKeyEvent *e);
+
+    ImplicitPatch* selectedPatch();
+
 public Q_SLOTS:
     void mouseMovedOnMap(Vector3 newPosition);
     void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
+    void createPatchWithOperation(Vector3 pos);
 
     void setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition = Vector3());
     void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
@@ -47,6 +52,7 @@ public Q_SLOTS:
     void setSelectedBlendingFactor(float newVal);
 
     void addNoiseOnSelectedPatch();
+    void addDistortionOnSelectedPatch();
 
     void savePatchesAsFile(std::string filename);
     void loadPatchesFromFile(std::string filename);
@@ -58,9 +64,19 @@ public Q_SLOTS:
 
     void openFileForNewPatch();
 
+    void setMainFilename(std::string newMainFilename);
+    void findAllSubfiles();
+
+    void loadTransformationRules();
+
+    void addParametricPoint(Vector3 point);
+    void displayParametricCurve();
+
+    void displayPatchesTree();
+
 protected:
     ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
-    ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitPatch* replacedPatch = nullptr);
+    ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitOperator* replacedPatch = nullptr);
     ImplicitPatch* findPrimitiveById(int ID);
     ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
 
@@ -108,6 +124,8 @@ protected:
     ImplicitPatch* currentlySelectedPatch = nullptr;
 
     std::string mainFilename;
+    std::vector<std::string> allSubfiles;
+    std::string rulesFilename = "saved_maps/transformation_rules.txt";
     bool enableHotReloading = false;
 
     void displayDebuggingVoxels();
@@ -118,7 +136,16 @@ protected:
     int nbPrimitives = 0;
     int nbUnaryOperators = 0;
     int nbBinaryOperators = 0;
+
+    BSpline parametricCurve;
+    Mesh parametricCurveMesh;
 };
+
+
+
+
+
+
 
 
 class PatchReplacementDialog : public QDialog {

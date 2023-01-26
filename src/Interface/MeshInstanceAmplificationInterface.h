@@ -34,8 +34,8 @@ public:
     int numberOfRocksDisplayed = 1000;
     int numberOfCoralsDisplayed = 1000;
 
-    int numberOfLoadedRocks = 5; // Set to -1 to get all
-    int numberOfLoadedCorals = 5;
+    int numberOfLoadedRocks = -1; // Set to -1 to get all
+    int numberOfLoadedCorals = -1;
     std::vector<Mesh> possibleRocks;
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
     std::vector<Mesh> possibleCorals;

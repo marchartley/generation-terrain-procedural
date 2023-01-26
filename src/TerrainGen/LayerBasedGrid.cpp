@@ -9,9 +9,9 @@
 
 std::map<TerrainTypes, std::pair<float, float>> LayerBasedGrid::materialLimits = {
     {AIR, {-10.f, -8.f} },
-    {STRONG_WATER, {-8.f, -7.f}},
-    {LIGHT_WATER, {-7.f, -6.f}},
-    {TURBULENT_WATER, {-6.f, -5.f}},
+    {CURRENT_MIDDLE, {-8.f, -7.f}},
+    {CURRENT_TOP, {-7.f, -6.f}},
+    {CURRENT_BOTTOM, {-6.f, -5.f}},
     {WATER, {-5.f, 0.f}},
     {CORAL, {0.f, .2f}},
     {SAND, {.2f, .5f}},
@@ -23,9 +23,9 @@ std::map<TerrainTypes, std::pair<float, float>> LayerBasedGrid::materialLimits =
 std::vector<TerrainTypes> LayerBasedGrid::invisibleLayers = {
     AIR,
     WATER,
-    STRONG_WATER,
-    LIGHT_WATER,
-    TURBULENT_WATER
+    CURRENT_MIDDLE,
+    CURRENT_TOP,
+    CURRENT_BOTTOM
 };
 
 std::vector<TerrainTypes> LayerBasedGrid::instanciableLayers = {
@@ -41,6 +41,13 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
 {
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(nx, ny, 1, {{TerrainTypes::BEDROCK, nz}}); // Initial terrain = 1 layer of bedrock
     this->previousState = layers;
+
+    this->transformationRules = {
+        {{{CURRENT_BOTTOM, 1.f}, {BEDROCK, .5f}},       {{CURRENT_BOTTOM, 1.f}, {SAND, .5f}}},
+        {{{CURRENT_BOTTOM, 1.f}},                       {{WATER, 1.f}}},
+        {{{CURRENT_MIDDLE, 1.f}},                       {{WATER, 1.f}}},
+        {{{CURRENT_TOP, 1.f}},                          {{WATER, 1.f}}},
+    };
 }
 
 void LayerBasedGrid::createMesh() {
@@ -324,8 +331,8 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(Vector3 origin, Vector3 dir, V
     Vector3 currPos = origin;
 //    auto values = this->getVoxelValues();
 //    values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
@@ -334,8 +341,8 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(Vector3 origin, Vector3 dir, V
             return currPos;
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
     }
     return Vector3(false);
 }
@@ -552,37 +559,57 @@ void LayerBasedGrid::add(ImplicitPatch* patch, TerrainTypes material, bool apply
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
-//    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
             while ( z < maxZ) {
                 nbEvaluations++;
-                auto densityAndProportion = patch->getMaterials(Vector3(x, y, z)); //patch->getDensityAtPosition(Vector3(x, y, z));
-//                float selectedDensity = 0.f;
-                TerrainTypes selectedMaterial;
-                float totalValue = 0.f;
-                float maxValue = 0.f;
-
-                // Just testing rules
-//                densityAndProportion[BEDROCK] *= 0.9f;
-//                float bedAndTurb = densityAndProportion[BEDROCK] + densityAndProportion[TURBULENT_WATER];
-//                densityAndProportion[BEDROCK] -= bedAndTurb * .25f;
-//                densityAndProportion[TURBULENT_WATER] -= bedAndTurb * .25f;
-//                densityAndProportion[SAND] += bedAndTurb * .25f;
-                // End testing rules
-                for (const auto& [material, value] : densityAndProportion) {
-                    if (value > maxValue) {
-//                        selectedDensity = LayerBasedGrid::densityFromMaterial(material);
-                        selectedMaterial = material;
-                        maxValue = value;
-                    }
-                    totalValue += value;
-                }
-                if (totalValue >= .5f)
-                    this->addLayer(Vector3(x, y), zResolution, selectedMaterial); //LayerBasedGrid::materialFromDensity(selectedDensity));
-                else
+                auto [totalValue, initialDensityAndProportion] = patch->getMaterialsAndTotalEvaluation(Vector3(x, y, z)); //patch->getDensityAtPosition(Vector3(x, y, z));
+                auto densityAndProportion = initialDensityAndProportion;
+                if (totalValue < ImplicitPatch::isovalue) { // Not enough material, just add air
                     this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
+                } else { // Otherwise, get the material to display and add it to the terrain
+                    // Just testing rules
+                    for (size_t i = 0; i < transformationRules.size(); i++) {
+                        auto [input, output] = transformationRules[i];
+//                        bool transformPossible = true;
+                        float maxTransform = 10000.f;
+                        for (auto [inMaterial, inDose] : input) {
+                            maxTransform = std::min(maxTransform, densityAndProportion[inMaterial] / inDose);
+                        }
+                        if (maxTransform > 1e-3) { //(transformPossible) {
+                            for (auto [inMaterial, inDose] : input) {
+                                densityAndProportion[inMaterial] -= inDose * maxTransform;
+                            }
+                            for (auto [outMaterial, outDose] : output) {
+                                densityAndProportion[outMaterial] += outDose * maxTransform;
+                            }
+                        }
+                    }
+                    // End testing rules
+
+                    // If changes has been made with rules, bring back the ratio
+                    float newTotalValue = 0.f;
+                    for (const auto& [mat, val] : densityAndProportion) // Get new material total
+                        newTotalValue += val;
+                    for (auto& [mat, val] : densityAndProportion) // Adjust to get back the initial material quantity
+                        val *= totalValue / newTotalValue;
+
+                    // Find the most used material
+                    TerrainTypes selectedMaterial;
+                    float maxValue = 0.f;
+                    for (const auto& [material, value] : densityAndProportion) {
+                        if (value > maxValue) {
+                            selectedMaterial = material;
+                            maxValue = value;
+                        }
+                    }
+//                    if (totalValue >= .5f)
+                    this->addLayer(Vector3(x, y), zResolution, selectedMaterial); //LayerBasedGrid::materialFromDensity(selectedDensity));
+                }
+//                else
+//                    this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);
                 /*
                 float eval = patch->evaluate(Vector3(x, y, z));
                 if (eval >= 0.5f) {

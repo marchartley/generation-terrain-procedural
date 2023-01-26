@@ -4,48 +4,381 @@
 		"composableA": {
 			"blendingFactor": 2.0,
 			"composableA": {
-				"blendingFactor": 2.0,
 				"composableA": {
 					"blendingFactor": 2.0,
 					"composableA": {
-						"densityValue": 1.0,
-						"dimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
+						"blendingFactor": 2.0,
+						"composableA": {
+							"blendingFactor": 2.0,
+							"composableA": {
+								"blendingFactor": 2.0,
+								"composableA": {
+									"densityValue": -2.5,
+									"dimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"index": 25,
+									"material": "WATER",
+									"name": "Identity",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"position": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"shape": "None",
+									"sigmaValue": -1.0,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"composableB": {
+									"blendingFactor": 2.0,
+									"composableA": {
+										"blendingFactor": 2.0,
+										"composableA": {
+											"densityValue": 0.10000000149011612,
+											"dimensions": {
+												"x": 62.34124755859375,
+												"y": 73.20097351074219,
+												"z": 8.433703422546387
+											},
+											"index": 26,
+											"material": "CORAL",
+											"name": "Mountainchain",
+											"optionalCurve": {
+												"closed": false,
+												"points": [
+													{
+														"x": 20.342056274414063,
+														"y": 69.45097351074219,
+														"z": 3.9731333255767822
+													},
+													{
+														"x": 48.35331726074219,
+														"y": 55.90591049194336,
+														"z": 3.75
+													},
+													{
+														"x": 58.29163360595703,
+														"y": 47.59702682495117,
+														"z": 4.386889457702637
+													},
+													{
+														"x": 58.59124755859375,
+														"y": 33.38764572143555,
+														"z": 3.9745049476623535
+													},
+													{
+														"x": 48.42823028564453,
+														"y": 18.838224411010742,
+														"z": 4.683703422546387
+													},
+													{
+														"x": 52.68598175048828,
+														"y": 8.037656784057617,
+														"z": 3.9978058338165283
+													},
+													{
+														"x": 34.07184600830078,
+														"y": 3.75,
+														"z": 4.414295196533203
+													},
+													{
+														"x": 12.258014678955078,
+														"y": 14.685277938842773,
+														"z": 4.598976135253906
+													},
+													{
+														"x": 3.75,
+														"y": 38.65372848510742,
+														"z": 4.429689884185791
+													},
+													{
+														"x": 9.414751052856445,
+														"y": 46.065059661865234,
+														"z": 4.038386821746826
+													},
+													{
+														"x": 4.397533416748047,
+														"y": 56.110191345214844,
+														"z": 4.254241466522217
+													}
+												]
+											},
+											"position": {
+												"x": 7.283315658569336,
+												"y": 3.3189682960510254,
+												"z": 0.0
+											},
+											"shape": "MountainChain",
+											"sigmaValue": 5.0,
+											"supportDimensions": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"type": "primitive"
+										},
+										"composableB": {
+											"densityValue": -2.5,
+											"dimensions": {
+												"x": 20.064613342285156,
+												"y": 9.811530113220215,
+												"z": 5.737059593200684
+											},
+											"index": 64,
+											"material": "WATER",
+											"name": "Mountainchain",
+											"optionalCurve": {
+												"closed": false,
+												"points": [
+													{
+														"x": 2.799999237060547,
+														"y": 2.8000001907348633,
+														"z": 2.799999952316284
+													},
+													{
+														"x": 17.264610290527344,
+														"y": 7.011530876159668,
+														"z": 2.937059164047241
+													}
+												]
+											},
+											"position": {
+												"x": 49.160484313964844,
+												"y": 12.336394309997559,
+												"z": 0.0
+											},
+											"shape": "MountainChain",
+											"sigmaValue": 5.599999904632568,
+											"supportDimensions": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"type": "primitive"
+										},
+										"index": 65,
+										"name": "Blend",
+										"operator": "Blend",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"positionalB": "FIXED_POS",
+										"type": "compose",
+										"useIntersection": true
+									},
+									"composableB": {
+										"densityValue": -2.5,
+										"dimensions": {
+											"x": 16.886913299560547,
+											"y": 17.373233795166016,
+											"z": 6.714532852172852
+										},
+										"index": 62,
+										"material": "WATER",
+										"name": "Mountainchain",
+										"optionalCurve": {
+											"closed": false,
+											"points": [
+												{
+													"x": 2.799999237060547,
+													"y": 2.799999237060547,
+													"z": 3.914532423019409
+												},
+												{
+													"x": 14.0869140625,
+													"y": 14.573230743408203,
+													"z": 2.799999952316284
+												}
+											]
+										},
+										"position": {
+											"x": 25.771480560302734,
+											"y": 59.94282913208008,
+											"z": 0.0
+										},
+										"shape": "MountainChain",
+										"sigmaValue": 5.599999904632568,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"index": 63,
+									"name": "Blend",
+									"operator": "Blend",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"positionalB": "FIXED_POS",
+									"type": "compose",
+									"useIntersection": true
+								},
+								"index": 27,
+								"name": "Blend",
+								"operator": "Blend",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": false
+							},
+							"composableB": {
+								"blendingFactor": 2.0,
+								"composableA": {
+									"densityValue": 2.5,
+									"dimensions": {
+										"x": 15.300000190734863,
+										"y": 14.90000057220459,
+										"z": 11.800000190734863
+									},
+									"index": 28,
+									"material": "BEDROCK",
+									"name": "Mountain",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"position": {
+										"x": 25.41999626159668,
+										"y": 47.17542266845703,
+										"z": 0.0
+									},
+									"shape": "Mountain",
+									"sigmaValue": 7.5,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"composableB": {
+									"densityValue": 2.5,
+									"dimensions": {
+										"x": 15.300000190734863,
+										"y": 14.90000057220459,
+										"z": 11.800000190734863
+									},
+									"index": 30,
+									"material": "BEDROCK",
+									"name": "Mountain",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"position": {
+										"x": 34.77414321899414,
+										"y": 28.430870056152344,
+										"z": 0.0
+									},
+									"shape": "Mountain",
+									"sigmaValue": 7.5,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"index": 31,
+								"name": "Blend",
+								"operator": "Blend",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": false
+							},
+							"index": 29,
+							"name": "Blend",
+							"operator": "Blend",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"positionalB": "FIXED_POS",
+							"type": "compose",
+							"useIntersection": false
 						},
-						"index": 0,
-						"name": "Identity",
-						"position": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
+						"composableB": {
+							"densityValue": 2.5,
+							"dimensions": {
+								"x": 19.80000114440918,
+								"y": 20.200000762939453,
+								"z": 15.300000190734863
+							},
+							"index": 32,
+							"material": "BEDROCK",
+							"name": "Mountain",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"position": {
+								"x": 34.307647705078125,
+								"y": 37.75886535644531,
+								"z": 0.0
+							},
+							"shape": "Mountain",
+							"sigmaValue": 7.5,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
 						},
-						"shape": "None",
-						"sigmaValue": -1.0,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
+						"index": 33,
+						"name": "Blend",
+						"operator": "Blend",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
 						},
-						"type": "primitive"
+						"positionalB": "FIXED_POS",
+						"type": "compose",
+						"useIntersection": false
 					},
 					"composableB": {
-						"densityValue": 1.5,
+						"densityValue": 2.5,
 						"dimensions": {
-							"x": 20.0,
-							"y": 20.0,
-							"z": 20.0
+							"x": 19.80000114440918,
+							"y": 20.200000762939453,
+							"z": 8.40000057220459
 						},
-						"index": 6,
-						"name": "Sphere",
+						"index": 34,
+						"material": "BEDROCK",
+						"name": "Mountain",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"position": {
-							"x": 42.28150939941406,
-							"y": 28.503326416015625,
+							"x": 27.332778930664063,
+							"y": 16.130298614501953,
 							"z": 0.0
 						},
-						"shape": "Sphere",
-						"sigmaValue": -1.0,
+						"shape": "Mountain",
+						"sigmaValue": 7.5,
 						"supportDimensions": {
 							"x": 0.0,
 							"y": 0.0,
@@ -53,57 +386,66 @@
 						},
 						"type": "primitive"
 					},
-					"index": 7,
+					"index": 35,
 					"name": "Blend",
 					"operator": "Blend",
-					"positionalB": "ABOVE",
-					"type": "compose"
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"positionalB": "FIXED_POS",
+					"type": "compose",
+					"useIntersection": false
 				},
-				"composableB": {
-					"densityValue": 1.5,
-					"dimensions": {
-						"x": 20.0,
-						"y": 20.0,
-						"z": 20.0
-					},
-					"index": 8,
-					"name": "Sphere",
-					"position": {
-						"x": 26.464996337890625,
-						"y": 29.648696899414063,
-						"z": 0.0
-					},
-					"shape": "Sphere",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
-				"index": 9,
-				"name": "Blend",
-				"operator": "Blend",
-				"positionalB": "FIXED_POS",
-				"type": "compose"
-			},
-			"composableB": {
-				"densityValue": 1.5,
-				"dimensions": {
-					"x": 20.0,
+				"distortion": {
+					"x": 3.5,
 					"y": 20.0,
-					"z": 20.0
+					"z": 10.0
 				},
-				"index": 10,
-				"name": "Sphere",
-				"position": {
-					"x": -0.5059833526611328,
-					"y": 59.76988983154297,
+				"index": 37,
+				"name": "Wrapping",
+				"noise": {
+					"x": 0.0,
+					"y": 0.0,
 					"z": 0.0
 				},
-				"shape": "Sphere",
-				"sigmaValue": -1.0,
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"rotation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"translation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "unary"
+			},
+			"composableB": {
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 100.0,
+					"y": 100.0,
+					"z": 5.0
+				},
+				"index": 38,
+				"material": "SAND",
+				"name": "Block",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Block",
+				"sigmaValue": 3.5,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
@@ -111,28 +453,38 @@
 				},
 				"type": "primitive"
 			},
-			"index": 11,
+			"index": 39,
 			"name": "Blend",
-			"operator": "Blend",
-			"positionalB": "FIXED_POS",
-			"type": "compose"
+			"operator": "Stack",
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"positionalB": "ABOVE",
+			"type": "compose",
+			"useIntersection": false
 		},
 		"composableB": {
-			"densityValue": 1.5,
+			"densityValue": -2.5,
 			"dimensions": {
-				"x": 20.0,
-				"y": 20.0,
-				"z": 20.0
-			},
-			"index": 12,
-			"name": "Sphere",
-			"position": {
-				"x": 63.05669403076172,
-				"y": -2.554100513458252,
+				"x": 0.0,
+				"y": 0.0,
 				"z": 0.0
 			},
-			"shape": "Sphere",
-			"sigmaValue": -1.0,
+			"index": 66,
+			"material": "WATER",
+			"name": "Basin",
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"position": {
+				"x": -10.672043800354004,
+				"y": -14.881736755371094,
+				"z": 0.0
+			},
+			"shape": "Block",
+			"sigmaValue": 5.599999904632568,
 			"supportDimensions": {
 				"x": 0.0,
 				"y": 0.0,
@@ -140,10 +492,15 @@
 			},
 			"type": "primitive"
 		},
-		"index": 13,
-		"name": "Blend",
-		"operator": "Blend",
+		"index": 67,
+		"name": "Stack",
+		"operator": "Stack",
+		"optionalCurve": {
+			"closed": false,
+			"points": []
+		},
 		"positionalB": "FIXED_POS",
-		"type": "compose"
+		"type": "compose",
+		"useIntersection": true
 	}
 }

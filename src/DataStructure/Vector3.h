@@ -111,6 +111,8 @@ public:
 
 
     static bool isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos);
+    static float signedManhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
+    static float manhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
     static float signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
     static float distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension = false);
 

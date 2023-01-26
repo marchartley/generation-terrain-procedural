@@ -1036,8 +1036,8 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector
     Vector3 currPos = origin;
     auto values = this->getVoxelValues();
     values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
@@ -1046,8 +1046,8 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector
             return currPos;
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
     }
     return Vector3(false);
 }

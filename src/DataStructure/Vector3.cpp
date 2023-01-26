@@ -610,7 +610,7 @@ bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
 
 // Inside : positive
 // Outside: negative
-float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::signedManhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
 {
     // TODO : Need to be improved one day
     pos -= minPos;
@@ -678,13 +678,47 @@ float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 m
 //    return Vector3::distanceToBoundaries(pos, minPos, maxPos, ignoreZdimension) * (Vector3::isInBox(pos, minPos, maxPos) ? 1.f : -1.f);
 }
 
-float Vector3::distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::manhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
 {
-    return std::abs(Vector3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
+    return std::abs(Vector3::signedManhattanDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 //    float x = std::min(std::abs(pos.x), std::abs(maxPos.x - pos.x));
 //    float y = std::min(std::abs(pos.y), std::abs(maxPos.y - pos.y));
 //    float z = std::min(std::abs(pos.z), std::abs(maxPos.z - pos.z)) * (ignoreZdimension ? 0.f : 1.f);
-//    return std::max({x, y, z});
+    //    return std::max({x, y, z});
+}
+
+float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+{
+    /*maxPos -= minPos;
+    pos -= minPos;
+    minPos = Vector3();
+    pos = ((pos - minPos) / (maxPos * .5f)) - (maxPos * .5f);
+    // (0, 0, 0) is the center of the box
+    // (1, 0, 0) is the right-center-center, (0, 1, 0) is the center-front-center and (0, 0, 1) is the center-center-top
+    pos = pos.abs();
+    if (pos.x <= 1.f && pos.y <= 1.f && pos.z <= 1.f) {
+        // Inside the box
+    } else {
+        // Outside the box
+        if (pos.x > 1.f && pos.y <= 1.f && pos.z <= 1.f) return pos.x - 1.f;
+        if (pos.x <= 1.f && pos.y > 1.f && pos.z <= 1.f) return pos.y - 1.f;
+        if (pos.x <= 1.f && pos.y <= 1.f && pos.z > 1.f) return pos.z - 1.f;
+        return (pos - Vector3(1, 1, 1)).norm2();
+    }*/
+    Vector3 boxDim = maxPos - minPos;
+    Vector3 halfDim = boxDim * .5f;
+    pos = pos - (minPos + halfDim); // ((maxPos - minPos) * .5f);
+    Vector3 q = pos.abs() - halfDim; // - ((maxPos - minPos) * .5f);
+    if (ignoreZdimension)
+        q.z = 0.f;
+    float d = Vector3::max(q, Vector3(0, 0, 0)).norm() + std::min(q.maxComp(), 0.f);
+    return d;
+
+}
+
+float Vector3::distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+{
+    return std::abs(Vector3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 }
 
 

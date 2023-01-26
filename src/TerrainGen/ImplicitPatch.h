@@ -39,6 +39,7 @@ public:
         STACK,
         BLEND,
         REPLACE,
+        ONE_SIDE_BLEND,
         NONE
     };
 
@@ -53,6 +54,7 @@ public:
         Sphere,
         Block,
         Gaussian,
+        Cylinder,
         Rock,
         Mountain,
         Dune,
@@ -60,6 +62,7 @@ public:
         Cave,
         Arch,
         Noise2D,
+        MountainChain,
         None
     };
 
@@ -93,7 +96,9 @@ public:
 
     std::string used_json_filename = "";
 
-    static ImplicitPatch* createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam);
+    BSpline optionalCurve;
+
+    static ImplicitPatch* createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
     static float isovalue;
     static float zResolution;
 
@@ -101,6 +106,7 @@ public:
     static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createBlockFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createGaussianFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createCylinderFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createRockFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createMountainFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createDuneFunction(float sigma, float width, float depth, float height);
@@ -108,6 +114,7 @@ public:
     static std::function<float(Vector3)> createCaveFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createArchFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height);
 //    static std::function<float(Vector3)> ...;
 
@@ -208,9 +215,14 @@ public:
     void rotate(float angleX, float angleY, float angleZ);
     void scale(Vector3 scaleFactor);
 
+    void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
+    void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
+
     Vector3 _translation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
     Vector3 _rotation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
     Vector3 _scale = Vector3(1, 1, 1);
+    Vector3 _distortion = Vector3(0.f, 0.f, 0.f);
+    Vector3 _noise = Vector3(0.f, 0.f, 0.f);
 };
 
 /*

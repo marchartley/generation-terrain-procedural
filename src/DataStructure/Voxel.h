@@ -10,9 +10,9 @@ class Voxel;
 
 enum TerrainTypes {
     AIR,
-    STRONG_WATER,
-    LIGHT_WATER,
-    TURBULENT_WATER,
+    CURRENT_MIDDLE,
+    CURRENT_TOP,
+    CURRENT_BOTTOM,
     WATER,
     CORAL,
     SAND,

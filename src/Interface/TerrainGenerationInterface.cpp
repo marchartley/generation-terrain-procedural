@@ -734,7 +734,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         }
         blend->updateCache();
     }
-    this->layerGrid->add(blends.back());
+//    this->layerGrid->add(blends.back());
 
     voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
     voxelGrid->fromIsoData();
