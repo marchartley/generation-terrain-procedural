@@ -87,7 +87,7 @@ void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, fl
     this->constraint = new SliderConstraint(positionMin, positionMax);
     this->sliderControlPoint->custom_constraint = constraint;
     this->sliderMesh.fromArray({minPos, maxPos});
-    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
+//    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
     QObject::connect(this->sliderControlPoint, &ControlPoint::modified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
 }

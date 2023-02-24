@@ -34,6 +34,8 @@ public Q_SLOTS:
 
     void prepareShader();
 
+    void setWaterLevel(float newLevel);
+
     void updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling);
 
     void afterTerrainUpdated();

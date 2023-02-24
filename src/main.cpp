@@ -12,8 +12,8 @@
 #include <random>
 #include <string>
 
-#include "third-party/glm/glm.hpp"
-#include "third-party/glm/ext.hpp"
+//#include "third-party/glm/glm.hpp"
+//#include "third-party/glm/ext.hpp"
 
 //#include "Graphics/DisplayGraphics.h"
 //#include "Graph/TopoMap.h"
@@ -32,6 +32,7 @@ float eval (Vector3 pos, float width, float depth, float height) {
 }*/
 int main(int argc, char *argv[])
 {
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);

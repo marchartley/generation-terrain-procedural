@@ -84,4 +84,9 @@ src/assets/textures/underwater_sand/Material_1573.jpg
 
 saved_maps/Geometry/*
 shared_images\*
+DataShomData/*
+Other_Data/*
+
+Python_tests\.ipynb_checkpoints\*
+
 usersmarchappdata*

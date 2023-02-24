@@ -1,10 +1,11 @@
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
-VoxelGrid::VoxelGrid(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
+VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)
     : /*blockSize(blockSize),*/ noise_shifting(noise_shifting) {
-    this->_cachedVoxelValues = Matrix3<float>(nx * chunkSize, ny * chunkSize, nz * chunkSize + 1, 1.f);
+    this->_cachedVoxelValues = Matrix3<float>(nx /* * chunkSize*/, ny /* * chunkSize*/, nz /* * chunkSize + 1*/, 1.f);
     this->initMap();
+    this->fromCachedData();
     /*
     this->getSizeZ() = nz * (chunkSize) + 1; // The Z axis is not "increased" by "nz" as it is not splitted in chunks
 //    chunkSize += 1; // More useful for the LoDs // TODO : CORRECT THIS TO BE ABLE TO FILL IN THE LAYERED TERRAIN
@@ -37,10 +38,10 @@ VoxelGrid::VoxelGrid(int nx, int ny, int nz/*, float blockSize*/, float noise_sh
     this->tempData = data;*/
 }
 
-VoxelGrid::VoxelGrid(Heightmap& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), 1.f/*, grid.getTileSize()*/) {
+VoxelGrid::VoxelGrid(Heightmap& grid) : VoxelGrid(grid.getSizeX(), grid.getSizeY(), grid.getMaxHeight(), 1.f) {
     this->from2DGrid(grid);
 }
-VoxelGrid::VoxelGrid() : VoxelGrid(1, 1, 1, 1.0) {
+VoxelGrid::VoxelGrid() : VoxelGrid(1, 1, 1, 1.f) {
 
 }
 VoxelGrid::~VoxelGrid()
@@ -48,6 +49,8 @@ VoxelGrid::~VoxelGrid()
     this->chunks.clear();
 }
 void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
+    this->_cachedVoxelValues = Matrix3<float>(grid.getSizeX(), grid.getSizeY(), grid.getSizeZ() * 2.f);
+    this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
         subsectionStart = Vector3();
@@ -92,6 +95,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
             }
         }
     }
+    this->fromCachedData();
     /*
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
     int iChunk = 0;
@@ -134,6 +138,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 //    this->getSizeY() = layerBased.getSizeY();
 //    this->getSizeZ() = (fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight);
     this->initMap();
+    this->fromCachedData();
 /*
     std::vector<Matrix3<float>> data(this->chunks.size(), Matrix3<float>(this->chunkSize, this->chunkSize, this->getSizeZ()));
     Matrix3<float> precomputedVoxelGrid = layerBased.voxelize(fixedHeight);
@@ -159,7 +164,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 }
 
 //std::shared_ptr<VoxelGrid> VoxelGrid::fromIsoData()
-VoxelGrid* VoxelGrid::fromIsoData()
+VoxelGrid* VoxelGrid::fromCachedData()
 {
 //    std::vector<Matrix3<float>> isoData = this->tempData;
     int iChunk = 0;
@@ -1078,15 +1083,24 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
     // Continue while we are in the grid or we are heading towards the grid
+    bool beenInBox = false;
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-        float isoval = values.at(currPos);
-        if (isoval > 0.0) {
-            return currPos;
+
+        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+            float isoval = values.at(currPos);
+            if (isoval > 0.0) {
+                return currPos;
+            }
+            beenInBox = true;
         }
         currPos += dir;
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    }
+    if (beenInBox && Vector3::isInBox(currPos.xy(), minPos.xy(), maxPos.xy())) {
+        currPos.z = 0;
+        return currPos;
     }
     return Vector3(false);
 }

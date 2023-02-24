@@ -97,9 +97,9 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-    ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
+//    ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
 
-    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
+//    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
 
@@ -228,6 +228,18 @@ void Viewer::draw() {
 
     this->raymarchingQuad.display();*/
     this->drawingProcess();
+}
+
+TerrainModel *Viewer::getCurrentTerrainModel()
+{
+    if (this->mapMode == VOXEL_MODE) {
+        return this->voxelGrid.get();
+    } else if (this->mapMode == GRID_MODE) {
+        return this->grid.get();
+    } else if (this->mapMode == LAYER_MODE) {
+        return this->layerGrid.get();
+    }
+    return nullptr;
 }
 void Viewer::drawingProcess() {
     auto allProcessStart = std::chrono::system_clock::now();
@@ -363,6 +375,8 @@ void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
     checkMouseOnVoxel();
+    Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
+    Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
     if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
         if (this->mapMode == MapMode::VOXEL_MODE) {
             std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
@@ -372,9 +386,8 @@ void Viewer::mousePressEvent(QMouseEvent *e)
         } else if (this->mapMode == MapMode::GRID_MODE) {
             std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->grid->getHeight(mousePosWorld) << std::endl;
         }
-
     }
-    Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e);
+    Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
@@ -400,7 +413,9 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
         this->mainGrabber->setState(HIDDEN);
     }
 
-    Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)));
+    Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
+    Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
+    Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
     try {
         QGLViewer::mouseMoveEvent(e);
     }  catch (std::exception) {
@@ -421,7 +436,7 @@ void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
         std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
 
     }
-    Q_EMIT this->mouseDoubleClickedOnMap(this->mousePosWorld, this->mouseInWorld, e);
+    Q_EMIT this->mouseDoubleClickedOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
 }
 
 void Viewer::animate()

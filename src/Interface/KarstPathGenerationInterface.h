@@ -44,7 +44,7 @@ public:
 
 Q_SIGNALS:
     void useAsMainCamera(qglviewer::Camera* cam, bool useMyCamera);
-    void karstPathUpdated();
+//    void karstPathUpdated();
 
 public Q_SLOTS:
     void updateFracture(Vector3 newFractureDir = Vector3());

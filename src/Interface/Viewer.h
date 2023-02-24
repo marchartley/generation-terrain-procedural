@@ -56,9 +56,9 @@ public:
     ~Viewer();
 
 Q_SIGNALS:
-    void mouseClickOnMap(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
-    void mouseDoubleClickedOnMap(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
-    void mouseMovedOnMap(Vector3 mousePosition);
+    void mouseClickOnMap(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    void mouseDoubleClickedOnMap(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    void mouseMovedOnMap(Vector3 mouseWorldPosition, TerrainModel* model);
 
 public Q_SLOTS:
     bool startStopRecording();
@@ -81,6 +81,8 @@ public Q_SLOTS:
 public:
     virtual void init();
     virtual void draw();
+
+    TerrainModel* getCurrentTerrainModel();
 
     bool eventFilter(QObject* obj, QEvent* event);
 

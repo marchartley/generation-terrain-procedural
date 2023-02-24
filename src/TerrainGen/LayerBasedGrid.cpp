@@ -39,15 +39,8 @@ LayerBasedGrid::LayerBasedGrid() : LayerBasedGrid(10, 10, 1.f)
 }
 LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
 {
-    this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(nx, ny, 1, {{TerrainTypes::BEDROCK, nz}}); // Initial terrain = 1 layer of bedrock
+    this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(nx, ny, 1, {{TerrainTypes::SAND, nz}}); // Initial terrain = 1 layer of bedrock
     this->previousState = layers;
-
-    this->transformationRules = {
-        {{{CURRENT_BOTTOM, 1.f}, {BEDROCK, .5f}},       {{CURRENT_BOTTOM, 1.f}, {SAND, .5f}}},
-        {{{CURRENT_BOTTOM, 1.f}},                       {{WATER, 1.f}}},
-        {{{CURRENT_MIDDLE, 1.f}},                       {{WATER, 1.f}}},
-        {{{CURRENT_TOP, 1.f}},                          {{WATER, 1.f}}},
-    };
 }
 
 TerrainTypes LayerBasedGrid::getValue(Vector3 pos)
@@ -329,9 +322,11 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(Vector3 origin, Vector3 dir, V
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-        float isoval = LayerBasedGrid::densityFromMaterial(this->getMaterialAndHeight(currPos).first);
-        if (isoval > 0.0) {
-            return currPos;
+        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+            float isoval = LayerBasedGrid::densityFromMaterial(this->getMaterialAndHeight(currPos).first);
+            if (isoval > 0.0) {
+                return currPos;
+            }
         }
         currPos += dir;
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
@@ -529,8 +524,8 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 void LayerBasedGrid::add(ImplicitPatch* patch)
 {
     auto AABBox = patch->getSupportBBox();
-    Vector3 minPos = AABBox.first;
-    Vector3 maxPos = AABBox.second;
+    Vector3 minPos = (AABBox.first / this->scaling) - this->translation;
+    Vector3 maxPos = (AABBox.second / this->scaling) - this->translation;
 
     int minX = std::max(0, int(minPos.x));
     int maxX = std::min(int(this->getSizeX()), int(maxPos.x));
@@ -542,13 +537,13 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
-    #pragma omp parallel for collapse(2)
+//    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
             while ( z < maxZ) {
                 nbEvaluations++;
-                auto [totalValue, initialDensityAndProportion] = patch->getMaterialsAndTotalEvaluation(Vector3(x, y, z)); //patch->getDensityAtPosition(Vector3(x, y, z));
+                auto [totalValue, initialDensityAndProportion] = patch->getMaterialsAndTotalEvaluation((Vector3(x, y, z) + this->translation) * this->scaling); //patch->getDensityAtPosition(Vector3(x, y, z));
                 auto densityAndProportion = initialDensityAndProportion;
                 if (totalValue < ImplicitPatch::isovalue) { // Not enough material, just add air
                     this->addLayer(Vector3(x, y), zResolution, TerrainTypes::AIR);

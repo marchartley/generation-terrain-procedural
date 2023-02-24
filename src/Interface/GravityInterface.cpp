@@ -114,14 +114,14 @@ QLayout* GravityInterface::createGUI()
     QObject::connect(gravityLayersButton, &QPushButton::pressed, this, [&]() {
         this->layerGrid->thermalErosion();
         this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
-        voxelGrid->fromIsoData();
+//        voxelGrid->fromCachedData();
         this->heightmap->fromLayerGrid(*this->layerGrid);
         Q_EMIT this->terrainUpdated();
     });
     QObject::connect(arrangingLayersButton, &QPushButton::pressed, this, [&]() {
         this->layerGrid->reorderLayers();
         this->voxelGrid->fromLayerBased(*this->layerGrid, this->voxelGrid->getSizeZ());
-        this->voxelGrid->fromIsoData();
+//        this->voxelGrid->fromCachedData();
         this->heightmap->fromLayerGrid(*this->layerGrid);
         Q_EMIT this->terrainUpdated();
     });

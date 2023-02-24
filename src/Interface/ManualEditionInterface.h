@@ -32,7 +32,8 @@ public Q_SLOTS:
     void setPosition(Vector3 newPosition);
     void applyModification();
 
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
+    void mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel* model);
+    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
 
 public:
     void mouseMoveEvent(QMouseEvent* event);

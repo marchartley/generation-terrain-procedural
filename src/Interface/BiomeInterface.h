@@ -47,7 +47,7 @@ public:
 public Q_SLOTS:
     void displayAllBiomes();
     void interchangeBiomes();
-    void mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event);
+    void mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
 
     void generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance = nullptr);
     void randomize();
@@ -59,7 +59,7 @@ public Q_SLOTS:
 
     void addTunnel(KarstHole& hole);
 
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
+    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
     void updateSelectionPlaneToFitBiome(int biomeID, int planeIndex);
 
     void displayUniqueSelection(int selectionIndex);

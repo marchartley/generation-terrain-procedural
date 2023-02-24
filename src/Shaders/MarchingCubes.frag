@@ -161,9 +161,9 @@ uniform int maxBiomesNormalTextures;
 //vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
 //int texIndices[4] = int[4](6, 5, 4, 2);
 
-float densities[4] = float[4](0.5, 0.6, 1.0, 2.0);
-vec4 colors[4] = vec4[4](vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
-int texIndices[4] = int[4](6, 1, 5, 4);
+float densities[5] = float[5](0.1, 0.2, 0.6, 1.0, 2.0);
+vec4 colors[5] = vec4[5](vec4(.761, .698, .502, 1.0), vec4(.761, .698, .502, 1.0), vec4(.661, .598, .402, 1.0), vec4(.630, .320, .250, 1.0), vec4(.755, .754, .748, 1.0));
+int texIndices[5] = int[5](2, 6, 1, 5, 4);
 
 vec3 hsv2rgb(vec3 c)
 {
@@ -188,7 +188,7 @@ float getDensity(vec3 pos, float resolution) {
         vec3 texSize = vec3(textureSize(dataFieldTex, 0));
         vec3 offsets = vec3(0.0); // 0.5 / texSize;
         float density = texture(dataFieldTex, pos).a;
-        float surrounding = 3.f;
+        float surrounding = 2.f;
         for (float x = 0; x < surrounding + 1.0; x += 1.0) {
             for (float y = 0; y < surrounding + 1.0; y += 1.0) {
                 for (float z = 0; z < surrounding + 1.0; z += 1.0) {
@@ -405,5 +405,8 @@ void main(void)
                          texture2D(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          alpha).rgb;
         fragColor = vec4((vec4(blending.x * xaxis + blending.y * yaxis + blending.z * zaxis, 1.0) * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
+
+//        fragColor = vec4(fragColor.xyz * waterRelativeHeight, 1.0);
+        fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
     }
 }

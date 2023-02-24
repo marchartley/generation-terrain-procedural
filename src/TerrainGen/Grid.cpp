@@ -12,8 +12,7 @@
 #include "Utils/stb_image_write.h"
 
 
-Heightmap::Heightmap(int nx, int ny, float maxHeight/*, float tileSize*/)
-    : maxHeight(maxHeight)/*, tileSize(tileSize)*/ {
+Heightmap::Heightmap(int nx, int ny, float heightFactor) {
     // Create and configure FastNoise object
     FastNoiseLite noise;
     noise.SetFrequency(0.01);
@@ -24,7 +23,6 @@ Heightmap::Heightmap(int nx, int ny, float maxHeight/*, float tileSize*/)
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(10);
 
-//    this->normals = Matrix3<Vector3>(nx, ny);
     this->heights = Matrix3<float>(nx, ny);
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
@@ -32,16 +30,14 @@ Heightmap::Heightmap(int nx, int ny, float maxHeight/*, float tileSize*/)
             this->heights.at(x, y) = z;
         }
     }
-    this->heights = this->heights.normalize() * maxHeight;
-//    this->computeNormals();
+    this->heights = this->heights.normalize() * heightFactor;
 
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
-Heightmap::Heightmap(std::string heightmap_filename, int nx, int ny, float max_height/*, float tileSize*/)
-    : maxHeight(max_height)/*, tileSize(tileSize)*/
+Heightmap::Heightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
 {
-    this->loadFromHeightmap(heightmap_filename, nx, ny, max_height/*, tileSize*/);
+    this->loadFromHeightmap(heightmap_filename, nx, ny, heightFactor);
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
@@ -49,64 +45,9 @@ Heightmap::Heightmap() : Heightmap(10, 10, 5.0) {
 
 }
 
-//void Grid::createMesh()
-//{
-    /*
-    std::vector<Vector3> vecs;
-
-    for(int x = 0; x < this->getSizeX() - 1; x++) {
-        for (int y = 0; y < this->getSizeY() - 1; y++) {
-            vecs.push_back(Vector3(x  , y  , this->heights.at(x  , y  )));
-            vecs.push_back(Vector3(x  , y+1, this->heights.at(x  , y+1)));
-            vecs.push_back(Vector3(x+1, y+1, this->heights.at(x+1, y+1)));
-
-            vecs.push_back(Vector3(x  , y  , this->heights.at(x  , y  )));
-            vecs.push_back(Vector3(x+1, y+1, this->heights.at(x+1, y+1)));
-            vecs.push_back(Vector3(x+1, y  , this->heights.at(x+1, y  )));
-        }
-    }
-    this->mesh.fromArray(vecs);
-    */
-//}
-
-//void Grid::computeNormals() {
-//    return;
-    /*
-    this->normals = Matrix3<Vector3>(this->getSizeX(), this->getSizeY());
-    this->heights.raiseErrorOnBadCoord = false;
-
-    for (int x = 0; x < this->getSizeX(); x++) {
-        for (int y = 0; y < this->getSizeY(); y++) {
-            Vector3 pos = Vector3(x   , y    , this->heights.at(x, y));
-            Vector3 v1 = Vector3(x - 1, y    , this->heights.at(x - 1, y    )) - pos;
-            Vector3 v2 = Vector3(x - 1, y - 1, this->heights.at(x - 1, y - 1)) - pos;
-            Vector3 v3 = Vector3(x    , y - 1, this->heights.at(x    , y - 1)) - pos;
-            Vector3 v4 = Vector3(x + 1, y - 1, this->heights.at(x + 1, y - 1)) - pos;
-            Vector3 v5 = Vector3(x + 1, y    , this->heights.at(x + 1, y    )) - pos;
-            Vector3 v6 = Vector3(x + 1, y + 1, this->heights.at(x + 1, y + 1)) - pos;
-            Vector3 v7 = Vector3(x    , y + 1, this->heights.at(x    , y + 1)) - pos;
-            Vector3 v8 = Vector3(x - 1, y + 1, this->heights.at(x - 1, y + 1)) - pos;
-
-            this->normals.at(x, y) += v1.cross(v2);
-            this->normals.at(x, y) += v2.cross(v3);
-            this->normals.at(x, y) += v3.cross(v4);
-            this->normals.at(x, y) += v4.cross(v5);
-            this->normals.at(x, y) += v5.cross(v6);
-            this->normals.at(x, y) += v6.cross(v7);
-            this->normals.at(x, y) += v7.cross(v8);
-            this->normals.at(x, y) += v8.cross(v1);
-            this->normals.at(x, y).normalize();
-        }
-    }*/
-//}
-
-//void Grid::display(bool displayNormals) {
-//    this->mesh.display();
-//}
-
 float Heightmap::getMaxHeight()
 {
-    return this->maxHeight; //this->heights.max();
+    return this->heights.max(); // this->maxHeight; //this->heights.max();
 }
 
 
@@ -229,7 +170,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
 
 void Heightmap::thermalErosion(float erosionCoef, float minSlope)
 {
-    minSlope *= getMaxHeight();
+    minSlope *= this->getHeightFactor();
     bool prevError = heights.raiseErrorOnBadCoord;
     RETURN_VALUE_ON_OUTSIDE prevReturn = heights.returned_value_on_outside;
     heights.raiseErrorOnBadCoord = false;
@@ -494,10 +435,8 @@ void Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
     }
 }
 
-void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float max_height/*, float tileSize*/)
+void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
 {
-//    this->tileSize = tileSize;
-    this->maxHeight = max_height;
     int imgW, imgH, nbChannels;
     unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
     if (data == NULL)
@@ -513,26 +452,27 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
     if (ny == -1)
         ny = imgH;
 
-    float max = 0;
+//    float max = 0;
 
     Matrix3<float> map(imgW, imgH);
     for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
             float value = (float)data[x + y * imgW]; // [(imgW - x) + y * imgW];
             map.at(x, y) = value;
-            max = std::max(max, value);
+//            max = std::max(max, value);
         }
     }
     stbi_image_free(data);
 
     map = map.resize(nx, ny, 1);
-    if (this->maxHeight == -1) {
-        maxHeight = max;
-    } else {
-        map *= (maxHeight / max);
-    }
+    map *= (heightFactor / 255.f);
     this->heights = map;
-//    this->computeNormals();
+//    if (heightFactor == -1) {
+//        maxHeight = max;
+//    } else {
+//        map *= (maxHeight / max);
+//    }
+//    this->heights = map;
 }
 
 void Heightmap::saveHeightmap(std::string heightmap_filename)
@@ -544,8 +484,9 @@ void Heightmap::saveHeightmap(std::string heightmap_filename)
     std::vector<float> toFloatData(width*height);
     std::vector<uint8_t> toIntData(width*height);
 
-    float newHeight = std::max(this->maxHeight, this->heights.max());
-    toFloatData = (this->heights/newHeight).data;
+//    float newHeight = std::max(this->maxHeight, this->heights.max());
+
+    toFloatData = (this->heights/(this->getMaxHeight() * this->heightFactor)).data;
     for (size_t i = 0; i < this->heights.size(); i++) {
         toIntData[i] = toFloatData[i] * 255;
     }

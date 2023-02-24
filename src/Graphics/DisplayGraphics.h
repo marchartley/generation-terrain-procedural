@@ -67,9 +67,13 @@ protected:
 
 class Plotter : public QDialog {
     Q_OBJECT
-public:
+private: // Singleton
     Plotter(QWidget* parent = nullptr);
     Plotter(ChartView* chartView, QWidget* parent = nullptr);
+
+public:
+    static Plotter* getInstance();
+    static Plotter* init(ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     void addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
     void addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
@@ -85,6 +89,8 @@ public:
     void saveFig(std::string filename);
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
+
+    void reset();
 
     QPushButton* saveButton;
     ChartView* chartView;
@@ -104,6 +110,8 @@ public:
     std::vector<std::pair<int, int>> selectedPlotData;
 
 
+private:
+    static Plotter* instance;
 //    QValueAxis* m_axisX;
 //    QValueAxis* m_axisY;
 public Q_SLOTS:

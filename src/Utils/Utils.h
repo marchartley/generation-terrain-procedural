@@ -13,6 +13,8 @@ bool isIn(T elem, std::vector<T> arr) {
     return std::find(arr.begin(), arr.end(), elem) != arr.end();
 }
 
+bool startsWith(std::string text, std::string needle);
+bool endsWith(std::string text, std::string needle);
 std::vector<std::string> split(std::string str, char c = ' ');
 bool makedir(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);

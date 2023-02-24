@@ -107,7 +107,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     std::cout << "From " << voxelGridOffsetStart << " to " << voxelGridOffsetEnd << " with scale = " << voxelGridScaleFactor << std::endl;
     this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
-    this->voxelGrid->fromIsoData();
+//    this->voxelGrid->fromCachedData();
 
     auto startTime = std::chrono::system_clock::now();
 //return;
@@ -171,7 +171,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         bool atLeastOne = false;
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
-                if (area.inside(Vector3(x, y, area.points[0].z)) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
+                if (area.contains(Vector3(x, y, area.points[0].z)) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
                     heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")\n";
                     atLeastOne = true;
@@ -231,7 +231,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         Vector3 pos = current->position;
 //        Vector3 surfacePos = getSurfacePosition(voxelGrid, pos);
         ShapeCurve area = current->area;
-        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->getMaxHeight());
+//        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->getMaxHeight());
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
         Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 1.f);
@@ -282,7 +282,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
         if (modif2D && !heightmapModifier.data.empty()) {
 
-            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y) * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight()), 10.f, AABBoxMin.xy());
+            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y) * (voxelGrid->getSizeZ() / (float)heightmap->getHeightFactor()), 10.f, AABBoxMin.xy());
         }
         if (modif3D && !modifications.data.empty()) {
 
@@ -479,7 +479,7 @@ void BiomeInterface::mousePressEvent(QMouseEvent *event)
     ActionInterface::mousePressEvent(event);
 }
 
-void BiomeInterface::mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent *event)
+void BiomeInterface::mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if(this->isVisible() && mouseInMap) {
         // Zoom on the area if left click, zoom out with right click
@@ -518,14 +518,14 @@ void BiomeInterface::mouseDoubleClickEvent(QMouseEvent *event)
     ActionInterface::mouseDoubleClickEvent(event);
 }
 */
-void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event)
+void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible()) {
         if (!mouseInMap) return;
 
         // Get the voxelGrid mouse position and convert it to the heightmap mouse pos
-        this->tempMousePos = fromVoxelsPosToHeightmap(mousePosInMap);
-        this->selectedBiomeIDs = this->heightmap->getBiomeIndices().at(tempMousePos.xy());
+        this->tempMousePos = fromVoxelsPosToHeightmap(model->getTerrainPos(mousePosInMap));
+        this->selectedBiomeIDs = this->heightmap->getBiomeIndices().at(model->getTerrainPos(tempMousePos.xy()));
         std::cout << "Biomes : " << (selectedBiomeIDs.empty() ? "None." : "") << std::endl;
         for (auto ID : selectedBiomeIDs) {
             std::cout << "- " << BiomeInstance::instancedBiomes[ID]->getInstanceName() << std::endl;

@@ -33,8 +33,8 @@ public:
     ImplicitPatch* selectedPatch();
 
 public Q_SLOTS:
-    void mouseMovedOnMap(Vector3 newPosition);
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event);
+    void mouseMovedOnMapEvent(Vector3 newPosition, TerrainModel *model);
+    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
     void createPatchWithOperation(Vector3 pos);
 
     void setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition = Vector3());
@@ -53,6 +53,7 @@ public Q_SLOTS:
 
     void addNoiseOnSelectedPatch();
     void addDistortionOnSelectedPatch();
+    void addSpreadOnSelectedPatch();
 
     void savePatchesAsFile(std::string filename);
     void loadPatchesFromFile(std::string filename);
@@ -100,6 +101,7 @@ protected:
 
     ImplicitPatch* mainPatch;
     ImplicitPatch* desiredPatchFromFile = nullptr;
+    std::string desiredPatchFilename = "";
 
 //    Patch3D* currentPatch;
     std::vector<ImplicitPatch*> storedPatches;

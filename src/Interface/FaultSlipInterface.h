@@ -33,7 +33,7 @@ public:
     QLayout* createGUI();
 
 Q_SIGNALS:
-    void faultSlipApplied();
+//    void faultSlipApplied();
 
 public Q_SLOTS:
     void updateSlipVector(Vector3 newSlipVector = Vector3());

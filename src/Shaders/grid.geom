@@ -15,6 +15,8 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
+uniform vec3 min_vertice_positions;
+uniform vec3 max_vertice_positions;
 //Vertices position for fragment shader
 in vec3 initialVertPos[];
 in vec3 realNormal[];
@@ -96,6 +98,8 @@ void main(void) {
 
     vec2 vecPos = initialVertPos[0].xy;
     if (vecPos.x >= texSize.x - 1 || vecPos.y >= texSize.y - 1) return;
+    if (vecPos.x < min_vertice_positions.x || vecPos.x > max_vertice_positions.x ||
+        vecPos.y < min_vertice_positions.y || vecPos.y > max_vertice_positions.y) return;
 
     subdivision(vecPos);
     return;

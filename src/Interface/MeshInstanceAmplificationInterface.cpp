@@ -306,8 +306,8 @@ void MeshInstanceAmplificationInterface::afterTerrainUpdated()
 
 void MeshInstanceAmplificationInterface::regenerateRocksPositions()
 {
-    auto coralAvailablePositions = this->getCoralAvailablePositions();
-    auto rocksAvailablePositions = this->getRocksAvailablePositions();
+    auto coralAvailablePositions = (this->possibleCorals.size() > 0 ? this->getCoralAvailablePositions() : std::vector<std::pair<Vector3, Vector3>>());
+    auto rocksAvailablePositions = (this->possibleRocks.size() > 0 ? this->getRocksAvailablePositions() : std::vector<std::pair<Vector3, Vector3>>());
 
     std::shuffle(coralAvailablePositions.begin(), coralAvailablePositions.end(), random_gen::random_generator);
     std::shuffle(rocksAvailablePositions.begin(), rocksAvailablePositions.end(), random_gen::random_generator);
