@@ -172,7 +172,7 @@ void KarstPathGenerationInterface::updateKarstPath()
         this->visitingCamera->setPosition(pathPositions[0]);
         this->visitingCamera->lookAt(pathPositions[1]);
     }
-    Q_EMIT this->karstPathUpdated();
+    Q_EMIT this->updated();
 }
 
 void KarstPathGenerationInterface::createKarst()

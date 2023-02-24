@@ -138,6 +138,7 @@ public:
     void reset(T newVal = T()) { for (auto& val : data) val = newVal; }
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
+    Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
 
     template<typename U>
     operator Matrix3<U>() {
@@ -764,6 +765,28 @@ Matrix3<int> Matrix3<T>::binarize(T limitValue, bool greaterValuesAreSetToOne, b
             }
         } else {
             if ((useAlsoTheEqualSign && this->data[i] <= limitValue) || (!useAlsoTheEqualSign && this->data[i] < limitValue)) {
+                bin[i] = 1;
+            } else {
+                bin[i] = 0;
+            }
+        }
+    }
+    return bin;
+}
+
+template<class T>
+Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne, bool useAlsoTheEqualSign)
+{
+    Matrix3<int> bin(this->sizeX, this->sizeY, this->sizeZ);
+    for (size_t i = 0; i < this->size(); i++) {
+        if (insideValuesAreSetToOne) {
+            if ((useAlsoTheEqualSign && this->data[i] >= minValue && this->data[i] <= maxValue) || (!useAlsoTheEqualSign && this->data[i] > minValue && this->data[i] < maxValue)) {
+                bin[i] = 1;
+            } else {
+                bin[i] = 0;
+            }
+        } else {
+            if ((useAlsoTheEqualSign && this->data[i] <= minValue && this->data[i] <= maxValue) || (!useAlsoTheEqualSign && this->data[i] < minValue && this->data[i] < maxValue)) {
                 bin[i] = 1;
             } else {
                 bin[i] = 0;

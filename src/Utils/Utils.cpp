@@ -213,3 +213,13 @@ float normalizedNormalDistribution(Vector3 size, Vector3 position, float sigma)
         return normalDistribution(size, position, sigma) / maxValue;
     return 0.f;
 }
+
+bool startsWith(std::string text, std::string needle)
+{
+    return text.substr(0, needle.size()) == needle;
+}
+
+bool endsWith(std::string text, std::string needle)
+{
+    return text.substr(text.size() - needle.size()) == needle;
+}

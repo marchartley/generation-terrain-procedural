@@ -29,7 +29,7 @@ ShapeCurve &ShapeCurve::translate(Vector3 translation)
     return *this;
 }
 
-bool ShapeCurve::inside(Vector3 pos, bool useNativeShape)
+bool ShapeCurve::contains(Vector3 pos, bool useNativeShape)
 {
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
@@ -80,7 +80,7 @@ bool ShapeCurve::inside(Vector3 pos, bool useNativeShape)
 float ShapeCurve::estimateDistanceFrom(Vector3 pos)
 {
     float dist = BSpline::estimateDistanceFrom(pos);
-    return dist * (inside(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
+    return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
 float ShapeCurve::computeArea()
@@ -190,7 +190,7 @@ ShapeCurve ShapeCurve::intersect(ShapeCurve other)
     }
 
     /// TODO : There is a special case where P0 is on an intersection...
-    bool currentlyInside = clipShape.inside(poly[0].coord);
+    bool currentlyInside = clipShape.contains(poly[0].coord);
 
     if (!foundIntersection) {
         // Shape is completely inside or outside
@@ -198,7 +198,7 @@ ShapeCurve ShapeCurve::intersect(ShapeCurve other)
             // Poly is inside
             return polyShape;
         } else {
-            if (polyShape.inside(clip[0].coord)) {
+            if (polyShape.contains(clip[0].coord)) {
                 // Clipping shape is inside
                 return clipShape;
             } else {
@@ -207,8 +207,8 @@ ShapeCurve ShapeCurve::intersect(ShapeCurve other)
             }
         }
     } else {
-        int firstIntersectionIndex = markEntriesExits(poly, clipShape.inside(poly[0].coord), 0);
-        markEntriesExits(clip, polyShape.inside(clip[0].coord), 1);
+        int firstIntersectionIndex = markEntriesExits(poly, clipShape.contains(poly[0].coord), 0);
+        markEntriesExits(clip, polyShape.contains(clip[0].coord), 1);
 
         std::vector<Vector3> resultingShape;
         auto& firstVertex = poly[firstIntersectionIndex];

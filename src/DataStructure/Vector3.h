@@ -203,6 +203,9 @@ namespace std {
     };
 }
 
+class AABBox: public std::pair<Vector3, Vector3> {
+
+};
 
 #include "Utils/json.h"
 nlohmann::json vec3_to_json(const Vector3& vec);

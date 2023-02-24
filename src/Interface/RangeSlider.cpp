@@ -114,8 +114,14 @@ void RangeSlider::mousePressEvent(QMouseEvent *mouseEvent)
   if (mouseEvent->button() == Qt::LeftButton)
   {
       QPoint posCursor = this->mapFromGlobal(QCursor::pos());
-      QPoint point_clicked(posCursor.x(), 0);
-     if (std::abs(min_handle->pos().x() - point_clicked.x()) < std::abs(max_handle->pos().x() - point_clicked.x()))
+      QPoint point_clicked = posCursor;  //(posCursor.x(), posCursor.y());
+     if (
+             (this->orientation() == Qt::Horizontal &&
+             (std::abs(min_handle->pos().x() - point_clicked.x()) < std::abs(max_handle->pos().x() - point_clicked.x()))
+              ) ||
+             (this->orientation() == Qt::Vertical && (
+             (std::abs(min_handle->pos().y() - point_clicked.y()) < std::abs(max_handle->pos().y() - point_clicked.y()))))
+        )
      {
          min_handle->handleActivated = true;
      } else {
@@ -133,7 +139,15 @@ void RangeSlider::mouseMoveEvent(QMouseEvent *event)
 
 float RangeSlider::getValueUnderCursor(QPoint cur)
 {
-    double width = this->width(), position = cur.x();
+    double width;
+    double position;
+    if (this->orientation() == Qt::Horizontal) {
+        width = this->width();
+        position = cur.x();
+    } else {
+        width = this->height();
+        position = cur.y();
+    }
     double value = position/width;
     return value;
 //    double range = this->maximum() - this->minimum();
@@ -144,7 +158,7 @@ float RangeSlider::getValueUnderCursor(QPoint cur)
 void RangeSlider::alt_update()
 {
    QPoint posCursor = this->mapFromGlobal(QCursor::pos());
-   QPoint point_clicked(posCursor.x(), 0);
+   QPoint point_clicked((this->orientation() == Qt::Horizontal ? posCursor.x() : posCursor.y()), 0);
   if (min_handle->handleActivated)
   {
       min_handle->setValue(this->getValueUnderCursor(posCursor));
@@ -226,7 +240,11 @@ float RangeSliderHandle::value()
 
 void RangeSliderHandle::updatePos()
 {
-    this->move(this->val * parent->width() - this->width() / 2, 0);/*
+    if (parent->orientation() == Qt::Horizontal)
+        this->move(this->val * parent->width() - this->width() / 2, 0);
+    else
+        this->move(0, this->val * parent->height() - this->height() / 2);
+    /*
     double width = parent->width(); //, position = pos().x();
     double range = parent->maximum() - parent->minimum();
     float location = (this->val - parent->minimum())/range;
@@ -237,7 +255,7 @@ void RangeSlider::Reset()
 {
   int horBuffer = (min_handle->width());
   QPoint myPos = mapToGlobal(pos());
-  QPoint point(myPos.x() + width() - horBuffer, myPos.y()- min_handle->height());
+  QPoint point(myPos.x() + width() - horBuffer, myPos.y() - min_handle->height());
   point = min_handle->mapFromParent(point);
 
   min_handle->move(point);

@@ -314,3 +314,17 @@ bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> _polygon)
     // If there's a odd number of intersections, the point is inside
     return (nb_intersections % 2) == 1;
 }
+
+Vector3 Collision::projectPointOnSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd)
+{
+    Vector3 startToPoint = point - segmentStart;
+    Vector3 segment = segmentEnd - segmentStart;
+    float t = startToPoint.dot(segment) / segment.norm2();
+    t = std::max(0.f, std::min(1.f, t)); // Stay on segment
+    return segmentStart + t * segment;
+}
+
+Vector3 Collision::projectPointOnSphere(Vector3 point, Vector3 sphereCenter, float sphereRadius)
+{
+    return sphereCenter + (point - sphereCenter).normalize() * sphereRadius;
+}

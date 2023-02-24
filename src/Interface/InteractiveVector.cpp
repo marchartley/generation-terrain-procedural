@@ -16,11 +16,11 @@ InteractiveVector::InteractiveVector(Vector3 start, Vector3 end)
 {
     this->startingControlPoint = std::make_unique<ControlPoint>(start, 5.f);
     this->endingControlPoint = std::make_unique<ControlPoint>(end, 3.f);
-    this->endingControlPoint->mesh.shareShader(this->startingControlPoint->mesh);
+//    this->endingControlPoint->mesh.shareShader(this->startingControlPoint->mesh);
     this->startingControlPoint->allowAllAxisRotations(true);
     this->startingControlPoint->allowAllAxisTranslation(true);
     this->endingControlPoint->allowAllAxisTranslation(true);
-    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
+//    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
 
     QObject::connect(this->startingControlPoint.get(), &ControlPoint::modified, this, [=](){
         Q_EMIT this->modified(this->getResultingVector());

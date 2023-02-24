@@ -14,17 +14,18 @@ class Heightmap;
 class Heightmap : public TerrainModel {
 public:
     Heightmap();
-    Heightmap(int nx, int ny, float max_height);
-    Heightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1);
+    Heightmap(int nx, int ny, float heightFactor);
+    Heightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
 
     Matrix3<float> getHeights() { return this->heights; }
     float getHeight(float x, float y) { return this->heights.at(x, y); }
     float getHeight(Vector3 pos) { return this->getHeight(pos.x, pos.y); }
 
     float getMaxHeight();
+    float getHeightFactor() { return this->heightFactor; }
     float getSizeX() { return this->heights.sizeX; }
     float getSizeY() { return this->heights.sizeY; }
-    float getSizeZ() { return this->getHeights().max() * this->maxHeight; }
+    float getSizeZ() { return this->getMaxHeight(); }
 
     /// Erosion functions (should be in another class, I guess...)
     std::vector<std::vector<Vector3>> hydraulicErosion(int numIterations = 1000,
@@ -56,8 +57,8 @@ public:
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
     void saveMap(std::string filename) { return this->saveHeightmap(filename); }
-    void retrieveMap(std::string filename) { return this->loadFromHeightmap(filename, getSizeX(), getSizeY(), maxHeight/*, tileSize*/); }
-    void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float max_height = -1/*, float tileSize = 0.1*/);
+    void retrieveMap(std::string filename) { return this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
+    void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
     void saveHeightmap(std::string heightmap_filename);
 
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
@@ -76,7 +77,8 @@ public:
 
 protected:
     Matrix3<float> heights;
-    float maxHeight;
+//    float maxHeight;
+    float heightFactor = 1.f;
     Matrix3<std::vector<int>> biomeIndices;
 };
 

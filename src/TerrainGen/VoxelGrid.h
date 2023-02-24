@@ -40,7 +40,7 @@ public:
     ~VoxelGrid();
     void from2DGrid(Heightmap grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
     void fromLayerBased(LayerBasedGrid layerBased, int fixedHeight = -1);
-    VoxelGrid *fromIsoData();
+    VoxelGrid *fromCachedData();
 
     void initMap();
 

@@ -37,6 +37,12 @@ public:
     virtual float getSizeZ() = 0;
     virtual Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
 
+    Vector3 getTerrainPos(Vector3 pos) { return (pos * scaling) - translation; }
+    Vector3 getWorldPos(Vector3 pos) { return (pos + translation) / scaling; }
+    void setScaling(Vector3 newScale) { this->scaling = newScale; }
+    void setScaling(float newScale) { this->scaling = Vector3(newScale, newScale, newScale); }
+    void setTranslation(Vector3 newTranslation) { this->translation = newTranslation; }
+
 
 //    int sizeX, sizeY, sizeZ;
     int _cachedHistoryIndex = -1;

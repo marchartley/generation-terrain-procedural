@@ -109,7 +109,7 @@ void FaultSlipInterface::computeFaultSlip()
                                                {"positive_side", positiveSideFalling}
                                               }));
 
-        Q_EMIT this->faultSlipApplied();
+        Q_EMIT updated(); //this->faultSlipApplied();
     }
 }
 

@@ -1,0 +1,279 @@
+{
+	"implicitPatches": {
+		"blendingFactor": 1.0,
+		"composableA": {
+			"blendingFactor": 2.0,
+			"composableA": {
+				"blendingFactor": 2.0,
+				"composableA": {
+					"densityValue": -2.5,
+					"dimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 9,
+					"material": "WATER",
+					"mirrored": false,
+					"name": "Identity",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"position": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"shape": "None",
+					"sigmaValue": -1.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"composableB": {
+					"composableA": {
+						"dimensions": {
+							"x": 50.0,
+							"y": 50.0,
+							"z": 13.0
+						},
+						"file": "C:/codes/Qt/Shared_folder_IRIT_Seafile/generation-terrain-procedural/saved_maps/heightmaps/volcano.png",
+						"material": "ROCK",
+						"position": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						}
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 7,
+					"mirrored": false,
+					"name": "",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					},
+					"spreadFactor": 0.0,
+					"translation": {
+						"x": 18.030071258544922,
+						"y": 25.516036987304688,
+						"z": -0.48154783248901367
+					},
+					"type": "unary"
+				},
+				"index": 6,
+				"mirrored": false,
+				"name": "Blend",
+				"operator": "Blend",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
+			},
+			"composableB": {
+				"composableA": {
+					"densityValue": 0.10000000149011612,
+					"dimensions": {
+						"x": 37.50495529174805,
+						"y": 35.93680191040039,
+						"z": 6.436113357543945
+					},
+					"index": 5,
+					"material": "CORAL",
+					"mirrored": false,
+					"name": "Mountainchain",
+					"optionalCurve": {
+						"closed": false,
+						"points": [
+							{
+								"x": 33.70053482055664,
+								"y": 33.43680191040039,
+								"z": 2.6187515258789063
+							},
+							{
+								"x": 2.5,
+								"y": 33.210445404052734,
+								"z": 2.5
+							},
+							{
+								"x": 3.5848560333251953,
+								"y": 4.343864440917969,
+								"z": 3.318662643432617
+							},
+							{
+								"x": 33.25807189941406,
+								"y": 2.5,
+								"z": 3.9361133575439453
+							},
+							{
+								"x": 35.00495529174805,
+								"y": 31.755733489990234,
+								"z": 2.880237579345703
+							}
+						]
+					},
+					"position": {
+						"x": 25.056610107421875,
+						"y": 32.48739242553711,
+						"z": 0.0
+					},
+					"shape": "MountainChain",
+					"sigmaValue": 8.699999809265137,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"distortion": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"index": 4,
+				"mirrored": false,
+				"name": "",
+				"noise": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"rotation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"scale": {
+					"x": 1.0,
+					"y": 1.0,
+					"z": 1.0
+				},
+				"spreadFactor": 0.0,
+				"translation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": -0.39295315742492676
+				},
+				"type": "unary"
+			},
+			"index": 3,
+			"mirrored": false,
+			"name": "Blend",
+			"operator": "Blend",
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"positionalB": "ABOVE",
+			"type": "compose",
+			"useIntersection": false
+		},
+		"composableB": {
+			"composableA": {
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 30.80000114440918,
+					"y": 30.30000114440918,
+					"z": 7.300000190734863
+				},
+				"index": 2,
+				"material": "SAND",
+				"mirrored": false,
+				"name": "Block",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 35.85139465332031,
+					"y": 40.735511779785156,
+					"z": 0.0
+				},
+				"shape": "Block",
+				"sigmaValue": 5.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"distortion": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"index": 1,
+			"mirrored": false,
+			"name": "Spread",
+			"noise": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
+			"rotation": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"scale": {
+				"x": 1.0,
+				"y": 1.0,
+				"z": 1.0
+			},
+			"spreadFactor": 0.0,
+			"translation": {
+				"x": -9.241403579711914,
+				"y": -5.776332855224609,
+				"z": -3.0608720779418945
+			},
+			"type": "unary"
+		},
+		"index": 0,
+		"mirrored": false,
+		"name": "Blend",
+		"operator": "One_side_blend",
+		"optionalCurve": {
+			"closed": false,
+			"points": []
+		},
+		"positionalB": "FIXED_POS",
+		"type": "compose",
+		"useIntersection": false
+	}
+}

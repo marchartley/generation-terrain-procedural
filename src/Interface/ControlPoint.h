@@ -27,7 +27,105 @@ enum GrabberState {
     CUSTOM_STATE_9 = 0xF,
 };
 
-class ControlPoint : /*public CustomInteractiveObject,*/ public qglviewer::ManipulatedFrame
+/*
+class ControlPoint : public qglviewer::ManipulatedFrame
+{
+    Q_OBJECT
+public:
+    ControlPoint();
+    ControlPoint(Vector3 pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
+    ~ControlPoint();
+
+protected:
+    enum ControlPointAction { TRANSLATE, ROTATE, SCALE, NO_ACTION };
+    enum Axis {X, Y, Z, NO_AXIS };
+
+public:
+    void display();
+    void move(Vector3 newPos);
+
+    Vector3 getPosition() const;
+
+    void allowAllAxisTranslation(bool allowed);
+    void allowAllAxisRotations(bool allowed);
+    void allowAllAxisScaling(bool allowed);
+
+    void mousePressEvent(QMouseEvent* const event  , qglviewer::Camera* const cam );
+    void mouseReleaseEvent( QMouseEvent* const event, qglviewer::Camera* const cam);
+    void mouseMoveEvent(QMouseEvent* const event, qglviewer::Camera* const cam);
+    void wheelEvent(QWheelEvent *const event, qglviewer::Camera *const camera);
+
+    void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
+    void setGrabberStateColor(GrabberState state, std::vector<float> color);
+
+    void setPosition(Vector3 newPosition);
+    void setRadius(float newRadius);
+    void setState(GrabberState newState);
+
+    Vector3 getFluidTranslation() const;
+    Vector3 getFluidRotation() const;
+    Vector3 getCurrentTranslation() const;
+    Vector3 getCurrentRotation() const;
+
+    qglviewer::Constraint* custom_constraint = nullptr;
+
+    std::map<Axis, bool> allowedTranslations;
+    std::map<Axis, bool> allowedRotations;
+    std::map<Axis, bool> allowedScaling;
+
+    bool displayOnTop = true;
+
+//    static std::shared_ptr<Shader> base_shader;
+    static std::map<GrabberState, std::vector<float>> default_GrabberStateColor;
+
+public Q_SLOTS:
+    void hide();
+    void show();
+
+Q_SIGNALS:
+    void modified();
+    void released();
+
+    void translationApplied(Vector3);
+    void rotationApplied(Vector3);
+
+protected:
+//    void updateStateDependingOnManipFrame();
+    void checkIfGrabsMouse(int x, int y,const qglviewer::Camera* const cam);
+
+    Vector3 intersectionWithTranslationWidget(Vector3 rayOrigin, Vector3 rayDir);
+    Vector3 intersectionWithRotationWidget(Vector3 rayOrigin, Vector3 rayDir);
+    Vector3 intersectionWithScalingWidget(Vector3 rayOrigin, Vector3 rayDir);
+
+    ControlPointAction hoveredAction(Vector3 rayOrigin, Vector3 rayDir);
+    Axis hoveredAxis(Vector3 rayOrigin, Vector3 rayDir);
+
+    ControlPointAction currentAction = NO_ACTION;
+    Axis currentAxis = NO_AXIS;
+
+    Vector3 position;
+    Vector3 mousePositionWhenActionStarted;
+
+    float radius;
+    GrabberState currentState = INACTIVE;
+
+//    std::map<GrabberState, std::vector<float>> GrabberStateColor;
+
+//    Mesh translationMesh, rotationMesh, scalingMesh;
+
+    std::map<GrabberState, std::vector<float>> GrabberStateColor;
+
+    std::vector<Vector3> translationHistory;
+    std::vector<Vector3> rotationHistory;
+
+    Vector3 getIntersectionWithTranslationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
+    Vector3 getIntersectionWithRotationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
+    Vector3 getIntersectionWithScalingAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
+
+};
+*/
+
+class ControlPoint : public qglviewer::ManipulatedFrame
 {
     Q_OBJECT
 public:
@@ -44,7 +142,7 @@ public:
 
 Q_SIGNALS:
     void modified();
-    void afterModified();
+    void released();
 
     void translationApplied(Vector3);
     void rotationApplied(Vector3);
@@ -66,7 +164,7 @@ public:
 
     Vector3 getRotation() const { return Vector3::quaternionToEuler(this->rotation()); }
     Vector3 getPosition() const { return this->position(); }
-    Vector3 getFluidMovement() const {
+    Vector3 getFluidTranslation() const {
         if (positionsHistory.empty()) return Vector3();
         return (this->getPosition() - this->positionsHistory.front()).normalize(); };
     Vector3 getLastMovement() const { return (this->prevPosition - this->getPosition()).normalize(); };
@@ -89,15 +187,19 @@ public:
     Vector3 initialPosition;
     Vector3 initialRotation;
 
+    Vector3 pressedPosBeforeAction;
+
     Mesh mesh;
     Sphere shape;
 
     Mesh translationMeshes;
     Mesh rotationMeshes;
+    Mesh rotationHelperSphere;
 
     float arrowSize;
     float circleRadius;
 
+    void setRadius(float newRadius) { this->radius = newRadius; }
     float radius;
     float minSphereRadius = -1;
     float maxSphereRadius = -1;
@@ -129,6 +231,7 @@ public:
     qglviewer::Constraint* custom_constraint = nullptr;
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
+    Vector3 getIntersectionWithPlane(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
 
     bool mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir);
     bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
@@ -150,5 +253,6 @@ private:
 
     bool useTranslation;
 };
+
 
 #endif // CONTROLPOINT_H

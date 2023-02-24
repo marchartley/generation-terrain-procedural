@@ -58,7 +58,7 @@ void ManualEditionInterface::setSize(int size)
 {
     if (size < 0) size = 0;
     this->manualEditionSize = size;
-    this->grabber->radius = size/2.f;
+    this->grabber->setRadius(size/2.f);
 }
 
 void ManualEditionInterface::setStrength(float strength)
@@ -95,7 +95,12 @@ void ManualEditionInterface::applyModification()
     Q_EMIT this->updated();
 }
 
-void ManualEditionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event)
+void ManualEditionInterface::mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel *model)
+{
+    this->setPosition(mouseWorldPosition);
+}
+
+void ManualEditionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if (this->isVisible() && mouseInMap &&
             event->button() == Qt::MouseButton::LeftButton &&

@@ -1,8 +1,6 @@
 #include "ImplicitPatch.h"
-
-
-
-#ifndef useBefore
+#include "Utils/ShapeCurve.h"
+#include "Utils/stb_image.h"
 
 float ImplicitPatch::isovalue = .5f;
 float ImplicitPatch::zResolution = .1f;
@@ -63,6 +61,46 @@ float ImplicitPatch::getMinHeight(Vector3 pos)
     return this->_cachedMinHeight.at((pos - AABBox.first).xy());
 }
 
+float ImplicitPatch::getMinimalHeight(std::pair<Vector3, Vector3> BBox)
+{
+    return this->getMinimalHeight(BBox.first, BBox.second);
+}
+
+float ImplicitPatch::getMaximalHeight(std::pair<Vector3, Vector3> BBox)
+{
+    return this->getMaximalHeight(BBox.first, BBox.second);
+}
+
+float ImplicitPatch::getMinimalHeight(Vector3 minBox, Vector3 maxBox)
+{
+    auto BBox = this->getBBox();
+    if (!minBox.isValid()) minBox = BBox.first;
+    if (!maxBox.isValid()) maxBox = BBox.second;
+
+    float minHeight = 10000.f;
+    for (int x = minBox.x; x < maxBox.x; x++) {
+        for (int y = minBox.y; y < maxBox.y; y++) {
+            minHeight = std::min(minHeight, this->getMinHeight(Vector3(x, y)));
+        }
+    }
+    return minHeight;
+}
+
+float ImplicitPatch::getMaximalHeight(Vector3 minBox, Vector3 maxBox)
+{
+    auto BBox = this->getBBox();
+    minBox = Vector3::max(minBox, BBox.first);
+    maxBox = Vector3::min(maxBox, BBox.second);
+
+    float maxHeight = -10000.f;
+    for (int x = minBox.x; x < maxBox.x; x++) {
+        for (int y = minBox.y; y < maxBox.y; y++) {
+            maxHeight = std::max(maxHeight, this->getMaxHeight(Vector3(x, y)));
+        }
+    }
+    return maxHeight;
+}
+
 std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(Vector3 pos)
 {
     std::map<TerrainTypes, float> materials = this->getMaterials(pos);
@@ -120,9 +158,17 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
         else if (type == "UNARY")
             result = ImplicitUnaryOperator::fromJson(content);
     } else if (content.contains("file")) {
-        nlohmann::json newContent = nlohmann::json::parse(std::ifstream(content["file"]));
-        result = ImplicitPatch::fromJson(newContent[ImplicitPatch::json_identifier]);
-        result->used_json_filename = content["file"];
+        std::string filename = content["file"];
+        if (filename.substr(filename.size() - 5) == ".json") {
+            nlohmann::json newContent = nlohmann::json::parse(std::ifstream(filename));
+            result = ImplicitPatch::fromJson(newContent[ImplicitPatch::json_identifier]);
+        } else {
+            Vector3 dimensions = json_to_vec3(content["dimensions"]);
+            TerrainTypes material = materialFromString(content["material"]);
+            result = ImplicitPrimitive::fromHeightmap(filename, dimensions);
+            dynamic_cast<ImplicitPrimitive*>(result)->material = material;
+        }
+        result->used_json_filename = filename;
         return result;
     }
     if (result != nullptr) {
@@ -145,6 +191,15 @@ void ImplicitPatch::updateCache()
 }
 
 ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
+{
+    ImplicitPrimitive* primitive = new ImplicitPrimitive();
+    primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve);
+    primitive->optionalCurve = parametricCurve;
+
+    return primitive;
+}
+
+std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
 {
     std::function<float(Vector3)> func;
     switch(shape) {
@@ -184,15 +239,17 @@ ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vect
     case MountainChain:
         func = ImplicitPatch::createMountainChainFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
         break;
+    case Polygon:
+        func = ImplicitPatch::createPolygonFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
+        break;
+    case ImplicitHeightmap:
+        // Do it yourself!
+        break;
     case None:
         func = ImplicitPatch::createIdentityFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
         break;
     }
-    ImplicitPrimitive* primitive = new ImplicitPrimitive();
-    primitive->evalFunction = func;
-    primitive->optionalCurve = parametricCurve;
-
-    return primitive;
+    return func;
 }
 
 
@@ -212,12 +269,35 @@ float ImplicitPrimitive::evaluate(Vector3 pos)
         return 0.f;
     Vector3 supportWidth = maxSupportPos - minSupportPos;
     Vector3 width = maxPos - minPos;
+//    if (this->optionalCurve.points.size() > 2) {
+//        ShapeCurve area = this->optionalCurve.points;
+//        if (!area.inside(pos)) {
+//            return 0.f;
+//        }
+//    }
 
-    float distanceToBBox = Vector3::signedDistanceToBoundaries(pos, minPos, maxPos);
-    float distanceFactor = std::max(1.f, (supportWidth - width).maxComp() * .5f); // Don't get a 0 here
-    distanceToBBox /= distanceFactor; // Make it depending on the support area
-    float distanceFalloff = interpolation::wyvill(std::clamp(distanceToBBox, 0.f, 1.f));
-    float evaluation = this->evalFunction(pos - this->position) * distanceFalloff;
+    float evaluation = 0.f;
+
+    Vector3 evalPos = pos - this->position;
+    if (Vector3::isInBox(pos, minPos, maxPos)) {
+        evaluation = this->evalFunction(evalPos);
+    } else {
+        if (!mirrored) {
+            evaluation = this->evalFunction(evalPos);
+        } else {
+            float distanceToBBox = Vector3::signedDistanceToBoundaries(pos, minPos, maxPos);
+            float distanceFactor = std::max(1.f, (supportWidth - width).maxComp() * .5f); // Don't get a 0 here
+            distanceToBBox /= distanceFactor; // Make it depending on the support area
+            float distanceFalloff = interpolation::wyvill(std::clamp(distanceToBBox, 0.f, 1.f));
+
+            evalPos = evalPos.abs();
+            evalPos.x = (evalPos.x < width.x ? evalPos.x : 2.f * width.x - evalPos.x);
+            evalPos.y = (evalPos.y < width.y ? evalPos.y : 2.f * width.y - evalPos.y);
+            evalPos.z = (evalPos.z < width.z ? evalPos.z : 2.f * width.z - evalPos.z);
+            evaluation = std::clamp(this->evalFunction(evalPos), 0.f, 1.f) * distanceFalloff * .5f;
+        }
+    }
+
     evaluation = std::clamp(evaluation, 0.f, 1.f);
 
     return evaluation;
@@ -232,7 +312,7 @@ std::pair<Vector3, Vector3> ImplicitPrimitive::getSupportBBox()
 {
     Vector3 margin = (this->supportDimensions - this->dimensions) * .5f;
     if (!this->supportDimensions.isValid() || this->supportDimensions == Vector3())
-        margin = this->dimensions * .5f; // Nice big margin
+        margin = this->dimensions * 1.f; // Nice big margin
     return {this->position - margin, this->position + this->dimensions + margin};
 }
 
@@ -243,9 +323,19 @@ std::pair<Vector3, Vector3> ImplicitPrimitive::getBBox()
 
 void ImplicitPrimitive::update()
 {
+
+    if (this->predefinedShape == ImplicitHeightmap) {
+        if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
+            this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
+        this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
+        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([this](Vector3 pos) -> float {
+                return this->cachedHeightmap.at(pos.xy());
+            });
+    } else {
+        this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
+    }
     // This is kinda f*cked up...
-    ImplicitPrimitive* copy = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
-    copy->setDimensions(this->dimensions);
+    /*copy->setDimensions(this->dimensions);
     copy->setSupportDimensions(this->supportDimensions);
     copy->position = this->position;
     copy->material = this->material;
@@ -253,8 +343,14 @@ void ImplicitPrimitive::update()
     copy->index = this->index;
     copy->name = this->name;
     copy->predefinedShape = this->predefinedShape;
+    copy->heightmapFilename = this->heightmapFilename;
+    copy->used_json_filename = this->used_json_filename;
+    copy->cachedHeightmap = this->cachedHeightmap;
+
     *this = *copy; // Not sure this is legal
     delete copy;
+
+    }*/
 }
 
 std::string ImplicitPrimitive::toString()
@@ -267,6 +363,9 @@ nlohmann::json ImplicitPrimitive::toJson()
     nlohmann::json content;
     if (!this->used_json_filename.empty()) {
         content["file"] = this->used_json_filename;
+        content["position"] = vec3_to_json(this->position);
+        content["dimensions"] = vec3_to_json(this->dimensions);
+        content["material"] = stringFromMaterial(this->material);
         /*std::ifstream file(this->used_json_filename);
         nlohmann::json old_json_content = nlohmann::json::parse(file);
         ImplicitPatch* oldValues = ImplicitPatch::fromJson(old_json_content[ImplicitPatch::json_identifier]);
@@ -288,6 +387,7 @@ nlohmann::json ImplicitPrimitive::toJson()
         content["shape"] = stringFromPredefinedShape(this->predefinedShape);
         content["sigmaValue"] = this->parametersProvided[0];
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["mirrored"] = this->mirrored;
     }
 
     return content;
@@ -308,6 +408,8 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
     patch->index = content["index"];
     patch->predefinedShape = predefinedShapeFromString(content["shape"]);
     patch->parametersProvided = {content["sigmaValue"]};
+    if (content.contains("mirrored"))
+        patch->mirrored = content["mirrored"];
     patch->update();
     return patch;
 }
@@ -322,6 +424,50 @@ void ImplicitPrimitive::setDimensions(Vector3 newDimensions)
 void ImplicitPrimitive::setSupportDimensions(Vector3 newSupportDimensions)
 {
     this->supportDimensions = newSupportDimensions;
+}
+
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions)
+{
+    int imgW, imgH, nbChannels;
+    unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
+    if (data == NULL)
+    {
+        std::cerr << "Error : Impossible to load " << filename << "\n";
+        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
+        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
+        exit (-1);
+        return nullptr;
+    }
+    Matrix3<float> map(imgW, imgH);
+    for (int x = 0; x < imgW; x++) {
+        for (int y = 0; y < imgH; y++) {
+            float value = (float)data[x + y * imgW];
+            map.at(x, y) = value;
+        }
+    }
+    stbi_image_free(data);
+
+    if (dimensions.isValid()) {
+        map = map.resize(dimensions.x, dimensions.y, 1);
+        map = map.normalize() * dimensions.z;
+    }
+    return ImplicitPrimitive::fromHeightmap(map, filename);
+}
+
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, std::string filename)
+{
+    ImplicitPrimitive* prim = new ImplicitPrimitive;
+    prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
+//    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
+//        return heightmap.data[heightmap.getIndex(pos.xy())];
+//    });
+
+    prim->name = "Heightmap";
+    prim->predefinedShape = ImplicitHeightmap;
+    prim->cachedHeightmap = heightmap;
+    prim->cachedHeightmap.raiseErrorOnBadCoord = false;
+    prim->update();
+    return prim;
 }
 
 
@@ -639,6 +785,7 @@ nlohmann::json ImplicitOperator::toJson()
         if (this->composableB)
             content["composableB"] = this->composableB->toJson();
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["mirrored"] = this->mirrored;
     }
 
     return content;
@@ -658,6 +805,8 @@ ImplicitPatch *ImplicitOperator::fromJson(nlohmann::json content)
         patch->withIntersectionOnB = content["useIntersection"];
     if (content.contains("optionalCurve"))
         patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+    if (content.contains("mirrored"))
+        patch->mirrored = content["mirrored"];
     patch->update();
     return patch;
 }
@@ -669,6 +818,15 @@ void ImplicitOperator::updateCache()
         this->composableA->updateCache();
     if (this->composableB != nullptr)
         this->composableB->updateCache();
+}
+
+void ImplicitOperator::swapAB()
+{
+    if (this->composableB != nullptr) {
+        std::swap(this->composableA, this->composableB);
+        this->composableA->updateCache();
+        this->composableB->updateCache();
+    }
 }
 
 Vector3 ImplicitOperator::getEvaluationPositionForComposableA(Vector3 pos)
@@ -688,6 +846,13 @@ Vector3 ImplicitOperator::getEvaluationPositionForComposableB(Vector3 pos)
         offsetB = this->composableA->getMinHeight(pos);
     } else if (this->positionalB == FIXED_POS) {
         offsetB = 0.f;
+    } else if (this->positionalB == SMOOTH_ABOVE) {
+        float heightB = this->composableB->getDimensions().z;
+        float heightA = heightA = std::min(heightB, this->composableA->getMaxHeight(pos));
+        float minHeightA = this->composableA->getMinimalHeight(this->composableB->getBBox());
+        float heightInterp = interpolation::wyvill(heightA, minHeightA, (minHeightA + heightB));
+//        offsetB = (1.f - heightInterp / heightB) * heightB;
+        pos.z *= (heightInterp / heightB);
     } else {
         std::cerr << "Wrong position label" << std::endl;
     }
@@ -701,13 +866,24 @@ Vector3 ImplicitOperator::getEvaluationPositionForComposableB(Vector3 pos)
 
 ImplicitUnaryOperator::ImplicitUnaryOperator()
 {
-    this->wrapFunction = [](Vector3) { return Vector3(0, 0, 0); };
+//    this->wrapFunction = [](Vector3 pos) { return pos; };
+//    this->unwrapFunction = [](Vector3 pos) { return pos; };
+    this->wrapFunction = [=](Vector3 pos) {
+        for (int i = 0; i < this->transforms.size(); i++)
+            pos = this->transforms[i].wrap(pos);
+        return pos;
+    };
+    this->unwrapFunction = [=](Vector3 pos) {
+        for (int i = this->transforms.size() - 1; i >= 0; i--)
+            pos = this->transforms[i].unwrap(pos);
+        return pos;
+    };
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
 
 float ImplicitUnaryOperator::evaluate(Vector3 pos)
 {
-    Vector3 evaluationPos = pos + this->wrapFunction(pos);
+    Vector3 evaluationPos = this->unwrapFunction(pos);
     float evaluation = this->composableA->evaluate(evaluationPos) + this->noiseFunction(pos);
     evaluation = std::clamp(evaluation, 0.f, 1.f);
 
@@ -716,7 +892,7 @@ float ImplicitUnaryOperator::evaluate(Vector3 pos)
 
 std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
 {
-    Vector3 evaluationPos = pos + this->wrapFunction(pos);
+    Vector3 evaluationPos = this->unwrapFunction(pos);
     auto [eval, materials] = this->composableA->getMaterialsAndTotalEvaluation(evaluationPos);
     if (eval > 0.f) {
         float noiseValue = this->noiseFunction(pos);
@@ -733,7 +909,7 @@ std::pair<Vector3, Vector3> ImplicitUnaryOperator::getSupportBBox()
     auto vertices = Vector3::getAABBoxVertices(AABBox.first, AABBox.second);
 
     for (auto& vert : vertices) // call transform function
-        vert -= this->wrapFunction(vert);
+        vert = this->wrapFunction(vert);
 
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }
@@ -744,7 +920,7 @@ std::pair<Vector3, Vector3> ImplicitUnaryOperator::getBBox()
     auto vertices = Vector3::getAABBoxVertices(AABBox.first, AABBox.second);
 
     for (auto& vert : vertices) // call transform function
-        vert -= this->wrapFunction(vert);
+        vert = this->wrapFunction(vert);
 
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }
@@ -775,10 +951,13 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         content["translation"] = vec3_to_json(this->_translation);
         content["rotation"] = vec3_to_json(this->_rotation);
         content["noise"] = vec3_to_json(this->_noise);
+        content["scale"] = vec3_to_json(this->_scale);
         content["distortion"] = vec3_to_json(this->_distortion);
         if (this->composableA)
             content["composableA"] = this->composableA->toJson();
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["spreadFactor"] = this->_spreadingFactor;
+        content["mirrored"] = this->mirrored;
     }
 
     return content;
@@ -797,18 +976,25 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     Vector3 distortion;
     if (content.contains("scale"))
         scale = json_to_vec3(content["scale"]);
+    if (scale == Vector3())
+        scale = Vector3(1.f, 1.f, 1.f);
     if (content.contains("noise"))
         noise = json_to_vec3(content["noise"]);
     if (content.contains("distortion"))
         distortion = json_to_vec3(content["distortion"]);
-    if (rotation != Vector3()) patch->rotate(rotation.x, rotation.y, rotation.z);
+    if (content.contains("spreadFactor"))
+        patch->spread(content["spreadFactor"]);
+
     if (translation != Vector3()) patch->translate(translation);
-    if (scale != Vector3()) patch->scale(scale);
+    if (scale != Vector3(1.f, 1.f, 1.f)) patch->scale(scale);
+    if (rotation != Vector3()) patch->rotate(rotation.x, rotation.y, rotation.z);
     if (noise != Vector3()) patch->addRandomNoise(noise.x, noise.y, noise.z);
     if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
 
     if (content.contains("optionalCurve"))
         patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+    if (content.contains("mirrored"))
+        patch->mirrored = content["mirrored"];
 
     patch->update();
     return patch;
@@ -817,10 +1003,7 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 void ImplicitUnaryOperator::translate(Vector3 translation)
 {
     this->_translation += translation;
-    std::function<Vector3(Vector3)> previousFunction = this->wrapFunction;
-    this->wrapFunction = [=](Vector3 pos) -> Vector3 {
-        return previousFunction(pos) - translation;
-    };
+    this->transforms.push_back(UnaryOpTranslate(translation));
 }
 
 void ImplicitUnaryOperator::rotate(float angleX, float angleY, float angleZ)
@@ -829,44 +1012,7 @@ void ImplicitUnaryOperator::rotate(float angleX, float angleY, float angleZ)
 
     auto AABBox = this->getBBox();
     Vector3 center = (AABBox.first + AABBox.second) * .5f;
-    Matrix Rx (3, 3, std::vector<float>({
-                   1, 0, 0,
-                   0, cos(-angleX), -sin(-angleX),
-                   0, sin(-angleX), cos(-angleX)
-               }).data());
-    Matrix Rz (3, 3, std::vector<float>({
-                    cos(-angleY), 0, -sin(-angleY),
-                    0, 1, 0,
-                    sin(-angleY), 0, cos(-angleY)
-                }).data());
-    Matrix Ry (3, 3, std::vector<float>({
-                    cos(-angleZ), -sin(-angleZ), 0,
-                    sin(-angleZ), cos(-angleZ), 0,
-                    0, 0, 1
-                }).data());
-    Matrix R = Rx.product(Ry).product(Rz);
-
-    std::function<Vector3(Vector3)> previousFunction = this->wrapFunction;
-    this->wrapFunction = [=](Vector3 pos) -> Vector3 {
-        // Exactly the rotation function, but with the matrix computed only once
-        return (((pos + previousFunction(pos)) - center).applyTransform(R) + center) - pos;
-    };
-    /*
-//    std::cout << "Rotation : " << rad2deg(angleX) << "x, " << rad2deg(angleY) << "y, " << rad2deg(angleZ) << "z" << std::endl;
-    auto AABBox = this->getBBox();
-    Vector3 center = (AABBox.first + AABBox.second) * .5f;
-//    Vector3 center = (AABBox.second - AABBox.first) * .5f;
-    std::function<Vector3(Vector3)> previousFunction = this->wrapFunction;
-    this->wrapFunction = [=](Vector3 pos) -> Vector3 {
-//        Vector3 firstTransform = pos + previousFunction(pos);
-//        Vector3 fromCenter = (firstTransform - center);
-//        Vector3 rotated = fromCenter.rotate(-angleX, -angleY, -angleZ);
-//        Vector3 backToCenter = rotated + center;
-//        Vector3 backToTranslation = backToCenter - pos;
-//        return  backToTranslation;
-
-        return (((pos + previousFunction(pos)) - center).rotate(-angleX, -angleY, -angleZ) + center) - pos;
-    };*/
+    this->transforms.push_back(UnaryOpRotate(Vector3(angleX, angleY, angleZ), center));
 }
 
 void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
@@ -874,10 +1020,7 @@ void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
     this->_scale *= scaleFactor;
     auto BBox = this->getBBox();
     Vector3 center = (BBox.first + BBox.second) * .5f;
-    std::function<Vector3(Vector3)> previousFunction = this->wrapFunction;
-    this->wrapFunction = [=](Vector3 pos) -> Vector3 {
-        return ((previousFunction(pos) - center) * scaleFactor) + center;
-    };
+    this->transforms.push_back(UnaryOpScale(scaleFactor, center));
 }
 
 void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float offset)
@@ -894,14 +1037,26 @@ void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float 
 void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float offset)
 {
     this->_distortion = Vector3(amplitude, period, offset);
-    this->wrapFunction = [=](Vector3 pos) -> Vector3 {
-        FastNoiseLite noise;
-        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-        float noiseValX = noise.GetNoise(pos.x * period + 1.f * offset, pos.y * period + 1.f * offset, pos.z * period + 1.f * offset) * 1.f;
-        float noiseValY = noise.GetNoise(pos.x * period + 2.f * offset, pos.y * period + 2.f * offset, pos.z * period + 2.f * offset) * 1.f;
-        float noiseValZ = noise.GetNoise(pos.x * period + 3.f * offset, pos.y * period + 3.f * offset, pos.z * period + 3.f * offset) * 1.f;
-        return Vector3(noiseValX, noiseValY, noiseValZ) * amplitude;
-    };
+    FastNoiseLite noise;
+    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+    this->transforms.push_back(UnaryOpWrap(noise, Vector3(amplitude, period, offset)));
+}
+
+void ImplicitUnaryOperator::spread(float factor)
+{
+    this->_spreadingFactor += factor;
+    float newSpreadFactor = this->_spreadingFactor;
+    auto BBox = this->getBBox();
+    Vector3 center = (BBox.first + BBox.second).xy() * .5f;
+    this->transforms.push_back(UnaryOpSpread(BBox, factor));
+}
+
+void ImplicitUnaryOperator::addWavelets()
+{
+    this->transforms.push_back(UnaryOpWrap(
+                                   [](Vector3 pos) -> Vector3 {
+                                   return Vector3(0, 0, .5f * std::cos(pos.x * 1.f));
+                               }));
 }
 
 
@@ -942,11 +1097,13 @@ std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma
 
 std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height)
 {
-    Vector3 start = Vector3(width * .5f, depth * .0f, height * .5f);
-    Vector3 end = Vector3(width * .5f, depth * 1.f, height * .5f);
+    Vector3 start = Vector3(width * .5f, depth * .5f, height * 0.f);
+    Vector3 end = Vector3(width * .5f, depth * .5f, height * 1.f);
 //    float radius = sigma;
     return [=] (Vector3 pos) {
-        // Line on Y axis
+        // Line on Z axis
+        if (pos.z < start.z || end.z < pos.z)
+            return 0.2f;
         BSpline spline({start, end});
         Vector3 closestPoint = spline.estimateClosestPos(pos, 1e-5);
         Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
@@ -1051,17 +1208,66 @@ std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma,
 
 std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline _path)
 {
-    return [=] (Vector3 pos) -> float {
+//    Vector3 c = Vector3(0.6, 0.8); // std::sin(deg2rad(45.f)), std::cos(deg2rad(45.f)));
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (Vector3 pos) -> float {
         BSpline path = _path;
-        Vector3 closestPoint = path.estimateClosestPos(pos);
-        return std::clamp(1.f - ((pos - closestPoint).norm() / sigma), 0.f, 1.f);
+        float closestTime = path.estimateClosestTime(pos);
+        Vector3 closestPoint = path.getPoint(closestTime);
+        Vector3 vertical(0, 0, 1);
+        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
+
+        Vector3 translatedPos = pos - closestPoint;
+        Vector3 normalizedPos = translatedPos.xy() / (Vector3(sigma, sigma, 1.f) * .5f);
+        float distance = normalizedPos.norm();
+        float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f) * sigma;
+        return functionsHeight;
+    });
+        /*Vector3 p = (pos - closestPoint) / (sigma);
+        Vector3 q = Vector3(p.xy().norm(), -p.y);
+        float d = (q - c * std::max(q.dot(c), 0.f)).norm();
+        float signedDist = d * ((q.x * c.y - q.y * c.x < 0.f) ? -1.f : 1.f);
+        return std::clamp(1.f - signedDist, 0.f, 1.f);
+        */
+        /*
+            vec2 q = vec2( length(p.xz), -p.y );
+            float d = length(q-c*max(dot(q,c), 0.0));
+            return d * ((q.x*c.y-q.y*c.x<0.0)?-1.0:1.0);
+        */
+        /*
+        BSpline path = _path;
+        float closestTime = path.estimateClosestTime(pos);
+        Vector3 closestPoint = path.getPoint(closestTime);
+        Vector3 vertical(0, 0, 1);
+        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
+        Vector3 toCurve = (closestPoint - pos);
+//        float distance = toCurve.norm();
+        float flatDistance = toCurve.xy().norm();
+//        toCurve.normalize();
+//        float islandFactor = std::pow((toCurve.xy().normalized().dot(islandDirection) + 1.f) * .5f, 1.f); // [-1, 1] -> [0, 1]
+        float distanceEval = (flatDistance * toCurve.z); //  * (islandFactor + 1.f); // d * [1, 2]
+        float normalizedEval = (distanceEval / sigma);
+        float eval = std::clamp(1.f - normalizedEval, 0.f, 1.f);
+        return eval;
+        */
 /*
         Vector3 translatedPos = pos - closestPoint;
         Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, depth, 1.f) * .5f);
 //        return normalizedPos.norm();
         float functionsHeight = std::clamp((1.f - normalizedPos.norm()), 0.f, 1.f) * height;
         return functionsHeight;*/
-    };
+    //    };
+}
+
+std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path)
+{
+    ShapeCurve polygon = path;
+    for (auto& p : polygon.points)
+        p.z = 0.f;
+    polygon.points.push_back(polygon.points.front());
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (Vector3 pos) -> float {
+        ShapeCurve polygon(_polygon);
+        return (polygon.contains(pos.xy()) ? height : 0.f);
+    });
 }
 
 std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height)
@@ -1127,698 +1333,134 @@ std::map<TerrainTypes, float> ImplicitCSG::getMaterials(Vector3 pos)
 }
 */
 
-#else
-int ImplicitPatch::currentMaxIndex = -1;
-ImplicitPatch::ImplicitPatch()
-    : ImplicitPatch(Vector3(), Vector3(), Vector3(), [](Vector3 _pos) {return 0.f; })
+UnaryOpTranslate::UnaryOpTranslate(Vector3 translation)
+    : UnaryOp()
 {
-
-}
-
-ImplicitPatch::ImplicitPatch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, float densityValue)
-    : ImplicitPatch(pos, boundMin, boundMax, evalFunction, [&](Vector3 pos) { return this->evaluate(pos); }, densityValue)
-{
-    this->compositionFunction = [&](Vector3 pos) {
-        float eval = this->evaluate(pos);
-        return eval;
+    this->wrap = [=](Vector3 pos) {
+        return pos + translation;
+    };
+    this->unwrap = [=](Vector3 pos) {
+        return pos - translation;
     };
 }
 
-ImplicitPatch::ImplicitPatch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, float densityValue)
-    : ImplicitPatch(pos, boundMin, boundMax, evalFunction, compositionFunction, [&](Vector3 _pos) { return 1.f; }, densityValue)
+UnaryOpRotate::UnaryOpRotate(Vector3 rotationAngles, Vector3 center)
+    : UnaryOp()
 {
-    this->alphaDistanceFunction = [&](Vector3 _pos) {
-        float distPower = 2.f;
-        float minDistance = 0.8f;
-        float distance = -Vector3::signedDistanceToBoundaries(_pos, this->position/*boundMin*/, this->dimension);
-        float maxDistance = ((this->dimension - this->position/*boundMin*/) * .5f).maxComp();
-        float ratio = 1.f - std::clamp(distance / maxDistance, 0.f, 1.f);
-        return 1.f - (ratio <= minDistance ? 0.f : std::pow((ratio - minDistance) / (1.f - minDistance), distPower));
+    float angleX = rotationAngles.x;
+    float angleY = rotationAngles.y;
+    float angleZ = rotationAngles.z;
+    Matrix Rx (3, 3, std::vector<float>({
+        1, 0, 0,
+        0, cos(angleX), -sin(angleX),
+        0, sin(angleX), cos(angleX)
+    }).data());
+    Matrix Rz (3, 3, std::vector<float>({
+             cos(angleY), 0, -sin(angleY),
+             0, 1, 0,
+             sin(angleY), 0, cos(angleY)
+         }).data());
+    Matrix Ry (3, 3, std::vector<float>({
+             cos(angleZ), -sin(angleZ), 0,
+             sin(angleZ), cos(angleZ), 0,
+             0, 0, 1
+         }).data());
+    Matrix R = Rx.product(Ry).product(Rz);
+
+    angleX *= -1.f;
+    angleY *= -1.f;
+    angleZ *= -1.f;
+    Matrix _Rx (3, 3, std::vector<float>({
+            1, 0, 0,
+            0, cos(angleX), -sin(angleX),
+            0, sin(angleX), cos(angleX)
+        }).data());
+    Matrix _Rz (3, 3, std::vector<float>({
+             cos(angleY), 0, -sin(angleY),
+             0, 1, 0,
+             sin(angleY), 0, cos(angleY)
+         }).data());
+    Matrix _Ry (3, 3, std::vector<float>({
+             cos(angleZ), -sin(angleZ), 0,
+             sin(angleZ), cos(angleZ), 0,
+             0, 0, 1
+         }).data());
+    Matrix _R = _Rx.product(_Ry).product(_Rz);
+
+    //    std::function<Vector3(Vector3)> previousWrapFunction = this->wrapFunction;
+    //    std::function<Vector3(Vector3)> previousUnwrapFunction = this->unwrapFunction;
+    this->wrap = [=](Vector3 pos) -> Vector3 {
+        // Exactly the rotation function, but with the matrix computed only once
+        return center + (pos - center).applyTransform(R);
+    };
+    this->unwrap = [=](Vector3 pos) -> Vector3 {
+        // Exactly the rotation function, but with the matrix computed only once
+        return center + (pos - center).applyTransform(_R);
     };
 }
 
-ImplicitPatch::ImplicitPatch(Vector3 pos, Vector3 boundMin, Vector3 boundMax, std::function<float (Vector3)> evalFunction, std::function<float (Vector3)> compositionFunction, std::function<float (Vector3)> alphaDistanceFunction, float densityValue)
-    : position(pos)/*, boundMin(boundMin)*/, dimension(boundMax), evalFunction(evalFunction), densityValue(densityValue), compositionFunction(compositionFunction), alphaDistanceFunction(alphaDistanceFunction)
+UnaryOpScale::UnaryOpScale(Vector3 scaling, Vector3 center)
+    : UnaryOp()
 {
-/*    this->_cachedMaxHeight = Matrix3<float>(boundMax - boundMin, -1000.f);
-    this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
-*/
-    ImplicitPatch::currentMaxIndex ++;
-    this->index = ImplicitPatch::currentMaxIndex;
-    this->initCachedAttributes();
-}
-
-ImplicitPatch::~ImplicitPatch()
-{
-}
-
-void ImplicitPatch::deleteComposables()
-{
-    if (this->composableA != nullptr) {
-        this->composableA->deleteComposables();
-        delete this->composableA;
-    } if (this->composableB != nullptr) {
-        this->composableB->deleteComposables();
-        delete this->composableB;
-    }
-}
-
-ImplicitPatch ImplicitPatch::clone()
-{
-    ImplicitPatch copy = *this;
-    ImplicitPatch::currentMaxIndex ++;
-    copy.index = ImplicitPatch::currentMaxIndex;
-    return copy;
-}
-
-void ImplicitPatch::cleanCache()
-{
-    this->_cachedMaxHeight.reset(-1000.f);
-    this->_cachedMinHeight.reset(-1000.f);
-    if (this->composableA)
-        this->composableA->cleanCache();
-    if (this->composableB)
-        this->composableB->cleanCache();
-}
-
-float ImplicitPatch::getMaxHeight(Vector3 position)
-{
-    if (this->_cachedMaxHeight.at(position.xy()) < -1.f) { // Unknown height yet
-        if (this->compositionOperation == NONE) {
-            float resolution = 1.f;
-            float maxHeight = this->dimension.z;
-            // TODO: check if the next condition is sufficint / optimal
-            while (maxHeight > 0.f/*(maxHeight >= this->position.z || maxHeight >= position.z)*/ && evaluate(Vector3(position.x, position.y, maxHeight)) < .5f)
-                maxHeight -= resolution;
-            this->_cachedMaxHeight.at(position.xy()) = maxHeight /*- std::min(this->position.z, position.z)*/;
-        }
-        else if (this->compositionOperation == STACK) {
-            this->_cachedMaxHeight.at(position.xy()) = this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(position)) + this->composableB->getMaxHeight(this->getPositionToEvaluateComposableB(position));
-        }
-        else if (this->compositionOperation == BLEND) {
-            // TODO : CORRECT THIS (?)
-            this->_cachedMaxHeight.at(position.xy()) = std::max(this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(position)), this->composableB->getMaxHeight(this->getPositionToEvaluateComposableB(position)));
-        }
-        else if (this->compositionOperation == REPLACE) {
-            this->_cachedMaxHeight.at(position.xy()) = std::max(this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(position)), this->composableB->getMaxHeight(this->getPositionToEvaluateComposableB(position)));
-        }/*
-        else if (this->compositionOperation == NEG_STACKING) {
-            this->_cachedMaxHeight.at(position.xy()) = std::max(this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(position)), this->composableB->getMaxHeight(this->getPositionToEvaluateComposableB(position)));
-        }
-        else if (this->compositionOperation == STACK_IN_WATER) {
-            this->_cachedMaxHeight.at(position.xy()) = std::max(this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(position)), this->composableB->getMaxHeight(this->getPositionToEvaluateComposableB(position)));
-        }*/
-    }
-    return this->_cachedMaxHeight.at(position.xy());
-}
-
-float ImplicitPatch::getMinHeight(Vector3 position)
-{
-    if (this->_cachedMinHeight.at(position.xy()) < -1.f) { // Unknown height yet
-        if (this->compositionOperation == NONE) {
-            float resolution = 1.f;
-            float minHeight = this->position.z;
-            // TODO: check if the next condition is sufficint / optimal
-            while (minHeight < this->getDimensions().z /*(maxHeight >= this->position.z || maxHeight >= position.z)*/ && evaluate(Vector3(position.x, position.y, minHeight)) < .5f)
-                minHeight += resolution;
-            if (minHeight < this->getDimensions().z)
-                this->_cachedMinHeight.at(position.xy()) = 100000.f;
-            else
-                this->_cachedMinHeight.at(position.xy()) = minHeight /*- std::min(this->position.z, position.z)*/;
-        } else {
-            float minHeightA = this->composableA->getMinHeight(position);
-            if (minHeightA < this->composableA->getDimensions().z)
-                this->_cachedMinHeight.at(position.xy()) = minHeightA;
-            else
-                this->_cachedMinHeight.at(position.xy()) = this->composableA->position.z + this->composableA->getDimensions().z + this->composableB->getMinHeight(position);
-        }
-        /*
-        else if (this->compositionOperation == STACK) {
-            float minHeightA = this->composableA->getMinHeight(position);
-            if (minHeightA < this->composableA->getDimensions().z)
-                this->_cachedMinHeight.at(position.xy()) = minHeightA;
-            else
-                this->_cachedMinHeight.at(position.xy()) = this->composableB->getMinHeight(position);
-        }
-        else if (this->compositionOperation == BLEND) {
-            // TODO : CORRECT THIS (?)
-            this->_cachedMinHeight.at(position.xy()) = std::max(this->composableA->getMinHeight(position), this->composableB->getMinHeight(position));
-        }
-        else if (this->compositionOperation == REPLACE) {
-            this->_cachedMinHeight.at(position.xy()) = std::max(this->composableA->getMinHeight(position), this->composableB->getMinHeight(position));
-        }
-        else if (this->compositionOperation == NEG_STACKING) {
-            this->_cachedMinHeight.at(position.xy()) = std::max(this->composableA->getMinHeight(position), this->composableB->getMinHeight(position));
-        }
-        else if (this->compositionOperation == STACK_IN_WATER) {
-            this->_cachedMinHeight.at(position.xy()) = std::max(this->composableA->getMinHeight(position), this->composableB->getMinHeight(position));
-        }*/
-    }
-    return this->_cachedMinHeight.at(position.xy());
-}
-
-float ImplicitPatch::evaluate(Vector3 position)
-{
-//    position -= this->position;
-    if (!Vector3::isInBox(position, Vector3() - dimension, 2.f * dimension))
-        return 0.f;
-
-    float evaluationValue = 0.f;
-    if (this->compositionOperation == NONE) {
-        evaluationValue =  this->evalFunction(position);
-        Vector3 normalizedPosition = position / this->getDimensions();
-        Vector3 centeredPosition = normalizedPosition - Vector3(.5f, .5f, .5f);
-        Vector3 absPos = centeredPosition.abs();
-        float maxComp = absPos.maxComp();
-        float distance = std::clamp(maxComp - .5f, 0.f, 1.f);
-        float distanceFalloff = interpolation::wyvill(distance);
-        float isoFalloff = distanceFalloff;
-        evaluationValue = evaluationValue * isoFalloff;
-    } else {
-        Vector3 posA = this->getPositionToEvaluateComposableA(position);
-        Vector3 posB = this->getPositionToEvaluateComposableB(position);
-        float evalA = this->composableA->evaluate(posA);
-        float evalB = this->composableB->evaluate(posB);
-        evaluationValue = this->evaluateFromValues(evalA, evalB);
-    }
-    return std::clamp(evaluationValue, 0.f, 1.f);
-}
-
-float ImplicitPatch::evaluateFromValues(float evaluationA, float evaluationB)
-{
-    float evaluationValue = 0.f;
-    switch(this->compositionOperation) {
-        case CompositionFunction::STACK: {
-            evaluationValue = std::max(evaluationA, evaluationB);
-            break;
-        }
-        case CompositionFunction::BLEND: {
-            evaluationValue = std::pow(std::pow(evaluationA, this->blendingFactor) + std::pow(evaluationB, this->blendingFactor), 1.f/this->blendingFactor);
-            break;
-        }
-        case CompositionFunction::REPLACE: {
-            evaluationValue = (evaluationB >= 0.5f ? evaluationB : evaluationA);
-            break;
-        }/*
-        case CompositionFunction::NEG_STACKING: {
-            evaluationValue = (evaluationB >= 0.5f ? evaluationB : evaluationA);
-            break;
-        }
-        case CompositionFunction::STACK_IN_WATER: {
-            evaluationValue = (evaluationB >= 0.5f ? evaluationB : evaluationA);
-            break;
-        }*/
-        case CompositionFunction::NONE: {
-            break; // Cannot pass here
-        }
-    }
-    return std::clamp(evaluationValue, 0.f, 1.f);
-}
-
-std::map<float, float> ImplicitPatch::getDensityAtPosition(Vector3 position, Vector3 worldPosition)
-{
-    if (!worldPosition.isValid())
-        worldPosition = position;
-
-    Vector3 minPos = this->getMinPosition();
-    Vector3 maxPos = this->getMaxPosition();
-    Vector3 margin = maxPos - minPos;
-    if (!Vector3::isInBox(worldPosition, minPos - margin, maxPos + margin)) {
-        return {};
-    }
-
-    std::map<float, float> densityAndEvalA;
-    std::map<float, float> densityAndEvalB;
-    std::map<float, float> finalEvalutation;
-
-    if (this->compositionOperation == NONE) { // Not a composition => one unique material to return
-        finalEvalutation = {{this->densityValue, this->evaluate(position)}};
-    } else { // If it's a composite, need to merge the result of the two branches
-        float totalA = 0.f;
-        float totalB = 0.f;
-//        float densityA = 0.f; // Should not be necessary
-//        float densityB = 0.f; // Should not be necessary
-        if (this->composableA && !this->composableA->isIdentity()) {
-            densityAndEvalA = this->composableA->getDensityAtPosition(this->getPositionToEvaluateComposableA(position), worldPosition);
-            for (const auto& [densA, valueA] : densityAndEvalA) {
-                totalA += valueA;
-//                densityA = densA; // Should not be necessary
-            }
-        }
-        if (this->composableB && !this->composableB->isIdentity()) {
-            densityAndEvalB = this->composableB->getDensityAtPosition(this->getPositionToEvaluateComposableB(position), worldPosition);
-            for (const auto& [densB, valueB] : densityAndEvalB) {
-                totalB += valueB;
-//                densityB = densB; // Should not be necessary
-            }
-        }
-        float totalQuantity = totalA + totalB;
-        if (totalQuantity <= 0.f) {
-            finalEvalutation = {{-1.f, 0.f}};
-        } else {
-            // Multiply the densities in patches A and B to match the composition value after evaluation
-            float myEval = this->evaluateFromValues(totalA, totalB);
-            float ratio = myEval / totalQuantity;
-            for (const auto& [densA, valueA] : densityAndEvalA) {
-                if (finalEvalutation.count(densA) == 0)
-                    finalEvalutation[densA] = 0.f;
-                finalEvalutation[densA] += valueA * ratio;
-            }
-            for (const auto& [densB, valueB] : densityAndEvalB) {
-                if (finalEvalutation.count(densB) == 0)
-                    finalEvalutation[densB] = 0.f;
-                finalEvalutation[densB] += valueB * ratio;
-            }
-    //        finalEvalutation = {{(totalA > totalB ? densityA : densityB), myEval}};
-                    /*
-            if (myEval >= 0.5f) {
-                finalEvalutation = {{(totalA > totalB ? densityA : densityB), myEval}};
-            } else {
-                finalEvalutation = {{-1.f, myEval}};
-            }*/
-            /*
-            for (const auto& [densA, valueA] : densityAndEvalA) {
-                if (finalEvalutation.count(densA) == 0)
-                    finalEvalutation[densA] = 0;
-                finalEvalutation[densA] += valueA;
-            }
-            for (const auto& [densB, valueB] : densityAndEvalB) {
-                if (finalEvalutation.count(densB) == 0)
-                    finalEvalutation[densB] = 0;
-                finalEvalutation[densB] += valueB;
-            }
-            // TODO : CORRECT THIS FUNCTION, PLEASE!!
-            float ourEvaluation = 1.f; //this->evaluateFromValues(totalA, totalB);
-            for (auto& [dens, val] : finalEvalutation) {
-                val *= ourEvaluation;
-            }*/
-        }
-    }
-    return finalEvalutation;
-}
-
-Vector3 ImplicitPatch::getPositionToEvaluateComposableA(Vector3 pos)
-{
-    return pos - (this->composableA->position + this->position);
-//    return pos; // No modification needed
-}
-
-Vector3 ImplicitPatch::getPositionToEvaluateComposableB(Vector3 pos)
-{
-    if (this->compositionOperation == NONE) {
-        // Doesn't really make sense to get here
-    } else {
-        if (this->positioning == ABOVE) {
-            float heightA = this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(pos));
-            pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-            pos.z -= heightA;
-        } else if (this->positioning == INSIDE_TOP) {
-            float heightA = this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(pos));
-            pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-            pos.z -= heightA;
-//            pos.z -= this->composableB->getMaxHeight(pos);
-        } else if (this->positioning == INSIDE_BOTTOM) {
-            float heightA = this->composableA->getMinHeight(this->getPositionToEvaluateComposableA(pos));
-            pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-            pos.z -= heightA;
-        } else if (this->positioning == FIXED) {
-            // Nothing to do
-        }
-    }
-    /*
-    if (this->compositionOperation == NONE) {
-        // Doesn't really make sense to get here
-    } else if (this->compositionOperation == STACK) {
-        float heightA = this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(pos));
-        pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-        pos.z -= heightA;
-    } else if (this->compositionOperation == BLEND) {
-        // Nothing to do
-    } else if (this->compositionOperation == REPLACE) {
-        // Nothing to do
-    }
-    */
-    /*else if (this->compositionOperation == NEG_STACKING) {
-        float heightA = this->composableA->getMaxHeight(this->getPositionToEvaluateComposableA(pos));
-        pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-        pos.z -= (heightA + this->composableB->getDimensions().z);
-    } else if (this->compositionOperation == STACK_IN_WATER) {
-        float heightA = this->composableA->getMinHeight(this->getPositionToEvaluateComposableA(pos));
-        pos.z +=  this->composableB->position.z; // Stick the patch to the ground.
-        pos.z -= heightA;
-    }*/
-    return pos - (this->composableB->position + this->position);
-}
-
-Vector3 ImplicitPatch::getMinPosition()
-{
-    if (!this->isOperation()) {
-        if (this->isIdentity())
-            return Vector3(false);
-        return this->position;
-    } else {
-        Vector3 minA = this->composableA->getMinPosition();
-        Vector3 minB = this->composableB->getMinPosition();
-        if (minA.isValid() && minB.isValid()) {
-            return Vector3::min(minA, minB);
-        } else {
-            if (!minA.isValid() && minB.isValid()) {
-                return minB;
-            } else if (minA.isValid() && !minB.isValid()) {
-                return minA;
-            } else {
-                return Vector3(false);
-            }
-        }
-    }
-
-}
-
-Vector3 ImplicitPatch::getMaxPosition()
-{
-    if (!this->isOperation()) {
-        if (this->isIdentity())
-            return Vector3(false);
-        return this->position + this->dimension;
-    } else {
-        Vector3 maxA = this->composableA->getMaxPosition();
-        Vector3 maxB = this->composableB->getMaxPosition();
-        if (maxA.isValid() && maxB.isValid()) {
-            return Vector3::max(maxA, maxB);
-        } else {
-            if (!maxA.isValid() && maxB.isValid()) {
-                return maxB;
-            } else if (maxA.isValid() && !maxB.isValid()) {
-                return maxA;
-            } else {
-                return Vector3(false);
-            }
-        }
-    }
-
-}
-
-void ImplicitPatch::defineFunctionsBasedOnPredefinedShape()
-{
-    if (this->shape == Sphere)
-        this->evalFunction = ImplicitPatch::createSphereFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Block)
-        this->evalFunction = ImplicitPatch::createBlockFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Gaussian)
-        this->evalFunction = ImplicitPatch::createGaussianFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Rock)
-        this->evalFunction = ImplicitPatch::createRockFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Mountain)
-        this->evalFunction = ImplicitPatch::createMountainFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Dune)
-        this->evalFunction = ImplicitPatch::createDuneFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Basin)
-        this->evalFunction = ImplicitPatch::createBasinFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Cave)
-        this->evalFunction = ImplicitPatch::createCaveFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-    if (this->shape == Arch)
-        this->evalFunction = ImplicitPatch::createArchFunction(this->sigmaValue, this->dimension.x, this->dimension.y, this->dimension.z);
-}
-
-nlohmann::json ImplicitPatch::toJson()
-{
-    nlohmann::json content;
-    if (!this->used_json_filename.empty()) {
-        std::ifstream file(this->used_json_filename);
-        nlohmann::json old_json_content = nlohmann::json::parse(file);
-        ImplicitPatch* oldValues = ImplicitPatch::fromJson(old_json_content[ImplicitPatch::json_identifier]);
-
-        Vector3 patchOffset = this->position - oldValues->position;
-        Vector3 patchRescale = this->getDimensions() / oldValues->getDimensions();
-        content["path"] = this->used_json_filename;
-        content["offset"] = vec3_to_json(patchOffset);
-        content["scale"] = vec3_to_json(patchRescale);
-    } else {
-        content["name"] = this->name;
-        content["operator"] = stringFromCompositionOperation(this->compositionOperation);
-        content["blendingFactor"] = this->blendingFactor;
-        content["position"] = vec3_to_json(this->position);
-        content["dimension"] = vec3_to_json(this->dimension);
-        content["densityValue"] = this->densityValue;
-        content["index"] = this->index;
-        content["shape"] = stringFromPredefinedShape(this->shape);
-        content["sigmaValue"] = this->sigmaValue;
-
-        if (this->composableA)
-            content["composableA"] = this->composableA->toJson();
-        if (this->composableB)
-            content["composableB"] = this->composableB->toJson();
-    }
-
-    return content;
-}
-
-ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json json_content)
-{
-    if (json_content.contains("path")) {
-        std::string filename = json_content["path"];
-        std::ifstream file(filename);
-        nlohmann::json sub_json_content = nlohmann::json::parse(file);
-        if (sub_json_content.contains(ImplicitPatch::json_identifier)) {
-            Vector3 patchOffset = Vector3(0, 0, 0);
-            Vector3 patchRescale = Vector3(1, 1, 1);
-            if (sub_json_content["implicitPatch"].contains("offset")) {
-                patchOffset = json_to_vec3(sub_json_content["implicitPatch"]["offset"]);
-            }
-            if (sub_json_content["implicitPatch"].contains("scale")) {
-                patchRescale = json_to_vec3(sub_json_content["implicitPatch"]["scale"]);
-            }
-            ImplicitPatch* result = ImplicitPatch::fromJson(sub_json_content[ImplicitPatch::json_identifier]);
-            result->used_json_filename = filename; // Save the file in this object
-            result->dimension *= patchRescale;
-            result->position += patchOffset;
-            return result;
-        } else {
-            std::cerr << "No patches defined in file " << filename << std::endl;
-            return nullptr;
-        }
-    } else {
-        ImplicitPatch* patch = new ImplicitPatch;
-        patch->name = json_content["name"];
-        patch->compositionOperation = compositionOperationFromString(json_content["operator"]);
-        patch->blendingFactor = json_content["blendingFactor"];
-        patch->position = json_to_vec3(json_content["position"]);
-        patch->dimension = json_to_vec3(json_content["dimension"]);
-        patch->densityValue = json_content["densityValue"];
-        patch->index = json_content["index"];
-        patch->shape = predefinedShapeFromString(json_content["shape"]);
-        patch->sigmaValue = json_content["sigmaValue"];
-
-        if (json_content.contains("composableA"))
-            patch->composableA = ImplicitPatch::fromJson(json_content["composableA"]);
-        if (json_content.contains("composableB"))
-            patch->composableB = ImplicitPatch::fromJson(json_content["composableB"]);
-        patch->defineFunctionsBasedOnPredefinedShape();
-
-        return patch;
-    }
-
-}
-
-std::string ImplicitPatch::toString()
-{
-    if (this->used_json_filename.empty()) {
-        return this->name + " #" + std::to_string(this->index);
-    } else {
-        // Gives the filename if it's coming from a JSON file
-        return QString::fromStdString(this->used_json_filename).split("\\").last().split("/").last().split(".json").front().toStdString();
-    }
-}
-
-ImplicitPatch ImplicitPatch::createStack(ImplicitPatch *P1, ImplicitPatch *P2, PositionalLabel pos)
-{
-    ImplicitPatch newPatch;
-    newPatch.compositionOperation = CompositionFunction::STACK;
-
-    newPatch.position = Vector3(); // Vector3::min(P1->position, P2->position);
-    Vector3 relativePos1 = (P1->position - newPatch.position);
-    Vector3 relativePos2 = (P2->position - newPatch.position);
-//    newPatch.boundMin = Vector3::min(P1->boundMin - relativePos1, P2->boundMin - relativePos2);
-    newPatch.dimension = Vector3::max(P1->dimension + relativePos1, P2->dimension + relativePos2);
-    newPatch.dimension.z = P1->dimension.z + P2->dimension.z;
-    newPatch.initCachedAttributes(P1, P2, pos);
-    return newPatch;
-}
-
-ImplicitPatch ImplicitPatch::createReplacement(ImplicitPatch *P1, ImplicitPatch *P2, PositionalLabel pos)
-{
-    ImplicitPatch newPatch;
-    newPatch.compositionOperation = CompositionFunction::REPLACE;
-
-    newPatch.position = Vector3(); // Vector3::min(P1->position, P2->position);
-    Vector3 relativePos1 = (P1->position - newPatch.position);
-    Vector3 relativePos2 = (P2->position - newPatch.position);
-//    newPatch.boundMin = Vector3::min(relativePos1 + P1->boundMin, relativePos2 + P2->boundMin);
-    newPatch.dimension = Vector3::max(relativePos1 + P1->dimension, relativePos2 + P2->dimension);
-    newPatch.initCachedAttributes(P1, P2, pos);
-    return newPatch;
-}
-
-ImplicitPatch ImplicitPatch::createBlending(ImplicitPatch *P1, ImplicitPatch *P2, PositionalLabel pos)
-{
-    ImplicitPatch newPatch;
-    newPatch.compositionOperation = CompositionFunction::BLEND;
-
-    newPatch.position = Vector3(); // Vector3::min(P1->position, P2->position);
-    Vector3 relativePos1 = (P1->position - newPatch.position);
-    Vector3 relativePos2 = (P2->position - newPatch.position);
-//    newPatch.boundMin = Vector3::min(relativePos1 + P1->boundMin, relativePos2 + P2->boundMin);
-    newPatch.dimension = Vector3::max(relativePos1 + P1->dimension, relativePos2 + P2->dimension);
-    newPatch.initCachedAttributes(P1, P2, pos);
-    return newPatch;
-}
-
-/*ImplicitPatch ImplicitPatch::createNegStacking(ImplicitPatch *P1, ImplicitPatch *P2)
-{
-    ImplicitPatch newPatch;
-    newPatch.compositionOperation = CompositionFunction::NEG_STACKING;
-
-    newPatch.position = Vector3(); // Vector3::min(P1->position, P2->position);
-    Vector3 relativePos1 = (P1->position - newPatch.position);
-    Vector3 relativePos2 = (P2->position - newPatch.position);
-//    newPatch.boundMin = Vector3::min(relativePos1 + P1->boundMin, relativePos2 + P2->boundMin);
-    newPatch.dimension = Vector3::max(relativePos1 + P1->dimension, relativePos2 + P2->dimension);
-    newPatch.initCachedAttributes(P1, P2);
-    return newPatch;
-}
-
-ImplicitPatch ImplicitPatch::createStackInWater(ImplicitPatch *P1, ImplicitPatch *P2)
-{
-    ImplicitPatch newPatch;
-    newPatch.compositionOperation = CompositionFunction::STACK_IN_WATER;
-
-    newPatch.position = Vector3(); // Vector3::min(P1->position, P2->position);
-    Vector3 relativePos1 = (P1->position - newPatch.position);
-    Vector3 relativePos2 = (P2->position - newPatch.position);
-    newPatch.dimension = Vector3::max(relativePos1 + P1->dimension, relativePos2 + P2->dimension);
-    newPatch.initCachedAttributes(P1, P2);
-    return newPatch;
-}*/
-
-void ImplicitPatch::initCachedAttributes(ImplicitPatch *composableA, ImplicitPatch *composableB, PositionalLabel pos)
-{
-    this->positioning = pos;
-    this->composableA = composableA;
-    this->composableB = composableB;
-    this->_cachedMaxHeight = Matrix3<float>(this->getDimensions().x, this->getDimensions().y, 1, -1000.f);
-    this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
-    this->_cachedMinHeight = Matrix3<float>(this->getDimensions().x, this->getDimensions().y, 1, -1000.f);
-    this->_cachedMinHeight.raiseErrorOnBadCoord = false;
-    this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
-}
-
-std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height)
-{
-    std::function sphere = [width](Vector3 pos) {
-        Vector3 center = Vector3(width, width, width) * .5f;
-        float sqrDist = (pos - center).norm2();
-        float value = std::max(0.f, (sqrDist > width * width ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width)));
-        if ((pos.xy() - center.xy()).norm2() < 5.f) {
-            int a = 0;
-        }
-        return value;
+    this->wrap = [=] (Vector3 pos) {
+        return center - (pos - center) * scaling;
     };
-    return sphere;
-}
-
-std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height)
-{
-    return [sigma, width, depth, height] (Vector3 pos) {
-        Vector3 boundaries = Vector3(width, depth, height);
-        float distToRect = -Vector3::signedDistanceToBoundaries(pos, boundaries * 0.f, boundaries * 1.f);
-        float iso = distToRect / boundaries.maxComp();
-        return std::clamp(iso + .5f, 0.f, 1.f);
+    this->unwrap = [=] (Vector3 pos) {
+        return center + (pos - center) / scaling;
     };
-//    return ImplicitPatch::convert2DfunctionTo3Dfunction([height](Vector3 pos) { return height; }); // Using the constant 2D function
 }
 
-std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height)
+UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, Vector3 strength)
+    : UnaryOp()
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, sigma, height](Vector3 pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
-}
-
-std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height)
-{
-    auto sphereFunction = ImplicitPatch::createSphereFunction(sigma, width, depth, height);
-    std::function rockFunction = [sphereFunction, sigma, width, depth, height] (Vector3 pos) {
-        FastNoiseLite noise;
-//        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        float noiseOffset = sigma * 1000.f; // noise.GetNoise(sigma * 1000.f, sigma * 1000.f);
-        float noiseValue = (noise.GetNoise(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
-        return sphereFunction(pos + Vector3(0, 0, width * .5f)) - (noiseValue * .5f);
+    this->wrap = [=] (Vector3 pos) {
+        FastNoiseLite _noise = noise;
+        return pos + Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x * strength.y + strength.z, (float)pos.y * strength.y + strength.z, (float)pos.z * strength.y + strength.z) * strength.x;
     };
-    return rockFunction;
-}
-
-std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height)
-{
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, height](Vector3 pos) {
-        Vector3 translatedPos = pos - (Vector3(width, depth, 0) * .5f);
-        Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, height, 1.f) * .5f);
-//        return normalizedPos.norm();
-        float functionsHeight = std::clamp((1.f - normalizedPos.norm()), 0.f, 1.f) * height;
-        return functionsHeight;
-    });
-}
-
-std::function<float (Vector3)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height)
-{
-    return ImplicitPatch::createMountainFunction(sigma, width, depth, height);
-}
-
-std::function<float (Vector3)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height)
-{
-    return ImplicitPatch::createBlockFunction(sigma, width, depth, height);
-}
-
-std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height)
-{
-    std::function caveFunc = [width, depth, height] (Vector3 pos) {
-        Vector3 start = Vector3(width * .5f, depth * 1.f, height * 1.f);
-        Vector3 p1 = Vector3(width * .4f, depth * .7f, height * .7f);
-        Vector3 p2 = Vector3(width * .6f, depth * .4f, height * .4f);
-        Vector3 end = Vector3(width * .5f, depth * .2f, height * .5f);
-        BSpline curve = BSpline({start, p1, p2, end});
-        float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
-        return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+    this->unwrap = [=] (Vector3 pos) {
+        FastNoiseLite _noise = noise;
+        return pos - Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x * strength.y + strength.z, (float)pos.y * strength.y + strength.z, (float)pos.z * strength.y + strength.z) * strength.x;
     };
-    return caveFunc;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height)
+UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
 {
-    std::function archFunc = [width, depth, height] (Vector3 pos) {
-        Vector3 start = Vector3(width * .5f, depth * 0.f, height * 0.f);
-        Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
-        Vector3 p2 = Vector3(width * .5f, depth * .7f, height * 1.f);
-        Vector3 end = Vector3(width * .5f, depth * 1.f, height * 0.f);
-        BSpline curve = BSpline({start, p1, p2, end});
-        float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
-        return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+    this->wrap = [=] (Vector3 pos) {
+        return pos + func(pos);
     };
-    return archFunc;
+    this->unwrap = [=] (Vector3 pos) {
+        return pos - func(pos);
+    };
 }
 
-std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (Vector3)> func)
+UnaryOpSpread::UnaryOpSpread(std::pair<Vector3, Vector3> BBox, float spreadFactor)
+    : UnaryOp()
 {
-    std::function _3Dfunction = [func](Vector3 pos) {
-        float height = func(pos);
-        float inverse_isovalue = .5f - (pos.z / height); //height * .5f - pos.z;
-        float isovalue = 1.f - std::abs(inverse_isovalue);
-        return std::max(0.f, isovalue);
+    Vector3 center = (BBox.first + BBox.second) * .5f;
+    Vector3 dimensions = (BBox.second - BBox.first);
+    this->wrap = [=](Vector3 pos) -> Vector3 {
+        Vector3 p = pos;
+        float relativeHeight = interpolation::linear(p.z, BBox.first.z, BBox.second.z);
+        relativeHeight = interpolation::smooth(relativeHeight);
+//        float heightFactor = (1.f - relativeHeight);
+        float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
+        float factor = spreadFactor * heightFactor;
+        Vector3 toCenter = (p.xy() - center.xy());
+        Vector3 displacement = toCenter.normalize() * dimensions * factor;
+        return pos + displacement;
     };
-    return _3Dfunction;
+    this->unwrap = [=](Vector3 pos) -> Vector3 {
+        Vector3 p = pos;
+        float relativeHeight = interpolation::linear(p.z, BBox.first.z, BBox.second.z);
+        relativeHeight = interpolation::smooth(relativeHeight);
+//        float heightFactor = (1.f - relativeHeight);
+        float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
+        float factor = spreadFactor * heightFactor;
+        Vector3 toCenter = (p.xy() - center.xy());
+        Vector3 displacement = toCenter.normalize() * dimensions * .5f * factor;
+        return pos - displacement;
+    };
 }
-
-#endif
 
 
 ImplicitPatch::CompositionFunction compositionOperationFromString(std::string name)
@@ -1885,6 +1527,10 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
         return ImplicitPatch::PredefinedShapes::Noise2D;
     else if (name == "MOUNTAINCHAIN")
         return ImplicitPatch::PredefinedShapes::MountainChain;
+    else if (name == "POLYGON")
+        return ImplicitPatch::PredefinedShapes::Polygon;
+    else if (name == "IMPLICIT_HEIGHTMAP")
+        return ImplicitPatch::PredefinedShapes::ImplicitHeightmap;
     else if (name == "NONE")
         return ImplicitPatch::PredefinedShapes::None;
 
@@ -1919,6 +1565,10 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
         return "Noise2D";
     else if (shape == ImplicitPatch::PredefinedShapes::MountainChain)
         return "MountainChain";
+    else if (shape == ImplicitPatch::PredefinedShapes::Polygon)
+        return "Polygon";
+    else if (shape == ImplicitPatch::PredefinedShapes::ImplicitHeightmap)
+        return "Implicit_Heightmap";
     else if (shape == ImplicitPatch::PredefinedShapes::None)
         return "None";
 
@@ -1939,6 +1589,8 @@ ImplicitPatch::PositionalLabel positionalLabelFromString(std::string name)
         return ImplicitPatch::PositionalLabel::INSIDE_BOTTOM;
     else if (name == "FIXED_POS")
         return ImplicitPatch::PositionalLabel::FIXED_POS;
+    else if (name == "SMOOTH_ABOVE")
+        return ImplicitPatch::PositionalLabel::SMOOTH_ABOVE;
 
     // Error
     std::cerr << "Wrong positional label string given. (" << name << ")" << std::endl;
@@ -1955,6 +1607,8 @@ std::string stringFromPositionalLabel(ImplicitPatch::PositionalLabel label)
         return "INSIDE_BOTTOM";
     else if (label == ImplicitPatch::PositionalLabel::FIXED_POS)
         return "FIXED_POS";
+    else if (label == ImplicitPatch::PositionalLabel::SMOOTH_ABOVE)
+        return "SMOOTH_ABOVE";
 
     // Impossible
     std::cerr << "Unknown positional label given." << std::endl;
@@ -2017,4 +1671,10 @@ std::string stringFromMaterial(TerrainTypes material)
     // Impossible
     std::cerr << "Unknown material type given." << std::endl;
     return "";
+}
+
+UnaryOp::UnaryOp()
+{
+    this->wrap = [=] (Vector3 pos) { return pos; };
+    this->unwrap = [=] (Vector3 pos) { return pos; };
 }

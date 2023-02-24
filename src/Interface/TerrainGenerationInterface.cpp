@@ -416,18 +416,22 @@ void TerrainGenerationInterface::prepareShader()
     layersMesh.shader->setInt("biomesAndDensitiesTex", 8);
     */
 
-    /*for (auto& [lab, ID] : colorTexturesIndex) {
-        std::cout << " -> " << lab << " : " << ID << std::endl;
-    }
-    Plotter plt;
-    plt.addImage(allColorTextures);
-    plt.exec();*/
+//    Plotter* plt = Plotter::getInstance();
+//    plt->addImage(allColorTextures);
+//    plt->draw();
+//    plt->show();
 
     updateDisplayedView(voxelGridOffset, voxelGridScaling);
 
 //    this->heightmap->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
     if (verbose)
         std::cout << "Terrain shaders and assets ready." << std::endl;
+}
+
+void TerrainGenerationInterface::setWaterLevel(float newLevel)
+{
+    this->waterLevel = newLevel;
+    Q_EMIT updated();
 }
 
 void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling)
@@ -676,86 +680,87 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*
 void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
 {
     std::string ext = toUpper(getExtention(filename));
-    if (!this->heightmap)
-        this->heightmap = std::make_shared<Heightmap>();
-    if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>();
-    if (!this->layerGrid)
-        this->layerGrid = std::make_shared<LayerBasedGrid>();
 
 
-    // TODO : REMOVE THIS PART VERY SOON !!
+//    // TODO : REMOVE THIS PART VERY SOON !!
     float radius = 20.f;
-    Vector3 terrainSize = Vector3(4*radius, 4*radius, 40);
-    this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 1.f);
+    Vector3 terrainSize = Vector3(4*radius, 4*radius, 60);
+    if (!this->heightmap)
+        this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x, terrainSize.y, terrainSize.z);
+    if (!this->layerGrid)
+        this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
+////    layerGrid->setScaling(5.f);
+////    layerGrid->setTranslation(Vector3(-50.f, -50.f, 0.f));
 
-//    ImplicitPatch* init = new ImplicitPrimitive;
-//    ImplicitPatch* p1 = new ImplicitPatch(Vector3(0, 0, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p1->name = "sphere1"; p1->densityValue = 0.1f;
-//    ImplicitPatch* s1 = new ImplicitPatch(ImplicitPatch::createStack(init, p1, ImplicitPatch::FIXED)); s1->name ="stack1";
-//    ImplicitPatch* p2 = new ImplicitPatch(Vector3(20, 20, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p2->name = "sphere2"; p2->densityValue = 3.f;
-//    ImplicitPatch* s2 = new ImplicitPatch(ImplicitPatch::createStack(s1, p2, ImplicitPatch::ABOVE)); s2->name = "stack2";
+////    ImplicitPatch* init = new ImplicitPrimitive;
+////    ImplicitPatch* p1 = new ImplicitPatch(Vector3(0, 0, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p1->name = "sphere1"; p1->densityValue = 0.1f;
+////    ImplicitPatch* s1 = new ImplicitPatch(ImplicitPatch::createStack(init, p1, ImplicitPatch::FIXED)); s1->name ="stack1";
+////    ImplicitPatch* p2 = new ImplicitPatch(Vector3(20, 20, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p2->name = "sphere2"; p2->densityValue = 3.f;
+////    ImplicitPatch* s2 = new ImplicitPatch(ImplicitPatch::createStack(s1, p2, ImplicitPatch::ABOVE)); s2->name = "stack2";
 
-    /*
-    ImplicitPrimitive* water = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* air = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* coral = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* sand = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* dirt = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* rock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-    ImplicitPrimitive* bedrock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-*/
-    std::vector<TerrainTypes> materials = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
-    std::vector<ImplicitPrimitive*> primitives(materials.size());
-    std::vector<ImplicitOperator*> blends(primitives.size() - 1);
-    /*
-    water->setDimensions(Vector3(20, 20, 20)); water->position = Vector3(0, -10, 0); water->name = "Water"; water->material = TerrainTypes::WATER;
-    air->setDimensions(Vector3(20, 20, 20)); air->position = Vector3(0, 10, 0); air->name = "Air"; air->material = TerrainTypes::AIR;
-    coral->setDimensions(Vector3(20, 20, 20)); coral->position = Vector3(0, 30, 0); coral->name = "Coral"; coral->material = TerrainTypes::CORAL;
-    sand->setDimensions(Vector3(20, 20, 20)); sand->position = Vector3(20, -10, 0); sand->name = "Sand"; sand->material = TerrainTypes::SAND;
-    dirt->setDimensions(Vector3(20, 20, 20)); dirt->position = Vector3(20, 10, 0); dirt->name = "Dirt"; dirt->material = TerrainTypes::DIRT;
-    rock->setDimensions(Vector3(20, 20, 20)); rock->position = Vector3(20, 30, 0); rock->name = "Rock"; rock->material = TerrainTypes::ROCK;
-    bedrock->setDimensions(Vector3(20, 20, 20)); bedrock->position = Vector3(0, -10, 0); bedrock->name = "Bedrock"; bedrock->material = TerrainTypes::BEDROCK;*/
-    for (size_t i = 0; i < primitives.size(); i++) {
-        primitives[i] = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);
-        primitives[i]->position = Vector3(-10, -10, 0); //Vector3(-10 + 20 * float(i % (primitives.size() / 2)), 0 + 20 * float(i / (primitives.size() / 2)), 0);
-        primitives[i]->setDimensions(Vector3(20, 20, 20));
-        primitives[i]->name = stringFromMaterial(materials[i]) + " sphere";
-        primitives[i]->material = materials[i];
-    }
-    for (size_t i = 0; i < blends.size(); i++) {
-        auto& blend = blends[i];
-        blend = new ImplicitOperator;
-        blend->composeFunction = ImplicitPatch::BLEND;
-        blend->positionalB = ImplicitPatch::FIXED_POS;
-        blend->name = "Blend " + std::to_string(i + 1);
-        blend->blendingFactor = 2.f;
-        if (i == 0) {
-            blend->composableA = primitives[0];
-            blend->composableB = primitives[1];
-        } else {
-            blend->composableA = blends[i - 1];
-            blend->composableB = primitives[i + 1];
-        }
-        blend->updateCache();
-    }
-//    this->layerGrid->add(blends.back());
+//    /*
+//    ImplicitPrimitive* water = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* air = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* coral = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* sand = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* dirt = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* rock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//    ImplicitPrimitive* bedrock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
+//*/
+//    std::vector<TerrainTypes> materials = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
+//    std::vector<ImplicitPrimitive*> primitives(materials.size());
+//    std::vector<ImplicitOperator*> blends(primitives.size() - 1);
+//    /*
+//    water->setDimensions(Vector3(20, 20, 20)); water->position = Vector3(0, -10, 0); water->name = "Water"; water->material = TerrainTypes::WATER;
+//    air->setDimensions(Vector3(20, 20, 20)); air->position = Vector3(0, 10, 0); air->name = "Air"; air->material = TerrainTypes::AIR;
+//    coral->setDimensions(Vector3(20, 20, 20)); coral->position = Vector3(0, 30, 0); coral->name = "Coral"; coral->material = TerrainTypes::CORAL;
+//    sand->setDimensions(Vector3(20, 20, 20)); sand->position = Vector3(20, -10, 0); sand->name = "Sand"; sand->material = TerrainTypes::SAND;
+//    dirt->setDimensions(Vector3(20, 20, 20)); dirt->position = Vector3(20, 10, 0); dirt->name = "Dirt"; dirt->material = TerrainTypes::DIRT;
+//    rock->setDimensions(Vector3(20, 20, 20)); rock->position = Vector3(20, 30, 0); rock->name = "Rock"; rock->material = TerrainTypes::ROCK;
+//    bedrock->setDimensions(Vector3(20, 20, 20)); bedrock->position = Vector3(0, -10, 0); bedrock->name = "Bedrock"; bedrock->material = TerrainTypes::BEDROCK;*/
+//    for (size_t i = 0; i < primitives.size(); i++) {
+//        primitives[i] = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);
+//        primitives[i]->position = Vector3(-10, -10, 0); //Vector3(-10 + 20 * float(i % (primitives.size() / 2)), 0 + 20 * float(i / (primitives.size() / 2)), 0);
+//        primitives[i]->setDimensions(Vector3(20, 20, 20));
+//        primitives[i]->name = stringFromMaterial(materials[i]) + " sphere";
+//        primitives[i]->material = materials[i];
+//    }
+//    for (size_t i = 0; i < blends.size(); i++) {
+//        auto& blend = blends[i];
+//        blend = new ImplicitOperator;
+//        blend->composeFunction = ImplicitPatch::BLEND;
+//        blend->positionalB = ImplicitPatch::FIXED_POS;
+//        blend->name = "Blend " + std::to_string(i + 1);
+//        blend->blendingFactor = 2.f;
+//        if (i == 0) {
+//            blend->composableA = primitives[0];
+//            blend->composableB = primitives[1];
+//        } else {
+//            blend->composableA = blends[i - 1];
+//            blend->composableB = primitives[i + 1];
+//        }
+//        blend->updateCache();
+//    }
+////    this->layerGrid->add(blends.back());
 
-    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
-    voxelGrid->fromIsoData();
-    heightmap->fromLayerGrid(*layerGrid);
+////    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
+////    heightmap->fromLayerGrid(*layerGrid);
 
-    Q_EMIT this->terrainUpdated();
-    return;
+////    Q_EMIT this->terrainUpdated();
+////    return;
 
-    // END OF SHITTY PART
+//    // END OF SHITTY PART
 
 
     if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmap->loadFromHeightmap(filename, 128, 128, 40);
+        heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z);
 
         voxelGrid->from2DGrid(*heightmap);
-        voxelGrid->fromIsoData();
+        layerGrid->fromVoxelGrid(*voxelGrid);
+//        voxelGrid->fromCachedData();
         /*
         ConstraintsSolver solver;
         int iArch1 = solver.addItem(new Vector3());
@@ -811,7 +816,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     } else /*if (ext == "DATA" || ext.empty())*/ {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
-        voxelGrid->fromIsoData();
+//        voxelGrid->fromCachedData();
         voxelGrid->smoothVoxels();
         voxelGrid->smoothVoxels();
         // Sorry heightmap... You take too long...
@@ -857,7 +862,7 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
 //    this->heightmap->maxHeight = 40.f;
 
     this->voxelGrid->from2DGrid(*this->heightmap);
-    this->voxelGrid->fromIsoData();
+//    this->voxelGrid->fromCachedData();
 
     this->biomeGenerationNeeded = true;
     this->biomeGenerationModelData = json_content;

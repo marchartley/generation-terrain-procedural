@@ -80,6 +80,15 @@ public Q_SLOTS:
     virtual void afterTerrainUpdated() {
 
     }
+    virtual void mouseClickedOnMapEvent(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model) {
+
+    }
+    virtual void mouseDoubleClickedOnMapEvent(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model) {
+
+    }
+    virtual void mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel* model) {
+
+    }
 };
 
 #endif // ACTIONINTERFACE_H

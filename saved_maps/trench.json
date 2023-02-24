@@ -8,8 +8,9 @@
 				"y": 0.0,
 				"z": 0.0
 			},
-			"index": 23,
+			"index": 2,
 			"material": "WATER",
+			"mirrored": false,
 			"name": "Identity",
 			"optionalCurve": {
 				"closed": false,
@@ -36,19 +37,20 @@
 				"y": 20.0,
 				"z": 20.0
 			},
-			"index": 16,
+			"index": 1,
 			"material": "ROCK",
-			"name": "Sphere",
+			"mirrored": false,
+			"name": "Block",
 			"optionalCurve": {
 				"closed": false,
 				"points": []
 			},
 			"position": {
-				"x": 45.27771759033203,
-				"y": 29.570316314697266,
+				"x": 3.3542661666870117,
+				"y": 19.640487670898438,
 				"z": 0.0
 			},
-			"shape": "Sphere",
+			"shape": "Block",
 			"sigmaValue": 5.0,
 			"supportDimensions": {
 				"x": 0.0,
@@ -57,7 +59,8 @@
 			},
 			"type": "primitive"
 		},
-		"index": 17,
+		"index": 0,
+		"mirrored": false,
 		"name": "Blend",
 		"operator": "Blend",
 		"optionalCurve": {

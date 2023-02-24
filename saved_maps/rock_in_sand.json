@@ -9,9 +9,13 @@
 					"y": 100.0,
 					"z": 7.400001525878906
 				},
-				"index": 189,
+				"index": 19,
 				"material": "SAND",
 				"name": "Block",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
 				"position": {
 					"x": 0.0,
 					"y": 0.0,
@@ -31,18 +35,28 @@
 				"y": 20.0,
 				"z": 10.0
 			},
-			"index": 93,
+			"index": 18,
 			"name": "Wrapping",
 			"noise": {
 				"x": 0.0,
 				"y": 0.0,
 				"z": 0.0
 			},
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
 			"rotation": {
 				"x": 0.0,
 				"y": 0.0,
 				"z": 0.0
 			},
+			"scale": {
+				"x": 1.0,
+				"y": 1.0,
+				"z": 1.0
+			},
+			"spreadFactor": 0.0,
 			"translation": {
 				"x": 0.0,
 				"y": 0.0,
@@ -68,9 +82,13 @@
 										"y": 0.0,
 										"z": 0.0
 									},
-									"index": 123,
+									"index": 17,
 									"material": "WATER",
 									"name": "Identity",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
 									"position": {
 										"x": 0.0,
 										"y": 0.0,
@@ -93,9 +111,13 @@
 											"y": 16.80000114440918,
 											"z": 17.899999618530273
 										},
-										"index": 124,
+										"index": 16,
 										"material": "ROCK",
 										"name": "Rock",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
 										"position": {
 											"x": 11.967233657836914,
 											"y": 7.403926849365234,
@@ -115,18 +137,28 @@
 										"y": 0.0,
 										"z": 0.0
 									},
-									"index": 59,
+									"index": 15,
 									"name": "Translation",
 									"noise": {
 										"x": 0.0,
 										"y": 0.0,
 										"z": 0.0
 									},
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
 									"rotation": {
 										"x": 0.0,
 										"y": 0.0,
 										"z": 0.0
 									},
+									"scale": {
+										"x": 1.0,
+										"y": 1.0,
+										"z": 1.0
+									},
+									"spreadFactor": 0.0,
 									"translation": {
 										"x": 0.0,
 										"y": 19.892391204833984,
@@ -134,9 +166,13 @@
 									},
 									"type": "unary"
 								},
-								"index": 125,
+								"index": 14,
 								"name": "Blend",
 								"operator": "Blend",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"positionalB": "FIXED_POS",
 								"type": "compose",
 								"useIntersection": false
@@ -149,9 +185,13 @@
 										"y": 29.0,
 										"z": 17.899999618530273
 									},
-									"index": 126,
+									"index": 13,
 									"material": "ROCK",
 									"name": "Rock",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
 									"position": {
 										"x": 12.830034255981445,
 										"y": 35.83704376220703,
@@ -171,18 +211,28 @@
 									"y": 0.0,
 									"z": 0.0
 								},
-								"index": 60,
+								"index": 12,
 								"name": "Translation",
 								"noise": {
 									"x": 0.0,
 									"y": 0.0,
 									"z": 0.0
 								},
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"rotation": {
 									"x": 0.0,
 									"y": 0.0,
 									"z": 0.0
 								},
+								"scale": {
+									"x": 1.0,
+									"y": 1.0,
+									"z": 1.0
+								},
+								"spreadFactor": 0.0,
 								"translation": {
 									"x": 5.448320388793945,
 									"y": -10.655197143554688,
@@ -190,9 +240,13 @@
 								},
 								"type": "unary"
 							},
-							"index": 127,
+							"index": 11,
 							"name": "Blend",
 							"operator": "Blend",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"positionalB": "FIXED_POS",
 							"type": "compose",
 							"useIntersection": false
@@ -205,9 +259,13 @@
 									"y": 36.29999923706055,
 									"z": 15.600000381469727
 								},
-								"index": 128,
+								"index": 10,
 								"material": "ROCK",
 								"name": "Rock",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
 								"position": {
 									"x": 36.90496826171875,
 									"y": 4.777805328369141,
@@ -227,18 +285,28 @@
 								"y": 0.0,
 								"z": 0.0
 							},
-							"index": 61,
+							"index": 9,
 							"name": "Translation",
 							"noise": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
 							},
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"rotation": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
 							},
+							"scale": {
+								"x": 1.0,
+								"y": 1.0,
+								"z": 1.0
+							},
+							"spreadFactor": 0.0,
 							"translation": {
 								"x": 0.0,
 								"y": 25.751161575317383,
@@ -246,9 +314,13 @@
 							},
 							"type": "unary"
 						},
-						"index": 129,
+						"index": 8,
 						"name": "Blend",
 						"operator": "Blend",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"positionalB": "FIXED_POS",
 						"type": "compose",
 						"useIntersection": false
@@ -261,9 +333,13 @@
 								"y": 26.30000114440918,
 								"z": 6.099999904632568
 							},
-							"index": 130,
+							"index": 7,
 							"material": "ROCK",
 							"name": "Rock",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
 							"position": {
 								"x": 43.99928283691406,
 								"y": 37.35797882080078,
@@ -283,18 +359,28 @@
 							"y": 0.0,
 							"z": 0.0
 						},
-						"index": 91,
+						"index": 6,
 						"name": "Translation",
 						"noise": {
 							"x": 0.0,
 							"y": 0.0,
 							"z": 0.0
 						},
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"rotation": {
 							"x": 0.0,
 							"y": 0.0,
 							"z": 0.0
 						},
+						"scale": {
+							"x": 1.0,
+							"y": 1.0,
+							"z": 1.0
+						},
+						"spreadFactor": 0.0,
 						"translation": {
 							"x": 0.0,
 							"y": -23.135936737060547,
@@ -302,9 +388,13 @@
 						},
 						"type": "unary"
 					},
-					"index": 131,
+					"index": 5,
 					"name": "Blend",
 					"operator": "Blend",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
 					"positionalB": "FIXED_POS",
 					"type": "compose",
 					"useIntersection": false
@@ -317,9 +407,13 @@
 							"y": 26.30000114440918,
 							"z": 14.100000381469727
 						},
-						"index": 132,
+						"index": 4,
 						"material": "ROCK",
 						"name": "Rock",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
 						"position": {
 							"x": 42.517757415771484,
 							"y": 48.25455093383789,
@@ -339,18 +433,28 @@
 						"y": 0.0,
 						"z": 0.0
 					},
-					"index": 92,
+					"index": 3,
 					"name": "Translation",
 					"noise": {
 						"x": 0.0,
 						"y": 0.0,
 						"z": 0.0
 					},
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
 					"rotation": {
 						"x": 0.0,
 						"y": 0.0,
 						"z": 0.0
 					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					},
+					"spreadFactor": 0.0,
 					"translation": {
 						"x": 9.603569030761719,
 						"y": -41.165008544921875,
@@ -358,9 +462,13 @@
 					},
 					"type": "unary"
 				},
-				"index": 133,
+				"index": 2,
 				"name": "Blend",
 				"operator": "Blend",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
 				"positionalB": "FIXED_POS",
 				"type": "compose",
 				"useIntersection": false
@@ -370,18 +478,28 @@
 				"y": 20.0,
 				"z": 10.0
 			},
-			"index": 134,
+			"index": 1,
 			"name": "Noise",
 			"noise": {
 				"x": 0.05000000074505806,
 				"y": 20.0,
 				"z": 10.0
 			},
+			"optionalCurve": {
+				"closed": false,
+				"points": []
+			},
 			"rotation": {
 				"x": 0.0,
 				"y": 0.0,
 				"z": 0.0
 			},
+			"scale": {
+				"x": 1.0,
+				"y": 1.0,
+				"z": 1.0
+			},
+			"spreadFactor": 0.0,
 			"translation": {
 				"x": 0.0,
 				"y": 0.0,
@@ -389,9 +507,13 @@
 			},
 			"type": "unary"
 		},
-		"index": 190,
+		"index": 0,
 		"name": "Blend",
-		"operator": "Blend",
+		"operator": "One_side_blend",
+		"optionalCurve": {
+			"closed": false,
+			"points": []
+		},
 		"positionalB": "FIXED_POS",
 		"type": "compose",
 		"useIntersection": false

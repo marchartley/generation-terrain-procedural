@@ -16,7 +16,11 @@ bool intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 boxC
 
 Vector3 intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxMin, Vector3 boxMax);
 
+Vector3 projectPointOnSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd);
+Vector3 projectPointOnSphere(Vector3 point, Vector3 sphereCenter, float sphereRadius);
+
 bool pointInPolygon(Vector3 point, std::vector<Vector3> polygon);
 }
+
 
 #endif // COLLISIONS_H

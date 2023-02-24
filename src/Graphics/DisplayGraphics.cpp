@@ -103,6 +103,7 @@ bool Chart::gestureEvent(QGestureEvent *event)
 //    QChart::scroll(scroll.x(), scroll.y());
 //    return QChart::wheelEvent(event);
 //}
+Plotter* Plotter::instance = nullptr;
 
 Plotter::Plotter(QWidget *parent) : Plotter(new ChartView(new Chart()), parent)
 {
@@ -110,9 +111,12 @@ Plotter::Plotter(QWidget *parent) : Plotter(new ChartView(new Chart()), parent)
 
 Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView)
 {
+    if (this->chartView == nullptr)
+        this->chartView = new ChartView(new Chart());
+
     this->setLayout(new QHBoxLayout());
     this->layout()->addWidget(this->chartView);
-    chartView->setRenderHint(QPainter::Antialiasing);
+    this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
     this->resize(800, 600);
 
@@ -134,7 +138,22 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     });
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &Plotter::selectData);
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
+    QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView, &ChartView::updated, this, &Plotter::updateLabelsPositions);
+}
+
+Plotter *Plotter::getInstance()
+{
+    if (Plotter::instance == nullptr) {
+        std::cerr << "Plotter has not been initialized with function Plotter::init()" << std::endl;
+    }
+    return Plotter::instance;
+}
+
+Plotter *Plotter::init(ChartView *chartView, QWidget *parent)
+{
+    Plotter::instance = new Plotter(chartView, parent);
+    return Plotter::getInstance();
 }
 
 void Plotter::addPlot(std::vector<float> data, std::string name, QColor color)
@@ -311,6 +330,39 @@ void Plotter::showEvent(QShowEvent *event)
 {
     QDialog::showEvent(event);
     this->draw();
+}
+
+void Plotter::reset()
+{
+    auto prevState = this->chartView->chart()->transformations();
+    this->chartView->chart()->removeAllSeries();
+    while (!this->chartView->chart()->axes().empty()) {
+        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
+    }
+    if (!title.empty())
+        this->chartView->chart()->setTitle(QString::fromStdString(title));
+
+    for (auto& labels : this->graphicLabels)
+        for (auto& lab : labels)
+            delete lab;
+    this->graphicLabels.clear();
+
+//    QPushButton* saveButton;
+//    ChartView* chartView;
+    backImage = nullptr;
+    title = "";
+    plot_data.clear();
+    plot_names.clear();
+    plot_colors.clear();
+    scatter_data.clear();
+    scatter_labels.clear();
+    scatter_colors.clear();
+    scatter_names.clear();
+    graphicLabels.clear();
+
+    selectedScatterData.clear();
+    selectedPlotData.clear();
+
 }
 
 void Plotter::updateLabelsPositions()

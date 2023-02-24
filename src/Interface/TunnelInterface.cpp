@@ -56,10 +56,10 @@ void TunnelInterface::hide()
     CustomInteractiveObject::hide();
 }
 
-void TunnelInterface::mouseClickInWorldEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent* event)
+void TunnelInterface::mouseClickedOnMapEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible() && mouseInMap && event->button() == Qt::MouseButton::LeftButton)
-        this->addCurvesControlPoint(mousePosInWorld);
+        this->addCurvesControlPoint(model->getTerrainPos(mousePosInWorld));
 }
 
 void TunnelInterface::show()
@@ -168,11 +168,11 @@ void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
         if (control->isManipulated() && this->voxelGrid->contains(control->getPosition())) {
 //            atLeastOnePointIsManipulated = true;
             Q_EMIT this->needToClipView(
-                        control->getFluidMovement(),
+                        control->getFluidTranslation(),
                         control->getPosition(),
                         true
                         );
-            QObject::connect(control.get(), &ControlPoint::afterModified,
+            QObject::connect(control.get(), &ControlPoint::released,
                              this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
         }
     }

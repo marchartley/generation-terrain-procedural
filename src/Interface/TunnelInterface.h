@@ -43,7 +43,7 @@ public Q_SLOTS:
     void createTunnel(bool removingMatter = true);
     void createCrack(bool removingMatter = true);
 
-    void mouseClickInWorldEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent *event);
+    void mouseClickedOnMapEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent *event, TerrainModel *model);
     void wheelEvent(QWheelEvent* event);
 
 public:

@@ -181,7 +181,7 @@ void BiomeInstance::updateSubInstances()
 {
     std::vector<Vector3> newPositions;
     for (auto& instance : instances) {
-        if (this->area.inside(instance->position)) {
+        if (this->area.contains(instance->position)) {
             newPositions.push_back(instance->position);
         } else {
             std::vector<Vector3> newPossiblePos = this->area.randomPointsInside();

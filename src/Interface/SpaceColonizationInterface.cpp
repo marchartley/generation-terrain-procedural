@@ -35,8 +35,9 @@ void SpaceColonizationInterface::display()
         for (auto& ctrl : this->controlPoints) {
             ctrl->display();
         }
-        if (this->startingPoint->mesh.shader != nullptr)
-            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
+//        if (this->startingPoint->mesh.shader != nullptr)
+//            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
+        this->startingPoint->setGrabberStateColor(INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f});
         this->startingPoint->display();
         if (this->pathsMeshes.shader != nullptr)
             this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
@@ -194,7 +195,7 @@ void SpaceColonizationInterface::updateKarstPath()
         this->visitingCamera->paths = this->karstPaths;
     }
 
-    Q_EMIT this->karstPathUpdated();
+    Q_EMIT this->updated();
 }
 
 void SpaceColonizationInterface::createKarst(bool usingSpheres)
