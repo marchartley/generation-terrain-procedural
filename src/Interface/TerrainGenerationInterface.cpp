@@ -135,6 +135,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_file", filename},
                                               {"from_noise", false}
                                           }));
+    this->setWaterLevel(this->waterLevel);
     Q_EMIT this->updated();
 }
 
