@@ -140,6 +140,8 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
     this->tempData = data;
     this->_smoothingNeeded = true;
     */
+    this->smoothVoxels();
+    this->smoothVoxels();
 }
 
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
