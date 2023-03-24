@@ -4,19 +4,19 @@
     <foregroundColor blue="180" red="180" green="180"/>
     <backgroundColor blue="127" red="127" green="127"/>
   </State>
-  <Display gridIsDrawn="false" axisIsDrawn="false" cameraIsEdited="false" FPSIsDisplayed="false"/>
-  <Geometry height="991" fullScreen="false" posX="-1" posY="-9" width="1920"/>
+  <Display cameraIsEdited="false" axisIsDrawn="false" gridIsDrawn="false" FPSIsDisplayed="false"/>
+  <Geometry posX="0" posY="27" fullScreen="false" width="1920" height="961"/>
   <Camera>
-    <Parameters orthoCoef="2.82422e-153" sceneRadius="500" fieldOfView="0.785398" Type="PERSPECTIVE" zNearCoefficient="0.005" zClippingCoefficient="1.73205">
-      <SceneCenter z="29.5" x="40" y="40"/>
+    <Parameters sceneRadius="500" Type="PERSPECTIVE" fieldOfView="0.785398" zClippingCoefficient="1.73205" orthoCoef="0" zNearCoefficient="0.005">
+      <SceneCenter z="11" y="50" x="50"/>
     </Parameters>
-    <Stereo physScreenWidth="0.5" IODist="0.062" focusDistance="1207.11"/>
+    <Stereo IODist="0.062" focusDistance="1207.11" physScreenWidth="0.5"/>
     <ManipulatedCameraFrame>
-      <position z="152.376" x="20.8338" y="-14.5743"/>
-      <orientation q1="0.0823798" q3="-0.968467" q2="0.0147116" q0="-0.234668"/>
-      <ManipulatedParameters transSens="1" wheelSens="1" zoomSens="1" spinSens="0.3" rotSens="1"/>
-      <ManipulatedCameraParameters rotatesAroundUpVector="false" flySpeed="5" zoomsOnPivotPoint="false">
-        <sceneUpVector z="0" x="0" y="1"/>
+      <position z="107.807" y="119.457" x="91.5949"/>
+      <orientation q2="-0.937555" q1="-0.287258" q3="-0.174274" q0="-0.0900103"/>
+      <ManipulatedParameters spinSens="0.3" transSens="1" zoomSens="1" rotSens="1" wheelSens="1"/>
+      <ManipulatedCameraParameters flySpeed="5" zoomsOnPivotPoint="false" rotatesAroundUpVector="false">
+        <sceneUpVector z="0" y="1" x="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>
   </Camera>

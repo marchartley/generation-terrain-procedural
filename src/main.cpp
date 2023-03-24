@@ -30,6 +30,8 @@ float eval (Vector3 pos, float width, float depth, float height) {
     float evaluation = distanceFalloff; // std::sin(distanceFalloff * 10.f); //std::clamp(distanceFalloff, 0.f, 1.f); // Maybe...
     return evaluation; // - 0.5f ?
 }*/
+//#include "Utils/PbmReader.h"
+
 int main(int argc, char *argv[])
 {
 
@@ -38,89 +40,6 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
-
-/*
-    float width = 5.f, depth = 5.f, height = 5.f;
-    Matrix3<float> m(3 * width, 3 * depth);
-    m.raiseErrorOnBadCoord = false;
-    for (int x = -width; x < 2 * width; x++) {
-        for (int y = -width; y < 2 * depth; y++) {
-            m.at(width + x, height + y) = eval(Vector3(x, y, height * .5f), width, depth, height);
-        }
-    }
-    std::cout << std::setw(2) << m.displayValues() << std::endl;
-    Plotter plt;
-    plt.addImage(m);
-    plt.exec();*/
-
-    /*
-    Matrix3<Vector3> img(10, 10);
-    for (int i = 0; i < img.sizeX; i++) {
-        for (int j = 0; j < img.sizeY; j++) {
-            img.at(i, j) = Vector3(float(i) / float(img.sizeX), float(j) / float(img.sizeY), 0.5f);//Vector3::random().abs();
-        }
-    }
-    Plotter plt;
-    plt.addImage(img);
-    return plt.exec();
-    */
-    /*
-    std::function blend = [](float valA, float valB) -> float {
-        float n = 2.f;
-        return std::pow(std::pow(valA, n) + std::pow(valB, n), 1/n);
-    };
-
-    int X = 20, Y = 20;
-    Matrix3<float> matA(X, Y);
-    Matrix3<float> matB(X, Y);
-    Matrix3<float> matAB(X, Y);
-    float delta = 0.001;
-    for (int x = 0; x < X; x++) {
-        for (int y = 0; y < Y; y++) {
-            float _x = x / float(X - 1), _y = 1.f - (y / float(Y - 1));
-//            float blendVal = blend(_x, _y);
-            Vector3 derivee = Vector3(
-                        blend(_x + delta, _y) - blend(_x - delta, _y),
-                        blend(_x, _y + delta) - blend(_x, _y - delta)
-                        ).normalize();
-
-            float contribA = derivee.x / (derivee.x + derivee.y);
-            float contribB = derivee.y / (derivee.x + derivee.y);
-            matA.at(x, y) = contribA;
-            matB.at(x, y) = contribB;
-        }
-    }
-
-    std::cout << matA.displayAsPlot(0.f, 1.f, {}, {{.5f, "/"}}) << std::endl;
-
-    return 0;
-*/
-    /*BSpline opCurve = BSpline({
-                                  Vector3(.0f, .5f),
-                                  Vector3(.3f, .5f),
-                                  Vector3(1.f, 1.f),
-//                                  Vector3(2.f, 2.f),
-//                                  Vector3(1.f, 1.f),
-                                  Vector3(.5f, .3f),
-                                  Vector3(.5f, .0f)
-                              });
-    Plotter* plot = new Plotter;
-    plot->addPlot(opCurve.getPath(50));
-    plot->exec();
-    delete plot;
-    return 0;*/
-    /*
-    Vector3 gridRes(151, 151, 1);
-    Matrix3<float> grid(gridRes);
-    for (int x = 0; x < gridRes.x; x++) {
-        for (int y = 0; y < gridRes.y; y++) {
-            Vector3 pos = Vector3(x, y) / gridRes;
-            float dist = opCurve.estimateSignedDistanceFrom(pos);
-            grid.at(x, y) = 1.f - std::clamp(dist + .5f, 0.f, 1.f);
-        }
-    }
-    std::cout << grid.displayAsPlot(0, 0, {"-", "+"}, {{.5f, "0"}}, 0.005f) << std::endl;
-    return 0;*/
 
 //    RegularSimplicialComplex grid(10, 10);
 //    grid.getNode(2, 3)->value = 0;

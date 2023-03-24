@@ -33,7 +33,7 @@ void ManualEditionInterface::replay(nlohmann::json action)
         bool addingMode = parameters.at("addingMode").get<bool>();
 
         RockErosion rock(size, strength);
-        rock.Apply(voxelGrid, position, addingMode, false);
+        rock.Apply(voxelGrid, position, addingMode);
     }
 }
 
@@ -83,7 +83,7 @@ void ManualEditionInterface::applyModification()
     Vector3 position = this->grabber->getPosition();
 
     RockErosion rock(size, strength);
-    rock.Apply(voxelGrid, position, addingMode, true);
+    rock.Apply(voxelGrid, position, addingMode);
 
     this->addTerrainAction(nlohmann::json({
                                            {"size", size},

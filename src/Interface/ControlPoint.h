@@ -237,6 +237,8 @@ protected:
     bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
     bool mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir);
 
+    bool stillOnInitialState = true;
+
 };
 
 

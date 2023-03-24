@@ -11,8 +11,219 @@
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
 {
-    this->createGUI();
+//    this->createGUI();
 }
+
+void TerrainGenerationInterface::setWaterLevel(float newLevel)
+{
+    this->waterLevel = newLevel;
+    voxelGrid->updateEnvironmentalDensities(newLevel * voxelGrid->getSizeZ());
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling)
+{
+    this->voxelGridOffset = newVoxelGridOffset;
+    this->voxelGridScaling = newVoxelGridScaling;
+
+//    heightmapMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+//    heightmapMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
+    marchingCubeMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+    marchingCubeMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
+
+    layersMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+    layersMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
+}
+
+void TerrainGenerationInterface::afterTerrainUpdated()
+{
+
+}
+
+void TerrainGenerationInterface::displayWaterLevel()
+{
+    waterLevelMesh.fromArray({
+                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
+                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ())
+                             });
+    waterLevelMesh.display();
+}
+
+void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
+{
+//    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz/*, blockSize*/, noise_shifting);
+//    tempMap->fromIsoData();
+    VoxelGrid tempMap = VoxelGrid(nx, ny, nz, noise_shifting);
+
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>();
+    if (!this->heightmap)
+        this->heightmap = std::make_shared<Heightmap>();
+    if (!this->layerGrid)
+        this->layerGrid = std::make_shared<LayerBasedGrid>();
+
+    *voxelGrid = tempMap;
+    this->heightmap->fromVoxelGrid(*voxelGrid);
+    this->layerGrid->fromVoxelGrid(*voxelGrid);
+
+    this->addTerrainAction(nlohmann::json({
+                                              {"from_noise", true},
+                                              {"noise_parameters", {
+                                                   {"nx", nx},
+                                                   {"ny", ny},
+                                                   {"nz", nz},
+//                                                   {"block_size", blockSize},
+                                                   {"noise_shifting", noise_shifting}
+                                               }}
+                                          }));
+}
+
+void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
+{
+    std::string ext = toUpper(getExtention(filename));
+
+    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
+    if (!this->heightmap)
+        this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x, terrainSize.y, terrainSize.z);
+    if (!this->layerGrid)
+        this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
+
+    if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
+        // From heightmap
+        heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z);
+
+        voxelGrid->from2DGrid(*heightmap);
+//        layerGrid->fromVoxelGrid(*voxelGrid);
+        layerGrid->from2DGrid(*heightmap);
+
+    } else if (ext == "JSON") {
+        // The JSON file contains the list of actions made on a map
+        std::ifstream file(filename);
+        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        nlohmann::json json_content = nlohmann::json::parse(content);
+        if (!json_content.contains("actions")) {
+            if (json_content.contains(ImplicitPatch::json_identifier)) {
+                this->createTerrainFromImplicitPatches(json_content);
+            } else {
+                this->createTerrainFromBiomes(json_content);
+            }
+        } else {
+            for (const auto &action : json_content.at("actions")) {
+                // Let all the interfaces try to replay their actions
+                for (auto& possibleAction : actionInterfaces)
+                    possibleAction.second->replay(action);
+            }
+        }
+    } else /*if (ext == "DATA" || ext.empty())*/ {
+        // Then it's our custom voxel grid file
+        voxelGrid->retrieveMap(filename);
+        voxelGrid->smoothVoxels();
+        voxelGrid->smoothVoxels();
+        heightmap->fromVoxelGrid(*voxelGrid);
+
+    } /*else {
+        // In any other case, consider that nothing has been done, cancel.
+        return;
+    }*/
+    this->addTerrainAction(nlohmann::json({
+                                              {"from_file", filename},
+                                              {"from_noise", false}
+                                          }));
+    Q_EMIT this->updated();
+}
+
+void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
+{
+    if (!this->heightmap)
+        this->heightmap = std::make_shared<Heightmap>();
+    if (!this->voxelGrid)
+        this->voxelGrid = std::make_shared<VoxelGrid>();
+
+    *heightmap = Heightmap(124, 124, 40.f);
+    heightmap->raise(Matrix3<float>(heightmap->getSizeX(), heightmap->getSizeY(), 1.f, 20.f));
+//    this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
+//    this->heightmap->maxHeight = 40.f;
+
+    this->voxelGrid->from2DGrid(*this->heightmap);
+//    this->voxelGrid->fromCachedData();
+
+    this->biomeGenerationNeeded = true;
+    this->biomeGenerationModelData = json_content;
+
+}
+
+void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
+{
+    // Dunno...
+    // TODO : Link to the PrimitivePatchInterface
+}
+
+void TerrainGenerationInterface::saveTerrain(std::string filename)
+{
+    std::string ext = toUpper(getExtention(filename));
+    if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
+        // To heightmap
+        this->heightmap->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
+        this->heightmap->saveHeightmap(filename);
+    } else if (ext == "JSON") {
+        // To JSON file containing the list of actions made on a map
+        this->saveAllActions(filename);
+    } else {
+        // Otherwise it's our custom voxel grid file
+        voxelGrid->saveMap(filename);
+    }
+}
+
+void TerrainGenerationInterface::reloadShaders()
+{
+    prepareShader();
+}
+
+
+void TerrainGenerationInterface::replay(nlohmann::json action)
+{
+    if (this->isConcerned(action)) {
+        auto parameters = action.at("parameters");
+        bool loadFromNoise = parameters.at("from_noise").get<bool>();
+        if (loadFromNoise) {
+            parameters = parameters.at("noise_parameters");
+            int nx = parameters.at("nx").get<int>();
+            int ny = parameters.at("ny").get<int>();
+            int nz = parameters.at("nz").get<int>();
+//            int blockSize = parameters.at("block_size").get<float>();
+            int noise_shifting = parameters.at("noise_shifting").get<float>();
+            this->createTerrainFromNoise(nx, ny, nz/*, blockSize*/, noise_shifting);
+        } else {
+            std::string filename = parameters.at("from_file").get<std::string>();
+            this->createTerrainFromFile(filename);
+        }
+    }
+}
+
+void TerrainGenerationInterface::hide()
+{
+    CustomInteractiveObject::hide();
+}
+
+void TerrainGenerationInterface::show()
+{
+    CustomInteractiveObject::show();
+}
+
+QLayout* TerrainGenerationInterface::createGUI()
+{
+    QLayout* nothing = new QHBoxLayout;
+    return nothing;
+}
+
+
+
 
 void TerrainGenerationInterface::prepareShader()
 {
@@ -149,7 +360,6 @@ void TerrainGenerationInterface::prepareShader()
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
 
-    this->regenerateRocksAndParticles();
     this->particlesMesh = Mesh(this->randomParticlesPositions,
                                std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
                                true, GL_POINTS);
@@ -390,79 +600,12 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
     layersMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
 
-    /*
-     * // TODO one day : put the material data in a texture to be used in the shaders
-    std::vector<TerrainTypes> materialTypes = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
-    float* dataForMaterialTypes = new float(materialTypes.size() * 4);
-    for (size_t i = 0; i < materialTypes.size(); i++) {
-        dataForMaterialTypes[3 * i + 0] = LayerBasedGrid::minDensityFromMaterial(materialTypes[i]);
-        dataForMaterialTypes[3 * i + 1] = LayerBasedGrid::maxDensityFromMaterial(materialTypes[i]);
-        dataForMaterialTypes[3 * i + 2] = (materialToTexture[materialTypes[i]] == "" ? 0 : 1); // Displayed or not
-        dataForMaterialTypes[3 * i + 3] = (materialToTexture[materialTypes[i]] == "" ? 0 : colorTexturesIndex[materialToTexture[materialTypes[i]]]);
-    }
-    glGenTextures(1, &biomesAndDensitiesTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE8);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, biomesAndDensitiesTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, materialTypes.size(), 1, 0,
-    GL_RGBA, GL_FLOAT, dataForMaterialTypes);
-    heightmapMesh.shader->setInt("biomesAndDensitiesTex", 8);
-    marchingCubeMesh.shader->setInt("biomesAndDensitiesTex", 8);
-    layersMesh.shader->setInt("biomesAndDensitiesTex", 8);
-    */
-
-//    Plotter* plt = Plotter::getInstance();
-//    plt->addImage(allColorTextures);
-//    plt->draw();
-//    plt->show();
-
     updateDisplayedView(voxelGridOffset, voxelGridScaling);
 
-//    this->heightmap->mesh.shader = std::make_shared<Shader>(vShader_grid, fShader_grid);
     if (verbose)
         std::cout << "Terrain shaders and assets ready." << std::endl;
 }
 
-void TerrainGenerationInterface::setWaterLevel(float newLevel)
-{
-    this->waterLevel = newLevel;
-    Q_EMIT updated();
-}
-
-void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling)
-{
-    this->voxelGridOffset = newVoxelGridOffset;
-    this->voxelGridScaling = newVoxelGridScaling;
-
-//    heightmapMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
-//    heightmapMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
-    marchingCubeMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
-    marchingCubeMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
-
-    layersMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
-    layersMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
-}
-
-void TerrainGenerationInterface::afterTerrainUpdated()
-{
-
-}
-
-void TerrainGenerationInterface::regenerateRocksAndParticles()
-{
-    this->randomParticlesPositions = std::vector<Vector3>(1000);
-    for (size_t i = 0; i < randomParticlesPositions.size(); i++) {
-        randomParticlesPositions[i] = Vector3::random(voxelGrid->getDimensions()); //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ));
-    }
-    if (this->particlesMesh.shader != nullptr)
-        this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
-    this->startingTime = std::chrono::system_clock::now();
-}
 
 
 void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles)
@@ -579,16 +722,6 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             // Check if something changed on the terrain :
             if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
                 this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
-                // Not the best check, but still pretty good....
-                if (marchingCubeMesh.vertexArray.size() != values.size()) {
-                    regenerateRocksAndParticles();
-                }
-            }
-            if (displayParticles) {
-//                particlesMesh.fromArray(randomParticlesPositions); // Maybe we shouldn't displace the particles
-                float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
-                particlesMesh.shader->setFloat("time", time); // std::chrono::system_clock::now().time_since_epoch().count());
-                particlesMesh.display(GL_POINTS);
             }
         }
     }
@@ -604,7 +737,8 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
 
             if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex) {
                 this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
-                Matrix3<int> materials; Matrix3<float> matHeights;
+                Matrix3<int> materials;
+                Matrix3<float> matHeights;
                 std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
                 layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
                 layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
@@ -619,316 +753,4 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             this->layersMesh.display(GL_POINTS);
         }
     }
-
-    // TEST OF GEOMETRY EXTRACTION
-//    auto vals = voxelGrid->getVoxelValues();
-//    marchingCubeMesh.extractGeometryFromShaders(vals);
-}
-
-void TerrainGenerationInterface::displayWaterLevel()
-{
-    waterLevelMesh.fromArray({
-                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
-                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ())
-                             });
-    waterLevelMesh.display();
-}
-
-void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
-{
-//    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz/*, blockSize*/, noise_shifting);
-//    tempMap->fromIsoData();
-    VoxelGrid tempMap = VoxelGrid(nx, ny, nz, noise_shifting);
-
-    if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>();
-    if (!this->heightmap)
-        this->heightmap = std::make_shared<Heightmap>();
-    if (!this->layerGrid)
-        this->layerGrid = std::make_shared<LayerBasedGrid>();
-
-    // Okay, super dirty but I don't know how to manage shared_ptr...
-//    this->voxelGrid->sizeX = tempMap->sizeX;
-//    this->voxelGrid->sizeY = tempMap->sizeY;
-//    this->voxelGrid->sizeZ = tempMap->sizeZ;
-//    this->voxelGrid->blockSize = tempMap->blockSize;
-//    this->voxelGrid->chunkSize = tempMap->chunkSize;
-//    this->voxelGrid->noise_shifting = tempMap->noise_shifting;
-//    this->voxelGrid->initMap();
-//    this->voxelGrid->tempData = tempMap->tempData;
-//    this->voxelGrid->fromIsoData();
-    *voxelGrid = tempMap;
-    this->heightmap->fromVoxelGrid(*voxelGrid);
-    this->layerGrid->fromVoxelGrid(*voxelGrid);
-
-    this->addTerrainAction(nlohmann::json({
-                                              {"from_noise", true},
-                                              {"noise_parameters", {
-                                                   {"nx", nx},
-                                                   {"ny", ny},
-                                                   {"nz", nz},
-//                                                   {"block_size", blockSize},
-                                                   {"noise_shifting", noise_shifting}
-                                               }}
-                                          }));
-}
-
-void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
-{
-    std::string ext = toUpper(getExtention(filename));
-
-
-//    // TODO : REMOVE THIS PART VERY SOON !!
-    float radius = 20.f;
-    Vector3 terrainSize = Vector3(4*radius, 4*radius, 60);
-    if (!this->heightmap)
-        this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
-    if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x, terrainSize.y, terrainSize.z);
-    if (!this->layerGrid)
-        this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
-////    layerGrid->setScaling(5.f);
-////    layerGrid->setTranslation(Vector3(-50.f, -50.f, 0.f));
-
-////    ImplicitPatch* init = new ImplicitPrimitive;
-////    ImplicitPatch* p1 = new ImplicitPatch(Vector3(0, 0, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p1->name = "sphere1"; p1->densityValue = 0.1f;
-////    ImplicitPatch* s1 = new ImplicitPatch(ImplicitPatch::createStack(init, p1, ImplicitPatch::FIXED)); s1->name ="stack1";
-////    ImplicitPatch* p2 = new ImplicitPatch(Vector3(20, 20, -10), Vector3(), Vector3(20, 20, 20), ImplicitPatch::createSphereFunction(0, 20, 20, 5)); p2->name = "sphere2"; p2->densityValue = 3.f;
-////    ImplicitPatch* s2 = new ImplicitPatch(ImplicitPatch::createStack(s1, p2, ImplicitPatch::ABOVE)); s2->name = "stack2";
-
-//    /*
-//    ImplicitPrimitive* water = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* air = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* coral = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* sand = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* dirt = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* rock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//    ImplicitPrimitive* bedrock = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);//new ImplicitPrimitive;
-//*/
-//    std::vector<TerrainTypes> materials = {WATER, AIR, CORAL, SAND, DIRT, ROCK, BEDROCK};
-//    std::vector<ImplicitPrimitive*> primitives(materials.size());
-//    std::vector<ImplicitOperator*> blends(primitives.size() - 1);
-//    /*
-//    water->setDimensions(Vector3(20, 20, 20)); water->position = Vector3(0, -10, 0); water->name = "Water"; water->material = TerrainTypes::WATER;
-//    air->setDimensions(Vector3(20, 20, 20)); air->position = Vector3(0, 10, 0); air->name = "Air"; air->material = TerrainTypes::AIR;
-//    coral->setDimensions(Vector3(20, 20, 20)); coral->position = Vector3(0, 30, 0); coral->name = "Coral"; coral->material = TerrainTypes::CORAL;
-//    sand->setDimensions(Vector3(20, 20, 20)); sand->position = Vector3(20, -10, 0); sand->name = "Sand"; sand->material = TerrainTypes::SAND;
-//    dirt->setDimensions(Vector3(20, 20, 20)); dirt->position = Vector3(20, 10, 0); dirt->name = "Dirt"; dirt->material = TerrainTypes::DIRT;
-//    rock->setDimensions(Vector3(20, 20, 20)); rock->position = Vector3(20, 30, 0); rock->name = "Rock"; rock->material = TerrainTypes::ROCK;
-//    bedrock->setDimensions(Vector3(20, 20, 20)); bedrock->position = Vector3(0, -10, 0); bedrock->name = "Bedrock"; bedrock->material = TerrainTypes::BEDROCK;*/
-//    for (size_t i = 0; i < primitives.size(); i++) {
-//        primitives[i] = (ImplicitPrimitive*)ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(20, 20, 20), 0.f);
-//        primitives[i]->position = Vector3(-10, -10, 0); //Vector3(-10 + 20 * float(i % (primitives.size() / 2)), 0 + 20 * float(i / (primitives.size() / 2)), 0);
-//        primitives[i]->setDimensions(Vector3(20, 20, 20));
-//        primitives[i]->name = stringFromMaterial(materials[i]) + " sphere";
-//        primitives[i]->material = materials[i];
-//    }
-//    for (size_t i = 0; i < blends.size(); i++) {
-//        auto& blend = blends[i];
-//        blend = new ImplicitOperator;
-//        blend->composeFunction = ImplicitPatch::BLEND;
-//        blend->positionalB = ImplicitPatch::FIXED_POS;
-//        blend->name = "Blend " + std::to_string(i + 1);
-//        blend->blendingFactor = 2.f;
-//        if (i == 0) {
-//            blend->composableA = primitives[0];
-//            blend->composableB = primitives[1];
-//        } else {
-//            blend->composableA = blends[i - 1];
-//            blend->composableB = primitives[i + 1];
-//        }
-//        blend->updateCache();
-//    }
-////    this->layerGrid->add(blends.back());
-
-////    voxelGrid->fromLayerBased(*layerGrid, terrainSize.z);
-////    heightmap->fromLayerGrid(*layerGrid);
-
-////    Q_EMIT this->terrainUpdated();
-////    return;
-
-//    // END OF SHITTY PART
-
-
-    if (ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
-        // From heightmap
-        heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z);
-
-        voxelGrid->from2DGrid(*heightmap);
-        layerGrid->fromVoxelGrid(*voxelGrid);
-//        voxelGrid->fromCachedData();
-        /*
-        ConstraintsSolver solver;
-        int iArch1 = solver.addItem(new Vector3());
-        int iArch2 = solver.addItem(new Vector3());
-        int iAlgae1 = solver.addItem(new Vector3());
-        int iAlgae2 = solver.addItem(new Vector3());
-
-        solver.addDistanceConstraint(iArch1, iArch2, 30.f);
-//        solver.addDistanceConstraint(iArch1, iAlgae1, 30.f);
-
-//        solver.addDistanceConstraint(iArch2, iArch1, 30.f);
-        solver.addDistanceConstraint(iAlgae1, iArch1, 30.f);
-        solver.addDistanceConstraint(iAlgae2, iArch1, 40.f);
-        solver.addDistanceConstraint(iAlgae2, iAlgae1, 70.f);
-
-        solver.addNormalConstraint(iArch1, deg2rad(0), deg2rad(20)); // 0 to 45
-        solver.addNormalConstraint(iArch2, deg2rad(20), deg2rad(90)); // 20 to 90
-        solver.addNormalConstraint(iAlgae1, deg2rad(0), deg2rad(90)); // 0 to 90
-
-        std::map<int, Vector3> positions = solver.solveWithVoxelGrid(voxelGrid);
-        std::vector<Vector3> pos;
-        for (auto& tuple : positions) {
-            pos.push_back(tuple.second);
-            std::cout << "Element " << tuple.first << " is placed at " << tuple.second << "\n";
-        }
-        std::cout << std::endl;
-//        exit(0);
-
-        UnderwaterErosion ue(voxelGrid, 10, 10, 10);
-        ue.CreateTunnel(BSpline({pos[0], (pos[0] + pos[1]) / 2 + Vector3(0, 0, 1) * (pos[0] - pos[1]).norm(), pos[1]}), true, true);
-        ue.CreateTunnel(BSpline({pos[2], pos[2] + Vector3(0, 0, 50)}), true, true);
-        ue.CreateMultipleTunnels({BSpline({pos[3] + Vector3(-5, -5, 0), pos[3] + Vector3(5, 5)}), BSpline({pos[3] + Vector3(-5, 5), pos[3] + Vector3(5, -5)})}, true, true);
-        */
-
-    } else if (ext == "JSON") {
-        // The JSON file contains the list of actions made on a map
-        std::ifstream file(filename);
-        std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        nlohmann::json json_content = nlohmann::json::parse(content);
-        if (!json_content.contains("actions")) {
-            if (json_content.contains(ImplicitPatch::json_identifier)) {
-                this->createTerrainFromImplicitPatches(json_content);
-            } else {
-                this->createTerrainFromBiomes(json_content);
-            }
-        } else {
-            for (auto action : json_content.at("actions")) {
-                // Let all the interfaces try to replay their actions
-                for (auto& possibleAction : actionInterfaces)
-                    possibleAction.second->replay(action);
-            }
-        }
-    } else /*if (ext == "DATA" || ext.empty())*/ {
-        // Then it's our custom voxel grid file
-        voxelGrid->retrieveMap(filename);
-//        voxelGrid->fromCachedData();
-        voxelGrid->smoothVoxels();
-        voxelGrid->smoothVoxels();
-        // Sorry heightmap... You take too long...
-        heightmap->fromVoxelGrid(*voxelGrid);
-
-    } /*else {
-        // In any other case, consider that nothing has been done, cancel.
-        return;
-    }*/
-//    this->voxelGrid->createMesh();
-//    this->heightmap->createMesh();
-//    layerGrid->from2DGrid(*heightmap);
-
-/*
-    voxelGrid->flowField = Matrix3<Vector3>(voxelGrid->environmentalDensities.getDimensions());
-    for (size_t i = 0; i < voxelGrid->environmentalDensities.size(); i++) {
-        if (voxelGrid->environmentalDensities.getCoordAsVector3(i).z < voxelGrid->environmentalDensities.sizeZ * waterLevel) {
-            voxelGrid->environmentalDensities[i] = 1000.f; // Water density
-            voxelGrid->flowField[i] = Vector3(0, -.3f, 0.f); // Water flow
-        } else {
-            voxelGrid->environmentalDensities[i] = 1.f; // Air density
-            voxelGrid->flowField[i] = Vector3(0, .1f, 0.f); // Air flow
-        }
-    }*/
-
-    this->addTerrainAction(nlohmann::json({
-                                              {"from_file", filename},
-                                              {"from_noise", false}
-                                          }));
-    Q_EMIT this->updated();
-}
-
-void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
-{
-    if (!this->heightmap)
-        this->heightmap = std::make_shared<Heightmap>();
-    if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>();
-
-    *heightmap = Heightmap(124, 124, 40.f);
-    heightmap->raise(Matrix3<float>(heightmap->getSizeX(), heightmap->getSizeY(), 1.f, 20.f));
-//    this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
-//    this->heightmap->maxHeight = 40.f;
-
-    this->voxelGrid->from2DGrid(*this->heightmap);
-//    this->voxelGrid->fromCachedData();
-
-    this->biomeGenerationNeeded = true;
-    this->biomeGenerationModelData = json_content;
-
-}
-
-void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
-{
-    // Dunno...
-    // TODO : Link to the PrimitivePatchInterface
-}
-
-void TerrainGenerationInterface::saveTerrain(std::string filename)
-{
-    std::string ext = toUpper(getExtention(filename));
-    if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
-        // To heightmap
-        this->heightmap->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
-        this->heightmap->saveHeightmap(filename);
-    } else if (ext == "JSON") {
-        // To JSON file containing the list of actions made on a map
-        this->saveAllActions(filename);
-    } else {
-        // Otherwise it's our custom voxel grid file
-        voxelGrid->saveMap(filename);
-    }
-}
-
-void TerrainGenerationInterface::reloadShaders()
-{
-    prepareShader();
-}
-
-
-void TerrainGenerationInterface::replay(nlohmann::json action)
-{
-    if (this->isConcerned(action)) {
-        auto parameters = action.at("parameters");
-        bool loadFromNoise = parameters.at("from_noise").get<bool>();
-        if (loadFromNoise) {
-            parameters = parameters.at("noise_parameters");
-            int nx = parameters.at("nx").get<int>();
-            int ny = parameters.at("ny").get<int>();
-            int nz = parameters.at("nz").get<int>();
-//            int blockSize = parameters.at("block_size").get<float>();
-            int noise_shifting = parameters.at("noise_shifting").get<float>();
-            this->createTerrainFromNoise(nx, ny, nz/*, blockSize*/, noise_shifting);
-        } else {
-            std::string filename = parameters.at("from_file").get<std::string>();
-            this->createTerrainFromFile(filename);
-        }
-    }
-}
-
-void TerrainGenerationInterface::hide()
-{
-    CustomInteractiveObject::hide();
-}
-
-void TerrainGenerationInterface::show()
-{
-    CustomInteractiveObject::show();
-}
-
-QLayout* TerrainGenerationInterface::createGUI()
-{
-    QLayout* nothing = new QHBoxLayout;
-    return nothing;
 }

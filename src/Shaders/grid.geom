@@ -101,8 +101,8 @@ void main(void) {
     if (vecPos.x < min_vertice_positions.x || vecPos.x > max_vertice_positions.x ||
         vecPos.y < min_vertice_positions.y || vecPos.y > max_vertice_positions.y) return;
 
-    subdivision(vecPos);
-    return;
+//    subdivision(vecPos);
+//    return;
 
     vec4 v1 = vec4(vecPos + vec2(0, 0), getHeight(vecPos + vec2(0, 0)), 1.0);
     vec4 v2 = vec4(vecPos + vec2(1, 0), getHeight(vecPos + vec2(1, 0)), 1.0);

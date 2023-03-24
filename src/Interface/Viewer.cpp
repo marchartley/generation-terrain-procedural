@@ -155,6 +155,9 @@ void Viewer::init() {
     GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
 //    sceneUBO = ShaderUBO("scene_buf", 1, sizeof(rt_scene));
 //    sceneUBO.affectShader(raymarchingQuad.shader);
+
+    this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
+    this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
     QGLViewer::init();
 }
 
@@ -340,7 +343,8 @@ void Viewer::drawingProcess() {
             outfile << voxelGrid->toString();
             outfile.close();
         }
-        this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
+        this->saveSnapshot(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
+//        this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
 #ifdef linux
         chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
         umask(prevMode);
@@ -542,31 +546,48 @@ void Viewer::closeEvent(QCloseEvent *e) {
     QGLViewer::closeEvent(e);
 }
 
-bool Viewer::startStopRecording()
+
+bool Viewer::startRecording(std::string folderUsed)
 {
+    if (folderUsed != "")
+        this->screenshotFolder = folderUsed;
+
     if(!makedir(this->screenshotFolder)) {
         this->isTakingScreenshots = false;
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
         exit(-1);
     }
-    this->isTakingScreenshots = !this->isTakingScreenshots;
-    if (!isTakingScreenshots) {
-        std::string command = "ffmpeg -f image2 -i ";
-        command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
-        if (this->screenshotIndex > 0) {
-            int result = std::system(command.c_str());
-            if (result != 0) {
-                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
-            }
-        }
-        this->screenshotFolder += "__next-take";
-        this->screenshotIndex = 0;
-    }
-
-
-    std::cout << (this->isTakingScreenshots ? "Smile, you're on camera" : "Ok, stop smiling, it's saved") << std::endl;
-    update();
+    this->isTakingScreenshots = true;
     return this->isTakingScreenshots;
+}
+
+bool Viewer::stopRecording()
+{
+    std::string command = "ffmpeg -f image2 -i ";
+    command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
+    if (this->screenshotIndex > 0) {
+        int result = std::system(command.c_str());
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+        }
+    }
+    this->screenshotFolder += "__next-take/";
+    this->screenshotIndex = 0;
+
+    this->isTakingScreenshots = false;
+    return this->isTakingScreenshots;
+}
+
+bool Viewer::startStopRecording()
+{
+    if (!this->isTakingScreenshots) {
+        std::cout << "Smile, you're on camera!" << std::endl;
+        return this->startRecording();
+    }
+    else {
+        std::cout << "Ok, you can stop smiling" << std::endl;
+        return this->stopRecording();
+    }
 }
 bool Viewer::eventFilter(QObject* obj, QEvent* event)
 {/*

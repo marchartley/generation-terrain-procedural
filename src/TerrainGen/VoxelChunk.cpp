@@ -11,8 +11,8 @@ VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<f
     this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->sizeZ, -1);
     this->applyModification(iso_data);
     this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->sizeZ);
-    this->updateLoDsAvailable();
-    this->computeDistanceField();
+//    this->updateLoDsAvailable();
+//    this->computeDistanceField();
 }
 
 VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, Matrix3<float>(), nullptr)

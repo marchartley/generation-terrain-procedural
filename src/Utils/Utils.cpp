@@ -19,6 +19,24 @@ std::vector<std::string> split(std::string str, char c)
     return result;
 }
 
+std::vector<std::string> split(std::string str)
+{
+    std::vector<std::string> result;
+    for (char c : str) {
+        result.push_back(std::to_string(c));
+    }
+    return result;
+}
+
+bool checkPathExists(std::string path)
+{
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) {
+        return false;
+    }
+    return true;
+}
+
 bool makedir(std::string path)
 {
     std::vector<std::string> splitted = split(path, '/');
@@ -30,8 +48,8 @@ bool makedir(std::string path)
         if(stat(currentPath.c_str(), &info) != 0) { // Folder doesn't exist
 #ifdef linux
             mode_t prevMode = umask(0011);
-            result = mkdir(currentPath.c_str(), 0666); // Create with full permission for linux
-            chmod(currentPath.c_str(), 0666);
+            result = mkdir(currentPath.c_str(), 0777); // Create with full permission for linux
+            chmod(currentPath.c_str(), 0777);
             umask(prevMode);
 #elif _WIN32
             result = mkdir(currentPath.c_str()); // Create for windows
@@ -222,4 +240,43 @@ bool startsWith(std::string text, std::string needle)
 bool endsWith(std::string text, std::string needle)
 {
     return text.substr(text.size() - needle.size()) == needle;
+}
+
+
+void displayProgress(float percent, bool displayPercent, int consoleWidth, std::string progressSign)
+{
+    std::string wait[4] = {"-", "\\", "|", "/"};
+    std::cout << "\r[";
+    int availableSpaceForSymbols = consoleWidth - 2;
+    int nbSymbols = int(percent * float(availableSpaceForSymbols));
+    int waitingState = int(((percent * float(availableSpaceForSymbols)) - nbSymbols) * 8) % 4;
+    availableSpaceForSymbols -= 1;
+    std::string percentValue = to_string_with_precision(percent * 100, 1);
+    if (displayPercent)
+        availableSpaceForSymbols -= (percentValue.size() + 1);
+    for (int i = 0; i < std::min(nbSymbols, availableSpaceForSymbols); i++)
+        std::cout << progressSign;
+    std::cout << wait[waitingState];
+    for (int i = std::min(nbSymbols, availableSpaceForSymbols); i < availableSpaceForSymbols; i++)
+        std::cout << " ";
+    if (displayPercent)
+        std::cout << percentValue << "%";
+    std::cout << "]" << std::flush;
+}
+
+std::string replaceInString(std::string initial, std::string toReplace, std::string replacing)
+{
+    std::string replaced = initial;
+    while (replaced.find(toReplace.c_str()) != replaced.npos) {
+        size_t pos = replaced.find(toReplace.c_str());
+        replaced.replace(pos, replacing.size(), replacing);
+    }
+    return replaced;
+}
+
+std::string getFilename(std::string path)
+{
+    std::vector<std::string> fullPath = split(path, '/');
+    fullPath = split(fullPath.back(), '\\');
+    return fullPath.back();
 }

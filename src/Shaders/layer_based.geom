@@ -35,14 +35,20 @@ float getDensityPerMaterial(int material)
     if (material == 0) {
         density = -10.0;
     } else if (material == 1) {
-        density = -1.0;
+        density = -10.0;
     } else if (material == 2) {
-        density = 0.25;
+    density = -10.0;
     } else if (material == 3) {
-        density = 0.75;
+    density = -10.0;
     } else if (material == 4) {
-        density = 1.4;
+        density = -1.0;
     } else if (material == 5) {
+        density = 0.25;
+    } else if (material == 6) {
+        density = 0.75;
+    } else if (material == 7) {
+        density = 1.4;
+    } else if (material == 8) {
         density = 2.5;
     }
     return density;

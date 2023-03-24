@@ -18,7 +18,7 @@ class HeightmapErosionInterface : public ActionInterface
 public:
     HeightmapErosionInterface(QWidget *parent = nullptr);
 
-    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr);
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    void affectHeightmap(std::shared_ptr<Grid> heightmap);
 

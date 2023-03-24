@@ -9,8 +9,8 @@
 #include "Interface/RangeSlider.h"
 
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall = false);
-QGroupBox* createMultipleSliderGroup(std::unordered_map<std::string, QSlider*> labelsAndSliders);
-QGroupBox* createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string, std::pair<QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
+QGroupBox* createMultipleSliderGroup(std::vector<std::pair<std::string, QSlider *> > labelsAndSliders);
+QGroupBox* createMultipleSliderGroupWithCheckbox(std::vector<std::tuple<std::string, QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
 QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets);
 QGroupBox* createHorizontalGroup(std::vector<QWidget*> widgets);
 QGroupBox* createMultiColumnGroup(std::vector<QWidget*> widgets, int nbColumns = 2);

@@ -2,7 +2,7 @@
 
 SmoothInterface::SmoothInterface(QWidget *parent) : ActionInterface("smooth", parent)
 {
-    this->createGUI();
+//    this->createGUI();
 }
 
 /*void SmoothInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)

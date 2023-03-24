@@ -49,6 +49,10 @@ public:
     Vector3 normalized() const;
     Vector3 abs();
     Vector3& setMag(float newMag);
+    Vector3& maxMagnitude(float maxMag);
+    Vector3& minMagnitude(float minMag);
+    Vector3& clamp(float minMag, float maxMag);
+    Vector3 clamped(float minMag, float maxMag) const;
 
     bool isAlmostVertical();
 

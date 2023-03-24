@@ -49,9 +49,9 @@ void KarstPathGenerationInterface::replay(nlohmann::json action)
     }
 }
 
-void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
 {
-    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 //    this->voxelGrid = voxelGrid;
     this->AABBoxMinPos = Vector3(0, 0, 0);
     this->AABBoxMaxPos = voxelGrid->getDimensions(); // Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ); // * voxelGrid->blockSize;

@@ -107,7 +107,7 @@ def createRandomIslandFromHeightmap(heightmap: np.ndarray, subsidence: float = 0
     waterLevel: float = .7
     small_distortion = distortion(heightmap, 0.05, 0.0)
     big_distortion = distortion(heightmap, 0.05, 0.0)
-    corals = extractCoralArea(small_distortion, waterLevel - .1, waterLevel, 0.2, 1.0, subsidence)
+    corals = extractCoralArea(small_distortion, waterLevel - .1, waterLevel, 0.0, 1.0, subsidence)
 
     big_distortion *= subsidence
     island = extractIslandArea(big_distortion, waterLevel)
@@ -226,9 +226,11 @@ def method3(heights: np.ndarray, subsidenceBetweenFrames: float = 0.05):
 def main():
     random.seed(1)
     # heights = distanceTransform(readImage("skeleton_1.png"))
-    # heights = distanceMap(createRandomWalk())q
+    heights = distanceMap(createRandomWalk())
+    # plt.imshow(heights, cmap="gray")
+    # plt.show()
     # heights = normalizeImage(readImage("random_heightmaps/Height Map PNG_cropped.png", (200, 200)))
-    heights = normalizeImage(readImage("random_heightmaps/gebco_2022_n-9.16_s-9.5953_w45.9874_e46.7857.png", (200, 200)))
+    # heights = normalizeImage(readImage("random_heightmaps/gebco_2022_n-9.16_s-9.5953_w45.9874_e46.7857.png", (200, 200)))
     # heights = distortion(heights, 0.05, 0.03)
 
     subsidenceBetweenFrames = 0.05

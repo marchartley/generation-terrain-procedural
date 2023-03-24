@@ -4,7 +4,7 @@
 #include "Interface/CustomInteractiveObject.h"
 #include "TerrainModification/TerrainAction.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 
 class ActionInterface : public CustomInteractiveObject
 {
@@ -22,11 +22,15 @@ public:
     virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
         this->layerGrid = layerGrid;
     }
+    virtual void affectImplicitTerrain(ImplicitPatch* implicitPatch) {
+        this->implicitTerrain = implicitPatch;
+    }
 
-    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid) {
+    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr) {
         this->affectHeightmap(heightmap);
         this->affectVoxelGrid(voxelGrid);
         this->affectLayerGrid(layerGrid);
+        this->affectImplicitTerrain(implicitPatch);
     }
 
     virtual QLayout* createGUI() {
@@ -71,6 +75,7 @@ public:
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<LayerBasedGrid> layerGrid;
+    ImplicitPatch* implicitTerrain;
 
 Q_SIGNALS:
     void updated();

@@ -66,9 +66,9 @@ void PrimitivePatchesInterface::replay(nlohmann::json action)
 
 }
 
-void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
 {
-    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 
     // Waiting for OpenGL to be available to create the shaders...
     std::string shaderPath = "src/Shaders/";
@@ -87,7 +87,7 @@ void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> height
     parametricCurveMesh.useIndices = false;
 
     this->loadTransformationRules();
-    this->loadPatchesFromFile(this->mainFilename);
+//    this->loadPatchesFromFile(this->mainFilename);
 }
 
 QLayout *PrimitivePatchesInterface::createGUI()

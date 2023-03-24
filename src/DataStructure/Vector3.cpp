@@ -44,6 +44,7 @@ float Vector3::norm2() {
     return this->x * this->x + this->y * this->y + this->z * this->z;
 }
 
+
 Vector3& Vector3::normalize() {
     if(this->norm() < 1e-5)
         return *this;
@@ -67,11 +68,38 @@ Vector3 Vector3::abs()
 
 Vector3& Vector3::setMag(float newMag)
 {
-    this->normalize();
-    this->x *= newMag;
-    this->y *= newMag;
-    this->z *= newMag;
+    this->normalize() *= newMag;
     return *this;
+}
+
+Vector3& Vector3::maxMagnitude(float maxMag)
+{
+    if (this->norm2() > maxMag*maxMag)
+        this->setMag(maxMag);
+    return *this;
+}
+
+Vector3 &Vector3::minMagnitude(float minMag)
+{
+    if (this->norm2() < minMag*minMag)
+        this->setMag(minMag);
+    return *this;
+}
+
+Vector3 &Vector3::clamp(float minMag, float maxMag)
+{
+    float mag2 = this->norm2();
+    if (mag2 > maxMag*maxMag)
+        this->setMag(maxMag);
+    else if (mag2 < minMag*minMag)
+        this->setMag(minMag);
+    return *this;
+}
+
+Vector3 Vector3::clamped(float minMag, float maxMag) const
+{
+    Vector3 v = *this;
+    return v.clamp(minMag, maxMag);
 }
 
 bool Vector3::isAlmostVertical()

@@ -206,7 +206,7 @@ float getDensity(vec3 pos, float resolution) {
     }
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
-//    return 1;
+    return 1;
     float density = getDensity((pos /*- vec3(1)*/) / (terrainSize /*+ vec3(1)*/), 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
     float power = 1.0;
     int texIndex = 0;

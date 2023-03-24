@@ -8,7 +8,7 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("fault
     this->faultSlip = FaultSlip();
     this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);
     this->slipVector = std::make_unique<InteractiveVector>(Vector3(), Vector3());
-    this->createGUI();
+//    this->createGUI();
 }
 
 void FaultSlipInterface::display()
@@ -44,9 +44,9 @@ void FaultSlipInterface::remesh()
     this->planeMesh.update();
 }
 
-void FaultSlipInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid)
+void FaultSlipInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
 {
-    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid);
+    ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->firstSlipControlPoint->move(voxelGrid->getDimensions() * Vector3(.5f, 0.f, 1.f)); //Vector3(voxelGrid->getSizeX() / 2.f, 0, voxelGrid->getSizeZ()));
     this->slipVector->setPositions(voxelGrid->getDimensions() * Vector3(0.f, .5f, 1.f), voxelGrid->getDimensions() * Vector3(0.f, .5f, .5f)); //Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ), Vector3(0, voxelGrid->sizeY / 2.f, voxelGrid->sizeZ / 2.f));
 //    this->voxelGrid = voxelGrid;

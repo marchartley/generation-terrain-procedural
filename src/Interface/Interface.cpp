@@ -59,7 +59,12 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
@@ -281,9 +286,9 @@ void ViewerInterface::setupUi()
         this->viewer->update();
     });
     displayModeLayout->addWidget(createVerticalGroup({createMultipleSliderGroupWithCheckbox({
-                                                               {"X", {mapSliceSliderX, sliderXactivation}},
-                                                               {"Y", {mapSliceSliderY, sliderYactivation}},
-                                                               {"Z", {mapSliceSliderZ, sliderZactivation}}
+                                                               {"X", mapSliceSliderX, sliderXactivation},
+                                                               {"Y", mapSliceSliderY, sliderYactivation},
+                                                               {"Z", mapSliceSliderZ, sliderZactivation}
                                                            }),
                                                       mapSliceSmooth}));
 
@@ -309,7 +314,7 @@ void ViewerInterface::setupUi()
     displayOptionLayout->addWidget(createVerticalGroup({
                                                            createHorizontalGroup({
                                                                createMultipleSliderGroupWithCheckbox({
-                                                                   {"Density", {isolevelSelectionSlider, isolevelSelectionActivation}}
+                                                                   {"Density", isolevelSelectionSlider, isolevelSelectionActivation}
                                                                }),
                                                                createSliderGroup("Water", waterLevelSlider)
                                                            }),

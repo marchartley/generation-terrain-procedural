@@ -1,13 +1,14 @@
 .git/
-build/
-build-Release/
-build-Release/*
-build-Debug/*
-.pro.user.*
+build*
+*.pro.user.*
 */.idea/*
 Python_tests/saved_runs/
 doc/
 screenshots/*
+erosionsTests/*
+erosionsTests*
+
+*.pickle
 
 # Prerequisites
 *.d
@@ -57,9 +58,9 @@ src/assets/models/coral_8_watertight.stl
 src/assets/models/coral_9_watertight.stl
 src/assets/models/My_Scan_2.stl
 src/assets/models/plastic-reef-5-corals20191129-2115-1wwd1bd.zip
-src/FastWFC/*
+# src/FastWFC/*
 saved_maps/action_histories/*
-saved_maps/heightmaps/*
+#saved_maps/heightmaps/*
 saved_maps/voxel_grids/*
 *.zip
 src/assets/textures/CIF_2021_ED166_HARTLEY_Marc_137014.pdf
@@ -68,3 +69,4 @@ src/assets/textures/coral2/Material_737.png
 src/assets/textures/mountain_rocks/Material_1607.jpg
 src/assets/textures/underwater_ground/Material_1283.jpg
 src/assets/textures/underwater_sand/Material_1573.jpg
+usersmarchappdatalocal*

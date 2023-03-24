@@ -23,7 +23,7 @@ QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmal
 
     return group;
 }
-QGroupBox* createMultipleSliderGroup(std::unordered_map<std::string, QSlider*> labelsAndSliders)
+QGroupBox* createMultipleSliderGroup(std::vector<std::pair<std::string, QSlider*>> labelsAndSliders)
 {
     QGridLayout* layout = new QGridLayout();
     QGroupBox* group = new QGroupBox;
@@ -99,7 +99,7 @@ QGroupBox* createOptionalSlider(RangeSlider *slider, std::string checkboxLabel, 
     */
 }
 
-QGroupBox *createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string, std::pair<QSlider *, QCheckBox *>> labelsAndSlidersAndActivables)
+QGroupBox *createMultipleSliderGroupWithCheckbox(std::vector<std::tuple<std::string, QSlider*, QCheckBox*>> labelsAndSlidersAndActivables)
 {
     QGridLayout* layout = new QGridLayout();
     QGroupBox* group = new QGroupBox;
@@ -107,8 +107,10 @@ QGroupBox *createMultipleSliderGroupWithCheckbox(std::unordered_map<std::string,
     for (const auto& labAndSlidAndAct : labelsAndSlidersAndActivables) {
         QLabel* lab = new QLabel(QString::fromStdString(std::get<0>(labAndSlidAndAct)));
         layout->addWidget(lab, row, 0);
-        layout->addWidget(std::get<0>(std::get<1>(labAndSlidAndAct)), row, 1);
-        layout->addWidget(std::get<1>(std::get<1>(labAndSlidAndAct)), row, 2);
+        layout->addWidget(std::get<1>(labAndSlidAndAct), row, 1);
+        layout->addWidget(std::get<2>(labAndSlidAndAct), row, 2);
+//        layout->addWidget(std::get<0>(std::get<1>(labAndSlidAndAct)), row, 1);
+//        layout->addWidget(std::get<1>(std::get<1>(labAndSlidAndAct)), row, 2);
         row++;
     }
     group->setLayout(layout);

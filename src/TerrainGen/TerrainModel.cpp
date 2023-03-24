@@ -29,3 +29,4 @@ size_t TerrainModel::getCurrentHistoryIndex() const
 {
     return this->_cachedHistoryIndex; // Not good
 }
+

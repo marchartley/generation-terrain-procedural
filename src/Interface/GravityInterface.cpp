@@ -3,7 +3,7 @@
 
 GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity", parent)
 {
-    this->createGUI();
+//    this->createGUI();
 }
 
 /*void GravityInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)

@@ -83,11 +83,13 @@ public:
     Matrix3<T> subset(Vector3 start, Vector3 end);
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
     Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
-    Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner);
-    Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front);
+    Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation = false);
+    Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front, bool useInterpolation = false);
     Matrix3<T> concat(Matrix3<T> matrixToConcat);
 
     Matrix3<float> toDistanceMap(bool ignoreZlayer = false);
+
+    Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
     template<typename U>
     Matrix3<T> convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
@@ -152,6 +154,9 @@ public:
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
     static Matrix3<T> identity(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
 
+    static Matrix3<Vector3> fromImageRGB(std::string filename);
+    static Matrix3<float> fromImageBW(std::string filename);
+
     Matrix3<T> operator-() const;
     template<typename U>
     Matrix3<T>& operator+=(const Matrix3<U>& o);
@@ -177,7 +182,7 @@ public:
     std::vector<T> data;
     int sizeX = 0, sizeY = 0, sizeZ = 1;
 
-    bool raiseErrorOnBadCoord = true;
+    bool raiseErrorOnBadCoord = false; // THIS SHOULD CLEARLY BE SET TO TRUE, BUT F**K IT!
     T defaultValueOnBadCoord = T();
     RETURN_VALUE_ON_OUTSIDE returned_value_on_outside = DEFAULT_VALUE;
     bool stillRaiseErrorForX = false;
@@ -707,9 +712,13 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     bool oldError = this->raiseErrorOnBadCoord;
     this->raiseErrorOnBadCoord = false;
+    #pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
+//                std::cout << "[" << x << ", " << y << ", " << z << "] : " << at(x + 1, y, z) << " - " << at(x - 1, y, z) << ", " << at(x, y+1, z) << " - " << at(x, y-1, z) << ", " << at(x, y, z+1) << " - " << at(x, y, z-1) << " = " << Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
+//                                                                                                                                                                                                          (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
+//                                                                                                                                                                                                          (at(x, y, z + 1) - at(x, y, z - 1)) * .5f) << std::endl;
                 returningGrid.at(x, y, z) = Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
                                                     (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
                                                     (at(x, y, z + 1) - at(x, y, z - 1)) * .5f);
@@ -1140,17 +1149,32 @@ Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, int left, int up, int fr
 }
 
 template<typename T>
-Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner)
+Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation)
 {
-    return this->add(matrixToAdd, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
+    if (useInterpolation) {
+        for (int x = 0; x < matrixToAdd.sizeX; x++) {
+            for (int y = 0; y < matrixToAdd.sizeY; y++) {
+                for (int z = 0; z < matrixToAdd.sizeZ; z++) {
+    //                T& val = matrixToAdd.at(x - left, y - up, z - front);
+    //                this->at(x, y, z) += val;
+                    T& val = matrixToAdd.at(x, y, z);
+                    this->addValueAt(val, upperLeftFrontCorner + Vector3(x, y, z));
+                }
+            }
+        }
+        return *this;
+    } else {
+        return this->add(matrixToAdd, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z, useInterpolation);
+    }
 }
 template<typename T>
-Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front)
+Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front, bool useInterpolation)
 {
     for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
-                this->at(x, y, z) += matrixToAdd.at(x - left, y - up, z - front);
+                T& val = matrixToAdd.at(x - left, y - up, z - front);
+                this->at(x, y, z) += val;
             }
         }
     }
@@ -1264,6 +1288,25 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer)
     distances.raiseErrorOnBadCoord = true;
     distances.defaultValueOnBadCoord = 0.f;
     return distances; //.normalize();
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
+{
+    Matrix3<T> result = *this;
+    if (onX) {
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    int targetX = (onX ? this->sizeX - (x +1) : x);
+                    int targetY = (onY ? this->sizeY - (y +1) : y);
+                    int targetZ = (onZ ? this->sizeZ - (z +1) : z);
+                    result.at(x, y, z) = this->at(targetX, targetY, targetZ);
+                }
+            }
+        }
+    }
+    return result;
 }
 
 

@@ -4,10 +4,13 @@ build-Release/*
 build-Debug/*
 build-Profile/*
 *.pro.user.*
+erosionsTests*
 screenshots/*
 shared_screenshots/
 shared_images/
 .cccc/
+Python_tests/_cached*
+Python_tests/erosionData
 
 doc/
 
