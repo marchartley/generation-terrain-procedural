@@ -13,16 +13,23 @@ bool isIn(T elem, std::vector<T> arr) {
     return std::find(arr.begin(), arr.end(), elem) != arr.end();
 }
 
+void displayProgress(float percent, bool displayPercent = true, int consoleWidth = 20, std::string progressSign = "=");
+
+std::string replaceInString(std::string initial, std::string toReplace, std::string replacing);
+
 bool startsWith(std::string text, std::string needle);
 bool endsWith(std::string text, std::string needle);
-std::vector<std::string> split(std::string str, char c = ' ');
+std::vector<std::string> split(std::string str, char c);
+std::vector<std::string> split(std::string str);
 bool makedir(std::string path);
+bool checkPathExists(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);
 
 std::string toUpper(std::string s);
 std::string toLower(std::string s);
 std::string toCapitalize(std::string s);
 std::string getExtention(std::string file);
+std::string getFilename(std::string path);
 
 float rad2deg(float rad);
 float deg2rad(float deg);
@@ -103,5 +110,48 @@ U remap(T val, T oldMin, T oldMax, U newMin, U newMax)
 
 float gaussian(Vector3 size, Vector3 position, float sigma);
 float normalizedGaussian(Vector3 size, Vector3 position, float sigma);
+
+
+template<typename T>
+std::vector<T> flattenArray(std::vector<std::vector<T>> arr) {
+    std::vector<T> finalArray;
+    for (const std::vector<T>& val : arr)
+        finalArray.insert(finalArray.end(), val.begin(), val.end());
+    return finalArray;
+}
+
+// COmpletely stolen from : https://stackoverflow.com/a/54512651
+template <typename Iterator>
+std::string join(Iterator begin, Iterator end, std::string separator = "")
+{
+    std::ostringstream o;
+    if(begin != end)
+    {
+        o << *begin++;
+        for(;begin != end; ++begin)
+            o  << separator << *begin;
+    }
+    return o.str();
+}
+
+template <typename Container>
+std::string join(Container const& c, std::string separator = "")
+{
+    using std::begin;
+    using std::end;
+    return join(begin(c), end(c), separator);
+    // not using std::... directly:
+    // there might be a non-std overload that wouldn't be found if we did
+}
+
+template <typename T>
+std::string to_string_with_precision(const T a_value, const int n = 6)
+{
+    std::ostringstream out;
+    out.precision(n);
+    out << std::fixed << a_value;
+    return out.str();
+}
+
 
 #endif // UTILS_H

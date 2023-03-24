@@ -4,7 +4,7 @@
 class TerrainGenerationInterface;
 #include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 #include "Interface/Viewer.h"
 
 class TerrainGenerationInterface : public ActionInterface
@@ -42,9 +42,6 @@ public Q_SLOTS:
 
 
 public:
-//    std::shared_ptr<VoxelGrid> voxelGrid;
-//    std::shared_ptr<Grid> heightmapGrid;
-//    std::shared_ptr<LayerBasedGrid> layerGrid;
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
 
@@ -56,8 +53,6 @@ public:
     std::map<std::string, int> displacementTexturesIndex;
 
 protected:
-    void regenerateRocksAndParticles();
-
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
     Mesh heightmapMesh;

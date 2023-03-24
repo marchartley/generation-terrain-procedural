@@ -190,11 +190,89 @@ void ImplicitPatch::updateCache()
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
 
+bool ImplicitPatch::checkIsInGround(Vector3 position)
+{
+    auto eval = this->getMaterials(position);
+    float groundValue = 0.f;
+    float outsideValue = 0.f;
+    for (auto& [mat, val] : eval) {
+        groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
+        outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
+    }
+    return groundValue > ImplicitPatch::isovalue;
+}
+
+Mesh ImplicitPatch::getGeometry()
+{
+    Vector3 dimensions = this->getDimensions();
+    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
+    layer.add(this);
+    VoxelGrid voxels;
+    voxels.fromLayerBased(layer);
+    return voxels.getGeometry();
+}
+
+//Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+//{
+//    return Vector3();
+//}
+
+float ImplicitPatch::getHeight(float x, float y)
+{
+    return this->_cachedMaxHeight.at(x, y);
+}
+
+float ImplicitPatch::getHeight(Vector3 pos)
+{
+    return this->getHeight(pos.x, pos.y);
+}
+
+bool ImplicitPatch::contains(Vector3 v)
+{
+    auto BBox = this->getSupportBBox();
+    return Vector3::isInBox(v, BBox.first, BBox.second);
+}
+
+bool ImplicitPatch::contains(float x, float y, float z)
+{
+    return this->contains(Vector3(x, y, z));
+}
+
+Matrix3<float> ImplicitPatch::getVoxelized(Vector3 scale)
+{
+    Vector3 dimensions = this->getBBox().second;
+
+    Matrix3<float> values(dimensions * scale, LayerBasedGrid::densityFromMaterial(AIR));
+
+    for (int x = 0; x < values.sizeX; x++) {
+        for (int y = 0; y < values.sizeY; y++) {
+            for (int z = 0; z < values.sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(pos);
+                if (totalEval >= ImplicitPatch::isovalue) {
+                    TerrainTypes maxType;
+                    float maxVal = 0.f;
+                    for (const auto& [mat, val] : matVals) {
+                        if (val > maxVal) {
+                            maxType = mat;
+                            maxVal = val;
+                        }
+                    }
+                    values.at(pos) = LayerBasedGrid::densityFromMaterial(maxType);
+                }
+            }
+        }
+    }
+    return values;
+}
+
 ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
 {
     ImplicitPrimitive* primitive = new ImplicitPrimitive();
+    primitive->predefinedShape = shape;
     primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve);
     primitive->optionalCurve = parametricCurve;
+    primitive->parametersProvided = {additionalParam};
 
     return primitive;
 }
@@ -244,6 +322,9 @@ std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(Pred
         break;
     case ImplicitHeightmap:
         // Do it yourself!
+        break;
+    case ParametricTunnel:
+        func = ImplicitPatch::createParametricTunnelFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
         break;
     case None:
         func = ImplicitPatch::createIdentityFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
@@ -329,7 +410,7 @@ void ImplicitPrimitive::update()
             this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
         this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
         this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([this](Vector3 pos) -> float {
-                return this->cachedHeightmap.at(pos.xy());
+                return this->cachedHeightmap.interpolate(pos.xy());
             });
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
@@ -424,6 +505,12 @@ void ImplicitPrimitive::setDimensions(Vector3 newDimensions)
 void ImplicitPrimitive::setSupportDimensions(Vector3 newSupportDimensions)
 {
     this->supportDimensions = newSupportDimensions;
+}
+
+ImplicitPatch *ImplicitPrimitive::copy() const
+{
+    ImplicitPrimitive* copy = new ImplicitPrimitive(*this);
+    return copy;
 }
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions)
@@ -860,6 +947,12 @@ Vector3 ImplicitOperator::getEvaluationPositionForComposableB(Vector3 pos)
     return pos;
 }
 
+ImplicitPatch *ImplicitOperator::copy() const
+{
+    ImplicitOperator* copy = new ImplicitOperator(*this);
+    return copy;
+}
+
 
 
 
@@ -1270,6 +1363,19 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     });
 }
 
+std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline _path)
+{
+    return [=] (Vector3 pos) -> float {
+        BSpline path = _path;
+        float closestTime = path.estimateClosestTime(pos);
+        Vector3 closestPoint = path.getPoint(closestTime);
+
+        float distance = (pos - closestPoint).norm() / sigma;
+        float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f);
+        return functionsHeight;
+    };
+}
+
 std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height)
 {
     return [](Vector3) -> float { return 0.f; };
@@ -1531,6 +1637,8 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
         return ImplicitPatch::PredefinedShapes::Polygon;
     else if (name == "IMPLICIT_HEIGHTMAP")
         return ImplicitPatch::PredefinedShapes::ImplicitHeightmap;
+    else if (name == "PARAMETRIC_TUNNEL")
+        return ImplicitPatch::PredefinedShapes::ParametricTunnel;
     else if (name == "NONE")
         return ImplicitPatch::PredefinedShapes::None;
 
@@ -1569,6 +1677,8 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
         return "Polygon";
     else if (shape == ImplicitPatch::PredefinedShapes::ImplicitHeightmap)
         return "Implicit_Heightmap";
+    else if (shape == ImplicitPatch::PredefinedShapes::ParametricTunnel)
+        return "Parametric_Tunnel";
     else if (shape == ImplicitPatch::PredefinedShapes::None)
         return "None";
 
@@ -1677,4 +1787,115 @@ UnaryOp::UnaryOp()
 {
     this->wrap = [=] (Vector3 pos) { return pos; };
     this->unwrap = [=] (Vector3 pos) { return pos; };
+}
+
+ImplicitNaryOperator::ImplicitNaryOperator()
+{
+
+}
+
+float ImplicitNaryOperator::evaluate(Vector3 pos)
+{
+    float maxVal = 0.f;
+    for (auto& compo : this->composables)
+        maxVal = std::max(maxVal, compo->evaluate(pos));
+    return maxVal;
+}
+
+std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(Vector3 pos)
+{
+    float maxVal = 0.f;
+    std::map<TerrainTypes, float> bestReturn;
+    for (auto& compo : this->composables) {
+        auto evaluation = compo->getMaterialsAndTotalEvaluation(pos);
+        float totalEval = evaluation.first;
+        if (totalEval > maxVal) {
+            maxVal = std::max(maxVal, totalEval);
+            bestReturn = evaluation.second;
+        }
+    }
+    return bestReturn;
+}
+
+std::pair<Vector3, Vector3> ImplicitNaryOperator::getSupportBBox()
+{
+    Vector3 minPos(false), maxPos(false);
+    for (auto& compo : this->composables) {
+        auto BBox = compo->getSupportBBox();
+        minPos = Vector3::min(minPos, BBox.first);
+        maxPos = Vector3::max(maxPos, BBox.second);
+    }
+    return {minPos, maxPos};
+}
+
+std::pair<Vector3, Vector3> ImplicitNaryOperator::getBBox()
+{
+    Vector3 minPos(false), maxPos(false);
+    for (auto& compo : this->composables) {
+        auto BBox = compo->getBBox();
+        minPos = Vector3::min(minPos, BBox.first);
+        maxPos = Vector3::max(maxPos, BBox.second);
+    }
+    return {minPos, maxPos};
+}
+
+void ImplicitNaryOperator::update()
+{
+    // Nothing to do...
+}
+
+std::string ImplicitNaryOperator::toString()
+{
+    std::string compoNames;
+    for (auto& compo : this->composables)
+        compoNames += compo->name + ", ";
+    return this->name + ": N-operation between " + compoNames;
+}
+
+nlohmann::json ImplicitNaryOperator::toJson()
+{
+    nlohmann::json content;
+    if (!this->used_json_filename.empty()) {
+        content["file"] = this->used_json_filename;
+    } else {
+        content["type"] = "compose";
+        content["name"] = this->name;
+        content["index"] = this->index;
+        content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["mirrored"] = this->mirrored;
+        std::vector<nlohmann::json> composableJson;
+        for (auto& compo : this->composables)
+            composableJson.push_back(compo->toJson());
+        content["composables"] = composableJson;
+    }
+
+    return content;
+}
+
+ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
+{
+    ImplicitNaryOperator* patch = new ImplicitNaryOperator;
+    for (auto& compoJson : content["composables"]) {
+        patch->composables.push_back(ImplicitPatch::fromJson(compoJson));
+    }
+    patch->name = content["name"];
+    patch->index = content["index"];
+    if (content.contains("optionalCurve"))
+        patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+    if (content.contains("mirrored"))
+        patch->mirrored = content["mirrored"];
+    patch->update();
+    return patch;
+}
+
+void ImplicitNaryOperator::updateCache()
+{
+    ImplicitPatch::updateCache();
+    for (auto& compo : this->composables)
+        compo->updateCache();
+}
+
+ImplicitPatch *ImplicitNaryOperator::copy() const
+{
+    return new ImplicitNaryOperator(*this);
 }

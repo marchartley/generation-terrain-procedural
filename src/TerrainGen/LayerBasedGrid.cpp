@@ -181,6 +181,7 @@ void LayerBasedGrid::from2DGrid(Heightmap grid)
 
 void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
 {
+    return; // TODO: Remove this return very soon
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1);
     Matrix3<float> voxelValues = voxelGrid.getVoxelValues();
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
@@ -342,6 +343,7 @@ Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 min
 
 std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
+    int x = 0;
     if (currentHistoryIndex != _historyIndex)
     {
         int maxStackSize = 0;
@@ -447,6 +449,42 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
         }
     }
 }
+
+LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material)
+{
+    auto initialColumn = this->layers.at(x, y);
+    auto& column = this->layers.at(x, y);
+    float currentHeight = 0.f;
+    int stackIndex = 0;
+    for (auto& [mat, height] : initialColumn) {
+        if (currentHeight > endZ) break;
+        if (currentHeight + height >= startZ) {
+            if (currentHeight < startZ && currentHeight + height > endZ) {
+                // Cut the layer in 3 : before and after and middle (with material change)
+                column[stackIndex].second = startZ - currentHeight;
+                column.insert(column.begin() + stackIndex, {material, endZ - startZ});
+                column.insert(column.begin() + stackIndex + 1, {column[stackIndex].first, (currentHeight + height - endZ)});
+                stackIndex += 2; // We added 2 layers
+            } else if (currentHeight >= startZ && currentHeight + height <= endZ) {
+                // The whole layer material is changed
+                column[stackIndex].first = material;
+            } else if (currentHeight + height < endZ) {
+                // The top part of the layer is changed
+                column[stackIndex].second = startZ - currentHeight;
+                column.insert(column.begin() + stackIndex, {material, (currentHeight + height) - startZ});
+                stackIndex ++;
+            } else {
+                // The bottom part of the layer is changed
+                column.insert(column.begin() + stackIndex, {column[stackIndex].first, endZ});
+                column[stackIndex].second = endZ - currentHeight;
+                stackIndex++;
+            }
+        }
+        currentHeight += height;
+        stackIndex ++;
+    }
+    return this;
+}
 /*
 void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
 {
@@ -532,12 +570,12 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     int minY = std::max(0, int(minPos.y));
     int maxY = std::min(int(this->getSizeY()), int(maxPos.y));
     float minZ = std::max(0.f, minPos.z);
-    float maxZ = float(maxPos.z);
+    float maxZ = std::min(float(maxPos.z), 20.f);
     std::cout << "Evaluation from " << Vector3(minX, minY, minZ) << " to " << Vector3(maxX, maxY, maxZ) << std::endl;
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
-//    #pragma omp parallel for collapse(2)
+    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
@@ -676,5 +714,10 @@ float LayerBasedGrid::maxDensityFromMaterial(TerrainTypes material)
     float valMin, valMax;
     std::tie(valMin, valMax) = LayerBasedGrid::materialLimits[material];
     return valMax;
+}
+
+bool LayerBasedGrid::checkIsInGround(Vector3 position)
+{
+    return !(isIn(this->getValue(position), LayerBasedGrid::invisibleLayers));
 }
 

@@ -12,6 +12,7 @@ class UnaryOp;
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Voxel.h"
 #include "Utils/json.h"
+#include "TerrainGen/TerrainModel.h"
 
 //class TerrainMaterial;
 
@@ -28,7 +29,7 @@ public:
     operator float() const { return this->density; }
 };*/
 
-class ImplicitPatch { // abstract
+class ImplicitPatch : public TerrainModel { // abstract
 public:
     ImplicitPatch();
     virtual ~ImplicitPatch() = default;
@@ -64,6 +65,7 @@ public:
         MountainChain,
         Polygon,
         ImplicitHeightmap,
+        ParametricTunnel,
         None
     };
 
@@ -96,6 +98,37 @@ public:
 
     virtual void updateCache();
 
+    virtual ImplicitPatch* copy() const = 0;
+
+    bool checkIsInGround(Vector3 position);
+
+    virtual void initMap() { }
+
+    virtual bool undo() { return false; }
+    virtual bool redo() { return false; }
+
+    virtual void saveMap(std::string filename) { }
+    virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
+    virtual Mesh getGeometry();
+
+    virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false)) { return Vector3(); }
+
+    virtual std::string toShortString() { return ""; };
+
+    virtual float getHeight(float x, float y);
+    virtual float getHeight(Vector3 pos);
+
+    virtual bool contains(Vector3 v);
+    virtual bool contains(float x, float y, float z);
+
+//    virtual size_t getCurrentHistoryIndex() const;
+
+    virtual float getSizeX() { return this->getBBox().second.x; }
+    virtual float getSizeY() { return this->getBBox().second.y; }
+    virtual float getSizeZ() { return this->getBBox().second.z; }
+
+    Matrix3<float> getVoxelized(Vector3 scale = Vector3(1.f, 1.f, 1.f));
+
     int index = -1;
     std::string name;
     bool mirrored = false;
@@ -123,6 +156,7 @@ public:
     static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path);
+    static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height);
 //    static std::function<float(Vector3)> ...;
 
@@ -153,6 +187,8 @@ public:
 
     void setDimensions(Vector3 newDimensions);
     void setSupportDimensions(Vector3 newSupportDimensions);
+
+    virtual ImplicitPatch* copy() const;
 
     Vector3 position = Vector3(false);
     Vector3 dimensions = Vector3(false);
@@ -200,6 +236,8 @@ public:
     Vector3 getEvaluationPositionForComposableA(Vector3 pos);
     Vector3 getEvaluationPositionForComposableB(Vector3 pos);
 
+    virtual ImplicitPatch* copy() const;
+
     ImplicitPatch* composableA = nullptr;
     ImplicitPatch* composableB = nullptr;
 
@@ -229,6 +267,8 @@ public:
     std::function<float(Vector3)> noiseFunction;
     std::vector<UnaryOp> transforms;
 
+//    virtual ImplicitPatch* copy() const;
+
     void translate(Vector3 translation);
     void rotate(float angleX, float angleY, float angleZ);
     void scale(Vector3 scaleFactor);
@@ -244,6 +284,27 @@ public:
     Vector3 _distortion = Vector3(0.f, 0.f, 0.f);
     Vector3 _noise = Vector3(0.f, 0.f, 0.f);
     float _spreadingFactor = 0.f;
+};
+
+
+class ImplicitNaryOperator : public ImplicitPatch {
+public:
+    ImplicitNaryOperator();
+
+    float evaluate(Vector3 pos);
+    std::map<TerrainTypes, float> getMaterials(Vector3 pos);
+    std::pair<Vector3, Vector3> getSupportBBox();
+    std::pair<Vector3, Vector3> getBBox();
+    void update();
+    std::string toString();
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+
+    void updateCache();
+
+    virtual ImplicitPatch* copy() const;
+
+    std::vector<ImplicitPatch*> composables;
 };
 
 class UnaryOp {

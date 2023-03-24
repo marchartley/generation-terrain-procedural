@@ -1,5 +1,5 @@
-#ifndef GRID_H
-#define GRID_H
+#ifndef HEIGHTMAP_H
+#define HEIGHTMAP_H
 
 #include "DataStructure/Vector3.h"
 
@@ -26,6 +26,8 @@ public:
     float getSizeX() { return this->heights.sizeX; }
     float getSizeY() { return this->heights.sizeY; }
     float getSizeZ() { return this->getMaxHeight(); }
+
+    virtual bool checkIsInGround(Vector3 position);
 
     /// Erosion functions (should be in another class, I guess...)
     std::vector<std::vector<Vector3>> hydraulicErosion(int numIterations = 1000,
@@ -75,11 +77,11 @@ public:
 
     Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
 
-protected:
+//protected:
     Matrix3<float> heights;
 //    float maxHeight;
     float heightFactor = 1.f;
     Matrix3<std::vector<int>> biomeIndices;
 };
 
-#endif // GRID_H
+#endif // HEIGHTMAP_H

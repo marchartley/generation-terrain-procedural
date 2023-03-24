@@ -17,7 +17,7 @@ class ErosionInterface : public ActionInterface
 public:
     ErosionInterface(QWidget *parent = nullptr);
 
-    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr);
 
     void display();
 
@@ -34,25 +34,34 @@ public Q_SLOTS:
     void throwFromSide();
     void throwFrom(Vector3 pos, Vector3 dir);
 
+    void testManyManyErosionParameters();
+
+    virtual void afterTerrainUpdated();
+
+    void browseWaterFlowFromFile();
+    void browseAirFlowFromFile();
+    void browseDensityFieldFromFile();
+
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<UnderwaterErosion> erosion;
     Viewer* viewer;
 
 protected:
+    std::function<Vector3(Vector3)> computeFlowfieldFunction();
     Mesh rocksPathSuccess;
     Mesh rocksPathFailure;
 
     float erosionSize = 8.f;
-    float erosionStrength = .1f;
-    int erosionQtt = 500;
+    float erosionStrength = .35f;
+    int erosionQtt = 10;
     float rockRandomness = .1f;
 
-    float gravity = 1.f;
-    float bouncingCoefficient = .5f;
-    float bounciness = .5f;
+    float gravity = .981f;
+    float bouncingCoefficient = 1.f;
+    float bounciness = 1.f;
     float minSpeed = .1f;
-    float maxSpeed = 1.f;
+    float maxSpeed = 1000.f;
     float maxCapacityFactor = 1.f;
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
@@ -62,11 +71,34 @@ protected:
     float airFlowfieldRotation = 0.f;
     float waterFlowfieldRotation = 180.f;
     float airForce = 0.f;
-    float waterForce = 1.f;
+    float waterForce = 0.f;
 
-    int numberOfIterations = 10;
+    float dt = 1.f;
+
+    float shearingStressConstantK = 1.f;
+    float shearingRatePower = .5f;
+    float erosionPowerValue = 1.f;
+    float criticalShearStress = .8f;
+
+    int numberOfIterations = 1;
+
+    UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP;
+
+    bool displayTrajectories = true;
+
+    std::string waterFlowImagePath = "";
+    std::string airFlowImagePath = "";
+    std::string densityFieldImagePath = "";
+
+    UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
+    UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
+
+    std::vector<std::vector<std::pair<Vector3, Vector3>>> initialPositionsAndDirections;
 
     QHBoxLayout* erosionLayout = nullptr;
+
+    UnderwaterErosion erosionProcess;
+    bool currentlyModifyingTerrain = false;
 };
 
 #endif // EROSIONINTERFACE_H

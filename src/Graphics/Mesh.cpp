@@ -232,6 +232,7 @@ void Mesh::computeNormals()
     this->normalsArrayIndex.resize(this->indices.size());
     for (size_t i = 0; i < this->vertexArray.size(); i+=3)
     {
+        if (vertexArray.size() < i + 3) continue;
         Vector3 normal0 = (this->vertexArray[i+2] - this->vertexArray[i]).cross(
                     (this->vertexArray[i+1] - this->vertexArray[i]));
         Vector3 normal1 = (this->vertexArray[i] - this->vertexArray[i+1]).cross(
@@ -528,6 +529,29 @@ std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices)
                                                  }));
     }
     return triangles;
+}
+
+std::string Mesh::toOBJ()
+{
+    std::string out = "# ICAR Team - Terrain generation\n# mesh.obj\n\no terrain\n\n";
+
+    for (size_t i = 0; i < vertexArray.size(); i++)
+        out += "v " + std::to_string(vertexArray[i].x) + " " + std::to_string(vertexArray[i].z) + " " + std::to_string(vertexArray[i].y) + "\n";
+
+//    out += "\n";
+//    for (size_t i = 0; i < vertexArray.size(); i++)
+//        out += "vt 0.0 0.0\n";
+
+//    out += "\n";
+//    for (size_t i = 0; i < normalsArray.size(); i++)
+//        out += "vn " + std::to_string(normalsArray[i].x) + " " + std::to_string(normalsArray[i].y) + " " + std::to_string(normalsArray[i].z) + "\n";
+
+//    out += "\n";
+//    for (size_t i = 0; i < vertexArray.size(); i += 3)
+//        out += "f " + std::to_string(i + 0) + "/" + std::to_string(i + 0) + "/" + std::to_string(i + 0) + " " + std::to_string(i + 1) + "/" + std::to_string(i + 1) + "/" + std::to_string(i + 1) + " " + std::to_string(i + 2) + "/" + std::to_string(i + 2) + "/" + std::to_string(i + 2) + "\n";
+    for (size_t i = 0; i < vertexArray.size(); i += 3)
+        out += "f " + std::to_string(i + 1) + " " + std::to_string(i + 2) + " " + std::to_string(i + 3) + "\n";
+    return out;
 }
 
 

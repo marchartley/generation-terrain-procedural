@@ -3,7 +3,7 @@
 
 class VoxelGrid;
 
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 #include "TerrainGen/VoxelChunk.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include "DataStructure/Voxel.h"
@@ -63,8 +63,10 @@ public:
     bool contains(Vector3 v);
     bool contains(float x, float y, float z);
 
-//    void remeshAll();
+    virtual bool checkIsInGround(Vector3 position);
 
+//    void remeshAll();
+    void limitVoxelValues(float limitedValue);
 
     std::string toString();
     std::string toShortString();
@@ -123,8 +125,10 @@ public:
     int fluidSimRescale = 4;
 
     int getChunkSize() const { return this->chunkSize; }
-    Matrix3<float> getEnvironmentalDensities() { return this->environmentalDensities; }
-protected:
+    Matrix3<float>& getEnvironmentalDensities() { return this->environmentalDensities; }
+    void updateEnvironmentalDensities(float waterLevel);
+
+//protected:
     std::vector<std::shared_ptr<VoxelChunk>> chunks;
     float noise_shifting;
     int chunkSize = 20;

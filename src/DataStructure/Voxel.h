@@ -26,7 +26,7 @@ enum VOXEL_NEIGHBOR {
     TOP = 0, BOTTOM = 1, LEFT = 2, RIGHT = 3, FRONT = 4, BACK = 5
 };
 
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 //#include "Vertex.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include <memory>

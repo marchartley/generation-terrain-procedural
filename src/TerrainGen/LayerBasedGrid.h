@@ -6,7 +6,7 @@ class LayerBasedGrid;
 #include <tuple>
 
 #include "Graphics/Mesh.h"
-//#include "TerrainGen/Grid.h"
+//#include "TerrainGen/Heightmap.h"
 //#include "TerrainGen/VoxelChunk.h"
 #include "DataStructure/Voxel.h"
 #include <vector>
@@ -50,6 +50,8 @@ public:
 
     void cleanLayers(float minLayerHeight = 0.1f);
 
+    LayerBasedGrid *transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material);
+
     void add(ImplicitPatch* patch);
 
     Mesh getGeometry();
@@ -65,6 +67,7 @@ public:
 
     std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> transformationRules;
 
+    virtual bool checkIsInGround(Vector3 position);
 
     float getSizeX() { return this->layers.sizeX; }
     float getSizeY() { return this->layers.sizeY; }

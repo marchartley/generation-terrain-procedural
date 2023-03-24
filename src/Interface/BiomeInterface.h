@@ -9,7 +9,7 @@ class BiomeInterface;
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 #include "Interface/ActionInterface.h"
 #include "Karst/KarstHole.h"
 #include "Interface/HierarchicalListWidget.h"

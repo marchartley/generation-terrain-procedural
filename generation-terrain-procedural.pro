@@ -51,8 +51,8 @@ SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
-    src/Biomes/InstancesTree.cpp \
-    src/Biomes/ModelsTree.cpp \
+#    src/Biomes/InstancesTree.cpp \
+#    src/Biomes/ModelsTree.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/Tree.cpp \
@@ -115,7 +115,7 @@ SOURCES += \
         src/Karst/KarstHole.cpp \
         src/Karst/KarstHoleProfile.cpp \
         src/Karst/KarstPathsGeneration.cpp \
-        src/TerrainGen/Grid.cpp \
+    src/TerrainGen/Heightmap.cpp \
     src/TerrainGen/ImplicitPatch.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
     src/TerrainGen/TerrainModel.cpp \
@@ -131,6 +131,7 @@ SOURCES += \
         src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
         src/Utils/Globals.cpp \
+    src/Utils/PbmReader.cpp \
         src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
         src/Utils/Utils.cpp \
@@ -231,7 +232,7 @@ HEADERS += \
     src/Interface/VisitingCamera.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \
-    src/TerrainGen/Grid.h \
+    src/TerrainGen/Heightmap.h \
     src/TerrainGen/ImplicitPatch.h \
     src/TerrainGen/LayerBasedGrid.h \
     src/TerrainGen/TerrainModel.h \
@@ -249,6 +250,7 @@ HEADERS += \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
+    src/Utils/PbmReader.h \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \
     src/Utils/Utils.h \

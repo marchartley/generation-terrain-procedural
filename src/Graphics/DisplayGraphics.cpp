@@ -218,7 +218,10 @@ void Plotter::addImage(Matrix3<float> image, bool normalize)
 {
     Matrix3<Vector3> copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
-        copy[i] = Vector3(image[i], image[i], image[i]);
+        float val = image[i];
+//        if (i == 40400)
+//            int a = 0;
+        copy[i] = Vector3(val, val, val);
     }
     return this->addImage(copy, normalize);
 }

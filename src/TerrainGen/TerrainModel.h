@@ -43,11 +43,13 @@ public:
     void setScaling(float newScale) { this->scaling = Vector3(newScale, newScale, newScale); }
     void setTranslation(Vector3 newTranslation) { this->translation = newTranslation; }
 
+    virtual bool checkIsInGround(Vector3 position) = 0;
+
 
 //    int sizeX, sizeY, sizeZ;
     int _cachedHistoryIndex = -1;
-    int currentHistoryIndex = 0;
-    int _historyIndex = 0;
+    int currentHistoryIndex = -2;
+    int _historyIndex = -3;
 
 //    Vector3 dimensions;
     Vector3 scaling = Vector3(1.f, 1.f, 1.f);

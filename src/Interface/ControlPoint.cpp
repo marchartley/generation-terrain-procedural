@@ -327,6 +327,7 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
 {
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
     this->move(pos);
+    this->stillOnInitialState = true;
     this->prevPosition = pos;
     this->GrabberStateColor = ControlPoint::default_GrabberStateColor;
     if (!useManipFrame) {
@@ -493,7 +494,7 @@ void ControlPoint::updateSphere()
 
 void ControlPoint::display()
 {
-    if (this->state == HIDDEN) return;
+    if (this->state == HIDDEN || this->stillOnInitialState) return;
     else {
         GLboolean m_origin_blend, m_origin_depth, m_origin_cull;
         glGetBooleanv(GL_BLEND, &m_origin_blend);
@@ -801,6 +802,7 @@ void ControlPoint::move(Vector3 newPos)
 {
     this->setPosition(newPos.x, newPos.y, newPos.z);
     this->updateSphere();
+    this->stillOnInitialState = false;
 }
 
 

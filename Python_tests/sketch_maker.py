@@ -13,6 +13,8 @@ from matplotlib.widgets import Button
 import Vectors
 from Vectors import Vector2D, Vector3D, line_intersection
 
+from noise import perlin
+
 def clamp(x, mini, maxi):
     return mini if x < mini else maxi if x > maxi else x
 
@@ -267,7 +269,7 @@ def distanceMapFromSketches(islandSketch: SketchManagement) -> np.ndarray:
 def genAndSaveDistanceMap(islandSketch: SketchManagement):
     image = distanceMapFromSketches(islandSketch)
     image = image[:, :, :3]
-    image = 1 - np.clip(image * 5.0, 0, 1)
+    # image = 1 - np.clip(image * 5.0, 0, 1)
     plt.imsave("test.png", image)
 
 def splitProfileOnMarkers(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> List[Tuple[int, int, List[float]]]:
@@ -361,7 +363,7 @@ def main():
     sideViewAx.set_ylim(0, 1)
 
     # Represent the center of the map with an ellipse
-    topViewAx.add_patch(matplotlib.patches.Circle((0, 0), 0.1))
+    # topViewAx.add_patch(matplotlib.patches.Circle((0, 0), 0.1))
 
     # Add sketching for top island sketching
     islandSketches = SketchManagement(topViewAx)
@@ -411,12 +413,15 @@ def main():
     profileSketching.addSketch(line = LineBuilder1D(sideViewAx, .1, "blue"))
 
     # Testing part
-    def centeredCircle(radius) -> List[Vector2D]:
+    def centeredCircle(radius:float, randomness: float = 0.2) -> List[Vector2D]:
+        noise = perlin.SimplexNoise(10)
         points: List[Vector2D] = []
         nbPoints = 20
         for i in range(nbPoints + 1):
             angle = i * 2 * 3.141592 / nbPoints
-            points.append(Vector2D(math.cos(angle), math.sin(angle)) * radius)
+            vertexUnitPos = Vector2D(math.cos(angle), math.sin(angle))
+            noiseValue = noise.noise2(vertexUnitPos.x, vertexUnitPos.y) * randomness
+            points.append(vertexUnitPos * (radius * (1 - noiseValue)))
         return points
     randomCoralCurve = centeredCircle(0.5)
     islandSketches.lineBuilders[0].setCurve(randomCoralCurve)
@@ -437,7 +442,7 @@ def main():
     #  - Profile differs depending on "r" and "d" (island width, island-coral distance)
 
     updateSideViewMarkers()
-    genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
+    # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
     plt.show()
 
 

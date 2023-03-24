@@ -2,55 +2,98 @@
 	"implicitPatches": {
 		"blendingFactor": 2.0,
 		"composableA": {
-			"densityValue": -2.5,
-			"dimensions": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
+			"blendingFactor": 2.0,
+			"composableA": {
+				"densityValue": -2.5,
+				"dimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"index": 4,
+				"material": "WATER",
+				"mirrored": false,
+				"name": "Identity",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "None",
+				"sigmaValue": -1.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			"composableB": {
+				"densityValue": 1.5,
+				"dimensions": {
+					"x": 50.0,
+					"y": 50.0,
+					"z": 50.0
+				},
+				"index": 3,
+				"material": "ROCK",
+				"mirrored": false,
+				"name": "Sphere",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": -14.667691230773926,
+					"y": 45.70219421386719,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 5.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
 			},
 			"index": 2,
-			"material": "WATER",
 			"mirrored": false,
-			"name": "Identity",
+			"name": "Blend",
+			"operator": "Blend",
 			"optionalCurve": {
 				"closed": false,
 				"points": []
 			},
-			"position": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
-			"shape": "None",
-			"sigmaValue": -1.0,
-			"supportDimensions": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
-			"type": "primitive"
+			"positionalB": "ABOVE",
+			"type": "compose",
+			"useIntersection": false
 		},
 		"composableB": {
 			"densityValue": 1.5,
 			"dimensions": {
-				"x": 20.0,
-				"y": 20.0,
-				"z": 20.0
+				"x": 50.0,
+				"y": 50.0,
+				"z": 50.0
 			},
 			"index": 1,
 			"material": "ROCK",
 			"mirrored": false,
-			"name": "Block",
+			"name": "Sphere",
 			"optionalCurve": {
 				"closed": false,
 				"points": []
 			},
 			"position": {
-				"x": 3.3542661666870117,
-				"y": 19.640487670898438,
+				"x": 50.53489685058594,
+				"y": -20.916324615478516,
 				"z": 0.0
 			},
-			"shape": "Block",
+			"shape": "Sphere",
 			"sigmaValue": 5.0,
 			"supportDimensions": {
 				"x": 0.0,

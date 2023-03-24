@@ -7,11 +7,10 @@
 #include <vector>
 #include <map>
 
-class Mesh //: public std::enable_shared_from_this<Mesh>
+class Mesh
 {
 public:
     Mesh(std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
-//    Mesh(Shader shader, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
     Mesh(std::vector<Vector3> _vertexArray, std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
     Mesh(std::vector<float> _vertexArrayFloat, std::shared_ptr<Shader> shader = nullptr, bool isDisplayed = true, GLenum displayShape = GL_TRIANGLES);
     Mesh& fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
@@ -48,6 +47,7 @@ public:
 
     std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
 
+    std::string toOBJ();
     std::string toOFF();
     std::string toSTL();
 
@@ -92,8 +92,6 @@ public:
 
     GLuint vao;
     GLuint vbo[4];
-
-//    bool useModernOpenGL = true;
 };
 
 #endif // MESH_H

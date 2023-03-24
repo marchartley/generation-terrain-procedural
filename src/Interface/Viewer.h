@@ -28,7 +28,7 @@ enum DebugMeshesNames {
     SPACE_COLONI = 0b100000
 };
 
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include <QGLViewer/qglviewer.h>
@@ -61,6 +61,8 @@ Q_SIGNALS:
     void mouseMovedOnMap(Vector3 mouseWorldPosition, TerrainModel* model);
 
 public Q_SLOTS:
+    bool startRecording(std::string folderUsed = "");
+    bool stopRecording();
     bool startStopRecording();
 
     void setViewerMode(ViewerMode newMode) { this->viewerMode = newMode; update(); }

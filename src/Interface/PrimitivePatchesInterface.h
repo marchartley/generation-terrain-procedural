@@ -21,7 +21,7 @@ public:
     void replay(nlohmann::json action);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
-    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr);
 
     QLayout* createGUI();
 

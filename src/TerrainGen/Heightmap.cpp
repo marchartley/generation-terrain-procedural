@@ -1,6 +1,6 @@
 #include "Utils/Collisions.h"
 #include "Utils/Globals.h"
-#include "TerrainGen/Grid.h"
+#include "TerrainGen/Heightmap.h"
 
 #include "Utils/FastNoiseLit.h"
 #include "Utils/Utils.h"
@@ -50,6 +50,11 @@ float Heightmap::getMaxHeight()
     return this->heights.max(); // this->maxHeight; //this->heights.max();
 }
 
+bool Heightmap::checkIsInGround(Vector3 position)
+{
+    return this->getHeight(position.xy()) >= position.z;
+}
+
 
 // Greatly inspired by Sebastian Lague https://github.com/SebLague/Hydraulic-Erosion
 std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
@@ -87,6 +92,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
 
         Matrix3<Vector3> gradients = heights.gradient();
         Matrix3<float> precomputedHeights = heights;
+        float erosionDepositionBalance = 0.f;
 
         for (int lifetime = 0; lifetime < maxDropletLifetime; lifetime++) {
             trace.push_back(pos);
@@ -123,7 +129,8 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                 // Add the sediment to the four nodes of the current cell using bilinear interpolation
                 // Deposition is not distributed over a radius (like erosion) so that it can fill small pits
                 precomputedHeights.raiseErrorOnBadCoord = false;
-                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor())) * amountToDeposit * 1.f;
+                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
+                brush = (brush / brush.sum()) * amountToDeposit;// * amountToDeposit * 1.f;
                 for (int x = 0; x < brush.sizeX; x++) {
                     for (int y = 0; y < brush.sizeY; y++) {
                         Vector3 offset(x - erosionRadius, y - erosionRadius);
@@ -131,12 +138,14 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                         precomputedHeights.at(pos + offset) += brush.at(x, y);
                     }
                 }
+                erosionDepositionBalance += brush.sum();
 
             } else {
                 // Erode a fraction of the droplet's current carry capacity.
                 // Clamp the erosion to the change in height so that it doesn't dig a hole in the terrain behind the droplet
                 float amountToErode = std::min ((sedimentCapacity - sediment) * erodeSpeed, -deltaHeight);
-                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor())) * amountToErode * 1.f;
+                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
+                brush = (brush / brush.sum()) * amountToErode;
                 // Use erosion brush to erode from all nodes inside the droplet's erosion radius
                 for (int x = 0; x < brush.sizeX; x++) {
                     for (int y = 0; y < brush.sizeY; y++) {
@@ -147,6 +156,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                         sediment += deltaSediment;
                     }
                 }
+                erosionDepositionBalance -= brush.sum();
             }
 
             // Update droplet's speed and water content
@@ -158,11 +168,12 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
 //            h = std::min(std::max(h, 0.f), 1.f);
 //        std::cout << (pos - initialPos).norm() << " dist" << std::endl;
         traces.push_back(trace);
+        std::cout << erosionDepositionBalance << std::endl;
     }
     this->heights *= currentMaxHeight;
     for (size_t i = 0; i < traces.size(); i++) {
         for (size_t j = 0; j < traces[i].size(); j++) {
-            traces[i][j].z = heights.interpolate(traces[i][j]) + .5f;
+            traces[i][j].z = heights.interpolate(traces[i][j]) + 1.f;
         }
     }
     return traces;
@@ -416,6 +427,10 @@ void Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
                 if (voxels.at(x, y, z) > 0.f) {
+//                    float current = voxels.at(x, y, z); // Is > 0.f
+//                    float above = voxels.at(x, y, z + 1); // can be == 0.f
+//                    if (above == 0.f) this->heights.at(x, y) = z;
+//                    else this->heights.at(x, y) = z + std::min(current / above, above / current);
                     this->heights.at(x, y) = z;
                     break;
                 }
@@ -437,15 +452,40 @@ void Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
 
 void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
 {
-    int imgW, imgH, nbChannels;
-    unsigned char *data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
-    if (data == NULL)
-    {
-        std::cerr << "Error : Impossible to load " << heightmap_filename << "\n";
-        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-        exit (-1);
-        return;
+    float *data = nullptr;
+    int imgW = 0, imgH = 0, nbChannels;
+    if (endsWith(heightmap_filename, "pgm")) {
+        std::ifstream file(heightmap_filename);
+        std::string line;
+        std::getline(file, line);
+        if (startsWith(line, "P2")) {
+            do { std::getline(file, line); } while (startsWith(line, "#"));
+            imgW = std::stoi(line.substr(0, line.find(" ")));
+            imgH = std::stoi(line.substr(line.find(" ") + 1));
+            std::getline(file, line);
+            float maxVal = std::stof(line);
+            data = new float[imgW * imgH];
+            int i = 0;
+            while (std::getline(file, line)) {
+                data[i] = 255.f * std::stof(line) / maxVal;
+                i++;
+            }
+        }
+
+    } else {
+        unsigned char *c_data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
+        if (c_data == NULL)
+        {
+            std::cerr << "Error : Impossible to load " << heightmap_filename << "\n";
+            std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
+            std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
+            exit (-1);
+            return;
+        }
+        data = new float[imgW * imgH];
+        for (int i = 0; i < imgW * imgH; i++)
+            data[i] = c_data[i];
+        free(c_data);
     }
     if (nx == -1)
         nx = imgW;
@@ -457,12 +497,14 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
     Matrix3<float> map(imgW, imgH);
     for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
-            float value = (float)data[x + y * imgW]; // [(imgW - x) + y * imgW];
+            int index = (imgW - (x + 1)) + y * imgW;
+            float value = data[index];
             map.at(x, y) = value;
 //            max = std::max(max, value);
         }
     }
-    stbi_image_free(data);
+    if (data != nullptr)
+        delete[] data;//stbi_image_free(data);
 
     map = map.resize(nx, ny, 1);
     map *= (heightFactor / 255.f);
