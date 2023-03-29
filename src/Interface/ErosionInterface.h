@@ -25,6 +25,8 @@ public:
 
     QLayout* createGUI();
 
+    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER};
+
 public Q_SLOTS:
     void show();
     void hide();
@@ -54,7 +56,7 @@ protected:
 
     float erosionSize = 8.f;
     float erosionStrength = .35f;
-    int erosionQtt = 10;
+    int erosionQtt = 1;
     float rockRandomness = .1f;
 
     float gravity = .981f;
@@ -81,6 +83,8 @@ protected:
     float criticalShearStress = .8f;
 
     int numberOfIterations = 1;
+
+    float initialCapacity = .5f;
 
     UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP;
 

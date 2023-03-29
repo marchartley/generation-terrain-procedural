@@ -458,12 +458,12 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
     int stackIndex = 0;
     for (auto& [mat, height] : initialColumn) {
         if (currentHeight > endZ) break;
-        if (currentHeight + height >= startZ) {
+        if (currentHeight + height >= startZ && mat != material) {
             if (currentHeight < startZ && currentHeight + height > endZ) {
                 // Cut the layer in 3 : before and after and middle (with material change)
                 column[stackIndex].second = startZ - currentHeight;
-                column.insert(column.begin() + stackIndex, {material, endZ - startZ});
-                column.insert(column.begin() + stackIndex + 1, {column[stackIndex].first, (currentHeight + height - endZ)});
+                column.insert(column.begin() + stackIndex + 1, {material, endZ - startZ});
+                column.insert(column.begin() + stackIndex + 2, {column[stackIndex].first, (currentHeight + height - endZ)});
                 stackIndex += 2; // We added 2 layers
             } else if (currentHeight >= startZ && currentHeight + height <= endZ) {
                 // The whole layer material is changed
@@ -471,11 +471,11 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
             } else if (currentHeight + height < endZ) {
                 // The top part of the layer is changed
                 column[stackIndex].second = startZ - currentHeight;
-                column.insert(column.begin() + stackIndex, {material, (currentHeight + height) - startZ});
+                column.insert(column.begin() + stackIndex + 1, {material, (currentHeight + height) - startZ});
                 stackIndex ++;
             } else {
                 // The bottom part of the layer is changed
-                column.insert(column.begin() + stackIndex, {column[stackIndex].first, endZ});
+                column.insert(column.begin() + stackIndex + 1, {column[stackIndex].first, endZ});
                 column[stackIndex].second = endZ - currentHeight;
                 stackIndex++;
             }
@@ -483,6 +483,13 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
         currentHeight += height;
         stackIndex ++;
     }
+
+//    for (auto& [mat, height] : initialColumn)
+//        std::cout << height << " > ";
+//    std::cout << "  ->  ";
+//    for (auto& [mat, height] : column)
+//        std::cout << height << " > ";
+//    std::cout << std::endl;
     return this;
 }
 /*

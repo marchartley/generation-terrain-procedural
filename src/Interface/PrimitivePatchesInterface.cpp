@@ -3,7 +3,7 @@
 #include "Interface/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"
-#include "Utils/stb_image.h"
+//#include "Utils/stb_image.h"
 
 PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     : ActionInterface("PrimitivePatchesInterface", parent)

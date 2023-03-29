@@ -53,7 +53,8 @@ public:
                                                      Matrix3<Vector3> waterFlow = Matrix3<Vector3>(),
                                                      Matrix3<Vector3> airFlow = Matrix3<Vector3>(),
                                                      DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
-                                                     Matrix3<float> densityMap = Matrix3<float>()
+                                                     Matrix3<float> densityMap = Matrix3<float>(),
+                                                     float initialCapacity = 0.f
                                                      );
 
     std::tuple<std::vector<BSpline>, int, int> ApplyOnAnyTerrain(TerrainModel* terrain,
@@ -88,8 +89,8 @@ public:
                                                                   Matrix3<Vector3> waterFlow = Matrix3<Vector3>(),
                                                                   Matrix3<Vector3> airFlow = Matrix3<Vector3>(),
                                                                  DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
-                                                                 Matrix3<float> densityMap = Matrix3<float>()
-                                                                  );
+                                                                 Matrix3<float> densityMap = Matrix3<float>(),
+                                                                 float initialCapacity = 0.f);
 
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);

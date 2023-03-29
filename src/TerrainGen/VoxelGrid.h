@@ -128,6 +128,8 @@ public:
     Matrix3<float>& getEnvironmentalDensities() { return this->environmentalDensities; }
     void updateEnvironmentalDensities(float waterLevel);
 
+    void saveHeightmap(std::string heightmap_filename);
+
 //protected:
     std::vector<std::shared_ptr<VoxelChunk>> chunks;
     float noise_shifting;

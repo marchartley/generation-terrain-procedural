@@ -82,7 +82,7 @@ void TerrainSavingInterface::saveTerrainGeometry(std::string filename)
     auto start = std::chrono::system_clock::now();
     auto end = std::chrono::system_clock::now();
     if (this->saveHeightmap) {
-    start = std::chrono::system_clock::now();
+        start = std::chrono::system_clock::now();
         m = this->heightmap->getGeometry();
         file.open(filename + "-heightmap" + ".stl");
         file << m.toSTL();
@@ -116,4 +116,38 @@ void TerrainSavingInterface::saveTerrainGeometry(std::string filename)
 
     if (verbose)
         std::cout << "Done." << std::endl;
+}
+
+void TerrainSavingInterface::quickSaveAt(std::string folderName, std::string filePrefix, bool heightmap, bool voxels, bool layers)
+{
+    std::ofstream file;
+    Mesh m;
+    auto start = std::chrono::system_clock::now();
+    auto end = std::chrono::system_clock::now();
+    if (heightmap) {
+        start = std::chrono::system_clock::now();
+        m = this->heightmap->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-heightmap" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
+
+    if (voxels) {
+        start = std::chrono::system_clock::now();
+        m = this->voxelGrid->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-voxels" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
+
+    if (layers) {
+        start = std::chrono::system_clock::now();
+        m = this->layerGrid->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-layers" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
 }

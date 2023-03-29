@@ -13,7 +13,7 @@ class TerrainGenerationInterface : public ActionInterface
 public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
-    void display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles);
+    void display();
     void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting = 0.0);
@@ -52,6 +52,11 @@ public:
     std::map<std::string, int> normalTexturesIndex;
     std::map<std::string, int> displacementTexturesIndex;
 
+    void setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles);
+    MapMode mapMode = MapMode::VOXEL_MODE;
+    SmoothingAlgorithm smoothingAlgorithm = SmoothingAlgorithm::MARCHING_CUBES;
+    bool displayParticles = false;
+
 protected:
     Mesh marchingCubeMesh;
     GLuint dataFieldTex;
@@ -61,6 +66,7 @@ protected:
     GLuint biomesAndDensitiesTex;
 
     Mesh layersMesh;
+    Mesh implicitMesh;
 
     GLuint allBiomesColorTextures, allBiomesNormalTextures, allBiomesDisplacementTextures;
 

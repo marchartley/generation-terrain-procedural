@@ -69,11 +69,12 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
-        this->viewer->grid = this->terrainGenerationInterface->heightmap;
+        this->viewer->heightmap = this->terrainGenerationInterface->heightmap;
         this->viewer->layerGrid = this->terrainGenerationInterface->layerGrid;
+        this->viewer->implicitTerrain = this->terrainGenerationInterface->implicitTerrain;
 
         for (auto& actionInterface : this->actionInterfaces) {
-            actionInterface.second->affectTerrains(viewer->grid, viewer->voxelGrid, viewer->layerGrid);
+            actionInterface.second->affectTerrains(viewer->heightmap, viewer->voxelGrid, viewer->layerGrid, viewer->implicitTerrain);
             actionInterface.second->reloadShaders();
 
             QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
@@ -94,13 +95,11 @@ ViewerInterface::ViewerInterface() {
             }
         }
 
-//        this->biomeInterface->affectHeightmap(this->terrainGenerationInterface->heightmap);
         if (terrainGenerationInterface->biomeGenerationNeeded) {
             this->biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
             this->biomeInterface->generateBiomes();
-//            this->biomeInterface->randomize();
         }
-        viewer->setSceneCenter(viewer->voxelGrid->getDimensions()/* * viewer->voxelGrid->getBlockSize()*/ / 2.f);
+        viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
         QObject::connect(this->biomeInterface.get(), &BiomeInterface::terrainViewModified, this->terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
     });
@@ -110,25 +109,6 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
     QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
     QObject::connect(this->tunnelInterface.get(), &TunnelInterface::tunnelCreated, this->biomeInterface.get(), &BiomeInterface::addTunnel);
-//    QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::karstPathUpdated,
-//                     this, [&](){ this->viewer->update(); });
-//    QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::karstPathUpdated,
-//                     this, [&](){ this->viewer->update(); });
-//    QObject::connect(this->faultSlip.get(), &FaultSlipInterface::faultSlipApplied,
-//                     this, [&](){ this->viewer->update(); });
-//    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
-//                     this->tunnelInterface.get(), &TunnelInterface::mouseClickInWorldEvent);
-//    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
-//                     this->manualEditionInterface.get(), &ManualEditionInterface::mouseClickedOnMapEvent);
-//    QObject::connect(this->viewer, &Viewer::mouseMovedOnMap,
-//                     this->manualEditionInterface.get(), &ManualEditionInterface::setPosition);
-//    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
-//                     this->biomeInterface.get(), &BiomeInterface::mouseClickedOnMapEvent);
-//    QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, this->biomeInterface.get(), &BiomeInterface::mouseDoubleClickOnMapEvent);
-//    QObject::connect(this->viewer, &Viewer::mouseClickOnMap,
-//                     this->patchesInterface.get(), &PrimitivePatchesInterface::mouseClickedOnMapEvent);
-//    QObject::connect(this->viewer, &Viewer::mouseMovedOnMap,
-//                     this->patchesInterface.get(), &PrimitivePatchesInterface::mouseMovedOnMap);
 
     QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
         this->setFocus(Qt::OtherFocusReason);
@@ -192,11 +172,13 @@ void ViewerInterface::setupUi()
         {nullptr,           "open_button.png",                  "Open an existing map",             fileMenu,       [=]() { this->openMapUI(); }},
         {nullptr,           "save_button.png",                  "Save the current map",             fileMenu,       [=]() { this->saveMapUI(); }},
         {nullptr,           "recording_button.png",             "Start / stop recording the screen",recordingMenu,  [=]() {this->viewer->startStopRecording(); }},
+        {nullptr,           "snapshot.png",                     "Take snapshot of screen",          recordingMenu,  [=]() {this->viewer->screenshot(); }},
         {nullptr,           "display-marching-cubes_button.png","Use the Marching Cubes algorithm", viewMenu,       [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES); } },
         {nullptr,           "display-voxels_button.png",        "Use raw voxels",                   viewMenu,       [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::NONE); } },
         {nullptr,           "heightmap_button.png",             "Display using heightmap structure",modelMenu,      [=]() { this->viewer->setMapMode(MapMode::GRID_MODE); } },
         {nullptr,           "layerbased_button.png",            "Display using layered structure",  modelMenu,      [=]() { this->viewer->setMapMode(MapMode::LAYER_MODE); } },
         {nullptr,           "voxelgrid_button.png",             "Display using voxels structure",   modelMenu,      [=]() { this->viewer->setMapMode(MapMode::VOXEL_MODE);} },
+        {nullptr,           "implicit_button.png",              "Display using implicit structure", modelMenu,      [=]() { this->viewer->setMapMode(MapMode::IMPLICIT_MODE);} },
         {nullptr,           "no_display.png",                   "Hide map",                         viewMenu,       [=]() { this->viewer->setViewerMode(NO_DISPLAY);} },
         {nullptr,           "wire_mode.png",                    "Display wireframe",                viewMenu,       [=]() { this->viewer->setViewerMode(WIRE_MODE); } },
         {nullptr,           "fill_mode.png",                    "Display solid",                    viewMenu,       [=]() { this->viewer->setViewerMode(FILL_MODE); } },
@@ -253,6 +235,7 @@ void ViewerInterface::setupUi()
 
     this->displayModeLayout = new QHBoxLayout;
     this->displayModeBox = new Spoiler("Affichage");
+
 //    this->LoDChooserLayout = new QHBoxLayout;
     this->LoDChooserBox = new Spoiler("Niveau de détail");
     this->mapSliceSliderX = new RangeSlider(Qt::Orientation::Horizontal, 0, 1, 0.01f);
@@ -311,6 +294,16 @@ void ViewerInterface::setupUi()
 
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
     QVBoxLayout* displayOptionLayout = new QVBoxLayout();
+
+    for (int i = 0; i < 4; i++) {
+        QPushButton* viewerSetupExperimental = new QPushButton("Setup view " + QString::fromStdString(std::to_string(i)));
+        QPushButton* viewerSetupExperimental_save = new QPushButton("Save");
+        std::string associatedFilename = "experiments_state" + std::to_string(i) + ".xml";
+        QObject::connect(viewerSetupExperimental, &QPushButton::pressed, this, [=]() { this->viewer->setupViewFromFile(associatedFilename); });
+        QObject::connect(viewerSetupExperimental_save, &QPushButton::pressed, this, [=]() { this->viewer->saveViewToFile(associatedFilename); });
+
+        displayOptionLayout->addWidget(createHorizontalGroup({viewerSetupExperimental, viewerSetupExperimental_save}));
+    }
     displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
                                                            createHorizontalGroup({

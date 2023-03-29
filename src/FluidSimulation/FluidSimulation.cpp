@@ -30,6 +30,7 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, floa
 
 void FluidSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
+    std::cout << sizeX << " " << sizeY << " " << sizeZ << std::endl;
     this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {

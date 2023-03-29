@@ -1,5 +1,5 @@
 #include "DataStructure/Matrix3.h"
-#include "Utils/stb_image.h"
+//#include "Utils/stb_image.h"
 
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl() {
