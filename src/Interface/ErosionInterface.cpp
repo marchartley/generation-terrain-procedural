@@ -28,27 +28,32 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
 
 
-    bool fromSky = true;
-//    bool fromSky = false;
-//    bool fromSide = true;
-    bool fromSide = false;
+    PARTICLE_INITIAL_LOCATION loc = SKY;
 
     if (initialPositionsAndDirections.empty()) {
-        initialPositionsAndDirections = std::vector<std::vector<std::pair<Vector3, Vector3>>>(100, std::vector<std::pair<Vector3, Vector3>>(1000));
-        for (int i = 0; i < initialPositionsAndDirections.size(); i++) {
-            for (int j = 0; j < initialPositionsAndDirections[i].size(); j++) {
+        initialPositionsAndDirections = std::vector<std::vector<std::pair<Vector3, Vector3>>>(500, std::vector<std::pair<Vector3, Vector3>>(1000));
+        for (size_t i = 0; i < initialPositionsAndDirections.size(); i++) {
+            for (size_t j = 0; j < initialPositionsAndDirections[i].size(); j++) {
                 Vector3 position;
                 Vector3 direction;
-                if (fromSky) {
+                if (loc == SKY) {
                     position = Vector3::random(voxelGrid->getDimensions().xy()) + Vector3(0, 0, voxelGrid->getSizeZ());
                     direction = Vector3(0, 0, -1);
-                } else if (fromSide) {
+                } else if (loc == RIVER) {
 //                    position = Vector3(voxelGrid->getSizeX(), 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 8), Vector3(0, voxelGrid->getSizeY()*.6, voxelGrid->getSizeZ()));
 //                    direction = Vector3(-1, 0, 0) + Vector3::random(.2f);
                     position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 30), Vector3(0, voxelGrid->getSizeY()*.6, 40));
-                    direction = Vector3(1, 0, 0) + Vector3::random(.2f);
+                    direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
 //                    position = Vector3(0, voxelGrid->getSizeY() * .5f, voxelGrid->getSizeZ()) + Vector3::random() * 5.f;
 //                    direction = Vector3(1, 0, 0) + Vector3::random(.2f);
+                } else if (loc == RIVER2) {
+                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .1, 30), Vector3(0, voxelGrid->getSizeY()*.3, 40));
+                    direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
+                } else if (loc == UNDERWATER) {
+                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 10), Vector3(0, voxelGrid->getSizeY()*.6, 20));
+                    direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
+                } else if (loc == RANDOM) {
+
                 }
                 initialPositionsAndDirections[i][j] = {position, direction};
             }
@@ -98,10 +103,11 @@ void ErosionInterface::throwFromSky()
     for (int x = 0; x < layersHeightmap.sizeX; x++)
         for (int y = 0; y < layersHeightmap.sizeY; y++)
             layersHeightmap.at(x, y) = layerGrid->getHeight(x, y) - 1;
-    auto implicitHeightmap = ImplicitPrimitive::fromHeightmap(layersHeightmap, "");
-    implicitHeightmap->material = TerrainTypes::DIRT;
-    implicitHeightmap->position = Vector3();
-    erod.implicitTerrain = implicitHeightmap;
+//    auto implicitHeightmap = ImplicitPrimitive::fromHeightmap(layersHeightmap, "");
+//    implicitHeightmap->material = TerrainTypes::DIRT;
+//    implicitHeightmap->position = Vector3();
+//    erod.implicitTerrain = implicitHeightmap;
+    erod.implicitTerrain = this->implicitTerrain;
     erod.layerBasedGrid = layerGrid.get();
 
 
@@ -134,7 +140,7 @@ void ErosionInterface::throwFromSky()
                                                                     maxCapacityFactor,
                                                                     erosionFactor,
                                                                     depositFactor,
-                                                                    matterDensity + .1f,
+                                                                    matterDensity, // + .1f,
                                                                     materialImpact,
                                                                     airFlowfieldRotation,
                                                                     waterFlowfieldRotation,
@@ -150,7 +156,8 @@ void ErosionInterface::throwFromSky()
                                                                     waterFlowfield,
                                                                     airFlowfield,
                                                                     densityUsed,
-                                                                    densityField
+                                                                    densityField,
+                                                                    initialCapacity
                                                                     );
 
         totalPos += nbPos;
@@ -167,16 +174,16 @@ void ErosionInterface::throwFromSky()
         }
         this->rocksPathSuccess.fromArray(asOneVector);
         if (this->applyOn == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN) {
-            layerGrid->reset();
-            layerGrid->add(erod.implicitTerrain);
+//            layerGrid->reset();
+//            layerGrid->add(erod.implicitTerrain);
     //        heightmap->fromLayerGrid(*layerGrid);
         }
         Q_EMIT this->updated();
     }
     auto endingTime = std::chrono::system_clock::now();
-    float totalTime = std::chrono::duration<float>(endingTime - startingTime).count();
-    std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "s  (" << totalPos/1000000 << "M pos, " << totalErosions/1000000 << "M erosions)" << std::endl;
-    std::cout << "(" << sumParticleSimulationTime << "s for particle simulation, " << sumTerrainModifTime << "s for applying changes, " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime) << "s for the display)" << std::endl;
+    float totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startingTime).count();
+    std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "ms  (" << totalPos/1000 << "k pos, " << totalErosions/1000 << "k erosions)" << std::endl;
+    std::cout << "(" << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime) << "ms for the display) => " << (sumParticleSimulationTime + sumTerrainModifTime) << "ms for algo." << std::endl;
 }
 void ErosionInterface::throwFromCam()
 {
@@ -289,13 +296,15 @@ void ErosionInterface::testManyManyErosionParameters()
 {
     srand(1);
 
-    UnderwaterErosion::EROSION_APPLIED terrainType = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP; // 0 = voxels, 1 = heightmap, 2 = implicit, ...
+    UnderwaterErosion::EROSION_APPLIED terrainType = this->applyOn; //UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP; // 0 = voxels, 1 = heightmap, 2 = implicit, ...
     if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS)
         viewer->setMapMode(MapMode::VOXEL_MODE);
     else if (terrainType == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP)
         viewer->setMapMode(MapMode::GRID_MODE);
-    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN)
+    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN)
         viewer->setMapMode(MapMode::LAYER_MODE);
+    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN)
+        viewer->setMapMode(MapMode::IMPLICIT_MODE);
     srand(43);
 
     TerrainGenerationInterface* terrainInterface = static_cast<TerrainGenerationInterface*>(this->viewer->interfaces["terrainGenerationInterface"].get());
@@ -304,9 +313,9 @@ void ErosionInterface::testManyManyErosionParameters()
     Heightmap initialHeightmap = *heightmap;
     LayerBasedGrid initialLayerGrid = *layerGrid;
 
-    this->viewer->restoreFromFile("experiments_state2.xml");
-    this->viewer->setStateFileName("experiments_state2.xml");
-    this->viewer->saveStateToFile();
+//    this->viewer->restoreFromFile("experiments_state2.xml");
+//    this->viewer->setStateFileName("experiments_state2.xml");
+//    this->viewer->saveStateToFile();
 
     Vector3 cameraPosition = Vector3(this->viewer->camera()->position());
     Vector3 cameraDirection = Vector3(this->viewer->camera()->viewDirection());
@@ -406,14 +415,15 @@ void ErosionInterface::testManyManyErosionParameters()
 
     std::vector<std::vector<std::string>> testedVariables = {
         { "particleSize" },
-        { "strength" },
-        { "erosionFactor" },
-        { "depositFactor" },
-        { "criticalShearStress" },
-        { "shearingStressConstantK" },
-        { "nbParticles" },
+//        { "strength" },
+//        { "erosionFactor" },
+//        { "criticalShearStress" },
+//        { "shearingStressConstantK" },
+//        { "nbParticles" },
         { "maxCapacityFactor" },
-        { "waterLevel" }
+        { "matterDensity" },
+        { "depositFactor" },
+//        { "waterLevel" }
     };
 
     int stopAfterStep = 11; // Set to -1 for infinite tries
@@ -512,20 +522,10 @@ void ErosionInterface::testManyManyErosionParameters()
                             variables["erosionPowerValue"],
                             variables["criticalShearStress"],
                             this->initialPositionsAndDirections[iteration % (initialPositionsAndDirections.size())],
-//                            this->computeFlowfieldFunction()
                             this->flowfieldUsed,
                             waterFlowfield,
                             airFlowfield
                             );
-    //            std::vector<Vector3> asOneVector;
-    //            for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
-    //                auto points = lastRocksLaunched[i].getPath(10);
-    //                for (size_t j = 0; j < points.size() - 1; j++) {
-    //                    asOneVector.push_back(points[j]);
-    //                    asOneVector.push_back(points[j + 1]);
-    //                }
-    //            }
-    //            this->rocksPathSuccess.fromArray(asOneVector);
 
                 totalPos += nbPos;
                 totalErosions += nbErosions;
@@ -533,7 +533,7 @@ void ErosionInterface::testManyManyErosionParameters()
                 sumTerrainModifTime += terrainModifTime;
 //                *heightmap = *erod.heightmap;
 
-                if (iteration % 5 == 0 && false) {
+                if (iteration % 5 == 0) {
                     auto startMesh = std::chrono::system_clock::now();
                     if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS) {
                         voxelGrid->saveMap(folderName + "voxels/terrain_" + std::to_string(iteration) + ".data");
@@ -550,23 +550,23 @@ void ErosionInterface::testManyManyErosionParameters()
                         geomFile.close();
                     }
                     auto endMesh = std::chrono::system_clock::now();
-                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
-                    for (const auto& path : lastRocksLaunched) {
-                        for (const auto& p : path.points) {
-                            particleFile << p.x << " " << p.y << " " << p.z << " ";
-                        }
-                        particleFile << std::endl;
-                    }
-                    particleFile.close();
-                    totalMeshingTime += std::chrono::duration<float>(endMesh - startMesh).count();
+//                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
+//                    for (const auto& path : lastRocksLaunched) {
+//                        for (const auto& p : path.points) {
+//                            particleFile << p.x << " " << p.y << " " << p.z << " ";
+//                        }
+//                        particleFile << std::endl;
+//                    }
+//                    particleFile.close();
+                    totalMeshingTime += std::chrono::duration_cast<std::chrono::milliseconds>(endMesh - startMesh).count();
                 }
                 Q_EMIT this->updated();
                 qApp->processEvents();
             }
             auto endingTime = std::chrono::system_clock::now();
-            float totalTime = std::chrono::duration<float>(endingTime - startingTime).count();
-            std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "s  (" << totalPos/1000000 << "M pos, " << totalErosions/1000000 << "M erosions)" << std::endl;
-            std::cout << "(" << sumParticleSimulationTime << "s for particle simulation, " << sumTerrainModifTime << "s for applying changes, " << totalMeshingTime << "s for meshing and " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime + totalMeshingTime) << "s for the rest)" << std::endl;
+            float totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startingTime).count();
+            std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "ms  (" << totalPos/1000 << "k pos, " << totalErosions/1000 << "k erosions)" << std::endl;
+            std::cout << "(" << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalMeshingTime << "ms for meshing and " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime + totalMeshingTime) << "ms for the rest)" << std::endl;
 
             std::string parametersToCSV = "";
             for (const auto& param : params)
@@ -689,7 +689,9 @@ QLayout *ErosionInterface::createGUI()
     FancySlider* erosionPowerValueSlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
     FancySlider* criticalShearStressSlider = new FancySlider(Qt::Horizontal, 0.f, 5.f, .1f);
 
-    FancySlider* iterationSlider = new FancySlider(Qt::Orientation::Horizontal, 1.f, 100.f);
+    FancySlider* iterationSlider = new FancySlider(Qt::Orientation::Horizontal, 1.f, 500.f);
+
+    FancySlider* initialCapacitySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
 
     QPushButton* confirmButton = new QPushButton("Envoyer");
     QPushButton* confirmFromCamButton = new QPushButton("Camera");
@@ -740,7 +742,8 @@ QLayout *ErosionInterface::createGUI()
                                                            {"ShearConstantK", shearingStressConstantKSlider},
                                                            {"ShearRatePower", shearingRatePowerSlider},
                                                            {"ErosionPower", erosionPowerValueSlider},
-                                                           {"Critical shear stress", criticalShearStressSlider}
+                                                           {"Critical shear stress", criticalShearStressSlider},
+                                                           {"Initial capacity", initialCapacitySlider},
                                                        }));
     erosionLayout->addWidget(createVerticalGroup({
                                                      confirmButton,
@@ -795,6 +798,7 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(shearingRatePowerSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->shearingRatePower = newVal; });
     QObject::connect(erosionPowerValueSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionPowerValue = newVal; });
     QObject::connect(criticalShearStressSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->criticalShearStress = newVal; });
+    QObject::connect(initialCapacitySlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->initialCapacity = newVal; });
 
     QObject::connect(confirmButton, &QPushButton::pressed, this, &ErosionInterface::throwFromSide);
     QObject::connect(confirmFromCamButton, &QPushButton::pressed, this, &ErosionInterface::throwFromCam);
@@ -844,6 +848,7 @@ QLayout *ErosionInterface::createGUI()
     shearingRatePowerSlider->setfValue(this->shearingRatePower);
     erosionPowerValueSlider->setfValue(this->erosionPowerValue);
     criticalShearStressSlider->setfValue(this->criticalShearStress);
+    initialCapacitySlider->setfValue(this->initialCapacity);
 
     displayTrajectoriesButton->setChecked(this->displayTrajectories);
 

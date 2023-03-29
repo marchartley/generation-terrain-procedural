@@ -5,9 +5,10 @@ class Viewer;
 
 
 enum MapMode {
-    GRID_MODE  = 0b001,
-    VOXEL_MODE = 0b010,
-    LAYER_MODE = 0b100,
+    GRID_MODE       = 0b0001,
+    VOXEL_MODE      = 0b0010,
+    LAYER_MODE      = 0b0100,
+    IMPLICIT_MODE   = 0b1000
 };
 enum ViewerMode {
     FILL_MODE  = 0b001,
@@ -79,6 +80,11 @@ public Q_SLOTS:
     void drawingProcess();
     void reloadAllShaders();
 
+    void setupViewFromFile(std::string filename);
+    void saveViewToFile(std::string filename);
+
+    void screenshot();
+
 //protected:
 public:
     virtual void init();
@@ -104,9 +110,10 @@ public:
     SmoothingAlgorithm algorithm = MARCHING_CUBES;
 
 //private:
-    std::shared_ptr<Heightmap> grid;
+    std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<LayerBasedGrid> layerGrid;
+    ImplicitPatch* implicitTerrain;
     bool display_vertices = true;
     qglviewer::Vec selectedPoint, orig, dir;
 
@@ -131,6 +138,7 @@ public:
 
     PositionalLight light;
 
+    std::string main_screenshotFolder;
     std::string screenshotFolder;
     bool isTakingScreenshots = false;
     int screenshotIndex = 0;

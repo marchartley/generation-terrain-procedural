@@ -28,5 +28,6 @@
         <file>src/assets/amplification_instances.png</file>
         <file>src/assets/feature_primitive_button.png</file>
         <file>src/assets/save_geometry.png</file>
+        <file>src/assets/snapshot.png</file>
     </qresource>
 </RCC>

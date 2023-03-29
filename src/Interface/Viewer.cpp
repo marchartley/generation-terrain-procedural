@@ -1,3 +1,4 @@
+#include "Interface/TerrainSavingInterface.h"
 #include "Utils/Globals.h"
 #include "Interface/Viewer.h"
 
@@ -31,7 +32,7 @@ Viewer::Viewer(QWidget *parent): Viewer(
 Viewer::Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid,
                std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
                ViewerMode mode, QWidget *parent)
-    : QGLViewer(parent), viewerMode(mode), mapMode(map), grid(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
+    : QGLViewer(parent), viewerMode(mode), mapMode(map), heightmap(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
 {
     if (parent != nullptr)
         parent->installEventFilter(this);
@@ -120,7 +121,8 @@ void Viewer::init() {
 
 
 #ifdef _WIN32
-    this->screenshotFolder = "screenshots/";
+    this->main_screenshotFolder = "screenshots/";
+    this->screenshotFolder = main_screenshotFolder;
     this->mapSavingFolder = "saved_maps/";
 #elif linux
     this->screenshotFolder = "screenshots/";
@@ -238,9 +240,11 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     if (this->mapMode == VOXEL_MODE) {
         return this->voxelGrid.get();
     } else if (this->mapMode == GRID_MODE) {
-        return this->grid.get();
+        return this->heightmap.get();
     } else if (this->mapMode == LAYER_MODE) {
         return this->layerGrid.get();
+    } else if (this->mapMode == IMPLICIT_MODE) {
+        return this->implicitTerrain;
     }
     return nullptr;
 }
@@ -309,7 +313,8 @@ void Viewer::drawingProcess() {
     current_frame ++;
     if (this->interfaces.count("terrainGenerationInterface")) {
         auto start = std::chrono::high_resolution_clock::now();
-        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->display(this->mapMode, this->algorithm, this->displayParticles);
+        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
+        this->interfaces["terrainGenerationInterface"]->display();
         auto end = std::chrono::high_resolution_clock::now();
         interfacesTimings[this->interfaces["terrainGenerationInterface"]] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
@@ -374,6 +379,39 @@ void Viewer::reloadAllShaders()
     }
 }
 
+void Viewer::setupViewFromFile(std::string filename)
+{
+//    std::cout << "Using view from file " << filename << std::endl;
+    this->setStateFileName(QString::fromStdString(filename));
+    this->restoreStateFromFile();
+    this->setStateFileName("");
+//    this->saveStateToFile();
+}
+
+void Viewer::saveViewToFile(std::string filename)
+{
+    this->setStateFileName(QString::fromStdString(filename));
+    this->saveStateToFile();
+//    this->restoreStateFromFile();
+    this->setStateFileName("");
+}
+
+void Viewer::screenshot()
+{
+    makedir(this->main_screenshotFolder + "shots/");
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+    this->saveSnapshot(QString::fromStdString(this->main_screenshotFolder + "shots/" + s_time + ".png"));
+    if (this->mapMode == MapMode::GRID_MODE) {
+        this->heightmap->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap.png");
+    } else if (this->mapMode == MapMode::VOXEL_MODE) {
+        this->voxelGrid->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap_from_voxels.png");
+    }
+//    dynamic_cast<TerrainSavingInterface*>(this->interfaces["terrainSavingInterface"].get())->quickSaveAt(this->main_screenshotFolder + "shots", s_time, true, true, false);
+}
+
 
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
@@ -388,7 +426,10 @@ void Viewer::mousePressEvent(QMouseEvent *e)
             auto [mat, height] = this->layerGrid->getMaterialAndHeight(mousePosWorld);
             std::cout << "Stack (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << LayerBasedGrid::densityFromMaterial(mat) << " for height " << height << std::endl;
         } else if (this->mapMode == MapMode::GRID_MODE) {
-            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->grid->getHeight(mousePosWorld) << std::endl;
+            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->heightmap->getHeight(mousePosWorld) << std::endl;
+        } else if (this->mapMode == MapMode::IMPLICIT_MODE) {
+//            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->grid->getHeight(mousePosWorld) << std::endl;
+            std::cout << "Dunno yet" << std::endl;
         }
     }
     Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
@@ -456,7 +497,9 @@ Vector3 Viewer::minVoxelsShown()
     else if (this->mapMode == MapMode::LAYER_MODE)
         return layerGrid->getDimensions() * minVec;
     else if (this->mapMode == MapMode::GRID_MODE)
-        return grid->getDimensions() * minVec;
+        return heightmap->getDimensions() * minVec;
+    else if (this->mapMode == MapMode::IMPLICIT_MODE)
+        return Vector3(); // implicitTerrain->getDimensions() * minVec;
     return Vector3();
 }
 
@@ -468,7 +511,9 @@ Vector3 Viewer::maxVoxelsShown()
     else if (this->mapMode == MapMode::LAYER_MODE)
         return layerGrid->getDimensions() * maxVec;
     else if (this->mapMode == MapMode::GRID_MODE)
-        return grid->getDimensions() * maxVec;
+        return heightmap->getDimensions() * maxVec;
+    else if (this->mapMode == MapMode::IMPLICIT_MODE)
+        return voxelGrid->getDimensions() * maxVec; //heightmap->getDimensions() * maxVec;
     return Vector3();
 }
 
@@ -526,9 +571,12 @@ bool Viewer::checkMouseOnVoxel()
     if (this->mapMode == MapMode::VOXEL_MODE) {
         currPos = voxelGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     } else if (this->mapMode == MapMode::GRID_MODE) {
-        currPos = grid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+        currPos = heightmap->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     } else if (this->mapMode == MapMode::LAYER_MODE) {
         currPos = layerGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+    } else if (this->mapMode == MapMode::IMPLICIT_MODE) {
+        std::cout << "Dunno yet" << std::endl;
+//        currPos = layerGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     }
     bool found = currPos.isValid();
 //    std::cout << found << std::endl;

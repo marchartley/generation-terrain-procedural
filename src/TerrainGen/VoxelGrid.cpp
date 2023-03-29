@@ -196,16 +196,18 @@ VoxelGrid* VoxelGrid::fromCachedData()
 void VoxelGrid::computeFlowfield()
 {
 //    DyeField constantDyeSource(fluidSystem->fullDim);
-    Matrix3<float> obstacleMap(this->getSizeX(), this->getSizeY(), this->getSizeZ(), false);
-    for (int x = 0; x < this->getSizeX(); x++) {
+//    Matrix3<float> obstacleMap(this->getSizeX(), this->getSizeY(), this->getSizeZ(), false);
+    Matrix3<float> obstacleMap = this->getVoxelValues().binarize();
+    /*for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             for (int z = 0; z < this->getSizeZ(); z++) {
                 obstacleMap(x, y, z) = (this->getVoxelValue(x, y, z) > 0.0 ? 1.f : 0.f);
             }
         }
-    }
+    }*/
 
     this->fluidSimulation.setObstacles(obstacleMap);
+//    std::cout << fluidSimulation.obstacles.displayValues() << std::endl;
     for (int x = 0; x < 2; x++) {
         for (int y = 0; y < this->fluidSimulation.sizeY; y++) {
             for (int z = 0; z < this->fluidSimulation.sizeZ; z++) {
@@ -1276,4 +1278,46 @@ void VoxelGrid::smoothVoxels()
 {
     Matrix3<float> voxelValues = this->getVoxelValues();
     this->applyModification(voxelValues.meanSmooth(3, 3, 3) - voxelValues);
+}
+
+void VoxelGrid::saveHeightmap(std::string heightmap_filename)
+{
+    std::string ext = toUpper(getExtention(heightmap_filename));
+    int width = this->getSizeX();
+    int height = this->getSizeY();
+    // To heightmap
+    std::vector<float> toFloatData(width*height);
+    std::vector<uint8_t> toIntData(width*height);
+
+//    float newHeight = std::max(this->maxHeight, this->heights.max());
+
+    Matrix3<float> heights(width, height);
+    for (int x = 0; x < heights.sizeX; x++) {
+        for (int y = 0; y < heights.sizeY; y++) {
+            for (int z = this->getSizeZ() - 1; z >= 0; z--) {
+                if (this->getVoxelValues().at(x, y, z) > 0.f) {
+                    heights.at(x, y) = float(z) / float(this->getSizeZ());
+                    break;
+                }
+            }
+        }
+    }
+
+    toFloatData = heights.data;
+    for (size_t i = 0; i < heights.size(); i++) {
+        toIntData[i] = toFloatData[i] * 255;
+    }
+    if (ext == "PNG")
+        stbi_write_png(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), this->getSizeX() * 1);
+    else if (ext == "JPG")
+        stbi_write_jpg(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), 95);
+    else if (ext == "BMP")
+        stbi_write_bmp(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+    else if (ext == "TGA")
+        stbi_write_tga(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+    else if (ext == "HDR")
+        stbi_write_hdr(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toFloatData.data());
+    else {
+        std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
+    }
 }

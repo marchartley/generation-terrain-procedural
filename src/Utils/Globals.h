@@ -1,6 +1,8 @@
 #ifndef GLOBALS_H
 #define GLOBALS_H
 
+#include "Utils/stb_image.h"
+#include "Utils/stb_image_write.h"
 #define useModernOpenGL 1
 
 //class random_gen;

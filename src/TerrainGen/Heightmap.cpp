@@ -6,11 +6,6 @@
 #include "Utils/Utils.h"
 #include "Utils/BSpline.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "Utils/stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "Utils/stb_image_write.h"
-
 
 Heightmap::Heightmap(int nx, int ny, float heightFactor) {
     // Create and configure FastNoise object
@@ -530,6 +525,7 @@ void Heightmap::saveHeightmap(std::string heightmap_filename)
 
     toFloatData = (this->heights/(this->getMaxHeight() * this->heightFactor)).data;
     for (size_t i = 0; i < this->heights.size(); i++) {
+        toFloatData[i] = std::max(toFloatData[i], 0.f);
         toIntData[i] = toFloatData[i] * 255;
     }
     if (ext == "PNG")

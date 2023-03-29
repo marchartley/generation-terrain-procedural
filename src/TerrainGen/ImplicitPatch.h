@@ -127,7 +127,7 @@ public:
     virtual float getSizeY() { return this->getBBox().second.y; }
     virtual float getSizeZ() { return this->getBBox().second.z; }
 
-    Matrix3<float> getVoxelized(Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
     int index = -1;
     std::string name;
@@ -166,9 +166,11 @@ public:
 
     static std::string json_identifier;
 
-protected:
+//protected:
     Matrix3<float> _cachedMinHeight;
     Matrix3<float> _cachedMaxHeight;
+    Matrix3<float> _cachedVoxelized;
+    bool _cached = false;
 };
 
 class ImplicitPrimitive : public ImplicitPatch {

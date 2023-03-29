@@ -1,6 +1,6 @@
 #include "ImplicitPatch.h"
 #include "Utils/ShapeCurve.h"
-#include "Utils/stb_image.h"
+//#include "Utils/stb_image.h"
 
 float ImplicitPatch::isovalue = .5f;
 float ImplicitPatch::zResolution = .1f;
@@ -238,16 +238,21 @@ bool ImplicitPatch::contains(float x, float y, float z)
     return this->contains(Vector3(x, y, z));
 }
 
-Matrix3<float> ImplicitPatch::getVoxelized(Vector3 scale)
+Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
-    Vector3 dimensions = this->getBBox().second;
+    if (_cached)
+        return this->_cachedVoxelized;
 
-    Matrix3<float> values(dimensions * scale, LayerBasedGrid::densityFromMaterial(AIR));
+    if (!dimensions.isValid())
+        dimensions = this->getBBox().second;
 
-    for (int x = 0; x < values.sizeX; x++) {
-        for (int y = 0; y < values.sizeY; y++) {
-            for (int z = 0; z < values.sizeZ; z++) {
-                Vector3 pos(x, y, z);
+    this->_cachedVoxelized = Matrix3<float>(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
+
+    #pragma omp parallel for collapse(3)
+    for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
+        for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
+            for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
+                Vector3 pos = Vector3(x, y, z) * scale;
                 auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(pos);
                 if (totalEval >= ImplicitPatch::isovalue) {
                     TerrainTypes maxType;
@@ -258,12 +263,17 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 scale)
                             maxVal = val;
                         }
                     }
-                    values.at(pos) = LayerBasedGrid::densityFromMaterial(maxType);
+                    if (pos.z == 20) {
+                        int a = 0;
+                    }
+                    _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
                 }
             }
         }
     }
-    return values;
+    _cached = true;
+//    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
+    return _cachedVoxelized;
 }
 
 ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
@@ -409,9 +419,11 @@ void ImplicitPrimitive::update()
         if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
             this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
         this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
-        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([this](Vector3 pos) -> float {
-                return this->cachedHeightmap.interpolate(pos.xy());
-            });
+        auto cacheCopy = cachedHeightmap;
+        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([cachedHeightmap=cacheCopy](Vector3 pos) -> float {
+            auto heightmap = cachedHeightmap;
+            return heightmap.interpolate(pos.xy());
+        });
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
     }
@@ -1798,12 +1810,24 @@ float ImplicitNaryOperator::evaluate(Vector3 pos)
 {
     float maxVal = 0.f;
     for (auto& compo : this->composables)
-        maxVal = std::max(maxVal, compo->evaluate(pos));
+        maxVal = maxVal + compo->evaluate(pos); //std::max(maxVal, compo->evaluate(pos));
     return maxVal;
 }
 
 std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(Vector3 pos)
 {
+    float maxVal = 0.f;
+    std::map<TerrainTypes, float> bestReturn;
+    for (auto& compo : this->composables) {
+        auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
+        for (auto& [mat, val] : evaluation) {
+            if (bestReturn.count(mat) == 0)
+                bestReturn[mat] = 0;
+            bestReturn[mat] += val;
+        }
+    }
+    return bestReturn;
+    /*
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
     for (auto& compo : this->composables) {
@@ -1814,7 +1838,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(Vector3 pos)
             bestReturn = evaluation.second;
         }
     }
-    return bestReturn;
+    return bestReturn;*/
 }
 
 std::pair<Vector3, Vector3> ImplicitNaryOperator::getSupportBBox()

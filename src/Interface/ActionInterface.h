@@ -75,7 +75,7 @@ public:
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<LayerBasedGrid> layerGrid;
-    ImplicitPatch* implicitTerrain;
+    ImplicitPatch* implicitTerrain = nullptr;
 
 Q_SIGNALS:
     void updated();

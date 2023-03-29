@@ -60,7 +60,7 @@ Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, M
 
 Matrix3<float> &RockErosion::computeErosionMatrix2D(Matrix3<float> &blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)
 {
-    return this->computeErosionMatrix(blankMatrix, this->createPrecomputedAttackMask2D(this->size) * this->maxStrength, pos, addingMatterMode, useMax);
+    return this->computeErosionMatrix(blankMatrix, this->createPrecomputedAttackMask2D(this->size) * this->maxStrength, pos.xy(), addingMatterMode, useMax);
 }
 
 Matrix3<float>& RockErosion::createPrecomputedAttackMask(int size)

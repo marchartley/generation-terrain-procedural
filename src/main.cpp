@@ -1,3 +1,6 @@
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
 #include <QGuiApplication>

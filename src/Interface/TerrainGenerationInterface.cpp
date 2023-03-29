@@ -5,8 +5,8 @@
 #include "Utils/ShapeCurve.h"
 #include "Utils/Utils.h"
 #include "Utils/Voronoi.h"
-#include "Utils/stb_image.h"
-#include "Utils/stb_image_write.h"
+//#include "Utils/stb_image.h"
+//#include "Utils/stb_image_write.h"
 #include "DataStructure/Matrix.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
@@ -31,6 +31,9 @@ void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset,
     marchingCubeMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
     marchingCubeMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
 
+    implicitMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
+    implicitMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
+
     layersMesh.shader->setVector("subterrainOffset", this->voxelGridOffset);
     layersMesh.shader->setFloat("subterrainScale", this->voxelGridScaling);
 }
@@ -38,6 +41,13 @@ void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset,
 void TerrainGenerationInterface::afterTerrainUpdated()
 {
 
+}
+
+void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles)
+{
+    this->mapMode = _mapMode;
+    this->smoothingAlgorithm = _smoothingAlgorithm;
+    this->displayParticles = _displayParticles;
 }
 
 void TerrainGenerationInterface::displayWaterLevel()
@@ -93,6 +103,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x, terrainSize.y, terrainSize.z);
     if (!this->layerGrid)
         this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
+    if (!this->implicitTerrain)
+        this->implicitTerrain = nullptr;
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
@@ -131,6 +143,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         // In any other case, consider that nothing has been done, cancel.
         return;
     }*/
+    implicitTerrain = ImplicitPrimitive::fromHeightmap(heightmap->heights);
+    dynamic_cast<ImplicitPrimitive*>(implicitTerrain)->material = TerrainTypes::DIRT;
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
                                               {"from_noise", false}
@@ -296,6 +310,8 @@ void TerrainGenerationInterface::prepareShader()
     layersMesh.fromArray(layersPoints);
     layersMesh.update();
 
+    implicitMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
+                            true, GL_TRIANGLES);
 
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
                             true, GL_TRIANGLES);
@@ -322,6 +338,25 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
     marchingCubeMesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
     marchingCubeMesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+
+
+    implicitMesh.useIndices = false;
+    implicitMesh.fromArray(points);
+    implicitMesh.update();
+    implicitMesh.shader->use();
+    GlobalsGL::f()->glBindVertexArray(implicitMesh.vao);
+    implicitMesh.shader->setInt("dataFieldTex", 0);
+    implicitMesh.shader->setInt("edgeTableTex", 1);
+    implicitMesh.shader->setInt("triTableTex", 2);
+    implicitMesh.shader->setFloat("isolevel", 0.f);
+    implicitMesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+    implicitMesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+    implicitMesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+    implicitMesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+    implicitMesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+    implicitMesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+    implicitMesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+    implicitMesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
     //Edge Table texture//
     //This texture store the 256 different configurations of a marching cube.
     //This is a table accessed with a bitfield of the 8 cube edges states
@@ -360,6 +395,7 @@ void TerrainGenerationInterface::prepareShader()
     glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
+    implicitMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
 
     this->particlesMesh = Mesh(this->randomParticlesPositions,
                                std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
@@ -382,6 +418,7 @@ void TerrainGenerationInterface::prepareShader()
     GlobalsGL::f()->glBindVertexArray(heightmapMesh.vao);
     heightmapMesh.shader->setInt("heightmapFieldTex", 3);
     marchingCubeMesh.shader->setInt("heightmapFieldTex", 3);
+    implicitMesh.shader->setInt("heightmapFieldTex", 3);
     layersMesh.shader->setInt("heightmapFieldTex", 3);
 
     Matrix3<float> heights = heightmap->getHeights();
@@ -423,6 +460,7 @@ void TerrainGenerationInterface::prepareShader()
     GL_ALPHA_INTEGER_EXT, GL_INT, heightmap->getBiomeIndices().data.data());
     heightmapMesh.shader->setInt("biomeFieldTex", 4);
     marchingCubeMesh.shader->setInt("biomeFieldTex", 4);
+    implicitMesh.shader->setInt("biomeFieldTex", 4);
     layersMesh.shader->setInt("biomeFieldTex", 4);
 
     if (verbose)
@@ -555,10 +593,12 @@ void TerrainGenerationInterface::prepareShader()
     delete[] allTexturesColors;
     heightmapMesh.shader->setInt("allBiomesColorTextures", 5);
     marchingCubeMesh.shader->setInt("allBiomesColorTextures", 5);
+    implicitMesh.shader->setInt("allBiomesColorTextures", 5);
     layersMesh.shader->setInt("allBiomesColorTextures", 5);
 
     heightmapMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
     marchingCubeMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
+    implicitMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
     layersMesh.shader->setInt("maxBiomesColorTextures", colorTexturesIndex.size());//indexColorTextureClass);
 
     glGenTextures(1, &allBiomesNormalTextures);
@@ -575,10 +615,12 @@ void TerrainGenerationInterface::prepareShader()
     delete[] allTexturesNormal;
     heightmapMesh.shader->setInt("allBiomesNormalTextures", 6);
     marchingCubeMesh.shader->setInt("allBiomesNormalTextures", 6);
+    implicitMesh.shader->setInt("allBiomesNormalTextures", 6);
     layersMesh.shader->setInt("allBiomesNormalTextures", 6);
 
     heightmapMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
     marchingCubeMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
+    implicitMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
     layersMesh.shader->setInt("maxBiomesNormalTextures", colorTexturesIndex.size());//indexNormalTextureClass);
 
     glGenTextures(1, &allBiomesDisplacementTextures);
@@ -595,10 +637,12 @@ void TerrainGenerationInterface::prepareShader()
     delete[] allTexturesDisplacement;
     heightmapMesh.shader->setInt("allBiomesDisplacementTextures", 7);
     marchingCubeMesh.shader->setInt("allBiomesDisplacementTextures", 7);
+    implicitMesh.shader->setInt("allBiomesDisplacementTextures", 7);
     layersMesh.shader->setInt("allBiomesDisplacementTextures", 7);
 
     heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
     marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
+    implicitMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
     layersMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
 
     updateDisplayedView(voxelGridOffset, voxelGridScaling);
@@ -609,7 +653,7 @@ void TerrainGenerationInterface::prepareShader()
 
 
 
-void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smoothingAlgorithm, bool displayParticles)
+void TerrainGenerationInterface::display()
 {
     /*if (this->heightmap != nullptr) {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE4);
@@ -695,8 +739,6 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
             this->heightmapMesh.display(GL_POINTS);
-//            this->heightmap->mesh.shader->setFloat("time", time);
-//            this->heightmap->display(true);
         }
     }
     else if (mapMode == VOXEL_MODE) {
@@ -752,6 +794,32 @@ void TerrainGenerationInterface::display(MapMode mapMode, SmoothingAlgorithm smo
                 layersMesh.update();
             }
             this->layersMesh.display(GL_POINTS);
+        }
+    } else if (mapMode == IMPLICIT_MODE) {
+        if (this->implicitTerrain == nullptr) {
+            std::cerr << "No implicit terrain to display" << std::endl;
+        } else {
+            Matrix3<float> values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
+            implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
+            implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
+            implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
+            implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
+            implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+            implicitMesh.display( GL_POINTS );
+            if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
+                implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
+                implicitMesh.shader->setFloat("min_isolevel", -1000.f);
+                implicitMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
+                implicitMesh.display( GL_POINTS );
+                implicitMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
+                implicitMesh.shader->setFloat("max_isolevel",  1000.f);
+                implicitMesh.display( GL_POINTS );
+                implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
+            }
+            // Check if something changed on the terrain :
+//            if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
+//                this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+//            }
         }
     }
 }

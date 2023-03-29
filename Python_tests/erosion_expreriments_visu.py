@@ -9,6 +9,21 @@ import sklearn.preprocessing
 from sklearn.preprocessing import MinMaxScaler
 import pickle
 
+def irange(start, end, step):
+    while start < end:
+        yield start
+        start += step
+    return end
+
+r = 10.0
+sum = 0.0
+for x in irange(-r, r, 0.1):
+    for y in irange(-r, r, 0.1):
+        for z in irange(-r, r, 0.1):
+            sum += min(1.0, np.linalg.norm([x, y, z]))
+print(sum / (r**3))
+exit(0)
+
 pd.set_option('display.max_columns', None)
 pd.set_option('expand_frame_repr', False)
 
