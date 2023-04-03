@@ -221,6 +221,10 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
     starting_distance *= 2.0; // Leave a little bit of gap
 
+    if (densityMap.size() > 0) {
+        densityMap.raiseErrorOnBadCoord = false;
+        densityMap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    }
     // Hydraulic erosion parameters
     float strengthValue = this->maxRockStrength;
     float maxCapacity = 1.f * strengthValue * maxCapacityFactor;
@@ -285,18 +289,21 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
             }
         }
     } else if (flowType == FLOWFIELD_TYPE::FLUID_SIMULATION) {
-//        flowfieldValues = voxelGrid->getFlowfield().resize(terrainSize) * airForce;
-        for (int x = 0; x < flowfieldValues.sizeX; x++) {
-            for (int y = 0; y < flowfieldValues.sizeY; y++) {
-                for (int z = 0; z < flowfieldValues.sizeZ; z++) {
-                    flowfieldValues.at(x, y, z) = Vector3(0, std::cos(3.f * float(y) / terrainSize.y), 0) * 3.f * airForce;
-//                    std::cout << flowfieldValues.at(x, y, z) << "\n";
-                }
-            }
-        }
+        flowfieldValues = voxelGrid->getFlowfield().resize(terrainSize) * airForce;
+//        for (int x = 0; x < flowfieldValues.sizeX; x++) {
+//            for (int y = 0; y < flowfieldValues.sizeY; y++) {
+//                for (int z = 0; z < flowfieldValues.sizeZ; z++) {
+//                    flowfieldValues.at(x, y, z) = Vector3(0, std::cos(3.f * float(y) / terrainSize.y), 0) * 3.f * airForce;
+//                }
+//            }
+//        }
         for (auto& f : flowfieldValues) {
-            f = (f + Vector3::random(.1f)).normalize();
+            f = (f.xy() + Vector3::random(.1f)).normalize();
         }
+        for (int x = 0; x < flowfieldValues.sizeX; x++)
+            for (int y = 0; y < flowfieldValues.sizeY; y++)
+                for (int z = flowfieldValues.sizeZ - 5; z < flowfieldValues.sizeZ; z++)
+                    flowfieldValues.at(x, y, z) += Vector3(0, 0, -1);
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -335,7 +342,7 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
         bool firstHit = true;
         while (!touched) {
             Vector3 nextPos = pos + (dir * dt).maxMagnitude(1.f);
-            if (Vector3::isInBox(nextPos.xy(), Vector3(), terrainSize.xy())) {
+            if (true || Vector3::isInBox(nextPos.xy(), Vector3(), terrainSize.xy())) {
                 float environmentDensity = environmentalDensities.at(nextPos);
                 // TODO !!!!
                 // Gravity + Buoyancy
@@ -350,11 +357,12 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                 // float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
 //                Vector3 acceleration = /*flowfieldValues.at(position) +*/ gravityDirection * (gravityForce * gravityCoefficient);
 //                float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
-                Vector3 justFlow = (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
+                Vector3 justFlow = flowfieldValues.at(1, 1, 1);//(flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
                 Vector3 justGravity = (gravityfieldValues.at(nextPos) * gravityCoefficient).maxMagnitude(2.f);
                 Vector3 flowfield = justFlow + justGravity;
                 dir += flowfield * flowfieldInfluence * dt;
-                hasBeenAtLeastOnceInside = true;
+                if (Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy()))
+                    hasBeenAtLeastOnceInside = true;
                 bool justHit = false;
                 if (terrain->checkIsInGround(nextPos)) { //currentMapValues.at(nextPos) > 0.0) { // Hit a wall
                     Vector3 normal;
@@ -366,6 +374,8 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                     float resistance = 0.f;
                     if (densityUsed == DENSITY_TYPE::DENSITY_IMAGE)
                         resistance = /*1.f - */densityMap.at(nextPos.xy()) * materialImpact;
+                    else if (densityUsed == DENSITY_TYPE::RANDOM_DENSITY)
+                        resistance = /*1.f - */densityMap.at(nextPos) * materialImpact;
 
 //                    std::cout << resistance << "\n";
 
@@ -413,7 +423,7 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                 pos += dir.clamped(0.f, 1.f);
 //            } while (terrain->checkIsInGround(pos));
 
-            if ((hasBeenAtLeastOnceInside && !Vector3::isInBox(nextPos.xy(), Vector3(), terrainSize.xy())) || steps < 0 /*|| dir.norm() < 1e-3*/) {
+            if ((hasBeenAtLeastOnceInside && !Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy())) || pos.z < 0 || steps < 0 /*|| dir.norm() < 1e-3*/) {
                 if ((steps < 0 || dir.norm2() < 1e-3) && depositFactor > 0.f) {
 //                    RockErosion(particleSize, -capacity).computeErosionMatrix(submodifications[i], pos - Vector3(0, 0, particleSize * .2f), false);
                     erosionValuesAndPositions.push_back({-capacity, pos - Vector3(0, 0, particleSize - .2f)});
@@ -471,6 +481,12 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
 
     for (const auto& sub : submodifications)
         modifications += sub;
+
+    if (densityMap.size() > 0) {
+        for (size_t i = 0; i < modifications.size(); i++) {
+            modifications[i] *= ((1.f - densityMap[i]) * (1.f - materialImpact));
+        }
+    }
 
 //    std::cout << "Total erosion : " << modifications.sum() << std::endl;
     if (asVoxels) {

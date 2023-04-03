@@ -25,7 +25,7 @@ public:
 
     QLayout* createGUI();
 
-    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER};
+    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X};
 
 public Q_SLOTS:
     void show();
@@ -34,7 +34,7 @@ public Q_SLOTS:
     void throwFromCam();
     void throwFromSky();
     void throwFromSide();
-    void throwFrom(Vector3 pos, Vector3 dir);
+    void throwFrom(PARTICLE_INITIAL_LOCATION location);
 
     void testManyManyErosionParameters();
 
@@ -56,11 +56,11 @@ protected:
 
     float erosionSize = 8.f;
     float erosionStrength = .35f;
-    int erosionQtt = 1;
+    int erosionQtt = 10;
     float rockRandomness = .1f;
 
     float gravity = .981f;
-    float bouncingCoefficient = 1.f;
+    float bouncingCoefficient = 0.15f; // 1.f;
     float bounciness = 1.f;
     float minSpeed = .1f;
     float maxSpeed = 1000.f;
@@ -71,7 +71,7 @@ protected:
     float materialImpact = 0.f;
 
     float airFlowfieldRotation = 0.f;
-    float waterFlowfieldRotation = 180.f;
+    float waterFlowfieldRotation = 270.f;
     float airForce = 0.f;
     float waterForce = 0.f;
 
@@ -97,7 +97,7 @@ protected:
     UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
     UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
 
-    std::vector<std::vector<std::pair<Vector3, Vector3>>> initialPositionsAndDirections;
+    std::map<PARTICLE_INITIAL_LOCATION, std::vector<std::vector<std::pair<Vector3, Vector3>>>> initialPositionsAndDirections;
 
     QHBoxLayout* erosionLayout = nullptr;
 
