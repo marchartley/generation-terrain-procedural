@@ -13,6 +13,7 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 
 void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
 {
+    std::cout << "START" << std::endl;
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid.get(), erosionSize, erosionStrength, erosionQtt);
 
@@ -28,37 +29,53 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
 
 
-    PARTICLE_INITIAL_LOCATION loc = SKY;
+    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X};
 
-    if (initialPositionsAndDirections.empty()) {
-        initialPositionsAndDirections = std::vector<std::vector<std::pair<Vector3, Vector3>>>(500, std::vector<std::pair<Vector3, Vector3>>(1000));
-        for (size_t i = 0; i < initialPositionsAndDirections.size(); i++) {
-            for (size_t j = 0; j < initialPositionsAndDirections[i].size(); j++) {
-                Vector3 position;
-                Vector3 direction;
-                if (loc == SKY) {
-                    position = Vector3::random(voxelGrid->getDimensions().xy()) + Vector3(0, 0, voxelGrid->getSizeZ());
-                    direction = Vector3(0, 0, -1);
-                } else if (loc == RIVER) {
-//                    position = Vector3(voxelGrid->getSizeX(), 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 8), Vector3(0, voxelGrid->getSizeY()*.6, voxelGrid->getSizeZ()));
-//                    direction = Vector3(-1, 0, 0) + Vector3::random(.2f);
-                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 30), Vector3(0, voxelGrid->getSizeY()*.6, 40));
-                    direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
-//                    position = Vector3(0, voxelGrid->getSizeY() * .5f, voxelGrid->getSizeZ()) + Vector3::random() * 5.f;
-//                    direction = Vector3(1, 0, 0) + Vector3::random(.2f);
-                } else if (loc == RIVER2) {
-                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .1, 30), Vector3(0, voxelGrid->getSizeY()*.3, 40));
-                    direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
-                } else if (loc == UNDERWATER) {
-                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 10), Vector3(0, voxelGrid->getSizeY()*.6, 20));
-                    direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
-                } else if (loc == RANDOM) {
+    int i = 0;
+    for (auto& loc : locs) {
+        std::cout << "i = " << i++ << std::endl;
+        if (initialPositionsAndDirections.count(loc) == 0) {
+            initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(100, std::vector<std::pair<Vector3, Vector3>>(100));
+        auto& poses = initialPositionsAndDirections[loc];
+            for (size_t i = 0; i < poses.size(); i++) {
+                for (size_t j = 0; j < poses[i].size(); j++) {
+                    Vector3 position;
+                    Vector3 direction;
+                    if (loc == SKY) {
+                        position = Vector3::random(voxelGrid->getDimensions().xy()) + Vector3(0, 0, voxelGrid->getSizeZ());
+                        direction = Vector3(0, 0, -1);
+                    } else if (loc == RIVER) {
+    //                    position = Vector3(voxelGrid->getSizeX(), 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 8), Vector3(0, voxelGrid->getSizeY()*.6, voxelGrid->getSizeZ()));
+    //                    direction = Vector3(-1, 0, 0) + Vector3::random(.2f);
+                        position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 30), Vector3(0, voxelGrid->getSizeY()*.6, 40));
+                        direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
+    //                    position = Vector3(0, voxelGrid->getSizeY() * .5f, voxelGrid->getSizeZ()) + Vector3::random() * 5.f;
+    //                    direction = Vector3(1, 0, 0) + Vector3::random(.2f);
+                    } else if (loc == RIVER2) {
+                        position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .1, 30), Vector3(0, voxelGrid->getSizeY()*.3, 40));
+                        direction = (Vector3(1, 0, 0) + Vector3::random(1.f));
+                    } else if (loc == UNDERWATER) {
+                        position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, voxelGrid->getSizeZ() * .2f), Vector3(0, voxelGrid->getSizeY()*.6, voxelGrid->getSizeZ() * .5f));
+                        direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
+                    } else if (loc == FROM_X) {
+                        position = Vector3(5, 0, 10) + Vector3::random(Vector3(0, 0.f, 0.f), Vector3(0, voxelGrid->getSizeY(), voxelGrid->getSizeZ()));
+                        direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
+                    } else if (loc == CENTER_TOP) {
+                        position = Vector3::random(Vector3(voxelGrid->getSizeX() * .45f, voxelGrid->getSizeY() * .45f, voxelGrid->getSizeZ() + 2.f), Vector3(voxelGrid->getSizeX() * .55f, voxelGrid->getSizeY()*.55f, voxelGrid->getSizeZ() + 2.f));
+                        direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
+                    } else if (loc == RANDOM) {
+                        position = Vector3::random() * 100.f;
+                        position.z = std::abs(position.z);
+                        direction = -position.normalized();
+                        position += voxelGrid->getDimensions().xy() * .5f;
+                    }
 
+                    poses[i][j] = {position, direction};
                 }
-                initialPositionsAndDirections[i][j] = {position, direction};
             }
         }
     }
+    std::cout << "ENDED" << std::endl;
 
     this->erosionProcess = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
     this->erosionProcess.heightmap = heightmap.get();
@@ -96,6 +113,18 @@ void ErosionInterface::replay(nlohmann::json action)
 
 void ErosionInterface::throwFromSky()
 {
+    this->throwFrom(SKY);
+}
+void ErosionInterface::throwFromCam()
+{
+    this->throwFrom(RIVER);
+}
+void ErosionInterface::throwFromSide()
+{
+    this->throwFrom(FROM_X);
+}
+void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
+{
     UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
     erod.heightmap = heightmap.get();
 
@@ -103,10 +132,6 @@ void ErosionInterface::throwFromSky()
     for (int x = 0; x < layersHeightmap.sizeX; x++)
         for (int y = 0; y < layersHeightmap.sizeY; y++)
             layersHeightmap.at(x, y) = layerGrid->getHeight(x, y) - 1;
-//    auto implicitHeightmap = ImplicitPrimitive::fromHeightmap(layersHeightmap, "");
-//    implicitHeightmap->material = TerrainTypes::DIRT;
-//    implicitHeightmap->position = Vector3();
-//    erod.implicitTerrain = implicitHeightmap;
     erod.implicitTerrain = this->implicitTerrain;
     erod.layerBasedGrid = layerGrid.get();
 
@@ -124,7 +149,14 @@ void ErosionInterface::throwFromSky()
 //        auto flowfieldFunction = this->computeFlowfieldFunction();
         Matrix3<Vector3> waterFlowfield = (this->waterFlowImagePath != "" ? -Matrix3<float>::fromImageBW(this->waterFlowImagePath).resize(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f).flip(true, false, false).gradient() : Matrix3<Vector3>());
         Matrix3<Vector3> airFlowfield = (this->airFlowImagePath != "" ? -Matrix3<float>::fromImageBW(this->airFlowImagePath).resize(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f).flip(true, false, false).gradient() : Matrix3<Vector3>());
-        Matrix3<float> densityField = (this->densityFieldImagePath != "" ? Matrix3<float>::fromImageBW(this->densityFieldImagePath).resize(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f).flip(true, false, false) : Matrix3<float>());
+        Matrix3<float> densityField;
+        if (this->densityUsed == UnderwaterErosion::RANDOM_DENSITY) {
+            densityField = Matrix3<float>(voxelGrid->getDimensions());
+            for (auto& v : densityField)
+                v = std::min(random_gen::generate(5.f), 1.f);
+        } else if (this->densityFieldImagePath != "") {
+            densityField = Matrix3<float>::fromImageBW(this->densityFieldImagePath).resize(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f).flip(true, false, false);
+        }
 
 
         std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(this->applyOn, particleSimulationTime, terrainModifTime,
@@ -151,7 +183,7 @@ void ErosionInterface::throwFromSky()
                                                                     shearingRatePower,
                                                                     erosionPowerValue,
                                                                     criticalShearStress,
-                                                                    initialPositionsAndDirections[iteration % (initialPositionsAndDirections.size())],
+                                                                    initialPositionsAndDirections[location][iteration % (initialPositionsAndDirections[location].size())],
                                                                     this->flowfieldUsed,
                                                                     waterFlowfield,
                                                                     airFlowfield,
@@ -174,9 +206,6 @@ void ErosionInterface::throwFromSky()
         }
         this->rocksPathSuccess.fromArray(asOneVector);
         if (this->applyOn == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN) {
-//            layerGrid->reset();
-//            layerGrid->add(erod.implicitTerrain);
-    //        heightmap->fromLayerGrid(*layerGrid);
         }
         Q_EMIT this->updated();
     }
@@ -184,78 +213,56 @@ void ErosionInterface::throwFromSky()
     float totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startingTime).count();
     std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "ms  (" << totalPos/1000 << "k pos, " << totalErosions/1000 << "k erosions)" << std::endl;
     std::cout << "(" << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime) << "ms for the display) => " << (sumParticleSimulationTime + sumTerrainModifTime) << "ms for algo." << std::endl;
-}
-void ErosionInterface::throwFromCam()
-{
-    Vector3 pos;
-    Vector3 dir;
-    pos = this->viewer->camera()->position();
-    dir = this->viewer->camera()->viewDirection();
-    this->throwFrom(pos, dir);
-}
-void ErosionInterface::throwFromSide()
-{
-    Vector3 pos;
-    Vector3 dir;
-    pos = this->viewer->camera()->position();
-    dir = this->viewer->camera()->viewDirection();
 
-    pos = Vector3(this->voxelGrid->getSizeX() * -1.f, this->voxelGrid->getSizeY() * .5f, this->voxelGrid->getSizeZ() * .5f);
-    dir = Vector3(1.f, 0.f, 0.f);
+//    UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
 
-    this->throwFrom(pos, dir);
-}
-void ErosionInterface::throwFrom(Vector3 pos, Vector3 dir)
-{
-    UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
+//    std::vector<BSpline> lastRocksLaunched;
+//    for (int iteration = 0; iteration < numberOfIterations; iteration++) {
+//        std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
+//        int nbPos, nbErosions;
+//        float particleSimulationTime, terrainModifTime;
+//        std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(this->applyOn, particleSimulationTime, terrainModifTime, pos, dir, this->rockRandomness, false,
+//                                                                          gravity,
+//                                                                          bouncingCoefficient,
+//                                                                          bounciness,
+//                                                                          minSpeed,
+//                                                                          maxSpeed,
+//                                                                          maxCapacityFactor,
+//                                                                          erosionFactor,
+//                                                                          depositFactor,
+//                                                                          matterDensity + 0.1f,
+//                                                                          materialImpact,
+//                                                                          airFlowfieldRotation,
+//                                                                          waterFlowfieldRotation,
+//                                                                          airForce,
+//                                                                          waterForce,
+//                                                                          dt,
+//                                                                          shearingStressConstantK,
+//                                                                          shearingRatePower,
+//                                                                          erosionPowerValue,
+//                                                                          criticalShearStress
+//                                                                          );
+//        std::vector<Vector3> asOneVector;
+//        for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
+//            auto points = lastRocksLaunched[i].getPath(10);
+//            for (size_t j = 0; j < points.size() - 1; j++) {
+//                asOneVector.push_back(points[j]);
+//                asOneVector.push_back(points[j + 1]);
+//            }
+//        }
+//        this->rocksPathSuccess.fromArray(asOneVector);
 
-    std::vector<BSpline> lastRocksLaunched;
-    for (int iteration = 0; iteration < numberOfIterations; iteration++) {
-        std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
-        int nbPos, nbErosions;
-        float particleSimulationTime, terrainModifTime;
-        std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(this->applyOn, particleSimulationTime, terrainModifTime, pos, dir, this->rockRandomness, false,
-                                                                          gravity,
-                                                                          bouncingCoefficient,
-                                                                          bounciness,
-                                                                          minSpeed,
-                                                                          maxSpeed,
-                                                                          maxCapacityFactor,
-                                                                          erosionFactor,
-                                                                          depositFactor,
-                                                                          matterDensity + 0.1f,
-                                                                          materialImpact,
-                                                                          airFlowfieldRotation,
-                                                                          waterFlowfieldRotation,
-                                                                          airForce,
-                                                                          waterForce,
-                                                                          dt,
-                                                                          shearingStressConstantK,
-                                                                          shearingRatePower,
-                                                                          erosionPowerValue,
-                                                                          criticalShearStress
-                                                                          );
-        std::vector<Vector3> asOneVector;
-        for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
-            auto points = lastRocksLaunched[i].getPath(10);
-            for (size_t j = 0; j < points.size() - 1; j++) {
-                asOneVector.push_back(points[j]);
-                asOneVector.push_back(points[j + 1]);
-            }
-        }
-        this->rocksPathSuccess.fromArray(asOneVector);
+//        this->addTerrainAction(nlohmann::json({
+//                                                  {"position", vec3_to_json(pos) },
+//                                                  {"direction", vec3_to_json(dir) },
+//                                                  {"size", erosionSize},
+//                                                  {"strength", erosionStrength},
+//                                                  {"randomness", rockRandomness},
+//                                                  {"quantity", erosionQtt}
+//                                              }));
 
-        this->addTerrainAction(nlohmann::json({
-                                                  {"position", vec3_to_json(pos) },
-                                                  {"direction", vec3_to_json(dir) },
-                                                  {"size", erosionSize},
-                                                  {"strength", erosionStrength},
-                                                  {"randomness", rockRandomness},
-                                                  {"quantity", erosionQtt}
-                                              }));
-
-        Q_EMIT this->updated();
-    }
+//        Q_EMIT this->updated();
+//    }
 }
 
 
@@ -336,8 +343,8 @@ void ErosionInterface::testManyManyErosionParameters()
         {"materialImpact",              {0.f, 1.f, materialImpact} },
         {"airFlowfieldRotation",        {0.f, 270.f, airFlowfieldRotation} },
         {"waterFlowfieldRotation",      {0.f, 270.f, waterFlowfieldRotation} },
-        {"airForce",                    {0.f, 0.0f, airForce} },
-        {"waterForce",                  {0.f, 0.0f, waterForce} },
+        {"airForce",                    {0.f, 1.0f, airForce} },
+        {"waterForce",                  {0.f, 1.0f, waterForce} },
         {"particleSize",                {2.f, 16.f, erosionSize} },
         {"strength",                    {0.f, .5f, erosionStrength} },
         {"nbParticles",                 {1.f, 50.f, erosionQtt} },
@@ -414,16 +421,18 @@ void ErosionInterface::testManyManyErosionParameters()
     this->rocksPathFailure.clear();
 
     std::vector<std::vector<std::string>> testedVariables = {
-        { "particleSize" },
+//        { "particleSize" },
 //        { "strength" },
 //        { "erosionFactor" },
 //        { "criticalShearStress" },
 //        { "shearingStressConstantK" },
 //        { "nbParticles" },
-        { "maxCapacityFactor" },
+//        { "maxCapacityFactor" },
         { "matterDensity" },
         { "depositFactor" },
-//        { "waterLevel" }
+//        { "waterLevel" },
+        { "waterForce" },
+        { "matterDensity" },
     };
 
     int stopAfterStep = 11; // Set to -1 for infinite tries
@@ -459,7 +468,7 @@ void ErosionInterface::testManyManyErosionParameters()
             tm *gmtm = std::gmtime(&now);
             char s_time[80];
             std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
-            std::string subFolderName = std::to_string(i) + "__" + std::string(s_time);
+            std::string subFolderName = join(testedVariables[iCombination], "-") + std::to_string(i) + "__" + std::string(s_time);
             std::string folderName = mainFolder + subFolderName + "/";
 
             makedir(folderName + "screen/");
@@ -493,6 +502,39 @@ void ErosionInterface::testManyManyErosionParameters()
             for (int iteration = 0; iteration < nbIterations; iteration++) {
                 int nbPos, nbErosions;
                 float particleSimulationTime, terrainModifTime;
+
+
+                if (iteration % 10 == 0 and false) {
+                    auto startMesh = std::chrono::system_clock::now();
+                    if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS) {
+                        voxelGrid->saveMap(folderName + "voxels/terrain_" + std::to_string(iteration) + ".data");
+                        std::ofstream geomFile; //(folderName + "meshes/terrain_" + std::to_string(iteration) + ".stl");
+//                        geomFile << voxelGrid->getGeometry().toSTL();
+//                        geomFile.close();
+                        geomFile.open(folderName + "meshes/terrain_" + std::to_string(iteration) + ".obj");
+                        geomFile << heightmap->getGeometry().toOBJ();
+                        geomFile.close();
+                    } else if (terrainType == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP) {
+                        heightmap->saveMap(folderName + "heightmap/terrain_" + std::to_string(iteration) + ".png");
+                        std::ofstream geomFile; // (folderName + "meshes/terrain_" + std::to_string(iteration) + ".stl");
+//                        geomFile << heightmap->getGeometry().toSTL();
+//                        geomFile.close();
+                        geomFile.open(folderName + "meshes/terrain_" + std::to_string(iteration) + ".obj");
+                        geomFile << heightmap->getGeometry().toOBJ();
+                        geomFile.close();
+                    }
+                    auto endMesh = std::chrono::system_clock::now();
+//                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
+//                    for (const auto& path : lastRocksLaunched) {
+//                        for (const auto& p : path.points) {
+//                            particleFile << p.x << " " << p.y << " " << p.z << " ";
+//                        }
+//                        particleFile << std::endl;
+//                    }
+//                    particleFile.close();
+                    totalMeshingTime += std::chrono::duration_cast<std::chrono::milliseconds>(endMesh - startMesh).count();
+                }
+
 //                std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(terrainType, particleSimulationTime, terrainModifTime,
                 std::tie(lastRocksLaunched, nbPos, nbErosions) = this->erosionProcess.Apply(
                             terrainType,
@@ -521,7 +563,7 @@ void ErosionInterface::testManyManyErosionParameters()
                             variables["shearingRatePower"],
                             variables["erosionPowerValue"],
                             variables["criticalShearStress"],
-                            this->initialPositionsAndDirections[iteration % (initialPositionsAndDirections.size())],
+                            this->initialPositionsAndDirections[SKY][iteration % (initialPositionsAndDirections[SKY].size())],
                             this->flowfieldUsed,
                             waterFlowfield,
                             airFlowfield
@@ -532,34 +574,6 @@ void ErosionInterface::testManyManyErosionParameters()
                 sumParticleSimulationTime += particleSimulationTime;
                 sumTerrainModifTime += terrainModifTime;
 //                *heightmap = *erod.heightmap;
-
-                if (iteration % 5 == 0) {
-                    auto startMesh = std::chrono::system_clock::now();
-                    if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS) {
-                        voxelGrid->saveMap(folderName + "voxels/terrain_" + std::to_string(iteration) + ".data");
-                        std::ofstream geomFile(folderName + "meshes/terrain_" + std::to_string(iteration) + ".stl");
-                        geomFile << voxelGrid->getGeometry().toSTL();
-                        geomFile.close();
-                    } else if (terrainType == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP) {
-                        heightmap->saveMap(folderName + "heightmap/terrain_" + std::to_string(iteration) + ".png");
-                        std::ofstream geomFile(folderName + "meshes/terrain_" + std::to_string(iteration) + ".stl");
-                        geomFile << heightmap->getGeometry().toSTL();
-                        geomFile.close();
-                        geomFile.open(folderName + "meshes/terrain_" + std::to_string(iteration) + ".obj");
-                        geomFile << heightmap->getGeometry().toOBJ();
-                        geomFile.close();
-                    }
-                    auto endMesh = std::chrono::system_clock::now();
-//                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
-//                    for (const auto& path : lastRocksLaunched) {
-//                        for (const auto& p : path.points) {
-//                            particleFile << p.x << " " << p.y << " " << p.z << " ";
-//                        }
-//                        particleFile << std::endl;
-//                    }
-//                    particleFile.close();
-                    totalMeshingTime += std::chrono::duration_cast<std::chrono::milliseconds>(endMesh - startMesh).count();
-                }
                 Q_EMIT this->updated();
                 qApp->processEvents();
             }
@@ -712,6 +726,7 @@ QLayout *ErosionInterface::createGUI()
     QPushButton* browseWaterFlow = new QPushButton("...");
     QPushButton* browseAirFlow = new QPushButton("...");
 
+    QRadioButton* useRandomDensity = new QRadioButton("Random density");
     QRadioButton* useNativeDensity = new QRadioButton("Native density");
     QRadioButton* useImageDensity = new QRadioButton("Density from image");
     QLabel* labDensityField = new QLabel;
@@ -768,7 +783,8 @@ QLayout *ErosionInterface::createGUI()
                                                          useImageDensity,
                                                          labDensityField,
                                                          densityFieldFileChooser,
-                                                         useNativeDensity
+                                                         useNativeDensity,
+                                                         useRandomDensity
                                                      })
                                                  }));
 
@@ -818,6 +834,7 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(browseWaterFlow, &QPushButton::pressed, this, [=]() { this->browseWaterFlowFromFile(); labWater->setText("Water: " + QString::fromStdString(getFilename(this->waterFlowImagePath)));});
     QObject::connect(browseAirFlow, &QPushButton::pressed, this, [=]() { this->browseAirFlowFromFile(); labAir->setText("Air: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
 
+    QObject::connect(useRandomDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = UnderwaterErosion::DENSITY_TYPE::RANDOM_DENSITY; });
     QObject::connect(useNativeDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE; });
     QObject::connect(useImageDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = UnderwaterErosion::DENSITY_TYPE::DENSITY_IMAGE; });
     QObject::connect(densityFieldFileChooser, &QPushButton::pressed, this, [=]() { this->browseDensityFieldFromFile(); labAir->setText("File: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
@@ -864,6 +881,7 @@ QLayout *ErosionInterface::createGUI()
     useImageFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_IMAGE);
     useSimulatedFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLUID_SIMULATION);
 
+    useRandomDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::RANDOM_DENSITY);
     useNativeDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::NATIVE);
     useImageDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::DENSITY_IMAGE);
     labDensityField->setText("File: " + QString::fromStdString(getFilename(this->densityFieldImagePath)));
