@@ -52,7 +52,8 @@ Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, M
         else
             blankMatrix.min(modifs, pos - anchor);
     } else {
-        blankMatrix.add(modifs * (addingMatterMode ? -1.f : 1.f), pos - anchor);
+        auto mat = modifs * (addingMatterMode ? -1.f : 1.f);
+        blankMatrix.add(mat, pos - anchor);
 //        blankMatrix.add(modifs * (addingMatterMode ? -1.f : 1.f), pos - anchor, true);
     }
     return blankMatrix;

@@ -505,7 +505,7 @@ float VoxelChunk::getVoxelValue(Vector3 pos)
     return this->getVoxelValue(pos.x, pos.y, pos.z);
 }
 
-Matrix3<float> VoxelChunk::getVoxelValues()
+Matrix3<float>& VoxelChunk::getVoxelValues()
 {
 
     if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
