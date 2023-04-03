@@ -47,7 +47,7 @@ public:
 
     float getVoxelValue(int x, int y, int z);
     float getVoxelValue(Vector3 pos);
-    Matrix3<float> getVoxelValues();
+    Matrix3<float>& getVoxelValues();
 
     std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 

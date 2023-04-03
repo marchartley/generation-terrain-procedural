@@ -60,7 +60,10 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
+
+        //this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/cube_2.data");
+
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");

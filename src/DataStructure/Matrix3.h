@@ -81,26 +81,26 @@ public:
 
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
     Matrix3<T> subset(Vector3 start, Vector3 end);
-    Matrix3<T>& paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
-    Matrix3<T>& paste(Matrix3<T> matrixToPaste, int left, int up, int front);
-    Matrix3<T>& add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation = false);
-    Matrix3<T>& add(Matrix3<T> matrixToAdd, int left, int up, int front, bool useInterpolation = false);
-    Matrix3<T> concat(Matrix3<T> matrixToConcat);
+    Matrix3<T>& paste(Matrix3<T>& matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
+    Matrix3<T>& paste(Matrix3<T>& matrixToPaste, int left, int up, int front);
+    Matrix3<T>& add(Matrix3<T>& matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation = false);
+    Matrix3<T>& add(Matrix3<T> &matrixToAdd, int left, int up, int front, bool useInterpolation = false);
+    Matrix3<T> concat(Matrix3<T>& matrixToConcat);
 
     Matrix3<float> toDistanceMap(bool ignoreZlayer = false);
 
     Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
     template<typename U>
-    Matrix3<T> convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
+    Matrix3<T> convolution(Matrix3<U>& convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
 
     T min() const;
     T max() const;
 
-    Matrix3<T>& max(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner);
-    Matrix3<T>& max(Matrix3<T> otherMatrix, int left, int up, int front);
-    Matrix3<T>& min(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner);
-    Matrix3<T>& min(Matrix3<T> otherMatrix, int left, int up, int front);
+    Matrix3<T>& max(Matrix3<T>& otherMatrix, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& max(Matrix3<T>& otherMatrix, int left, int up, int front);
+    Matrix3<T>& min(Matrix3<T>& otherMatrix, Vector3 upperLeftFrontCorner);
+    Matrix3<T>& min(Matrix3<T>& otherMatrix, int left, int up, int front);
 
     Matrix3<T> abs() const;
     T sum();
@@ -631,9 +631,16 @@ Matrix3<T>& Matrix3<T>::normalize() {
         if (min > val) min = val;
         if (max < val) max = val;
     }
-    for (T& val : data)
-    {
-        val = (val - min)/ (max - min);
+    if (min != max) {
+        for (T& val : data)
+        {
+            val = (val - min)/ (max - min);
+        }
+    } else {
+        for (T& val : data)
+        {
+            val = T();
+        }
     }
     return *this;
 }
@@ -1131,12 +1138,12 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
 
 
 template<typename T>
-Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, Vector3 upperLeftFrontCorner)
+Matrix3<T>& Matrix3<T>::paste(Matrix3<T>& matrixToPaste, Vector3 upperLeftFrontCorner)
 {
     return this->paste(matrixToPaste, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
 }
 template<typename T>
-Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, int left, int up, int front)
+Matrix3<T>& Matrix3<T>::paste(Matrix3<T>& matrixToPaste, int left, int up, int front)
 {
     for (int x = std::max(left, 0); x < std::min(matrixToPaste.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToPaste.sizeY + up, this->sizeY); y++) {
@@ -1149,7 +1156,7 @@ Matrix3<T>& Matrix3<T>::paste(Matrix3<T> matrixToPaste, int left, int up, int fr
 }
 
 template<typename T>
-Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation)
+Matrix3<T>& Matrix3<T>::add(Matrix3<T>& matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation)
 {
     if (useInterpolation) {
         for (int x = 0; x < matrixToAdd.sizeX; x++) {
@@ -1168,7 +1175,7 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, Vector3 upperLeftFrontCorner
     }
 }
 template<typename T>
-Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front, bool useInterpolation)
+Matrix3<T>& Matrix3<T>::add(Matrix3<T>& matrixToAdd, int left, int up, int front, bool useInterpolation)
 {
     for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
@@ -1182,7 +1189,7 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T> matrixToAdd, int left, int up, int front,
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::concat(Matrix3<T> matrixToConcat)
+Matrix3<T> Matrix3<T>::concat(Matrix3<T>& matrixToConcat)
 {
     Matrix3<T> newMatrix(this->getDimensions() + matrixToConcat.getDimensions() * Vector3(1, 0, 0));
     newMatrix.paste(*this, Vector3());
@@ -1191,12 +1198,12 @@ Matrix3<T> Matrix3<T>::concat(Matrix3<T> matrixToConcat)
 }
 
 template<typename T>
-Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner)
+Matrix3<T>& Matrix3<T>::max(Matrix3<T>& otherMatrix, Vector3 upperLeftFrontCorner)
 {
     return this->max(otherMatrix, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
 }
 template<typename T>
-Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, int left, int up, int front)
+Matrix3<T>& Matrix3<T>::max(Matrix3<T>& otherMatrix, int left, int up, int front)
 {
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
@@ -1209,12 +1216,12 @@ Matrix3<T>& Matrix3<T>::max(Matrix3<T> otherMatrix, int left, int up, int front)
 }
 
 template<typename T>
-Matrix3<T>& Matrix3<T>::min(Matrix3<T> otherMatrix, Vector3 upperLeftFrontCorner)
+Matrix3<T>& Matrix3<T>::min(Matrix3<T>& otherMatrix, Vector3 upperLeftFrontCorner)
 {
     return this->min(otherMatrix, upperLeftFrontCorner.x, upperLeftFrontCorner.y, upperLeftFrontCorner.z);
 }
 template<typename T>
-Matrix3<T>& Matrix3<T>::min(Matrix3<T> otherMatrix, int left, int up, int front)
+Matrix3<T>& Matrix3<T>::min(Matrix3<T>& otherMatrix, int left, int up, int front)
 {
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
@@ -1311,7 +1318,7 @@ Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
 
 
 template<class T> template<class U>
-Matrix3<T> Matrix3<T>::convolution(Matrix3<U> convMatrix, CONVOLUTION_BORDERS borders)
+Matrix3<T> Matrix3<T>::convolution(Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders)
 {
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
     this->raiseErrorOnBadCoord = false;

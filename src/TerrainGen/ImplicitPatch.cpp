@@ -199,6 +199,8 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
         groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
         outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
     }
+//    if (groundValue > 0)
+        std::cout << groundValue << " " << outsideValue << std::endl;
     return groundValue > ImplicitPatch::isovalue;
 }
 
