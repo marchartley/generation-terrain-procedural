@@ -1,0 +1,13 @@
+numpy
+pandas
+docopt
+GDAL
+pyproj
+scikit-image
+matplotlib
+coverage
+fiona
+geopandas
+pysal
+affine
+rasterstats

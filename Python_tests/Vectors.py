@@ -112,9 +112,12 @@ class Vector2D:
         """The distance between vectors self and other."""
         return abs(self - other)
 
-    def to_polar(self):
+    def to_polar(self) -> 'Vector2D':
         """Return the vector's components in polar coordinates."""
-        return self.__abs__(), math.atan2(self.y, self.x)
+        return Vector2D(math.atan2(self.y, self.x), self.__abs__())
+
+    def to_cartesian(self) -> 'Vector2D':
+        return Vector2D(self.y * math.cos(self.x), self.y * math.sin(self.x))
 
     def copy(self):
         return copy.deepcopy(self)
@@ -129,6 +132,12 @@ class Vector2D:
         self.y = newY
         return self
 
+    @staticmethod
+    def from_polar(vec: 'Vector2D') -> 'Vector2D':
+        return vec.to_cartesian()
+
+    def yx(self) -> 'Vector2D':
+        return Vector2D(self.y, self.x)
 
 def randomVec2():
     return Vector2D(random.random(), random.random())

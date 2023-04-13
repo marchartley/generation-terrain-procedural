@@ -13,8 +13,8 @@ class Vector3 {
 public:
     Vector3();
     Vector3(float x, float y, float z = 0.f, bool valid = true);
-    Vector3(const Vector3& copy);
-    Vector3(Vector3* copy);
+//    Vector3(const Vector3& copy);
+//    Vector3(Vector3* copy);
     Vector3(qglviewer::Vec other);
     explicit Vector3(bool valid);
     explicit Vector3(const float* coords, bool valid = true);
@@ -156,7 +156,7 @@ public:
 
     friend Vector3 operator-(Vector3 v);
 
-    Vector3& operator=(const Vector3& o);
+//    Vector3& operator=(const Vector3& o);
     friend bool operator==(Vector3 a, Vector3 b);
     friend bool operator!=(Vector3 a, Vector3 b);
     friend bool operator<(Vector3 a, Vector3 b);
@@ -208,7 +208,13 @@ namespace std {
 }
 
 class AABBox: public std::pair<Vector3, Vector3> {
-
+public:
+    AABBox(Vector3 mini, Vector3 maxi);
+    const Vector3& min() const { return this->first; }
+    const Vector3& max() const { return this->second; }
+    Vector3 dimensions() const { return max() - min(); }
+    bool contains(Vector3 position) const { return Vector3::isInBox(position, min(), max()); }
+    Vector3 center() const { return (this->min() + this->max()) * .5f; }
 };
 
 #include "Utils/json.h"

@@ -26,56 +26,56 @@ ImplicitPatch::ImplicitPatch()
 float ImplicitPatch::getMaxHeight(Vector3 pos)
 {
     auto AABBox = this->getBBox();
-    if (this->_cachedMaxHeight.at((pos - AABBox.first).xy()) == -1.f) {
-        float minHeight = AABBox.first.z;
-        float maxHeight = AABBox.second.z;
+    if (this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) == -1.f) {
+        float minHeight = AABBox.min().z;
+        float maxHeight = AABBox.max().z;
 
-        this->_cachedMaxHeight.at((pos - AABBox.first).xy()) = 0;
+        this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
             float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             if (eval >= ImplicitPatch::isovalue) {
-                this->_cachedMaxHeight.at((pos - AABBox.first).xy()) = z;
+                this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = z;
                 break;
             }
         }
     }
-    return this->_cachedMaxHeight.at((pos - AABBox.first).xy());
+    return this->_cachedMaxHeight.at((pos - AABBox.min()).xy());
 }
 
 float ImplicitPatch::getMinHeight(Vector3 pos)
 {
     auto AABBox = this->getBBox();
-    if (this->_cachedMinHeight.at((pos - AABBox.first).xy()) == -1.f) {
-        float minHeight = AABBox.first.z;
-        float maxHeight = AABBox.second.z;
+    if (this->_cachedMinHeight.at((pos - AABBox.min()).xy()) == -1.f) {
+        float minHeight = AABBox.min().z;
+        float maxHeight = AABBox.max().z;
 
-        this->_cachedMinHeight.at((pos - AABBox.first).xy()) = 0;
+        this->_cachedMinHeight.at((pos - AABBox.min()).xy()) = 0;
         for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
             float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             if (eval >= ImplicitPatch::isovalue) {
-                this->_cachedMinHeight.at((pos - AABBox.first).xy()) = z;
+                this->_cachedMinHeight.at((pos - AABBox.min()).xy()) = z;
                 break;
             }
         }
     }
-    return this->_cachedMinHeight.at((pos - AABBox.first).xy());
+    return this->_cachedMinHeight.at((pos - AABBox.min()).xy());
 }
 
-float ImplicitPatch::getMinimalHeight(std::pair<Vector3, Vector3> BBox)
+float ImplicitPatch::getMinimalHeight(AABBox BBox)
 {
-    return this->getMinimalHeight(BBox.first, BBox.second);
+    return this->getMinimalHeight(BBox.min(), BBox.max());
 }
 
-float ImplicitPatch::getMaximalHeight(std::pair<Vector3, Vector3> BBox)
+float ImplicitPatch::getMaximalHeight(AABBox BBox)
 {
-    return this->getMaximalHeight(BBox.first, BBox.second);
+    return this->getMaximalHeight(BBox.min(), BBox.max());
 }
 
 float ImplicitPatch::getMinimalHeight(Vector3 minBox, Vector3 maxBox)
 {
     auto BBox = this->getBBox();
-    if (!minBox.isValid()) minBox = BBox.first;
-    if (!maxBox.isValid()) maxBox = BBox.second;
+    if (!minBox.isValid()) minBox = BBox.min();
+    if (!maxBox.isValid()) maxBox = BBox.max();
 
     float minHeight = 10000.f;
     for (int x = minBox.x; x < maxBox.x; x++) {
@@ -89,8 +89,8 @@ float ImplicitPatch::getMinimalHeight(Vector3 minBox, Vector3 maxBox)
 float ImplicitPatch::getMaximalHeight(Vector3 minBox, Vector3 maxBox)
 {
     auto BBox = this->getBBox();
-    minBox = Vector3::max(minBox, BBox.first);
-    maxBox = Vector3::min(maxBox, BBox.second);
+    minBox = Vector3::max(minBox, BBox.min());
+    maxBox = Vector3::min(maxBox, BBox.max());
 
     float maxHeight = -10000.f;
     for (int x = minBox.x; x < maxBox.x; x++) {
@@ -115,13 +115,13 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndT
 Vector3 ImplicitPatch::getDimensions()
 {
     auto AABBox = this->getBBox();
-    return AABBox.second - AABBox.first;
+    return AABBox.dimensions();
 }
 
 Vector3 ImplicitPatch::getSupportDimensions()
 {
     auto AABBox = this->getSupportBBox();
-    return AABBox.second - AABBox.first;
+    return AABBox.dimensions();
 }
 
 Vector3 ImplicitPatch::getNormal(Vector3 pos)
@@ -200,7 +200,7 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
         outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
     }
 //    if (groundValue > 0)
-        std::cout << groundValue << " " << outsideValue << std::endl;
+//        std::cout << groundValue << " " << outsideValue << std::endl;
     return groundValue > ImplicitPatch::isovalue;
 }
 
@@ -214,10 +214,32 @@ Mesh ImplicitPatch::getGeometry()
     return voxels.getGeometry();
 }
 
-//Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
-//{
-//    return Vector3();
-//}
+Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+{
+    auto myAABBox = this->getBBox();
+    if (!minPos.isValid())
+        minPos = myAABBox.min();
+    if (!maxPos.isValid())
+        maxPos = myAABBox.max();
+
+    Vector3 currPos = origin;
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    // Continue while we are in the grid or we are heading towards the grid
+    while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
+    {
+        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+            if (this->checkIsInGround(currPos)) {
+                return currPos;
+            }
+        }
+        currPos += dir;
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    }
+    return Vector3(false);
+
+}
 
 float ImplicitPatch::getHeight(float x, float y)
 {
@@ -232,7 +254,7 @@ float ImplicitPatch::getHeight(Vector3 pos)
 bool ImplicitPatch::contains(Vector3 v)
 {
     auto BBox = this->getSupportBBox();
-    return Vector3::isInBox(v, BBox.first, BBox.second);
+    return BBox.contains(v);
 }
 
 bool ImplicitPatch::contains(float x, float y, float z)
@@ -401,7 +423,7 @@ std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(Vector3 pos)
     return {{this->material, this->evaluate(pos)}};
 }
 
-std::pair<Vector3, Vector3> ImplicitPrimitive::getSupportBBox()
+AABBox ImplicitPrimitive::getSupportBBox()
 {
     Vector3 margin = (this->supportDimensions - this->dimensions) * .5f;
     if (!this->supportDimensions.isValid() || this->supportDimensions == Vector3())
@@ -409,7 +431,7 @@ std::pair<Vector3, Vector3> ImplicitPrimitive::getSupportBBox()
     return {this->position - margin, this->position + this->dimensions + margin};
 }
 
-std::pair<Vector3, Vector3> ImplicitPrimitive::getBBox()
+AABBox ImplicitPrimitive::getBBox()
 {
     return {this->position, this->position + this->dimensions};
 }
@@ -421,10 +443,11 @@ void ImplicitPrimitive::update()
         if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
             this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
         this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
-        auto cacheCopy = cachedHeightmap;
-        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([cachedHeightmap=cacheCopy](Vector3 pos) -> float {
-            auto heightmap = cachedHeightmap;
-            return heightmap.interpolate(pos.xy());
+//        auto cacheCopy = cachedHeightmap;
+        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
+//            auto heightmap = cachedHeightmap;
+            auto valueAt = this->cachedHeightmap.interpolate(pos.xy());
+            return valueAt;
         });
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
@@ -527,7 +550,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
     return copy;
 }
 
-ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions)
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions, ImplicitPrimitive *prim)
 {
     int imgW, imgH, nbChannels;
     unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
@@ -552,12 +575,13 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector
         map = map.resize(dimensions.x, dimensions.y, 1);
         map = map.normalize() * dimensions.z;
     }
-    return ImplicitPrimitive::fromHeightmap(map, filename);
+    return ImplicitPrimitive::fromHeightmap(map, filename,  prim);
 }
 
-ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, std::string filename)
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, std::string filename, ImplicitPrimitive *prim)
 {
-    ImplicitPrimitive* prim = new ImplicitPrimitive;
+    if (prim == nullptr)
+        prim = new ImplicitPrimitive;
     prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
 //    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
 //        return heightmap.data[heightmap.getIndex(pos.xy())];
@@ -795,7 +819,7 @@ std::pair<float, std::map<TerrainTypes, float>> ImplicitOperator::getMaterialsAn
     return this->composableB->getMaterialsAndTotalEvaluation(evaluationPosB);
 }
 
-std::pair<Vector3, Vector3> ImplicitOperator::getSupportBBox()
+AABBox ImplicitOperator::getSupportBBox()
 {
     auto AABBoxA = this->composableA->getSupportBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -805,24 +829,24 @@ std::pair<Vector3, Vector3> ImplicitOperator::getSupportBBox()
 
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
         // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
         // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::FIXED_POS) {
         // Nothing to do there
     }
 
-    return {Vector3::min(AABBoxA.first, AABBoxB.first), Vector3::max(AABBoxA.second, AABBoxB.second)};
+    return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
-std::pair<Vector3, Vector3> ImplicitOperator::getBBox()
+AABBox ImplicitOperator::getBBox()
 {
     auto AABBoxA = this->composableA->getBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -832,21 +856,21 @@ std::pair<Vector3, Vector3> ImplicitOperator::getBBox()
 
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
         // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
         // Same as before "Above"?
-        float maxPossibleHeightA = AABBoxA.second.z - AABBoxA.first.z;
+        float maxPossibleHeightA = AABBoxA.dimensions().z;
         AABBoxB.second.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::FIXED_POS) {
         // Nothing to do there
     }
 
-    return {Vector3::min(AABBoxA.first, AABBoxB.first), Vector3::max(AABBoxA.second, AABBoxB.second)};
+    return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
 void ImplicitOperator::update()
@@ -1010,10 +1034,10 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
     return materials;
 }
 
-std::pair<Vector3, Vector3> ImplicitUnaryOperator::getSupportBBox()
+AABBox ImplicitUnaryOperator::getSupportBBox()
 {
     auto AABBox = this->composableA->getSupportBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.first, AABBox.second);
+    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
     for (auto& vert : vertices) // call transform function
         vert = this->wrapFunction(vert);
@@ -1021,10 +1045,10 @@ std::pair<Vector3, Vector3> ImplicitUnaryOperator::getSupportBBox()
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }
 
-std::pair<Vector3, Vector3> ImplicitUnaryOperator::getBBox()
+AABBox ImplicitUnaryOperator::getBBox()
 {
     auto AABBox = this->composableA->getBBox();
-    auto vertices = Vector3::getAABBoxVertices(AABBox.first, AABBox.second);
+    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
     for (auto& vert : vertices) // call transform function
         vert = this->wrapFunction(vert);
@@ -1118,7 +1142,7 @@ void ImplicitUnaryOperator::rotate(float angleX, float angleY, float angleZ)
     this->_rotation += Vector3(angleX, angleY, angleZ);
 
     auto AABBox = this->getBBox();
-    Vector3 center = (AABBox.first + AABBox.second) * .5f;
+    Vector3 center = AABBox.center();
     this->transforms.push_back(UnaryOpRotate(Vector3(angleX, angleY, angleZ), center));
 }
 
@@ -1126,7 +1150,7 @@ void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
 {
     this->_scale *= scaleFactor;
     auto BBox = this->getBBox();
-    Vector3 center = (BBox.first + BBox.second) * .5f;
+    Vector3 center = BBox.center();
     this->transforms.push_back(UnaryOpScale(scaleFactor, center));
 }
 
@@ -1154,7 +1178,7 @@ void ImplicitUnaryOperator::spread(float factor)
     this->_spreadingFactor += factor;
     float newSpreadFactor = this->_spreadingFactor;
     auto BBox = this->getBBox();
-    Vector3 center = (BBox.first + BBox.second).xy() * .5f;
+    Vector3 center = BBox.center().xy();
     this->transforms.push_back(UnaryOpSpread(BBox, factor));
 }
 
@@ -1553,14 +1577,14 @@ UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
     };
 }
 
-UnaryOpSpread::UnaryOpSpread(std::pair<Vector3, Vector3> BBox, float spreadFactor)
+UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
     : UnaryOp()
 {
-    Vector3 center = (BBox.first + BBox.second) * .5f;
-    Vector3 dimensions = (BBox.second - BBox.first);
+    Vector3 center = BBox.center();
+    Vector3 dimensions = BBox.dimensions();
     this->wrap = [=](Vector3 pos) -> Vector3 {
         Vector3 p = pos;
-        float relativeHeight = interpolation::linear(p.z, BBox.first.z, BBox.second.z);
+        float relativeHeight = interpolation::linear(p.z, BBox.min().z, BBox.max().z);
         relativeHeight = interpolation::smooth(relativeHeight);
 //        float heightFactor = (1.f - relativeHeight);
         float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
@@ -1571,7 +1595,7 @@ UnaryOpSpread::UnaryOpSpread(std::pair<Vector3, Vector3> BBox, float spreadFacto
     };
     this->unwrap = [=](Vector3 pos) -> Vector3 {
         Vector3 p = pos;
-        float relativeHeight = interpolation::linear(p.z, BBox.first.z, BBox.second.z);
+        float relativeHeight = interpolation::linear(p.z, BBox.min().z, BBox.max().z);
         relativeHeight = interpolation::smooth(relativeHeight);
 //        float heightFactor = (1.f - relativeHeight);
         float heightFactor = -(relativeHeight - .5f) * 2.f; // Top = -1, bottom = 1
@@ -1843,24 +1867,24 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(Vector3 pos)
     return bestReturn;*/
 }
 
-std::pair<Vector3, Vector3> ImplicitNaryOperator::getSupportBBox()
+AABBox ImplicitNaryOperator::getSupportBBox()
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
         auto BBox = compo->getSupportBBox();
-        minPos = Vector3::min(minPos, BBox.first);
-        maxPos = Vector3::max(maxPos, BBox.second);
+        minPos = Vector3::min(minPos, BBox.min());
+        maxPos = Vector3::max(maxPos, BBox.max());
     }
     return {minPos, maxPos};
 }
 
-std::pair<Vector3, Vector3> ImplicitNaryOperator::getBBox()
+AABBox ImplicitNaryOperator::getBBox()
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
         auto BBox = compo->getBBox();
-        minPos = Vector3::min(minPos, BBox.first);
-        maxPos = Vector3::max(maxPos, BBox.second);
+        minPos = Vector3::min(minPos, BBox.min());
+        maxPos = Vector3::max(maxPos, BBox.max());
     }
     return {minPos, maxPos};
 }

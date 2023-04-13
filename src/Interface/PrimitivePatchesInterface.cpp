@@ -342,8 +342,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
         if (this->selectedPatch() != nullptr) {
             // Display modified AABBox
             auto AABBox = this->selectedPatch()->getBBox();
-            Vector3 minPos = AABBox.first;
-            Vector3 maxPos = AABBox.second;
+            Vector3 minPos = AABBox.min();
+            Vector3 maxPos = AABBox.max();
             Vector3 dim = maxPos - minPos;
             std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
             for (auto& p : box) {
@@ -789,11 +789,11 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
         if (currentlySelectedPatch != nullptr) {
             auto patchAABBox = currentlySelectedPatch->getBBox();
             auto patchSupportedAABBox = currentlySelectedPatch->getSupportBBox();
-            Vector3 patchDimensions = patchAABBox.second - patchAABBox.first;
-            Vector3 patchSupportedDimensions = patchSupportedAABBox.second - patchSupportedAABBox.first;
-            Vector3 controlPosition = patchAABBox.first;
+            Vector3 patchDimensions = patchAABBox.dimensions();
+            Vector3 patchSupportedDimensions = patchSupportedAABBox.dimensions();
+            Vector3 controlPosition = patchAABBox.min();
             this->primitiveControlPoint->setPosition(controlPosition /*+ (selectedPatch->getDimensions() * .5f).xy()*/);
-            std::vector<Vector3> box = CubeMesh::createTriangles(patchAABBox.first, patchAABBox.second);
+            std::vector<Vector3> box = CubeMesh::createTriangles(patchAABBox);
             this->patchAABBoxMesh.fromArray(box);
             this->patchAABBoxMesh.update();
             this->primitiveControlPoint->show();
@@ -807,7 +807,7 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
                 for (int y = 0; y < resolution.y; y++) {
                     for (int z = 0; z < resolution.z; z++) {
                         Vector3 pos(x, y, z);
-                        debuggingVoxels.at(pos) = currentlySelectedPatch->evaluate((pos) * ratio + patchSupportedAABBox.first);
+                        debuggingVoxels.at(pos) = currentlySelectedPatch->evaluate((pos) * ratio + patchSupportedAABBox.min());
                     }
                 }
             }
@@ -1340,7 +1340,7 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
     debuggingVoxelsMesh.shader->setVector("scale", scaleToDisplayPatch);
 
     // Translate the debugging mesh to the right position
-    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().first; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
+    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
     debuggingVoxelsMesh.shader->setFloat("offsetX", positionToDisplayPatch.x);
     debuggingVoxelsMesh.shader->setFloat("offsetY", positionToDisplayPatch.y);
     debuggingVoxelsMesh.shader->setFloat("offsetZ", positionToDisplayPatch.z);

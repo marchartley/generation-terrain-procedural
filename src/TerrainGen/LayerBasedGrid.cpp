@@ -569,8 +569,8 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 void LayerBasedGrid::add(ImplicitPatch* patch)
 {
     auto AABBox = patch->getSupportBBox();
-    Vector3 minPos = (AABBox.first / this->scaling) - this->translation;
-    Vector3 maxPos = (AABBox.second / this->scaling) - this->translation;
+    Vector3 minPos = (AABBox.min() / this->scaling) - this->translation;
+    Vector3 maxPos = (AABBox.max() / this->scaling) - this->translation;
 
     int minX = std::max(0, int(minPos.x));
     int maxX = std::min(int(this->getSizeX()), int(maxPos.x));

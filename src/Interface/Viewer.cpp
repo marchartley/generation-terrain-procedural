@@ -428,8 +428,7 @@ void Viewer::mousePressEvent(QMouseEvent *e)
         } else if (this->mapMode == MapMode::GRID_MODE) {
             std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->heightmap->getHeight(mousePosWorld) << std::endl;
         } else if (this->mapMode == MapMode::IMPLICIT_MODE) {
-//            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->grid->getHeight(mousePosWorld) << std::endl;
-            std::cout << "Dunno yet" << std::endl;
+            std::cout << "Implicit surface at " << mousePosWorld << std::endl;
         }
     }
     Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
@@ -548,25 +547,7 @@ bool Viewer::checkMouseOnVoxel()
     if (voxelGrid == nullptr)
         return false;
     camera()->convertClickToLine(mousePos, orig, dir);
-    /*
-    float maxDist = std::max((int)camera()->distanceToSceneCenter(), std::max(voxelGrid->getSizeX(), std::max(voxelGrid->getSizeY(), voxelGrid->getSizeZ())));
-    maxDist *= maxDist;
 
-    Vector3 minPos = minVoxelsShown(), maxPos = maxVoxelsShown();
-
-    bool found = false;
-    Vector3 currPos(orig.x, orig.y, orig.z);
-    auto values = voxelGrid->getVoxelValues();
-    values.raiseErrorOnBadCoord = false;
-    while((currPos / 2.f).norm2() < maxDist && !found)
-    {
-        currPos += Vector3(dir.x, dir.y, dir.z);
-        if (minPos.x <= currPos.x && currPos.x <= maxPos.x && minPos.y <= currPos.y && currPos.y <= maxPos.y && minPos.z <= currPos.z && currPos.z <= maxPos.z) {
-            float isoval = values.at(currPos);//voxelGrid->getVoxelValue(currPos);
-            if (isoval > 0.0) // || (0.f <= currPos.z && currPos.z < 1.0) )
-                found = true;
-        }
-    }*/
     Vector3 currPos(false);
     if (this->mapMode == MapMode::VOXEL_MODE) {
         currPos = voxelGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
@@ -575,8 +556,7 @@ bool Viewer::checkMouseOnVoxel()
     } else if (this->mapMode == MapMode::LAYER_MODE) {
         currPos = layerGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     } else if (this->mapMode == MapMode::IMPLICIT_MODE) {
-        std::cout << "Dunno yet" << std::endl;
-//        currPos = layerGrid->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
+        currPos = implicitTerrain->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     }
     bool found = currPos.isValid();
 //    std::cout << found << std::endl;
