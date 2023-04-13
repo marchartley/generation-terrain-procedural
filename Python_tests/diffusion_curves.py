@@ -72,7 +72,7 @@ def main():
     mask[mask > 0] = 1
 
     startingTime = time.time()
-    blurred = diffuseValues(img, mask, kernelSize = (3, 3), epsilon = 1e-8, verbose = True)
+    blurred = diffuseValues(img, mask, kernelSize = (3, 3), epsilon = 1e-8, verbose = False)
     print(f"Diffusion applied on {img.shape[1]}x{img.shape[0]} image in {round((time.time() - startingTime) * 1000)}ms")
 
     # One last blur to remove traces of the initial curves

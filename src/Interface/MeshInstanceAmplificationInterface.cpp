@@ -223,9 +223,9 @@ QLayout* MeshInstanceAmplificationInterface::createGUI()
     return layout;
 }
 
-std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::getAvailablePositionsForMaterial(TerrainTypes target)
+std::vector< AABBox > MeshInstanceAmplificationInterface::getAvailablePositionsForMaterial(TerrainTypes target)
 {
-    std::vector<std::pair<Vector3, Vector3> > positions;
+    std::vector< AABBox > positions;
     auto materialsAndHeightsGrid = layerGrid->getLayers();
     for (int x = 0; x < layerGrid->getSizeX(); x++) {
         for (int y = 0; y < layerGrid->getSizeY(); y++) {
@@ -246,10 +246,10 @@ std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::ge
     return positions;
 }
 
-std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::getCoralAvailablePositions()
+std::vector<AABBox> MeshInstanceAmplificationInterface::getCoralAvailablePositions()
 {
     auto intervals = getAvailablePositionsForMaterial(TerrainTypes::CORAL);
-    std::vector<std::pair<Vector3, Vector3> > extendedPositions;
+    std::vector<AABBox> extendedPositions;
 
     for (auto& interv : intervals) {
         Vector3& start = interv.first;
@@ -267,11 +267,11 @@ std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::ge
     return extendedPositions;
 }
 
-std::vector<std::pair<Vector3, Vector3> > MeshInstanceAmplificationInterface::getRocksAvailablePositions()
+std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositions()
 {
 //    return getAvailablePositionsForMaterial(TerrainTypes::ROCK);
     auto intervals = getAvailablePositionsForMaterial(TerrainTypes::ROCK);
-    std::vector<std::pair<Vector3, Vector3> > extendedPositions;
+    std::vector<AABBox> extendedPositions;
 
     for (auto& interv : intervals) {
         Vector3& start = interv.first;
@@ -306,8 +306,8 @@ void MeshInstanceAmplificationInterface::afterTerrainUpdated()
 
 void MeshInstanceAmplificationInterface::regenerateRocksPositions()
 {
-    auto coralAvailablePositions = (this->possibleCorals.size() > 0 ? this->getCoralAvailablePositions() : std::vector<std::pair<Vector3, Vector3>>());
-    auto rocksAvailablePositions = (this->possibleRocks.size() > 0 ? this->getRocksAvailablePositions() : std::vector<std::pair<Vector3, Vector3>>());
+    auto coralAvailablePositions = (this->possibleCorals.size() > 0 ? this->getCoralAvailablePositions() : std::vector<AABBox>());
+    auto rocksAvailablePositions = (this->possibleRocks.size() > 0 ? this->getRocksAvailablePositions() : std::vector<AABBox>());
 
     std::shuffle(coralAvailablePositions.begin(), coralAvailablePositions.end(), random_gen::random_generator);
     std::shuffle(rocksAvailablePositions.begin(), rocksAvailablePositions.end(), random_gen::random_generator);

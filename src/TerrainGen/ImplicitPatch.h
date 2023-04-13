@@ -74,14 +74,14 @@ public:
     virtual std::map<TerrainTypes, float> getMaterials(Vector3 pos) = 0;
     virtual float getMaxHeight(Vector3 pos);
     virtual float getMinHeight(Vector3 pos);
-    virtual float getMinimalHeight(std::pair<Vector3, Vector3> BBox);
-    virtual float getMaximalHeight(std::pair<Vector3, Vector3> BBox);
+    virtual float getMinimalHeight(AABBox BBox);
+    virtual float getMaximalHeight(AABBox BBox);
     virtual float getMinimalHeight(Vector3 minBox = Vector3::min(), Vector3 maxBox = Vector3::max());
     virtual float getMaximalHeight(Vector3 minBox = Vector3::min(), Vector3 maxBox = Vector3::max());
     std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(Vector3 pos);
 
-    virtual std::pair<Vector3, Vector3> getSupportBBox() = 0;
-    virtual std::pair<Vector3, Vector3> getBBox() = 0;
+    virtual AABBox getSupportBBox() = 0;
+    virtual AABBox getBBox() = 0;
     Vector3 getDimensions();
     Vector3 getSupportDimensions();
 
@@ -111,7 +111,7 @@ public:
     virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
     virtual Mesh getGeometry();
 
-    virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false)) { return Vector3(); }
+    virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
     virtual std::string toShortString() { return ""; };
 
@@ -180,8 +180,8 @@ public:
     float evaluate(Vector3 pos);
     std::map<TerrainTypes, float> getMaterials(Vector3 pos);
 
-    std::pair<Vector3, Vector3> getSupportBBox();
-    std::pair<Vector3, Vector3> getBBox();
+    AABBox getSupportBBox();
+    AABBox getBBox();
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -204,8 +204,8 @@ public:
     std::string heightmapFilename = "";
     Matrix3<float> cachedHeightmap;
 
-    static ImplicitPrimitive* fromHeightmap(std::string filename, Vector3 dimensions = Vector3(false));
-    static ImplicitPrimitive* fromHeightmap(Matrix3<float> heightmap, std::string filename = "");
+    static ImplicitPrimitive* fromHeightmap(std::string filename, Vector3 dimensions = Vector3(false), ImplicitPrimitive *prim = nullptr);
+    static ImplicitPrimitive* fromHeightmap(Matrix3<float> heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
 };
 
 class ImplicitOperator : public ImplicitPatch {
@@ -224,8 +224,8 @@ public:
     std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(Vector3 pos);
     std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(Vector3 pos);
 
-    std::pair<Vector3, Vector3> getSupportBBox();
-    std::pair<Vector3, Vector3> getBBox();
+    AABBox getSupportBBox();
+    AABBox getBBox();
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -258,8 +258,8 @@ public:
     float evaluate(Vector3 pos);
     std::map<TerrainTypes, float> getMaterials(Vector3 pos);
 
-    std::pair<Vector3, Vector3> getSupportBBox();
-    std::pair<Vector3, Vector3> getBBox();
+    AABBox getSupportBBox();
+    AABBox getBBox();
     std::string toString();
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
@@ -295,8 +295,8 @@ public:
 
     float evaluate(Vector3 pos);
     std::map<TerrainTypes, float> getMaterials(Vector3 pos);
-    std::pair<Vector3, Vector3> getSupportBBox();
-    std::pair<Vector3, Vector3> getBBox();
+    AABBox getSupportBBox();
+    AABBox getBBox();
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -334,7 +334,7 @@ public:
 };
 class UnaryOpSpread: public UnaryOp {
 public:
-    UnaryOpSpread(std::pair<Vector3, Vector3> BBox, float spreadFactor);
+    UnaryOpSpread(AABBox BBox, float spreadFactor);
 };
 
 /*

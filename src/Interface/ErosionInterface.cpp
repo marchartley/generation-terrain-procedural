@@ -13,7 +13,6 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 
 void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
 {
-    std::cout << "START" << std::endl;
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid.get(), erosionSize, erosionStrength, erosionQtt);
 
@@ -31,9 +30,7 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X};
 
-    int i = 0;
     for (auto& loc : locs) {
-        std::cout << "i = " << i++ << std::endl;
         if (initialPositionsAndDirections.count(loc) == 0) {
             initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(100, std::vector<std::pair<Vector3, Vector3>>(100));
         auto& poses = initialPositionsAndDirections[loc];
@@ -75,7 +72,6 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
             }
         }
     }
-    std::cout << "ENDED" << std::endl;
 
     this->erosionProcess = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
     this->erosionProcess.heightmap = heightmap.get();

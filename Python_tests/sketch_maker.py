@@ -1,22 +1,38 @@
 import math
+import timeit
 from typing import Tuple, List, Callable, Union, Optional, Any
-
-import matplotlib.patches
-import numpy as np
 from matplotlib import pyplot as plt
-
 import threading
 import time
-
-from matplotlib.widgets import Button
-
-import Vectors
 from Vectors import Vector2D, Vector3D, line_intersection
 
-from noise import perlin
 
 def clamp(x, mini, maxi):
     return mini if x < mini else maxi if x > maxi else x
+
+def mapTo(x, prevMin, prevMax, newMin, newMax):
+    t = (x - prevMin) / (prevMax - prevMin)
+    return newMin + t * (newMax - newMin)
+
+def frange(start: float, end: float, step: float = 1.0):
+    while start < end:
+        yield start
+        start += step
+
+def curveInterpolation(initialCurve: List[Any], desiredLength: int):
+    initialLength = len(initialCurve)
+    if initialLength == desiredLength:
+        return initialCurve
+
+    finalCurve: List[Vector2D] = []
+    ratio = (initialLength - 1) / (desiredLength - 1)
+
+    for i in range(desiredLength):
+        ii = i * ratio
+        t = ii - int(ii)
+        finalCurve.append(initialCurve[math.floor(ii)] * (1 - t) + initialCurve[min(math.ceil(ii), initialLength - 1)] * t)
+
+    return finalCurve
 
 class RepeatedTimer(object):
     def __init__(self, interval, function, *args, **kwargs):
@@ -50,10 +66,9 @@ class RepeatedTimer(object):
 
 
 class LineBuilder:
-    def __init__(self, ax: plt.Figure, color: Optional[str] = None, active: bool = True, multiline: bool = False):
+    def __init__(self, ax: plt.Axes, color: Optional[str] = None, active: bool = True, multiline: bool = False):
         self.line, = ax.plot([0], [0], color = color)
-        self.xs = []
-        self.ys = []
+        self.points: List[Vector2D] = []
         self.ax = ax
         self.cid_press = self.line.figure.canvas.mpl_connect('button_press_event', self.press_event)
         self.cid_release = self.line.figure.canvas.mpl_connect('button_release_event', self.release_event)
@@ -63,14 +78,12 @@ class LineBuilder:
         self.color = color
         self.callbacksOnChange: List[Callable] = []
         self.previousMousePos: Optional[Vector2D] = None
-        # self.multiline = multiline
+        self.xMin, self.xMax = ax.get_xlim()
+        self.yMin, self.yMax = ax.get_ylim()
 
-    def addPoint(self, x, y) -> 'LineBuilder':
-        if x is None or y is None:
-            return self
-        self.xs.append(x)
-        self.ys.append(y)
-        self.draw()
+    def addPoint(self, p: Vector2D) -> 'LineBuilder':
+        self.points.append(p.copy())
+        # self.draw()
         for callback in self.callbacksOnChange:
             callback()
         return self
@@ -80,13 +93,18 @@ class LineBuilder:
             return
         if event.inaxes != self.line.axes:
             return
-        self.addPoint(event.xdata, event.ydata)
+        self.addPoint(Vector2D(event.xdata, event.ydata))
         self.currentlyPressed = True
         self.previousMousePos = Vector2D(event.xdata, event.ydata)
+        # print(self, f"Pressed (active = {self.active}, pressed = {self.currentlyPressed})")
+        # self.draw()
 
-    def release_event(self, _event):
+    def release_event(self, event):
+        if event.inaxes != self.line.axes:
+            return
         self.currentlyPressed = False
         self.previousMousePos = None
+        # print(self, f"Release (active = {self.active}, pressed = {self.currentlyPressed})")
 
     def move_event(self, event):
         if not self.active:
@@ -94,29 +112,28 @@ class LineBuilder:
         if event.inaxes != self.line.axes:
             return
         if self.currentlyPressed:
-            self.addPoint(event.xdata, event.ydata)
+            self.addPoint(Vector2D(event.xdata, event.ydata))
             self.previousMousePos = Vector2D(event.xdata, event.ydata)
+            # self.draw()
 
     def reset(self) -> 'LineBuilder':
-        self.xs = []
-        self.ys = []
-        self.draw()
+        self.points = []
+        # self.draw()
         for callback in self.callbacksOnChange:
             callback()
         return self
 
     def getCurve(self) -> List[Vector2D]:
-        return [Vector2D(x, y) for x, y in zip(self.xs, self.ys)]
+        return self.points
 
     def setCurve(self, points: List[Vector2D]) -> 'LineBuilder':
         self.reset()
         for p in points:
-            self.addPoint(p.x, p.y)
+            self.addPoint(p)
         return self
 
     def close(self) -> 'LineBuilder':
-        self.xs.append(self.xs[0])
-        self.ys.append(self.ys[0])
+        self.addPoint(self.points[0])
         return self
 
     def intersection(self, limitA: Vector2D, limitB: Vector2D) -> List[Vector2D]:
@@ -134,19 +151,152 @@ class LineBuilder:
         self.callbacksOnChange.append(function)
 
     def draw(self):
-        self.line.set_data(self.xs, self.ys)
+        curve = self.getCurve()
+        self.line.set_data([v.x for v in curve], [v.y for v in curve])
         self.line.figure.canvas.draw()
 
+
+class LineBuilder1D(LineBuilder):
+    def __init__(self, ax: plt.Axes, nb_points: int = 30, color: Optional[str] = None, active: bool = True):
+        super().__init__(ax, color, active)
+        self.previousMousePos: Optional[Vector2D] = None
+        self.nb_points = nb_points
+        self.reset()
+
+    def addPoint(self, p: Vector2D) -> 'LineBuilder1D':
+        index = self.getClosestPointIndex(p)
+        self.points[index] = p.copy()
+        for callback in self.callbacksOnChange:
+            callback()
+        return self
+
+    def move_event(self, event):
+        if not self.active:
+            return
+        if event.inaxes != self.line.axes:
+            return
+        if self.currentlyPressed:
+            mousePos = Vector2D(event.xdata, event.ydata)
+            nbPointsToSet = 4*math.ceil(self.nb_points * abs(mousePos.x - self.previousMousePos.x) / (self.xMax - self.xMin))
+            for i in range(nbPointsToSet):
+                t = i / nbPointsToSet
+                p = self.previousMousePos + (mousePos - self.previousMousePos) * t
+                self.addPoint(p)
+            self.previousMousePos = Vector2D(event.xdata, event.ydata)
+
+    def getClosestPointIndex(self, v: Vector2D) -> int:
+        index = -1
+        minDist = math.inf
+        for i, p in enumerate(self.points):
+            if abs(p.x - v.x) < minDist:
+                index = i
+                minDist = abs(p.x - v.x)
+        return index
+
+    def reset(self) -> 'LineBuilder1D':
+        nbPoints = self.nb_points
+        self.points = [Vector2D(self.xMin + (i / (nbPoints-1)) * (self.xMax - self.xMin), 0) for i in range(nbPoints)]
+        for callback in self.callbacksOnChange:
+            callback()
+        return self
+
+    def setCurve(self, points: List[Vector2D]) -> 'LineBuilder1D':
+        self.reset()
+        newPoints = curveInterpolation(points, self.nb_points)
+        for i, p in enumerate(newPoints):
+            self.points[i].y = p.y
+        return self
+
+    def close(self) -> 'LineBuilder1D':
+        raise NotImplementedError("Cannot close a 1D line")
+
+
+class LineBuilder2D(LineBuilder):
+    def __init__(self, ax: plt.Axes, color: Optional[str] = None, active: bool = True):
+        super().__init__(ax, color, active)
+
+
+def angleDistance(v0: Vector2D, v1: Vector2D) -> float:
+    d0 = abs(v0.x - v1.x)
+    d1 = abs(v0.x - (v1.x + math.tau))
+    return min(d0, d1)
+
+
+class LineBuilderRadial(LineBuilder1D):
+    def __init__(self, ax: plt.Axes, nb_points = 30, color: Optional[str] = None, active: bool = True, center = Vector2D(0, 0)):
+        self.center = center
+        self.xMin, self.xMax = 0, math.tau
+        super().__init__(ax, nb_points = nb_points, color = color, active = active)
+        self.center = center
+        self.xMin, self.xMax = 0, math.tau
+        self.reset()
+
+    def close(self) -> 'LineBuilderRadial':
+        return self
+
+    def cartesianToPolar(self, v: Vector2D) -> Vector2D:
+        return (v - self.center).to_polar()
+
+    def polarToCartesian(self, v: Vector2D) -> Vector2D:
+        return v.to_cartesian() + self.center
+
+    def getClosestPointIndex(self, v: Vector2D) -> int:
+        index = -1
+        minDist = math.inf
+        for i, p in enumerate(self.points):
+            if angleDistance(p, v) < minDist:
+                index = i
+                minDist = angleDistance(p, v)
+        return index
+
+    def addPoint(self, p: Vector2D) -> 'LineBuilderRadial':
+        index = self.getClosestPointIndex(self.cartesianToPolar(p))
+        self.points[index].y = self.cartesianToPolar(p).y
+        for callback in self.callbacksOnChange:
+            callback()
+        return self
+
+    def move_event(self, event):
+        pPos = None if self.previousMousePos is None else self.previousMousePos.copy()
+        if not self.active:
+            return
+        if event.inaxes != self.line.axes:
+            return
+        if self.currentlyPressed and pPos is not None:
+            mousePos = Vector2D(event.xdata, event.ydata)
+            nbPointsToSet = math.ceil(self.nb_points * abs(self.cartesianToPolar(mousePos).x - self.cartesianToPolar(pPos).x) / math.tau)
+            for i in range(nbPointsToSet):
+                t = i / nbPointsToSet
+                p = pPos + (mousePos - pPos) * t
+                self.addPoint(p)
+            self.previousMousePos = Vector2D(event.xdata, event.ydata)
+
+    def reset(self) -> 'LineBuilderRadial':
+        nbPoints = self.nb_points
+        self.points = [Vector2D(mapTo(i / nbPoints, 0, 1, self.xMin, self.xMax), 1) for i in range(nbPoints)]
+        for callback in self.callbacksOnChange:
+            callback()
+        return self
+
+    def getCurve(self) -> List[Vector2D]:
+        curve = [self.polarToCartesian(p) for p in self.points] + [self.polarToCartesian(self.points[0])]
+        return curve
+
+    def setCurve(self, points: List[Vector2D]) -> 'LineBuilderRadial':
+        self.reset()
+        newPoints = [p.to_polar() for p in curveInterpolation(points, self.nb_points)]
+        for i, p in enumerate(newPoints):
+            self.points[i].y = p.y
+        return self
 
 class SketchManagement:
     def __init__(self, ax):
         self.lineBuilders: List[LineBuilder] = []
         self.ax = ax
 
-    def addSketch(self, color: Optional[str] = None, line: Optional[LineBuilder] = None) -> int:
-        # isFirstLineCreated = len(self.lineBuilders) == 0  # Activate if first line
+    def addSketch(self, color: Optional[str] = None, sketch_type = LineBuilder, line: Optional[LineBuilder] = None) -> int:
         if line is None:
-            line = LineBuilder(self.ax, color = color) # , active = isFirstLineCreated)
+            line = sketch_type(self.ax, color = color)
         self.lineBuilders.append(line)
         self.activate(0)
         return len(self.lineBuilders) - 1
@@ -164,285 +314,14 @@ class SketchManagement:
         for line in self.lineBuilders:
             line.draw()
 
-class LineBuilder1D(LineBuilder):
-    def __init__(self, ax: plt.Axes, precision: float = .1, color: Optional[str] = None, active: bool = True):
-        super().__init__(ax, color, active)
-        self.previousMousePos: Optional[Vector2D] = None
-        self.precision = precision
-        self.reset()
-
-    def addPoint(self, x, y) -> 'LineBuilder1D':
-        if x is None:
-            return self
-        index = -1
-        if x in self.xs:
-            index = self.xs.index(x)
-        else:
-            index = self.getClosestPoint(x)
-        self.ys[index] = y
-        self.draw()
-        for callback in self.callbacksOnChange:
-            callback()
-        return self
-
-    def move_event(self, event):
-        if not self.active:
-            return
-        if event.inaxes != self.line.axes:
-            return
-        if self.currentlyPressed:
-            currentMousePos: Vector2D = Vector2D(event.xdata, event.ydata)
-            self.setPartialCurve(self.previousMousePos, currentMousePos)
-            self.previousMousePos = currentMousePos
-
-    def getClosestPoint(self, x) -> int:
-        a, b = self.ax.get_xlim()
-        lin = (x - a) / (b - a)
-        index = clamp(round(lin * len(self.xs)), 0, len(self.xs) - 1)
-        return index
-
-    def setPartialCurve(self, p0: Vector2D, p1: Vector2D) -> 'LineBuilder1D':
-        startX = min(p0.x, p1.x)
-        endX = max(p0.x, p1.x)
-        minIndex = self.getClosestPoint(startX)
-        maxIndex = self.getClosestPoint(endX)
-        for index in range(minIndex, maxIndex + 1):
-            intersection = line_intersection(Vector2D(self.xs[index], 0), Vector2D(self.xs[index], 1), p0, p1, epsilon=self.precision*2)
-            if intersection is not None:
-                self.ys[index] = intersection[1]
-            else:
-                self.ys[index] = p0.y  # Last chance: if the  segment is too small, just give it a "random" y-value
-        self.draw()
-        return self
-
-    def reset(self) -> 'LineBuilder1D':
-        nbPoints = math.ceil((self.ax.get_xlim()[1] - self.ax.get_xlim()[0]) / self.precision) + 1
-        self.xs = [self.ax.get_xlim()[0] + self.precision * i for i in range(nbPoints)]
-        self.ys = [0.0 for _ in range(nbPoints)]
-        self.draw()
-        for callback in self.callbacksOnChange:
-            callback()
-        return self
-
-    def setCurve(self, points: List[Vector2D]) -> 'LineBuilder1D':
-        self.reset()
-        intersections: List[Vector2D] = []
-        for x in self.xs:
-            for iPoint in range(len(points) - 1):
-                p0, p1 = points[iPoint], points[iPoint + 1]
-                inter = line_intersection(Vector2D(x, 0), Vector2D(x, 1), p0, p1)
-                if inter is not None:
-                    intersections.append(Vector2D(inter))
-
-        for p in intersections:
-            self.addPoint(p.x, p.y)
-        return self
-
-    def getPoint(self, x: float) -> float:
-        if x in self.xs:
-            return self.ys[self.xs.index(x)]
-        return self.ys[self.getClosestPoint(x)]
-
-    def close(self) -> 'LineBuilder1D':
-        raise NotImplementedError("Cannot close a 1D line")
-
-
-def distanceMapFromSketches(islandSketch: SketchManagement) -> np.ndarray:
-    dims = (100, 100, len(islandSketch.lineBuilders) + 1) # Add the "borders" as last dimension
-    heightmap = np.zeros(dims)
-
-    for _y in range(dims[0]):
-        for _x in range(dims[1]):
-            x = (_x / dims[1]) * 2.0 - 1.0  # Transferring on [-1, 1]^2
-            y = (_y / dims[0]) * 2.0 - 1.0
-            pos = Vector2D(x, y)
-            for iChannel, line in enumerate(islandSketch.lineBuilders):
-                minDist = max(dims)
-                curve = line.getCurve()
-                for i in range(len(curve) - 1):
-                    minDist = min(minDist, Vectors.distanceToLine(pos, curve[i], curve[i + 1]))
-                heightmap[dims[0] - _y - 1, _x, iChannel] = minDist
-            distToBorder = min([abs(x), abs(y), abs(1-x), abs(1-y)])
-            heightmap[dims[0] - _y - 1, _x, -1] = distToBorder
-    return heightmap
-
-def genAndSaveDistanceMap(islandSketch: SketchManagement):
-    image = distanceMapFromSketches(islandSketch)
-    image = image[:, :, :3]
-    # image = 1 - np.clip(image * 5.0, 0, 1)
-    plt.imsave("test.png", image)
-
-def splitProfileOnMarkers(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> List[Tuple[int, int, List[float]]]:
-    """Extract the curves made by the profile depending on the distance between each island sketch"""
-    markers: List[Tuple[float, int]] = []
-
-    sliceDirection = (sliceCut[1] - sliceCut[0]).normalize()
-    for sketchID, sketch in enumerate(islandSketches.lineBuilders):
-        intersections = sketch.intersection(*sliceCut)
-        for intersect in intersections:
-            # distanceOnSlice = sliceDirection.dot(intersect - sliceCut[0])
-            # print()
-            distanceOnSlice = intersect.x
-            markers.append((distanceOnSlice, sketchID))
-
-    markers.sort(key = lambda a: a[0])
-
-    borderMarker = len(islandSketches.lineBuilders)
-
-    profile = profileSketch.getCurve()
-    curves: List[Tuple[int, int, List[float]]] = []
-    begin = (-1.0, borderMarker)  # markers.pop(0)
-    ending = markers[0]
-
-    startingIndex = 0
-    for i, p in enumerate(profile):
-        x, y = p.x, p.y
-        if x >= ending[0]:  # End of the curve, beginning of a new one
-            curves.append((begin[1], ending[1], [_p.y for _p in profile[startingIndex:i]]))
-            if len(markers) > 0:
-                startingIndex = i
-                begin = markers.pop(0)
-                if len(markers) == 0:
-                    ending = (1.0, borderMarker)
-                else:
-                    ending = markers[0]
-    return curves
-
-def interpolateOnCurve(curve: List[Any], t: float) -> Vector2D:
-    if t >= 1.0:
-        return curve[-1]
-    i = t * len(curve)
-    a = i - math.floor(i)
-    if math.floor(i) < 0 or math.ceil(i) >= len(curve):
-        b = 0
-    return curve[math.floor(i)] * a + curve[math.ceil(i)] * (1 - a)
-
-def heightmapFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]):
-    sequences = splitProfileOnMarkers(profileSketch, islandSketches, sliceCut)
-    distances = distanceMapFromSketches(islandSketches)
-    heights = np.zeros((distances.shape[0], distances.shape[1]))
-
-    for _y in range(heights.shape[0]):
-        for _x in range(heights.shape[1]):
-            closestFeatures = [i[0] for i in sorted(enumerate(distances[_y, _x, :]), key=lambda x:x[1])]  # Get indices of sorted array
-            top2 = closestFeatures[:2]
-            valid_sequences = [s[2] for s in sequences if list(s[:2]) == list(top2)]
-            if valid_sequences:
-                sequence = valid_sequences[0]
-                dist0 = distances[_y, _x, top2[0]]
-                dist1 = distances[_y, _x, top2[1]]
-                if dist0 + dist1 != 0.0:
-                    heights[_y, _x] = interpolateOnCurve(sequence, dist0 / (dist0 + dist1))
-                else:
-                    heights[_y, _x] = sequence[0]
-    print("Heightmap generated")
-    return heights
-
-def genAndSaveHeightMap(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]):
-    image = heightmapFromSketches(profileSketch, islandSketches, sliceCut)
-    rgb = np.zeros((image.shape[0], image.shape[1], 3))
-    rgb[:, :, 0] = rgb[:, :, 1] = rgb[:, :, 2] = image
-    plt.imsave("test.png", rgb)
-
 def main():
-    sketch_names = ["Reef", "Island", "Passes"]
-    sketch_colors = ["orange", "green", "blue"]
-    waterLevel = 0.7
+    fig, ax = plt.subplots(1, 1)
+    ax.set_xlim([-2, 2])
+    ax.set_ylim([-2, 2])
+    # rad = LineBuilderRadial(ax, 0.01, center=Vector2D(0.5, 0.0))
+    rad = LineBuilder1D(ax, nb_points=30)
 
-    # Creates a top view for island sketching and a side view for profile editing
-    fig, axes = plt.subplots(1, 2, squeeze=False)
-    topViewAx: plt.Axes = axes[0, 0]
-    sideViewAx: plt.Axes = axes[0, 1]
-    fig.subplots_adjust(bottom=0.2)
-
-    topViewAx.set_title('Top view')
-    topViewAx.set_xlim(-1, 1)
-    topViewAx.set_ylim(-1, 1)
-    sideViewAx.set_title('Side view')
-    sideViewAx.set_xlim(-1, 1)
-    sideViewAx.set_ylim(0, 1)
-
-    # Represent the center of the map with an ellipse
-    # topViewAx.add_patch(matplotlib.patches.Circle((0, 0), 0.1))
-
-    # Add sketching for top island sketching
-    islandSketches = SketchManagement(topViewAx)
-
-    buttons: List[Button] = []
-    button_size = 0.5 / len(sketch_names)
-    for i_sketch in range(len(sketch_names)):
-        islandSketches.addSketch(color = sketch_colors[i_sketch])
-        sketchID = i_sketch
-        ax_button = fig.add_axes([0.5 + button_size * sketchID, 0.05, button_size - 0.01, 0.075])
-        buttons.append(Button(ax_button, sketch_names[sketchID]))
-        def activationFunction(id):
-            def action(event):
-                islandSketches.activate(id)
-            return action
-        buttons[-1].on_clicked(activationFunction(sketchID))
-
-    # Add button for generating a distance map / heightmap
-    ax_button = fig.add_axes([0.0, 0.05, 0.09, 0.075])
-    distance_button = Button(ax_button, "Gen height map")
-    distance_button.on_clicked(lambda e: genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))
-    # Add button for splitting sequences
-    ax_button = fig.add_axes([0.1, 0.05, 0.09, 0.075])
-    splitting_button = Button(ax_button, "Split profile")
-    splitting_button.on_clicked(lambda e: splitProfileOnMarkers(profileSketching.lineBuilders[0], islandSketches, sliceCut))
-
-    # Profile will be defined by the horizontal plane passing through center
-    sliceCut = (Vector2D(-1, 0), Vector2D(1, 0))
-    topViewAx.plot([sliceCut[0].x, sliceCut[1].x], [sliceCut[0].y, sliceCut[1].y], linestyle="--", color="blue")
-
-    # Each time the top view sketch is modified, reposition markers on the side view
-    def updateSideViewMarkers():
-        for line in sideViewAx.lines:
-            line.set_data([], [])
-        # Add water level to profile editing
-        sideViewAx.axhline(y = waterLevel, color = "blue")
-        for sketch in islandSketches.lineBuilders:
-            intersections = sketch.intersection(*sliceCut)
-            for intersect in intersections:
-                sideViewAx.axvline(x = intersect.x, color = sketch.color)
-        profileSketching.draw()
-        fig.canvas.draw()
-        fig.canvas.flush_events()
-
-    # Add sketching for profile editing
-    profileSketching: SketchManagement = SketchManagement(sideViewAx)
-    profileSketching.addSketch(line = LineBuilder1D(sideViewAx, .1, "blue"))
-
-    # Testing part
-    def centeredCircle(radius:float, randomness: float = 0.2) -> List[Vector2D]:
-        noise = perlin.SimplexNoise(10)
-        points: List[Vector2D] = []
-        nbPoints = 20
-        for i in range(nbPoints + 1):
-            angle = i * 2 * 3.141592 / nbPoints
-            vertexUnitPos = Vector2D(math.cos(angle), math.sin(angle))
-            noiseValue = noise.noise2(vertexUnitPos.x, vertexUnitPos.y) * randomness
-            points.append(vertexUnitPos * (radius * (1 - noiseValue)))
-        return points
-    randomCoralCurve = centeredCircle(0.5)
-    islandSketches.lineBuilders[0].setCurve(randomCoralCurve)
-    randomIslandCurve = centeredCircle(0.25)
-    islandSketches.lineBuilders[1].setCurve(randomIslandCurve)
-
-    _randomProfileCurve = [.0, .5, .6, .7, .7, .6, .6, .9, .9, .6, .6, .7, .7, .6, .5, .0]
-    randomProfileCurve = []
-    for i in range(len(_randomProfileCurve)):
-        randomProfileCurve.append(Vector2D((2 * i/(len(_randomProfileCurve) - 1)) - 1, _randomProfileCurve[i]))
-    profileSketching.lineBuilders[0].setCurve(randomProfileCurve)
-
-    islandSketches.onChange(updateSideViewMarkers)
-    # Todo:
-    #  - From profile, get heightmap depending on coral position and island position
-    #  - Add passes in the process
-    #  - Create heightmap from input and distance map
-    #  - Profile differs depending on "r" and "d" (island width, island-coral distance)
-
-    updateSideViewMarkers()
-    # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
+    rad.draw()
     plt.show()
 
 

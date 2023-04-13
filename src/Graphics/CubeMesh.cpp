@@ -117,3 +117,8 @@ std::vector<Vector3> CubeMesh::createTriangles(Vector3 minPos, Vector3 maxPos)
     }
     return box;
 }
+
+std::vector<Vector3> CubeMesh::createTriangles(AABBox box)
+{
+    return CubeMesh::createTriangles(box.min(), box.max());
+}

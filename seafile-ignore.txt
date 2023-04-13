@@ -2,11 +2,18 @@
 build*
 *.pro.user.*
 */.idea/*
+Python_tests/__pycache__/
 Python_tests/saved_runs/
 doc/
 screenshots/*
 erosionsTests/*
 erosionsTests*
+
+Python_tests/sketch-to-terrain/data
+Python_tests/sketch-to-terrain/data_downsampled_blurred
+Python_tests/sketch-to-terrain/outputs
+Python_tests/sketch-to-terrain/world_map
+Python_tests/sketch-to-terrain/*.h5
 
 *.pickle
 

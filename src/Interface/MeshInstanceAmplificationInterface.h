@@ -16,9 +16,9 @@ public:
 
     QLayout* createGUI();
 
-    std::vector<std::pair<Vector3, Vector3>> getAvailablePositionsForMaterial(TerrainTypes target);
-    std::vector<std::pair<Vector3, Vector3>> getCoralAvailablePositions();
-    std::vector<std::pair<Vector3, Vector3>> getRocksAvailablePositions();
+    std::vector<AABBox> getAvailablePositionsForMaterial(TerrainTypes target);
+    std::vector<AABBox> getCoralAvailablePositions();
+    std::vector<AABBox> getRocksAvailablePositions();
 
 public Q_SLOTS:
     void setCoralsDisplayed(bool display);

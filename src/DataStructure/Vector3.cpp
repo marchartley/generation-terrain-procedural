@@ -10,13 +10,13 @@ Vector3::Vector3(float x, float y, float z, bool valid) : x(x), y(y), z(z), vali
 }
 Vector3::Vector3() : Vector3(0.f, 0.f, 0.f) {
 
-}
+}/*
 Vector3::Vector3(const Vector3& copy) : Vector3(copy.x, copy.y, copy.z, copy.valid) {
 
 }
 Vector3::Vector3(Vector3* copy) : Vector3(copy->x, copy->y, copy->z, copy->valid) {
 
-}
+}*/
 
 Vector3::Vector3(qglviewer::Vec other)
     : Vector3(other.x, other.y, other.z)
@@ -544,13 +544,13 @@ Vector3& Vector3::operator-=(float o) {
     this->z -= o;
     return *this;
 }
-Vector3& Vector3::operator=(const Vector3& o) {
+/*Vector3& Vector3::operator=(const Vector3& o) {
     this->x = o.x;
     this->y = o.y;
     this->z = o.z;
     this->valid = o.valid;
     return *this;
-}
+}*/
 
 Vector3 operator/(Vector3 a, Vector3 b) {
     return a /= b;
@@ -757,4 +757,9 @@ nlohmann::json vec3_to_json(const Vector3& vec) {
 Vector3 json_to_vec3(nlohmann::json json)
 {
     return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
+}
+
+AABBox::AABBox(Vector3 mini, Vector3 maxi) : std::pair<Vector3, Vector3>({mini, maxi})
+{
+
 }

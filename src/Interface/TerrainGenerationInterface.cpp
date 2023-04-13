@@ -143,7 +143,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         // In any other case, consider that nothing has been done, cancel.
         return;
     }*/
-    implicitTerrain = ImplicitPrimitive::fromHeightmap(heightmap->heights);
+    implicitTerrain = ImplicitPrimitive::fromHeightmap(heightmap->heights, "", dynamic_cast<ImplicitPrimitive*>(implicitTerrain));
     dynamic_cast<ImplicitPrimitive*>(implicitTerrain)->material = TerrainTypes::DIRT;
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
