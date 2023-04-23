@@ -283,26 +283,17 @@ def randomVec3():
     return Vector3D(random.random(), random.random(), random.random())
 
 
-def line_intersection(P11, P12, P21, P22, epsilon: float = 0.0) -> Optional[List[float]]:
-    if isinstance(P11, Vector2D):
-        P11 = P11.asarray()
-    if isinstance(P12, Vector2D):
-        P12 = P12.asarray()
-    if isinstance(P21, Vector2D):
-        P21 = P21.asarray()
-    if isinstance(P22, Vector2D):
-        P22 = P22.asarray()
-
-    divisor = (P11[0] - P12[0]) * (P21[1] - P22[1]) - (P11[1] - P12[1]) * (P21[0] - P22[0])
+def line_intersection(P11: Vector2D, P12: Vector2D, P21: Vector2D, P22: Vector2D, epsilon: float = 0.0) -> Optional[Vector2D]:
+    divisor = (P11.x - P12.x) * (P21.y - P22.y) - (P11.y - P12.y) * (P21.x - P22.x)
     if divisor == 0:
         return None
-    t = ((P11[0] - P21[0]) * (P21[1] - P22[1]) - (P11[1] - P21[1]) * (P21[0] - P22[0])) / divisor
-    u = ((P11[0] - P21[0]) * (P11[1] - P12[1]) - (P11[1] - P21[1]) * (P11[0] - P12[0])) / divisor
+    t = ((P11.x - P21.x) * (P21.y - P22.y) - (P11.y - P21.y) * (P21.x - P22.x)) / divisor
+    u = ((P11.x - P21.x) * (P11.y - P12.y) - (P11.y - P21.y) * (P11.x - P12.x)) / divisor
 
     # check if line actually intersect
     if (epsilon != 0.0 and 0 + epsilon <= t <= 1 - epsilon and 0 + epsilon <= u <= 1 - epsilon) or (
             epsilon == 0.0 and 0 <= t <= 1 and 0 <= u <= 1):
-        return [P11[0] + t * (P12[0] - P11[0]), P11[1] + t * (P12[1] - P11[1])]
+        return P11 + t * (P12 - P11)  # [P11[0] + t * (P12[0] - P11[0]), P11[1] + t * (P12[1] - P11[1])]
     else:
         return None
 

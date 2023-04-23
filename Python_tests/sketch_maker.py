@@ -19,7 +19,7 @@ def frange(start: float, end: float, step: float = 1.0):
         yield start
         start += step
 
-def curveInterpolation(initialCurve: List[Any], desiredLength: int):
+def resizeArray(initialCurve: List[Any], desiredLength: int):
     initialLength = len(initialCurve)
     if initialLength == desiredLength:
         return initialCurve
@@ -34,36 +34,6 @@ def curveInterpolation(initialCurve: List[Any], desiredLength: int):
 
     return finalCurve
 
-class RepeatedTimer(object):
-    def __init__(self, interval, function, *args, **kwargs):
-        self._timer = None
-        self.interval = interval
-        self.function = function
-        self.args = args
-        self.kwargs = kwargs
-        self.is_running = False
-        self.next_call = time.time()
-        self.start()
-
-    def _run(self):
-        self.is_running = False
-        self.start()
-        self.function(*self.args, **self.kwargs)
-
-    def start(self) -> 'RepeatedTimer':
-        if not self.is_running:
-            self.next_call += self.interval
-            self._timer = threading.Timer(self.next_call - time.time(), self._run)
-            self._timer.start()
-            self.is_running = True
-
-        return self
-
-    def stop(self) -> 'RepeatedTimer':
-        self._timer.cancel()
-        self.is_running = False
-        return self
-
 
 class LineBuilder:
     def __init__(self, ax: plt.Axes, color: Optional[str] = None, active: bool = True, multiline: bool = False):
@@ -77,6 +47,7 @@ class LineBuilder:
         self.active = active
         self.color = color
         self.callbacksOnChange: List[Callable] = []
+        self.callbacksOnChangeEnded: List[Callable] = []
         self.previousMousePos: Optional[Vector2D] = None
         self.xMin, self.xMax = ax.get_xlim()
         self.yMin, self.yMax = ax.get_ylim()
@@ -102,6 +73,9 @@ class LineBuilder:
     def release_event(self, event):
         if event.inaxes != self.line.axes:
             return
+        if self.currentlyPressed:
+            for callback in self.callbacksOnChangeEnded:
+                callback()
         self.currentlyPressed = False
         self.previousMousePos = None
         # print(self, f"Release (active = {self.active}, pressed = {self.currentlyPressed})")
@@ -144,11 +118,14 @@ class LineBuilder:
             intersect = line_intersection(limitA, limitB, p1, p2)
             if intersect is None:
                 continue
-            intersections.append(Vector2D(intersect))
+            intersections.append(intersect)
         return intersections
 
     def addCallbackOnChange(self, function: Callable):
         self.callbacksOnChange.append(function)
+
+    def addCallbackOnChangeEnded(self, function: Callable):
+        self.callbacksOnChangeEnded.append(function)
 
     def draw(self):
         curve = self.getCurve()
@@ -202,7 +179,7 @@ class LineBuilder1D(LineBuilder):
 
     def setCurve(self, points: List[Vector2D]) -> 'LineBuilder1D':
         self.reset()
-        newPoints = curveInterpolation(points, self.nb_points)
+        newPoints = resizeArray(points, self.nb_points)
         for i, p in enumerate(newPoints):
             self.points[i].y = p.y
         return self
@@ -284,7 +261,7 @@ class LineBuilderRadial(LineBuilder1D):
 
     def setCurve(self, points: List[Vector2D]) -> 'LineBuilderRadial':
         self.reset()
-        newPoints = [p.to_polar() for p in curveInterpolation(points, self.nb_points)]
+        newPoints = [p.to_polar() for p in resizeArray(points, self.nb_points)]
         for i, p in enumerate(newPoints):
             self.points[i].y = p.y
         return self
@@ -309,6 +286,10 @@ class SketchManagement:
     def onChange(self, function: Callable):
         for line in self.lineBuilders:
             line.addCallbackOnChange(function)
+
+    def onChangeEnded(self, function: Callable):
+        for line in self.lineBuilders:
+            line.addCallbackOnChangeEnded(function)
 
     def draw(self):
         for line in self.lineBuilders:

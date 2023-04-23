@@ -9,13 +9,13 @@ screenshots/*
 erosionsTests/*
 erosionsTests*
 
-Python_tests/sketch-to-terrain/data
-Python_tests/sketch-to-terrain/data_downsampled_blurred
-Python_tests/sketch-to-terrain/outputs
-Python_tests/sketch-to-terrain/world_map
-Python_tests/sketch-to-terrain/*.h5
-
 *.pickle
+
+Python_tests/sketch-to-terrain/data/
+Python_tests/sketch-to-terrain/data_downsampled_blurred/
+Python_tests/sketch-to-terrain/world_map/
+Python_tests/sketch-to-terrain/*.h5
+Python_tests/sketch-to-terrain/outputs/
 
 # Prerequisites
 *.d
