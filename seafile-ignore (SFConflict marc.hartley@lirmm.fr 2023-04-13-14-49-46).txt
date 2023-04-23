@@ -1,26 +1,21 @@
-build/
-build-Release/
-build-Release/*
-build-Debug/*
-build-Profile/*
+.git/
+build*
 *.pro.user.*
-erosionsTests*
-screenshots/*
-shared_screenshots/
-shared_images/
-.cccc/
-Python_tests/_cached*
-Python_tests/erosionData
-Python_tests/synthetic_terrains_dataset/*
-
+*/.idea/*
+Python_tests/__pycache__/
+Python_tests/saved_runs/
 doc/
+screenshots/*
+erosionsTests/*
+erosionsTests*
 
-src/third-party/
-*/.idea/
-__pycache__/
-Python_tests/grid_layout_map
-Python_tests/saved_runs_old
-Python_tests/saved_runs
+Python_tests/sketch-to-terrain/data
+Python_tests/sketch-to-terrain/data_downsampled_blurred
+Python_tests/sketch-to-terrain/outputs
+Python_tests/sketch-to-terrain/world_map
+Python_tests/sketch-to-terrain/*.h5
+
+*.pickle
 
 # Prerequisites
 *.d
@@ -55,13 +50,9 @@ Python_tests/saved_runs
 *.out
 *.app
 *.user
-*.2b2237b
-build/.qglviewer.xml
-build/.qglviewer.xml
-build/generation-terrain-procedural
-build/Makefile
-build/qrc_qmake_qmake_immediate.cpp
-generation-terrain-procedural.pro.user
+*.user.*
+build/*
+
 *.dat
 src/assets/models/coral_1_bottom_watertight.stl
 src/assets/models/coral_1_top_watertight.stl
@@ -74,9 +65,9 @@ src/assets/models/coral_8_watertight.stl
 src/assets/models/coral_9_watertight.stl
 src/assets/models/My_Scan_2.stl
 src/assets/models/plastic-reef-5-corals20191129-2115-1wwd1bd.zip
-src/FastWFC/*
+# src/FastWFC/*
 saved_maps/action_histories/*
-saved_maps/heightmaps/*
+#saved_maps/heightmaps/*
 saved_maps/voxel_grids/*
 *.zip
 src/assets/textures/CIF_2021_ED166_HARTLEY_Marc_137014.pdf
@@ -85,12 +76,4 @@ src/assets/textures/coral2/Material_737.png
 src/assets/textures/mountain_rocks/Material_1607.jpg
 src/assets/textures/underwater_ground/Material_1283.jpg
 src/assets/textures/underwater_sand/Material_1573.jpg
-
-saved_maps/Geometry/*
-shared_images\*
-DataShomData/*
-Other_Data/*
-
-Python_tests\.ipynb_checkpoints\*
-
-usersmarchappdata*
+usersmarchappdatalocal*
