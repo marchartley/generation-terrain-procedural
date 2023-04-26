@@ -295,6 +295,7 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
             }
         }
     }
+    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
     _cached = true;
 //    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
     return _cachedVoxelized;

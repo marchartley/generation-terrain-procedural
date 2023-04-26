@@ -298,12 +298,17 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
 //            }
 //        }
         for (auto& f : flowfieldValues) {
-            f = (f.xy() + Vector3::random(.1f)).normalize();
+            //f = (f.xy() + Vector3::random(.1f)).normalize();
         }
-        for (int x = 0; x < flowfieldValues.sizeX; x++)
-            for (int y = 0; y < flowfieldValues.sizeY; y++)
-                for (int z = flowfieldValues.sizeZ - 5; z < flowfieldValues.sizeZ; z++)
-                    flowfieldValues.at(x, y, z) += Vector3(0, 0, -1);
+        for (int x = 0; x < flowfieldValues.sizeX; x++) {
+            for (int y = 0; y < flowfieldValues.sizeY; y++) {
+                for (int z = 0; z < flowfieldValues.sizeZ; z++) {
+                    if (environmentalDensities.at(x, y, z) < 1000.0)
+                        flowfieldValues.at(x, y, z) = Vector3();
+//                    flowfieldValues.at(x, y, z) += Vector3(0, 0, -1);
+                }
+            }
+        }
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -357,7 +362,7 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                 // float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
 //                Vector3 acceleration = /*flowfieldValues.at(position) +*/ gravityDirection * (gravityForce * gravityCoefficient);
 //                float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
-                Vector3 justFlow = flowfieldValues.at(1, 1, 1);//(flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
+                Vector3 justFlow = flowfieldValues.at(pos); // (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
                 Vector3 justGravity = (gravityfieldValues.at(nextPos) * gravityCoefficient).maxMagnitude(2.f);
                 Vector3 flowfield = justFlow + justGravity;
                 dir += flowfield * flowfieldInfluence * dt;
