@@ -1178,7 +1178,9 @@ void VoxelGrid::updateEnvironmentalDensities(float waterLevel)
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             for (int z = 0; z < this->getSizeZ(); z++) {
-                this->environmentalDensities.at(x, y, z) = (z < waterLevel ? 1000 : 1);
+                this->environmentalDensities.at(x, y, z) = (z < waterLevel ? (1000 + (1 - float(z)/waterLevel) * 1000)
+                                                                           : (1000 - (z - waterLevel)/float(this->getSizeZ()) * 999));
+//                this->environmentalDensities.at(x, y, z) = (z < waterLevel ? 1000 : 1);
             }
         }
     }
