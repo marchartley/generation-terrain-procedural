@@ -34,6 +34,17 @@ std::string getFilename(std::string path);
 float rad2deg(float rad);
 float deg2rad(float deg);
 
+//template <typename ... FArgs, typename ... Args>
+//float timeIt(std::function<void(FArgs...)> func,
+//                  Args && ... as) {
+//    auto start = std::chrono::system_clock::now();
+//    func(std::forward<Args>(as)...);
+//    auto end = std::chrono::system_clock::now();
+//    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+//}
+float timeIt(std::function<void()> func);
+
+
 /// Careful, the order of the vectors are not preserved in these functions
 template <class T>
 std::vector<T> convertSetToVector(std::set<T> _set) {

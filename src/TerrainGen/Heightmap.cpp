@@ -501,8 +501,11 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
     if (data != nullptr)
         delete[] data;//stbi_image_free(data);
 
-    map = map.resize(nx, ny, 1);
-    map *= (heightFactor / 255.f);
+    map = map.meanSmooth(3, 3, 1, true);
+    map = map.resize(nx, ny, 1) / 255.f;
+//    for (auto& h : map)
+//        h = std::pow(h, 2.f);
+    map *= heightFactor;
     this->heights = map;
 //    if (heightFactor == -1) {
 //        maxHeight = max;

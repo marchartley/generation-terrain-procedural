@@ -4,16 +4,19 @@ import os
 import re
 from pathlib import Path
 import shutil
+from random import shuffle
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 def get_order(file, file_pattern):
     match = file_pattern.match(Path(file).name)
     if not match:
         return math.inf
     return int(match.groups()[0])
+
 
 def moveToFolders(path):
     allFiles = glob.glob(path + "*.png")
@@ -41,21 +44,27 @@ def moveToFolders(path):
     os.makedirs(path + "val", exist_ok=True)
     os.makedirs(path + "test", exist_ok=True)
 
-    trainLimit = int(len(sortedFiles) * 2/3)
-    valLimit = trainLimit + int(len(sortedFiles) * 1/6)
+    trainLimit = int(len(sortedFiles) * 3 / 4)
+    valLimit = trainLimit + int(len(sortedFiles) * 1 / 8)
 
+    shuffle(sortedFiles)
     print(f"Arranging {path}")
     for i in range(len(sortedFiles)):
         if i % 50 == 0:
-            print(f"{i+1} / {len(sortedFiles)}")
+            print(f"{i + 1} / {len(sortedFiles)}")
         previous_filename = sortedFiles[i][1]
         fileID = sortedFiles[i][0]
-        newFilename = path + ("train" if i < trainLimit else "val" if i < valLimit else "test") + "/" + str(fileID) + ".png"
+        newFilename = path + ("train" if i < trainLimit else "val" if i < valLimit else "test") + "/" + str(
+            fileID) + ".png"
         shutil.move(previous_filename, newFilename)
 
 
 def main():
-    mainPath = "correct_synthetic_terrains_dataset/"
+    mainPath = ""
+    if os.name == 'nt':
+        mainPath = "./correct_synthetic_terrains_dataset/"
+    else:
+        mainPath = "/data/correct_synthetic_terrains_dataset/"
     pathHeightmap = mainPath + "heightmaps/"
     pathFeatures = mainPath + "features/"
     pathDistortions = mainPath + "distortions/"

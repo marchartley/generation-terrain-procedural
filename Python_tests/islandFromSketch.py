@@ -15,6 +15,8 @@ from typing import Tuple, List, Callable, Union, Optional, Any
 
 import PIL.Image
 from matplotlib.widgets import Button
+
+import curves
 from Vectors import Vector2D, Vector3D, line_intersection
 import Vectors
 from noise import perlin
@@ -137,8 +139,33 @@ def genAndSaveDistanceMap(islandSketch: SketchManagement):
     image = image[:, :, :3]
     plt.imsave("test.png", image)
 
+def getSequences(profileSketch: LineBuilder):
+    centerMarker, islandCenterPos = -1, 0.0
+    islandMarker, islandBorderPos = 1, 0.5
+    coralMarker, coralsBorderPos = 0, 0.75
+    abyssMarker, abyssesPos = 3, 1.0
+
+    def subcurve(curve, t0, t1):
+        return curve[int(t0 * len(curve)) : int(t1 * len(curve))]
+
+    curve = [p.y for p in profileSketch.getCurve()]
+    sequences = [
+        (centerMarker, centerMarker, [curve[0]]),
+        (centerMarker, islandMarker, subcurve(curve, islandCenterPos, islandBorderPos)),
+        (islandMarker, coralMarker, subcurve(curve, islandBorderPos, coralsBorderPos)),
+        (coralMarker, abyssMarker, subcurve(curve, coralsBorderPos, abyssesPos)),
+        (abyssMarker, abyssMarker, [curve[-1]]),
+    ]
+    # for s in list(reversed(sequences)): # Use a copy of it, just to be able to modify it
+    #     sequences.append((s[1], s[0], list(reversed(s[2]))))
+    return sequences
+
+
+
 def splitProfileOnMarkers(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> List[Tuple[int, int, List[float]]]:
     """Extract the curves made by the profile depending on the distance between each island sketch"""
+    return getSequences(profileSketch)
+
     markers: List[Tuple[float, int]] = []
 
     # sliceDirection = (sliceCut[1] - sliceCut[0]).normalize()
@@ -185,12 +212,18 @@ def interpolateOnCurve(curve: List[Any], t: float) -> Any:
 
     p0 = curve[math.floor(i)]
     p1 = curve[math.ceil(i)]
-    return p0 * a + p1 * (1 - a)
+    return p0 * (1 - a) + p1 * a
 
 def getDistancesToCurves(x: float, y: float, islandSketches: SketchManagement, profileSlice: Vector2D) -> List[float]:
     distancesToCurves = [(i, curve.intersection(Vector2D(), profileSlice)) for i, curve in enumerate(islandSketches.lineBuilders)]
-    distancesToCurves = [vecs[0].norm() if len(vecs) > 0 else (Vector2D(x, y) * 1000).norm() for i, vecs in distancesToCurves]
-    distancesToCurves.append(1.5)  # approximation of sqrt(2)
+    distancesToCurves = [vecs[0].norm() if len(vecs) > 0 else 1000.0 for i, vecs in distancesToCurves]
+    # distancesToCurves.append(1.5)  # approximation of sqrt(2)
+    if distancesToCurves[1] > distancesToCurves[0]:
+        tmp = distancesToCurves[0]
+        distancesToCurves[0] = distancesToCurves[1]
+        distancesToCurves[1] = tmp
+    distanceToAbysses = max(1.5, max(distancesToCurves[:2]) + 0.001) # Force the abyss to be just behind the corals
+    distancesToCurves.append(distanceToAbysses)
     return distancesToCurves
 
 def getSequenceID(sequence: Tuple[int, int, Any], sequences: List[Tuple[int, int, List[float]]]) -> int:
@@ -205,8 +238,8 @@ def getSequence(sequences: List[Tuple[int, int, List[float]]], distancesToCurves
     t = 0
     indices = [i for i in range(len(distancesToCurves))]
     indices = [x for _, x in sorted(zip(distancesToCurves, indices))]
-    if distToCenter < distancesToCurves[indices[0]]:
-        t = distToCenter / distancesToCurves[indices[0]]
+    if distToCenter <= distancesToCurves[indices[0]]:
+        t = (distToCenter / distancesToCurves[indices[0]] if distancesToCurves[indices[0]] > 0 else 0)
         currSeq = [-1, indices[0], t]
     else:
         found = False
@@ -237,18 +270,18 @@ def heightmapFromSketches(profileSketch: LineBuilder, islandSketches: SketchMana
     dims = outputImageDims
     heights: np.ndarray = np.zeros((dims[0], dims[1]))
 
-    for _x in range(dims[0]):
-        for _y in range(dims[1]):
+    for _y in range(dims[1]):
+        for _x in range(dims[0]):
             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
             pos = Vector2D(x, y)
             distToCenter = pos.norm()
-            profileSlice = pos.normalized() * 2# if distToCenter > 0.1 else Vector2D(1, 0)
+            profileSlice = (pos.normalized() * 10 if distToCenter > 0.01 else Vector2D(10, 0))
 
             distancesToCurves = getDistancesToCurves(x, y, islandSketches, profileSlice)
+            # if _x == 65 and _y == 55:
+                # a = 0
             marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
-            if distToCenter < 0.01:
-                height = interpolateOnCurve(profileSketch.getCurve(), 0.5).y
-            heights[_x, _y] = height
+            heights[_x, _y] = min(max(height, 0.0), 1.0)
 
     # Distortion part :
     distorted = np.zeros((dims[0], dims[1]))
@@ -271,7 +304,10 @@ def featuresFromSketches(profileSketch: LineBuilder, islandSketches: SketchManag
             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
             pos = Vector2D(x, y)
             distToCenter = pos.norm()
-            profileSlice = pos.normalized() * 2# if distToCenter > 0.1 else Vector2D(1, 0)
+            profileSlice = (pos.normalized() * 10 if distToCenter > 0.1 else Vector2D(10, 0))
+
+            if distToCenter == 0:
+                a = 0
 
             distancesToCurves = getDistancesToCurves(x, y, islandSketches, profileSlice)
             marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
@@ -344,14 +380,15 @@ def onMouseMove(e: matplotlib.backend_bases.FigureCanvasBase, topViewAx, sideVie
 
 # Each time the top view sketch is modified, reposition markers on the side view
 def updateSideViewMarkers(sideViewAx: plt.Axes, waterLevel: float, islandSketches: SketchManagement, profileSketching: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D], fig: plt.Figure):
-    for line in sideViewAx.lines:
-        line.set_data([], [])
-    # Add water level to profile editing
-    sideViewAx.axhline(y = waterLevel, color = "blue")
-    for sketch in islandSketches.lineBuilders:
-        intersections = sketch.intersection(*sliceCut)
-        for intersect in intersections:
-            sideViewAx.axvline(x = intersect.x, color = sketch.color)
+    # return
+    # for line in sideViewAx.lines:
+    #     line.set_data([], [])
+    # # Add water level to profile editing
+    # sideViewAx.axhline(y = waterLevel, color = "blue")
+    # # for sketch in islandSketches.lineBuilders:
+    # #     intersections = sketch.intersection(*sliceCut)
+    # #     for intersect in intersections:
+    # #         sideViewAx.axvline(x = intersect.x, color = sketch.color)
     islandSketches.draw()
     profileSketching.draw()
 
@@ -364,8 +401,10 @@ def addDistortionFromCurve(curve: List[Vector2D], distortionStrength: float) -> 
             x, y = intsToCoords(_x, _y, sizeX, sizeY)
             closestLineIndex: int = -1
             closestDistance: float = lineWidth
+            pos = Vector2D(x, y)
             for i in range(len(curve) - 1):
-                distToLine = Vectors.distanceToLine(Vector2D(x, y), curve[i], curve[i + 1])
+                if curve[i] == curve[i + 1]: continue
+                distToLine = Vectors.distanceToLine(pos, curve[i], curve[i + 1])
                 if distToLine < closestDistance:
                     closestDistance = distToLine
                     closestLineIndex = i
@@ -414,30 +453,56 @@ def randomDistortionCurve() -> List[Vector2D]:
     for _ in range(random.randint(20, 40)):
         x = n.noise2(p.x / freq, p.y / freq)
         y = n.noise2(p.x / freq, p.y / freq + 1000.0)
-        p += Vector2D(x, y) * .5
+        # p += Vector2D(x, y) * .5
+        p.x, p.y = p.x + x * .5, p.y + y * .5
         toCenter = (p * -1)
-        p += 0.1 * toCenter  # /(1.5 - toCenter.norm())
+        # p += 0.1 * toCenter  # /(1.5 - toCenter.norm())
+        p.x, p.y = p.x + toCenter.x * .5, p.y + toCenter.y * .5
         positions.append(p.copy())
     for _ in range(5):
         positions = smoothCurve(positions)
-    return positions
+    return curves.catmull_rom_chain(positions)
 
-def createDatasetOfRandomIslands(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D], filePrefix = "result"):
+def getRandom(mini: float, maxi: float) -> float:
+    return mini + random.random() * (maxi - mini)
+
+def randomIslandCurve(randomness: float) -> List[Vector2D]:
+    pass
+
+def createDatasetOfRandomIslands(_profileSketch: LineBuilder1D, _islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D], filePrefix = "result"):
     global distortionMaps
+
+    islandMinRandomness, islandMaxRandomness = 0.5, 1.5
+    profileMinRandomness, profileMaxRandomness = 0.8, 1.0
+    minDistortionCurves, maxDistortionCurves = 3, 10
+    minDistortionStrength, maxDistortionStrength = 0.1, 0.3
+    islandSizeMinRandomness, islandSizeMaxRandomness = 0.5, 1.5
+
+    profileSketch = _profileSketch  # deepcopy(_profileSketch)
+    islandSketches = _islandSketches  # deepcopy(_islandSketches)
+
     distortionMaps.append(initialDistoMap(20, 20))
-    maxDistortionCurves = 10
-    maxDistortionStrength = 0.5
     folder = "correct_synthetic_terrains_dataset/"
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    for iSample in range(1000000):
+    for iSample in range(10000):
         if os.path.exists(folder + "features/" + filePrefix + str(iSample) + ".png"):
             continue
-        nbDistortions = random.randint(1, maxDistortionCurves)
+        nbDistortions = int(getRandom(minDistortionCurves, maxDistortionCurves))
         for _ in range(nbDistortions):
-            strength = random.random() * maxDistortionStrength
+            strength = getRandom(minDistortionStrength, maxDistortionStrength)
             addDistortionFromCurve(randomDistortionCurve(), strength)
+
+        randomness = getRandom(islandMinRandomness, islandMaxRandomness)
+        randomCoralCurve = centeredCircle(1.0 * getRandom(islandSizeMinRandomness, islandSizeMaxRandomness), randomness)
+        islandSketches.lineBuilders[0].setCurve(randomCoralCurve)
+        randomIslandCurve = centeredCircle(0.5 * getRandom(islandSizeMinRandomness, islandSizeMaxRandomness), randomness)
+        islandSketches.lineBuilders[1].setCurve(randomIslandCurve)
+
+        _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.5, 0.1, 0.0]
+        randomProfileCurve = [h * getRandom(profileMinRandomness, profileMaxRandomness) for h in _randomProfileCurve]
+        profileSketch.setCurve(randomProfileCurve)
         genAndSaveHeightMap(profileSketch, islandSketches, sliceCut, folder, "features/", "distortions/", "heightmaps/", filePrefix + str(iSample))
         distortionMaps = distortionMaps[0:1]
     print("Finished!")
@@ -449,12 +514,23 @@ def updateResultsFigure(images: List[np.ndarray], _axes: List[plt.Axes]):
         axes[i].imshow(img)
     fig2.canvas.draw()
 
+def centeredCircle(radius: float, randomness: float = 1.2) -> List[Vector2D]:
+    perlin_noise = perlin.SimplexNoise(10)
+    points: List[Vector2D] = []
+    nbPoints = 30
+    for i in range(nbPoints):
+        angle = i * math.tau / (nbPoints - 1)
+        vertexUnitPos = Vector2D(math.cos(angle), math.sin(angle))
+        noiseValue = 1.0 + perlin_noise.noise2(vertexUnitPos.x, vertexUnitPos.y) * (randomness - 1)
+        points.append(vertexUnitPos * (radius * noiseValue))
+    return points
+
 def main():
     global fig2
 
     distortionMaps.append(initialDistoMap(20, 20))
     # for _ in range(3):
-        # addDistortionFromCurve(randomDistortionCurve(), 0.1)
+    #     addDistortionFromCurve(randomDistortionCurve(), 0.1)
     # distortionMaps.append([[Vector2D(math.cos(x / 5), math.sin(y / 2)) * 0.1 for y in range(20)] for x in range(20)])
     # distortionMaps.append([[Vector2D(0, 1) if x < 10 else Vector2D(0, 0) for y in range(20)] for x in range(20)])
 
@@ -474,7 +550,7 @@ def main():
     topViewAx.set_xlim(-1, 1)
     topViewAx.set_ylim(-1, 1)
     sideViewAx.set_title('Side view')
-    sideViewAx.set_xlim(-1, 1)
+    sideViewAx.set_xlim(0, 1)
     sideViewAx.set_ylim(0, 1)
     distortionsAx.set_title('Distortions')
     distortionsAx.set_xlim(-1, 1)
@@ -513,34 +589,24 @@ def main():
 
     # Profile will be defined by the horizontal plane passing through center
     sliceCut = (Vector2D(-1, 0), Vector2D(1, 0))
-    topViewAx.plot([sliceCut[0].x, sliceCut[1].x], [sliceCut[0].y, sliceCut[1].y], linestyle="--", color="blue")
+    # topViewAx.plot([sliceCut[0].x, sliceCut[1].x], [sliceCut[0].y, sliceCut[1].y], linestyle="--", color="blue")
 
     # Add sketching for profile editing
     profileSketching: SketchManagement = SketchManagement(sideViewAx)
-    sketchPro = LineBuilder1D(sideViewAx, 40, "blue")
-    # sketchPro.xMin = 0
-    # sketchPro.xMax = 1
+    sketchPro = LineBuilder1D(sideViewAx, 20, "blue")
+    sketchPro.xMin = 0
+    sketchPro.xMax = 1
     profileSketching.addSketch(line = sketchPro)
 
     # Testing part
-    def centeredCircle(radius:float, randomness: float = 0.2) -> List[Vector2D]:
-        perlin_noise = perlin.SimplexNoise(10)
-        points: List[Vector2D] = []
-        nbPoints = 30
-        for i in range(nbPoints):
-            angle = i * math.tau / (nbPoints - 1)
-            vertexUnitPos = Vector2D(math.cos(angle), math.sin(angle))
-            noiseValue = perlin_noise.noise2(vertexUnitPos.x, vertexUnitPos.y) * randomness
-            points.append(vertexUnitPos * (radius * (1 - noiseValue)))
-        return points
-    randomCoralCurve = centeredCircle(0.5)
+    randomCoralCurve = centeredCircle(2.0)
     islandSketches.lineBuilders[0].setCurve(randomCoralCurve)
-    randomIslandCurve = centeredCircle(0.25)
+    randomIslandCurve = centeredCircle(1.0)
     islandSketches.lineBuilders[1].setCurve(randomIslandCurve)
 
     # _randomProfileCurve = [.0, .9, .0, .9, .0, .9, .0, .9, .0]
-    _randomProfileCurve = [0.02, 0.04, 0.05, 0.06, 0.07, 0.09, 0.13, 0.17, 0.19, 0.7, 0.57, 0.53, 0.61, 0.7, 0.75, 0.86, 0.9, 0.96, 0.99, 0.94, 0.88, 0.82, 0.75, 0.71, 0.52, 0.52, 0.52, 0.65, 0.69, 0.7, 0.3, 0.22, 0.21, 0.2, 0.2, 0.19, 0.19, 0.18, 0.18, 0.05]
-    # _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.1, 0.0]
+    # _randomProfileCurve = [0.02, 0.04, 0.05, 0.06, 0.07, 0.09, 0.13, 0.17, 0.19, 0.7, 0.57, 0.53, 0.61, 0.7, 0.75, 0.86, 0.9, 0.96, 0.99, 0.94, 0.88, 0.82, 0.75, 0.71, 0.52, 0.52, 0.52, 0.65, 0.69, 0.7, 0.3, 0.22, 0.21, 0.2, 0.2, 0.19, 0.19, 0.18, 0.18, 0.05]
+    _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.1, 0.0]
     randomProfileCurve = []
     for i in range(len(_randomProfileCurve)):
         randomProfileCurve.append(Vector2D((2 * i/(len(_randomProfileCurve) - 1)) - 1, _randomProfileCurve[i]))
@@ -558,14 +624,32 @@ def main():
 
     distortionSketcher = SketchManagement(distortionsAx)
     distortionSketcher.addSketch(sketch_type=LineBuilder2D)
+
+    islandMinRandomness, islandMaxRandomness = 0.5, 1.5  # 0.9, 1.1
+    profileMinRandomness, profileMaxRandomness = 0.8, 1.0
+    minDistortionCurves, maxDistortionCurves = 3, 10
+    minDistortionStrength, maxDistortionStrength = 0.1, 0.3
+    randomness = getRandom(islandMinRandomness, islandMaxRandomness)
+    randomCoralCurve = centeredCircle(1.0, randomness)
+    islandSketches.lineBuilders[0].setCurve(randomCoralCurve)
+    randomIslandCurve = centeredCircle(0.5, randomness)
+    islandSketches.lineBuilders[1].setCurve(randomIslandCurve)
+
+    _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.1, 0.0]
+    randomProfileCurve = [h * getRandom(profileMinRandomness, profileMaxRandomness) for h in _randomProfileCurve]
+    profileSketching.lineBuilders[0].setCurve(randomProfileCurve)
+
     # distortionSketcher.lineBuilders[0].setCurve([Vector2D(-.8, -.8), Vector2D(.8, .3)])
     # distortionSketcher.onChange(lambda: updateDistortionsSketches(distortionsAx, distortionSketcher))
     # distortionSketcher.onChangeEnded(lambda: updateDistortionsAx(distortionsAx, distortionSketcher))
     updateSideViewMarkers(sideViewAx, waterLevel, islandSketches, profileSketching, sliceCut, fig)
     updateDistortionsAx(distortionsAx, distortionSketcher)
-    # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
+    genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
 
-    # createDatasetOfRandomIslands(profileSketching.lineBuilders[0], islandSketches, sliceCut, filePrefix="sample")
+    createDatasetOfRandomIslands(sketchPro, islandSketches, sliceCut, filePrefix="sample")
+    # import cProfile
+    # cProfile.runctx('createDatasetOfRandomIslands(sketchPro, islandSketches, sliceCut, filePrefix="sample")', globals(), locals(), sort="ncalls")
+
 
     plt.show()
 

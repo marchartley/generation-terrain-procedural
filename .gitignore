@@ -12,6 +12,7 @@ shared_images/
 Python_tests/_cached*
 Python_tests/erosionData
 Python_tests/synthetic_terrains_dataset/*
+Python_tests/correct_synthetic_terrains_dataset*
 
 doc/
 
