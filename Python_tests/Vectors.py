@@ -1,4 +1,5 @@
 import random
+from functools import lru_cache
 from typing import Union, Iterable, List, Optional
 import math
 import copy
@@ -140,7 +141,7 @@ class Vector2D:
         return Vector2D(self.y, self.x)
 
 def randomVec2():
-    return Vector2D(random.random(), random.random())
+    return Vector2D(random.random() * 2.0 - 1.0, random.random() * 2.0 - 1.0)
 
 
 
@@ -301,6 +302,8 @@ def line_intersection(P11: Vector2D, P12: Vector2D, P21: Vector2D, P22: Vector2D
 def closestPointToLine(point: Vector2D, lineA: Vector2D, lineB: Vector2D, limitedToSegment: bool = True) -> Vector2D:
     a = (point - lineA)
     b = (lineB - lineA)
+    if b.dot(b) == 0:
+        return lineA
     t = ((a.dot(b)) / (b.dot(b)))
     return (t if not limitedToSegment else min(1, max(0, t))) * b + lineA
 

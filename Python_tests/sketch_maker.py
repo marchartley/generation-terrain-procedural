@@ -4,6 +4,8 @@ from typing import Tuple, List, Callable, Union, Optional, Any
 from matplotlib import pyplot as plt
 import threading
 import time
+
+import curves
 from Vectors import Vector2D, Vector3D, line_intersection
 
 
@@ -21,7 +23,7 @@ def frange(start: float, end: float, step: float = 1.0):
 
 def resizeArray(initialCurve: List[Any], desiredLength: int):
     initialLength = len(initialCurve)
-    if initialLength == desiredLength:
+    if initialLength == desiredLength or initialLength == 0:
         return initialCurve
 
     finalCurve: List[Vector2D] = []
@@ -37,7 +39,8 @@ def resizeArray(initialCurve: List[Any], desiredLength: int):
 
 class LineBuilder:
     def __init__(self, ax: plt.Axes, color: Optional[str] = None, active: bool = True, multiline: bool = False):
-        self.line, = ax.plot([0], [0], color = color)
+        _data = ax.plot([0], [0], color = color)
+        self.line: plt.Line2D = _data[0]
         self.points: List[Vector2D] = []
         self.ax = ax
         self.cid_press = self.line.figure.canvas.mpl_connect('button_press_event', self.press_event)
@@ -51,12 +54,14 @@ class LineBuilder:
         self.previousMousePos: Optional[Vector2D] = None
         self.xMin, self.xMax = ax.get_xlim()
         self.yMin, self.yMax = ax.get_ylim()
+        self.drawableCurve: List[Vector2D] = []
 
     def addPoint(self, p: Vector2D) -> 'LineBuilder':
         self.points.append(p.copy())
+        self.computeCachedCurve()
         # self.draw()
-        for callback in self.callbacksOnChange:
-            callback()
+        # for callback in self.callbacksOnChange:
+        #     callback()
         return self
 
     def press_event(self, event):
@@ -98,7 +103,7 @@ class LineBuilder:
         return self
 
     def getCurve(self) -> List[Vector2D]:
-        return self.points
+        return self.drawableCurve
 
     def setCurve(self, points: List[Vector2D]) -> 'LineBuilder':
         self.reset()
@@ -113,10 +118,11 @@ class LineBuilder:
     def intersection(self, limitA: Vector2D, limitB: Vector2D) -> List[Vector2D]:
         intersections: List[Vector2D] = []
         curve = self.getCurve()
+        curve = resizeArray(curve, 30)  # Just to gain in time... should be removed later
         for i in range(1, len(curve)):
             p1, p2 = curve[i - 1], curve[i]
             intersect = line_intersection(limitA, limitB, p1, p2)
-            if intersect is None:
+            if intersect is None or intersect in intersections:
                 continue
             intersections.append(intersect)
         return intersections
@@ -129,8 +135,17 @@ class LineBuilder:
 
     def draw(self):
         curve = self.getCurve()
-        self.line.set_data([v.x for v in curve], [v.y for v in curve])
+        c1 = curve
+        c2 = curve  # self.points
+        self.line.set_data([v.x for v in c1], [v.y for v in c1])
+        # ax: plt.Axes = self.line.axes
+        # ax.scatter([p.x for p in c2], [p.y for p in c2], marker="x")
         self.line.figure.canvas.draw()
+
+    def computeCachedCurve(self):
+        self.drawableCurve = resizeArray(curves.catmull_rom_chain(self.points, num_points=5), 30)
+        for callback in self.callbacksOnChange:
+            callback()
 
 
 class LineBuilder1D(LineBuilder):
@@ -143,8 +158,9 @@ class LineBuilder1D(LineBuilder):
     def addPoint(self, p: Vector2D) -> 'LineBuilder1D':
         index = self.getClosestPointIndex(p)
         self.points[index] = p.copy()
-        for callback in self.callbacksOnChange:
-            callback()
+        self.computeCachedCurve()
+        # for callback in self.callbacksOnChange:
+        #     callback()
         return self
 
     def move_event(self, event):
@@ -173,19 +189,26 @@ class LineBuilder1D(LineBuilder):
     def reset(self) -> 'LineBuilder1D':
         nbPoints = self.nb_points
         self.points = [Vector2D(self.xMin + (i / (nbPoints-1)) * (self.xMax - self.xMin), 0) for i in range(nbPoints)]
-        for callback in self.callbacksOnChange:
-            callback()
         return self
 
-    def setCurve(self, points: List[Vector2D]) -> 'LineBuilder1D':
+    def setCurve(self, points: Union[List[float], List[Vector2D]]) -> 'LineBuilder1D':
         self.reset()
-        newPoints = resizeArray(points, self.nb_points)
-        for i, p in enumerate(newPoints):
-            self.points[i].y = p.y
+        points = resizeArray(points, self.nb_points)
+        # self.points = []
+        # for i, p in enumerate(points):
+        #     if isinstance(p, Vector2D):
+        #         self.points.append(p.copy())
+        #     else:
+        #         self.points.append(Vector2D(self.xMin + (i * (self.xMax - self.xMin) / (len(points) + 1)), p))
+        self.points = [p if isinstance(p, Vector2D) else Vector2D(self.xMin + (i * (self.xMax - self.xMin) / (len(points) + 1)), p) for i, p in enumerate(points)]
+        self.computeCachedCurve()
         return self
 
     def close(self) -> 'LineBuilder1D':
         raise NotImplementedError("Cannot close a 1D line")
+
+    def draw(self):
+        return super().draw()
 
 
 class LineBuilder2D(LineBuilder):
@@ -226,11 +249,17 @@ class LineBuilderRadial(LineBuilder1D):
                 minDist = angleDistance(p, v)
         return index
 
+    def computeCachedCurve(self):
+        self.drawableCurve = resizeArray(curves.catmull_rom_chain([self.polarToCartesian(p) for p in self.points], closed=True), 20)
+        for callback in self.callbacksOnChange:
+            callback()
+
     def addPoint(self, p: Vector2D) -> 'LineBuilderRadial':
         index = self.getClosestPointIndex(self.cartesianToPolar(p))
         self.points[index].y = self.cartesianToPolar(p).y
-        for callback in self.callbacksOnChange:
-            callback()
+        self.computeCachedCurve()
+        # for callback in self.callbacksOnChange:
+        #     callback()
         return self
 
     def move_event(self, event):
@@ -248,35 +277,57 @@ class LineBuilderRadial(LineBuilder1D):
                 self.addPoint(p)
             self.previousMousePos = Vector2D(event.xdata, event.ydata)
 
+            for callback in self.callbacksOnChangeEnded:
+                callback()
+
     def reset(self) -> 'LineBuilderRadial':
         nbPoints = self.nb_points
         self.points = [Vector2D(mapTo(i / nbPoints, 0, 1, self.xMin, self.xMax), 1) for i in range(nbPoints)]
-        for callback in self.callbacksOnChange:
-            callback()
+        self.computeCachedCurve()
+        # for callback in self.callbacksOnChange:
+        #     callback()
         return self
 
     def getCurve(self) -> List[Vector2D]:
-        curve = [self.polarToCartesian(p) for p in self.points] + [self.polarToCartesian(self.points[0])]
-        return curve
+        return self.drawableCurve
+        # curve = curves.catmull_rom_chain([self.polarToCartesian(p) for p in self.points], closed=True)  # + [self.polarToCartesian(self.points[0])], closed=True)
+        # return curve
 
     def setCurve(self, points: List[Vector2D]) -> 'LineBuilderRadial':
         self.reset()
         newPoints = [p.to_polar() for p in resizeArray(points, self.nb_points)]
+        newPoints.sort(key = lambda v: v.x)
         for i, p in enumerate(newPoints):
             self.points[i].y = p.y
+        self.computeCachedCurve()
         return self
+
+    def getValue(self, angle: float) -> float:
+        angle = math.fmod(angle + 2 * math.pi, 2 * math.pi)
+        closestBefore, closestAfter = self.points[-1], None
+        closestBeforeID = -1
+        for i, p in enumerate(self.points):  # Points are defined as (theta, r)
+            if p.x <= angle:
+                closestBefore = p
+                closestBeforeID = i
+        closestAfter = self.points[(closestBeforeID + 1) % len(self.points)]
+        t = (angle - closestBefore.x) / ((closestAfter.x if closestBeforeID+1 < len(self.points) else 2*math.pi) - closestBefore.x)
+        return closestBefore.y + t * (closestAfter.y - closestBefore.y)
+
+    def draw(self):
+        return super().draw()
 
 class SketchManagement:
     def __init__(self, ax):
         self.lineBuilders: List[LineBuilder] = []
         self.ax = ax
 
-    def addSketch(self, color: Optional[str] = None, sketch_type = LineBuilder, line: Optional[LineBuilder] = None) -> int:
+    def addSketch(self, color: Optional[str] = None, sketch_type = LineBuilder, line: Optional[LineBuilder] = None) -> LineBuilder:
         if line is None:
             line = sketch_type(self.ax, color = color)
         self.lineBuilders.append(line)
         self.activate(0)
-        return len(self.lineBuilders) - 1
+        return line
 
     def activate(self, builder: int):
         for lb in self.lineBuilders:
@@ -294,6 +345,11 @@ class SketchManagement:
     def draw(self):
         for line in self.lineBuilders:
             line.draw()
+
+    def addSketchs(self, sketches: List[LineBuilder]):
+        for sketch in sketches:
+            self.addSketch(line = sketch)
+
 
 def main():
     fig, ax = plt.subplots(1, 1)
