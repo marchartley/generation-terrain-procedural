@@ -759,7 +759,7 @@ Vector3 json_to_vec3(nlohmann::json json)
     return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
 }
 
-AABBox::AABBox(Vector3 mini, Vector3 maxi) : std::pair<Vector3, Vector3>({mini, maxi})
+AABBox::AABBox(Vector3 mini, Vector3 maxi) : mini(mini), maxi(maxi)
 {
 
 }

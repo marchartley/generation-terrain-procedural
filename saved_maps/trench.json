@@ -1,117 +1,565 @@
 {
 	"implicitPatches": {
-		"blendingFactor": 2.0,
-		"composableA": {
-			"blendingFactor": 2.0,
-			"composableA": {
-				"densityValue": -2.5,
-				"dimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
+		"composables": [
+			{
+				"blendingFactor": 2.0,
+				"composableA": {
+					"blendingFactor": 2.0,
+					"composableA": {
+						"blendingFactor": 2.0,
+						"composableA": {
+							"blendingFactor": 2.0,
+							"composableA": {
+								"blendingFactor": 2.0,
+								"composableA": {
+									"blendingFactor": 2.0,
+									"composableA": {
+										"densityValue": 0.75,
+										"dimensions": {
+											"x": 100.0,
+											"y": 100.0,
+											"z": 29.996519088745117
+										},
+										"index": 18,
+										"material": "DIRT",
+										"mirrored": false,
+										"name": "Heightmap",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"position": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"shape": "Implicit_Heightmap",
+										"sigmaValue": -1.0,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"composableB": {
+										"densityValue": 1.5,
+										"dimensions": {
+											"x": 37.60000228881836,
+											"y": 38.29999923706055,
+											"z": 20.0
+										},
+										"index": 17,
+										"material": "ROCK",
+										"mirrored": false,
+										"name": "Mountain",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"position": {
+											"x": 46.578704833984375,
+											"y": 32.58708190917969,
+											"z": 0.0
+										},
+										"shape": "Mountain",
+										"sigmaValue": 5.0,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"index": 16,
+									"mirrored": false,
+									"name": "Blend",
+									"operator": "Blend",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"positionalB": "ABOVE",
+									"type": "compose",
+									"useIntersection": false
+								},
+								"composableB": {
+									"composableA": {
+										"densityValue": 1.5,
+										"dimensions": {
+											"x": 37.60000228881836,
+											"y": 38.29999923706055,
+											"z": 6.200000286102295
+										},
+										"index": 15,
+										"material": "ROCK",
+										"mirrored": false,
+										"name": "Mountain",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"position": {
+											"x": 31.425947189331055,
+											"y": 33.38323211669922,
+											"z": 0.0
+										},
+										"shape": "Mountain",
+										"sigmaValue": 5.0,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"distortion": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"index": 14,
+									"mirrored": false,
+									"name": "",
+									"noise": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"rotation": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"scale": {
+										"x": 1.0,
+										"y": 1.0,
+										"z": 1.0
+									},
+									"spreadFactor": 0.0,
+									"translation": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 3.4280457496643066
+									},
+									"type": "unary"
+								},
+								"index": 13,
+								"mirrored": false,
+								"name": "Blend",
+								"operator": "Blend",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": false
+							},
+							"composableB": {
+								"composableA": {
+									"densityValue": 1.5,
+									"dimensions": {
+										"x": 59.612648010253906,
+										"y": 61.14250946044922,
+										"z": 3.299999952316284
+									},
+									"index": 12,
+									"material": "ROCK",
+									"mirrored": false,
+									"name": "Polygon",
+									"optionalCurve": {
+										"closed": false,
+										"points": [
+											{
+												"x": 40.812644958496094,
+												"y": 27.866708755493164,
+												"z": 4.533263206481934
+											},
+											{
+												"x": 25.52434730529785,
+												"y": 19.149999618530273,
+												"z": 4.0
+											},
+											{
+												"x": 18.80000114440918,
+												"y": 41.99250793457031,
+												"z": 6.244904041290283
+											},
+											{
+												"x": 39.54585266113281,
+												"y": 39.79850769042969,
+												"z": 5.25364875793457
+											}
+										]
+									},
+									"position": {
+										"x": -5.911848068237305,
+										"y": 18.255495071411133,
+										"z": 0.0
+									},
+									"shape": "Polygon",
+									"sigmaValue": 5.0,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"distortion": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"index": 11,
+								"mirrored": false,
+								"name": "",
+								"noise": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"rotation": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"scale": {
+									"x": 1.0,
+									"y": 1.0,
+									"z": 1.0
+								},
+								"spreadFactor": 0.0,
+								"translation": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": -0.6849994659423828
+								},
+								"type": "unary"
+							},
+							"index": 10,
+							"mirrored": false,
+							"name": "Blend",
+							"operator": "Blend",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"positionalB": "FIXED_POS",
+							"type": "compose",
+							"useIntersection": false
+						},
+						"composableB": {
+							"composableA": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 11.618383407592773,
+									"y": 19.032058715820313,
+									"z": 10.848030090332031
+								},
+								"index": 9,
+								"material": "ROCK",
+								"mirrored": false,
+								"name": "Parametric Tunnel",
+								"optionalCurve": {
+									"closed": false,
+									"points": [
+										{
+											"x": 7.018383026123047,
+											"y": 4.599998474121094,
+											"z": 5.0373101234436035
+										},
+										{
+											"x": 5.855033874511719,
+											"y": 12.1800537109375,
+											"z": 6.248030185699463
+										},
+										{
+											"x": 4.600000381469727,
+											"y": 14.432060241699219,
+											"z": 4.599999904632568
+										}
+									]
+								},
+								"position": {
+									"x": 10.320018768310547,
+									"y": 37.00102996826172,
+									"z": 0.0
+								},
+								"shape": "Parametric_Tunnel",
+								"sigmaValue": 9.199999809265137,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"distortion": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"index": 8,
+							"mirrored": false,
+							"name": "",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"scale": {
+								"x": 1.0,
+								"y": 1.0,
+								"z": 1.0
+							},
+							"spreadFactor": 0.0,
+							"translation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": -4.055034160614014
+							},
+							"type": "unary"
+						},
+						"index": 7,
+						"mirrored": false,
+						"name": "Blend",
+						"operator": "Blend",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"positionalB": "FIXED_POS",
+						"type": "compose",
+						"useIntersection": false
+					},
+					"composableB": {
+						"composableA": {
+							"densityValue": -2.5,
+							"dimensions": {
+								"x": 24.324289321899414,
+								"y": 7.924495697021484,
+								"z": 10.90757942199707
+							},
+							"index": 6,
+							"material": "WATER",
+							"mirrored": false,
+							"name": "Parametric Tunnel",
+							"optionalCurve": {
+								"closed": false,
+								"points": [
+									{
+										"x": 2.6500000953674316,
+										"y": 2.6500015258789063,
+										"z": 2.6500000953674316
+									},
+									{
+										"x": 14.326107025146484,
+										"y": 5.274494171142578,
+										"z": 8.257579803466797
+									},
+									{
+										"x": 21.67428970336914,
+										"y": 4.896862030029297,
+										"z": 5.9599456787109375
+									}
+								]
+							},
+							"position": {
+								"x": -0.09496760368347168,
+								"y": 40.903255462646484,
+								"z": 0.0
+							},
+							"shape": "Parametric_Tunnel",
+							"sigmaValue": 5.300000190734863,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
+						},
+						"distortion": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"index": 5,
+						"mirrored": false,
+						"name": "",
+						"noise": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"rotation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"scale": {
+							"x": 1.0,
+							"y": 1.0,
+							"z": 1.0
+						},
+						"spreadFactor": 0.0,
+						"translation": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": -2.3405888080596924
+						},
+						"type": "unary"
+					},
+					"index": 4,
+					"mirrored": false,
+					"name": "Blend",
+					"operator": "Blend",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"positionalB": "FIXED_POS",
+					"type": "compose",
+					"useIntersection": false
 				},
-				"index": 4,
-				"material": "WATER",
+				"composableB": {
+					"composableA": {
+						"densityValue": -2.5,
+						"dimensions": {
+							"x": 24.85704231262207,
+							"y": 47.700584411621094,
+							"z": 24.098905563354492
+						},
+						"index": 3,
+						"material": "WATER",
+						"mirrored": false,
+						"name": "Parametric Tunnel",
+						"optionalCurve": {
+							"closed": false,
+							"points": [
+								{
+									"x": 17.643068313598633,
+									"y": 45.05058288574219,
+									"z": 15.67112922668457
+								},
+								{
+									"x": 2.6499996185302734,
+									"y": 39.449310302734375,
+									"z": 21.44890594482422
+								},
+								{
+									"x": 22.207040786743164,
+									"y": 28.315139770507813,
+									"z": 13.056568145751953
+								},
+								{
+									"x": 6.216588973999023,
+									"y": 22.00274658203125,
+									"z": 12.954174041748047
+								},
+								{
+									"x": 8.468194961547852,
+									"y": 12.4918212890625,
+									"z": 5.046492099761963
+								},
+								{
+									"x": 12.470373153686523,
+									"y": 2.6500015258789063,
+									"z": 2.6500000953674316
+								}
+							]
+						},
+						"position": {
+							"x": 28.966520309448242,
+							"y": 49.505393981933594,
+							"z": 0.0
+						},
+						"shape": "Parametric_Tunnel",
+						"sigmaValue": 5.300000190734863,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"distortion": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"index": 2,
+					"mirrored": false,
+					"name": "",
+					"noise": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"rotation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"scale": {
+						"x": 1.0,
+						"y": 1.0,
+						"z": 1.0
+					},
+					"spreadFactor": 0.0,
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 3.1559481620788574
+					},
+					"type": "unary"
+				},
+				"index": 1,
 				"mirrored": false,
-				"name": "Identity",
+				"name": "Blend",
+				"operator": "Blend",
 				"optionalCurve": {
 					"closed": false,
 					"points": []
 				},
-				"position": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"shape": "None",
-				"sigmaValue": -1.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			"composableB": {
-				"densityValue": 1.5,
-				"dimensions": {
-					"x": 50.0,
-					"y": 50.0,
-					"z": 50.0
-				},
-				"index": 3,
-				"material": "ROCK",
-				"mirrored": false,
-				"name": "Sphere",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"position": {
-					"x": -14.667691230773926,
-					"y": 45.70219421386719,
-					"z": 0.0
-				},
-				"shape": "Sphere",
-				"sigmaValue": 5.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			"index": 2,
-			"mirrored": false,
-			"name": "Blend",
-			"operator": "Blend",
-			"optionalCurve": {
-				"closed": false,
-				"points": []
-			},
-			"positionalB": "ABOVE",
-			"type": "compose",
-			"useIntersection": false
-		},
-		"composableB": {
-			"densityValue": 1.5,
-			"dimensions": {
-				"x": 50.0,
-				"y": 50.0,
-				"z": 50.0
-			},
-			"index": 1,
-			"material": "ROCK",
-			"mirrored": false,
-			"name": "Sphere",
-			"optionalCurve": {
-				"closed": false,
-				"points": []
-			},
-			"position": {
-				"x": 50.53489685058594,
-				"y": -20.916324615478516,
-				"z": 0.0
-			},
-			"shape": "Sphere",
-			"sigmaValue": 5.0,
-			"supportDimensions": {
-				"x": 0.0,
-				"y": 0.0,
-				"z": 0.0
-			},
-			"type": "primitive"
-		},
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
+			}
+		],
 		"index": 0,
 		"mirrored": false,
-		"name": "Blend",
-		"operator": "Blend",
+		"name": "",
 		"optionalCurve": {
 			"closed": false,
 			"points": []
 		},
-		"positionalB": "ABOVE",
-		"type": "compose",
-		"useIntersection": false
+		"type": "compose"
 	}
 }

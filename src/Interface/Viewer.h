@@ -51,7 +51,7 @@ class Viewer : public QGLViewer {
     Q_OBJECT
 public:
     Viewer(QWidget *parent = nullptr);
-    Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPath, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
     Viewer(std::shared_ptr<Heightmap> g, QWidget *parent = nullptr);
     Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
@@ -113,7 +113,7 @@ public:
     std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<LayerBasedGrid> layerGrid;
-    ImplicitPatch* implicitTerrain;
+    std::shared_ptr<ImplicitNaryOperator> implicitTerrain;
     bool display_vertices = true;
     qglviewer::Vec selectedPoint, orig, dir;
 

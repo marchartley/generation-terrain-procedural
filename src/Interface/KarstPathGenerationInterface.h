@@ -31,7 +31,7 @@ public:
     Mesh waterLevelMesh;
 
 //    bool isHidden;
-    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    std::shared_ptr<VoxelGrid> voxelGrid;
 

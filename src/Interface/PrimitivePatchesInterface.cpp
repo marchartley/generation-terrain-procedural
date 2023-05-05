@@ -10,9 +10,9 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
 {
     previewMesh.cullFace = false;
 
-    this->mainPatch = new ImplicitPrimitive;
-    this->mainPatch->name = "Identity";
-//    dynamic_cast<ImplicitPrimitive*>(this->mainPatch)->material = WATER;
+//    this->implicitTerrain = new ImplicitPrimitive;
+//    this->implicitTerrain->name = "Identity";
+//    dynamic_cast<ImplicitPrimitive*>(this->implicitTerrain)->material = WATER;
 
 
 //    this->setMainFilename("saved_maps/implicit_patches.json");
@@ -51,7 +51,7 @@ void PrimitivePatchesInterface::display()
         }
 
         if (parametricCurveMesh.shader != nullptr) {
-            parametricCurveMesh.shader->setVector("color", Vector3(1, 1, 1));
+            parametricCurveMesh.shader->setVector("color", std::vector<float> {1.f, 1.f, 1.f, 1.f});
             this->displayParametricCurve();
         }
     }
@@ -66,7 +66,7 @@ void PrimitivePatchesInterface::replay(nlohmann::json action)
 
 }
 
-void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
+void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 
@@ -107,6 +107,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QRadioButton* createNoise2DButton = new QRadioButton("Noise");
     QRadioButton* createMountainChainButton = new QRadioButton("Mountains");
     QRadioButton* createPolygonButton = new QRadioButton("Polygon");
+    QRadioButton* createTunnelButton = new QRadioButton("Tunnel");
     QRadioButton* createFromFileButton = new QRadioButton("...");
 
 //    FancySlider* densitySlider = new FancySlider(Qt::Orientation::Horizontal, -5.f, 5.f, .1f);
@@ -138,7 +139,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QPushButton* fileSelectionButton = new QPushButton("...");
     QCheckBox* enableHotreloadButton = new QCheckBox("Hot reloading ?");
 
-    QLabel* patchesCounterLabel = new QLabel(QString::fromStdString("Prim: " + std::to_string(nbPrimitives) + ", Unary: " + std::to_string(nbUnaryOperators) + ", Binary: " + std::to_string(nbBinaryOperators)));
+    QLabel* patchesCounterLabel = new QLabel(QString::fromStdString("Prim: " + std::to_string(nbPrimitives) + ", Unary: " + std::to_string(nbUnaryOperators) + ", Binary: " + std::to_string(nbBinaryOperators) + ", N-ary: " + std::to_string(nbNaryOperators)));
 
     QRadioButton* airDensityCheckbox = new QRadioButton("Air");
     QRadioButton* waterDensityCheckbox = new QRadioButton("Water");
@@ -166,6 +167,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     createNoise2DButton,
                                                     createMountainChainButton,
                                                     createPolygonButton,
+                                                    createTunnelButton,
                                                     createFromFileButton
                                           }));
 //    layout->addWidget(createSliderGroup("Density", densitySlider));
@@ -220,6 +222,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(createNoise2DButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Noise2D); });
     QObject::connect(createMountainChainButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::MountainChain); });
     QObject::connect(createPolygonButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Polygon); });
+    QObject::connect(createTunnelButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::ParametricTunnel); });
     QObject::connect(createFromFileButton, &QRadioButton::toggled, this, [=](bool checked) {
         if (checked) {
             this->setSelectedShape(ImplicitPatch::PredefinedShapes::ImplicitHeightmap);
@@ -291,6 +294,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     createArchButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Arch);
     createMountainChainButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::MountainChain);
     createPolygonButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Polygon);
+    createTunnelButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::ParametricTunnel);
     createNoise2DButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Noise2D);
 
     stackingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::STACK);
@@ -373,8 +377,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
                 translate->composableA = this->selectedPatch();
                 translate->translate(translation);
                 translate->name = "Translation";
-                if (this->selectedPatch() == this->mainPatch) {
-                    this->mainPatch = translate;
+                if (this->selectedPatch() == this->implicitTerrain.get()) {
+                    this->implicitTerrain->composables = {translate};
                 } else {
                     ImplicitOperator* parent = (ImplicitOperator*)this->naiveApproachToGetParent(this->selectedPatch());
                     if (this->selectedPatch() == parent->composableA) {
@@ -409,8 +413,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
             rotate->composableA = this->currentlySelectedPatch;
             rotate->rotate(rotation.x, rotation.y, rotation.z);
             rotate->name = "Rotation";
-            if (currentlySelectedPatch == this->mainPatch) {
-                this->mainPatch = rotate; // TODO : Not right, but for tests
+            if (currentlySelectedPatch == this->implicitTerrain) {
+                this->implicitTerrain = rotate; // TODO : Not right, but for tests
             } else {
                 ImplicitOperator* parent = (ImplicitOperator*)this->naiveApproachToGetParent(currentlySelectedPatch);
                 if (currentlySelectedPatch == parent->composableA) {
@@ -450,7 +454,7 @@ void PrimitivePatchesInterface::hide()
 
 void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 {
-    if (e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon)) {
+    if (e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
         this->createPatchWithOperation(Vector3());
         this->parametricCurve.points.clear();
         this->parametricCurveMesh.clear();
@@ -478,7 +482,7 @@ void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 
 ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
 {
-    return (this->currentlySelectedPatch != nullptr ? this->currentlySelectedPatch : this->mainPatch);
+    return (this->currentlySelectedPatch != nullptr ? this->currentlySelectedPatch : this->implicitTerrain.get());
 }
 
 void PrimitivePatchesInterface::mouseMovedOnMapEvent(Vector3 newPosition, TerrainModel* model)
@@ -493,7 +497,7 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bo
 {
     if (this->isVisible() && mouseInMap) {
 
-        if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon) {
+        if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
             this->addParametricPoint(model->getTerrainPos(mousePosInMap));
             return;
         }
@@ -509,10 +513,17 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     ImplicitPatch* patch = this->createPatchFromParameters(pos - this->functionSize.xy() * .5f);
     ImplicitPatch* previousMain = this->selectedPatch();
     ImplicitPatch* _parent = this->naiveApproachToGetParent(previousMain);
+    if (previousMain == this->implicitTerrain.get()) {
+        if (this->implicitTerrain->composables.empty()) {
+            previousMain = ImplicitPatch::createIdentity();
+        } else {
+            previousMain = this->implicitTerrain->composables.front();
+        }
+    }
     ImplicitPatch* operation = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
 
     if (_parent == nullptr) {
-        this->mainPatch = operation;
+        this->implicitTerrain->composables = {operation};
     } else {
         ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
         if (previousMain == parent->composableA)
@@ -521,12 +532,12 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
             parent->composableB = operation;
     }
 //        ImplicitPatch* newOperation = this->createOperationPatchFromParameters(previousMain, patch);
-//        this->mainPatch = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
+//        this->implicitTerrain = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
     this->updateMapWithCurrentPatch();
 
     this->storedPatches.push_back(patch);
     this->storedPatches.push_back(operation);
-    this->storedPatches.push_back(mainPatch);
+    this->storedPatches.push_back(implicitTerrain.get());
     this->updatePrimitiveList();
 
     if (this->mainFilename != "")
@@ -545,7 +556,7 @@ void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes
     if (this->desiredPatchFromFile != nullptr) {
         this->functionSize = desiredPatchFromFile->getDimensions();
     }
-    if (this->currentShapeSelected == ImplicitPatch::MountainChain) {
+    if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
         this->functionSize = Vector3(selectedSigma, selectedSigma, selectedSigma);
     }
     for (auto& vert : vertices) {
@@ -570,12 +581,12 @@ void PrimitivePatchesInterface::setCurrentPositioning(ImplicitPatch::PositionalL
 void PrimitivePatchesInterface::resetPatch()
 {
     this->storedPatches.clear();
-    delete this->mainPatch;
+//    delete this->implicitTerrain;
     ImplicitPatch::currentMaxIndex = -1;
-    this->mainPatch = new ImplicitPrimitive;
-    this->mainPatch->name = "Identity";
+    this->implicitTerrain->composables.clear(); // = new ImplicitPrimitive;
+    this->implicitTerrain->name = "Identity";
     this->updateMapWithCurrentPatch();
-    this->storedPatches.push_back(mainPatch);
+    this->storedPatches.push_back(implicitTerrain.get());
     this->updatePrimitiveList();
 //    voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
     //    voxelGrid->fromIsoData();
@@ -583,11 +594,11 @@ void PrimitivePatchesInterface::resetPatch()
 
 void PrimitivePatchesInterface::updateMapWithCurrentPatch()
 {
-    this->mainPatch->updateCache();
+    this->implicitTerrain->updateCache();
 //    this->layerGrid->layers = this->layerGrid->previousState;
     this->layerGrid->reset();
-//    this->mainPatch->cleanCache();
-    this->layerGrid->add(this->mainPatch/*, SAND, false*/);
+//    this->implicitTerrain->cleanCache();
+    this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
     voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
 //    voxelGrid->fromCachedData();
     heightmap->fromLayerGrid(*layerGrid);
@@ -631,8 +642,8 @@ void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
     } else {
         noisePatch = new ImplicitUnaryOperator;
         noisePatch->composableA = selectedPatch;
-        if (selectedPatch == this->mainPatch) {
-            this->mainPatch = noisePatch;
+        if (selectedPatch == this->implicitTerrain.get()) {
+            this->implicitTerrain->composables = {noisePatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
@@ -666,8 +677,8 @@ void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
     } else {
         distortionPatch = new ImplicitUnaryOperator;
         distortionPatch->composableA = selectedPatch;
-        if (selectedPatch == this->mainPatch) {
-            this->mainPatch = distortionPatch;
+        if (selectedPatch == this->implicitTerrain.get()) {
+            this->implicitTerrain->composables = {distortionPatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
@@ -701,8 +712,8 @@ void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
     } else {
         distortionPatch = new ImplicitUnaryOperator;
         distortionPatch->composableA = selectedPatch;
-        if (selectedPatch == this->mainPatch) {
-            this->mainPatch = distortionPatch;
+        if (selectedPatch == this->implicitTerrain.get()) {
+            this->implicitTerrain->composables = {distortionPatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
@@ -725,7 +736,7 @@ void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
 void PrimitivePatchesInterface::savePatchesAsFile(std::string filename)
 {
     this->lastTimeFileHasBeenModified = QDateTime::currentDateTime().addDays(1); // Just to avoid the reloading during the save
-    nlohmann::json content = this->mainPatch->toJson();
+    nlohmann::json content = this->implicitTerrain->toJson();
     std::ofstream out(filename, std::ios_base::out | std::ios_base::trunc);
     out << nlohmann::json({ {ImplicitPatch::json_identifier, content} }).dump(1, '\t');
     out.flush();
@@ -740,7 +751,7 @@ void PrimitivePatchesInterface::loadPatchesFromFile(std::string filename)
     nlohmann::json json_content = nlohmann::json::parse(content);
     this->lastTimeFileHasBeenModified = QFileInfo(QString::fromStdString(filename)).lastModified();
     if (json_content.contains(ImplicitPatch::json_identifier)) {
-        this->mainPatch = ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]);
+        this->implicitTerrain->composables = {ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier])};
         this->updateMapWithCurrentPatch();
         this->updatePrimitiveList();
     } else {
@@ -862,7 +873,7 @@ void PrimitivePatchesInterface::modifyPrimitiveHierarchy(int ID_to_move, int rel
 
     if (relation == HIERARCHY_TYPE::SIBLING) {
         // Critical case : trying to make sibling with the root, just consider it as an error and make it a child
-        if (related != this->mainPatch)
+        if (related != this->implicitTerrain)
             related = this->naiveApproachToGetParent(related);
         relation = HIERARCHY_TYPE::CHILD;
     } else if (relation == HIERARCHY_TYPE::PARENT) {
@@ -892,7 +903,7 @@ void PrimitivePatchesInterface::modifyPrimitiveHierarchy(int ID_to_move, int rel
     if (newGrandparent == nullptr){
         // No grandparent = "related" is the main patch
         newGrandparent = new ImplicitPatch(related->clone());
-        this->mainPatch = newGrandparent;
+        this->implicitTerrain = newGrandparent;
     }
 
     if (newGrandparent->composableA == related)
@@ -938,7 +949,7 @@ void PrimitivePatchesInterface::setMainFilename(std::string newMainFilename)
 void PrimitivePatchesInterface::findAllSubfiles()
 {
     this->allSubfiles.clear();
-    std::vector<ImplicitPatch*> pendingPatches = {this->mainPatch};
+    std::vector<ImplicitPatch*> pendingPatches = {this->implicitTerrain.get()};
     while (!pendingPatches.empty()) {
         ImplicitPatch* current = pendingPatches.back();
         pendingPatches.pop_back();
@@ -1009,7 +1020,7 @@ void PrimitivePatchesInterface::displayPatchesTree()
     Plotter* plt = Plotter::getInstance();
 
     std::vector<std::pair<ImplicitPatch*, std::vector<int>>> allPatchesAndDirections;
-    std::vector<std::tuple<ImplicitPatch*, std::vector<int>, int>> queueWithDirections = {{mainPatch, {}, -1}};
+    std::vector<std::tuple<ImplicitPatch*, std::vector<int>, int>> queueWithDirections = {{implicitTerrain.get(), {}, -1}};
     std::vector<Vector3> positions;
     std::vector<std::string> labels;
     std::vector<std::pair<int, int>> edges;
@@ -1101,7 +1112,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         return translate;
     } else {
         Vector3 funcSize = this->functionSize * layerGrid->scaling;
-        if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon) {
+        if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
             auto AABBox = this->parametricCurve.AABBox();
             position = std::get<0>(AABBox) - funcSize * .5f;
             funcSize = (std::get<1>(AABBox) + funcSize * .5f) - position;
@@ -1163,7 +1174,7 @@ ImplicitPatch* PrimitivePatchesInterface::findPrimitiveById(int ID)
 
 ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch* child)
 {
-    std::vector<ImplicitPatch*> waitingPatches = {this->mainPatch};
+    std::vector<ImplicitPatch*> waitingPatches = {this->implicitTerrain.get()};
     std::set<ImplicitPatch*> visitedPatches;
     while (!waitingPatches.empty()) {
         auto current = waitingPatches.back();
@@ -1200,13 +1211,14 @@ void PrimitivePatchesInterface::updatePrimitiveList()
     if (this->isVisible()) {
         primitiveSelectionGui->clear();
         this->storedPatches.clear();
-    //    this->cleanPatch(this->mainPatch);
+    //    this->cleanPatch(this->implicitTerrain);
         bool patchesCanBeLocked = this->mainFilename != "";
-        std::vector<std::tuple<ImplicitPatch*, int, bool>> waitingPatches = { {this->mainPatch, 0, false} };
+        std::vector<std::tuple<ImplicitPatch*, int, bool>> waitingPatches = { {this->implicitTerrain.get(), 0, false} };
 
         this->nbPrimitives = 0;
         this->nbBinaryOperators = 0;
         this->nbUnaryOperators = 0;
+        this->nbNaryOperators = 0;
         int currentIndex = 0;
 
         while (!waitingPatches.empty()) {
@@ -1217,6 +1229,7 @@ void PrimitivePatchesInterface::updatePrimitiveList()
             primitiveSelectionGui->addItem(new HierarchicalListWidgetItem((locked ? "*" : "") + current->toString(), current->index, level));
             this->storedPatches.push_back(current);
             ImplicitOperator* currentAsOperator = dynamic_cast<ImplicitOperator*>(current);
+            ImplicitNaryOperator* currentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(current);
             if (currentAsOperator) {
                 if (currentAsOperator->composableA) {
                     waitingPatches.push_back({currentAsOperator->composableA, level+1, childrenAreLocked});
@@ -1224,6 +1237,9 @@ void PrimitivePatchesInterface::updatePrimitiveList()
                 if (currentAsOperator->composableB) {
                     waitingPatches.push_back({currentAsOperator->composableB, level+1, childrenAreLocked});
                 }
+            } else if (currentAsNaryOperator) {
+                for (const auto& c : currentAsNaryOperator->composables)
+                    waitingPatches.push_back({c, level+1, childrenAreLocked});
             }
 
             // Counting patches
@@ -1231,8 +1247,10 @@ void PrimitivePatchesInterface::updatePrimitiveList()
                 nbPrimitives ++;
             else if (dynamic_cast<ImplicitUnaryOperator*>(current) != nullptr)
                 nbUnaryOperators ++;
-            else
+            else if (currentAsOperator)
                 nbBinaryOperators ++;
+            else
+                nbNaryOperators ++;
         }
 //        if (nbPrimitives > 1) // If there is more than just the Identity
 //            this->savePatchesAsFile(this->mainFilename);

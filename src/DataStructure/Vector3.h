@@ -207,14 +207,17 @@ namespace std {
     };
 }
 
-class AABBox: public std::pair<Vector3, Vector3> {
+class AABBox { //: public std::pair<Vector3, Vector3> {
 public:
     AABBox(Vector3 mini, Vector3 maxi);
-    const Vector3& min() const { return this->first; }
-    const Vector3& max() const { return this->second; }
+    Vector3 min() const { return this->mini; }
+    Vector3 max() const { return this->maxi; }
     Vector3 dimensions() const { return max() - min(); }
     bool contains(Vector3 position) const { return Vector3::isInBox(position, min(), max()); }
     Vector3 center() const { return (this->min() + this->max()) * .5f; }
+
+    Vector3 mini;
+    Vector3 maxi;
 };
 
 #include "Utils/json.h"

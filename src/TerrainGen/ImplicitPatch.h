@@ -123,9 +123,9 @@ public:
 
 //    virtual size_t getCurrentHistoryIndex() const;
 
-    virtual float getSizeX() { return this->getBBox().second.x; }
-    virtual float getSizeY() { return this->getBBox().second.y; }
-    virtual float getSizeZ() { return this->getBBox().second.z; }
+    virtual float getSizeX() { return this->getBBox().max().x; }
+    virtual float getSizeY() { return this->getBBox().max().y; }
+    virtual float getSizeZ() { return this->getBBox().max().z; }
 
     Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
@@ -137,6 +137,7 @@ public:
 
     BSpline optionalCurve;
 
+    static ImplicitPatch* createIdentity();
     static ImplicitPatch* createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
     static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
     static float isovalue;

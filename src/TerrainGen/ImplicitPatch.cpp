@@ -179,6 +179,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
 
 void ImplicitPatch::updateCache()
 {
+    this->_cached = false;
     Vector3 dim = Vector3::max(Vector3(1, 1), this->getDimensions().roundedUp());
 
     this->_cachedMaxHeight = Matrix3<float>(dim.x, dim.y, 1, -1.f);
@@ -268,7 +269,7 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
         return this->_cachedVoxelized;
 
     if (!dimensions.isValid())
-        dimensions = this->getBBox().second;
+        dimensions = this->getBBox().max();
 
     this->_cachedVoxelized = Matrix3<float>(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
@@ -308,6 +309,16 @@ ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vect
     primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve);
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
+
+    return primitive;
+}
+ImplicitPatch *ImplicitPatch::createIdentity()
+{
+    ImplicitPrimitive* primitive = new ImplicitPrimitive();
+    primitive->predefinedShape = ImplicitPatch::PredefinedShapes::None;
+    primitive->evalFunction = [](Vector3) { return 0.f; };
+    primitive->optionalCurve = {};
+    primitive->parametersProvided = {0.f};
 
     return primitive;
 }
@@ -584,6 +595,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, st
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
     prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
+    prim->position = Vector3(0, 0, 0);
 //    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
 //        return heightmap.data[heightmap.getIndex(pos.xy())];
 //    });
@@ -831,15 +843,15 @@ AABBox ImplicitOperator::getSupportBBox()
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
         // Same as before "Above"?
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
         // Same as before "Above"?
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::FIXED_POS) {
         // Nothing to do there
     }
@@ -858,15 +870,15 @@ AABBox ImplicitOperator::getBBox()
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_BOTTOM) {
         // Same as before "Above"?
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::INSIDE_TOP) {
         // Same as before "Above"?
         float maxPossibleHeightA = AABBoxA.dimensions().z;
-        AABBoxB.second.z += maxPossibleHeightA;
+        AABBoxB.maxi.z += maxPossibleHeightA;
     } else if (this->positionalB == PositionalLabel::FIXED_POS) {
         // Nothing to do there
     }

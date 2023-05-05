@@ -62,9 +62,9 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
         //this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/cube_2.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/cube_2.data");
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
@@ -82,7 +82,7 @@ ViewerInterface::ViewerInterface() {
 
             QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
                 this->viewer->update();
-                qApp->processEvents();
+//                qApp->processEvents();
             });
             QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
             QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);
