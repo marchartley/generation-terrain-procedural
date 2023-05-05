@@ -229,6 +229,7 @@ public:
 
     qglviewer::WorldConstraint* default_constraint;
     qglviewer::Constraint* custom_constraint = nullptr;
+    int debugID = -1;
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
     Vector3 getIntersectionWithPlane(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
@@ -238,6 +239,7 @@ protected:
     bool mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir);
 
     bool stillOnInitialState = true;
+
 
 };
 

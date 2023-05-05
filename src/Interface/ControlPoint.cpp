@@ -327,12 +327,12 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
 {
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
     this->move(pos);
-    this->stillOnInitialState = true;
+    this->stillOnInitialState = false; // true;
     this->prevPosition = pos;
     this->GrabberStateColor = ControlPoint::default_GrabberStateColor;
     if (!useManipFrame) {
         this->removeFromMouseGrabberPool();
-    } else {
+    } else if (!this->isInMouseGrabberPool()) {
         this->addInMouseGrabberPool();
     }
     this->allowAllAxisRotations(false);
@@ -341,7 +341,7 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
     this->translationMeshes.show();
 
     QObject::connect(this, &qglviewer::ManipulatedFrame::modified, this, [=](){
-        Q_EMIT this->modified();
+        Q_EMIT ControlPoint::modified();
         if ((this->prevPosition - this->getPosition()).norm2() > 1.0) {
             this->prevPosition = this->getPosition();
 //        if (this->positionsHistory.empty() || this->positionsHistory.back() != this->prevPosition) {
@@ -481,7 +481,7 @@ void ControlPoint::updateSphere()
         }
     }
     this->currentlyManipulated = this->isManipulated();
-
+//    this->manipFrame.setPosition(this->getPosition());
     this->shape.position = this->getPosition();
     this->shape.radius = this->radius;
     this->shape.buildVerticesFlat();
@@ -639,6 +639,7 @@ void ControlPoint::mouseReleaseEvent(QMouseEvent * const event, qglviewer::Camer
 
 void ControlPoint::mouseMoveEvent(QMouseEvent * const event, qglviewer::Camera * const cam)
 {
+    event->accept();
     qglviewer::ManipulatedFrame::mouseMoveEvent(event, cam);
 }
 
@@ -800,8 +801,10 @@ bool ControlPoint::mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir)
 
 void ControlPoint::move(Vector3 newPos)
 {
-    this->setPosition(newPos.x, newPos.y, newPos.z);
-    this->updateSphere();
+    if (!this->isManipulated()) {
+        this->setPosition(newPos.x, newPos.y, newPos.z);
+        this->updateSphere();
+    }
     this->stillOnInitialState = false;
 }
 

@@ -20,8 +20,11 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
 
 void TunnelInterface::display()
 {
-    for (auto& ctrl : this->controlPoints)
+    for (auto& ctrl : this->controlPoints) {
+//        std::cout << ctrl->
+//        ctrl->move(ctrl->getPosition());
         ctrl->display();
+    }
     if (controlPoints.size() > 1) {
         if (this->tunnelPreview.shader != nullptr) {
             this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
@@ -157,8 +160,11 @@ void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
             std::unique_ptr<ControlPoint>& newCtrl = this->controlPoints.back();
             newCtrl->allowAllAxisTranslation(true);
             newCtrl->displayOnTop = true;
+            newCtrl->debugID = 1;
             QObject::connect(newCtrl.get(), &ControlPoint::modified,
-                             this, [&](){ this->addCurvesControlPoint(Vector3(), true); });
+                             this, [&](){
+                this->addCurvesControlPoint(Vector3(), true);
+            });
         }
     }
     this->currentTunnelPoints.clear();
