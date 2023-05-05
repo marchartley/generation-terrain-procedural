@@ -252,8 +252,8 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getCoralAvailablePositio
     std::vector<AABBox> extendedPositions;
 
     for (auto& interv : intervals) {
-        Vector3& start = interv.first;
-        Vector3& end = interv.second;
+        Vector3 start = interv.min();
+        Vector3 end = interv.max();
         float minHeight = start.z;
         float maxHeight = end.z;
 
@@ -274,8 +274,8 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     std::vector<AABBox> extendedPositions;
 
     for (auto& interv : intervals) {
-        Vector3& start = interv.first;
-        Vector3& end = interv.second;
+        Vector3 start = interv.min();
+        Vector3 end = interv.max();
         float minHeight = start.z;
         float maxHeight = end.z;
 
@@ -316,7 +316,7 @@ void MeshInstanceAmplificationInterface::regenerateRocksPositions()
     for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
         rocksIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
                                               int(random_gen::generate(0, possibleRocks.size())),
-                                              Vector3(rocksAvailablePositions[i].first),
+                                              Vector3(rocksAvailablePositions[i].min()),
                                                 //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
                                               random_gen::generate(5.f, 15.f)
                                                      );
@@ -325,7 +325,7 @@ void MeshInstanceAmplificationInterface::regenerateRocksPositions()
     for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
         coralsIndicesAndPositionAndSize[i] = std::make_tuple<int, Vector3, float>(
                                               int(random_gen::generate(0, possibleCorals.size())),
-                                                Vector3(coralAvailablePositions[i].first),
+                                                Vector3(coralAvailablePositions[i].min()),
                                               // Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
                                               random_gen::generate(5.f, 15.f)
                                                      );

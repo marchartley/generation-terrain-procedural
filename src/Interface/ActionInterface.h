@@ -22,11 +22,11 @@ public:
     virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
         this->layerGrid = layerGrid;
     }
-    virtual void affectImplicitTerrain(ImplicitPatch* implicitPatch) {
+    virtual void affectImplicitTerrain(std::shared_ptr<ImplicitNaryOperator> implicitPatch) {
         this->implicitTerrain = implicitPatch;
     }
 
-    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch = nullptr) {
+    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr) {
         this->affectHeightmap(heightmap);
         this->affectVoxelGrid(voxelGrid);
         this->affectLayerGrid(layerGrid);
@@ -75,7 +75,7 @@ public:
     std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<LayerBasedGrid> layerGrid;
-    ImplicitPatch* implicitTerrain = nullptr;
+    std::shared_ptr<ImplicitNaryOperator> implicitTerrain = nullptr;
 
 Q_SIGNALS:
     void updated();

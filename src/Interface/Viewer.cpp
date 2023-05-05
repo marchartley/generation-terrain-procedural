@@ -20,6 +20,7 @@ Viewer::Viewer(QWidget *parent): Viewer(
         std::make_shared<Heightmap>(),
         std::make_shared<VoxelGrid>(),
         std::make_shared<LayerBasedGrid>(),
+        nullptr, // std::make_shared<ImplicitPatch>(new ImplicitPrimitive()),
         VOXEL_MODE,
         FILL_MODE,
         parent
@@ -30,20 +31,20 @@ Viewer::Viewer(QWidget *parent): Viewer(
     this->mainCamera = this->camera();
 }
 Viewer::Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid,
-               std::shared_ptr<LayerBasedGrid> layerGrid, MapMode map,
+               std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch, MapMode map,
                ViewerMode mode, QWidget *parent)
-    : QGLViewer(parent), viewerMode(mode), mapMode(map), heightmap(grid), voxelGrid(voxelGrid), layerGrid(layerGrid)
+    : QGLViewer(parent), viewerMode(mode), mapMode(map), heightmap(grid), voxelGrid(voxelGrid), layerGrid(layerGrid), implicitTerrain(implicitPatch)
 {
     if (parent != nullptr)
         parent->installEventFilter(this);
     this->mainCamera = this->camera();
 }
 Viewer::Viewer(std::shared_ptr<Heightmap> g, QWidget *parent)
-    : Viewer(g, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
+    : Viewer(g, nullptr, nullptr, nullptr, GRID_MODE, FILL_MODE, parent) {
 
 }
 Viewer::Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent)
-    : Viewer(nullptr, g, nullptr, LAYER_MODE, FILL_MODE, parent) {
+    : Viewer(nullptr, g, nullptr, nullptr, LAYER_MODE, FILL_MODE, parent) {
 
 }
 Viewer::~Viewer()
@@ -244,13 +245,13 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     } else if (this->mapMode == LAYER_MODE) {
         return this->layerGrid.get();
     } else if (this->mapMode == IMPLICIT_MODE) {
-        return this->implicitTerrain;
+        return this->implicitTerrain.get();
     }
     return nullptr;
 }
 void Viewer::drawingProcess() {
     auto allProcessStart = std::chrono::system_clock::now();
-    std::map<std::shared_ptr<ActionInterface>, std::chrono::milliseconds> interfacesTimings;
+    std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
 //    std::chrono::milliseconds test;
     // Update the mouse position in the grid
     this->checkMouseOnVoxel();
@@ -312,29 +313,21 @@ void Viewer::drawingProcess() {
     });
     current_frame ++;
     if (this->interfaces.count("terrainGenerationInterface")) {
-        auto start = std::chrono::high_resolution_clock::now();
         static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
-        this->interfaces["terrainGenerationInterface"]->display();
-        auto end = std::chrono::high_resolution_clock::now();
-        interfacesTimings[this->interfaces["terrainGenerationInterface"]] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        interfacesTimings[this->interfaces["terrainGenerationInterface"]] = timeIt([&]() { this->interfaces["terrainGenerationInterface"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     this->mainGrabber->display();
 
     for (auto& actionInterface : this->interfaces) {
         if (actionInterface.first != "terrainGenerationInterface") {
-            auto start = std::chrono::high_resolution_clock::now();
-            actionInterface.second->display();
-            auto end = std::chrono::high_resolution_clock::now();
-            interfacesTimings[actionInterface.second] = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+//            std::cout << "Error on " << actionInterface.first << "?" << std::endl;
+            interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(); });
         }
     }
 
     if (this->interfaces.count("terrainGenerationInterface")) {
-        auto start = std::chrono::high_resolution_clock::now();
-        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel();
-        auto end = std::chrono::high_resolution_clock::now();
-        interfacesTimings[this->interfaces["terrainGenerationInterface"]] += std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        interfacesTimings[this->interfaces["terrainGenerationInterface"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
 //    std::cout << "--" << std::endl;
     if (this->isTakingScreenshots) {
@@ -363,7 +356,7 @@ void Viewer::drawingProcess() {
     if (displayTiming) {
         std::cout << "Total time/frame : " << std::chrono::duration_cast<std::chrono::milliseconds>(allProcessEnd - allProcessStart).count() << "ms" << std::endl;
         for (auto& [interf, time] : interfacesTimings) {
-            std::cout << "\t" << interf->actionType << " : " << time.count() << "ms" << std::endl;
+            std::cout << "\t" << interf->actionType << " : " << time << "ms" << std::endl;
         }
     }
 //    std::cout << "Real FPS : " << this->currentFPS() << std::endl;

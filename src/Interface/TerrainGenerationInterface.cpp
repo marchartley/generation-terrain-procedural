@@ -110,7 +110,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     if (!this->layerGrid)
         this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
     if (!this->implicitTerrain)
-        this->implicitTerrain = nullptr;
+        this->implicitTerrain = std::make_shared<ImplicitNaryOperator>();
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
@@ -149,8 +149,10 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         // In any other case, consider that nothing has been done, cancel.
         return;
     }*/
-    implicitTerrain = ImplicitPrimitive::fromHeightmap(heightmap->heights, "", dynamic_cast<ImplicitPrimitive*>(implicitTerrain));
-    dynamic_cast<ImplicitPrimitive*>(implicitTerrain)->material = TerrainTypes::DIRT;
+    ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, ""); // , dynamic_cast<ImplicitPrimitive*>(implicitTerrain.get()));
+    implicitHeightmap->material = TerrainTypes::DIRT;
+    this->implicitTerrain->composables = {implicitHeightmap};
+    this->implicitTerrain->_cached = false;
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
                                               {"from_noise", false}
@@ -806,7 +808,7 @@ void TerrainGenerationInterface::display()
             std::cerr << "No implicit terrain to display" << std::endl;
         } else {
             Matrix3<float> values;
-            std::cout << "evals: " << timeIt([&]() { values = implicitTerrain->getVoxelized(voxelGrid->getDimensions()); }) << std::endl;
+            std::cout << "evals: " << timeIt([&]() { values = implicitTerrain->getVoxelized(voxelGrid->getDimensions()); }) << "ms" << std::endl;
             implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
             implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);

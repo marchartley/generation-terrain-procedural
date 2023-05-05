@@ -44,7 +44,7 @@ void FaultSlipInterface::remesh()
     this->planeMesh.update();
 }
 
-void FaultSlipInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
+void FaultSlipInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->firstSlipControlPoint->move(voxelGrid->getDimensions() * Vector3(.5f, 0.f, 1.f)); //Vector3(voxelGrid->getSizeX() / 2.f, 0, voxelGrid->getSizeZ()));

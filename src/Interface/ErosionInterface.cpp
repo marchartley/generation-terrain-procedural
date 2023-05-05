@@ -11,7 +11,7 @@ ErosionInterface::ErosionInterface(QWidget *parent)
 
 }
 
-void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, ImplicitPatch* implicitPatch)
+void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->erosion = std::make_shared<UnderwaterErosion>(voxelGrid.get(), erosionSize, erosionStrength, erosionQtt);
@@ -75,7 +75,7 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     this->erosionProcess = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
     this->erosionProcess.heightmap = heightmap.get();
-    this->erosionProcess.implicitTerrain = this->implicitTerrain;
+    this->erosionProcess.implicitTerrain = this->implicitTerrain.get();
     this->erosionProcess.layerBasedGrid = layerGrid.get();
 
 //    QTimer::singleShot(1000, this, &ErosionInterface::testManyManyErosionParameters);
@@ -128,7 +128,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     for (int x = 0; x < layersHeightmap.sizeX; x++)
         for (int y = 0; y < layersHeightmap.sizeY; y++)
             layersHeightmap.at(x, y) = layerGrid->getHeight(x, y) - 1;
-    erod.implicitTerrain = this->implicitTerrain;
+    erod.implicitTerrain = this->implicitTerrain.get();
     erod.layerBasedGrid = layerGrid.get();
 
 
