@@ -57,7 +57,7 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
@@ -82,7 +82,7 @@ ViewerInterface::ViewerInterface() {
 
             QObject::connect(actionInterface.second.get(), &ActionInterface::updated, this, [&](){
                 this->viewer->update();
-//                qApp->processEvents();
+                qApp->processEvents();
             });
             QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
             QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);

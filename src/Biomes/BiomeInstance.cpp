@@ -28,6 +28,7 @@ int BiomeInstance::getLevel(bool ignorePriorityOffset)
 
 void BiomeInstance::completeIfNeeded()
 {
+//    std::cout << "Completing " << this->classname << std::endl;
     if (classname == "arche")
         completeArch();
     else if (classname == "tranchee" || classname == "passe-corail")
@@ -35,8 +36,15 @@ void BiomeInstance::completeIfNeeded()
     else if (classname == "area")
         completeArea();
 
-    for (auto& child : instances)
-        child->completeIfNeeded();
+    for (int i = this->instances.size() - 1; i >= 0; i--) {
+        auto& child = this->instances[i];
+        if (child->area) {
+            child->completeIfNeeded();
+        } else {
+            this->instances.erase(instances.begin() + i + 1);
+        }
+    }
+
 }
 
 std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, Vector3 newPosition)
@@ -248,7 +256,7 @@ void BiomeInstance::completeArch()
 {
     // We need at least 2 points
     int neededPointsAmount = 2;
-    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+    int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
     std::vector<BSpline> areas = diagram.solve();
@@ -272,7 +280,7 @@ void BiomeInstance::completeTrench()
 {
     // We need at least 2 points
     int neededPointsAmount = 2;
-    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+    int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
     std::vector<BSpline> areas = diagram.solve();
@@ -296,7 +304,7 @@ void BiomeInstance::completeArea()
 {
     // We need at least 2 points
     int neededPointsAmount = 2;
-    int numberOfGeneratedPoints = neededPointsAmount - getNumberOfPoints();
+    int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
     std::vector<BSpline> areas = diagram.solve();
@@ -322,7 +330,7 @@ int BiomeInstance::getNumberOfPoints()
     for (auto& child : instances)
         // Uncomment to get only the number of "points" biomes
 //        nb_points += 1; //(child->classname == "point" ? 1 : 0);
-        if (child->area)
+        if (!child->area)
             nb_points++;
     return nb_points;
 }

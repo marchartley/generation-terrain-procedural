@@ -763,3 +763,8 @@ AABBox::AABBox(Vector3 mini, Vector3 maxi) : mini(mini), maxi(maxi)
 {
 
 }
+
+Vector3 AABBox::random(Vector3 mini, Vector3 maxi)
+{
+    return Vector3::random(mini, maxi);
+}

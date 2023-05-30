@@ -125,7 +125,7 @@ public:
     int fluidSimRescale = 4;
 
     int getChunkSize() const { return this->chunkSize; }
-    Matrix3<float>& getEnvironmentalDensities() { return this->environmentalDensities; }
+    Matrix3<float>& getEnvironmentalDensities();
     void updateEnvironmentalDensities(float waterLevel);
 
     void saveHeightmap(std::string heightmap_filename);

@@ -11,13 +11,25 @@ BiomeInterface::BiomeInterface(QWidget* parent)
 
 void BiomeInterface::display()
 {
-    for (size_t i = 0; i < selectionPlanes.size(); i++) {
-        auto& selectionPlane = selectionPlanes[i];
-        if (selectionPlane.shader != nullptr) {
-            Vector3 color = HSVtoRGB(i / (float)(selectionPlanes.size() - 1), 1.f, 1.f);
-            selectionPlane.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f});
+    if (this->isVisible()) {
+        auto queue = std::vector<std::shared_ptr<BiomeInstance>>({this->rootBiome});
+        while (!queue.empty()) {
+            auto& current = queue.front();
+            queue.erase(queue.begin());
+            if (!isIn(current->classname, allBiomeNames))
+                allBiomeNames.push_back(current->classname);
+           for (auto& c : current->instances)
+               queue.push_back(c);
         }
-        selectionPlane.display();
+        for (size_t i = 0; i < selectionPlanes.size(); i++) {
+            auto& selectionPlane = selectionPlanes[i];
+            if (selectionPlane.shader != nullptr) {
+                int classIndex = std::distance(allBiomeNames.begin(), std::find(allBiomeNames.begin(), allBiomeNames.end(), this->selectedBiomes[i]->classname));
+                Vector3 color = HSVtoRGB(float(classIndex) / (float)(allBiomeNames.size() - 1), 1.f, 1.f);
+                selectionPlane.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f});
+            }
+            selectionPlane.display();
+        }
     }
 }
 
@@ -106,7 +118,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     voxelGridOffsetEnd.z = 1; // Force the Z component to be 1, instead of being rounded to 0 in the division
 
     std::cout << "From " << voxelGridOffsetStart << " to " << voxelGridOffsetEnd << " with scale = " << voxelGridScaleFactor << std::endl;
-    this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
+    /////// this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
 //    this->voxelGrid->fromCachedData();
 
     auto startTime = std::chrono::system_clock::now();
@@ -121,10 +133,35 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     // All the biome hierarchy is created from the json
     // Each biome has a class name, a position and his biome children
-    if (predefinedBiomeInstance != nullptr)
+    if (predefinedBiomeInstance != nullptr) {
         rootBiome = predefinedBiomeInstance;
-    else
+    } else {
         rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
+        /*for (int _ = 0; _ < 5; _++) {
+            rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
+            for (auto& inst: rootBiome->instances) {
+                Qt::GlobalColor color = Qt::gray;
+                if (inst->classname == "lagon") {
+                    color = Qt::cyan;
+                } else if (inst->classname == "recif-frangeant") {
+                    color = Qt::darkRed;
+                } else if (inst->classname == "plage") {
+                    color = Qt::yellow;
+                } else if (inst->classname == "recif-barriere") {
+                    color = Qt::red;
+                } else if (inst->classname == "profondeurs") {
+                    color = Qt::darkBlue;
+                } else if (inst->classname == "ile") {
+                    color = Qt::green;
+                }
+    //            std::cout << inst->classname << std::endl;
+                Plotter::getInstance()->addPlot(inst->area.shrink(0.5f).closedPath(), inst->classname, color);
+            }
+            Plotter::getInstance()->exec();
+            Plotter::getInstance()->reset();
+        }
+        exit(0);*/
+    }
     heightmap->getBiomeIndices() = Matrix3<int>(heightmap->getDimensions(), 0);
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
     std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
@@ -161,32 +198,35 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     for (auto& current : sortedBiomes) {
         ShapeCurve area = current->area;
         int level = current->getLevel();
-        area = area.grow(1.f); // Grow the area to fill all artefacts
+//        area = area.grow(1.f); // Grow the area to fill all artefacts
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
         BiomeInstance::registerBiomeInstance(current);
         possibleBiomeInstances.push_back(*current);
         std::ostringstream out;
-        out << "Checking for " << current->getInstanceName() << " :\n";
+//        std::ostream& out = std::cout;
+        out << "Checking for " << current->getInstanceName() << " :" << std::endl;
         bool atLeastOne = false;
         for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
             for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
                 if (area.contains(Vector3(x, y, area.points[0].z)) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
                     heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
-                    out << "Found at (" << x << ", " << y << ")\n";
+                    out << "Found at (" << x << ", " << y << ")" << std::endl;
                     atLeastOne = true;
                 }
             }
         }
         if (!atLeastOne) {
-            out << "Never seen...\n";
+            out << "Never seen..." << std::endl;
         }
         out << "Area was\n";
         for (auto& p : current->area.points)
-            out << "- " << p << "\n";
+            out << "- " << p << std::endl;
 //        current->instanceID = biomeID;
 //        biomeID++;
     }
+
+    return;
 
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
@@ -303,7 +343,9 @@ void BiomeInterface::randomize()
 
     // If the main biome has already been computed, regenerate it
     if (rootBiome->instances.size() > 0) {
+        std::cout << "A" << std::endl;
         this->modifiedBiomeModel = *rootBiome->toBiomeModel();
+        std::cout << "B" << std::endl;
         /// TODO : don't modify the original biomeModel ...
         this->biomeModel = *(std::make_shared<BiomeModel>(modifiedBiomeModel)->clone());
     }
@@ -398,10 +440,13 @@ void BiomeInterface::setVoxelGridSizeFactor(float newFactor)
 void BiomeInterface::displayAllBiomes()
 {
     this->selectedBiomeIDs.clear();
+    this->selectedBiomes.clear();
     std::vector<std::shared_ptr<BiomeInstance> > allBiomes = rootBiome->getAllChildrenBreadthFirst();
     for (auto& biome : allBiomes) {
-        if (biome->instanceID >= 0 && !biome->isRoot())
+        if (biome->instanceID >= 0 && !biome->isRoot()) {
             selectedBiomeIDs.push_back(biome->instanceID);
+            selectedBiomes.push_back(biome);
+        }
     }
     updateBiomeSelectionGui();
 }
@@ -534,14 +579,12 @@ void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInM
     }
 }
 
-void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex)
+void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex, bool callUpdate)
 {
-//    std::cout << "Display biome #" << biomeID << std::endl;
     if (biomeID == -1 || BiomeInstance::instancedBiomes[biomeID]->isRoot()) {
         // Remove all triangles
 //        selectionPlane.fromArray(std::vector<float>{});
     } else {
-//        std::cout << "Displaing surface of " << BiomeInstance::instancedBiomes[biomeID]->classname << std::endl;
         int level = BiomeInstance::instancedBiomes[biomeID]->getLevel();
         ShapeCurve biomeArea = BiomeInstance::instancedBiomes[biomeID]->area;
         biomeArea = biomeArea.shrink(level);
@@ -575,7 +618,8 @@ void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex)
         selectionPlanes[planeIndex].fromArray(vertices);
         selectionPlanes[planeIndex].cullFace = false;
     }
-    Q_EMIT updated();
+    if (callUpdate)
+        Q_EMIT updated();
 }
 
 void BiomeInterface::displayUniqueSelection(int selectionIndex)
@@ -738,7 +782,7 @@ void BiomeInterface::updateBiomeSelectionGui()
 
     this->selectionPlanes.resize(this->selectedBiomeIDs.size());
     for (size_t i = 0; i < this->selectedBiomeIDs.size(); i++)
-        this->updateSelectionPlaneToFitBiome(this->selectedBiomeIDs[i], i);
+        this->updateSelectionPlaneToFitBiome(this->selectedBiomeIDs[i], i, false);
     Q_EMIT updated();
 }
 

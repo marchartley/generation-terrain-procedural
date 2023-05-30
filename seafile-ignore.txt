@@ -18,7 +18,7 @@ Python_tests/sketch-to-terrain/*.h5
 Python_tests/sketch-to-terrain/outputs/
 Python_tests/synthetic_terrains_dataset/*
 Python_tests/correct_synthetic_terrains_dataset*
-Python_tests/pytorch-CycleGAN-and-pix2pix/*
+#Python_tests/pytorch-CycleGAN-and-pix2pix/*
 
 # Prerequisites
 *.d

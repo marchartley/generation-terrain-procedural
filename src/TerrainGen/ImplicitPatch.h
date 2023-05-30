@@ -5,6 +5,7 @@ class ImplicitPatch;
 class ImplicitPrimitive;
 class ImplicitOperator;
 class ImplicitUnaryOperator;
+class ImplicitNaryOperator;
 class ImplicitCSG;
 class UnaryOp;
 

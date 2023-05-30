@@ -200,9 +200,10 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
         groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
         outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
     }
+//    std::cout << groundValue << " " << outsideValue << "\n";
 //    if (groundValue > 0)
 //        std::cout << groundValue << " " << outsideValue << std::endl;
-    return groundValue > ImplicitPatch::isovalue;
+    return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
 
 Mesh ImplicitPatch::getGeometry()
@@ -279,6 +280,18 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
             for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
                 Vector3 pos = Vector3(x, y, z) * scale;
                 auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(pos);
+
+
+                float positiveVal = 0.f;
+                float negativeVal = 0.f;
+                for (const auto& [mat, val] : matVals) {
+                    float density = LayerBasedGrid::densityFromMaterial(mat);
+                    positiveVal += (density > 0.f ? val : 0.f);
+                    negativeVal += (density <= 0.f ? val : 0.f);
+                }
+                totalEval = positiveVal;
+
+
                 if (totalEval >= ImplicitPatch::isovalue) {
                     TerrainTypes maxType;
                     float maxVal = 0.f;
@@ -287,9 +300,6 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
                             maxType = mat;
                             maxVal = val;
                         }
-                    }
-                    if (pos.z == 20) {
-                        int a = 0;
                     }
                     _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
                 }

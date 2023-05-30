@@ -15,26 +15,6 @@
 #include <random>
 #include <string>
 
-//#include "third-party/glm/glm.hpp"
-//#include "third-party/glm/ext.hpp"
-
-//#include "Graphics/DisplayGraphics.h"
-//#include "Graph/TopoMap.h"
-//#include "Graph/RegularSimplicialComplex.h"
-/*
-float eval (Vector3 pos, float width, float depth, float height) {
-    Vector3 minPos = Vector3();
-    Vector3 maxPos = Vector3(width, depth, height);
-    float distanceToBBox = Vector3::signedDistanceToBoundaries((pos / maxPos), minPos, Vector3(1, 1, 1)); //maxPos);
-//        float distanceFactor = std::max(1.f, maxPos.maxComp() * .5f); //(supportWidth - width).maxComp() * .5f); // Don't get a 0 here
-//        distanceToBBox /= distanceFactor; // Make it depending on the support area
-//    float distanceFalloff = interpolation::wyvill(std::clamp(distanceToBBox * 2.f, 0.f, 1.f));
-    float distanceFalloff = 1.f - (distanceToBBox + 0.5f); // std::clamp(, 0.f, 1.f);
-    float evaluation = distanceFalloff; // std::sin(distanceFalloff * 10.f); //std::clamp(distanceFalloff, 0.f, 1.f); // Maybe...
-    return evaluation; // - 0.5f ?
-}*/
-//#include "Utils/PbmReader.h"
-
 int main(int argc, char *argv[])
 {
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
@@ -42,6 +22,38 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
+/*
+    ShapeCurve A = ShapeCurve({
+                                  Vector3(0, 0.5, 0),
+                                  Vector3(0.5, 0, 0),
+                                  Vector3(1, 0.1, 0),
+                                  Vector3(0.9, 0.2, 0),
+                                  Vector3(0.5, 0.5, 0),
+                                  Vector3(0.9, 0.8, 0),
+                                  Vector3(1, 0.9, 0),
+                                  Vector3(0.5, 1, 0)
+                              });
+    ShapeCurve B = ShapeCurve({
+                                  Vector3(2, 0.5, 0),
+                                  Vector3(1.5, 0, 0),
+                                  Vector3(1, 0.1, 0),
+                                  Vector3(1.1, 0.2, 0),
+                                  Vector3(1.5, 0.5, 0),
+                                  Vector3(1.1, 0.8, 0),
+                                  Vector3(1, 0.9, 0),
+                                  Vector3(1.5, 1, 0)
+                              });
+    ShapeCurve AB = merge(A, B);
+
+    Plotter::init();
+    Plotter::getInstance()->addPlot(A.closedPath(), "A", Qt::blue);
+    Plotter::getInstance()->addPlot(B.closedPath(), "B", Qt::green);
+    Plotter::getInstance()->addPlot(AB.closedPath(), "AB", Qt::red);
+    Plotter::getInstance()->addScatter(AB.points, "");
+    std::cout << A << std::endl;
+    std::cout << B << std::endl;
+    std::cout << AB << std::endl;
+    return Plotter::getInstance()->exec();*/
 
 //    RegularSimplicialComplex grid(10, 10);
 //    grid.getNode(2, 3)->value = 0;

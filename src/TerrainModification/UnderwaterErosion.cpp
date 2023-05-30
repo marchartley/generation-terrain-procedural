@@ -168,17 +168,17 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
                          Matrix3<float> densityMap,
                          float initialCapacity)
 {
-    // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
+    TerrainModel *terrain = nullptr;
     if (applyOn == EROSION_APPLIED::DENSITY_VOXELS) {
-        return this->ApplyOnAnyTerrain(voxelGrid, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
+        terrain = voxelGrid; //return this->ApplyOnAnyTerrain(voxelGrid, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
     } else if (applyOn == EROSION_APPLIED::HEIGHTMAP) {
-        return this->ApplyOnAnyTerrain(heightmap, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
+        terrain = heightmap; //return this->ApplyOnAnyTerrain(heightmap, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
     } else if (applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN) {
-        return this->ApplyOnAnyTerrain(implicitTerrain, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
+        terrain = implicitTerrain; //return this->ApplyOnAnyTerrain(implicitTerrain, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
     } else if (applyOn == EROSION_APPLIED::LAYER_TERRAIN) {
-        return this->ApplyOnAnyTerrain(layerBasedGrid, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
+        terrain = layerBasedGrid; // return this->ApplyOnAnyTerrain(layerBasedGrid, particleSimulationTime, terrainModifTime, startingPoint, originalDirection, randomnessFactor, fallFromSky, gravity, bouncingCoefficient, bounciness, minSpeed, maxSpeed, maxCapacityFactor, erosion, deposit, matterDensity, materialImpact, airFlowfieldRotation, waterFlowfieldRotation, airForce, waterForce, dt, shearingStressConstantK, shearingRatePower, erosionPowerValue, criticalShearValue, posAndDirs, flowType, waterFlow, airFlow, densityUsed, densityMap, initialCapacity);
     }
-    return {{}, -1, -1};
+/*    return {{}, -1, -1};
 }
 
 std::tuple<std::vector<BSpline>, int, int>
@@ -210,7 +210,7 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                                      DENSITY_TYPE densityUsed,
                                      Matrix3<float> densityMap,
                                      float initialCapacity)
-{
+{*/
     VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
     Heightmap* asHeightmap = dynamic_cast<Heightmap*>(terrain);
     ImplicitPatch* asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
@@ -297,9 +297,9 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
 //                }
 //            }
 //        }
-        for (auto& f : flowfieldValues) {
+//        for (auto& f : flowfieldValues) {
             //f = (f.xy() + Vector3::random(.1f)).normalize();
-        }
+//        }
         for (int x = 0; x < flowfieldValues.sizeX; x++) {
             for (int y = 0; y < flowfieldValues.sizeY; y++) {
                 for (int z = 0; z < flowfieldValues.sizeZ; z++) {
@@ -339,6 +339,8 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
         float flowfieldInfluence = 1.0;
         int steps = 10 * starting_distance; // An estimation of how many step we need
         auto [pos, dir] = posAndDirs[i];
+        if (terrain->checkIsInGround(pos))
+            continue;
 
 //        std::vector<Vector3> coords;
 
@@ -363,7 +365,7 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
 //                Vector3 acceleration = /*flowfieldValues.at(position) +*/ gravityDirection * (gravityForce * gravityCoefficient);
 //                float gravityCoefficient = std::max(1.f - (environmentDensity / matterDensity), -1.f); // Keep it between -1 and 1
                 Vector3 justFlow = flowfieldValues.at(pos); // (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
-                Vector3 justGravity = (gravityfieldValues.at(nextPos) * gravityCoefficient).maxMagnitude(2.f);
+                Vector3 justGravity = (gravityfieldValues.at(pos) * gravityCoefficient); // (gravityfieldValues.at(nextPos) * gravityCoefficient); // .maxMagnitude(2.f);
                 Vector3 flowfield = justFlow + justGravity;
                 dir += flowfield * flowfieldInfluence * dt;
                 if (Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy()))
@@ -432,9 +434,12 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
                 if ((steps < 0 || dir.norm2() < 1e-3) && depositFactor > 0.f) {
 //                    RockErosion(particleSize, -capacity).computeErosionMatrix(submodifications[i], pos - Vector3(0, 0, particleSize * .2f), false);
                     erosionValuesAndPositions.push_back({-capacity, pos - Vector3(0, 0, particleSize - .2f)});
+//                    std::cout << "Deposing " << capacity << std::endl;
                 }
                 break;
             }
+            if (steps < 0)
+                break;
         }
         tunnels[i] = tunnel;
 //        modifications += submodifications[i];
@@ -455,13 +460,20 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
     #pragma omp parallel for
     for (size_t i = 0; i < allErosions.size(); i++) {
         const auto& erosionValuesAndPositions = allErosions[i];
-        for (auto& [val, pos] : erosionValuesAndPositions) {
+        for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
+            auto [val, pos] = erosionValuesAndPositions[iRock];
+            int size = particleSize;
+            if (iRock == erosionValuesAndPositions.size() - 1) {
+                size *= 2.f;
+                val *= .5f;
+            }
+
             if (asVoxels) {
-                RockErosion(particleSize, val).computeErosionMatrix(submodifications[i], pos);
+                RockErosion(size, val).computeErosionMatrix(submodifications[i], pos);
             } else if (asHeightmap) {
-                RockErosion(particleSize, val).computeErosionMatrix2D(submodifications[i], pos);
+                RockErosion(size, val).computeErosionMatrix2D(submodifications[i], pos);
             } else if (asImplicit) {
-                float dimensions = particleSize * val * 5.f;
+                float dimensions = size * val * 5.f;
                 auto sphere = dynamic_cast<ImplicitPrimitive*>(ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(dimensions, dimensions, dimensions), val));
                 sphere->material = (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT);
                 sphere->dimensions = Vector3(dimensions, dimensions, dimensions);
@@ -499,18 +511,18 @@ UnderwaterErosion::ApplyOnAnyTerrain(TerrainModel *terrain, float &particleSimul
             for (int y = 0; y < modifications.sizeY; y++)
                 for (int z = 0; z < 2; z++)
                     modifications.at(x, y, z) = 0;
-        asVoxels->applyModification(modifications);
+        asVoxels->applyModification(modifications * 0.5f);
     } else if (asHeightmap) {
-        asHeightmap->heights += modifications;
+        asHeightmap->heights += modifications * 0.5f;
     } else if (asImplicit) {
         ImplicitNaryOperator* totalErosion = new ImplicitNaryOperator;
         for (auto& op : allNary)
             totalErosion->composables.push_back(op);
-        totalErosion->composables.push_back(implicitTerrain->copy());
+//        totalErosion->composables.push_back(implicitTerrain->copy());
 //        delete implicitTerrain;
-        implicitTerrain->~ImplicitPatch();
-        implicitTerrain = new (implicitTerrain) ImplicitNaryOperator;
-        dynamic_cast<ImplicitNaryOperator*>(implicitTerrain)->composables = totalErosion->composables;
+//        implicitTerrain->~ImplicitPatch();
+//        implicitTerrain = new (implicitTerrain) ImplicitNaryOperator;
+        dynamic_cast<ImplicitNaryOperator*>(implicitTerrain)->composables.push_back(totalErosion);
         implicitTerrain->_cached = false;
     } else if (asLayers) {
         // ...

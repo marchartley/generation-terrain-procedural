@@ -25,7 +25,7 @@ public:
 
     QLayout* createGUI();
 
-    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X};
+    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE};
 
 public Q_SLOTS:
     void show();
@@ -67,7 +67,7 @@ protected:
     float maxCapacityFactor = 1.f;
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
-    float matterDensity = 1000.f;
+    float matterDensity = 500.f;
     float materialImpact = 0.f;
 
     float airFlowfieldRotation = 0.f;

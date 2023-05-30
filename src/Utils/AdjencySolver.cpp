@@ -63,7 +63,7 @@ float computeEntropy(std::vector<ID>& availableClasses) {
     return availableClasses.size();
 }
 
-std::vector<ID> simplifiedWFC(std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<ID, ID>>& possibleAdjency, std::vector<std::vector<int>> neighbors, std::ostringstream& out) {
+std::vector<ID> simplifiedWFC(std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<ID, ID>>& possibleAdjency, std::vector<std::vector<int>> neighbors, std::ostream& out) {
     size_t numberOfNodes = restrictedBiomesNames.size();
     // We want to set classes, taking into account duplicates
     std::vector<ID> remainingClassesToSet = std::vector<ID>(restrictedBiomesNames.size());
@@ -91,6 +91,16 @@ std::vector<ID> simplifiedWFC(std::vector<std::string> restrictedBiomesNames, st
         std::shuffle(candidatesIndices.begin(), candidatesIndices.end(), random_gen::random_generator);
         ID index = candidatesIndices.front();
 
+        // Increase the possibility that we fall on the same class than a neighbor, or one of the compatible ones
+        for (size_t iNeighbor : neighbors[index]) {
+            if (biomesAlreadySet[iNeighbor] != -1) {
+                for (int _ = 0; _ < 100; _++) {
+//                    availableBiomePerNode[index].push_back(biomesAlreadySet[iNeighbor]);
+                }
+            } else {
+//                availableBiomePerNode[index] = vectorUnion(availableBiomePerNode[index], availableBiomePerNode[iNeighbor]);
+            }
+        }
         // Set this biome to a random class and remove all other possibilities
         ID selectedClass = availableBiomePerNode[index][(int)random_gen::generate(0, availableBiomePerNode[index].size())];
         biomesAlreadySet[index] = selectedClass;
@@ -159,7 +169,7 @@ void computePossibleAndImpossibleNeighborings(std::vector<std::string> restricte
 }
 std::vector<int> AdjencySolver::solveGeomToTopo(Voronoi& diagram, std::vector<std::string> restrictedBiomesNames, std::vector<std::pair<std::string, std::string> > impossibleAdjency)
 {
-    std::ostringstream out; // = std::cout;
+    std::ostream& out = std::cout;
     // List all the biome names
 //    std::vector<std::string> allPossibleBiomesNames = removeDuplicatesFromVector(restrictedBiomesNames);
     std::vector<ID> biomesAlreadySet;
@@ -180,7 +190,7 @@ std::vector<int> AdjencySolver::solveGeomToTopo(Voronoi& diagram, std::vector<st
 
     bool allBiomesSet = false;
     std::vector<ID> bestCombinationYet = std::vector<ID>(numberOfNodes, -1);
-    size_t maxIterations = numberOfNodes * numberOfNodes * 1;
+    size_t maxIterations = numberOfNodes * 2; // * numberOfNodes * 1;
 
     int previousNbValidBiomes;
 
@@ -203,7 +213,7 @@ std::vector<int> AdjencySolver::solveGeomToTopo(Voronoi& diagram, std::vector<st
         for (auto biomeClass : bestCombinationYet) {
             previousNbValidBiomes += 1 * (biomeClass == -1);
         }
-        if (previousNbValidBiomes > nbValidBiomes)
+        if (previousNbValidBiomes >= nbValidBiomes)
             bestCombinationYet = biomesAlreadySet;
     }
     completeAdjenciesWithRandomNeighbors(bestCombinationYet, neighbors, possibleIdPerNeighborId);

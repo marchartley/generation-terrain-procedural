@@ -150,7 +150,9 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     instance->idealSize = (model->idealSize.mean > 0 ? model->idealSize.randomValue() : -1);
     std::vector<std::shared_ptr<BiomeModel>> children;
 
-    for (auto& child : model->modelChildren) {
+    int augmentation = 1;
+    for (size_t i = 0; i < model->modelChildren.size() * (augmentation + 1); i++) {
+        auto& child = model->modelChildren[i % model->modelChildren.size()];
         for (int i = 0; i < child.probaQuantity.randomValue() * child.probaAppearence.randomValue(); i++) {
             children.push_back(child.model);
         }
@@ -163,11 +165,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {
             allChildrenClassnames.push_back(children[i]->modelName);
     }
-#ifdef linux
     std::ifstream file("saved_maps/neighboring_constraints.json");
-#else
-    std::ifstream file("saved_maps/neighboring_constraints.json");
-#endif
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     nlohmann::json neighboring = nlohmann::json::parse(content);
     std::vector<float> constraintsWeights(diagram.pointset.size());
@@ -190,17 +188,105 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     for (size_t i = 0; i < newChildrenOrder.size(); i++) newChildrenOrder[i] = i;
     AdjencySolver solver;
 
-    newChildrenOrder = solver.solveGeomToTopo(diagram, allChildrenClassnames /*vectorMerge(allChildrenClassnames, allChildrenClassnames)*/, forbiddenNeighboring);
+    newChildrenOrder = solver.solveGeomToTopo(diagram, allChildrenClassnames, forbiddenNeighboring);
 
 //    std::vector<BiomeInstance> instances
 
     // Because we may have used multiple of the data, we need to clamp the new indices
-    for (auto& ind : newChildrenOrder)
-        ind = ind % allChildrenClassnames.size();
+//    for (auto& ind : newChildrenOrder)
+//        ind = ind % allChildrenClassnames.size();
 
-    for (size_t i = 0; i < diagram.pointset.size(); i++) {
+    std::vector<std::string> finalClasses(newChildrenOrder.size());
+    for (size_t i = 0; i < finalClasses.size(); i++) {
+        finalClasses[i] = allChildrenClassnames[newChildrenOrder[i]];
+    }
+    std::vector<int> mergingQueue = {0};
+
+    std::vector<Vector3> newPointset = diagram.pointset;
+    std::vector<ShapeCurve> newSubareas(subarea_borders.size());
+
+    std::vector<std::vector<int>> groups;
+    std::set<int> visitedNodes;
+    std::vector<int> unvisitedNodes = newChildrenOrder;
+    std::vector<int> queue;
+    if (newChildrenOrder.size() > 1) { // Need at least 2 elems to have neighbors
+        while (!unvisitedNodes.empty()) {
+            groups.push_back({});
+            queue = {unvisitedNodes.front()};
+            while (!queue.empty()) {
+                int currentIndex = queue.front();
+                queue.erase(queue.begin());
+                visitedNodes.insert(currentIndex);
+                unvisitedNodes.erase(std::find(unvisitedNodes.begin(), unvisitedNodes.end(), currentIndex));
+                groups[groups.size() - 1].push_back(currentIndex);
+                auto currentClass = finalClasses[currentIndex];
+
+                newSubareas[groups[groups.size() - 1][0]] = newSubareas[groups[groups.size() - 1][0]].merge(subarea_borders[currentIndex]);
+
+                auto neighbors = diagram.neighbors[currentIndex];
+
+                for (size_t iNeighbor = 0; iNeighbor < neighbors.size(); iNeighbor++) {
+                    auto neighborClass = finalClasses[neighbors[iNeighbor]];
+                    if (!isIn(neighbors[iNeighbor], queue) && visitedNodes.find(neighbors[iNeighbor]) == visitedNodes.end() && currentClass == neighborClass) {
+                        queue.push_back(neighbors[iNeighbor]);
+                        newPointset[neighbors[iNeighbor]].setValid(false);
+                    }
+                }
+            }
+        }
+    }
+    std::vector<std::set<int>> merged(newChildrenOrder.size());
+    for (size_t iGrp = 0; iGrp < groups.size(); iGrp++) {
+        merged[groups[iGrp][0]] = convertVectorToSet(groups[iGrp]);
+    }
+/*
+    mergingQueue = newChildrenOrder;
+    std::vector<std::set<int>> merged(mergingQueue.size());
+    for (size_t i = 0; i < merged.size(); i++)
+        merged[i] = {int(i)};
+    if (newChildrenOrder.size() > 1) { // Need at least 2 elems to have neighbors
+        while (!mergingQueue.empty()) {
+            int currentIndex = mergingQueue.front();
+            mergingQueue.erase(mergingQueue.begin());
+            auto currentClass = finalClasses[currentIndex];
+            auto neighbors = diagram.neighbors[currentIndex];
+
+            for (size_t iNeighbor = 0; iNeighbor < neighbors.size(); iNeighbor++) {
+                auto neighborClass = finalClasses[neighbors[iNeighbor]];
+                if (currentClass == neighborClass) {
+                    merged[currentIndex].insert(merged[neighbors[iNeighbor]].begin(), merged[neighbors[iNeighbor]].end());
+                }
+            }
+        }
+    }*/
+    /*std::vector<Vector3> newPointset = diagram.pointset;
+    std::vector<ShapeCurve> newSubareas(subarea_borders.size());
+    for (size_t i = 0; i < merged.size(); i++) {
+        if (merged[i].size() == 0) {
+            newPointset[i].setValid(false);
+            continue;
+        }
+        newSubareas[i] = ShapeCurve(subarea_borders[i]).removeDuplicates();
+        for (auto neighbor: merged[i]) {
+            if (neighbor != int(i)) {
+                merged[neighbor].clear();
+                newSubareas[i] = newSubareas[i].merge(ShapeCurve(subarea_borders[neighbor]));
+            }
+        }
+
+    }*/
+    for (int i = newPointset.size() - 1; i >= 0; i--) {
+        if (!newPointset[i].isValid()) {
+            newPointset.erase(newPointset.begin() + i);
+            newSubareas.erase(newSubareas.begin() + i);
+            newChildrenOrder.erase(newChildrenOrder.begin() + i);
+        }
+    }
+
+
+    for (size_t i = 0; i < newChildrenOrder.size(); i++) {
         int index = newChildrenOrder[i];
-        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstanceFromModel(children[index], diagram.pointset[i], subarea_borders[i]);
+        std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstanceFromModel(children[index], newPointset[i], newSubareas[i]); // diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;
         instance->instances.push_back(childBiome);
     }
