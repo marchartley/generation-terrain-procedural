@@ -218,6 +218,8 @@ public:
 
     Vector3 mini;
     Vector3 maxi;
+
+    static Vector3 random(Vector3 mini, Vector3 maxi);
 };
 
 #include "Utils/json.h"

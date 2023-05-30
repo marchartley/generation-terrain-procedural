@@ -4,17 +4,18 @@
 // Source : http://paulbourke.net/geometry/pointlineplane/
 Vector3 Collision::intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
 {
-    Vector3 l21 = (p1 - p2);
-    Vector3 l13 = (p3 - p1);
-    Vector3 l43 = (p3 - p4);
+    Vector3 l21 = (p1 - p2); // .normalized();
+    Vector3 l13 = (p3 - p1); // .normalized();
+    Vector3 l43 = (p3 - p4); // .normalized();
 
     float d1321 = l13.dot(l21);
     float d1343 = l13.dot(l43);
     float d4321 = l43.dot(l21);
     float d4343 = l43.dot(l43);
     float d2121 = l21.dot(l21);
+    float d2143 = l21.normalized().dot(l43.normalized());
 
-    if (std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return Vector3(false); // Parallel lines?
+    if (std::abs(std::abs(d2143) - 1) < 0.001 || std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return Vector3(false); // Parallel lines?
     float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
     float mu_b = (d1343 + mu_a*d4321) / d4343;
 
@@ -304,7 +305,7 @@ bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> _polygon)
     // At this point, we can check if the "pos" is in the same plane as the shape
 
     Vector3 ray = center + (firstVertex - center).normalized() * polygonLength; // Same, should be outside the shape
-
+    polygon.push_back(polygon[0]);
     // Check the intersection of the ray with all the segments of the shape
     int nb_intersections = 0;
     for (size_t i = 0; i < polygon.size() - 1; i++) {

@@ -646,7 +646,7 @@ def main():
     updateDistortionsAx(distortionsAx, distortionSketcher)
     genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut)
 
-    createDatasetOfRandomIslands(sketchPro, islandSketches, sliceCut, filePrefix="sample")
+    # createDatasetOfRandomIslands(sketchPro, islandSketches, sliceCut, filePrefix="sample")
     # import cProfile
     # cProfile.runctx('createDatasetOfRandomIslands(sketchPro, islandSketches, sliceCut, filePrefix="sample")', globals(), locals(), sort="ncalls")
 

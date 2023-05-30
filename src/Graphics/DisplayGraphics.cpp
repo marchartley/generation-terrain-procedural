@@ -120,11 +120,6 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
     this->resize(800, 600);
 
-//    this->m_axisX = new QValueAxis(this->chartView->chart());
-//    this->m_axisY = new QValueAxis(this->chartView->chart());
-//    this->chartView->chart()->addAxis(m_axisX,Qt::AlignBottom);
-//    this->chartView->chart()->addAxis(m_axisY,Qt::AlignLeft);
-
     this->saveButton = new QPushButton("Save");
     this->layout()->addWidget(this->saveButton);
 
@@ -229,11 +224,11 @@ void Plotter::addImage(Matrix3<float> image, bool normalize)
 void Plotter::draw()
 {
 //    QTransform prevState = this->chartView->transform();
-    auto prevState = this->chartView->chart()->transformations();
-    this->chartView->chart()->removeAllSeries();
-    while (!this->chartView->chart()->axes().empty()) {
-        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
-    }
+//    auto prevState = this->chartView->chart()->transformations();
+//    this->chartView->chart()->removeAllSeries();
+//    while (!this->chartView->chart()->axes().empty()) {
+//        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
+//    }
     if (!title.empty())
         this->chartView->chart()->setTitle(QString::fromStdString(title));
 
@@ -304,9 +299,13 @@ void Plotter::draw()
     }
 //    this->chartView->setTransform(prevState);
 //    this->chartView->chart()->setTransformations(prevState);
+//    while (!this->chartView->chart()->axes().empty()) {
+//        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
+//    }
+
     this->chartView->chart()->createDefaultAxes();
-    this->chartView->chart()->zoomOut();
-    this->chartView->update();
+//    this->chartView->chart()->zoomOut();
+//    this->chartView->update();
 }
 
 int Plotter::exec()

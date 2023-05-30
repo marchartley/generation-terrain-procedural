@@ -59,7 +59,7 @@ class Region:
         # self.verticesStrength = [1.0 for vert in self.verticesStrength]
 
         _mean = sum(newStrengths) / len(newStrengths)
-        self.verticesStrength = [vert * (meanTarget / _mean) for vert in newStrengths]
+        self.verticesStrength = [vert * 0.2 * (meanTarget / _mean) for vert in newStrengths]
 
     def setVerticesStrengthTowardNodes(self, graph: GeometricGraph, selfIndex: int, otherRegions: List['Region'], meanStrength: float = 1.0):
         newStrengths = [1.0 for _ in range(len(self.vertices))]
@@ -276,6 +276,12 @@ class Region:
                         # if len(voro.vertices) < max(posIdx):
                         #     pos = pos.normalized() * 2.0
                 self.vertices[i] = pos
+
+    def grown(self, padding: float = 10.0) -> List[Vector2D]:
+        res = []
+        for i, v in enumerate(self.vertices):
+            res.append(v + self.normal(i) * padding)
+        return res
 
     def draw(self, withAreas: Union[bool, float] = False, withVertices: bool = True, withStrengths: bool = False):
         p = matplotlib.patches.Polygon([(v.x, v.y) for v in self.vertices], facecolor=(.5, .3, .3, .1))
@@ -513,7 +519,7 @@ class Region:
 
     def smooth(self, factor=1.0):
         for _ in range(math.ceil(factor)):
-            newPositions = [vec.copy for vec in self.vertices]
+            newPositions = [vec.copy() for vec in self.vertices]
             for i in range(len(newPositions)):
                 if factor <= 1.0:
                     tmp = (self.vertices[i - 1] + self.vertices[(i + 1) % len(self.vertices)]) / 2.0
@@ -643,7 +649,7 @@ class Region:
                                     vert - fixedPosition).norm2():
                                 fixedPosition = possibleFixedPosition"""
 
-                if self.contains(newPositions[i] + direction):
+                if self.contains(predictedPos):
                     canMove = False
 
                 if canMove:
@@ -672,7 +678,7 @@ class Region:
             direction = self.normal(i)
             predictedPos = vert + direction * self.verticesStrength[i]
             fixedPosition = None
-            newVert = vert.copy()
+            newVert = predictedPos  # vert.copy()
             currentBest = math.inf
             for other in otherRegions:
                 if other is self:
@@ -744,9 +750,8 @@ def main():
         graph.positions = geometryFromInstancingNodes(graph, 1.5, False)
         graph.positions = repositionNodesWithForces(graph)
 
-    randomAreas = [(sum([weight for n, weight in graph.nodes[i].connectedNodes]) / len(
-        graph.nodes[i].connectedNodes)) ** 2 * math.pi for i in range(len(graph.nodes))]
-    regions = [Region(Vector2D(graph.positions[i, 0], graph.positions[i, 1]), randomAreas[i], 30, i) for i in
+    randomAreas = [random.random() * 500 for i in range(len(graph.nodes))] # [(sum([weight for n, weight in graph.nodes[i].connectedNodes]) / len(graph.nodes[i].connectedNodes)) ** 2 * math.pi for i in range(len(graph.nodes))]
+    regions = [Region(Vector2D(graph.positions[i, 0], graph.positions[i, 1]), randomAreas[i], 20, i) for i in
                range(len(graph.nodes))]
 
     for i, region in enumerate(regions):
@@ -755,12 +760,13 @@ def main():
 
     for i, region in enumerate(regions):
         region.draw(withAreas=randomAreas[i], withVertices=False, withStrengths=False)
-    graph.draw(title="Initial graph", withLabels=False, withVoronoi=False)
+    # graph.draw(title="Initial graph", withLabels=False, withVoronoi=False)
     plt.draw()
 
     plt.ion()
     nbIterations = 100
-    for iteration in range(nbIterations):
+
+    def iterate(iteration):
         for i, region in enumerate(regions):
             region.setVerticesNormalsTowardOtherRegion(graph, i, regions)
             region.setVerticesStrengthTowardNodes(graph, i, regions)
@@ -769,10 +775,21 @@ def main():
         plt.clf()
         for i, region in enumerate(regions):
             region.growWithoutCheckingForOverlaps(regions)
-            region.smooth(0.5)
+            # region.growNaive(regions)
+            # region.smooth(0.5)
             region.draw(withAreas=randomAreas[i], withVertices=False, withStrengths=False)
-        graph.draw(title=f"Initial graph (iter {iteration + 1}/{nbIterations})", withLabels=False, withVoronoi=False)
+        # graph.draw(title=f"Initial graph (iter {iteration + 1}/{nbIterations})", withLabels=False, withVoronoi=False)
         plt.draw()
+
+    for iteration in range(nbIterations):
+        optimize = False
+        for region in regions:
+            if region.targetArea is not None and region.getProportionAreaCovered() <= 1.0:
+                optimize = True
+                break
+        if optimize:
+            iterate(iteration)
+
     plt.ioff()
     plt.show()
 

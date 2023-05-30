@@ -380,11 +380,19 @@ QLayout *PrimitivePatchesInterface::createGUI()
                 if (this->selectedPatch() == this->implicitTerrain.get()) {
                     this->implicitTerrain->composables = {translate};
                 } else {
-                    ImplicitOperator* parent = (ImplicitOperator*)this->naiveApproachToGetParent(this->selectedPatch());
-                    if (this->selectedPatch() == parent->composableA) {
-                        parent->composableA = translate;
-                    } else {
-                        parent->composableB = translate;
+                    ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
+                    if (parentAsOperator) {
+                        if (this->selectedPatch() == parentAsOperator->composableA) {
+                            parentAsOperator->composableA = translate;
+                        } else {
+                            parentAsOperator->composableB = translate;
+                        }
+                    }
+                    ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
+                    if (parentAsNaryOperator) {
+                        for (auto& c : parentAsNaryOperator->composables)
+                            if (this->selectedPatch() == c)
+                                c = translate;
                     }
                 }
                 this->storedPatches.push_back(translate);
@@ -482,7 +490,13 @@ void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 
 ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
 {
-    return (this->currentlySelectedPatch != nullptr ? this->currentlySelectedPatch : this->implicitTerrain.get());
+    if (this->currentlySelectedPatch != nullptr && this->currentlySelectedPatch != this->implicitTerrain.get()) {
+        return this->currentlySelectedPatch;
+    } else if (!this->implicitTerrain->composables.empty()) {
+        return this->implicitTerrain->composables[0];
+    } else {
+        return nullptr;
+    }
 }
 
 void PrimitivePatchesInterface::mouseMovedOnMapEvent(Vector3 newPosition, TerrainModel* model)
@@ -525,11 +539,24 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     if (_parent == nullptr) {
         this->implicitTerrain->composables = {operation};
     } else {
-        ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
-        if (previousMain == parent->composableA)
-            parent->composableA = operation;
-        else
-            parent->composableB = operation;
+        ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(_parent);
+        if (parentAsOperator) {
+            if (previousMain == parentAsOperator->composableA)
+                parentAsOperator->composableA = operation;
+            else
+                parentAsOperator->composableB = operation;
+        }
+        ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(_parent);
+        if (parentAsNaryOperator) {
+            int iComposable = 0;
+            for (iComposable = 0; iComposable < parentAsNaryOperator->composables.size(); iComposable++) {
+                if (previousMain == parentAsNaryOperator->composables[iComposable])
+                    break;
+            }
+            parentAsNaryOperator->composables[iComposable] = operation;
+
+        }
+
     }
 //        ImplicitPatch* newOperation = this->createOperationPatchFromParameters(previousMain, patch);
 //        this->implicitTerrain = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
@@ -646,12 +673,12 @@ void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
             this->implicitTerrain->composables = {noisePatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
-            if (parent) {
-                if (selectedPatch == parent->composableA)
-                    parent->composableA = noisePatch;
+            ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(_parent);
+            if (parentAsOperator) {
+                if (selectedPatch == parentAsOperator->composableA)
+                    parentAsOperator->composableA = noisePatch;
                 else
-                    parent->composableB = noisePatch;
+                    parentAsOperator->composableB = noisePatch;
             }
         }
     }
@@ -1184,17 +1211,25 @@ ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch
         visitedPatches.insert(current);
         // Check children if they exist
         ImplicitOperator* currentAsOperator = dynamic_cast<ImplicitOperator*>(current);
-        if (currentAsOperator == nullptr)
-            continue;
-        if (currentAsOperator->composableA) {
-            if (currentAsOperator->composableA == child)
-                return current;
-            waitingPatches.push_back(currentAsOperator->composableA);
+        if (currentAsOperator) {
+            if (currentAsOperator->composableA) {
+                if (currentAsOperator->composableA == child)
+                    return current;
+                waitingPatches.push_back(currentAsOperator->composableA);
+            }
+            if (currentAsOperator->composableB) {
+                if (currentAsOperator->composableB == child)
+                    return current;
+                waitingPatches.push_back(currentAsOperator->composableB);
+            }
         }
-        if (currentAsOperator->composableB) {
-            if (currentAsOperator->composableB == child)
-                return current;
-            waitingPatches.push_back(currentAsOperator->composableB);
+        ImplicitNaryOperator* currentAsNary = dynamic_cast<ImplicitNaryOperator*>(current);
+        if (currentAsNary) {
+            for (auto& c : currentAsNary->composables) {
+                if (c == child)
+                    return current;
+                waitingPatches.push_back(c);
+            }
         }
     }
     return nullptr;

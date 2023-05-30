@@ -28,11 +28,11 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
 
 
-    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X};
+    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE};
 
     for (auto& loc : locs) {
         if (initialPositionsAndDirections.count(loc) == 0) {
-            initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(100, std::vector<std::pair<Vector3, Vector3>>(100));
+            initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20, std::vector<std::pair<Vector3, Vector3>>(1000));
         auto& poses = initialPositionsAndDirections[loc];
             for (size_t i = 0; i < poses.size(); i++) {
                 for (size_t j = 0; j < poses[i].size(); j++) {
@@ -65,6 +65,9 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                         position.z = std::abs(position.z);
                         direction = -position.normalized();
                         position += voxelGrid->getDimensions().xy() * .5f;
+                    } else if (loc == EVERYWHERE) {
+                        position = Vector3::random(Vector3(), voxelGrid->getDimensions());
+                        direction = Vector3();
                     }
 
                     poses[i][j] = {position, direction};
@@ -117,7 +120,7 @@ void ErosionInterface::throwFromCam()
 }
 void ErosionInterface::throwFromSide()
 {
-    this->throwFrom(FROM_X);
+    this->throwFrom(EVERYWHERE);
 }
 void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 {
@@ -675,7 +678,7 @@ QLayout *ErosionInterface::createGUI()
 
     FancySlider* rockSizeSlider = new FancySlider(Qt::Horizontal, 0.f, 100.f);
     FancySlider* rockStrengthSlider = new FancySlider(Qt::Horizontal, 0.f, .5f, .01f);
-    FancySlider* rockQttSlider = new FancySlider(Qt::Horizontal, 0.f, 1000.f);
+    FancySlider* rockQttSlider = new FancySlider(Qt::Horizontal, 1.f, 1000.f);
     FancySlider* rockRandomnessSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
     FancySlider* gravitySlider = new FancySlider(Qt::Horizontal, 0.f, 2.f, .01f);
     FancySlider* bouncingCoefficientSlider = new FancySlider(Qt::Horizontal, 0.f, 1.f, .01f);
@@ -737,19 +740,19 @@ QLayout *ErosionInterface::createGUI()
                                                            {"gravity", gravitySlider},
                                                            {"bouncing Coefficient", bouncingCoefficientSlider},
                                                            {"bounciness", bouncinessSlider},
-                                                           {"minSpeed", minSpeedSlider},
-                                                           {"maxSpeed", maxSpeedSlider},
+//                                                           {"minSpeed", minSpeedSlider},
+//                                                           {"maxSpeed", maxSpeedSlider},
                                                            {"max Capacity Factor", maxCapacityFactorSlider},
                                                            {"erosion Factor", erosionFactorSlider},
                                                            {"deposit Factor", depositFactorSlider},
                                                            {"matter Density", matterDensitySlider},
-                                                           {"material Impact", materialImpactSlider},
+//                                                           {"material Impact", materialImpactSlider},
                                                            {"air Rotation", airFlowfieldRotationSlider},
                                                            {"water Rotation", waterFlowfieldRotationSlider},
                                                            {"air Force", airForceSlider},
                                                            {"water Force", waterForceSlider},
                                                            {"nb iterations", iterationSlider},
-                                                           {"dt", dtSlider},
+//                                                           {"dt", dtSlider},
                                                            {"ShearConstantK", shearingStressConstantKSlider},
                                                            {"ShearRatePower", shearingRatePowerSlider},
                                                            {"ErosionPower", erosionPowerValueSlider},

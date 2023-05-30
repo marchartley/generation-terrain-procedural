@@ -680,8 +680,7 @@ def main():
         graph.positions = iterativeGeometryFromInstancingNodes(graph, distanceTolerance=distanceTolerance)
 
         # angles = [np.vdot(randomPositions[i, :], randomPositions[(i + 1) % nbNodes]) for i in range(nbNodes)]
-
-        plt.ion()
+        # plt.ion()
         for iteration in range(nbNodes):
             plt.pause(0.01)
             # randomPositions = iterativeGeometryFromLaplacianEigenVectors(graph, randomPositions)
@@ -692,6 +691,12 @@ def main():
                        withVoronoi=True, withDelaunay=True,
                        withCirclesAround=True,
                        title=f"Instancing points ({iteration + 1}/{nbNodes})")
+        plt.clf()
+        graph.draw(withLabels=True, withWeights=False,
+                   withVoronoi=True, withDelaunay=True,
+                   withCirclesAround=False,
+                   title=f"Initial graph")
+        plt.show()
 
         for iteration in range(100):
             plt.pause(0.05)
@@ -700,7 +705,7 @@ def main():
             graph.positions = iterativeRepositionNodesWithForce(graph, .99)
             graph.draw(withLabels=True, withWeights=False,
                        withVoronoi=True, withDelaunay=True,
-                       withCirclesAround=True,
+                       withCirclesAround=False,
                        title=f"Apply forces ({round(100 * (iteration + 1) / 100, 2)}%)")
             plt.draw()
         plt.ioff()

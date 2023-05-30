@@ -14,72 +14,740 @@
 								"composableA": {
 									"blendingFactor": 2.0,
 									"composableA": {
-										"densityValue": 0.75,
-										"dimensions": {
-											"x": 100.0,
-											"y": 100.0,
-											"z": 29.996519088745117
+										"blendingFactor": 6.300000190734863,
+										"composableA": {
+											"blendingFactor": 6.300000190734863,
+											"composableA": {
+												"blendingFactor": 6.300000190734863,
+												"composableA": {
+													"blendingFactor": 3.1000001430511475,
+													"composableA": {
+														"blendingFactor": 3.1000001430511475,
+														"composableA": {
+															"blendingFactor": 2.299999952316284,
+															"composableA": {
+																"blendingFactor": 10.0,
+																"composableA": {
+																	"blendingFactor": 10.0,
+																	"composableA": {
+																		"densityValue": 0.75,
+																		"dimensions": {
+																			"x": 100.0,
+																			"y": 100.0,
+																			"z": 30.0
+																		},
+																		"index": 43,
+																		"material": "DIRT",
+																		"mirrored": false,
+																		"name": "Heightmap",
+																		"optionalCurve": {
+																			"closed": false,
+																			"points": []
+																		},
+																		"position": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"shape": "Implicit_Heightmap",
+																		"sigmaValue": -1.0,
+																		"supportDimensions": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"type": "primitive"
+																	},
+																	"composableB": {
+																		"composableA": {
+																			"densityValue": 1.5,
+																			"dimensions": {
+																				"x": 15.600000381469727,
+																				"y": 15.100000381469727,
+																				"z": 21.399999618530273
+																			},
+																			"index": 42,
+																			"material": "ROCK",
+																			"mirrored": false,
+																			"name": "Block",
+																			"optionalCurve": {
+																				"closed": false,
+																				"points": []
+																			},
+																			"position": {
+																				"x": 39.546142578125,
+																				"y": 29.243640899658203,
+																				"z": 0.0
+																			},
+																			"shape": "Block",
+																			"sigmaValue": 5.0,
+																			"supportDimensions": {
+																				"x": 0.0,
+																				"y": 0.0,
+																				"z": 0.0
+																			},
+																			"type": "primitive"
+																		},
+																		"distortion": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"index": 41,
+																		"mirrored": false,
+																		"name": "",
+																		"noise": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"optionalCurve": {
+																			"closed": false,
+																			"points": []
+																		},
+																		"rotation": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"scale": {
+																			"x": 1.0,
+																			"y": 1.0,
+																			"z": 1.0
+																		},
+																		"spreadFactor": 0.0,
+																		"translation": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 3.0600085258483887
+																		},
+																		"type": "unary"
+																	},
+																	"index": 40,
+																	"mirrored": false,
+																	"name": "Blend",
+																	"operator": "Blend",
+																	"optionalCurve": {
+																		"closed": false,
+																		"points": []
+																	},
+																	"positionalB": "FIXED_POS",
+																	"type": "compose",
+																	"useIntersection": false
+																},
+																"composableB": {
+																	"composableA": {
+																		"densityValue": 1.5,
+																		"dimensions": {
+																			"x": 15.600000381469727,
+																			"y": 15.100000381469727,
+																			"z": 21.399999618530273
+																		},
+																		"index": 39,
+																		"material": "ROCK",
+																		"mirrored": false,
+																		"name": "Block",
+																		"optionalCurve": {
+																			"closed": false,
+																			"points": []
+																		},
+																		"position": {
+																			"x": 40.75227737426758,
+																			"y": 47.2297248840332,
+																			"z": 0.0
+																		},
+																		"shape": "Block",
+																		"sigmaValue": 5.0,
+																		"supportDimensions": {
+																			"x": 0.0,
+																			"y": 0.0,
+																			"z": 0.0
+																		},
+																		"type": "primitive"
+																	},
+																	"distortion": {
+																		"x": 0.0,
+																		"y": 0.0,
+																		"z": 0.0
+																	},
+																	"index": 38,
+																	"mirrored": false,
+																	"name": "",
+																	"noise": {
+																		"x": 0.0,
+																		"y": 0.0,
+																		"z": 0.0
+																	},
+																	"optionalCurve": {
+																		"closed": false,
+																		"points": []
+																	},
+																	"rotation": {
+																		"x": 0.0,
+																		"y": 0.0,
+																		"z": 0.0
+																	},
+																	"scale": {
+																		"x": 1.0,
+																		"y": 1.0,
+																		"z": 1.0
+																	},
+																	"spreadFactor": 0.0,
+																	"translation": {
+																		"x": 0.0,
+																		"y": 0.0,
+																		"z": 3.1283493041992188
+																	},
+																	"type": "unary"
+																},
+																"index": 37,
+																"mirrored": false,
+																"name": "Blend",
+																"operator": "Blend",
+																"optionalCurve": {
+																	"closed": false,
+																	"points": []
+																},
+																"positionalB": "FIXED_POS",
+																"type": "compose",
+																"useIntersection": false
+															},
+															"composableB": {
+																"composableA": {
+																	"densityValue": 1.5,
+																	"dimensions": {
+																		"x": 15.600000381469727,
+																		"y": 15.100000381469727,
+																		"z": 21.399999618530273
+																	},
+																	"index": 36,
+																	"material": "ROCK",
+																	"mirrored": false,
+																	"name": "Block",
+																	"optionalCurve": {
+																		"closed": false,
+																		"points": []
+																	},
+																	"position": {
+																		"x": 39.07487869262695,
+																		"y": 12.005976676940918,
+																		"z": 0.0
+																	},
+																	"shape": "Block",
+																	"sigmaValue": 5.0,
+																	"supportDimensions": {
+																		"x": 0.0,
+																		"y": 0.0,
+																		"z": 0.0
+																	},
+																	"type": "primitive"
+																},
+																"distortion": {
+																	"x": 0.0,
+																	"y": 0.0,
+																	"z": 0.0
+																},
+																"index": 35,
+																"mirrored": false,
+																"name": "",
+																"noise": {
+																	"x": 0.0,
+																	"y": 0.0,
+																	"z": 0.0
+																},
+																"optionalCurve": {
+																	"closed": false,
+																	"points": []
+																},
+																"rotation": {
+																	"x": 0.0,
+																	"y": 0.0,
+																	"z": 0.0
+																},
+																"scale": {
+																	"x": 1.0,
+																	"y": 1.0,
+																	"z": 1.0
+																},
+																"spreadFactor": 0.0,
+																"translation": {
+																	"x": 0.0,
+																	"y": 0.0,
+																	"z": 2.923046112060547
+																},
+																"type": "unary"
+															},
+															"index": 34,
+															"mirrored": false,
+															"name": "Blend",
+															"operator": "Blend",
+															"optionalCurve": {
+																"closed": false,
+																"points": []
+															},
+															"positionalB": "FIXED_POS",
+															"type": "compose",
+															"useIntersection": false
+														},
+														"composableB": {
+															"composableA": {
+																"densityValue": 1.5,
+																"dimensions": {
+																	"x": 15.600000381469727,
+																	"y": 15.100000381469727,
+																	"z": 21.399999618530273
+																},
+																"index": 33,
+																"material": "ROCK",
+																"mirrored": false,
+																"name": "Block",
+																"optionalCurve": {
+																	"closed": false,
+																	"points": []
+																},
+																"position": {
+																	"x": 45.38405227661133,
+																	"y": 66.01370239257813,
+																	"z": 0.0
+																},
+																"shape": "Block",
+																"sigmaValue": 5.0,
+																"supportDimensions": {
+																	"x": 0.0,
+																	"y": 0.0,
+																	"z": 0.0
+																},
+																"type": "primitive"
+															},
+															"distortion": {
+																"x": 0.0,
+																"y": 0.0,
+																"z": 0.0
+															},
+															"index": 32,
+															"mirrored": false,
+															"name": "",
+															"noise": {
+																"x": 0.0,
+																"y": 0.0,
+																"z": 0.0
+															},
+															"optionalCurve": {
+																"closed": false,
+																"points": []
+															},
+															"rotation": {
+																"x": 0.0,
+																"y": 0.0,
+																"z": 0.0
+															},
+															"scale": {
+																"x": 1.0,
+																"y": 1.0,
+																"z": 1.0
+															},
+															"spreadFactor": 0.0,
+															"translation": {
+																"x": 0.0,
+																"y": 0.0,
+																"z": 3.245694160461426
+															},
+															"type": "unary"
+														},
+														"index": 31,
+														"mirrored": false,
+														"name": "Blend",
+														"operator": "Blend",
+														"optionalCurve": {
+															"closed": false,
+															"points": []
+														},
+														"positionalB": "FIXED_POS",
+														"type": "compose",
+														"useIntersection": false
+													},
+													"composableB": {
+														"composableA": {
+															"densityValue": 1.5,
+															"dimensions": {
+																"x": 15.600000381469727,
+																"y": 15.100000381469727,
+																"z": 21.399999618530273
+															},
+															"index": 30,
+															"material": "ROCK",
+															"mirrored": false,
+															"name": "Block",
+															"optionalCurve": {
+																"closed": false,
+																"points": []
+															},
+															"position": {
+																"x": 27.92364501953125,
+																"y": 66.03099060058594,
+																"z": 0.0
+															},
+															"shape": "Block",
+															"sigmaValue": 5.0,
+															"supportDimensions": {
+																"x": 0.0,
+																"y": 0.0,
+																"z": 0.0
+															},
+															"type": "primitive"
+														},
+														"distortion": {
+															"x": 0.0,
+															"y": 0.0,
+															"z": 0.0
+														},
+														"index": 29,
+														"mirrored": false,
+														"name": "",
+														"noise": {
+															"x": 0.0,
+															"y": 0.0,
+															"z": 0.0
+														},
+														"optionalCurve": {
+															"closed": false,
+															"points": []
+														},
+														"rotation": {
+															"x": 0.0,
+															"y": 0.0,
+															"z": 0.0
+														},
+														"scale": {
+															"x": 1.0,
+															"y": 1.0,
+															"z": 1.0
+														},
+														"spreadFactor": 0.0,
+														"translation": {
+															"x": 0.0,
+															"y": 0.0,
+															"z": 3.292287588119507
+														},
+														"type": "unary"
+													},
+													"index": 28,
+													"mirrored": false,
+													"name": "Blend",
+													"operator": "Blend",
+													"optionalCurve": {
+														"closed": false,
+														"points": []
+													},
+													"positionalB": "FIXED_POS",
+													"type": "compose",
+													"useIntersection": false
+												},
+												"composableB": {
+													"composableA": {
+														"densityValue": 1.5,
+														"dimensions": {
+															"x": 15.600000381469727,
+															"y": 15.100000381469727,
+															"z": 21.399999618530273
+														},
+														"index": 27,
+														"material": "ROCK",
+														"mirrored": false,
+														"name": "Block",
+														"optionalCurve": {
+															"closed": false,
+															"points": []
+														},
+														"position": {
+															"x": 61.7876091003418,
+															"y": 78.69087982177734,
+															"z": 0.0
+														},
+														"shape": "Block",
+														"sigmaValue": 5.0,
+														"supportDimensions": {
+															"x": 0.0,
+															"y": 0.0,
+															"z": 0.0
+														},
+														"type": "primitive"
+													},
+													"distortion": {
+														"x": 0.0,
+														"y": 0.0,
+														"z": 0.0
+													},
+													"index": 26,
+													"mirrored": false,
+													"name": "",
+													"noise": {
+														"x": 0.0,
+														"y": 0.0,
+														"z": 0.0
+													},
+													"optionalCurve": {
+														"closed": false,
+														"points": []
+													},
+													"rotation": {
+														"x": 0.0,
+														"y": 0.0,
+														"z": 0.0
+													},
+													"scale": {
+														"x": 1.0,
+														"y": 1.0,
+														"z": 1.0
+													},
+													"spreadFactor": 0.0,
+													"translation": {
+														"x": 0.0,
+														"y": 0.0,
+														"z": 2.6064634323120117
+													},
+													"type": "unary"
+												},
+												"index": 25,
+												"mirrored": false,
+												"name": "Blend",
+												"operator": "Blend",
+												"optionalCurve": {
+													"closed": false,
+													"points": []
+												},
+												"positionalB": "FIXED_POS",
+												"type": "compose",
+												"useIntersection": false
+											},
+											"composableB": {
+												"composableA": {
+													"densityValue": 1.5,
+													"dimensions": {
+														"x": 15.600000381469727,
+														"y": 15.100000381469727,
+														"z": 21.399999618530273
+													},
+													"index": 24,
+													"material": "ROCK",
+													"mirrored": false,
+													"name": "Block",
+													"optionalCurve": {
+														"closed": false,
+														"points": []
+													},
+													"position": {
+														"x": 46.5413703918457,
+														"y": 38.81599044799805,
+														"z": 0.0
+													},
+													"shape": "Block",
+													"sigmaValue": 5.0,
+													"supportDimensions": {
+														"x": 0.0,
+														"y": 0.0,
+														"z": 0.0
+													},
+													"type": "primitive"
+												},
+												"distortion": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0
+												},
+												"index": 23,
+												"mirrored": false,
+												"name": "",
+												"noise": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0
+												},
+												"optionalCurve": {
+													"closed": false,
+													"points": []
+												},
+												"rotation": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0
+												},
+												"scale": {
+													"x": 1.0,
+													"y": 1.0,
+													"z": 1.0
+												},
+												"spreadFactor": 0.0,
+												"translation": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 3.3592376708984375
+												},
+												"type": "unary"
+											},
+											"index": 22,
+											"mirrored": false,
+											"name": "Blend",
+											"operator": "Blend",
+											"optionalCurve": {
+												"closed": false,
+												"points": []
+											},
+											"positionalB": "FIXED_POS",
+											"type": "compose",
+											"useIntersection": true
 										},
-										"index": 18,
-										"material": "DIRT",
+										"composableB": {
+											"composableA": {
+												"densityValue": 1.5,
+												"dimensions": {
+													"x": 15.600000381469727,
+													"y": 15.100000381469727,
+													"z": 21.399999618530273
+												},
+												"index": 21,
+												"material": "ROCK",
+												"mirrored": false,
+												"name": "Block",
+												"optionalCurve": {
+													"closed": false,
+													"points": []
+												},
+												"position": {
+													"x": 58.13222885131836,
+													"y": 29.986347198486328,
+													"z": 0.0
+												},
+												"shape": "Block",
+												"sigmaValue": 5.0,
+												"supportDimensions": {
+													"x": 0.0,
+													"y": 0.0,
+													"z": 0.0
+												},
+												"type": "primitive"
+											},
+											"distortion": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"index": 20,
+											"mirrored": false,
+											"name": "",
+											"noise": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"optionalCurve": {
+												"closed": false,
+												"points": []
+											},
+											"rotation": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"scale": {
+												"x": 1.0,
+												"y": 1.0,
+												"z": 1.0
+											},
+											"spreadFactor": 0.0,
+											"translation": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 2.8058619499206543
+											},
+											"type": "unary"
+										},
+										"index": 19,
 										"mirrored": false,
-										"name": "Heightmap",
+										"name": "One Side Blend",
+										"operator": "One_side_blend",
 										"optionalCurve": {
 											"closed": false,
 											"points": []
 										},
-										"position": {
-											"x": 0.0,
-											"y": 0.0,
-											"z": 0.0
-										},
-										"shape": "Implicit_Heightmap",
-										"sigmaValue": -1.0,
-										"supportDimensions": {
-											"x": 0.0,
-											"y": 0.0,
-											"z": 0.0
-										},
-										"type": "primitive"
+										"positionalB": "FIXED_POS",
+										"type": "compose",
+										"useIntersection": true
 									},
 									"composableB": {
-										"densityValue": 1.5,
-										"dimensions": {
-											"x": 37.60000228881836,
-											"y": 38.29999923706055,
-											"z": 20.0
+										"composableA": {
+											"densityValue": 1.5,
+											"dimensions": {
+												"x": 15.600000381469727,
+												"y": 15.100000381469727,
+												"z": 21.399999618530273
+											},
+											"index": 18,
+											"material": "ROCK",
+											"mirrored": false,
+											"name": "Block",
+											"optionalCurve": {
+												"closed": false,
+												"points": []
+											},
+											"position": {
+												"x": 75.7534408569336,
+												"y": 62.38424301147461,
+												"z": 0.0
+											},
+											"shape": "Block",
+											"sigmaValue": 5.0,
+											"supportDimensions": {
+												"x": 0.0,
+												"y": 0.0,
+												"z": 0.0
+											},
+											"type": "primitive"
 										},
-										"index": 17,
-										"material": "ROCK",
-										"mirrored": false,
-										"name": "Mountain",
-										"optionalCurve": {
-											"closed": false,
-											"points": []
-										},
-										"position": {
-											"x": 46.578704833984375,
-											"y": 32.58708190917969,
-											"z": 0.0
-										},
-										"shape": "Mountain",
-										"sigmaValue": 5.0,
-										"supportDimensions": {
+										"distortion": {
 											"x": 0.0,
 											"y": 0.0,
 											"z": 0.0
 										},
-										"type": "primitive"
+										"index": 17,
+										"mirrored": false,
+										"name": "",
+										"noise": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"rotation": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"scale": {
+											"x": 1.0,
+											"y": 1.0,
+											"z": 1.0
+										},
+										"spreadFactor": 0.0,
+										"translation": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 2.6912198066711426
+										},
+										"type": "unary"
 									},
 									"index": 16,
 									"mirrored": false,
-									"name": "Blend",
-									"operator": "Blend",
+									"name": "One Side Blend",
+									"operator": "One_side_blend",
 									"optionalCurve": {
 										"closed": false,
 										"points": []
 									},
-									"positionalB": "ABOVE",
+									"positionalB": "FIXED_POS",
 									"type": "compose",
 									"useIntersection": false
 								},
@@ -87,24 +755,24 @@
 									"composableA": {
 										"densityValue": 1.5,
 										"dimensions": {
-											"x": 37.60000228881836,
-											"y": 38.29999923706055,
-											"z": 6.200000286102295
+											"x": 15.600000381469727,
+											"y": 15.100000381469727,
+											"z": 21.399999618530273
 										},
 										"index": 15,
 										"material": "ROCK",
 										"mirrored": false,
-										"name": "Mountain",
+										"name": "Block",
 										"optionalCurve": {
 											"closed": false,
 											"points": []
 										},
 										"position": {
-											"x": 31.425947189331055,
-											"y": 33.38323211669922,
+											"x": 21.120662689208984,
+											"y": 41.54602813720703,
 											"z": 0.0
 										},
-										"shape": "Mountain",
+										"shape": "Block",
 										"sigmaValue": 5.0,
 										"supportDimensions": {
 											"x": 0.0,
@@ -144,14 +812,14 @@
 									"translation": {
 										"x": 0.0,
 										"y": 0.0,
-										"z": 3.4280457496643066
+										"z": 2.5872602462768555
 									},
 									"type": "unary"
 								},
 								"index": 13,
 								"mirrored": false,
-								"name": "Blend",
-								"operator": "Blend",
+								"name": "One Side Blend",
+								"operator": "One_side_blend",
 								"optionalCurve": {
 									"closed": false,
 									"points": []
@@ -162,47 +830,26 @@
 							},
 							"composableB": {
 								"composableA": {
-									"densityValue": 1.5,
+									"densityValue": -2.5,
 									"dimensions": {
-										"x": 59.612648010253906,
-										"y": 61.14250946044922,
-										"z": 3.299999952316284
+										"x": 15.600000381469727,
+										"y": 15.100000381469727,
+										"z": 21.399999618530273
 									},
 									"index": 12,
-									"material": "ROCK",
+									"material": "WATER",
 									"mirrored": false,
-									"name": "Polygon",
+									"name": "Block",
 									"optionalCurve": {
 										"closed": false,
-										"points": [
-											{
-												"x": 40.812644958496094,
-												"y": 27.866708755493164,
-												"z": 4.533263206481934
-											},
-											{
-												"x": 25.52434730529785,
-												"y": 19.149999618530273,
-												"z": 4.0
-											},
-											{
-												"x": 18.80000114440918,
-												"y": 41.99250793457031,
-												"z": 6.244904041290283
-											},
-											{
-												"x": 39.54585266113281,
-												"y": 39.79850769042969,
-												"z": 5.25364875793457
-											}
-										]
+										"points": []
 									},
 									"position": {
-										"x": -5.911848068237305,
-										"y": 18.255495071411133,
+										"x": 49.0526008605957,
+										"y": 39.514488220214844,
 										"z": 0.0
 									},
-									"shape": "Polygon",
+									"shape": "Block",
 									"sigmaValue": 5.0,
 									"supportDimensions": {
 										"x": 0.0,
@@ -242,14 +889,14 @@
 								"translation": {
 									"x": 0.0,
 									"y": 0.0,
-									"z": -0.6849994659423828
+									"z": 3.3516149520874023
 								},
 								"type": "unary"
 							},
 							"index": 10,
 							"mirrored": false,
-							"name": "Blend",
-							"operator": "Blend",
+							"name": "One Side Blend",
+							"operator": "One_side_blend",
 							"optionalCurve": {
 								"closed": false,
 								"points": []
@@ -260,43 +907,27 @@
 						},
 						"composableB": {
 							"composableA": {
-								"densityValue": 1.5,
+								"densityValue": -2.5,
 								"dimensions": {
-									"x": 11.618383407592773,
-									"y": 19.032058715820313,
-									"z": 10.848030090332031
+									"x": 15.600000381469727,
+									"y": 15.100000381469727,
+									"z": 21.399999618530273
 								},
 								"index": 9,
-								"material": "ROCK",
+								"material": "WATER",
 								"mirrored": false,
-								"name": "Parametric Tunnel",
+								"name": "Block",
 								"optionalCurve": {
 									"closed": false,
-									"points": [
-										{
-											"x": 7.018383026123047,
-											"y": 4.599998474121094,
-											"z": 5.0373101234436035
-										},
-										{
-											"x": 5.855033874511719,
-											"y": 12.1800537109375,
-											"z": 6.248030185699463
-										},
-										{
-											"x": 4.600000381469727,
-											"y": 14.432060241699219,
-											"z": 4.599999904632568
-										}
-									]
+									"points": []
 								},
 								"position": {
-									"x": 10.320018768310547,
-									"y": 37.00102996826172,
+									"x": 26.320392608642578,
+									"y": 54.825172424316406,
 									"z": 0.0
 								},
-								"shape": "Parametric_Tunnel",
-								"sigmaValue": 9.199999809265137,
+								"shape": "Block",
+								"sigmaValue": 5.0,
 								"supportDimensions": {
 									"x": 0.0,
 									"y": 0.0,
@@ -335,7 +966,7 @@
 							"translation": {
 								"x": 0.0,
 								"y": 0.0,
-								"z": -4.055034160614014
+								"z": 2.599236488342285
 							},
 							"type": "unary"
 						},
@@ -355,41 +986,25 @@
 						"composableA": {
 							"densityValue": -2.5,
 							"dimensions": {
-								"x": 24.324289321899414,
-								"y": 7.924495697021484,
-								"z": 10.90757942199707
+								"x": 15.600000381469727,
+								"y": 15.100000381469727,
+								"z": 21.399999618530273
 							},
 							"index": 6,
 							"material": "WATER",
 							"mirrored": false,
-							"name": "Parametric Tunnel",
+							"name": "Block",
 							"optionalCurve": {
 								"closed": false,
-								"points": [
-									{
-										"x": 2.6500000953674316,
-										"y": 2.6500015258789063,
-										"z": 2.6500000953674316
-									},
-									{
-										"x": 14.326107025146484,
-										"y": 5.274494171142578,
-										"z": 8.257579803466797
-									},
-									{
-										"x": 21.67428970336914,
-										"y": 4.896862030029297,
-										"z": 5.9599456787109375
-									}
-								]
+								"points": []
 							},
 							"position": {
-								"x": -0.09496760368347168,
-								"y": 40.903255462646484,
+								"x": 34.83676528930664,
+								"y": 55.219608306884766,
 								"z": 0.0
 							},
-							"shape": "Parametric_Tunnel",
-							"sigmaValue": 5.300000190734863,
+							"shape": "Block",
+							"sigmaValue": 5.0,
 							"supportDimensions": {
 								"x": 0.0,
 								"y": 0.0,
@@ -428,7 +1043,7 @@
 						"translation": {
 							"x": 0.0,
 							"y": 0.0,
-							"z": -2.3405888080596924
+							"z": 2.6514315605163574
 						},
 						"type": "unary"
 					},
@@ -448,56 +1063,25 @@
 					"composableA": {
 						"densityValue": -2.5,
 						"dimensions": {
-							"x": 24.85704231262207,
-							"y": 47.700584411621094,
-							"z": 24.098905563354492
+							"x": 15.600000381469727,
+							"y": 15.100000381469727,
+							"z": 21.399999618530273
 						},
 						"index": 3,
 						"material": "WATER",
 						"mirrored": false,
-						"name": "Parametric Tunnel",
+						"name": "Block",
 						"optionalCurve": {
 							"closed": false,
-							"points": [
-								{
-									"x": 17.643068313598633,
-									"y": 45.05058288574219,
-									"z": 15.67112922668457
-								},
-								{
-									"x": 2.6499996185302734,
-									"y": 39.449310302734375,
-									"z": 21.44890594482422
-								},
-								{
-									"x": 22.207040786743164,
-									"y": 28.315139770507813,
-									"z": 13.056568145751953
-								},
-								{
-									"x": 6.216588973999023,
-									"y": 22.00274658203125,
-									"z": 12.954174041748047
-								},
-								{
-									"x": 8.468194961547852,
-									"y": 12.4918212890625,
-									"z": 5.046492099761963
-								},
-								{
-									"x": 12.470373153686523,
-									"y": 2.6500015258789063,
-									"z": 2.6500000953674316
-								}
-							]
+							"points": []
 						},
 						"position": {
-							"x": 28.966520309448242,
-							"y": 49.505393981933594,
+							"x": 43.6816520690918,
+							"y": 56.99159622192383,
 							"z": 0.0
 						},
-						"shape": "Parametric_Tunnel",
-						"sigmaValue": 5.300000190734863,
+						"shape": "Block",
+						"sigmaValue": 5.0,
 						"supportDimensions": {
 							"x": 0.0,
 							"y": 0.0,
@@ -536,7 +1120,7 @@
 					"translation": {
 						"x": 0.0,
 						"y": 0.0,
-						"z": 3.1559481620788574
+						"z": 2.1638541221618652
 					},
 					"type": "unary"
 				},

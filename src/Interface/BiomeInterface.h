@@ -42,6 +42,8 @@ public:
     int tempIndex = -1;
     Vector3 tempMousePos;
 
+    std::vector<std::string> allBiomeNames;
+
     void setVoxelGridSizeFactor(float newFactor);
 
 public Q_SLOTS:
@@ -60,7 +62,7 @@ public Q_SLOTS:
     void addTunnel(KarstHole& hole);
 
     void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
-    void updateSelectionPlaneToFitBiome(int biomeID, int planeIndex);
+    void updateSelectionPlaneToFitBiome(int biomeID, int planeIndex, bool callUpdate = true);
 
     void displayUniqueSelection(int selectionIndex);
 
@@ -82,6 +84,7 @@ protected:
     void deleteBiomeFromID(int ID);
 
     std::vector<int> selectedBiomeIDs;
+    std::vector<std::shared_ptr<BiomeInstance>> selectedBiomes;
 //    int selectedBiomeID = -1;
     QLayout* layout = nullptr;
 

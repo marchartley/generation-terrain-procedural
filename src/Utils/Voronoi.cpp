@@ -58,7 +58,7 @@ Voronoi::Voronoi(int numberRandomPoints, ShapeCurve boundingShape)
     : boundingShape(boundingShape.removeDuplicates())
 {
     std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
-    this->pointset = boundingShape.shrink(1.f).randomPointsInside(numberRandomPoints);
+    this->pointset = boundingShape/*.shrink(1.f)*/.randomPointsInside(numberRandomPoints);
 }
 
 Voronoi::Voronoi(std::vector<Vector3> pointset)
@@ -373,6 +373,7 @@ std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
 
             e = e->next;
         }
+//        if (areaShape.points.size() > 0 && areaShape.points)
         areas[site->index] = areaShape;
     }
 
