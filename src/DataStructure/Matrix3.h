@@ -67,8 +67,8 @@ public:
     bool checkCoord(Vector3 pos) const;
     bool checkIndex(size_t i) const;
 
-    T interpolate(Vector3 coord);
-    T interpolate(float x, float y, float z = 0);
+    T interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE);
+    T interpolate(float x, float y, float z = 0, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE);
     Matrix3<T>& addValueAt(T value, Vector3 coord);
     Matrix3<T>& addValueAt(T value, float x, float y, float z);
 
@@ -109,6 +109,8 @@ public:
 
     Matrix3<T>& normalize();
     Matrix3<T> normalized() const;
+
+    Matrix3<T> transposeXY();
 
     Matrix3<Vector3> gradient();
     Matrix3<Vector3> grad();
@@ -291,8 +293,9 @@ Matrix3<T>::Matrix3(std::vector<std::vector<T>> data)
     std::vector<T> oneMatrix;
     for (std::vector<T>& row : data)
         oneMatrix.insert(oneMatrix.end(), row.begin(), row.end());
-    int sizeY = (data.size() > 0 ? data[0].size() : 0);
-    init(oneMatrix, data.size(), sizeY, 1);
+    int sizeX = data[0].size();
+    int sizeY = data.size();
+    init(oneMatrix, sizeX, sizeY, 1);
 }
 template<class T>
 Matrix3<T>::Matrix3(std::vector<std::vector<std::vector<T>>> data)
@@ -301,9 +304,10 @@ Matrix3<T>::Matrix3(std::vector<std::vector<std::vector<T>>> data)
     for (std::vector<std::vector<T>>& grid : data)
         for (std::vector<T>& row : grid)
             oneMatrix.insert(oneMatrix.end(), row.begin(), row.end());
-    int sizeY = (data.size() > 0 ? data[0].size() : 0);
+    int sizeX = data[0].size();
+    int sizeY = data.size();
     int sizeZ = (sizeY > 0 ? data[0][0].size() : 0);
-    init(oneMatrix, data.size(), sizeY, sizeZ);
+    init(oneMatrix, sizeX, sizeY, sizeZ);
 }
 
 template<class T>
@@ -325,7 +329,7 @@ bool Matrix3<T>::checkIndex(size_t i) const
 }
 
 template<class T>
-T Matrix3<T>::interpolate(Vector3 coord)
+T Matrix3<T>::interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding)
 {
     Vector3 round = coord.floor();
     Vector3 cellOffset = coord - round;
@@ -333,7 +337,7 @@ T Matrix3<T>::interpolate(Vector3 coord)
     bool previousErrorConfig = this->raiseErrorOnBadCoord;
     RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
     this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    this->returned_value_on_outside = padding;
     T f000 = this->at(round + Vector3(0, 0, 0));
     T f100 = this->at(round + Vector3(1, 0, 0));
     T f010 = this->at(round + Vector3(0, 1, 0));
@@ -355,9 +359,9 @@ T Matrix3<T>::interpolate(Vector3 coord)
 }
 
 template<class T>
-T Matrix3<T>::interpolate(float x, float y, float z)
+T Matrix3<T>::interpolate(float x, float y, float z, RETURN_VALUE_ON_OUTSIDE padding)
 {
-    return interpolate(Vector3(x, y, z));
+    return interpolate(Vector3(x, y, z), padding);
 }
 
 template<class T>
@@ -648,6 +652,21 @@ template<class T>
 Matrix3<T> Matrix3<T>::normalized() const {
     Matrix3 mat = *this;
     return mat.normalize();
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::transposeXY()
+{
+    Matrix3<T> res(this->getDimensions().yxz());
+    for (int x = 0; x < res.sizeX; x++) {
+        for (int y = 0; y < res.sizeY; y++) {
+            for (int z = 0; z < res.sizeZ; z++) {
+                T prevVal = this->at(y, x, z);
+                res.at(x, y, z) = prevVal;
+            }
+        }
+    }
+    return res;
 }
 
 template<class T>
@@ -1035,21 +1054,21 @@ template<typename T>
 Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode)
 {
     Matrix3<T> newMat(newX, newY, newZ);
-    float rx = this->sizeX / (float)newX, ry = this->sizeY / (float)newY, rz = this->sizeZ / (float)newZ;
+    float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
 
     if (mode == LINEAR) {
         // Apply interpolations
         for (int x = 0; x < newX; x++) {
             int x_original = int(x * rx);
-            int x_plus_1 = (x_original >= this->sizeX - 2 ? x_original : x_original + 1);
+            int x_plus_1 = (x_original >= this->sizeX - 1 ? x_original : x_original + 1);
             float d_x = (x * rx) - x_original;
             for (int y = 0; y < newY; y++) {
                 int y_original = int(y * ry);
-                int y_plus_1 = (y_original >= this->sizeY - 2 ? y_original : y_original + 1);
+                int y_plus_1 = (y_original >= this->sizeY - 1 ? y_original : y_original + 1);
                 float d_y = (y * ry) - y_original;
                 for (int z = 0; z < newZ; z++) {
                     int z_original = int(z * rz);
-                    int z_plus_1 = (z_original >= this->sizeZ - 2 ? z_original : z_original + 1);
+                    int z_plus_1 = (z_original >= this->sizeZ - 1 ? z_original : z_original + 1);
                     float d_z = (z * rz) - z_original;
 
                     T f000 = this->at(x_original    , y_original    , z_original    );
@@ -1061,12 +1080,14 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                     T f011 = this->at(x_original    , y_plus_1, z_plus_1);
                     T f111 = this->at(x_plus_1, y_plus_1, z_plus_1);
                     // Interpolation
-                    newMat.at(x, y, z) = ((
+                    T res = ((
                                               f000 * (1-d_x) + f100 * d_x) * (1-d_y) + (
                                               f010 * (1-d_x) + f110 * d_x) * d_y) * (1 - d_z) +
                                         ((
                                              f001 * (1-d_x) + f101 * d_x) * (1-d_y) + (
                                              f011 * (1-d_x) + f111 * d_x) * d_y) * d_z;
+
+                    newMat.at(x, y, z) = res;
                 }
             }
         }
@@ -1301,15 +1322,13 @@ template<class T>
 Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
 {
     Matrix3<T> result = *this;
-    if (onX) {
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->sizeZ; z++) {
-                    int targetX = (onX ? this->sizeX - (x +1) : x);
-                    int targetY = (onY ? this->sizeY - (y +1) : y);
-                    int targetZ = (onZ ? this->sizeZ - (z +1) : z);
-                    result.at(x, y, z) = this->at(targetX, targetY, targetZ);
-                }
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                int targetX = (onX ? this->sizeX - (x +1) : x);
+                int targetY = (onY ? this->sizeY - (y +1) : y);
+                int targetZ = (onZ ? this->sizeZ - (z +1) : z);
+                result.at(x, y, z) = this->at(targetX, targetY, targetZ);
             }
         }
     }

@@ -102,6 +102,7 @@ public:
     void setVoxelIsOnGround(float x, float y, float z, bool newVal);
 
     void computeFlowfield();
+    void computeMultipleFlowfields();
 
     void affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize = 3);
     void affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize = 3);
@@ -137,6 +138,11 @@ public:
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
     FluidSimulation fluidSimulation;
+
+    std::vector<FluidSimulation> multipleFluidSimulations;
+    std::vector<Vector3> multipleSeaCurrents;
+    std::vector<Matrix3<Vector3>> multipleFlowFields;
+
     bool _smoothingNeeded = false; // Just used when we come from a 2D grid.
     Matrix3<Vector3> flowField;
     Matrix3<int> distanceField;

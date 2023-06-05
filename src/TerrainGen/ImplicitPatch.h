@@ -139,7 +139,7 @@ public:
     BSpline optionalCurve;
 
     static ImplicitPatch* createIdentity();
-    static ImplicitPatch* createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
+    static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
     static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve = BSpline());
     static float isovalue;
     static float zResolution;
@@ -279,6 +279,7 @@ public:
 
     void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
     void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
+    void addWrapFunction(Matrix3<Vector3> func);
     void spread(float factor = 1.f);
     void addWavelets();
 

@@ -57,18 +57,19 @@ ViewerInterface::ViewerInterface() {
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
         //this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/cube_2.data");
 
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
+        //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;

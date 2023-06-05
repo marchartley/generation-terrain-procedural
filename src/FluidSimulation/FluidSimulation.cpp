@@ -30,7 +30,6 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, floa
 
 void FluidSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
-    std::cout << sizeX << " " << sizeY << " " << sizeZ << std::endl;
     this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {
@@ -77,8 +76,8 @@ void FluidSimulation::step()
     this->currentStep ++;
     this->velocityStep();
 //    this->densityStep(); // This is actually useless right now. Maybe we could use it to erod the walls depending on the density, but that's not for now.
-//    this->set_bounds(this->velocity, true, false);
-//    this->set_bounds(this->density, false, true);
+    this->set_bounds(this->velocity, true, false);
+    this->set_bounds(this->density, false, true);
 }
 
 void FluidSimulation::velocityStep()
@@ -153,7 +152,7 @@ void FluidSimulation::advectVelocity()
         }
     }
     velocity_old.raiseErrorOnBadCoord = true;
-//    this->setVelocityBounds();
+    this->setVelocityBounds();
 }
 
 void FluidSimulation::densityStep()
@@ -178,7 +177,7 @@ void FluidSimulation::projectVelocity()
     this->divergence = velocity.divergence() * -h;
 
     this->set_bounds(this->divergence);
-//    this->set_bounds(this->pressure);
+    this->set_bounds(this->pressure);
 
     this->pressure = divergence;
     this->pressure.raiseErrorOnBadCoord = false;
@@ -207,7 +206,7 @@ void FluidSimulation::projectVelocity()
     // Following ethanjli code :
     Matrix3<Vector3> pressureGradient = this->pressure.gradient() * -h;
     this->velocity += pressureGradient;
-//    this->setVelocityBounds();
+    this->setVelocityBounds();
 }
 
 void FluidSimulation::setVelocityBounds()

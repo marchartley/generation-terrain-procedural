@@ -582,7 +582,7 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     float zResolution = 1.f;
     int nbEvaluations = 0;
     auto start = std::chrono::system_clock::now();
-    #pragma omp parallel for collapse(2)
+//    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;

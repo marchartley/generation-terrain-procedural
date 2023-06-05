@@ -471,6 +471,11 @@ Vector3& Vector3::operator-=(const Vector3& o) {
     this->z -= o.z;
     return *this;
 }
+
+float &Vector3::operator[](size_t i)
+{
+    return ((float*)(this))[i];
+}
 //Vector3 operator*(Vector3 a, Vector3 b) {
 //    a *= b;
 //    return a;
@@ -569,7 +574,7 @@ Vector3 operator*(float a, Vector3 b) {
 }
 
 Vector3 operator/(float a, Vector3 b) {
-    return b /= a;
+    return Vector3(a / b.x, a / b.y, a / b.z);
 }
 
 //Vector3 operator+(Vector3 b, float a) {
@@ -762,6 +767,14 @@ Vector3 json_to_vec3(nlohmann::json json)
 AABBox::AABBox(Vector3 mini, Vector3 maxi) : mini(mini), maxi(maxi)
 {
 
+}
+
+Vector3 AABBox::normalize(Vector3 p)
+{
+    auto mini = this->min();
+    auto maxi = this->max();
+    Vector3 ret = (p - mini) / (maxi - mini);
+    return ret;
 }
 
 Vector3 AABBox::random(Vector3 mini, Vector3 maxi)

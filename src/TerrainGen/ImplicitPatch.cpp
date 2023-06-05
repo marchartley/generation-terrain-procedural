@@ -153,10 +153,12 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
         std::string type = toUpper(content["type"]);
         if (type == "PRIMITIVE")
             result = ImplicitPrimitive::fromJson(content);
-        else if (type == "COMPOSE")
+        else if (type == "COMPOSE" || type == "BINARY")
             result = ImplicitOperator::fromJson(content);
         else if (type == "UNARY")
             result = ImplicitUnaryOperator::fromJson(content);
+        else if (type == "NARY")
+            result = ImplicitNaryOperator::fromJson(content);
     } else if (content.contains("file")) {
         std::string filename = content["file"];
         if (filename.substr(filename.size() - 5) == ".json") {
@@ -274,7 +276,7 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 
     this->_cachedVoxelized = Matrix3<float>(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-    #pragma omp parallel for collapse(3)
+//    #pragma omp parallel for collapse(3)
     for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
         for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
             for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
@@ -312,13 +314,14 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
     return _cachedVoxelized;
 }
 
-ImplicitPatch *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
+ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
 {
     ImplicitPrimitive* primitive = new ImplicitPrimitive();
     primitive->predefinedShape = shape;
     primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve);
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
+    primitive->dimensions = dimensions;
 
     return primitive;
 }
@@ -613,6 +616,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, st
     prim->name = "Heightmap";
     prim->predefinedShape = ImplicitHeightmap;
     prim->cachedHeightmap = heightmap;
+    prim->cachedHeightmap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     prim->cachedHeightmap.raiseErrorOnBadCoord = false;
     prim->update();
     return prim;
@@ -1136,14 +1140,24 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
         noise = json_to_vec3(content["noise"]);
     if (content.contains("distortion"))
         distortion = json_to_vec3(content["distortion"]);
-    if (content.contains("spreadFactor"))
-        patch->spread(content["spreadFactor"]);
+    if (content.contains("spreadFactor")) {
+        if (content["spreadFactor"] != 0) {
+            patch->spread(content["spreadFactor"]);
+        }
+    }
 
     if (translation != Vector3()) patch->translate(translation);
     if (scale != Vector3(1.f, 1.f, 1.f)) patch->scale(scale);
     if (rotation != Vector3()) patch->rotate(rotation.x, rotation.y, rotation.z);
     if (noise != Vector3()) patch->addRandomNoise(noise.x, noise.y, noise.z);
-    if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
+//    if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
+    if (distortion != Vector3()) {
+        patch->addWrapFunction(Matrix3<Vector3>({
+                                                       { Vector3(0.5, 0, 0), Vector3(0.7, -.2, 0), Vector3(1, -1, 0) },
+                                                       { Vector3(0.0, 0, 0), Vector3(0.7, 0, 0), Vector3(2, 0, 0) },
+                                                       { Vector3(0.5, 0, 0), Vector3(0.7, .2, 0), Vector3(1, 1, 0) }
+         }));
+    }
 
     if (content.contains("optionalCurve"))
         patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
@@ -1194,6 +1208,21 @@ void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float o
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     this->transforms.push_back(UnaryOpWrap(noise, Vector3(amplitude, period, offset)));
+}
+
+void ImplicitUnaryOperator::addWrapFunction(Matrix3<Vector3> func)
+{
+//    AABBox dims = this->getSupportBBox();
+    this->transforms.push_back(UnaryOpWrap([=](Vector3 pos) -> Vector3 {
+        auto f = func;
+        auto supportBBox = this->composableA->getSupportBBox();
+        Vector3 normalizedPos = supportBBox.normalize(pos);
+        Vector3 posInMatrix = normalizedPos * (f.getDimensions() - Vector3(1, 1, 1));
+        Vector3 distortionValue = f.interpolate(posInMatrix);
+        if (pos.z == 0) //std::abs(normalizedPos.xy().maxComp() - 2.f/3.f) < 0.01f || std::abs(normalizedPos.xy().minComp() - 1.f/3.f) < 0.01f)
+            std::cout << "Pos: " << normalizedPos << " -> " << posInMatrix << ": " << distortionValue << std::endl;
+        return distortionValue * supportBBox.dimensions();
+    }));
 }
 
 void ImplicitUnaryOperator::spread(float factor)
@@ -1593,7 +1622,8 @@ UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, Vector3 strength)
 UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
 {
     this->wrap = [=] (Vector3 pos) {
-        return pos + func(pos);
+        Vector3 newPos = pos + func(pos);
+        return newPos;
     };
     this->unwrap = [=] (Vector3 pos) {
         return pos - func(pos);
@@ -1931,7 +1961,7 @@ nlohmann::json ImplicitNaryOperator::toJson()
     if (!this->used_json_filename.empty()) {
         content["file"] = this->used_json_filename;
     } else {
-        content["type"] = "compose";
+        content["type"] = "nary";
         content["name"] = this->name;
         content["index"] = this->index;
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
