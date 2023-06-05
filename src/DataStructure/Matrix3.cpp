@@ -18,7 +18,6 @@ Matrix3<Vector3> Matrix3<Vector3>::curl() {
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::rot() { return this->curl(); }
 
-
 template<>
 Matrix3<float> Matrix3<Vector3>::divergence()
 {

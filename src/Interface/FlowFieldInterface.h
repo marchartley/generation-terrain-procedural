@@ -13,8 +13,12 @@ public:
     FlowFieldInterface(QWidget *parent = nullptr);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch);
 
     void display();
+    void displayPressureDensities();
+    void displayFlows();
+    void displaySumOfFlows();
 
     void replay(nlohmann::json action);
 
@@ -27,15 +31,20 @@ public Q_SLOTS:
     void recomputeFlowfield();
     void updateFlowfieldDebugMesh();
 
-public:
-//    std::shared_ptr<VoxelGrid> voxelGrid;
 
 protected:
-    Mesh flowMesh;
+//    Mesh flowMesh;
 
-    QHBoxLayout* flowFieldLayout;
-    QPushButton* flowFieldComputeButton;
-    QCheckBox* flowFieldDisplayButton;
+    std::vector<Mesh> flowMeshes;
+    Mesh sumOfFlowsMesh;
+
+    Matrix3<float> pressureDensityVoxels;
+    Matrix3<Vector3> totalFlow;
+    Mesh pressureDensityMesh;
+
+    std::vector<bool> displayedFlowfields;
+    bool displayingPressure = false;
+    bool displayingSumOfFlows = false;
 };
 
 #endif // FLOWFIELDINTERFACE_H

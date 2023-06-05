@@ -23,6 +23,33 @@ int main(int argc, char *argv[])
 #endif
     QApplication app(argc, argv);
 /*
+    AABBox bbox(Vector3(0, 0, 0), Vector3(2, 2, 1));
+
+    Matrix3<float> M = Matrix3<float>({
+                                          {0, 1},
+                                          {1, 0}
+                                          });
+//    std::cout << M.displayValues() << std::endl;
+
+    Matrix3<float> m(10, 10);
+    Vector3 ratio = (M.getDimensions() - Vector3(1, 1, 0)) / (bbox.dimensions() - Vector3(1, 1, 0));
+    for (int _x = 0; _x < m.sizeX; _x++) {
+        for (int _y = 0; _y < m.sizeY; _y++) {
+            for (int _z = 0; _z < m.sizeZ; _z++) {
+                float x = _x, y = _y, z = _z;
+                Vector3 pos(x, y, z);
+                Vector3 query = bbox.normalize(pos); // * M.getDimensions(); //pos * ratio;
+                query.z = 0;
+                auto val = M.interpolate(query);
+                m.at(pos) = val;
+            }
+        }
+    }
+    std::cout << M.displayValues() << std::endl;
+    std::cout << m.displayValues() << std::endl;
+    return 0;*/
+
+/*
     ShapeCurve A = ShapeCurve({
                                   Vector3(0, 0.5, 0),
                                   Vector3(0.5, 0, 0),

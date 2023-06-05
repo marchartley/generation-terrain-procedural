@@ -166,6 +166,8 @@ public:
 //    using std::abs;
 //    friend Vector3 abs(Vector3 o) { return o.abs(); }
 
+    float& operator[](size_t i);
+
     std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
 //    const char* toHashString() const {return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z); }
 
@@ -176,6 +178,10 @@ public:
     Vector3 xy()  const { return Vector3(x, y, 0); }
     Vector3 yz()  const { return Vector3(y, z, 0); }
     Vector3 xz()  const { return Vector3(x, z, 0); }
+    Vector3 xyz() const { return Vector3(x, y, z); }
+    Vector3 yxz() const { return Vector3(y, x, z); }
+    Vector3 zyx() const { return Vector3(z, y, x); }
+    Vector3 xzy() const { return Vector3(x, z, y); }
     float x, y, z;
 protected:
     bool valid = true;
@@ -215,6 +221,7 @@ public:
     Vector3 dimensions() const { return max() - min(); }
     bool contains(Vector3 position) const { return Vector3::isInBox(position, min(), max()); }
     Vector3 center() const { return (this->min() + this->max()) * .5f; }
+    Vector3 normalize(Vector3 p);
 
     Vector3 mini;
     Vector3 maxi;

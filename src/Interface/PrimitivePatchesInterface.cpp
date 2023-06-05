@@ -527,7 +527,7 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     ImplicitPatch* patch = this->createPatchFromParameters(pos - this->functionSize.xy() * .5f);
     ImplicitPatch* previousMain = this->selectedPatch();
     ImplicitPatch* _parent = this->naiveApproachToGetParent(previousMain);
-    if (previousMain == this->implicitTerrain.get()) {
+    if (!previousMain) {
         if (this->implicitTerrain->composables.empty()) {
             previousMain = ImplicitPatch::createIdentity();
         } else {
@@ -591,6 +591,15 @@ void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes
         vert += newPosition;
         vert -= functionSize.xy() * .5f;
     }
+
+//    ImplicitPrimitive* previewPatch = ImplicitPatch::createPredefinedShape(newShape, this->functionSize, this->selectedSigma);
+//    previewPatch->material = this->selectedTerrainType;
+//    Vector3 resolution = Vector3(20, 20, 20);
+//    Vector3 ratio = (patchSupportedDimensions) / (resolution /*+ Vector3(1, 1, 1)*/);
+//    debuggingVoxelsPosition = newPosition - functionSize * Vector3(1.f, 1.f, 0.f);
+//    debuggingVoxelsScale = Vector3(2.f, 2.f, 2.f);
+//    debuggingVoxels = previewPatch->getVoxelized(Vector3(false), debuggingVoxelsScale);
+//    debuggingVoxels = debuggingVoxels.resize(debuggingVoxelsScale);
     this->previewMesh.fromArray(vertices);
     this->previewMesh.update();
 }
@@ -717,8 +726,19 @@ void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
             }
         }
     }
+    Matrix3<Vector3> disto = Matrix3<Vector3>({
+//                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), /*Vector3(0.0, 0.0, 0), */Vector3(0.0, -.5, 0)/*, Vector3(0.0, 0.5, 0) */},
+//                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, -.2, 0), Vector3(0.0, -.0, 0), /*Vector3(0.0, -.3, 0), */Vector3(0.0, -.5, 0)/*, Vector3(0.0, 0.5, 0) */},
+//                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), /*Vector3(0.0, 0.0, 0), */Vector3(0.0, 0.0, 0)/*, Vector3(0.0, 0.0, 0) */},
+//                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, 0.2, 0), Vector3(0.0, 0.0, 0), /*Vector3(0.0, 0.3, 0), */Vector3(0.0, 0.5, 0)/*, Vector3(0.0, -.5, 0) */},
+//                                                  { Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), Vector3(0.0, 0.0, 0), /*Vector3(0.0, 0.0, 0), */Vector3(0.0, 0.5, 0)/*, Vector3(0.0, -.5, 0) */}
+                                                  { Vector3(0.2, -.5, 0), Vector3(0.0, -.5, 0), Vector3(0.0, -.5, 0), Vector3(0.0, -.5, 0) },
+                                                  { Vector3(0.2, 0.5, 0), Vector3(0.0, 0.5, 0), Vector3(0.0, 0.5, 0), Vector3(0.0, 0.5, 0) }
+    }).flip(false, true, false);
+//    std::cout << disto.displayValues() << std::endl;
     float amplitude = this->selectedSigma;
-    distortionPatch->addRandomWrap(amplitude);
+//    distortionPatch->addRandomWrap(amplitude);
+    distortionPatch->addWrapFunction(disto);
     distortionPatch->name = "Wrapping";
     this->storedPatches.push_back(distortionPatch);
     this->updateMapWithCurrentPatch();
@@ -839,6 +859,8 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
 
             Vector3 resolution = Vector3(20, 20, 20);
             Vector3 ratio = (patchSupportedDimensions) / (resolution /*+ Vector3(1, 1, 1)*/);
+            this->debuggingVoxelsPosition = this->selectedPatch()->getSupportBBox().min();
+            this->debuggingVoxelsScale = ratio;
             debuggingVoxels = Matrix3<float>(resolution);
             debuggingVoxels.raiseErrorOnBadCoord = false;
             for (int x = 0; x < resolution.x; x++) {
@@ -1389,14 +1411,16 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
 
     // Scale the debugging mesh to the right size
-    Vector3 scaleToDisplayPatch = this->selectedPatch()->getSupportDimensions() / debuggingVoxels.getDimensions(); //currentlySelectedPatch->getDimensions() / debuggingVoxels.getDimensions();
+    auto suppDim = this->selectedPatch()->getSupportDimensions();
+    Vector3 scaleToDisplayPatch = suppDim / debuggingVoxels.getDimensions(); // Vector3(1.f, 1.f, 1.f); // 1.f / this->debuggingVoxelsScale; //currentlySelectedPatch->getDimensions() / debuggingVoxels.getDimensions();
     debuggingVoxelsMesh.shader->setVector("scale", scaleToDisplayPatch);
 
     // Translate the debugging mesh to the right position
-    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
+    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
     debuggingVoxelsMesh.shader->setFloat("offsetX", positionToDisplayPatch.x);
     debuggingVoxelsMesh.shader->setFloat("offsetY", positionToDisplayPatch.y);
     debuggingVoxelsMesh.shader->setFloat("offsetZ", positionToDisplayPatch.z);
+    std::cout << positionToDisplayPatch << " " << scaleToDisplayPatch << std::endl;
 
     // Ignore parameters to hide some voxels
     debuggingVoxelsMesh.shader->setVector("min_vertice_positions", Vector3::min());

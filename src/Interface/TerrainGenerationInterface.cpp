@@ -128,6 +128,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         if (!json_content.contains("actions")) {
             if (json_content.contains(ImplicitPatch::json_identifier)) {
                 this->createTerrainFromImplicitPatches(json_content);
+                return;
             } else {
                 this->createTerrainFromBiomes(json_content);
             }
@@ -183,8 +184,10 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
 
 void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
 {
-    // Dunno...
-    // TODO : Link to the PrimitivePatchInterface
+    *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
+    this->layerGrid->add(implicitTerrain.get());
+    this->voxelGrid->fromLayerBased(*layerGrid);
+    this->heightmap->fromLayerGrid(*layerGrid);
 }
 
 void TerrainGenerationInterface::saveTerrain(std::string filename)

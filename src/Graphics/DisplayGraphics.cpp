@@ -140,7 +140,8 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
 Plotter *Plotter::getInstance()
 {
     if (Plotter::instance == nullptr) {
-        std::cerr << "Plotter has not been initialized with function Plotter::init()" << std::endl;
+//        std::cerr << "Plotter has not been initialized with function Plotter::init()" << std::endl;
+        Plotter::init();
     }
     return Plotter::instance;
 }

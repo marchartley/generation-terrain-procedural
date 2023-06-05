@@ -142,6 +142,9 @@ protected:
 
     BSpline parametricCurve;
     Mesh parametricCurveMesh;
+
+    Vector3 debuggingVoxelsPosition = Vector3(0.f, 0.f, 0.f);
+    Vector3 debuggingVoxelsScale = Vector3(1.f, 1.f, 1.f);
 };
 
 
