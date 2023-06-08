@@ -67,6 +67,7 @@ public:
         Polygon,
         ImplicitHeightmap,
         ParametricTunnel,
+        Ripple,
         None
     };
 
@@ -159,6 +160,7 @@ public:
     static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path);
+    static std::function<float(Vector3)> createRippleFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height);
 //    static std::function<float(Vector3)> ...;
 
@@ -334,6 +336,8 @@ class UnaryOpWrap: public UnaryOp {
 public:
     UnaryOpWrap(FastNoiseLite noise, Vector3 strength);
     UnaryOpWrap(std::function<Vector3(Vector3)> func);
+    UnaryOpWrap(Matrix3<Vector3> wrapper);
+    Matrix3<Vector3> wrapper;
 };
 class UnaryOpSpread: public UnaryOp {
 public:

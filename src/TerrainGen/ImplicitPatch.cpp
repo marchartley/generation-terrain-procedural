@@ -276,7 +276,7 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 
     this->_cachedVoxelized = Matrix3<float>(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-//    #pragma omp parallel for collapse(3)
+    #pragma omp parallel for collapse(3)
     for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
         for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
             for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
@@ -387,6 +387,9 @@ std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(Pred
         break;
     case None:
         func = ImplicitPatch::createIdentityFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        break;
+    case Ripple:
+        func = ImplicitPatch::createRippleFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
         break;
     }
     return func;
@@ -1219,8 +1222,8 @@ void ImplicitUnaryOperator::addWrapFunction(Matrix3<Vector3> func)
         Vector3 normalizedPos = supportBBox.normalize(pos);
         Vector3 posInMatrix = normalizedPos * (f.getDimensions() - Vector3(1, 1, 1));
         Vector3 distortionValue = f.interpolate(posInMatrix);
-        if (pos.z == 0) //std::abs(normalizedPos.xy().maxComp() - 2.f/3.f) < 0.01f || std::abs(normalizedPos.xy().minComp() - 1.f/3.f) < 0.01f)
-            std::cout << "Pos: " << normalizedPos << " -> " << posInMatrix << ": " << distortionValue << std::endl;
+//        if (pos.z == 0) //std::abs(normalizedPos.xy().maxComp() - 2.f/3.f) < 0.01f || std::abs(normalizedPos.xy().minComp() - 1.f/3.f) < 0.01f)
+//            std::cout << "Pos: " << normalizedPos << " -> " << posInMatrix << ": " << distortionValue << std::endl;
         return distortionValue * supportBBox.dimensions();
     }));
 }
@@ -1466,6 +1469,20 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
     };
 }
 
+std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height)
+{
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (Vector3 pos) -> float {
+        if(!Vector3::isInBox(pos, Vector3(), Vector3(width, depth, height)))
+            return 0.f;
+        float x = 2 * pos.x / width;
+        float y = 2.f * pos.y / depth - 1;
+        float maxHeight = (x < 1.f ? x : 1.f/(x*x));
+        float damping = std::max(1 - y*y, 0.f);
+//        std::cout << x << " " << y << " " << maxHeight << " " << damping << std::endl;
+        return height * maxHeight * damping;
+    });
+}
+
 std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height)
 {
     return [](Vector3) -> float { return 0.f; };
@@ -1630,6 +1647,18 @@ UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
     };
 }
 
+UnaryOpWrap::UnaryOpWrap(Matrix3<Vector3> wrapper)
+    : wrapper(wrapper)
+{
+    this->wrap = [=] (Vector3 pos) {
+        Vector3 newPos = pos + this->wrapper.at(pos);
+        return newPos;
+    };
+    this->unwrap = [=] (Vector3 pos) {
+        return pos - this->wrapper.at(pos);
+    };
+}
+
 UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
     : UnaryOp()
 {
@@ -1732,6 +1761,8 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
         return ImplicitPatch::PredefinedShapes::ParametricTunnel;
     else if (name == "NONE")
         return ImplicitPatch::PredefinedShapes::None;
+    else if (name == "RIPPLE")
+        return ImplicitPatch::PredefinedShapes::Ripple;
 
     // Error
     std::cerr << "Wrong predefined shape string given. (" << name << ")" << std::endl;
@@ -1772,6 +1803,8 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
         return "Parametric_Tunnel";
     else if (shape == ImplicitPatch::PredefinedShapes::None)
         return "None";
+    else if (shape == ImplicitPatch::PredefinedShapes::Ripple)
+        return "Ripple";
 
     // Impossible
     std::cerr << "Unknown predefined shape given." << std::endl;

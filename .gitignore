@@ -6,6 +6,7 @@ build-Profile/*
 *.pro.user.*
 erosionsTests*
 screenshots/*
+shots/*
 shared_screenshots/
 shared_images/
 .cccc/

@@ -102,7 +102,7 @@ public:
     void setVoxelIsOnGround(float x, float y, float z, bool newVal);
 
     void computeFlowfield();
-    void computeMultipleFlowfields();
+    void computeMultipleFlowfields(int steps = 30);
 
     void affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize = 3);
     void affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize = 3);
@@ -123,7 +123,7 @@ public:
     float getSizeY() { return _cachedVoxelValues.sizeY; }
     float getSizeZ() { return _cachedVoxelValues.sizeZ; }
 
-    int fluidSimRescale = 4;
+    float fluidSimRescale;
 
     int getChunkSize() const { return this->chunkSize; }
     Matrix3<float>& getEnvironmentalDensities();

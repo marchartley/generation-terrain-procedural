@@ -18,7 +18,8 @@
 enum RESIZE_MODE {
     LINEAR = 0,
     MAX_VAL = 1,
-    MIN_VAL = 2
+    MIN_VAL = 2,
+    FILL_WITH_DEFAULT = 3
 };
 
 enum CONVOLUTION_BORDERS {
@@ -1054,6 +1055,7 @@ template<typename T>
 Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode)
 {
     Matrix3<T> newMat(newX, newY, newZ);
+    newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
 
     if (mode == LINEAR) {
@@ -1095,7 +1097,6 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
     if (mode == MAX_VAL || mode == MIN_VAL) {
 //        for (auto& val : newMat)
 //            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
-        newMat.raiseErrorOnBadCoord = false;
         Matrix3<short int> modifiedMatrix(newX, newY, newZ, 0);
         for (int x = 0; x < this->sizeX; x++) {
             int startX = x / rx;
@@ -1125,8 +1126,19 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                 }
             }
         }
-        newMat.raiseErrorOnBadCoord = this->raiseErrorOnBadCoord;
+    } else if (mode == FILL_WITH_DEFAULT) {
+        if (rz == 0) rz = 1;
+        for (int x = 0; x < this->sizeX; x++) {
+            for (int y = 0; y < this->sizeY; y++) {
+                for (int z = 0; z < this->sizeZ; z++) {
+                    T old = this->at(x, y, z);
+                    Vector3 pos(x / rx, y / ry, z / rz);
+                    newMat.at(pos) = old;
+                }
+            }
+        }
     }
+    newMat.raiseErrorOnBadCoord = this->raiseErrorOnBadCoord;
     return newMat;
 }
 

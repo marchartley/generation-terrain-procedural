@@ -112,6 +112,34 @@ Matrix Vector3::toMatrix()
     return Matrix(3, 1, (float*)(*this));
 }
 
+Vector3 Vector3::toEulerAngles()
+{
+    Vector3 self = this->normalized();
+    return Vector3(
+                    std::acos(self.y),
+                    std::acos(self.z),
+                    std::acos(self.x)
+                );
+}
+
+Vector3 Vector3::eulerAnglesWith(Vector3 other)
+{
+    return Vector3(false);
+    /*Vector3 v1 = this->normalized();
+    Vector3 v2 = other.normalized();
+    Vector3 v3 = v1.cross(v2);
+    v2 = v3.cross(v1); // make it perpendicular
+
+    float R11 = v1.x, R12 = v2.x, R13 = v3.x,
+            R21 = v1.y, R22 = v2.y, R23 = v3.y,
+            R31 = v1.z, R32 = v2.z, R33 = v3.z;
+    Vector3 result;
+    result.x = std::atan2(R32, R33) * (180.0 / 3.141592);
+    result.y = std::atan2(-1 * R31, std::sqrt(R32 * R32 + R33 * R33)) * (180.0 / 3.141592);
+    result.z = std::atan2(R21, R11) * (180.0 / 3.141592);
+    return result;*/
+}
+
 Vector3 Vector3::quaternionToEuler(qglviewer::Quaternion quaternion)
 {
 //    std::cout << "Axis : " << Vector3(quaternion.axis()) << "\nAngle : " << quaternion.angle() << std::endl;

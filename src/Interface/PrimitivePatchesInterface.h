@@ -55,6 +55,9 @@ public Q_SLOTS:
     void addDistortionOnSelectedPatch();
     void addSpreadOnSelectedPatch();
 
+    void rippleScene();
+    void deformationFromFlow();
+
     void savePatchesAsFile(std::string filename);
     void loadPatchesFromFile(std::string filename);
     void hotReloadFile();
@@ -83,9 +86,9 @@ protected:
 
     QDateTime lastTimeFileHasBeenModified;
 
-    ImplicitPatch::PredefinedShapes currentShapeSelected = ImplicitPatch::PredefinedShapes::Sphere;
+    ImplicitPatch::PredefinedShapes currentShapeSelected = ImplicitPatch::PredefinedShapes::Block;
     ImplicitPatch::CompositionFunction currentOperation = ImplicitPatch::CompositionFunction::BLEND;
-    ImplicitPatch::PositionalLabel currentPositioning = ImplicitPatch::PositionalLabel::ABOVE;
+    ImplicitPatch::PositionalLabel currentPositioning = ImplicitPatch::PositionalLabel::FIXED_POS;
 //    float selectedDensity = 1.5f;
     TerrainTypes selectedTerrainType = TerrainTypes::ROCK;
 

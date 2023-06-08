@@ -22,6 +22,20 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
+
+    /*Vector3 A = Vector3(1, 0, 0);
+    Vector3 B = Vector3(0.5, 1, 1).normalize();
+    Vector3 UP = Vector3(0, 0, 1); // A.cross(B);
+    Vector3 LEFT = UP.cross(A);
+
+    Vector3 C = Vector3(
+                    std::acos(B.y),
+                    std::acos(B.z),
+                    std::acos(B.x)
+                ) * (180.f / 3.141592f);
+
+    std::cout << C << std::endl;
+    return 0;*/
 /*
     AABBox bbox(Vector3(0, 0, 0), Vector3(2, 2, 1));
 

@@ -115,32 +115,32 @@ void VoxelGrid::computeFlowfield()
     this->flowField.raiseErrorOnBadCoord = true;
 }
 
-void VoxelGrid::computeMultipleFlowfields()
+void VoxelGrid::computeMultipleFlowfields(int steps)
 {
     Matrix3<float> obstacleMap = this->getVoxelValues().binarize();
     auto& densities = this->getEnvironmentalDensities();
-    std::cout << densities.min() << " " << densities.max() << std::endl;
+    float maxDensity = densities.max();
     for (size_t i = 0; i < obstacleMap.size(); i++)
-        obstacleMap[i] = (densities[i] < 1000 || obstacleMap.getCoordAsVector3(i).z < 2 ? 1 : obstacleMap[i]);
+        obstacleMap[i] = ((maxDensity > 10 && densities[i] < 1000) || obstacleMap.getCoordAsVector3(i).z < 1 ? 1 : obstacleMap[i]);
     size_t nbCurrentsToCompute = this->multipleFluidSimulations.size();
 #pragma omp parallel for
     for (size_t iCurrent = 0; iCurrent < nbCurrentsToCompute; iCurrent++) {
-        if (iCurrent > 0) continue;
+//        if (iCurrent > 0) continue;
         Vector3 simulationDimensions = Vector3(this->multipleFluidSimulations[iCurrent].sizeX, this->multipleFluidSimulations[iCurrent].sizeY, this->multipleFluidSimulations[iCurrent].sizeZ);
         this->multipleFluidSimulations[iCurrent].setObstacles(obstacleMap);
         for (int x = 0; x < simulationDimensions.x; x++) {
             for (int y = 0; y < simulationDimensions.y; y++) {
                 for (int z = 0; z < simulationDimensions.z; z++) {
                     Vector3 pos(x, y, z);
-                    if (Vector3::distanceToBoundaries(pos, Vector3(0, 0, -100), simulationDimensions + Vector3(0, 0, 100)) < 2.f && obstacleMap.at(pos) == 0) {
-                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = ((simulationDimensions * .5f) - pos).normalize() / (float) this->fluidSimRescale;
-                    }
-//                    if (!Vector3::isInBox(pos - (this->multipleSeaCurrents[iCurrent].normalized() * 2.f), Vector3(), simulationDimensions))
-//                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = this->multipleSeaCurrents[iCurrent] / (float)this->fluidSimRescale;
+//                    if (Vector3::distanceToBoundaries(pos, Vector3(0, 0, -100), simulationDimensions + Vector3(0, 0, 100)) < 2.f && obstacleMap.at(pos) == 0) {
+//                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = ((simulationDimensions * .5f) - pos).normalize() / (float) this->fluidSimRescale;
+//                    }
+                    if (!Vector3::isInBox(pos - (this->multipleSeaCurrents[iCurrent].normalized() * 2.f), Vector3(), simulationDimensions))
+                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = this->multipleSeaCurrents[iCurrent] / (float)this->fluidSimRescale;
                 }
             }
         }
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < steps; i++)
             this->multipleFluidSimulations[iCurrent].step();
         this->multipleFlowFields[iCurrent] = this->multipleFluidSimulations[iCurrent].getVelocities(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     }
@@ -235,15 +235,17 @@ void VoxelGrid::initMap()
 
     float dt = 0.1f;
     float diffusion = 0.1f;
-    float viscosity = 0.01f;
-    this->fluidSimulation = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, 10);
+    float viscosity = 0.1f;
+    int fluidSolverIterations = 10;
+    this->fluidSimRescale = 4;
+    this->fluidSimulation = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
     this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
 
     this->multipleFluidSimulations.resize(4);
     this->multipleFlowFields.resize(4);
     this->multipleSeaCurrents.resize(4);
     for (size_t i = 0; i < this->multipleFluidSimulations.size(); i++) {
-        this->multipleFluidSimulations[i] = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, 10);
+        this->multipleFluidSimulations[i] = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
         this->multipleFlowFields[i] = Matrix3<Vector3>(this->getDimensions());
     }
     float waterStrength = 1.f;
@@ -609,7 +611,7 @@ Mesh VoxelGrid::getGeometry()
 {
     auto triTable = MarchingCubes::triangleTable;
 //    auto edges = MarchingCubes::cubeEdges;
-    auto values = this->getVoxelValues();
+    auto values = this->getVoxelValues().meanSmooth(5, 5, 5);
     values.defaultValueOnBadCoord = -1;
 
     float offsetX = 0.f;

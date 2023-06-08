@@ -9,7 +9,8 @@ void FlowFieldInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, st
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 
-    this->displayedFlowfields = std::vector<bool>(voxelGrid->multipleFlowFields.size(), true);
+    this->displayedFlowfields = std::vector<bool>(voxelGrid->multipleFlowFields.size(), false);
+    if (!this->displayedFlowfields.empty()) this->displayedFlowfields[0] = true;
     this->flowMeshes = std::vector<Mesh>(voxelGrid->multipleFlowFields.size());
 
     // Waiting for OpenGL to be available to create the shaders...
@@ -44,6 +45,7 @@ void FlowFieldInterface::display()
     this->displayPressureDensities();
     this->displayFlows();
     this->displaySumOfFlows();
+    this->recomputeFlowfield(10);
 }
 
 void FlowFieldInterface::displayPressureDensities()
@@ -163,15 +165,15 @@ void FlowFieldInterface::replay(nlohmann::json action)
     }
 }
 
-void FlowFieldInterface::recomputeFlowfield()
+void FlowFieldInterface::recomputeFlowfield(int steps)
 {
-    this->voxelGrid->computeMultipleFlowfields();
+    this->voxelGrid->computeMultipleFlowfields(steps);
 
     this->totalFlow = this->voxelGrid->multipleFlowFields[0];
     for (size_t i = 1; i < this->voxelGrid->multipleFlowFields.size(); i++)
         this->totalFlow += this->voxelGrid->multipleFlowFields[i];
 
-    pressureDensityVoxels = this->totalFlow.divergence();// Matrix3<float>(this->totalFlow.getDimensions());
+    pressureDensityVoxels = -this->totalFlow.divergence();// Matrix3<float>(this->totalFlow.getDimensions());
 //    for (size_t i = 0; i < pressureDensityVoxels.size(); i++) {
 //        float currentHeight = pressureDensityVoxels.getCoordAsVector3(i).z;
 //        if (2 < currentHeight && currentHeight < pressureDensityVoxels.sizeZ - 3)
@@ -185,7 +187,8 @@ void FlowFieldInterface::recomputeFlowfield()
     this->addTerrainAction(nlohmann::json({
                                               {}
                                           }));
-    Q_EMIT this->updated();
+    if (steps == 30)
+        Q_EMIT this->updated();
 }
 
 void FlowFieldInterface::updateFlowfieldDebugMesh()
@@ -268,7 +271,7 @@ QLayout* FlowFieldInterface::createGUI()
     flowFieldDisplayAllFlowsButton->setChecked(this->displayingSumOfFlows);
     QObject::connect(flowFieldDisplayPressureButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayingPressure = checked; } );
     QObject::connect(flowFieldDisplayAllFlowsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayingSumOfFlows = checked; } );
-    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, &FlowFieldInterface::recomputeFlowfield );
+    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=]() { this->recomputeFlowfield(30); } );
 
     return flowFieldLayout;
 }
