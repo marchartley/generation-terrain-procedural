@@ -80,6 +80,9 @@ public:
 
     Matrix toMatrix();
 
+    Vector3 toEulerAngles();
+    Vector3 eulerAnglesWith(Vector3 other);
+
     static Vector3 quaternionToEuler(qglviewer::Quaternion quaternion);
     static Vector3 quaternionToEuler(float x, float y, float z, float w);
 

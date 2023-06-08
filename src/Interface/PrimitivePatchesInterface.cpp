@@ -109,6 +109,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QRadioButton* createPolygonButton = new QRadioButton("Polygon");
     QRadioButton* createTunnelButton = new QRadioButton("Tunnel");
     QRadioButton* createFromFileButton = new QRadioButton("...");
+    QRadioButton* createRippleButton = new QRadioButton("Ripple");
 
 //    FancySlider* densitySlider = new FancySlider(Qt::Orientation::Horizontal, -5.f, 5.f, .1f);
 
@@ -132,6 +133,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QPushButton* addNoiseButton = new QPushButton("Add noise");
     QPushButton* addDistoButton = new QPushButton("Distord");
     QPushButton* addSpreadButton = new QPushButton("Spread");
+    QPushButton* addRipplesButton = new QPushButton("Ripples");
+    QPushButton* deformFromFlowButton = new QPushButton("Deform flow");
 
     QPushButton* resetButton = new QPushButton("Reset");
 
@@ -168,7 +171,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     createMountainChainButton,
                                                     createPolygonButton,
                                                     createTunnelButton,
-                                                    createFromFileButton
+                                                    createFromFileButton,
+                                                    createRippleButton
                                           }));
 //    layout->addWidget(createSliderGroup("Density", densitySlider));
     layout->addWidget(createMultiColumnGroup({
@@ -201,7 +205,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     {"Sigma", sigmaSlider}
                                           }));
     layout->addWidget(applyIntersectionButton);
-    layout->addWidget(createHorizontalGroup({addNoiseButton, addDistoButton, addSpreadButton}));
+    layout->addWidget(createHorizontalGroup({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}));
     layout->addWidget(resetButton);
     layout->addWidget(primitiveSelectionGui);
 
@@ -230,6 +234,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
 //            createSphereButton->setChecked(true);
         }
     });
+    QObject::connect(createRippleButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Ripple); });
 //    QObject::connect(densitySlider, &FancySlider::floatValueChanged, this, [=](float newDensity) { this->selectedDensity = newDensity; });
 
     QObject::connect(stackingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setCurrentOperation(ImplicitPatch::CompositionFunction::STACK); });
@@ -262,6 +267,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(addNoiseButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addNoiseOnSelectedPatch);
     QObject::connect(addDistoButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addDistortionOnSelectedPatch);
     QObject::connect(addSpreadButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::addSpreadOnSelectedPatch);
+    QObject::connect(addRipplesButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::rippleScene);
+    QObject::connect(deformFromFlowButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::deformationFromFlow);
 
     QObject::connect(resetButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::resetPatch);
 
@@ -296,6 +303,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     createPolygonButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Polygon);
     createTunnelButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::ParametricTunnel);
     createNoise2DButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Noise2D);
+    createRippleButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Ripple);
 
     stackingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::STACK);
     blendingButton->setChecked(this->currentOperation == ImplicitPatch::CompositionFunction::BLEND);
@@ -776,6 +784,143 @@ void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
     distortionPatch->spread(amplitude);
     distortionPatch->name = "Spread";
     this->storedPatches.push_back(distortionPatch);
+    this->updateMapWithCurrentPatch();
+    this->updatePrimitiveList();
+}
+
+void PrimitivePatchesInterface::rippleScene()
+{
+    Matrix3<int> terrainSurface = this->voxelGrid->getVoxelValues().binarize();
+    Matrix3<float> waterSpeed(terrainSurface.getDimensions());
+    Matrix3<Vector3> flowfield = this->voxelGrid->multipleFlowFields[0];
+    Matrix3<Vector3> normals = terrainSurface.gradient();
+    for(auto& n : normals)
+        n.normalize();
+    terrainSurface.raiseErrorOnBadCoord = false;
+    terrainSurface.defaultValueOnBadCoord = 0;
+
+    std::vector<Vector3> allSurfaceVoxels;
+    for (int x = 0; x < terrainSurface.sizeX; x++) {
+        for (int y = 0; y < terrainSurface.sizeY; y++) {
+            for (int z = 0; z < terrainSurface.sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                if (terrainSurface.at(pos) == 0) continue;
+                bool isSurface = (terrainSurface.at(pos + Vector3(0, 0, 1)) == 0);
+                /*bool isSurface = false;
+                for (int dx = -1; dx < 2; dx++) {
+                    for (int dy = -1; dy < 2; dy++) {
+                        for (int dz = -1; dz < 2; dz++) {
+                            if (terrainSurface.at(x+dx, y+dy, z+dz) == 0)
+                                isSurface = true;
+                        }
+                    }
+                }*/
+//                if (z > 10)
+//                    isSurface = false;
+                if (isSurface) {
+                    terrainSurface.at(pos) = 1;
+                    waterSpeed.at(pos) = std::abs(1 - flowfield.at(pos).dot(normals.at(pos)));
+                    if (waterSpeed.at(pos) > 0.01)
+                        allSurfaceVoxels.push_back(pos);
+//                    std::cout << voxelGrid->getVoxelValues().at(pos) << std::endl;
+                } else {
+                    terrainSurface.at(pos) = 0;
+                }
+            }
+        }
+    }
+//    terrainSurface = terrainSurface.resize(Vector3(10, 10, 10), RESIZE_MODE::MAX_VAL);
+//    terrainSurface = terrainSurface.resize(waterSpeed.getDimensions(), RESIZE_MODE::FILL_WITH_DEFAULT);
+
+    ImplicitNaryOperator* allRipples = new ImplicitNaryOperator;
+
+    std::shuffle(allSurfaceVoxels.begin(), allSurfaceVoxels.end(), random_gen::random_generator);
+    for (int i = 0; i < std::min(100, int(allSurfaceVoxels.size())); i++) {
+        Vector3 pos = allSurfaceVoxels[i];
+        Vector3 waterFlow = flowfield.at(pos);
+        float waterSpeed = waterFlow.norm();
+        float rippleWidth = 20 * waterSpeed;
+        float rippleDepth = 40; // * waterSpeed;
+        Vector3 rippleDims = Vector3(rippleWidth, rippleDepth, 4);
+        ImplicitPrimitive* ripple = ImplicitPatch::createPredefinedShape(ImplicitPatch::PredefinedShapes::Ripple, rippleDims, 0.f);
+        ripple->position = (pos - rippleDims.xy() * .5f) - Vector3(0, 0, 3);
+        ripple->material = TerrainTypes::DIRT;
+
+//        UnaryOpRotate rotationTransfo(Vector3(0, 0, waterFlow.toEulerAngles().z), Vector3(rippleWidth * .5f, rippleDepth * .5f, 0));
+        ImplicitUnaryOperator* rotation = new ImplicitUnaryOperator;
+        rotation->composableA = ripple;
+        rotation->rotate(0, 0, waterFlow.toEulerAngles().z);
+        allRipples->composables.push_back(rotation);
+//        std::cout << pos << std::endl;
+    }
+    /*for (int x = 0; x < terrainSurface.sizeX; x++) {
+        for (int y = 0; y < terrainSurface.sizeY; y++) {
+            for (int z = 0; z < terrainSurface.sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                if (terrainSurface.at(pos) == 0)
+                    continue;
+
+                ImplicitPrimitive* ripple = ImplicitPatch::createPredefinedShape(ImplicitPatch::PredefinedShapes::Ripple, Vector3(3, 3, 5), 0.f);
+                ripple->position = pos;
+                allRipples->composables.push_back(ripple);
+                std::cout << pos << std::endl;
+            }
+        }
+    }*/
+    std::cout << "Added " << allRipples->composables.size() << " elements" << std::endl;
+
+
+
+
+    this->implicitTerrain->composables.push_back(allRipples);
+    this->storedPatches.push_back(allRipples);
+    this->updateMapWithCurrentPatch();
+    this->updatePrimitiveList();
+}
+
+void PrimitivePatchesInterface::deformationFromFlow()
+{
+    std::vector<ImplicitPatch*> queue = {this->implicitTerrain.get()};
+    while (!queue.empty()) {
+        auto patch = queue[0];
+        queue.erase(queue.begin());
+        ImplicitUnaryOperator* wrap = new ImplicitUnaryOperator;
+        AABBox bbox = patch->getSupportBBox();
+        if (bbox.dimensions().norm2() < 50*50*50) {
+            wrap->addWrapFunction(voxelGrid->multipleFlowFields[0].subset(bbox.min(), bbox.max()).resize(10, 10, 10) * 0.1f);
+            wrap->composableA = patch;
+            ImplicitPatch* parent = this->naiveApproachToGetParent(patch);
+            ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(parent);
+            ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(parent);
+            ImplicitOperator* asBinary = dynamic_cast<ImplicitOperator*>(parent);
+            if (asUnary) {
+                asUnary->composableA = wrap;
+            } else if (asBinary) {
+                if (patch == asBinary->composableA)
+                    asBinary->composableA = wrap;
+                else
+                    asBinary->composableB = wrap;
+            } else if (asNary) {
+                for (size_t i = 0; i < asNary->composables.size(); i++)
+                    if (asNary->composables[i] == patch)
+                        asNary->composables[i] = wrap;
+            }
+        } else {
+            ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(patch);
+            ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(patch);
+            ImplicitOperator* asBinary = dynamic_cast<ImplicitOperator*>(patch);
+            if (asUnary) {
+                queue.push_back(asUnary->composableA);
+            } else if (asBinary) {
+                queue.push_back(asBinary->composableA);
+                queue.push_back(asBinary->composableB);
+            } else if (asNary) {
+                for (size_t i = 0; i < asNary->composables.size(); i++)
+                    queue.push_back(asNary->composables[i]);
+            }
+        }
+//        this->storedPatches.push_back(wrap);
+    }
     this->updateMapWithCurrentPatch();
     this->updatePrimitiveList();
 }

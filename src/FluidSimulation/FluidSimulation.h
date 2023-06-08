@@ -151,6 +151,7 @@ public:
     void solve_linear(Matrix3<T>& arr1, Matrix3<T>& arr0, float a, bool inverseOnBounds = false)
     {
         for (int k = 0; k < this->iterations; k++) {
+#pragma omp parallel for collapse(3)
             for (int x = 1; x < this->sizeX - 1; x++) {
                 for (int y = 1; y < this->sizeY - 1; y++) {
                     for (int z = 1; z < this->sizeZ - 1; z++) {
@@ -182,6 +183,7 @@ public:
         float s0, s1, t0, t1, u0, u1;
         Vector3 tmpVec;
 
+#pragma omp parallel for collapse(3)
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {

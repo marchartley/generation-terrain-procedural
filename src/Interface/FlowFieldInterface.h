@@ -28,7 +28,7 @@ public Q_SLOTS:
     void show();
     void hide();
 
-    void recomputeFlowfield();
+    void recomputeFlowfield(int steps = 30);
     void updateFlowfieldDebugMesh();
 
 

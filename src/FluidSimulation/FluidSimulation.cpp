@@ -101,6 +101,7 @@ void FluidSimulation::diffuseVelocity()
 
     float a = dt * viscosity; // * sizeX * sizeY * sizeZ; // Removing "N^3" following ethanjli code
     for (int i = 0; i < this->iterations; i++) {
+#pragma omp parallel for collapse(3)
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
                 for (int z = 0; z < sizeZ; z++) {
@@ -127,6 +128,7 @@ void FluidSimulation::advectVelocity()
     Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(sizeX, sizeY, sizeZ) * dt;
 
     velocity_old.raiseErrorOnBadCoord = false;
+#pragma omp parallel for collapse(3)
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
@@ -183,6 +185,7 @@ void FluidSimulation::projectVelocity()
     this->pressure.raiseErrorOnBadCoord = false;
     Matrix3<float> tmp = pressure;
     for (int i = 0; i < this->iterations; i++) {
+#pragma omp parallel for collapse(3)
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
                 for (int z = 0; z < sizeZ; z++) {
@@ -215,6 +218,7 @@ void FluidSimulation::setVelocityBounds()
     bool inverseOnBounds = true;
     Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
 
+#pragma omp parallel for collapse(3)
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
