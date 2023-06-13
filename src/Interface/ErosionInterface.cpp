@@ -143,6 +143,10 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     float sumParticleSimulationTime = 0.f, sumTerrainModifTime = 0.f;
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
         std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
+        erod.maxRockSize = this->erosionSize;
+        erod.maxRockStrength = this->erosionStrength;
+        erod.rockAmount = this->erosionQtt;
+
         int nbPos, nbErosions;
         float particleSimulationTime, terrainModifTime;
 //        auto flowfieldFunction = this->computeFlowfieldFunction();

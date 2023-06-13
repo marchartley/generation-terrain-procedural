@@ -281,21 +281,44 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
         for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
             for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
                 Vector3 pos = Vector3(x, y, z) * scale;
-                auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(pos);
+                std::vector<Vector3> evaluationPoses = {
+                    pos + Vector3(0, 0, 0)/*,
+                    pos + Vector3(0, 0, 1),
+                    pos + Vector3(0, 1, 0),
+                    pos + Vector3(0, 1, 1),
+                    pos + Vector3(1, 0, 0),
+                    pos + Vector3(1, 0, 1),
+                    pos + Vector3(1, 1, 0),
+                    pos + Vector3(1, 1, 1)*/
+                };
+                float allPositiveVals = 0.f;
+                std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
+                for (size_t i = 0; i < evaluations.size(); i++) {
+                    auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
+                    evaluations[i] = {totalEval, matVals};
+    //                auto [totalEval1, matVals1] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 0, 1));
+    //                auto [totalEval2, matVals2] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 1, 0));
+    //                auto [totalEval3, matVals3] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 1, 1));
+    //                auto [totalEval4, matVals4] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 0, 0));
+    //                auto [totalEval5, matVals5] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 0, 1));
+    //                auto [totalEval6, matVals6] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 1, 0));
+    //                auto [totalEval7, matVals7] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 1, 1));
 
 
-                float positiveVal = 0.f;
-                float negativeVal = 0.f;
-                for (const auto& [mat, val] : matVals) {
-                    float density = LayerBasedGrid::densityFromMaterial(mat);
-                    positiveVal += (density > 0.f ? val : 0.f);
-                    negativeVal += (density <= 0.f ? val : 0.f);
+                    float positiveVal = 0.f;
+                    float negativeVal = 0.f;
+                    for (const auto& [mat, val] : matVals) {
+                        float density = LayerBasedGrid::densityFromMaterial(mat);
+                        positiveVal += (density > 0.f ? val : 0.f);
+                        negativeVal += (density <= 0.f ? val : 0.f);
+                    }
+                    totalEval = positiveVal;
+                    allPositiveVals += positiveVal;
                 }
-                totalEval = positiveVal;
 
-
-                if (totalEval >= ImplicitPatch::isovalue) {
-                    TerrainTypes maxType;
+                allPositiveVals /= float(evaluations.size());
+                if (allPositiveVals >= ImplicitPatch::isovalue) {
+                    /*TerrainTypes maxType;
                     float maxVal = 0.f;
                     for (const auto& [mat, val] : matVals) {
                         if (val > maxVal) {
@@ -304,11 +327,13 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
                         }
                     }
                     _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
+                    */
+                    _cachedVoxelized.at(pos) = allPositiveVals;
                 }
             }
         }
     }
-    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
+//    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
     _cached = true;
 //    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
     return _cachedVoxelized;
@@ -1463,9 +1488,25 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
         float closestTime = path.estimateClosestTime(pos);
         Vector3 closestPoint = path.getPoint(closestTime);
 
+        Vector3 newBasisX = path.getFrenetNormal(closestTime) * sigma;
+        Vector3 newBasisY = path.getFrenetDirection(closestTime) * sigma;
+        Vector3 newBasisZ = path.getFrenetBinormal(closestTime) * sigma;
+        ShapeCurve shape = ShapeCurve({
+                                          Vector3(-.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ),
+                                          Vector3(-.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ),
+                                          Vector3(0.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ),
+                                          Vector3(0.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ)
+                                      });
+        shape.translate(closestPoint);
+
+        float res = ImplicitPatch::isovalue - shape.estimateSignedDistanceFrom(pos);
+        return std::max(res, 0.f);
+        /*
         float distance = (pos - closestPoint).norm() / sigma;
         float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f);
+
         return functionsHeight;
+        */
     };
 }
 

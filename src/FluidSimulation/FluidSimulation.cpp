@@ -30,7 +30,7 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ, float dt, floa
 
 void FluidSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
-    this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ);
+    this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ).binarize(0.5);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {
             this->velocity[i] = Vector3();
@@ -57,6 +57,7 @@ void FluidSimulation::setMaxSpeed(float speed)
 
 Matrix3<Vector3> FluidSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
 {
+
     return this->velocity.resize(rescaleX, rescaleY, rescaleZ);
     /*Matrix3<Vector3> mat(sizeX, sizeY, sizeZ);
     for (size_t i = 0; i < mat.data.size(); i++)

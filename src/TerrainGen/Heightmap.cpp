@@ -572,6 +572,11 @@ Vector3 Heightmap::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, 
     return Vector3(false);
 }
 
+Vector3 Heightmap::findSurfaceBetween(Vector3 start, Vector3 end)
+{
+
+}
+
 Mesh Heightmap::getGeometry()
 {
     std::vector<Vector3> vertices;
@@ -596,4 +601,25 @@ Mesh Heightmap::getGeometry()
     m.useIndices = false;
     m.fromArray(vertices);
     return m;
+}
+
+Matrix3<Vector3> Heightmap::getNormals()
+{
+    Matrix3<float> vals = this->heights;
+    vals.normalize();
+    vals.raiseErrorOnBadCoord = false;
+    vals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    Matrix3<Vector3> normals(vals.getDimensions());
+
+    for (int x = 0; x < normals.sizeX; x++) {
+        for (int y = 0; y < normals.sizeY; y++) {
+            Vector3 pos(x, y);
+            float R = vals.at(pos + Vector3(-1.f, 0.f));
+            float L = vals.at(pos + Vector3(1.f, 0.f));
+            float U = vals.at(pos + Vector3(0.f, 1.f));
+            float D = vals.at(pos + Vector3(0.f, -1.f));
+            normals.at(pos) = Vector3(R - L, D - U, 1.f).normalize();
+        }
+    }
+    return normals;
 }

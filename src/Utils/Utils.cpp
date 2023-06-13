@@ -1,6 +1,8 @@
 #include "Utils.h"
 
 #include <sys/stat.h>
+#include <thread>
+#include <chrono>
 
 std::vector<std::string> split(std::string str, char c)
 {
@@ -23,7 +25,7 @@ std::vector<std::string> split(std::string str)
 {
     std::vector<std::string> result;
     for (char c : str) {
-        result.push_back(std::to_string(c));
+        result.push_back(std::string(1, c));
     }
     return result;
 }
@@ -289,4 +291,9 @@ float timeIt(std::function<void ()> func)
     func();
     auto end = std::chrono::system_clock::now();
     return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+}
+
+void sleep(int milliseconds)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds) );
 }

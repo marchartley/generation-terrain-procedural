@@ -84,7 +84,7 @@ protected:
 
     int numberOfIterations = 1;
 
-    float initialCapacity = .5f;
+    float initialCapacity = .0f;
 
     UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP;
 

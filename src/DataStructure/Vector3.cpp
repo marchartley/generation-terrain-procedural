@@ -155,18 +155,18 @@ Vector3 Vector3::quaternionToEuler(float x, float y, float z, float w)
     Vector3 angles;
 
     // roll (x-axis rotation)
-    double sinr_cosp = 2 * (w * x + y * z);
-    double cosr_cosp = 1 - 2 * (x * x + y * y);
+    float sinr_cosp = 2 * (w * x + y * z);
+    float cosr_cosp = 1 - 2 * (x * x + y * y);
     angles.x = std::atan2(sinr_cosp, cosr_cosp);
 
     // pitch (y-axis rotation)
-    double sinp = std::sqrt(1 + 2 * (w * y - x * z));
-    double cosp = std::sqrt(1 - 2 * (w * y - x * z));
+    float sinp = std::sqrt(1 + 2 * (w * y - x * z));
+    float cosp = std::sqrt(1 - 2 * (w * y - x * z));
     angles.y = 2 * std::atan2(sinp, cosp) - M_PI / 2;
 
     // yaw (z-axis rotation)
-    double siny_cosp = 2 * (w * z + x * y);
-    double cosy_cosp = 1 - 2 * (y * y + z * z);
+    float siny_cosp = 2 * (w * z + x * y);
+    float cosy_cosp = 1 - 2 * (y * y + z * z);
     angles.z = std::atan2(siny_cosp, cosy_cosp);
 
     return angles;
@@ -217,6 +217,11 @@ Vector3 Vector3::ceil() const
     if (v.y != y) v.y += 1;
     if (v.z != z) v.z += 1;
     return v;
+}
+
+float Vector3::length()
+{
+    return this->norm();
 }
 
 Vector3 Vector3::random() {

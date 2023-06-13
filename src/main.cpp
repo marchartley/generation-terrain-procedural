@@ -3,6 +3,7 @@
 
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
+//#include "sim-fluid-loganzartman/Game.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <qapplication.h>
@@ -15,14 +16,126 @@
 #include <random>
 #include <string>
 
+using namespace std;
+
+//#include "src/third-party/GridFluidSim3D/src/main.h"
+/*
+#include "FluidSimulation_FLIP/FLIPSimulation.h"
+#include "FluidSimulation_ShallowWater/ShallowWaterSimulation.h"
+#include "FluidSimulation_SPH/SPHSimulation.h"
+
+using namespace ShallowWater;
+*/
 int main(int argc, char *argv[])
 {
+    /*
+    // Testing Shallow water
+    ShallowWater::ShallowWaterSimulation simulation;
+
+    int N = 200;
+    simulation.init(N);
+    auto initialgrid = simulation.grid;
+
+    // Add some water to the top left cell
+    simulation.grid[0].water_height = 100;
+
+    visualize(simulation.grid, N, 20);
+
+    // Run the simulation
+    simulation.run(0.1, 500);
+
+    visualize(simulation.grid, N, 20);
+    visualize_diff(initialgrid, simulation.grid, N, 20);
+    return 0;
+
+*/
+
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
 
+
+    QGLFormat glFormat;
+    glFormat.setVersion(4, 5);
+    glFormat.setProfile(QGLFormat::CoreProfile);
+    glFormat.setSampleBuffers(true);
+    glFormat.setDefaultFormat(glFormat);
+    glFormat.setSwapInterval(1);
+    QGLWidget widget(glFormat);
+    widget.makeCurrent();
+
+    const QOpenGLContext *context = GlobalsGL::context();
+
+    qDebug() << "Context valid: " << context->isValid();
+    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
+    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
+    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
+    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+
+/*
+    int isize = 64;
+    int jsize = 64;
+    int ksize = 64;
+    float dx = 0.125;
+    FluidSimulation fluidsim(isize, jsize, ksize, dx);
+
+    fluidsim.setSurfaceSubdivisionLevel(2);
+
+    float x, y, z;
+    fluidsim.getSimulationDimensions(&x, &y, &z);
+    fluidsim.addImplicitFluidPoint(x/2, y/2, z/2, 7.0);
+
+    fluidsim.addBodyForce(0.0, -25.0, 0.0);
+    fluidsim.initialize();
+
+    float timestep = 1.0 / 30.0;
+    for (;;) {
+        fluidsim.update(timestep);
+    }
+
+    return 0;*/
+
+
+
+    /*
+    std::cout << timeIt([]() {
+        Fluid fluid;
+        gfx::Program texture_copy_program;
+
+        fluid.init();
+        texture_copy_program.vertex({"screen_quad.vs.glsl"}).fragment({"texture_copy.fs.glsl"}).compile();
+
+    //    fluid.resize(40, 40, 40);
+
+        for (int i = 0; i < 100; i++) {
+            fluid.step();
+            fluid.ssbo_barrier();
+
+//            if (i % 100 != 0) continue;
+//            const auto particles = fluid.particle_ssbo.map_buffer_readonly<Particle>();
+            auto grid = fluid.grid_ssbo.map_buffer<GridCell>();
+
+            int count = 0;
+            for (int y = fluid.grid_dimensions.y-1; y >= 0; --y) {
+                for (int x = 0; x < fluid.grid_dimensions.x; ++x) {
+                    for (int z = 0; z < fluid.grid_dimensions.z; ++z) {
+                        const int i = fluid.get_grid_index({x, y, z});
+                        if (z == 5) std::cout << (grid[i].type == GRID_FLUID ? "O" : (grid[i].type == GRID_SOLID ? "#" : "."));
+                        count += (grid[i].type == 2 ? 1 : 0);
+                    }
+                }
+                std::cout << "\n";
+            }
+            std::cout << "\n" << count << "\n" << std::endl;
+        }
+    }) << "ms" << std::endl;
+
+    return 0;
+    */
     /*Vector3 A = Vector3(1, 0, 0);
     Vector3 B = Vector3(0.5, 1, 1).normalize();
     Vector3 UP = Vector3(0, 0, 1); // A.cross(B);
@@ -115,24 +228,6 @@ int main(int argc, char *argv[])
 //    dual.debug();
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
-
-    QGLFormat glFormat;
-    glFormat.setVersion(4, 5);
-    glFormat.setProfile(QGLFormat::CoreProfile);
-    glFormat.setSampleBuffers(true);
-    glFormat.setDefaultFormat(glFormat);
-    glFormat.setSwapInterval(1);
-    QGLWidget widget(glFormat);
-    widget.makeCurrent();
-
-    const QOpenGLContext *context = GlobalsGL::context();
-
-    qDebug() << "Context valid: " << context->isValid();
-    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
-    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
-    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
-    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
-    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     ViewerInterface vi;
     vi.show();

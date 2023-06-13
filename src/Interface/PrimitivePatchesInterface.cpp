@@ -792,7 +792,7 @@ void PrimitivePatchesInterface::rippleScene()
 {
     Matrix3<int> terrainSurface = this->voxelGrid->getVoxelValues().binarize();
     Matrix3<float> waterSpeed(terrainSurface.getDimensions());
-    Matrix3<Vector3> flowfield = this->voxelGrid->multipleFlowFields[0];
+    Matrix3<Vector3> flowfield = this->voxelGrid->getFlowfield();
     Matrix3<Vector3> normals = terrainSurface.gradient();
     for(auto& n : normals)
         n.normalize();
@@ -887,7 +887,7 @@ void PrimitivePatchesInterface::deformationFromFlow()
         ImplicitUnaryOperator* wrap = new ImplicitUnaryOperator;
         AABBox bbox = patch->getSupportBBox();
         if (bbox.dimensions().norm2() < 50*50*50) {
-            wrap->addWrapFunction(voxelGrid->multipleFlowFields[0].subset(bbox.min(), bbox.max()).resize(10, 10, 10) * 0.1f);
+            wrap->addWrapFunction(voxelGrid->getFlowfield().subset(bbox.min(), bbox.max()).resize(10, 10, 10) * 0.1f);
             wrap->composableA = patch;
             ImplicitPatch* parent = this->naiveApproachToGetParent(patch);
             ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(parent);

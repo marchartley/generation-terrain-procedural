@@ -14,6 +14,9 @@ unix {
 #    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
 #    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
 #    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+    INCLUDEPATH *= src/third-party/glad/include
+    INCLUDEPATH *= src/third-party/glfw/include
+    INCLUDEPATH *= src/third-party/glm
 }
 win32 {
     # I installed the sources of:
@@ -27,6 +30,10 @@ win32 {
 #    INCLUDEPATH *= "C:\Program Files\Python39\include"
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include"
     INCLUDEPATH *= "C:\Qt\libQGLViewer-2.7.2"
+    INCLUDEPATH *= "src\third-party\glad\include"
+    INCLUDEPATH *= "src\third-party\glfw\include"
+    INCLUDEPATH *= "src\third-party\glm"
+    INCLUDEPATH *= "src\third-party"
 #    INCLUDEPATH *= C:\codes\CPP\eigen
 #    INCLUDEPATH *= "C:/Program Files/OpenVDB/include"
     # INCLUDEPATH *= C:\Programs_installations\vcpkg\installed\x64-windows\include
@@ -63,6 +70,9 @@ SOURCES += \
         src/FastWFC/wave.cpp \
         src/FastWFC/wfc.cpp \
         src/FluidSimulation/FluidSimulation.cpp \
+    src/FluidSimulation_FLIP/FLIPSimulation.cpp \
+    src/FluidSimulation_SPH/SPHSimulation.cpp \
+    src/FluidSimulation_ShallowWater/ShallowWaterSimulation.cpp \
         src/Graph/Graph.cpp \
         src/Graph/FastPoissonGraph.cpp \
         src/Graph/GraphNode.cpp \
@@ -136,7 +146,51 @@ SOURCES += \
     src/Utils/ShapeCurve.cpp \
         src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
-        src/main.cpp
+        src/main.cpp \
+#    src/third-party/GridFluidSim3D/src/aabb.cpp \
+#    src/third-party/GridFluidSim3D/src/anisotropicparticlemesher.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/cbindings.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/config_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/cuboidfluidsource_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/fluidsimulation_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/fluidsimulationsavestate_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/fluidsource_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/sphericalfluidsource_c.cpp \
+#    src/third-party/GridFluidSim3D/src/c_bindings/utils_c.cpp \
+#    src/third-party/GridFluidSim3D/src/clscalarfield.cpp \
+#    src/third-party/GridFluidSim3D/src/collision.cpp \
+#    src/third-party/GridFluidSim3D/src/config.cpp \
+#    src/third-party/GridFluidSim3D/src/cuboidfluidsource.cpp \
+#    src/third-party/GridFluidSim3D/src/diffuseparticlesimulation.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidbrickgrid.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidbrickgridsavestate.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidmaterialgrid.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidsimulation.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidsimulationsavestate.cpp \
+#    src/third-party/GridFluidSim3D/src/fluidsource.cpp \
+#    src/third-party/GridFluidSim3D/src/gridindexkeymap.cpp \
+#    src/third-party/GridFluidSim3D/src/gridindexvector.cpp \
+#    src/third-party/GridFluidSim3D/src/implicitpointprimitive.cpp \
+#    src/third-party/GridFluidSim3D/src/interpolation.cpp \
+#    src/third-party/GridFluidSim3D/src/isotropicparticlemesher.cpp \
+#    src/third-party/GridFluidSim3D/src/kernels/kernels.cpp \
+#    src/third-party/GridFluidSim3D/src/levelset.cpp \
+#    src/third-party/GridFluidSim3D/src/logfile.cpp \
+#    src/third-party/GridFluidSim3D/src/macvelocityfield.cpp \
+#    src/third-party/GridFluidSim3D/src/main.cpp \
+#    src/third-party/GridFluidSim3D/src/particleadvector.cpp \
+#    src/third-party/GridFluidSim3D/src/polygonizer3d.cpp \
+#    src/third-party/GridFluidSim3D/src/pressuresolver.cpp \
+#    src/third-party/GridFluidSim3D/src/render/brick_texture_packer/brick_texture_packer.cpp \
+#    src/third-party/GridFluidSim3D/src/render/brick_texture_packer/lodepng/lodepng.cpp \
+#    src/third-party/GridFluidSim3D/src/scalarfield.cpp \
+#    src/third-party/GridFluidSim3D/src/spatialpointgrid.cpp \
+#    src/third-party/GridFluidSim3D/src/sphericalfluidsource.cpp \
+#    src/third-party/GridFluidSim3D/src/stopwatch.cpp \
+#    src/third-party/GridFluidSim3D/src/trianglemesh.cpp \
+#    src/third-party/GridFluidSim3D/src/turbulencefield.cpp \
+#    src/third-party/GridFluidSim3D/src/utils.cpp \
+#    src/third-party/GridFluidSim3D/src/vmath.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
@@ -181,6 +235,9 @@ HEADERS += \
     src/FastWFC/wave.hpp \
     src/FastWFC/wfc.hpp \
     src/FluidSimulation/FluidSimulation.h \
+    src/FluidSimulation_FLIP/FLIPSimulation.h \
+    src/FluidSimulation_SPH/SPHSimulation.h \
+    src/FluidSimulation_ShallowWater/ShallowWaterSimulation.h \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \
@@ -262,7 +319,84 @@ HEADERS += \
     src/Utils/matplotlibcpp.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
-    src/Utils/stl_reader.h
+    src/Utils/stl_reader.h \
+    src/sim-fluid-loganzartman/Box.hpp \
+    src/sim-fluid-loganzartman/DebugLine.hpp \
+    src/sim-fluid-loganzartman/Fluid.hpp \
+    src/sim-fluid-loganzartman/Game.hpp \
+    src/sim-fluid-loganzartman/GridCell.hpp \
+    src/sim-fluid-loganzartman/P2GTransfer.hpp \
+    src/sim-fluid-loganzartman/Particle.hpp \
+    src/sim-fluid-loganzartman/Quad.hpp \
+    src/sim-fluid-loganzartman/SSFBufferElement.hpp \
+    src/sim-fluid-loganzartman/SSFRenderTexture.hpp \
+    src/sim-fluid-loganzartman/gfx/object.hpp \
+    src/sim-fluid-loganzartman/gfx/program.hpp \
+    src/sim-fluid-loganzartman/gfx/rendertexture.hpp \
+    src/sim-fluid-loganzartman/util.hpp \
+#    src/third-party/GridFluidSim3D/src/aabb.h \
+#    src/third-party/GridFluidSim3D/src/anisotropicparticlemesher.h \
+#    src/third-party/GridFluidSim3D/src/array3d.h \
+#    src/third-party/GridFluidSim3D/src/arrayview3d.h \
+#    src/third-party/GridFluidSim3D/src/brick.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/aabb_c.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/cbindings.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/diffuseparticle_c.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/gridindex_c.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/markerparticle_c.h \
+#    src/third-party/GridFluidSim3D/src/c_bindings/vector3_c.h \
+#    src/third-party/GridFluidSim3D/src/clscalarfield.h \
+#    src/third-party/GridFluidSim3D/src/collision.h \
+#    src/third-party/GridFluidSim3D/src/config.h.in \
+#    src/third-party/GridFluidSim3D/src/cuboidfluidsource.h \
+#    src/third-party/GridFluidSim3D/src/diffuseparticle.h \
+#    src/third-party/GridFluidSim3D/src/diffuseparticlesimulation.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_dambreak.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_diffuse_inflow.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_export_particle_positions.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_gravity_field.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_hello_world.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_import_mesh_obstacle.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_inflow_outflow.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_lego_sphere_drop.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_save_load_state.h \
+#    src/third-party/GridFluidSim3D/src/examples/cpp/example_sphere_drop.h \
+#    src/third-party/GridFluidSim3D/src/fluidbrickgrid.h \
+#    src/third-party/GridFluidSim3D/src/fluidbrickgridsavestate.h \
+#    src/third-party/GridFluidSim3D/src/fluidmaterialgrid.h \
+#    src/third-party/GridFluidSim3D/src/fluidsimassert.h \
+#    src/third-party/GridFluidSim3D/src/fluidsimulation.h \
+#    src/third-party/GridFluidSim3D/src/fluidsimulationsavestate.h \
+#    src/third-party/GridFluidSim3D/src/fluidsource.h \
+#    src/third-party/GridFluidSim3D/src/fragmentedvector.h \
+#    src/third-party/GridFluidSim3D/src/grid3d.h \
+#    src/third-party/GridFluidSim3D/src/gridindexkeymap.h \
+#    src/third-party/GridFluidSim3D/src/gridindexvector.h \
+#    src/third-party/GridFluidSim3D/src/implicitpointprimitive.h \
+#    src/third-party/GridFluidSim3D/src/interpolation.h \
+#    src/third-party/GridFluidSim3D/src/isotropicparticlemesher.h \
+#    src/third-party/GridFluidSim3D/src/kernels/kernels.cpp.in \
+#    src/third-party/GridFluidSim3D/src/kernels/kernels.h \
+#    src/third-party/GridFluidSim3D/src/levelset.h \
+#    src/third-party/GridFluidSim3D/src/logfile.h \
+#    src/third-party/GridFluidSim3D/src/macvelocityfield.h \
+#    src/third-party/GridFluidSim3D/src/main.h \
+#    src/third-party/GridFluidSim3D/src/markerparticle.h \
+#    src/third-party/GridFluidSim3D/src/mortonarray3d.h \
+#    src/third-party/GridFluidSim3D/src/particleadvector.h \
+#    src/third-party/GridFluidSim3D/src/polygonizer3d.h \
+#    src/third-party/GridFluidSim3D/src/pressuresolver.h \
+#    src/third-party/GridFluidSim3D/src/render/brick_texture_packer/lodepng/lodepng.h \
+#    src/third-party/GridFluidSim3D/src/scalarfield.h \
+#    src/third-party/GridFluidSim3D/src/spatialpointgrid.h \
+#    src/third-party/GridFluidSim3D/src/sphericalfluidsource.h \
+#    src/third-party/GridFluidSim3D/src/stopwatch.h \
+#    src/third-party/GridFluidSim3D/src/subdividedarray3d.h \
+#    src/third-party/GridFluidSim3D/src/triangle.h \
+#    src/third-party/GridFluidSim3D/src/trianglemesh.h \
+#    src/third-party/GridFluidSim3D/src/turbulencefield.h \
+#    src/third-party/GridFluidSim3D/src/utils.h \
+#    src/third-party/GridFluidSim3D/src/vmath.h
 #    src/sim-fluid-ethanjli/fluidsystem.h \
 #    src/sim-fluid-ethanjli/fluidsystem.tpp \
 #    src/sim-fluid-ethanjli/math.h \
@@ -313,4 +447,62 @@ DISTFILES += \
     src/Shaders/voxels.frag \
     src/Shaders/voxels.vert \
     src/Shaders/rockShader.frag \
-    src/Shaders/rockShader.vert
+    src/Shaders/rockShader.vert \
+ \#    src/sim-fluid-loganzartman/CMakeLists.txt
+    src/third-party/GridFluidSim3D/.git/HEAD \
+    src/third-party/GridFluidSim3D/.git/config \
+    src/third-party/GridFluidSim3D/.git/description \
+    src/third-party/GridFluidSim3D/.git/hooks/applypatch-msg.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/commit-msg.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/fsmonitor-watchman.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/post-update.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/pre-applypatch.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/pre-commit.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/pre-push.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/pre-rebase.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/pre-receive.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/prepare-commit-msg.sample \
+    src/third-party/GridFluidSim3D/.git/hooks/update.sample \
+    src/third-party/GridFluidSim3D/.git/index \
+    src/third-party/GridFluidSim3D/.git/info/exclude \
+    src/third-party/GridFluidSim3D/.git/logs/HEAD \
+    src/third-party/GridFluidSim3D/.git/logs/refs/heads/master \
+    src/third-party/GridFluidSim3D/.git/logs/refs/remotes/origin/HEAD \
+    src/third-party/GridFluidSim3D/.git/objects/pack/pack-92fd604aa35276ee3371ff5987591a000327f956.idx \
+    src/third-party/GridFluidSim3D/.git/objects/pack/pack-92fd604aa35276ee3371ff5987591a000327f956.pack \
+    src/third-party/GridFluidSim3D/.git/packed-refs \
+    src/third-party/GridFluidSim3D/.git/refs/heads/master \
+    src/third-party/GridFluidSim3D/.git/refs/remotes/origin/HEAD \
+    src/third-party/GridFluidSim3D/.gitignore \
+    src/third-party/GridFluidSim3D/CMakeLists.txt \
+    src/third-party/GridFluidSim3D/LICENSE.md \
+    src/third-party/GridFluidSim3D/README.md \
+    src/third-party/GridFluidSim3D/src/examples/python/example_dambreak.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_diffuse_inflow.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_hello_world.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_inflow_outflow.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_lego_sphere_drop.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_save_load_state.py \
+    src/third-party/GridFluidSim3D/src/examples/python/example_sphere_drop.py \
+    src/third-party/GridFluidSim3D/src/kernels/scalarfield.cl \
+    src/third-party/GridFluidSim3D/src/kernels/tricubicinterpolate.cl \
+    src/third-party/GridFluidSim3D/src/pyfluid/__init__.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/aabb.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/array3d.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/config.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/fluidsimulation.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/fluidsimulationsavestate.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/fluidsource.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/gridindex.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/method_decorators.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/pybindings.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/pyfluid.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/utils.py \
+    src/third-party/GridFluidSim3D/src/pyfluid/vector3.py \
+    src/third-party/GridFluidSim3D/src/render/blender_scripts/brick_texture_lookup_shader.osl \
+    src/third-party/GridFluidSim3D/src/render/blender_scripts/import_animation-basic.py \
+    src/third-party/GridFluidSim3D/src/render/blender_scripts/import_animation-brick.py \
+    src/third-party/GridFluidSim3D/src/render/blender_scripts/import_animation-diffuse.py \
+    src/third-party/GridFluidSim3D/src/render/blender_scripts/import_animation-diffuse_particles_only.py \
+    src/third-party/GridFluidSim3D/src/render/brick_texture_packer/README.md \
+    src/third-party/GridFluidSim3D/src/render/brick_texture_packer/lodepng/README.md

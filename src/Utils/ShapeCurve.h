@@ -12,6 +12,7 @@ public:
 
     bool contains(Vector3 pos, bool useNativeShape = true);
     float estimateDistanceFrom(Vector3 pos);
+    float estimateSignedDistanceFrom(Vector3 pos, float epsilon = 1e-3);
     float computeArea();
     float computeSignedArea();
 

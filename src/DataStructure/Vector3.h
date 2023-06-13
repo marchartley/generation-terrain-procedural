@@ -7,7 +7,7 @@
 #include <QGLViewer/vec.h>
 #include <QGLViewer/quaternion.h>
 #include "DataStructure/Matrix.h"
-#include "third-party/glm/glm.hpp"
+//#include <glm/glm.hpp>
 
 class Vector3 {
 public:
@@ -43,6 +43,7 @@ public:
     Vector3 floor() const;
     Vector3 ceil() const;
 
+    float length();
     float norm();
     float norm2();
     Vector3& normalize();
@@ -127,7 +128,7 @@ public:
     void setValid(bool newValidValue) { this->valid = newValidValue; }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     explicit operator float*() const { return new float[3]{this->x, this->y, this->z}; }
-    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
+//    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
 //    friend Vector3 operator+(Vector3 a, Vector3& b);
     Vector3& operator+=(const Vector3& o);
     Vector3& operator-=(const Vector3& o);

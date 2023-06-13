@@ -20,6 +20,7 @@ class rt_scene;
 
 #include "DataStructure/Vector3.h"
 #include "Graphics/Shader.h"
+#include <glm/glm.hpp>
 
 class ShaderElement
 {

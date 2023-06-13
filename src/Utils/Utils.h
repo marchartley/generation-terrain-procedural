@@ -34,6 +34,8 @@ std::string getFilename(std::string path);
 float rad2deg(float rad);
 float deg2rad(float deg);
 
+void sleep(int milliseconds);
+
 //template <typename ... FArgs, typename ... Args>
 //float timeIt(std::function<void(FArgs...)> func,
 //                  Args && ... as) {

@@ -1,7 +1,7 @@
 #ifndef RAYMARCHING_H
 #define RAYMARCHING_H
 
-#include "third-party/glm/glm.hpp"
+#include <glm/glm.hpp>
 
 class RayMarching
 {

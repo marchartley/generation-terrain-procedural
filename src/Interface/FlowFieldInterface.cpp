@@ -169,9 +169,9 @@ void FlowFieldInterface::recomputeFlowfield(int steps)
 {
     this->voxelGrid->computeMultipleFlowfields(steps);
 
-    this->totalFlow = this->voxelGrid->multipleFlowFields[0];
+    this->totalFlow = this->voxelGrid->getFlowfield(0);
     for (size_t i = 1; i < this->voxelGrid->multipleFlowFields.size(); i++)
-        this->totalFlow += this->voxelGrid->multipleFlowFields[i];
+        this->totalFlow += this->voxelGrid->getFlowfield(i);
 
     pressureDensityVoxels = -this->totalFlow.divergence();// Matrix3<float>(this->totalFlow.getDimensions());
 //    for (size_t i = 0; i < pressureDensityVoxels.size(); i++) {
@@ -196,7 +196,7 @@ void FlowFieldInterface::updateFlowfieldDebugMesh()
     float maxPressure = this->pressureDensityVoxels.max();
 
     for (size_t i = 0; i < this->flowMeshes.size(); i++) {
-        Matrix3<Vector3> flowNormalized = this->voxelGrid->multipleFlowFields[i] / maxPressure;
+        Matrix3<Vector3> flowNormalized = this->voxelGrid->getFlowfield(i) / maxPressure;
 //        float max = -1, min = std::numeric_limits<float>::max();
 //        for (auto& v : flowNormalized){
 //            max = std::max(max, v.norm2());
