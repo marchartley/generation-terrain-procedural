@@ -12,7 +12,7 @@ class Shader;
 #include "Graphics/ShaderElement.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Matrix.h"
-//#include <glm/glm.hpp>
+#include <glm/glm.hpp>
 #include <string>
 
 class Shader

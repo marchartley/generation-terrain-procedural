@@ -61,7 +61,9 @@ Matrix3<float>& RockErosion::computeErosionMatrix(Matrix3<float>& blankMatrix, M
 
 Matrix3<float> &RockErosion::computeErosionMatrix2D(Matrix3<float> &blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)
 {
-    return this->computeErosionMatrix(blankMatrix, this->createPrecomputedAttackMask2D(this->size) * this->maxStrength, pos.xy(), addingMatterMode, useMax);
+    auto mask = this->createPrecomputedAttackMask2D(this->size);
+    mask *= this->maxStrength;
+    return this->computeErosionMatrix(blankMatrix, mask, pos.xy(), addingMatterMode, useMax);
 }
 
 Matrix3<float>& RockErosion::createPrecomputedAttackMask(int size)
@@ -82,7 +84,7 @@ Matrix3<float>& RockErosion::createPrecomputedAttackMask(int size)
             }
         }
         attackMask.raiseErrorOnBadCoord = false,
-        RockErosion::precomputedAttackMasks[size] = attackMask;
+        RockErosion::precomputedAttackMasks[size] = -attackMask / attackMask.sum();
     }
     return RockErosion::precomputedAttackMasks[size];
 }
@@ -105,7 +107,7 @@ Matrix3<float>& RockErosion::createPrecomputedAttackMask2D(int size)
             }
         }
         attackMask.raiseErrorOnBadCoord = false,
-        RockErosion::precomputedAttackMasks2D[size] = attackMask * .5f;
+        RockErosion::precomputedAttackMasks2D[size] = -(attackMask * .5f) / attackMask.sum();
     }
     return RockErosion::precomputedAttackMasks2D[size];
 }

@@ -94,12 +94,27 @@ float cubeVal(vec3 pos){
     float val = texture(dataFieldTex, pos/texSize).a;
 //    if (pos.z <= 1)
 //        val = 1.0;
-    val = (val < min_isolevel || val > max_isolevel) ? -1000 : val;
+    val = (val < min_isolevel || val > max_isolevel) ? -1 : val;
     return val - 0.5;
 }
 //Get vertex i value within current marching cube
 float cubeVal(vec3 voxelPos, int i){
     return cubeVal(cubePos(voxelPos, i));
+}
+
+vec3 getNormal(vec3 p) {
+    vec3 maxDims = min(textureSize(dataFieldTex, 0), max_vertice_positions);
+    vec3 minDims = max(vec3(0.0), min_vertice_positions);
+    vec3 x0 = clamp(p + vec3(0.01, 0, 0), minDims, maxDims);
+    vec3 x1 = clamp(p - vec3(0.01, 0, 0), minDims, maxDims);
+    vec3 y0 = clamp(p + vec3(0, 0.01, 0), minDims, maxDims);
+    vec3 y1 = clamp(p - vec3(0, 0.01, 0), minDims, maxDims);
+    vec3 z0 = clamp(p + vec3(0, 0, 0.01), minDims, maxDims);
+    vec3 z1 = clamp(p - vec3(0, 0, 0.01), minDims, maxDims);
+    float dx = clamp(cubeVal(x0) - cubeVal(x1), -1, 1);
+    float dy = clamp(cubeVal(y0) - cubeVal(y1), -1, 1);
+    float dz = clamp(cubeVal(z0) - cubeVal(z1), -1, 1);
+    return normalize(-vec3(dx, dy, dz));
 }
 
 //Get triangle table value
@@ -341,19 +356,19 @@ void main(void) {
                 position= vec4(vertlist[triTableValue(cubeindex, i)], 1);
                 gl_Position = proj_matrix * mv_matrix * position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
-                grealNormal = normal;
+                grealNormal = getNormal(position.xyz);
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+1)], 1);
                 gl_Position = proj_matrix * mv_matrix * position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
-                grealNormal = normal;
+                grealNormal = getNormal(position.xyz);
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+2)], 1);
                 gl_Position = proj_matrix * mv_matrix *  position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
-                grealNormal = normal;
+                grealNormal = getNormal(position.xyz);
                 EmitVertex();
                 EndPrimitive();
             }else{

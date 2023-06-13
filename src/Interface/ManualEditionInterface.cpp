@@ -82,8 +82,12 @@ void ManualEditionInterface::applyModification()
     float strength = this->manualEditionStrength;
     Vector3 position = this->grabber->getPosition();
 
-    RockErosion rock(size, strength);
-    rock.Apply(voxelGrid, position, addingMode);
+//    RockErosion rock(size, strength);
+//    rock.Apply(voxelGrid, position, addingMode);
+    Matrix3<float> modif = RockErosion::createPrecomputedAttackMask(size);
+    modif *= strength / (modif.at(size * .5f, size * .5f, size * .5f));
+    voxelGrid->applyModification(modif * (addingMode ? 1.f : -1.f), position - Vector3(size * .5f, size * .5f, size * .5f));
+    std::cout << modif.displayAsPlot() << std::endl;
 
     this->addTerrainAction(nlohmann::json({
                                            {"size", size},

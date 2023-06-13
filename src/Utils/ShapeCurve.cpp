@@ -80,8 +80,13 @@ bool ShapeCurve::contains(Vector3 pos, bool useNativeShape)
 
 float ShapeCurve::estimateDistanceFrom(Vector3 pos)
 {
-    float dist = BSpline::estimateDistanceFrom(pos);
+    float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
     return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
+}
+
+float ShapeCurve::estimateSignedDistanceFrom(Vector3 pos, float epsilon)
+{
+    return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
 }
 
 float ShapeCurve::computeArea()

@@ -58,7 +58,7 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
-                this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
+                this->terrainGenerationInterface->createTerrainFromFile("saved_maps/coral_base.png");
         //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 

@@ -88,6 +88,7 @@ public:
     float getOriginalVoxelValue(Vector3 pos);
     float getOriginalVoxelValue(float x, float y, float z);
     Matrix3<Vector3> getFlowfield();
+    Matrix3<Vector3> getFlowfield(size_t flowIndex);
     Vector3 getFlowfield(Vector3 pos);
     Vector3 getFlowfield(float x, float y, float z);
     void setFlowfield(Vector3 pos, Vector3 newVal);
@@ -155,6 +156,9 @@ public:
     float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
     int _cachedHistoryIndex = -1;
     Matrix3<float> _cachedVoxelValues;
+
+    std::vector<Matrix3<float>> voxelsValuesStack;
+    std::vector<Vector3> voxelsValuesAnchorStack;
 };
 
 #endif // VOXELGRID_H

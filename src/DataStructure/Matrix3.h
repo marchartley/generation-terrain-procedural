@@ -19,7 +19,8 @@ enum RESIZE_MODE {
     LINEAR = 0,
     MAX_VAL = 1,
     MIN_VAL = 2,
-    FILL_WITH_DEFAULT = 3
+    FILL_WITH_DEFAULT = 3,
+    NEAREST = 4
 };
 
 enum CONVOLUTION_BORDERS {
@@ -60,6 +61,9 @@ public:
     T& operator[](Vector3 pos);
 
     Vector3 getDimensions() const;
+    int width() const;
+    int depth() const;
+    int height() const;
     int getIndex(size_t x, size_t y, size_t z) const;
     int getIndex(Vector3 coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
@@ -122,6 +126,8 @@ public:
     Matrix3<T> laplacian();
     Vector3 gradient(Vector3 position);
     Vector3 gradient(float posX, float posY, float posZ = 0);
+
+    T trace();
 
     Matrix3<T> wrapWith(Matrix3<Vector3> wrapper);
     Matrix3<T> wrapWith(BSpline original, BSpline wrapperCurve);
@@ -206,7 +212,7 @@ public:
     Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
     std::string displayValues();
-    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X");
+    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X", std::string separator = "");
 };
 
 #include <sstream>
@@ -227,7 +233,7 @@ std::string Matrix3<T>::displayValues()
 }
 
 template<class T>
-std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError)
+std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError, std::string separator)
 {
     if (patterns.empty())
         patterns = {"#", "=", "-", "."};
@@ -245,7 +251,7 @@ std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> pat
                 bool specialCharUsed = false;
                 for (const auto& [targetValue, character] : specialCharactersAtValue) {
                     if (targetValue - specialCharEpsilon <= val && val <= targetValue + specialCharEpsilon) {
-                        out << character << " ";
+                        out << character << separator;
                         specialCharUsed = true;
                         break; // Don't add other characters
                     }
@@ -253,9 +259,9 @@ std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> pat
                 if (!specialCharUsed) {
                     float prop = interpolation::linear(val, min, max);
                     if (prop < 0.f || prop > 1.f || isnan(prop))
-                        out << charForError << " ";
+                        out << charForError << separator;
                     else
-                        out << patterns[int(prop * float(patterns.size() - 1))] << " ";
+                        out << patterns[int(prop * float(patterns.size() - 1))] << separator;
                 }
             }
             out << "\n";
@@ -561,6 +567,19 @@ template<class T>
 Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
 {
     return gradient(Vector3(posX, posY, posZ));
+}
+
+template<class T>
+T Matrix3<T>::trace()
+{
+    if (sizeZ != 1)
+        throw std::domain_error("Cannot compute the trace of the matrix : Matrix should be 2D (sizeZ = 1) but here sizeZ = " + std::to_string(this->sizeZ));
+    if (sizeX != sizeY)
+        throw std::domain_error("Cannot compute the trace of the matrix : Matrix should be squared (sizeX = sizeY) but here sizeX = " + std::to_string(this->sizeX) + " and sizeY = " + std::to_string(this->sizeY));
+    T sum = T();
+    for (int i = 0; i < sizeX; i++)
+        sum += this->at(i, i);
+    return sum;
 }
 
 template<class T>
@@ -1009,7 +1028,6 @@ bool Matrix3<T>::operator==(Matrix3<U> o) {
     return true;
 }
 
-
 template<class T>
 int Matrix3<T>::getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect) const
 {
@@ -1093,8 +1111,20 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                 }
             }
         }
-    }
-    if (mode == MAX_VAL || mode == MIN_VAL) {
+    } else if (mode == NEAREST) {
+        // Apply interpolations
+        for (int x = 0; x < newX; x++) {
+            int x_rounded = std::round(x * rx);
+            for (int y = 0; y < newY; y++) {
+                int y_rounded = std::round(y * ry);
+                for (int z = 0; z < newZ; z++) {
+                    int z_rounded = std::round(z * rz);
+                    T res = this->at(x_rounded, y_rounded, z_rounded);
+                    newMat.at(x, y, z) = res;
+                }
+            }
+        }
+    } else if (mode == MAX_VAL || mode == MIN_VAL) {
 //        for (auto& val : newMat)
 //            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
         Matrix3<short int> modifiedMatrix(newX, newY, newZ, 0);
@@ -1626,6 +1656,19 @@ Matrix3<Vector3> Matrix3<T>::fbmNoise3D(FastNoiseLite noise, int sizeX, int size
                                noise.GetNoise(x + offsetDim3.x, y + offsetDim3.y, z + offsetDim3.z));
     }
     return values;
+}
+
+template<class T>
+int Matrix3<T>::width() const {
+    return this->sizeX;
+}
+template<class T>
+int Matrix3<T>::depth() const {
+    return this->sizeY;
+}
+template<class T>
+int Matrix3<T>::height() const {
+    return this->sizeZ;
 }
 
 template<class T>

@@ -237,7 +237,7 @@ void VoxelGrid::initMap()
     float diffusion = 0.1f;
     float viscosity = 0.1f;
     int fluidSolverIterations = 10;
-    this->fluidSimRescale = 4;
+    this->fluidSimRescale = 6;
     this->fluidSimulation = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
     this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
 
@@ -412,6 +412,7 @@ void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
 //            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->getSizeZ()));
         }
     }
+
 }
 
 void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor, Vector3 anchor)
@@ -667,7 +668,7 @@ Mesh VoxelGrid::getGeometry()
     //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
     };
 
-    std::function getCubeIndex = [&](Vector3 voxPos, vec3 normal) -> int {
+    std::function getCubeIndex = [&](Vector3 voxPos, Vector3 normal) -> int {
         int cubeindex = 0;
         float cubeVal0 = cubeVali(voxPos, 0);
         float cubeVal1 = cubeVali(voxPos, 1);
@@ -689,10 +690,10 @@ Mesh VoxelGrid::getGeometry()
         cubeindex += int(cubeVal6 < refined_isolevel)*64;
         cubeindex += int(cubeVal7 < refined_isolevel)*128;
 
-        normal = vec3(0, 0, 0);
+        normal = Vector3(0, 0, 0);
 
         if (cubeindex != 0 && cubeindex != 255) {
-            vec3 vertlist[12];
+            Vector3 vertlist[12];
 
             //Find the vertices where the surface intersects the cube
             vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
@@ -837,11 +838,19 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
 }
 Matrix3<Vector3> VoxelGrid::getFlowfield()
 {
+    return this->getFlowfield(0);
+    /*
     Matrix3<Vector3> values(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     for (auto& vc : this->chunks) {
         values.paste(vc->flowField, vc->x, vc->y, 0);
     }
-    return values;
+    return values;*/
+}
+
+Matrix3<Vector3> VoxelGrid::getFlowfield(size_t flowIndex)
+{
+    Matrix3<float> binary = this->getVoxelValues().binarize(0.f, false);
+    return this->multipleFlowFields[flowIndex] * binary;
 }
 
 Vector3 VoxelGrid::getFlowfield(Vector3 pos) {

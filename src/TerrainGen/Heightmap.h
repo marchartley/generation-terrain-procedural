@@ -64,6 +64,7 @@ public:
     void saveHeightmap(std::string heightmap_filename);
 
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
+    Vector3 findSurfaceBetween(Vector3 start, Vector3 end);
 
     Mesh getGeometry();
 
@@ -76,6 +77,8 @@ public:
     std::string toShortString() { return "Grid: " + std::to_string(getDimensions().x) + "x" + std::to_string(getDimensions().y); };
 
     Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
+
+    Matrix3<Vector3> getNormals();
 
 //protected:
     Matrix3<float> heights;
