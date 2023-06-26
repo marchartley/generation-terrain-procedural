@@ -63,6 +63,7 @@ void Viewer::init() {
     glEnable(GL_TEXTURE_2D);
     glEnable(GL_TEXTURE_3D);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
     this->setBackgroundColor(QColor(127, 127, 127));
 
     this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
@@ -154,86 +155,21 @@ void Viewer::init() {
 
     }*/
 
-    Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
-    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
+//    Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
+//    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
 //    sceneUBO = ShaderUBO("scene_buf", 1, sizeof(rt_scene));
 //    sceneUBO.affectShader(raymarchingQuad.shader);
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
     QGLViewer::init();
+//    this->startAnimation();
 }
 
 void Viewer::draw() {
 //    QGLViewer::draw();
-    /*
-    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
-    raymarchingQuad.shader->use();
-    float pMatrix[16];
-    float mvMatrix[16];
-    camera()->getProjectionMatrix(pMatrix);
-    camera()->getModelViewMatrix(mvMatrix);
-    glm::mat4 mv_matrix(mvMatrix[0], mvMatrix[1], mvMatrix[2], mvMatrix[3], mvMatrix[4], mvMatrix[5], mvMatrix[6], mvMatrix[7], mvMatrix[8], mvMatrix[9], mvMatrix[10], mvMatrix[11], mvMatrix[12], mvMatrix[13], mvMatrix[14], mvMatrix[15]);
-    glm::mat4 proj_matrix(pMatrix[0], pMatrix[1], pMatrix[2], pMatrix[3], pMatrix[4], pMatrix[5], pMatrix[6], pMatrix[7], pMatrix[8], pMatrix[9], pMatrix[10], pMatrix[11], pMatrix[12], pMatrix[13], pMatrix[14], pMatrix[15]);
-    glm::vec3 cam_pos = Vector3(camera()->position());
-    rt_scene scene("scene", raymarchingQuad.shader);
-    scene.proj_matrix = proj_matrix;
-    scene.mv_matrix = mv_matrix;
-    scene.bg_color =  glm::vec4(1.f, 0.f, 0.f, 1.f);
-    scene.canvas_width = this->width();
-    scene.canvas_height = this->height();
-    scene.camera_pos = glm::vec4(cam_pos, 0.0);
-    scene.update();
-
-    rt_material mat;
-    mat.color = glm::vec4(1.f, 0.f, 0.f, 1.f);
-    mat.absorb = glm::vec4(.5f, .5f, .5f, 0.f);
-    mat.diffuse = 1.f;
-    mat.refraction = 0.f;
-    mat.reflection = 0.f;
-    mat.specular = 16;
-    mat.kd = .5f;
-    mat.ks = .5f;
-
-    rt_sphere sphere("spheres[0]", raymarchingQuad.shader);
-    sphere.mat = mat;
-    sphere.obj = glm::vec4(20.f, 0.f, 0.f, 20.f);
-    sphere.quat_rotation = glm::vec4(0, 0, 0, 1);
-    sphere.textureNum = 0;
-    sphere.hollow = false;
-    sphere.update();
-
-    rt_sphere sphere2("spheres[1]", raymarchingQuad.shader);
-    sphere2.mat = mat;
-    sphere2.obj = glm::vec4(30.f, 0.f, 0.f, 20.f);
-    sphere2.quat_rotation = glm::vec4(0, 0, 0, 1);
-    sphere2.textureNum = 0;
-    sphere2.hollow = false;
-    sphere2.update();
-
-    rt_box box("boxes[0]", raymarchingQuad.shader);
-    box.mat = mat;
-    box.pos = glm::vec4(0.f, 20.f, 0.f, 0.f);
-    box.form = glm::vec4(10.f, 30.f, 100.f, 0.f);
-    box.quat_rotation = glm::vec4(0, 0, 0, 1);
-    box.textureNum = 0;
-    box.update();
-
-    rt_light_direct light("lights_direct[0]", raymarchingQuad.shader);
-    light.direction = glm::vec4(.1f, .1f, .9f, 1.f);
-    light.color =  glm::vec4(1.f, 1.f, 1.f, 1.f);
-    light.intensity = 1.f;
-    light.update();
-
-    raymarchingQuad.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
-
-    Matrix3<int> materials; Matrix3<float> matHeights;
-    std::tie(materials, matHeights) = voxelGrid->getLayersRepresentations();
-    raymarchingQuad.shader->setTexture3D("matIndicesTex", 1, materials);
-    raymarchingQuad.shader->setTexture3D("matHeightsTex", 2, matHeights);
-
-    this->raymarchingQuad.display();*/
     this->drawingProcess();
+    this->window()->setWindowTitle("Simulation - " + QString::number(this->currentFPS()) + "FPS");
 }
 
 TerrainModel *Viewer::getCurrentTerrainModel()
@@ -312,6 +248,7 @@ void Viewer::drawingProcess() {
         shader->setBool("wireframeMode", !displayFill);
     });
     current_frame ++;
+
     if (this->interfaces.count("terrainGenerationInterface")) {
         static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
         interfacesTimings[this->interfaces["terrainGenerationInterface"]] = timeIt([&]() { this->interfaces["terrainGenerationInterface"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -322,13 +259,14 @@ void Viewer::drawingProcess() {
     for (auto& actionInterface : this->interfaces) {
         if (actionInterface.first != "terrainGenerationInterface") {
 //            std::cout << "Error on " << actionInterface.first << "?" << std::endl;
-            interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(); });
+            interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(this->camera()->position()); });
         }
     }
 
     if (this->interfaces.count("terrainGenerationInterface")) {
         interfacesTimings[this->interfaces["terrainGenerationInterface"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
+
 //    std::cout << "--" << std::endl;
     if (this->isTakingScreenshots) {
 #ifdef linux
@@ -367,9 +305,9 @@ void Viewer::reloadAllShaders()
     Shader::applyToAllShaders([](std::shared_ptr<Shader> shader) {
         shader->compileShadersFromSource();
     });
-    for (auto& [name, action] : this->interfaces) {
-        action->reloadShaders();
-    }
+//    for (auto& [name, action] : this->interfaces) {
+//        action->reloadShaders();
+//    }
 }
 
 void Viewer::setupViewFromFile(std::string filename)
@@ -479,6 +417,7 @@ void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
 void Viewer::animate()
 {
     QGLViewer::animate();
+    draw();
 }
 
 Vector3 Viewer::minVoxelsShown()

@@ -1,9 +1,115 @@
 {
 	"implicitPatches": {
-		"composables": [],
+		"composables": [
+			{
+				"composables": [
+					{
+						"blendingFactor": 2.0,
+						"composableA": {
+							"densityValue": -2.5,
+							"dimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"index": 4,
+							"material": "WATER",
+							"mirrored": false,
+							"name": "",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"position": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"shape": "None",
+							"sigmaValue": 0.0,
+							"supportDimensions": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"type": "primitive"
+						},
+						"composableB": {
+							"composableA": {
+								"dimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 1.1754943508222875e-38
+								},
+								"file": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/river.png",
+								"material": "ROCK",
+								"position": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								}
+							},
+							"distortion": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"index": 2,
+							"mirrored": false,
+							"name": "",
+							"noise": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"rotation": {
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							"scale": {
+								"x": 1.0,
+								"y": 1.0,
+								"z": 1.0
+							},
+							"spreadFactor": 0.0,
+							"translation": {
+								"x": 10.94952392578125,
+								"y": 16.311996459960938,
+								"z": 0.0
+							},
+							"type": "unary"
+						},
+						"index": 1,
+						"mirrored": false,
+						"name": "Blend",
+						"operator": "Blend",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"positionalB": "FIXED_POS",
+						"type": "compose",
+						"useIntersection": false
+					}
+				],
+				"index": 0,
+				"mirrored": false,
+				"name": "Identity",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"type": "nary"
+			}
+		],
 		"index": 0,
 		"mirrored": false,
-		"name": "Identity",
+		"name": "",
 		"optionalCurve": {
 			"closed": false,
 			"points": []

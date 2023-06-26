@@ -11,7 +11,7 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("fault
 //    this->createGUI();
 }
 
-void FaultSlipInterface::display()
+void FaultSlipInterface::display(Vector3 camPos)
 {
     if (voxelGrid != nullptr) {
         this->firstSlipControlPoint->display();

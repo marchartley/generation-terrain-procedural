@@ -78,6 +78,8 @@ Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilen
 void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDefinitions, std::vector<std::string> feedbackValues)
 {
 #if useModernOpenGL || !useModernOpenGL
+    if (this->programID != 0)
+        GlobalsGL::f()->glDeleteProgram(this->programID);
     this->programID = GlobalsGL::f()->glCreateProgram();
     if (vertexShaderFilename != "")
     {
@@ -131,6 +133,9 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
     }
 
     GlobalsGL::f()->glLinkProgram(this->programID);
+    GlobalsGL::f()->glDeleteShader(this->vShader);
+    GlobalsGL::f()->glDeleteShader(this->fShader);
+    GlobalsGL::f()->glDeleteShader(this->gShader);
 
 #endif
 }

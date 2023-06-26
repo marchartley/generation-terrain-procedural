@@ -42,7 +42,9 @@ public:
     Vector3 roundedDown(int precision = 0) const;
     Vector3 floor() const;
     Vector3 ceil() const;
+    static Vector3 wrap(Vector3 p, Vector3 mini, Vector3 maxi);
 
+    float magnitude();
     float length();
     float norm();
     float norm2();

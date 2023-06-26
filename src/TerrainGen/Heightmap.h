@@ -15,7 +15,7 @@ class Heightmap : public TerrainModel {
 public:
     Heightmap();
     Heightmap(int nx, int ny, float heightFactor);
-    Heightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
+    Heightmap(std::string heightmap_filename, int nx = 30, int ny = 30, float heightFactor = 10);
 
     Matrix3<float> getHeights() { return this->heights; }
     float getHeight(float x, float y) { return this->heights.at(x, y); }

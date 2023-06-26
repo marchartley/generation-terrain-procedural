@@ -184,7 +184,7 @@ std::string toCapitalize(std::string s)
     return res;
 }
 
-std::string getExtention(std::string file)
+std::string getExtension(std::string file)
 {
     std::string ext = file.substr(file.find_last_of('.') + 1);
     return ext;

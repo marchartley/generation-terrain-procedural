@@ -18,7 +18,7 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
     //    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=](){ voxelGrid->computeFlowfield(); } );
 }*/
 
-void TunnelInterface::display()
+void TunnelInterface::display(Vector3 camPos)
 {
     for (auto& ctrl : this->controlPoints) {
 //        std::cout << ctrl->
@@ -29,6 +29,7 @@ void TunnelInterface::display()
         if (this->tunnelPreview.shader != nullptr) {
             this->tunnelPreview.shader->setVector("color", std::vector<float>({0.1f, 0.2f, 0.7f, 0.6f}));
         }
+        this->tunnelPreview.reorderTriangles(camPos);
         this->tunnelPreview.display(); //GL_LINES, 5.f);
     }
 }

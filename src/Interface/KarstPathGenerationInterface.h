@@ -23,7 +23,7 @@ public:
     ~KarstPathGenerationInterface();
 //    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
     void replay(nlohmann::json action);
 
     std::unique_ptr<InteractiveVector> fractureVector;

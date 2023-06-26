@@ -512,6 +512,91 @@ void Mesh::setShader(std::shared_ptr<Shader> shader)
 
 }
 
+void Mesh::reorderVertices(Vector3 camPos)
+{
+    this->reorderAny(camPos, 1);
+}
+
+void Mesh::reorderLines(Vector3 camPos)
+{
+    this->reorderAny(camPos, 2);
+}
+
+void Mesh::reorderTriangles(Vector3 camPos)
+{
+    this->reorderAny(camPos, 3);
+}
+
+void Mesh::reorderAny(Vector3 camPos, int nbVertexToUse)
+{
+    std::vector<Vector3> lineCenters(vertexArray.size() / nbVertexToUse);
+    std::vector<int> newOrder(lineCenters.size());
+    std::vector<float> distances(lineCenters.size());
+    for (size_t i = 0; i < lineCenters.size(); i++) {
+        for (int n = 0; n < nbVertexToUse; n++)
+            lineCenters[i] += vertexArray[nbVertexToUse * i + n];
+        lineCenters[i] = (lineCenters[i] / (float)(nbVertexToUse)) - camPos;
+        distances[i] = lineCenters[i].norm2();
+        newOrder[i] = i;
+    }
+    std::sort(newOrder.begin(), newOrder.end(), [&](const int& idA, const int& idB) { return distances[idA] > distances[idB]; });
+
+    for (size_t i = 0; i < lineCenters.size(); i++) {
+        for (int iVertex = 0; iVertex < nbVertexToUse; iVertex++) {
+            size_t vectorIndex = nbVertexToUse * newOrder[i] + iVertex;
+            size_t flatIndex = 3 * (nbVertexToUse * i + iVertex);
+            if (vertexArray.size() > vectorIndex) {
+                vertexArrayFloat[flatIndex + 0] = vertexArray[vectorIndex].x;
+                vertexArrayFloat[flatIndex + 1] = vertexArray[vectorIndex].y;
+                vertexArrayFloat[flatIndex + 2] = vertexArray[vectorIndex].z;
+            }
+            if (normalsArray.size() > vectorIndex) {
+                normalsArrayFloat[flatIndex + 0] = normalsArray[vectorIndex].x;
+                normalsArrayFloat[flatIndex + 1] = normalsArray[vectorIndex].y;
+                normalsArrayFloat[flatIndex + 2] = normalsArray[vectorIndex].z;
+            }
+            if (colorsArray.size() > vectorIndex) {
+                colorsArrayFloat[flatIndex + 0] = colorsArray[vectorIndex].x;
+                colorsArrayFloat[flatIndex + 1] = colorsArray[vectorIndex].y;
+                colorsArrayFloat[flatIndex + 2] = colorsArray[vectorIndex].z;
+            }
+        }
+    }
+    // Retrieve the new order as Vector3's
+    for (size_t i = 0; i < lineCenters.size(); i++) {
+        for (int iVertex = 0; iVertex < nbVertexToUse; iVertex++) {
+            size_t vectorIndex = nbVertexToUse * i + iVertex;
+            size_t flatIndex = 3 * (nbVertexToUse * i + iVertex);
+            if (vertexArray.size() > vectorIndex) {
+                vertexArray[vectorIndex].x = vertexArrayFloat[flatIndex + 0];
+                vertexArray[vectorIndex].y = vertexArrayFloat[flatIndex + 1];
+                vertexArray[vectorIndex].z = vertexArrayFloat[flatIndex + 2];
+            }
+            if (normalsArray.size() > vectorIndex) {
+                normalsArray[vectorIndex].x = normalsArrayFloat[flatIndex + 0];
+                normalsArray[vectorIndex].y = normalsArrayFloat[flatIndex + 1];
+                normalsArray[vectorIndex].z = normalsArrayFloat[flatIndex + 2];
+            }
+            if (colorsArray.size() > vectorIndex) {
+                colorsArray[vectorIndex].x = colorsArrayFloat[flatIndex + 0];
+                colorsArray[vectorIndex].y = colorsArrayFloat[flatIndex + 1];
+                colorsArray[vectorIndex].z = colorsArrayFloat[flatIndex + 2];
+            }
+        }
+        /*for (int j = 0; j < 3 * nbVertexToUse; j++) {
+            if (vertexArray.size() > )
+            vertexArray[nbVertexToUse * i + j / 3][j % 3] = vertexArrayFloat[nbVertexToUse * 3 * i + j];
+
+            normalsArray[nbVertexToUse * i + j / 3][j % 3] = normalsArrayFloat[nbVertexToUse * 3 * i + j];
+
+            colorsArray[nbVertexToUse * i + j / 3][j % 3] = colorsArrayFloat[nbVertexToUse * 3 * i + j];
+        }*/
+    }
+    this->needToUpdatePositions = true;
+    this->needToUpdateNormals = true;
+    this->needToUpdateColors = true;
+}
+
 std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices)
 {
     if (indices.empty()) {

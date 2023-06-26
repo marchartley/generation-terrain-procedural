@@ -27,7 +27,7 @@ KarstPathGenerationInterface::~KarstPathGenerationInterface()
     waterHeightSlider.reset();
 }
 
-void KarstPathGenerationInterface::display()
+void KarstPathGenerationInterface::display(Vector3 camPos)
 {
     if (this->isVisible()) {
         this->sourceControlPoint->display();

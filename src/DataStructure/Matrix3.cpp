@@ -1,5 +1,6 @@
 #include "DataStructure/Matrix3.h"
 //#include "Utils/stb_image.h"
+#include "Utils/Skeletonize.h"
 
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl() {
@@ -17,6 +18,53 @@ Matrix3<Vector3> Matrix3<Vector3>::curl() {
 }
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::rot() { return this->curl(); }
+
+template<>
+Matrix3<int> Matrix3<int>::skeletonize()
+{
+    Matrix3<int> self = ((Matrix3<float>)*this).binarize(0.5f);
+    Matrix3<int> initial = *this;
+    skeleton_tracer_t* skel = new skeleton_tracer_t();
+    skel->W = self.sizeX; // width of image
+    skel->H = self.sizeY; // height of image
+
+    // allocate the input image
+    unsigned char* data = (unsigned char*)malloc(sizeof(unsigned char)*skel->W*skel->H); //new uchar(self.sizeX * self.sizeY);
+    for (size_t i = 0; i < self.size(); i++)
+        data[i] = (unsigned char)(self[i]);
+    skel->im = data;
+
+    skel->thinning_zs(); // perform raster thinning
+
+    // run the algorithm
+    skeleton_tracer_t::polyline_t* p = (skeleton_tracer_t::polyline_t*)skel->trace_skeleton(0, 0, skel->W, skel->H, 0);
+
+    self.reset(); // Back to all 0's
+    // print out points in every polyline
+    skeleton_tracer_t::polyline_t* it = p; //iterator
+    while(it){
+      skeleton_tracer_t::point_t* jt = it->head;
+      Vector3 prevPos(false);
+      while(jt){
+          Vector3 newPos(jt->x, jt->y);
+          // Clearly not the best way to do this!
+          if (prevPos.isValid()/* && initial.at(newPos) != 0*/) {
+              Vector3 move = newPos - prevPos;
+              float length = move.length();
+              for (int i = 0; i < length; i++)
+                  self.at(prevPos + move * clamp(i / length, 0.f, 1.f)) = 1;
+          }
+          prevPos = newPos;
+        jt = jt->next;
+      }
+      it = it->next;
+    }
+    free(skel->im);
+    skel->destroy_polylines(p);
+    skel->destroy_rects();
+    delete skel;
+    return self;
+}
 
 template<>
 Matrix3<float> Matrix3<Vector3>::divergence()
@@ -153,4 +201,18 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
         delete[] data;//stbi_image_free(data);
 
     return map;
+}
+//template<class T>
+Matrix3<float> operator-(const float a, Matrix3<float> b) {
+    Matrix3<float> res = b;
+    for (size_t i = 0; i < res.size(); i++)
+        res[i] = a - res[i];
+    return res;
+}
+//template<class T>
+Matrix3<float> operator+(const float a, Matrix3<float> b) {
+    Matrix3<float> res = b;
+    for (size_t i = 0; i < res.size(); i++)
+        res[i] = a + res[i];
+    return res;
 }

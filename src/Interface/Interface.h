@@ -25,6 +25,9 @@
 #include "Interface/PrimitivePatchesInterface.h"
 #include "Interface/TerrainSavingInterface.h"
 #include "Interface/MeshInstanceAmplificationInterface.h"
+#include "Interface/SPHSimulationInterface.h"
+#include "Interface/FLIPSimulationInterface.h"
+#include "Interface/CoralIslandGeneratorInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -49,22 +52,6 @@ public:
 public Q_SLOTS:
     void openInterface(std::string interfaceName, std::shared_ptr<ActionInterface> object);
     void openInterface(std::shared_ptr<ActionInterface> object);
-    /*void openInterface(std::string interfaceName);
-
-    void openFaultSlipInterface();
-    void openFlowfieldInterface();
-    void openKarstInterface();
-    void openKarstPeytavieInterface();
-    void openTunnelInterface();
-    void openManualEditionInterface();
-    void openGravityInterface();
-    void openErosionInterface();
-    void openHeightmapErosionInterface();
-    void openBiomeInterface();
-    void openSmoothInterface();
-    void openPatchesInterface();
-    void openSavingInterface();
-    void openMeshInstanceAmplificationInterface();*/
 
     void hideAllInteractiveParts();
 
@@ -94,6 +81,9 @@ public:
     std::shared_ptr<PrimitivePatchesInterface> patchesInterface;
     std::shared_ptr<TerrainSavingInterface> savingInterface;
     std::shared_ptr<MeshInstanceAmplificationInterface> meshInstanceAmplificationInterface;
+    std::shared_ptr<SPHSimulationInterface> sphSimulationInterface;
+    std::shared_ptr<FLIPSimulationInterface> flipSimulationInterface;
+    std::shared_ptr<CoralIslandGeneratorInterface> coralIslandGeneratorInterface;
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 

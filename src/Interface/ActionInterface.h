@@ -36,7 +36,7 @@ public:
     virtual QLayout* createGUI() {
         return nullptr;
     }
-    virtual void display() {
+    virtual void display(Vector3 camPos = Vector3(false)) {
 
     }
     virtual void reloadShaders() {

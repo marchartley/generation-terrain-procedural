@@ -90,9 +90,9 @@ public:
     Matrix3<T>& paste(Matrix3<T>& matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(Matrix3<T>& matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation = false);
     Matrix3<T>& add(Matrix3<T> &matrixToAdd, int left, int up, int front, bool useInterpolation = false);
-    Matrix3<T> concat(Matrix3<T>& matrixToConcat);
+    Matrix3<T> concat(Matrix3<T> matrixToConcat);
 
-    Matrix3<float> toDistanceMap(bool ignoreZlayer = false);
+    Matrix3<float> toDistanceMap(bool ignoreZlayer = false, bool considerBorders = true);
 
     Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
@@ -106,6 +106,9 @@ public:
     Matrix3<T>& max(Matrix3<T>& otherMatrix, int left, int up, int front);
     Matrix3<T>& min(Matrix3<T>& otherMatrix, Vector3 upperLeftFrontCorner);
     Matrix3<T>& min(Matrix3<T>& otherMatrix, int left, int up, int front);
+
+    static Matrix3<T> max(Matrix3<T> m1, Matrix3<T> m2);
+    static Matrix3<T> min(Matrix3<T> m1, Matrix3<T> m2);
 
     Matrix3<T> abs() const;
     T sum();
@@ -126,6 +129,10 @@ public:
     Matrix3<T> laplacian();
     Vector3 gradient(Vector3 position);
     Vector3 gradient(float posX, float posY, float posZ = 0);
+
+    Matrix3<int> skeletonize();
+    Matrix3<T> dilate();
+    Matrix3<T> erode();
 
     T trace();
 
@@ -214,7 +221,10 @@ public:
     std::string displayValues();
     std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X", std::string separator = "");
 };
-
+//template<class T>
+Matrix3<float> operator-(const float a, Matrix3<float> b);
+//template<class T>
+Matrix3<float> operator+(const float a, Matrix3<float> b);
 #include <sstream>
 template<class T>
 std::string Matrix3<T>::displayValues()
@@ -567,6 +577,56 @@ template<class T>
 Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
 {
     return gradient(Vector3(posX, posY, posZ));
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::dilate()
+{
+    Matrix3<T> copy = *this;
+    copy.raiseErrorOnBadCoord = false;
+    copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    Matrix3<T> res = *this;
+    for (int x = 0; x < res.sizeX; x++) {
+        for (int y = 0; y < res.sizeY; y++) {
+            for (int z = 0; z < res.sizeZ; z++) {
+                T maxVal = res.at(x, y, z);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            maxVal = std::max(maxVal, copy.at(x + dx, y + dy, z + dz));
+                        }
+                    }
+                }
+                res.at(x, y, z) = maxVal;
+            }
+        }
+    }
+    return res;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::erode()
+{
+    Matrix3<T> copy = *this;
+    copy.raiseErrorOnBadCoord = false;
+    copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    Matrix3<T> res = *this;
+    for (int x = 0; x < res.sizeX; x++) {
+        for (int y = 0; y < res.sizeY; y++) {
+            for (int z = 0; z < res.sizeZ; z++) {
+                T minVal = res.at(x, y, z);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            minVal = std::min(minVal, copy.at(x + dx, y + dy, z + dz));
+                        }
+                    }
+                }
+                res.at(x, y, z) = minVal;
+            }
+        }
+    }
+    return res;
 }
 
 template<class T>
@@ -935,7 +995,7 @@ Matrix3<T> operator-(Matrix3<T> a, const Matrix3<U>& b) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<U>& o)  {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be substracted (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] -= o.data[i];
     }
@@ -949,7 +1009,7 @@ Matrix3<T> operator*(Matrix3<T> a, Matrix3<U> o) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be multiplied (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] *= o.data[i];
     }
@@ -963,7 +1023,7 @@ Matrix3<T> operator/(Matrix3<T>& a, const Matrix3<U>& b) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator/=(Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
-        throw std::domain_error("Matrices must have same sizes to be added (M1 = " + this->toString() + " and M2 = " + o.toString());
+        throw std::domain_error("Matrices must have same sizes to be divided (M1 = " + this->toString() + " and M2 = " + o.toString());
     for (size_t i = 0; i < data.size(); i++) {
         data[i] /= o.data[i];
     }
@@ -1252,7 +1312,7 @@ Matrix3<T>& Matrix3<T>::add(Matrix3<T>& matrixToAdd, int left, int up, int front
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::concat(Matrix3<T>& matrixToConcat)
+Matrix3<T> Matrix3<T>::concat(Matrix3<T> matrixToConcat)
 {
     Matrix3<T> newMatrix(this->getDimensions() + matrixToConcat.getDimensions() * Vector3(1, 0, 0));
     newMatrix.paste(*this, Vector3());
@@ -1297,11 +1357,35 @@ Matrix3<T>& Matrix3<T>::min(Matrix3<T>& otherMatrix, int left, int up, int front
 }
 
 template<class T>
-Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer)
+Matrix3<T> Matrix3<T>::max(Matrix3<T> m1, Matrix3<T> m2)
+{
+    if (m1.getDimensions() != m2.getDimensions())
+        throw std::domain_error("Matrices must have same sizes to be maxed (M1 = " + m1.toString() + " and M2 = " + m2.toString());
+    Matrix3<T> res(m1.getDimensions());
+    for (size_t i = 0; i < m1.size(); i++) {
+        res[i] = std::max(m1[i], m2[i]);
+    }
+    return res;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::min(Matrix3<T> m1, Matrix3<T> m2)
+{
+    if (m1.getDimensions() != m2.getDimensions())
+        throw std::domain_error("Matrices must have same sizes to be mined (M1 = " + m1.toString() + " and M2 = " + m2.toString());
+    Matrix3<T> res(m1.getDimensions());
+    for (size_t i = 0; i < m1.size(); i++) {
+        res[i] = std::min(m1[i], m2[i]);
+    }
+    return res;
+}
+
+template<class T>
+Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders)
 {
     Matrix3<float> distances(this->sizeX, this->sizeY, this->sizeZ, std::numeric_limits<float>::max() - 10000);
     distances.raiseErrorOnBadCoord = false;
-    distances.defaultValueOnBadCoord = 0.f;
+    distances.defaultValueOnBadCoord = (considerBorders ? 0.f : std::numeric_limits<float>::max() - 10000);
 
     // Using the Chamfer distance -> direct neighbor               => distance = 3
     //                               diagonal on 2 axis neighbor   => distance = 4
@@ -1440,9 +1524,16 @@ Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)
 template<class T>
 Vector3 Matrix3<T>::getWrappedPosition(Vector3 pos)
 {
-    return     Vector3(int(pos.x) % sizeX,
-                       int(pos.y) % sizeY,
-                       int(pos.z) % sizeZ);
+    Vector3 rounded = pos.roundedDown();
+    Vector3 decimals = pos - rounded;
+    Vector3 wrap = Vector3(int(rounded.x + sizeX) % sizeX,
+                           int(rounded.y + sizeY) % sizeY,
+                           int(rounded.z + sizeZ) % sizeZ
+                           ) + decimals;
+    return wrap;
+//    return     Vector3(int(pos.x) % sizeX,
+//                       int(pos.y) % sizeY,
+//                       int(pos.z) % sizeZ);
 }
 
 template<class T>
@@ -1676,4 +1767,7 @@ Vector3 Matrix3<T>::getDimensions() const
 {
     return Vector3(this->sizeX, this->sizeY, this->sizeZ);
 }
+
+
+
 #endif // MATRIX3_H

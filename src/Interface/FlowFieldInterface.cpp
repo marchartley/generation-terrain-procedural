@@ -37,18 +37,18 @@ void FlowFieldInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, st
     }
 }
 
-void FlowFieldInterface::display()
+void FlowFieldInterface::display(Vector3 camPos)
 {
     if (!this->isVisible())
         return;
 
-    this->displayPressureDensities();
-    this->displayFlows();
-    this->displaySumOfFlows();
+    this->displayPressureDensities(camPos);
+    this->displayFlows(camPos);
+    this->displaySumOfFlows(camPos);
     this->recomputeFlowfield(10);
 }
 
-void FlowFieldInterface::displayPressureDensities()
+void FlowFieldInterface::displayPressureDensities(Vector3 camPos)
 {
     if (!this->displayingPressure)
         return;
@@ -131,11 +131,12 @@ void FlowFieldInterface::displayPressureDensities()
         pressureDensityMesh.shader->setFloat("isolevel", iso);
 
         // display the mesh
+        pressureDensityMesh.reorderVertices(camPos);
         pressureDensityMesh.display(GL_POINTS);
     }
 }
 
-void FlowFieldInterface::displayFlows()
+void FlowFieldInterface::displayFlows(Vector3 camPos)
 {
     for (size_t i = 0; i < this->displayedFlowfields.size(); i++) {
         if (!this->displayedFlowfields[i])
@@ -144,17 +145,19 @@ void FlowFieldInterface::displayFlows()
         Mesh& flowMesh = this->flowMeshes[i];
         if (flowMesh.shader != nullptr)
             flowMesh.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f}); //std::vector<float>({0.f, 0.f, 1.f, .4f}));
+        flowMesh.reorderLines(camPos);
         flowMesh.display(GL_LINES, 5.f);
     }
 }
 
-void FlowFieldInterface::displaySumOfFlows()
+void FlowFieldInterface::displaySumOfFlows(Vector3 camPos)
 {
     if (!this->displayingSumOfFlows)
         return;
     Vector3 color = HSVtoRGB(1.f, 1.f, 1.f);
     if (this->sumOfFlowsMesh.shader != nullptr)
         this->sumOfFlowsMesh.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f}); //std::vector<float>({0.f, 0.f, 1.f, .4f}));
+    this->sumOfFlowsMesh.reorderLines(camPos);
     this->sumOfFlowsMesh.display(GL_LINES, 5.f);
 }
 

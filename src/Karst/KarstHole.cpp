@@ -158,7 +158,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         for (const float& time : validTimesInPath) {
             if (time < t)
                 previousValidTime = time;
-            if (time > t) {
+            if (time >= t) {
                 nextValidTime = time;
                 break; // no need to go further
             }
@@ -302,6 +302,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
         cylindersEnd.push_back(std::get<1>(cylinder) - minVec);
     }
     Matrix3<float> mask((maxVec - minVec));
+#pragma omp parallel for collapse(3)
     for (int x = 0; x < mask.sizeX; x++) {
         for (int y = 0; y < mask.sizeY; y++) {
             for (int z = 0; z < mask.sizeZ; z++) {

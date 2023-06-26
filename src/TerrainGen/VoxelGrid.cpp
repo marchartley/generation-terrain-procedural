@@ -44,7 +44,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             float grid_height = gridHeights.at(x, y) * (this->getSizeZ() / (grid.getMaxHeight()));
-            int z = int(grid_height);
+            int z = int(std::max(grid_height, 2.f));
             // Positive values
             for (int i = 0; i < int(z); i++) {
                 _cachedVoxelValues.at(x, y, i) = .5f;
@@ -71,12 +71,19 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 
 VoxelGrid* VoxelGrid::fromCachedData()
 {
+    this->voxelsValuesStack.clear();
+    this->voxelsValuesAnchorStack.clear();
+    this->currentHistoryIndex = 0;
+    this->applyModification(this->_cachedVoxelValues);
+
+    /*
     for (auto& vc : this->chunks) {
         vc->currentHistoryIndex = 0;
         vc->voxelsValuesStack.clear();
         vc->voxelsValuesAnchorStack.clear();
         vc->applyModification(this->_cachedVoxelValues.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, vc->z, vc->z + vc->sizeZ));
     }
+    */
     if (this->_smoothingNeeded)  {
         this->smoothVoxels();
         this->_smoothingNeeded = false;
@@ -87,6 +94,9 @@ VoxelGrid* VoxelGrid::fromCachedData()
 
 void VoxelGrid::computeFlowfield()
 {
+    this->computeMultipleFlowfields();
+    this->flowField = this->getFlowfield();
+    /*
     Matrix3<float> obstacleMap = this->getVoxelValues().binarize();
 
     this->fluidSimulation.setObstacles(obstacleMap);
@@ -113,10 +123,13 @@ void VoxelGrid::computeFlowfield()
         }
     }
     this->flowField.raiseErrorOnBadCoord = true;
+    */
 }
 
 void VoxelGrid::computeMultipleFlowfields(int steps)
 {
+    auto smallerVoxelGrid = this->getVoxelValues().resize(this->getDimensions() / this->fluidSimRescale);
+    auto geom = Mesh().applyMarchingCubes(smallerVoxelGrid).getTriangles(); //this->getGeometry().getTriangles();
     Matrix3<float> obstacleMap = this->getVoxelValues().binarize();
     auto& densities = this->getEnvironmentalDensities();
     float maxDensity = densities.max();
@@ -127,14 +140,12 @@ void VoxelGrid::computeMultipleFlowfields(int steps)
     for (size_t iCurrent = 0; iCurrent < nbCurrentsToCompute; iCurrent++) {
 //        if (iCurrent > 0) continue;
         Vector3 simulationDimensions = Vector3(this->multipleFluidSimulations[iCurrent].sizeX, this->multipleFluidSimulations[iCurrent].sizeY, this->multipleFluidSimulations[iCurrent].sizeZ);
-        this->multipleFluidSimulations[iCurrent].setObstacles(obstacleMap);
+//        this->multipleFluidSimulations[iCurrent].setObstacles(obstacleMap);
+        this->multipleFluidSimulations[iCurrent].setObstacles(geom);
         for (int x = 0; x < simulationDimensions.x; x++) {
             for (int y = 0; y < simulationDimensions.y; y++) {
                 for (int z = 0; z < simulationDimensions.z; z++) {
                     Vector3 pos(x, y, z);
-//                    if (Vector3::distanceToBoundaries(pos, Vector3(0, 0, -100), simulationDimensions + Vector3(0, 0, 100)) < 2.f && obstacleMap.at(pos) == 0) {
-//                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = ((simulationDimensions * .5f) - pos).normalize() / (float) this->fluidSimRescale;
-//                    }
                     if (!Vector3::isInBox(pos - (this->multipleSeaCurrents[iCurrent].normalized() * 2.f), Vector3(), simulationDimensions))
                         this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = this->multipleSeaCurrents[iCurrent] / (float)this->fluidSimRescale;
                 }
@@ -195,10 +206,10 @@ void VoxelGrid::initMap()
     this->distanceField.clear();
     this->pressureField.clear();
     this->_cachedHistoryIndex = -1;
-
+/*
     // Create and configure FastNoise object
     this->noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-    this->noise.SetFrequency(/*blockSize*/ 1.f / (float) this->getSizeX());
+    this->noise.SetFrequency(1.f / (float) this->getSizeX());
     this->noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     this->noise.SetFractalLacunarity(2.0);
     this->noise.SetFractalGain(0.7);
@@ -232,20 +243,20 @@ void VoxelGrid::initMap()
         this->chunks[i]->updateLoDsAvailable();
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
     }
-
-    float dt = 0.1f;
-    float diffusion = 0.1f;
+*/
+    float dt = 1.f;
+    float diffusion = 0.0f;
     float viscosity = 0.1f;
-    int fluidSolverIterations = 10;
+    int fluidSolverIterations = 1;
     this->fluidSimRescale = 6;
-    this->fluidSimulation = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
+    this->fluidSimulation = StableFluids::StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
     this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
 
     this->multipleFluidSimulations.resize(4);
     this->multipleFlowFields.resize(4);
     this->multipleSeaCurrents.resize(4);
     for (size_t i = 0; i < this->multipleFluidSimulations.size(); i++) {
-        this->multipleFluidSimulations[i] = FluidSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
+        this->multipleFluidSimulations[i] = StableFluids::StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
         this->multipleFlowFields[i] = Matrix3<Vector3>(this->getDimensions());
     }
     float waterStrength = 1.f;
@@ -259,6 +270,7 @@ void VoxelGrid::initMap()
 
 void VoxelGrid::makeItFall(float erosionStrength)
 {
+    /*
     computeVoxelGroups();
     for(int i = 0; i < 1; i++) {
         for(std::shared_ptr<VoxelChunk>& vc : this->chunks) {
@@ -271,6 +283,7 @@ void VoxelGrid::makeItFall(float erosionStrength)
 //        float _a, _b;
 //        erod.Apply(0, _a, _b);
     }
+    */
 }
 void VoxelGrid::letGravityMakeSandFall(bool remesh)
 {
@@ -389,6 +402,15 @@ Matrix3<float> VoxelGrid::shareSandWithNeighbors()
 
 void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
 {
+    if (currentHistoryIndex < this->voxelsValuesStack.size()) {
+        this->voxelsValuesStack.erase(this->voxelsValuesStack.begin() + currentHistoryIndex, this->voxelsValuesStack.end());
+        this->voxelsValuesAnchorStack.erase(this->voxelsValuesAnchorStack.begin() + currentHistoryIndex, this->voxelsValuesAnchorStack.end());
+    }
+    this->currentHistoryIndex = std::max(1, this->currentHistoryIndex + 1);
+
+    this->voxelsValuesStack.push_back(modifications);
+    this->voxelsValuesAnchorStack.push_back(anchor);
+    /*
     int nbChunks = this->chunks.size();
     #pragma omp parallel for
     for (int i = 0; i < nbChunks; i++) {
@@ -412,7 +434,7 @@ void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
 //            vc->applyModification(modifications.subset(vc->x, vc->x + this->chunkSize, vc->y, vc->y + this->chunkSize, 0, 0 + this->getSizeZ()));
         }
     }
-
+    */
 }
 
 void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor, Vector3 anchor)
@@ -492,23 +514,38 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
 
 bool VoxelGrid::undo()
 {
+    if (this->voxelsValuesStack.size() > 1 && this->currentHistoryIndex > 0) {
+        this->currentHistoryIndex --;
+        return true;
+    }
+    return false;
+    /*
     bool effective = false;
     for (auto& vc : this->chunks)
         effective = vc->undo();
     return effective;
+    */
 }
 
 bool VoxelGrid::redo()
 {
+    if (this->currentHistoryIndex < this->voxelsValuesStack.size()) {
+        this->currentHistoryIndex ++;
+        return true;
+    }
+    return false;
+    /*
     bool effective = false;
     for (auto& vc : this->chunks)
         effective = vc->redo();
     return effective;
+    */
 }
 
 size_t VoxelGrid::getCurrentHistoryIndex() const
 {
-    return this->chunks.front()->currentHistoryIndex;
+    return this->currentHistoryIndex;
+//    return this->chunks.front()->currentHistoryIndex;
 }
 
 float VoxelGrid::getHeight(float x, float y) {
@@ -528,8 +565,9 @@ bool VoxelGrid::contains(float x, float y, float z) {
 
 bool VoxelGrid::checkIsInGround(Vector3 position)
 {
-    return _cachedVoxelValues.at(position) > 0.f;
-    //    return this->getVoxelValue(position) > 0.f;
+    return this->_cachedVoxelValues.at(position) > 0.f;
+//    return this->getVoxelValues().at(position) > 0.f;
+//    return this->getVoxelValue(position) > 0.f;
 }
 
 void VoxelGrid::limitVoxelValues(float limitedValue)
@@ -600,9 +638,13 @@ Matrix3<float> VoxelGrid::getVoxelValues()
 
         this->_cachedVoxelValues = Matrix3<float>(this->getSizeX(), this->getSizeY(), this->getSizeZ());
         this->_cachedVoxelValues.raiseErrorOnBadCoord = false;
-        for (auto& vc : this->chunks) {
+        for (int i = 0; i < this->currentHistoryIndex; i++)
+            _cachedVoxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
+        /*
+         for (auto& vc : this->chunks) {
             this->_cachedVoxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
         }
+        */
 //        this->updateLayersRepresentation();
     }
     return this->_cachedVoxelValues;
@@ -814,6 +856,8 @@ void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
 }
 void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
 {
+    this->applyModification(Matrix3<float>(1, 1, 1, -this->getVoxelValue(x, y, z) + newVal), Vector3(x, y, z));
+    /*
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1) {
@@ -823,6 +867,7 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
 //        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
         this->chunks[iChunk]->needRemeshing = true;
     }
+    */
 }
 
 float VoxelGrid::getOriginalVoxelValue(Vector3 pos) {
@@ -858,21 +903,27 @@ Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
 }
 
 Vector3 VoxelGrid::getFlowfield(float x, float y, float z) {
+    return this->getFlowfield().at(x, y, z);
+    /*
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
         return this->chunks[iChunk]->flowField(voxPosX, voxPosY, _z);
     return Vector3();
+    */
 }
 void VoxelGrid::setFlowfield(Vector3 pos, Vector3 newVal) {
     this->setFlowfield(pos.x, pos.y, pos.z, newVal);
 }
 void VoxelGrid::setFlowfield(float x, float y, float z, Vector3 newVal)
 {
+    this->multipleFlowFields[0].at(x, y, z) = newVal;
+    /*
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1)
         this->chunks[iChunk]->flowField(voxPosX, voxPosY, _z) = newVal;
+        */
 }
 
 int VoxelGrid::getVoxelGroup(Vector3 pos) {
@@ -935,25 +986,34 @@ int VoxelGrid::getMaxLoD()
 void VoxelGrid::saveState()
 {
     Matrix3<float> voxelValues = this->getVoxelValues();
-    for (auto& vc : chunks) {
+    this->voxelsValuesStack.clear();
+    this->voxelsValuesAnchorStack.clear();
+    this->currentHistoryIndex = 0;
+    /*for (auto& vc : chunks) {
         vc->voxelsValuesStack.clear();
         vc->voxelsValuesAnchorStack.clear();
         vc->currentHistoryIndex = 0;
-    }
+    }*/
     this->applyModification(voxelValues);
+
 }
 
 void VoxelGrid::saveMap(std::string filename)
 {
     std::ofstream out;
     out.open(filename);
+    out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << "\n";
+    auto values = this->getVoxelValues();
+    for (size_t i = 0; i < values.size(); i++)
+        out << values[i] << " ";
+    /*
     out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << " " << this->chunkSize << "\n";
     for (auto& vc : chunks) {
         for (int x = 0; x < vc->sizeX; x++)
             for (int y = 0; y < vc->sizeY; y++)
                 for (int z = 0; z < vc->sizeZ; z++)
                     out << vc->getVoxelValue(x, y, z) << " ";
-    }
+    }*/
     out.close();
 }
 void VoxelGrid::retrieveMap(std::string filename)
@@ -964,13 +1024,44 @@ void VoxelGrid::retrieveMap(std::string filename)
         std::cerr << "Unable to open file " << filename << "..." << std::endl;
         return;
     }
-    int _x = this->getSizeX(), _y = this->getSizeY(), _z = this->getSizeZ();
+    int _x, _y, _z;
     int _chunkSize;
     in >> _x >> _y >> _z >> _chunkSize;
     this->chunkSize = _chunkSize;
+    Vector3 finalSize = this->getDimensions();
     this->_cachedVoxelValues = Matrix3<float>(_x, _y, _z, 0.f);
     initMap();
 
+    if (_chunkSize > 0) {
+        float map_val;
+        int iChunk = 0;
+        for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
+            for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
+                Vector3 offset(xChunk * chunkSize, yChunk * chunkSize, 0.f);
+    //            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), Matrix3<float>(chunkSize, chunkSize, _z), this); //->shared_from_this());
+    //            this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
+    //            this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
+    //            Matrix3<float> values = Matrix3<float>(this->chunkSize, this->chunkSize, _z);
+                for (int x = 0; x < chunkSize; x++) {
+                    for (int y = 0; y < chunkSize; y++) {
+                        for (int z = 0; z < this->getSizeZ(); z++) {
+                            in >> map_val;
+                            this->_cachedVoxelValues.at(Vector3(x, y, z) + offset) = map_val;
+                        }
+                    }
+                }
+    //            this->applyModification(values);
+            }
+        }
+    } else {
+        for (size_t i = 0; i < _cachedVoxelValues.size(); i++)
+            in >> _cachedVoxelValues[i];
+    }
+    finalSize.z *= 2.f;
+    _cachedVoxelValues.resize(finalSize);
+    this->fromCachedData();
+
+/*
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
@@ -994,6 +1085,7 @@ void VoxelGrid::retrieveMap(std::string filename)
         }
         vc->applyModification(values);
     }
+    */
 }
 
 Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
@@ -1045,12 +1137,14 @@ Matrix3<float> &VoxelGrid::getEnvironmentalDensities()
 
 void VoxelGrid::updateEnvironmentalDensities(float waterLevel)
 {
+    this->storedWaterLevel = waterLevel;
+    float waterLevelOnVoxels = waterLevel * this->getSizeZ();
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             for (int z = 0; z < this->getSizeZ(); z++) {
 //                this->environmentalDensities.at(x, y, z) = (z < waterLevel ? (1000 + (1 - float(z)/waterLevel) * 1000)
 //                                                                           : (1000 - (z - waterLevel)/float(this->getSizeZ()) * 999));
-                this->environmentalDensities.at(x, y, z) = (z < waterLevel ? 1000 : 1);
+                this->environmentalDensities.at(x, y, z) = (z < waterLevelOnVoxels ? 1000 : 1);
             }
         }
     }
@@ -1093,7 +1187,7 @@ void VoxelGrid::smoothVoxels()
 
 void VoxelGrid::saveHeightmap(std::string heightmap_filename)
 {
-    std::string ext = toUpper(getExtention(heightmap_filename));
+    std::string ext = toUpper(getExtension(heightmap_filename));
     int width = this->getSizeX();
     int height = this->getSizeY();
     // To heightmap

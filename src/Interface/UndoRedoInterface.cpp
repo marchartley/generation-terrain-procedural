@@ -12,7 +12,7 @@ UndoRedoInterface::UndoRedoInterface(QWidget *parent) : ActionInterface("undo-re
     this->voxelGrid = voxelGrid;
 }*/
 
-void UndoRedoInterface::display()
+void UndoRedoInterface::display(Vector3 camPos)
 {
     // Nothing to display
 }

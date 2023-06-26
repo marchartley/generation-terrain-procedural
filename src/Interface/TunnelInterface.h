@@ -16,7 +16,7 @@ public:
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
     void replay(nlohmann::json action);
 
 

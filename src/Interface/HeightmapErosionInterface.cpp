@@ -23,7 +23,7 @@ void HeightmapErosionInterface::affectTerrains(std::shared_ptr<Heightmap> height
     this->heightmap = heightmap;
 }*/
 
-void HeightmapErosionInterface::display()
+void HeightmapErosionInterface::display(Vector3 camPos)
 {
     if (hydraulicMesh.shader != nullptr)
         hydraulicMesh.shader->setVector("color", std::vector<float>({1.f, .0f, .0f, 1.f}));

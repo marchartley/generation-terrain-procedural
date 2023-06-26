@@ -219,6 +219,24 @@ Vector3 Vector3::ceil() const
     return v;
 }
 
+Vector3 Vector3::wrap(Vector3 p, Vector3 mini, Vector3 maxi)
+{
+    p -= mini;
+    maxi -= mini;
+    Vector3 rounded = p.roundedDown();
+    Vector3 decimals = p - rounded;
+    Vector3 wrap = Vector3(int(rounded.x + maxi.x) % int(maxi.x),
+                           int(rounded.y + maxi.y) % int(maxi.y),
+                           int(rounded.z + maxi.z) % int(maxi.z)
+                           ) + decimals + mini;
+    return wrap;
+}
+
+float Vector3::magnitude()
+{
+    return this->norm();
+}
+
 float Vector3::length()
 {
     return this->norm();

@@ -28,6 +28,9 @@ ViewerInterface::ViewerInterface() {
     this->patchesInterface = std::make_shared<PrimitivePatchesInterface>(this);
     this->savingInterface = std::make_shared<TerrainSavingInterface>(this);
     this->meshInstanceAmplificationInterface = std::make_shared<MeshInstanceAmplificationInterface>(this);
+    this->sphSimulationInterface = std::make_shared<SPHSimulationInterface>(this);
+    this->flipSimulationInterface = std::make_shared<FLIPSimulationInterface>(this);
+    this->coralIslandGeneratorInterface = std::make_shared<CoralIslandGeneratorInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                 {
@@ -46,7 +49,10 @@ ViewerInterface::ViewerInterface() {
                     { "smoothInterface", smoothInterface},
                     { "terrainSavingInterface", savingInterface},
                     { "meshInstanceAmplificationInterface", meshInstanceAmplificationInterface},
-                    { "primitivePatchInterface", patchesInterface}
+                    { "primitivePatchInterface", patchesInterface},
+                    { "SPHSimulation", sphSimulationInterface },
+                    { "FLIPSimulation", flipSimulationInterface },
+                    { "coralIslandGeneratorInterface", coralIslandGeneratorInterface}
                 });
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -54,22 +60,26 @@ ViewerInterface::ViewerInterface() {
         actionInterface.second->affectSavingFile(actionsOnMap, actionsHistoryFile, historyFilename);
     }
 
+//    QObject::connect(terrainGenerationInterface.get(), &TerrainGenerationInterface::updated, erosionInterface.get(), &ErosionInterface::computePredefinedRocksLocations);
+//    QObject::connect(terrainGenerationInterface.get(), &TerrainGenerationInterface::updated, sphSimulationInterface.get(), &SPHSimulationInterface::updateParticles);
+
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [&](){
 //        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
-                this->terrainGenerationInterface->createTerrainFromFile("saved_maps/coral_base.png");
-        //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/one_slope.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
-        //this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/cube_2.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/midCave");
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
-        //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 
 //        this->terrainGenerationInterface->prepareShader();
@@ -168,7 +178,10 @@ void ViewerInterface::setupUi()
         {erosionInterface,                      "erosion.png",                  "Erosion on 3D terrain",                physicsMenu},
         {meshInstanceAmplificationInterface,    "amplification_instances.png",  "Amplify the terrain with meshes",      viewMenu},
         {spaceColonization,                     "karst_button.png",             "Create karsts using space colonization",diggingMenu},
-        {karstPathGeneration,                   "karst_peytavie_button.png",    "Create karsts with graphs",            diggingMenu}
+        {karstPathGeneration,                   "karst_peytavie_button.png",    "Create karsts with graphs",            diggingMenu},
+        {sphSimulationInterface,                "",                             "SPH Simulation",                       physicsMenu},
+        {flipSimulationInterface,               "",                             "FLIP Simulation",                      physicsMenu},
+        {coralIslandGeneratorInterface,         "",                             "Create coral island",                  diggingMenu}
     };
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu* , std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -188,7 +201,11 @@ void ViewerInterface::setupUi()
         {nullptr,                       "no_display.png",                   "Hide map",                         viewMenu,       [=]() { this->viewer->setViewerMode(NO_DISPLAY);} },
         {nullptr,                       "wire_mode.png",                    "Display wireframe",                viewMenu,       [=]() { this->viewer->setViewerMode(WIRE_MODE); } },
         {nullptr,                       "fill_mode.png",                    "Display solid",                    viewMenu,       [=]() { this->viewer->setViewerMode(FILL_MODE); } },
-        {smoothInterface,               "smooth_button.png",                "Smooth the terrain",               modelMenu,      [=]() { smoothInterface->applySmooth(); } }
+        {smoothInterface,               "smooth_button.png",                "Smooth the terrain",               modelMenu,      [=]() { smoothInterface->applySmooth(); } },
+        {terrainGenerationInterface,    "",                                 "Use heightmap as reference",       modelMenu,      [=]() { terrainGenerationInterface->heightmapToAll(); } },
+        {terrainGenerationInterface,    "",                                 "Use voxels as reference",          modelMenu,      [=]() { terrainGenerationInterface->voxelsToAll(); } },
+        {terrainGenerationInterface,    "",                                 "Use layers as reference",          modelMenu,      [=]() { terrainGenerationInterface->layersToAll(); } },
+        {terrainGenerationInterface,    "",                                 "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
     };
 
     for (auto& informations : interfacesToOpen) {
@@ -411,6 +428,8 @@ void ViewerInterface::openMapUI()
 {
     QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
     terrainGenerationInterface->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
+    viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
+//    this->terrainGenerationInterface->prepareShader(true);
 }
 
 void ViewerInterface::saveMapUI()

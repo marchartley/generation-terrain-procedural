@@ -225,8 +225,9 @@ def method3(heights: np.ndarray, subsidenceBetweenFrames: float = 0.05):
 
 def main():
     random.seed(1)
+    heights = readImage("../saved_maps/heightmaps/new_one_slope.png")
     # heights = distanceTransform(readImage("skeleton_1.png"))
-    heights = distanceMap(createRandomWalk())
+    # heights = distanceMap(createRandomWalk())
     # plt.imshow(heights, cmap="gray")
     # plt.show()
     # heights = normalizeImage(readImage("random_heightmaps/Height Map PNG_cropped.png", (200, 200)))
