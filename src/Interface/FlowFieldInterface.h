@@ -15,10 +15,10 @@ public:
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch);
 
-    void display();
-    void displayPressureDensities();
-    void displayFlows();
-    void displaySumOfFlows();
+    void display(Vector3 camPos = Vector3(false));
+    void displayPressureDensities(Vector3 camPos = Vector3(false));
+    void displayFlows(Vector3 camPos = Vector3(false));
+    void displaySumOfFlows(Vector3 camPos = Vector3(false));
 
     void replay(nlohmann::json action);
 

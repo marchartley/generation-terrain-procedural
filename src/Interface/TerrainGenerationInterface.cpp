@@ -17,7 +17,7 @@ TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : Action
 void TerrainGenerationInterface::setWaterLevel(float newLevel)
 {
     this->waterLevel = newLevel;
-    voxelGrid->updateEnvironmentalDensities(newLevel * voxelGrid->getSizeZ());
+    voxelGrid->updateEnvironmentalDensities(newLevel);
     Q_EMIT updated();
 }
 
@@ -43,11 +43,101 @@ void TerrainGenerationInterface::afterTerrainUpdated()
 
 }
 
+void TerrainGenerationInterface::heightmapToVoxels()
+{
+    voxelGrid->from2DGrid(*heightmap);
+}
+
+void TerrainGenerationInterface::heightmapToLayers()
+{
+    layerGrid->from2DGrid(*heightmap);
+}
+
+void TerrainGenerationInterface::heightmapToImplicit()
+{
+    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(heightmap->getHeights())};
+}
+
+void TerrainGenerationInterface::heightmapToAll()
+{
+    heightmapToVoxels();
+    heightmapToLayers();
+    heightmapToImplicit();
+}
+
+void TerrainGenerationInterface::voxelsToHeightmap()
+{
+    heightmap->fromVoxelGrid(*voxelGrid);
+}
+
+void TerrainGenerationInterface::voxelsToLayers()
+{
+    layerGrid->fromVoxelGrid(*voxelGrid);
+}
+
+void TerrainGenerationInterface::voxelsToImplicit()
+{
+    implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())}; // Yeah, I can pass a 3D grid in this function
+}
+
+void TerrainGenerationInterface::voxelsToAll()
+{
+    voxelsToHeightmap();
+    voxelsToLayers();
+    voxelsToImplicit();
+}
+
+void TerrainGenerationInterface::layersToVoxels()
+{
+    voxelGrid->fromLayerBased(*layerGrid);
+}
+
+void TerrainGenerationInterface::layersToHeightmap()
+{
+    heightmap->fromLayerGrid(*layerGrid);
+}
+
+void TerrainGenerationInterface::layersToImplicit()
+{
+    // ..?!
+}
+
+void TerrainGenerationInterface::layersToAll()
+{
+    layersToVoxels();
+    layersToHeightmap();
+    layersToImplicit();
+}
+
+void TerrainGenerationInterface::implicitToVoxels()
+{
+    voxelGrid->_cachedVoxelValues = implicitTerrain->getVoxelized();
+    voxelGrid->fromCachedData();
+}
+
+void TerrainGenerationInterface::implicitToLayers()
+{
+    layerGrid->reset();
+    layerGrid->add(implicitTerrain.get());
+}
+
+void TerrainGenerationInterface::implicitToHeightmap()
+{
+    // ..?!
+}
+
+void TerrainGenerationInterface::implicitToAll()
+{
+    implicitToHeightmap();
+    implicitToVoxels();
+    implicitToLayers();
+}
+
 void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles)
 {
     this->mapMode = _mapMode;
     this->smoothingAlgorithm = _smoothingAlgorithm;
-    this->displayParticles = _displayParticles;
+//    this->displayParticles = _displayParticles;
 }
 
 void TerrainGenerationInterface::displayWaterLevel()
@@ -100,9 +190,9 @@ void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared
 void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
 {
     this->lastLoadedMap = filename;
-    std::string ext = toUpper(getExtention(filename));
+    std::string ext = toUpper(getExtension(filename));
 
-    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
+    Vector3 terrainSize = Vector3(100, 100, 50); //Vector3(128, 128, 64);
     if (!this->heightmap)
         this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
     if (!this->voxelGrid)
@@ -114,11 +204,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z);
+        std::cout << "Heightmap : " << timeIt([=]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); }) << "ms" << std::endl;
 
-        voxelGrid->from2DGrid(*heightmap);
+        std::cout << "Voxels : " << timeIt([=]() { voxelGrid->from2DGrid(*heightmap); }) << "ms" << std::endl;
 //        layerGrid->fromVoxelGrid(*voxelGrid);
-        layerGrid->from2DGrid(*heightmap);
+        std::cout << "Layers : " << timeIt([=]() { layerGrid->from2DGrid(*heightmap); }) << "ms" << std::endl;
 
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
@@ -142,8 +232,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     } else /*if (ext == "DATA" || ext.empty())*/ {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
-        voxelGrid->smoothVoxels();
-        voxelGrid->smoothVoxels();
+//        voxelGrid->smoothVoxels();
+//        voxelGrid->smoothVoxels();
         heightmap->fromVoxelGrid(*voxelGrid);
 
     } /*else {
@@ -192,7 +282,7 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
 
 void TerrainGenerationInterface::saveTerrain(std::string filename)
 {
-    std::string ext = toUpper(getExtention(filename));
+    std::string ext = toUpper(getExtension(filename));
     if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
         // To heightmap
         this->heightmap->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
@@ -251,7 +341,7 @@ QLayout* TerrainGenerationInterface::createGUI()
 
 
 
-void TerrainGenerationInterface::prepareShader()
+void TerrainGenerationInterface::prepareShader(bool reload)
 {
     bool verbose = true;
 
@@ -408,11 +498,11 @@ void TerrainGenerationInterface::prepareShader()
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
     implicitMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
 
-    this->particlesMesh = Mesh(this->randomParticlesPositions,
-                               std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
-                               true, GL_POINTS);
-    particlesMesh.shader->setVector("color", std::vector<float>({1.f, 1.f, 1.f, .2f}));
-    this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
+//    this->particlesMesh = Mesh(this->randomParticlesPositions,
+//                               std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
+//                               true, GL_POINTS);
+//    particlesMesh.shader->setVector("color", std::vector<float>({1.f, 1.f, 1.f, .2f}));
+//    this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
 
     this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
 
@@ -664,14 +754,8 @@ void TerrainGenerationInterface::prepareShader()
 
 
 
-void TerrainGenerationInterface::display()
+void TerrainGenerationInterface::display(Vector3 camPos)
 {
-    /*if (this->heightmap != nullptr) {
-        GlobalsGL::f()->glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, biomeFieldTex);
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY, 0,
-        GL_ALPHA_INTEGER_EXT, GL_INT, ((Matrix3<float>)(heightmap->getBiomeIndices()) / 10.f).data.data());
-    }*/
 
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
@@ -682,8 +766,7 @@ void TerrainGenerationInterface::display()
 
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
-//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-//            GL_RED, GL_FLOAT, heightmap->heights.data.data());//heightData.data.data());
+
     Matrix3<float> heights = heightmap->getHeights();
     float maxHeight = heights.max();
     this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
@@ -707,7 +790,6 @@ void TerrainGenerationInterface::display()
         maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
     Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->getBiomeIndices(); //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
     for (size_t i = 0; i < heights.size(); i++) {
-//        int biomeID = (resizedBiomeIndices[i].empty() ? 0 : resizedBiomeIndices[i].back());
         float colorTextureOffset = 1.f;
         float normalTextureOffset = 1.f;
         float displacementTextureOffset = 1.f;
@@ -722,7 +804,6 @@ void TerrainGenerationInterface::display()
                     displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
             }
         }
-//        Vector3 color = HSVtoRGB(biomeID / (float)maxBiomeID, 1, 1);
         gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
         heightmapData[i * 4 + 0] = colorTextureOffset;
         heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
@@ -746,7 +827,6 @@ void TerrainGenerationInterface::display()
                 positions[i] = heightData.getCoordAsVector3(i);
                 heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
             }
-            heightmapMesh.useIndices = false;
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
             this->heightmapMesh.display(GL_POINTS);
@@ -757,6 +837,15 @@ void TerrainGenerationInterface::display()
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
             Matrix3<float> values = voxelGrid->getVoxelValues();
+            if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                std::vector<Vector3> points(values.size());
+                for (size_t i = 0; i < points.size(); i++) {
+                    values[i] = (std::max(-3.f, std::min(3.f, values[i])) / 6.f) + 0.5;
+                    points[i] = values.getCoordAsVector3(i);
+                }
+                marchingCubeMesh.useIndices = false;
+                marchingCubeMesh.fromArray(points);
+            }
             marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
@@ -789,7 +878,7 @@ void TerrainGenerationInterface::display()
             layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             layersMesh.shader->setFloat("waterRelativeHeight", waterLevel);
 
-            if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex) {
+            //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                 this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
                 Matrix3<int> materials;
                 Matrix3<float> matHeights;
@@ -803,7 +892,7 @@ void TerrainGenerationInterface::display()
                 }
                 layersMesh.fromArray(layersPoints);
                 layersMesh.update();
-            }
+//            }
             this->layersMesh.display(GL_POINTS);
         }
     } else if (mapMode == IMPLICIT_MODE) {
@@ -828,10 +917,6 @@ void TerrainGenerationInterface::display()
                 implicitMesh.display( GL_POINTS );
                 implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
             }
-            // Check if something changed on the terrain :
-//            if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
-//                this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
-//            }
         }
     }
 }

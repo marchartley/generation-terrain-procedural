@@ -14,7 +14,7 @@ SpaceColonizationInterface::~SpaceColonizationInterface()
 {
 }
 
-void SpaceColonizationInterface::display()
+void SpaceColonizationInterface::display(Vector3 camPos)
 {
     if (this->isVisible())
     {

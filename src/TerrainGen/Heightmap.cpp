@@ -517,7 +517,7 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
 
 void Heightmap::saveHeightmap(std::string heightmap_filename)
 {
-    std::string ext = toUpper(getExtention(heightmap_filename));
+    std::string ext = toUpper(getExtension(heightmap_filename));
     int width = this->getSizeX();
     int height = this->getSizeY();
     // To heightmap

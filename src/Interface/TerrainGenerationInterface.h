@@ -13,7 +13,7 @@ class TerrainGenerationInterface : public ActionInterface
 public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
     void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting = 0.0);
@@ -32,7 +32,7 @@ public Q_SLOTS:
     void show();
     void hide();
 
-    void prepareShader();
+    void prepareShader(bool reload = false);
 
     void setWaterLevel(float newLevel);
 
@@ -40,6 +40,26 @@ public Q_SLOTS:
     void reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
 
     void afterTerrainUpdated();
+
+    void heightmapToVoxels();
+    void heightmapToLayers();
+    void heightmapToImplicit();
+    void heightmapToAll();
+
+    void voxelsToHeightmap();
+    void voxelsToLayers();
+    void voxelsToImplicit();
+    void voxelsToAll();
+
+    void layersToVoxels();
+    void layersToHeightmap();
+    void layersToImplicit();
+    void layersToAll();
+
+    void implicitToVoxels();
+    void implicitToLayers();
+    void implicitToHeightmap();
+    void implicitToAll();
 
 
 public:
@@ -56,7 +76,7 @@ public:
     void setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles);
     MapMode mapMode = MapMode::VOXEL_MODE;
     SmoothingAlgorithm smoothingAlgorithm = SmoothingAlgorithm::MARCHING_CUBES;
-    bool displayParticles = false;
+//    bool displayParticles = false;
 
 protected:
     Mesh marchingCubeMesh;
@@ -74,8 +94,7 @@ protected:
     Vector3 voxelGridOffset = Vector3(0, 0, 0);
     float voxelGridScaling = 1.f;
 
-    Mesh particlesMesh;
-    std::vector<Vector3> randomParticlesPositions;
+//    std::vector<Vector3> randomParticlesPositions;
 
     std::string lastLoadedMap = "";
 

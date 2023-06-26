@@ -83,6 +83,8 @@ public:
 
     void addImage(Matrix3<Vector3> image, bool normalize = false);
     void addImage(Matrix3<float> image, bool normalize = false);
+    void addImage(Matrix3<double> image, bool normalize = false);
+    void addImage(Matrix3<int> image, bool normalize = false);
 
     void draw();
     int exec();

@@ -18,37 +18,8 @@
 
 using namespace std;
 
-//#include "src/third-party/GridFluidSim3D/src/main.h"
-/*
-#include "FluidSimulation_FLIP/FLIPSimulation.h"
-#include "FluidSimulation_ShallowWater/ShallowWaterSimulation.h"
-#include "FluidSimulation_SPH/SPHSimulation.h"
-
-using namespace ShallowWater;
-*/
 int main(int argc, char *argv[])
 {
-    /*
-    // Testing Shallow water
-    ShallowWater::ShallowWaterSimulation simulation;
-
-    int N = 200;
-    simulation.init(N);
-    auto initialgrid = simulation.grid;
-
-    // Add some water to the top left cell
-    simulation.grid[0].water_height = 100;
-
-    visualize(simulation.grid, N, 20);
-
-    // Run the simulation
-    simulation.run(0.1, 500);
-
-    visualize(simulation.grid, N, 20);
-    visualize_diff(initialgrid, simulation.grid, N, 20);
-    return 0;
-
-*/
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -74,7 +45,6 @@ int main(int argc, char *argv[])
     qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-
 
 /*
     int isize = 64;

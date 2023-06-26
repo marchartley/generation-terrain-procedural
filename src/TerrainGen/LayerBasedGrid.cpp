@@ -177,6 +177,8 @@ void LayerBasedGrid::from2DGrid(Heightmap grid)
             };
         }
     }
+    this->cleanLayers();
+    this->_historyIndex = -1;
 }
 
 void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
@@ -344,7 +346,7 @@ Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 min
 std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
     int x = 0;
-    if (currentHistoryIndex != _historyIndex)
+    if (true || currentHistoryIndex != _historyIndex)
     {
         int maxStackSize = 0;
         for (auto& cell : layers)

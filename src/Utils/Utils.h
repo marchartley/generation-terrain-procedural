@@ -28,7 +28,7 @@ Vector3 HSVtoRGB(float H, float S,float V);
 std::string toUpper(std::string s);
 std::string toLower(std::string s);
 std::string toCapitalize(std::string s);
-std::string getExtention(std::string file);
+std::string getExtension(std::string file);
 std::string getFilename(std::string path);
 
 float rad2deg(float rad);

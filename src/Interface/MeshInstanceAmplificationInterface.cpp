@@ -6,7 +6,7 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
 
 }
 
-void MeshInstanceAmplificationInterface::display()
+void MeshInstanceAmplificationInterface::display(Vector3 camPos)
 {
 
     if (this->displayRocks || this->displayCorals) {
@@ -170,38 +170,6 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     auto endTime = std::chrono::system_clock::now();
     if (verbose)
         std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms" << std::endl;
-
-    /*
-    {
-        auto startTime = std::chrono::system_clock::now();
-        QTemporaryDir tempDirCorals;
-        QDirIterator itCorals(":/models_3d/corals/", QDir::Files, QDirIterator::Subdirectories);
-        this->possibleCorals = std::vector<Mesh>();
-        std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
-        while (itCorals.hasNext()) {
-            QString dir = itCorals.next();
-            QString newPath = tempDirCorals.path() + QFileInfo(dir).fileName();
-            QFile::copy(dir, newPath);
-            Mesh m = Mesh(coralsShader);
-            // Normalize it and move it upward so the anchor is on the ground
-            possibleCorals.push_back(m.fromStl(newPath.toStdString()).normalize().rotate(deg2rad(180), 0, 0)); // .translate(0.f, 0.f, .25f));
-        }
-        QTemporaryDir tempDirRocks;
-        QDirIterator itRocks(":/models_3d/rocks/", QDir::Files, QDirIterator::Subdirectories);
-        this->possibleRocks = std::vector<Mesh>();
-        std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
-        while (itRocks.hasNext()) {
-            QString dir = itRocks.next();
-            QString newPath = tempDirRocks.path() + QFileInfo(dir).fileName();
-            QFile::copy(dir, newPath);
-            Mesh m = Mesh(rocksShader);
-            possibleRocks.push_back(m.fromStl(newPath.toStdString()).normalize());
-        }
-
-        auto endTime = std::chrono::system_clock::now();
-        std::cout << "Loaded models in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms (sequential)" << std::endl;
-    }
-    */
 }
 
 QLayout* MeshInstanceAmplificationInterface::createGUI()

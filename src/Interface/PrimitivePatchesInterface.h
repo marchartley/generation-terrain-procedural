@@ -15,7 +15,7 @@ class PrimitivePatchesInterface : public ActionInterface
 public:
     PrimitivePatchesInterface(QWidget *parent = nullptr);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
     void reloadShaders();
 
     void replay(nlohmann::json action);

@@ -27,7 +27,7 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     hotreloadTimer->start();
 }
 
-void PrimitivePatchesInterface::display()
+void PrimitivePatchesInterface::display(Vector3 camPos)
 {
     if (this->isVisible()) {
         if (previewMesh.shader != nullptr) {
@@ -159,12 +159,12 @@ QLayout *PrimitivePatchesInterface::createGUI()
     layout->addWidget(createMultiColumnGroup({
                                                     createSphereButton,
                                                     createBlockButton,
-                                                    createGaussianButton,
+//                                                    createGaussianButton,
                                                     createCylinderButton,
                                                     createRockButton,
                                                     createMountainButton,
-                                                    createDuneButton,
-                                                    createBasinButton,
+//                                                    createDuneButton,
+//                                                    createBasinButton,
                                                     createCaveButton,
                                                     createArchButton,
                                                     createNoise2DButton,
@@ -172,7 +172,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     createPolygonButton,
                                                     createTunnelButton,
                                                     createFromFileButton,
-                                                    createRippleButton
+//                                                    createRippleButton
                                           }));
 //    layout->addWidget(createSliderGroup("Density", densitySlider));
     layout->addWidget(createMultiColumnGroup({

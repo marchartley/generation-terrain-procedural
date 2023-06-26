@@ -11,7 +11,7 @@ ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterfac
     setAddingMode(addingMode);
 }
 
-void ManualEditionInterface::display()
+void ManualEditionInterface::display(Vector3 camPos)
 {
 //    std::cout << (readyToModify ? "modif" : "not modif") << std::endl;
     if (this->readyToModify) {
@@ -87,7 +87,6 @@ void ManualEditionInterface::applyModification()
     Matrix3<float> modif = RockErosion::createPrecomputedAttackMask(size);
     modif *= strength / (modif.at(size * .5f, size * .5f, size * .5f));
     voxelGrid->applyModification(modif * (addingMode ? 1.f : -1.f), position - Vector3(size * .5f, size * .5f, size * .5f));
-    std::cout << modif.displayAsPlot() << std::endl;
 
     this->addTerrainAction(nlohmann::json({
                                            {"size", size},
@@ -102,6 +101,9 @@ void ManualEditionInterface::applyModification()
 void ManualEditionInterface::mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel *model)
 {
     this->setPosition(mouseWorldPosition);
+    if (readyToModify) {
+        this->applyModification();
+    }
 }
 
 void ManualEditionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)

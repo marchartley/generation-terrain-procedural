@@ -19,13 +19,13 @@ public:
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
 
     void replay(nlohmann::json action);
 
     QLayout* createGUI();
 
-    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE};
+    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS};
 
 public Q_SLOTS:
     void show();
@@ -44,6 +44,8 @@ public Q_SLOTS:
     void browseAirFlowFromFile();
     void browseDensityFieldFromFile();
 
+    void computePredefinedRocksLocations();
+
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<UnderwaterErosion> erosion;
@@ -56,7 +58,7 @@ protected:
 
     float erosionSize = 8.f;
     float erosionStrength = .35f;
-    int erosionQtt = 10;
+    int erosionQtt = 1;
     float rockRandomness = .1f;
 
     float gravity = .981f;
@@ -71,9 +73,9 @@ protected:
     float materialImpact = 0.f;
 
     float airFlowfieldRotation = 0.f;
-    float waterFlowfieldRotation = 270.f;
+    float waterFlowfieldRotation = 90.f;
     float airForce = 0.f;
-    float waterForce = 0.f;
+    float waterForce = 1.f;
 
     float dt = 1.f;
 

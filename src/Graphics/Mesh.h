@@ -45,6 +45,11 @@ public:
 
     void setShader(std::shared_ptr<Shader> shader);
 
+    void reorderVertices(Vector3 camPos);
+    void reorderLines(Vector3 camPos);
+    void reorderTriangles(Vector3 camPos);
+    void reorderAny(Vector3 camPos, int nbVertexToUse);
+
     std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
 
     std::string toOBJ();

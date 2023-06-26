@@ -9,7 +9,7 @@ BiomeInterface::BiomeInterface(QWidget* parent)
     createGUI();
 }
 
-void BiomeInterface::display()
+void BiomeInterface::display(Vector3 camPos)
 {
     if (this->isVisible()) {
         auto queue = std::vector<std::shared_ptr<BiomeInstance>>({this->rootBiome});

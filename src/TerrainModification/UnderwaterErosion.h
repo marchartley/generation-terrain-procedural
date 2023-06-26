@@ -8,6 +8,34 @@
 #include "Karst/KarstHoleProfile.h"
 #include "Karst/KarstHole.h"
 
+struct ErosionParticle {
+    Vector3 pos;
+    Vector3 force;
+    Vector3 velocity;
+    Vector3 dir; // Normalized velocity
+
+    float density;
+    float radius;
+    float volume;
+    float mass;
+    float capacity;
+    float maxCapacity;
+};
+
+struct EnvironmentProperty {
+    Vector3 gravity;
+    Vector3 flowfield;
+    float density;
+    float viscosity;
+};
+
+struct MaterialProperty {
+    Vector3 normal;
+    float density;
+    float criticalShearStress;
+    float resistance;
+};
+
 class UnderwaterErosion
 {
 public:

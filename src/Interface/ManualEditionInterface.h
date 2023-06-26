@@ -15,7 +15,7 @@ class ManualEditionInterface : public ActionInterface
 public:
     ManualEditionInterface(QWidget *parent = nullptr);
 
-    void display();
+    void display(Vector3 camPos = Vector3(false));
     void replay(nlohmann::json action);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);

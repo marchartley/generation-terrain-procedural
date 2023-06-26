@@ -48,7 +48,7 @@ public:
 
 //    int sizeX, sizeY, sizeZ;
     int _cachedHistoryIndex = -1;
-    int currentHistoryIndex = -2;
+    int currentHistoryIndex = 0;
     int _historyIndex = -3;
 
 //    Vector3 dimensions;

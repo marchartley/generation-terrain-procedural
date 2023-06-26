@@ -222,6 +222,16 @@ void Plotter::addImage(Matrix3<float> image, bool normalize)
     return this->addImage(copy, normalize);
 }
 
+void Plotter::addImage(Matrix3<double> image, bool normalize)
+{
+    return this->addImage((Matrix3<float>)image, normalize);
+}
+
+void Plotter::addImage(Matrix3<int> image, bool normalize)
+{
+    return this->addImage((Matrix3<float>)image, normalize);
+}
+
 void Plotter::draw()
 {
 //    QTransform prevState = this->chartView->transform();
@@ -245,7 +255,7 @@ void Plotter::draw()
         int ViewH = static_cast<int>(chartView->height());
 
         //scale the image to fit plot area
-        QImage scaledImage = backImage->scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation);
+        QImage scaledImage = backImage->scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
 //        *backImage = backImage->scaled(QSize(width, height));
 
         //We have to translate the image because setPlotAreaBackGround

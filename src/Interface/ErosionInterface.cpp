@@ -26,14 +26,27 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->rocksPathSuccess.useIndices = false;
     this->rocksPathSuccess.shader->setVector("color", std::vector<float>({.1f, .7f, .2f, .5f}));
 
+    this->erosionProcess = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
+    this->erosionProcess.heightmap = heightmap.get();
+    this->erosionProcess.implicitTerrain = this->implicitTerrain.get();
+    this->erosionProcess.layerBasedGrid = layerGrid.get();
 
+    this->computePredefinedRocksLocations();
 
-    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE};
+    //    QTimer::singleShot(1000, this, &ErosionInterface::testManyManyErosionParameters);
+}
 
+void ErosionInterface::computePredefinedRocksLocations()
+{
+    if (this->voxelGrid == nullptr) return;
+    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS};
+
+    auto voxels = voxelGrid->getVoxelValues();
+    auto terrainSurface = Mesh().applyMarchingCubes(voxels).vertexArray;
     for (auto& loc : locs) {
-        if (initialPositionsAndDirections.count(loc) == 0) {
+//        if (initialPositionsAndDirections.count(loc) == 0) {
             initialPositionsAndDirections[loc] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20, std::vector<std::pair<Vector3, Vector3>>(1000));
-        auto& poses = initialPositionsAndDirections[loc];
+            auto& poses = initialPositionsAndDirections[loc];
             for (size_t i = 0; i < poses.size(); i++) {
                 for (size_t j = 0; j < poses[i].size(); j++) {
                     Vector3 position;
@@ -68,23 +81,19 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                     } else if (loc == EVERYWHERE) {
                         position = Vector3::random(Vector3(), voxelGrid->getDimensions());
                         direction = Vector3();
+                    } else if (loc == JUST_ABOVE_VOXELS) {
+                        position = terrainSurface[int(random_gen::generate(terrainSurface.size()))] + Vector3(0, 0, 1);
+                        direction = Vector3(0, 0, 0);
                     }
 
                     poses[i][j] = {position, direction};
                 }
             }
         }
-    }
-
-    this->erosionProcess = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
-    this->erosionProcess.heightmap = heightmap.get();
-    this->erosionProcess.implicitTerrain = this->implicitTerrain.get();
-    this->erosionProcess.layerBasedGrid = layerGrid.get();
-
-//    QTimer::singleShot(1000, this, &ErosionInterface::testManyManyErosionParameters);
+//    }
 }
 
-void ErosionInterface::display()
+void ErosionInterface::display(Vector3 camPos)
 {
     if (this->displayTrajectories) {
         this->rocksPathSuccess.display(GL_LINES, 3.f);
@@ -116,7 +125,7 @@ void ErosionInterface::throwFromSky()
 }
 void ErosionInterface::throwFromCam()
 {
-    this->throwFrom(RIVER);
+    this->throwFrom(JUST_ABOVE_VOXELS);
 }
 void ErosionInterface::throwFromSide()
 {
@@ -201,10 +210,12 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
         sumTerrainModifTime += terrainModifTime;
         std::vector<Vector3> asOneVector;
         for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
-            auto points = lastRocksLaunched[i].getPath(std::min(200, int(lastRocksLaunched[i].points.size())));
-            for (size_t j = 0; j < points.size() - 1; j++) {
-                asOneVector.push_back(points[j]);
-                asOneVector.push_back(points[j + 1]);
+            auto points = lastRocksLaunched[i].points; // lastRocksLaunched[i].getPath(std::min(100, int(lastRocksLaunched[i].points.size())));
+            for (int j = 0; j < int(points.size()) - 1; j++) {
+                if ((points[j] - points[j+1]).norm2() < 20.f) {
+                    asOneVector.push_back(points[j]);
+                    asOneVector.push_back(points[j + 1]);
+                }
             }
         }
         this->rocksPathSuccess.fromArray(asOneVector);

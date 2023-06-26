@@ -61,7 +61,7 @@ RangeSliderHandle::RangeSliderHandle(float val, RangeSlider *_parent)
   setAcceptDrops(true);
   //hard coded path to image :/ sorry
   QPixmap pix = QPixmap::fromImage(QImage(parent->pathToHandleImage));
-  pix =  pix.scaled(25, 25, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+  pix =  pix.scaled(15, 15, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
   setPixmap(pix);
 //  this->updatePos();
 }

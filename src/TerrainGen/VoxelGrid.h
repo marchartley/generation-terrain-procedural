@@ -15,7 +15,7 @@ class VoxelGrid;
 #include "Utils/FastNoiseLit.h"
 #include "DataStructure/Matrix3.h"
 
-#include "FluidSimulation/FluidSimulation.h"
+#include "FluidSimulation/StableFluidsFluidSimulation.h"
 // #include "src/sim-fluid-ethanjli/fluidsystem.h"
 #include "TerrainGen/TerrainModel.h"
 
@@ -138,9 +138,9 @@ public:
     int chunkSize = 20;
     FastNoiseLite noise;
     NoiseMinMax noiseMinMax;
-    FluidSimulation fluidSimulation;
+    StableFluids::StableFluidsSimulation fluidSimulation;
 
-    std::vector<FluidSimulation> multipleFluidSimulations;
+    std::vector<StableFluids::StableFluidsSimulation> multipleFluidSimulations;
     std::vector<Vector3> multipleSeaCurrents;
     std::vector<Matrix3<Vector3>> multipleFlowFields;
 
@@ -159,6 +159,8 @@ public:
 
     std::vector<Matrix3<float>> voxelsValuesStack;
     std::vector<Vector3> voxelsValuesAnchorStack;
+
+    float storedWaterLevel = 0.f;
 };
 
 #endif // VOXELGRID_H

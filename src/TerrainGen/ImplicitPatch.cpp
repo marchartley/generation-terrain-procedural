@@ -1,6 +1,7 @@
 #include "ImplicitPatch.h"
 #include "Utils/ShapeCurve.h"
 //#include "Utils/stb_image.h"
+#include "Utils/Utils.h"
 
 float ImplicitPatch::isovalue = .5f;
 float ImplicitPatch::zResolution = .1f;
@@ -493,15 +494,21 @@ void ImplicitPrimitive::update()
 {
 
     if (this->predefinedShape == ImplicitHeightmap) {
-        if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
-            this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
-        this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
-//        auto cacheCopy = cachedHeightmap;
-        this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
-//            auto heightmap = cachedHeightmap;
-            auto valueAt = this->cachedHeightmap.interpolate(pos.xy());
-            return valueAt;
-        });
+        if (this->cachedHeightmap.height() > 1) {
+            this->evalFunction = [=](Vector3 pos) -> float {
+                return (this->getBBox().contains(pos) ? clamp(this->cachedHeightmap.interpolate(pos) + ImplicitPatch::isovalue, 0.f, 1.f) : 0.f);
+            };
+        } else {
+            if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
+                this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
+            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
+    //        auto cacheCopy = cachedHeightmap;
+            this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
+    //            auto heightmap = cachedHeightmap;
+                auto valueAt = this->cachedHeightmap.interpolate(pos.xy());
+                return valueAt;
+            });
+        }
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
     }
@@ -605,37 +612,48 @@ ImplicitPatch *ImplicitPrimitive::copy() const
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions, ImplicitPrimitive *prim)
 {
-    int imgW, imgH, nbChannels;
-    unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
-    if (data == NULL)
-    {
-        std::cerr << "Error : Impossible to load " << filename << "\n";
-        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-        exit (-1);
-        return nullptr;
-    }
-    Matrix3<float> map(imgW, imgH);
-    for (int x = 0; x < imgW; x++) {
-        for (int y = 0; y < imgH; y++) {
-            float value = (float)data[x + y * imgW];
-            map.at(x, y) = value;
+    std::string ext = getExtension(filename);
+    if (isIn(ext, {"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
+        int imgW, imgH, nbChannels;
+        unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
+        if (data == NULL)
+        {
+            std::cerr << "Error : Impossible to load " << filename << "\n";
+            std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
+            std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
+            exit (-1);
+            return nullptr;
         }
-    }
-    stbi_image_free(data);
+        Matrix3<float> map(imgW, imgH);
+        for (int x = 0; x < imgW; x++) {
+            for (int y = 0; y < imgH; y++) {
+                float value = (float)data[x + y * imgW];
+                map.at(x, y) = value;
+            }
+        }
+        stbi_image_free(data);
 
-    if (dimensions.isValid()) {
-        map = map.resize(dimensions.x, dimensions.y, 1);
-        map = map.normalize() * dimensions.z;
+        if (dimensions.isValid()) {
+            map = map.resize(dimensions.x, dimensions.y, 1);
+            map = map.normalize() * dimensions.z;
+        }
+        return ImplicitPrimitive::fromHeightmap(map, filename,  prim);
+    } else {
+        VoxelGrid voxels = VoxelGrid();
+        voxels.retrieveMap(filename);
+        Matrix3<float> map = voxels.getVoxelValues();
+        return ImplicitPrimitive::fromHeightmap(map, filename, prim);
     }
-    return ImplicitPrimitive::fromHeightmap(map, filename,  prim);
 }
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, std::string filename, ImplicitPrimitive *prim)
 {
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
-    prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
+    if (heightmap.height() > 1)
+        prim->setDimensions(heightmap.getDimensions());
+    else
+        prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
     prim->position = Vector3(0, 0, 0);
 //    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
 //        return heightmap.data[heightmap.getIndex(pos.xy())];
