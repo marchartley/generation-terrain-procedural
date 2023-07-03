@@ -1,6 +1,8 @@
 #include "TerrainGenerationInterface.h"
 
 #include "Biomes/BiomeInstance.h"
+#include "Interface/FancySlider.h"
+#include "Interface/InterfaceUtils.h"
 #include "Utils/ConstraintsSolver.h"
 #include "Utils/ShapeCurve.h"
 #include "Utils/Utils.h"
@@ -56,6 +58,7 @@ void TerrainGenerationInterface::heightmapToLayers()
 void TerrainGenerationInterface::heightmapToImplicit()
 {
     implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(heightmap->getHeights())};
+    implicitTerrain->_cached = false;
 }
 
 void TerrainGenerationInterface::heightmapToAll()
@@ -78,6 +81,7 @@ void TerrainGenerationInterface::voxelsToLayers()
 void TerrainGenerationInterface::voxelsToImplicit()
 {
     implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())}; // Yeah, I can pass a 3D grid in this function
+    implicitTerrain->_cached = false;
 }
 
 void TerrainGenerationInterface::voxelsToAll()
@@ -153,11 +157,60 @@ void TerrainGenerationInterface::displayWaterLevel()
     waterLevelMesh.display();
 }
 
-void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting)
+void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, bool noise2D, float noiseStrength, float frequency, float lacunarity, float noise_shifting)
 {
-//    std::shared_ptr<VoxelGrid> tempMap = std::make_shared<VoxelGrid>(nx, ny, nz/*, blockSize*/, noise_shifting);
-//    tempMap->fromIsoData();
-    VoxelGrid tempMap = VoxelGrid(nx, ny, nz, noise_shifting);
+//    std::cout << noiseStrength << " " << frequency << " " << lacunarity << std::endl;
+    Matrix3<float> values(nx, ny, nz);
+
+    // Create and configure FastNoise object
+    if (frequency > 0.f) {
+        FastNoiseLite noise;
+        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+        noise.SetFrequency(1.f / (float) (values.sizeX * frequency));
+        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
+        noise.SetFractalLacunarity(lacunarity);
+        noise.SetFractalGain(0.7);
+        noise.SetFractalWeightedStrength(0.5);
+        noise.SetFractalOctaves(10);
+
+        if (noise2D) {
+            for (int x = 0; x < values.sizeX; x++) {
+                for (int y = 0; y < values.sizeY; y++) {
+                    float grid_height = noise.GetNoise((float)x, (float)y) * noiseStrength * values.sizeZ + this->waterLevel * values.sizeZ;
+                    int z = int(std::max(grid_height, 2.f));
+                    // Positive values
+                    for (int i = 0; i < int(z); i++) {
+                        values.at(x, y, i) = .5f;
+                    }
+                    if (z < values.sizeZ) {
+                        values.at(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
+                        for (int i = z+1; i < values.sizeZ; i++) {
+                            values.at(x, y, i) = -.5f;
+                        }
+                    }
+                }
+            }
+            values = values.meanSmooth();
+        } else {
+            for (int x = 0; x < values.sizeX; x++) {
+                for (int y = 0; y < values.sizeY; y++) {
+                    for (int z = 0; z < values.sizeZ; z++) {
+                        values.at(x, y, z) = noise.GetNoise((float)x, (float)y, (float)z) * noiseStrength;
+                        if (z < this->waterLevel * values.sizeZ)
+                            values.at(x, y, z) = std::abs(values.at(x, y, z));
+                    }
+                }
+            }
+        }
+    } else {
+        for (int x = 0; x < values.sizeX; x++) {
+            for (int y = 0; y < values.sizeY; y++) {
+                for (int z = 0; z < values.sizeZ; z++) {
+                    values.at(x, y, z) = (z < this->waterLevel * values.sizeZ ? 2.f : -2.f);
+                }
+            }
+        }
+    }
 
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
@@ -166,7 +219,9 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*
     if (!this->layerGrid)
         this->layerGrid = std::make_shared<LayerBasedGrid>();
 
-    *voxelGrid = tempMap;
+//    *voxelGrid = tempMap;
+    voxelGrid->_cachedVoxelValues = values;
+    voxelGrid->fromCachedData();
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
 
@@ -180,6 +235,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz/*
                                                    {"noise_shifting", noise_shifting}
                                                }}
                                           }));
+    Q_EMIT this->updated();
 }
 
 void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
@@ -229,12 +285,20 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                     possibleAction.second->replay(action);
             }
         }
-    } else /*if (ext == "DATA" || ext.empty())*/ {
+    } else if (ext == "STL") {
+        Mesh m;
+        m.fromStl(filename);
+        voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
+        voxelGrid->fromCachedData();
+        heightmap->fromVoxelGrid(*voxelGrid);
+        layerGrid->fromVoxelGrid(*voxelGrid);
+    }else /*if (ext == "DATA" || ext.empty())*/ {
         // Then it's our custom voxel grid file
         voxelGrid->retrieveMap(filename);
 //        voxelGrid->smoothVoxels();
 //        voxelGrid->smoothVoxels();
         heightmap->fromVoxelGrid(*voxelGrid);
+        layerGrid->fromVoxelGrid(*voxelGrid);
 
     } /*else {
         // In any other case, consider that nothing has been done, cancel.
@@ -334,8 +398,69 @@ void TerrainGenerationInterface::show()
 
 QLayout* TerrainGenerationInterface::createGUI()
 {
-    QLayout* nothing = new QHBoxLayout;
-    return nothing;
+    QLayout* layout = new QHBoxLayout;
+
+    QLabel* heightmapPathLabel = new QLabel(QString::fromStdString(getFilename(this->lastLoadedMap)));
+    QPushButton* loadHeightmapButton = new QPushButton("Load");
+    QPushButton* reloadButton = new QPushButton("Reload");
+    QPushButton* saveHeightmapButton = new QPushButton("Save");
+    QDoubleSpinBox* widthEdit = new QDoubleSpinBox(); // (QString::fromStdString(std::to_string(int(voxelGrid->getSizeX()))));
+    QDoubleSpinBox* depthEdit = new QDoubleSpinBox(); //(QString::fromStdString(std::to_string(int(voxelGrid->getSizeY()))));
+    QDoubleSpinBox* heightEdit = new QDoubleSpinBox(); // (QString::fromStdString(std::to_string(int(voxelGrid->getSizeZ()))));
+
+    FancySlider* noiseStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, 0.01f);
+    FancySlider* noiseLacunaritySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 4.f, 0.01f);
+    FancySlider* noiseFrequencySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 3.f, 0.01f);
+    QPushButton* createFromNoiseButton = new QPushButton("Noise");
+
+    QRadioButton* noise2D = new QRadioButton("2D");
+    QRadioButton* noise3D = new QRadioButton("3D");
+
+    layout->addWidget(createVerticalGroup({
+                                              createHorizontalGroup({heightmapPathLabel, loadHeightmapButton}),
+                                              createHorizontalGroup({reloadButton, saveHeightmapButton}),
+                                              createHorizontalGroup({
+                                                  widthEdit, new QLabel("x"), depthEdit, new QLabel("x"), heightEdit
+                                              }),
+
+                                              createMultipleSliderGroup({
+//                                                  {"strength", noiseStrengthSlider},
+                                                  {"frequency", noiseFrequencySlider},
+                                                  {"lacunarity", noiseLacunaritySlider}
+                                              }),
+//                                              createFromNoiseButton
+                                              createHorizontalGroup({
+                                                  noise2D, noise3D
+                                              })
+                                          }));
+    widthEdit->setDecimals(0);
+    depthEdit->setDecimals(0);
+    heightEdit->setDecimals(0);
+
+    widthEdit->setValue(voxelGrid->getSizeX());
+    depthEdit->setValue(voxelGrid->getSizeX());
+    heightEdit->setValue(voxelGrid->getSizeX());
+
+    noiseStrengthSlider->setfValue(1.f);
+    noiseLacunaritySlider->setfValue(2.f);
+    noiseFrequencySlider->setfValue(1.f);
+
+    noise2D->setChecked(false);
+    noise3D->setChecked(true);
+
+    QObject::connect(loadHeightmapButton, &QPushButton::pressed, this, [=]() { this->openMapUI(); });
+    QObject::connect(reloadButton, &QPushButton::pressed, this, [=]() { this->reloadTerrain(this->actionInterfaces); });
+    QObject::connect(saveHeightmapButton, &QPushButton::pressed, this, [=]() { this->saveMapUI(); });
+//    QObject::connect(createFromNoiseButton, &QPushButton::pressed, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(widthEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(depthEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(heightEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(noiseFrequencySlider, &FancySlider::floatValueChanged, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(noiseStrengthSlider, &FancySlider::floatValueChanged, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(noiseLacunaritySlider, &FancySlider::floatValueChanged, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(noise2D, &QRadioButton::pressed, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), true, noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(noise3D, &QRadioButton::pressed, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), false, noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    return layout;
 }
 
 
@@ -901,6 +1026,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
         } else {
             Matrix3<float> values;
             std::cout << "evals: " << timeIt([&]() { values = implicitTerrain->getVoxelized(voxelGrid->getDimensions()); }) << "ms" << std::endl;
+//            std::cout << values.sum() << std::endl;
             implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
             implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
@@ -919,4 +1045,20 @@ void TerrainGenerationInterface::display(Vector3 camPos)
             }
         }
     }
+}
+
+
+
+void TerrainGenerationInterface::openMapUI()
+{
+    QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
+    this->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
+//    this->viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
+//    this->terrainGenerationInterface->prepareShader(true);
+}
+
+void TerrainGenerationInterface::saveMapUI()
+{
+    QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
+    this->saveTerrain(q_filename.toStdString());
 }

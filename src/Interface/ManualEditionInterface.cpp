@@ -13,6 +13,9 @@ ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterfac
 
 void ManualEditionInterface::display(Vector3 camPos)
 {
+    if (!this->isVisible())
+        return;
+
 //    std::cout << (readyToModify ? "modif" : "not modif") << std::endl;
     if (this->readyToModify) {
         this->grabber->setState((this->addingMode ? POSITIVE : NEGATIVE));
@@ -102,7 +105,7 @@ void ManualEditionInterface::mouseMovedOnMapEvent(Vector3 mouseWorldPosition, Te
 {
     this->setPosition(mouseWorldPosition);
     if (readyToModify) {
-        this->applyModification();
+//        this->applyModification();
     }
 }
 

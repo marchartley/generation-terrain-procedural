@@ -29,17 +29,18 @@ KarstPathGenerationInterface::~KarstPathGenerationInterface()
 
 void KarstPathGenerationInterface::display(Vector3 camPos)
 {
-    if (this->isVisible()) {
-        this->sourceControlPoint->display();
-        this->fractureVector->display();
-        if (this->waterLevelMesh.shader != nullptr)
-            this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
-        this->waterLevelMesh.display(GL_LINES, 5.f);
-        if (this->pathsMeshes.shader != nullptr)
-            this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-        this->pathsMeshes.display(GL_LINES, 5.f);
-        this->waterHeightSlider->display();
-    }
+    if (!this->isVisible())
+        return;
+
+    this->sourceControlPoint->display();
+    this->fractureVector->display();
+    if (this->waterLevelMesh.shader != nullptr)
+        this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
+    this->waterLevelMesh.display(GL_LINES, 5.f);
+    if (this->pathsMeshes.shader != nullptr)
+        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+    this->pathsMeshes.display(GL_LINES, 5.f);
+    this->waterHeightSlider->display();
 }
 
 void KarstPathGenerationInterface::replay(nlohmann::json action)

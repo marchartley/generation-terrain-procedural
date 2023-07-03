@@ -55,8 +55,8 @@ public Q_SLOTS:
 
     void hideAllInteractiveParts();
 
-    void openMapUI();
-    void saveMapUI();
+//    void openMapUI();
+//    void saveMapUI();
 
 public:
     StickyFrame* frame;
@@ -101,7 +101,7 @@ public:
 
     std::shared_ptr<ActionInterface> lastOpenedInterface;
 
-    std::string mapSavingFolder = "saved_maps/";
+//    std::string mapSavingFolder = "saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;
 };
 

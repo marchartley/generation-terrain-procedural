@@ -35,19 +35,20 @@ void SPHSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap
 
 void SPHSimulationInterface::display(Vector3 camPos)
 {
-    if (isVisible()) {
-        for (int _ = 0; _ < 1; _++)
-            simulation.step();
-        updateSimulationMesh();
+    if (!this->isVisible())
+        return;
+
+    for (int _ = 0; _ < 1; _++)
+        simulation.step();
+    updateSimulationMesh();
 
 //        ghostsMesh.shader->setVector("color", std::vector<float>{1.f, .5f, 0.f, .4f});
 //        ghostsMesh.display(GL_POINTS); //GL_TRIANGLES);
-        particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
-        particlesMesh.reorderVertices(camPos);
-        particlesMesh.display(GL_POINTS); //GL_TRIANGLES);
+    particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
+    particlesMesh.reorderVertices(camPos);
+    particlesMesh.display(GL_POINTS); //GL_TRIANGLES);
 //        connectionsMesh.shader->setVector("color", std::vector<float>{0.f, 1.f, 0.f, .4f});
 //        connectionsMesh.display(GL_LINES);
-    }
 }
 
 void SPHSimulationInterface::replay(nlohmann::json action)

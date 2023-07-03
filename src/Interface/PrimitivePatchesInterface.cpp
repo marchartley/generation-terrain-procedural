@@ -29,31 +29,32 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
 
 void PrimitivePatchesInterface::display(Vector3 camPos)
 {
-    if (this->isVisible()) {
-        if (previewMesh.shader != nullptr) {
-            this->setSelectedShape(this->currentShapeSelected);
-            previewMesh.shader->setVector("color", std::vector<float>({0.f, 0.4f, 0.8f, 0.5f}));
-            previewMesh.display();
-        }
-        if (!patchAABBoxMesh.vertexArray.empty() && patchAABBoxMesh.shader != nullptr) {
-            GLint polygonMode;
-            glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            patchAABBoxMesh.shader->setVector("color", std::vector<float>({0.f, 0.8f, 0.4f, 1.0f}));
-            patchAABBoxMesh.display(GL_LINES, 3.f);
-            glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
-        }
-        this->primitiveControlPoint->display();
+    if (!this->isVisible())
+        return;
 
-        if (this->debugMeshDisplayed) {
+    if (previewMesh.shader != nullptr) {
+        this->setSelectedShape(this->currentShapeSelected);
+        previewMesh.shader->setVector("color", std::vector<float>({0.f, 0.4f, 0.8f, 0.5f}));
+        previewMesh.display();
+    }
+    if (!patchAABBoxMesh.vertexArray.empty() && patchAABBoxMesh.shader != nullptr) {
+        GLint polygonMode;
+        glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        patchAABBoxMesh.shader->setVector("color", std::vector<float>({0.f, 0.8f, 0.4f, 1.0f}));
+        patchAABBoxMesh.display(GL_LINES, 3.f);
+        glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
+    }
+    this->primitiveControlPoint->display();
+
+    if (this->debugMeshDisplayed) {
 //            this->debuggingVoxelsMesh.shader->setVector("color", std::vector<float> {0.f, 0.f, 0.f, 1.f});
-            displayDebuggingVoxels();
-        }
+        displayDebuggingVoxels();
+    }
 
-        if (parametricCurveMesh.shader != nullptr) {
-            parametricCurveMesh.shader->setVector("color", std::vector<float> {1.f, 1.f, 1.f, 1.f});
-            this->displayParametricCurve();
-        }
+    if (parametricCurveMesh.shader != nullptr) {
+        parametricCurveMesh.shader->setVector("color", std::vector<float> {1.f, 1.f, 1.f, 1.f});
+        this->displayParametricCurve();
     }
 }
 
@@ -639,6 +640,7 @@ void PrimitivePatchesInterface::resetPatch()
 void PrimitivePatchesInterface::updateMapWithCurrentPatch()
 {
     this->implicitTerrain->updateCache();
+    this->implicitTerrain->augment();
 //    this->layerGrid->layers = this->layerGrid->previousState;
     this->layerGrid->reset();
 //    this->implicitTerrain->cleanCache();
@@ -992,7 +994,7 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
         if (currentlySelectedPatch != nullptr) {
             auto patchAABBox = currentlySelectedPatch->getBBox();
             auto patchSupportedAABBox = currentlySelectedPatch->getSupportBBox();
-            Vector3 patchDimensions = patchAABBox.dimensions();
+//            Vector3 patchDimensions = patchAABBox.dimensions();
             Vector3 patchSupportedDimensions = patchSupportedAABBox.dimensions();
             Vector3 controlPosition = patchAABBox.min();
             this->primitiveControlPoint->setPosition(controlPosition /*+ (selectedPatch->getDimensions() * .5f).xy()*/);
@@ -1018,6 +1020,11 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
             }
             this->debugMeshDisplayed = true;
         }
+        auto hierarchy = naiveApproachToGetAllParents(currentlySelectedPatch);
+        for (auto& node : hierarchy) {
+            std::cout << node->name << "\n";
+        }
+        std::cout << std::endl;
     }
     if (!newSelectionIsExisting) {
         this->patchAABBoxMesh.fromArray(std::vector<Vector3>{});
@@ -1400,6 +1407,17 @@ ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch
         }
     }
     return nullptr;
+}
+
+std::vector<ImplicitPatch *> PrimitivePatchesInterface::naiveApproachToGetAllParents(ImplicitPatch *child)
+{
+    std::vector<ImplicitPatch*> parents = {child};
+    auto parent = naiveApproachToGetParent(child);
+    while(parent != nullptr) {
+        parents.push_back(parent);
+        parent = naiveApproachToGetParent(parent);
+    }
+    return parents;
 }
 
 
