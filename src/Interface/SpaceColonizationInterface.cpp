@@ -16,38 +16,33 @@ SpaceColonizationInterface::~SpaceColonizationInterface()
 
 void SpaceColonizationInterface::display(Vector3 camPos)
 {
-    if (this->isVisible())
-    {
-        // Hide control points when visiting
-        if (visitingCamera->isVisiting) {
-            for (auto& ctrl : this->controlPoints) {
-                ctrl->hide();
-            }
-            this->startingPoint->hide();
-        } else {
-            for (auto& ctrl : this->controlPoints) {
-                ctrl->show();
-            }
-            this->startingPoint->show();
-        }
+    if (!this->isVisible())
+        return;
 
-
-        for (auto& ctrl : this->controlPoints) {
-            ctrl->display();
-        }
-//        if (this->startingPoint->mesh.shader != nullptr)
-//            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
-        this->startingPoint->setGrabberStateColor(INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f});
-        this->startingPoint->display();
-        if (this->pathsMeshes.shader != nullptr)
-            this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-        this->pathsMeshes.display(GL_LINES, 5.f);
-    } else {
-        // Just make sure that they are not interacting when hidden
+    // Hide control points when visiting
+    if (visitingCamera->isVisiting) {
         for (auto& ctrl : this->controlPoints) {
             ctrl->hide();
         }
+        this->startingPoint->hide();
+    } else {
+        for (auto& ctrl : this->controlPoints) {
+            ctrl->show();
+        }
+        this->startingPoint->show();
     }
+
+
+    for (auto& ctrl : this->controlPoints) {
+        ctrl->display();
+    }
+//        if (this->startingPoint->mesh.shader != nullptr)
+//            this->startingPoint->mesh.shader->setVector("color", std::vector<float>({100/255.f, 10/255.f, 255/255.f, 1.f}));
+    this->startingPoint->setGrabberStateColor(INACTIVE, {100/255.f, 10/255.f, 255/255.f, 1.f});
+    this->startingPoint->display();
+    if (this->pathsMeshes.shader != nullptr)
+        this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
+    this->pathsMeshes.display(GL_LINES, 5.f);
 }
 
 void SpaceColonizationInterface::replay(nlohmann::json action)

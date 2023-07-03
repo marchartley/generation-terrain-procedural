@@ -8,17 +8,10 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
 
 void MeshInstanceAmplificationInterface::display(Vector3 camPos)
 {
+    if (!this->isVisible())
+        return;
 
     if (this->displayRocks || this->displayCorals) {
-        // Check if something changed on the terrain :
-        /*std::cout << this->previousHistoryIndex << " " << voxelGrid->getCurrentHistoryIndex() << std::flush;
-        if (this->previousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
-            this->previousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
-            regenerateRocksPositions();
-            std::cout << "Regenerated!" << std::endl;
-        } else {
-            std::cout << "Nothing" << std::endl;
-        }*/
         if (displayRocks) {
             for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
                 int iRock;

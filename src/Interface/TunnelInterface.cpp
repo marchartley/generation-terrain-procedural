@@ -20,6 +20,9 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
 
 void TunnelInterface::display(Vector3 camPos)
 {
+    if (!this->isVisible())
+        return;
+
     for (auto& ctrl : this->controlPoints) {
 //        std::cout << ctrl->
 //        ctrl->move(ctrl->getPosition());

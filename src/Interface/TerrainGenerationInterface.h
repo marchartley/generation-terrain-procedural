@@ -16,7 +16,7 @@ public:
     void display(Vector3 camPos = Vector3(false));
     void displayWaterLevel();
 
-    void createTerrainFromNoise(int nx, int ny, int nz/*, float blockSize*/, float noise_shifting = 0.0);
+    void createTerrainFromNoise(int nx, int ny, int nz, bool noise2D = false, float noiseStrength = 1.f, float frequency = 1.f, float lacunarity = 2.f, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void createTerrainFromImplicitPatches(nlohmann::json json_content);
@@ -61,6 +61,8 @@ public Q_SLOTS:
     void implicitToHeightmap();
     void implicitToAll();
 
+    void openMapUI();
+    void saveMapUI();
 
 public:
     float minIsoLevel = -1000.0;
@@ -77,6 +79,9 @@ public:
     MapMode mapMode = MapMode::VOXEL_MODE;
     SmoothingAlgorithm smoothingAlgorithm = SmoothingAlgorithm::MARCHING_CUBES;
 //    bool displayParticles = false;
+
+    std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
+    std::string mapSavingFolder = "saved_maps/";
 
 protected:
     Mesh marchingCubeMesh;

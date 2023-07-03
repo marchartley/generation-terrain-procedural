@@ -68,6 +68,7 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/coral_long.png");
         this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
@@ -166,6 +167,7 @@ void ViewerInterface::setupUi()
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu*>> interfacesToOpen = {
 //         Interface to open                      Button image                    Description                             Menu
 //     Called with "createGUI()"
+        {terrainGenerationInterface,            "terrain_button.png",           "Terrain generation",                   modelMenu},
         {faultSlip,                             "fault-slip_button.png",        "Fault slips",                          diggingMenu},
         {flowField,                             "flowfield_button.png",         "Currents simulation",                  physicsMenu},
         {tunnelInterface,                       "tunnel_button.png",            "Tunnels creation",                     diggingMenu},
@@ -187,11 +189,11 @@ void ViewerInterface::setupUi()
 //         Main interface     Button image                        Description                         Menu            Function to call
         {undoRedoInterface,             "undo_button.png",                  "Undo last action",                 editMenu,       [=]() { undoRedoInterface->undo(); }},
         {undoRedoInterface,             "redo_button.png",                  "Redo last action",                 editMenu,       [=]() { undoRedoInterface->redo(); }},
-        {terrainGenerationInterface,    "reload_button.png",                "Reload terrain",                   fileMenu,       [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); }},
-        {nullptr,                       "open_button.png",                  "Open an existing map",             fileMenu,       [=]() { this->openMapUI(); }},
-        {nullptr,                       "save_button.png",                  "Save the current map",             fileMenu,       [=]() { this->saveMapUI(); }},
-        {nullptr,                       "recording_button.png",             "Start / stop recording the screen",recordingMenu,  [=]() {this->viewer->startStopRecording(); }},
-        {nullptr,                       "snapshot.png",                     "Take snapshot of screen",          recordingMenu,  [=]() {this->viewer->screenshot(); }},
+//        {terrainGenerationInterface,    "reload_button.png",                "Reload terrain",                   fileMenu,       [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); }},
+//        {terrainGenerationInterface,    "open_button.png",                  "Open an existing map",             fileMenu,       [=]() { terrainGenerationInterface->openMapUI(); }},
+//        {terrainGenerationInterface,    "save_button.png",                  "Save the current map",             fileMenu,       [=]() { terrainGenerationInterface->saveMapUI(); }},
+        {nullptr,                       "recording_button.png",             "Start / stop recording the screen",recordingMenu,  [=]() { this->viewer->startStopRecording(); }},
+        {nullptr,                       "snapshot.png",                     "Take snapshot of screen",          recordingMenu,  [=]() { this->viewer->screenshot(); }},
         {nullptr,                       "display-marching-cubes_button.png","Use the Marching Cubes algorithm", viewMenu,       [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES); } },
         {nullptr,                       "display-voxels_button.png",        "Use raw voxels",                   viewMenu,       [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::NONE); } },
         {nullptr,                       "heightmap_button.png",             "Display using heightmap structure",modelMenu,      [=]() { this->viewer->setMapMode(MapMode::GRID_MODE); } },
@@ -424,17 +426,17 @@ void ViewerInterface::hideAllInteractiveParts()
     this->update();
 }
 
-void ViewerInterface::openMapUI()
-{
-    QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
-    terrainGenerationInterface->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
-    viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
-//    this->terrainGenerationInterface->prepareShader(true);
-}
+//void ViewerInterface::openMapUI()
+//{
+//    QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
+//    terrainGenerationInterface->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
+//    viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
+////    this->terrainGenerationInterface->prepareShader(true);
+//}
 
-void ViewerInterface::saveMapUI()
-{
-    QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
-    terrainGenerationInterface->saveTerrain(q_filename.toStdString());
-}
+//void ViewerInterface::saveMapUI()
+//{
+//    QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
+//    terrainGenerationInterface->saveTerrain(q_filename.toStdString());
+//}
 

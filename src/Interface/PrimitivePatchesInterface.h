@@ -83,6 +83,7 @@ protected:
     ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitOperator* replacedPatch = nullptr);
     ImplicitPatch* findPrimitiveById(int ID);
     ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
+    std::vector<ImplicitPatch*> naiveApproachToGetAllParents(ImplicitPatch* child);
 
     QDateTime lastTimeFileHasBeenModified;
 
