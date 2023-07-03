@@ -4,38 +4,45 @@ using namespace FLIP;
 
 FLIPSimulationInterface::FLIPSimulationInterface(QWidget *parent) : ActionInterface("FLIPSimulation", parent)
 {
-    simulation = FLIPSimulation(1000, 10, 10, 5, 1, .2f, 2000, 0.1f);
+    simulation = FLIPSimulation(1000, 20, 20, 10, 1, .2f, 20000, 0.1f);
 }
 
 void FLIPSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 
-    this->updateParticles();
 
     const char* vParticleShader = "src/Shaders/particle.vert";
     const char* gParticleShader = "src/Shaders/particle.geom";
     const char* fParticleShader = "src/Shaders/particle.frag";
+    const char* vNoShader = "src/Shaders/no_shader.vert";
+    const char* fNoShader = "src/Shaders/no_shader.frag";
 
     this->particlesMesh = Mesh(std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader));
     this->particlesMesh.useIndices = false;
-    this->connectionsMesh = Mesh(std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader));
-    this->connectionsMesh.useIndices = false;
+    this->debugObstacleMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
+    this->debugObstacleMesh.useIndices = true;
+    this->debugObstacleMesh.cullFace = true;
+    this->updateParticles();
 }
 
 void FLIPSimulationInterface::display(Vector3 camPos)
 {
-    if (isVisible()) {
-        for (int _ = 0; _ < 1; _++)
-            simulation.step();
-        updateSimulationMesh();
+    if (!this->isVisible())
+        return;
+    for (int _ = 0; _ < 1; _++)
+        simulation.step();
+    updateSimulationMesh();
 
-        particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
-        particlesMesh.reorderVertices(camPos);
-        particlesMesh.display(GL_POINTS); //GL_TRIANGLES);
-        connectionsMesh.shader->setVector("color", std::vector<float>{0.f, 1.f, 0.f, .4f});
-        connectionsMesh.display(GL_LINES);
-    }
+    debugObstacleMesh.shader->setVector("color", std::vector<float>{0.f, 1.f, 0.f, .4f});
+    debugObstacleMesh.display(GL_TRIANGLES);
+    debugObstacleMesh.shader->setVector("color", std::vector<float>{0.f, 0.f, 0.f, .4f});
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    debugObstacleMesh.display(GL_TRIANGLES);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
+    particlesMesh.reorderVertices(camPos);
+    particlesMesh.display(GL_POINTS); //GL_TRIANGLES);
 }
 
 void FLIPSimulationInterface::replay(nlohmann::json action)
@@ -103,8 +110,8 @@ void FLIPSimulationInterface::updateParticles()
 {
     if (voxelGrid == nullptr) return;
 
-    Matrix3<float> values = voxelGrid->getVoxelValues();
-    values = values.resize(20, 20, 10);
+    Matrix3<float> bigValues = voxelGrid->getVoxelValues();
+    Matrix3<float> values = bigValues.resize(20, 20, 10);
     Mesh m;
     auto triangles = m.applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
@@ -114,4 +121,16 @@ void FLIPSimulationInterface::updateParticles()
     }
 
     simulation.setObstacles(triangles);
+
+    std::vector<Vector3> allVertices;
+    allVertices.reserve(triangles.size() * 3);
+    for (size_t iTriangle = 0; iTriangle < triangles.size(); iTriangle++) {
+        const auto& triangle = triangles[iTriangle];
+        for (const auto& vertex : triangle) {
+            allVertices.push_back(vertex * (bigValues.getDimensions() / simulation.dimensions));
+        }
+    }
+    debugObstacleMesh.fromArray(allVertices);
+//    debugObstacleMesh.colorsArray = std::vector<Vector3>(allVertices.size(), Vector3(0, 1.f, 0));
+//    debugObstacleMesh.computeNormals();
 }

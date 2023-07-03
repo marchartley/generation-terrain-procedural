@@ -54,86 +54,88 @@ void FlowFieldInterface::displayPressureDensities(Vector3 camPos)
         return;
 
     std::vector<float> isoValues = {0.5f}; // {0.9f, 0.5f, 0.2f};
-
-    std::vector<Vector3> positions(pressureDensityVoxels.size());
-    for (size_t i = 0; i < positions.size(); i++) {
-        positions[i] = pressureDensityVoxels.getCoordAsVector3(i);
-    }
-    pressureDensityMesh.fromArray(positions);
-    pressureDensityMesh.update();
-    GlobalsGL::f()->glBindVertexArray(pressureDensityMesh.vao);
-    pressureDensityMesh.shader->setTexture3D("dataFieldTex", 0, pressureDensityVoxels + .5f);
-    pressureDensityMesh.shader->setInt("dataFieldTex", 0);
-    pressureDensityMesh.shader->setInt("edgeTableTex", 1);
-    pressureDensityMesh.shader->setInt("triTableTex", 2);
-    pressureDensityMesh.shader->setFloat("isolevel", 0.f);
-    pressureDensityMesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
-    pressureDensityMesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
-    pressureDensityMesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
-    pressureDensityMesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
-    pressureDensityMesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
-    pressureDensityMesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
-    pressureDensityMesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
-    pressureDensityMesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
-    pressureDensityMesh.shader->setBool("useMarchingCubes", true);
-    //Edge Table texture//
-    //This texture store the 256 different configurations of a marching cube.
-    //This is a table accessed with a bitfield of the 8 cube edges states
-    //(edge cut by isosurface or totally in or out).
-    //(cf. MarchingCubes.cpp)
-
-    GLuint edgeTableTex, triTableTex;
-    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
-    //Integer textures must use nearest filtering mode
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    //We create an integer texture with new GL_EXT_texture_integer formats
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
-
-    //Triangle Table texture//
-    //This texture store the vertex index list for
-    //generating the triangles of each configurations.
-    //(cf. MarchingCubes.cpp)
-
-    glGenTextures(1, &triTableTex);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
-    glEnable(GL_TEXTURE_2D);
-    glBindTexture(GL_TEXTURE_2D, triTableTex);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
-    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
+    pressureDensityMesh.displayAsScalarField(pressureDensityVoxels, camPos, isoValues);
 
 
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
+//    std::vector<Vector3> positions(pressureDensityVoxels.size());
+//    for (size_t i = 0; i < positions.size(); i++) {
+//        positions[i] = pressureDensityVoxels.getCoordAsVector3(i);
+//    }
+//    pressureDensityMesh.fromArray(positions);
+//    pressureDensityMesh.update();
+//    GlobalsGL::f()->glBindVertexArray(pressureDensityMesh.vao);
+//    pressureDensityMesh.shader->setTexture3D("dataFieldTex", 0, pressureDensityVoxels + .5f);
+//    pressureDensityMesh.shader->setInt("dataFieldTex", 0);
+//    pressureDensityMesh.shader->setInt("edgeTableTex", 1);
+//    pressureDensityMesh.shader->setInt("triTableTex", 2);
+//    pressureDensityMesh.shader->setFloat("isolevel", 0.f);
+//    pressureDensityMesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+//    pressureDensityMesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+//    pressureDensityMesh.shader->setBool("useMarchingCubes", true);
+//    //Edge Table texture//
+//    //This texture store the 256 different configurations of a marching cube.
+//    //This is a table accessed with a bitfield of the 8 cube edges states
+//    //(edge cut by isosurface or totally in or out).
+//    //(cf. MarchingCubes.cpp)
 
-    // Ignore parameters to hide some voxels
-//    pressureDensityMesh.shader->setVector("min_vertice_positions", Vector3::min());
-//    pressureDensityMesh.shader->setVector("max_vertice_positions", Vector3::max());
-//    pressureDensityMesh.shader->setFloat("min_isolevel", -1000.f); // 3.5f);
-//    pressureDensityMesh.shader->setFloat("max_isolevel", 1000.f);
+//    GLuint edgeTableTex, triTableTex;
+//    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+//    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
+//    glEnable(GL_TEXTURE_2D);
+//    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
+//    //Integer textures must use nearest filtering mode
 
-    for (size_t i = 0; i < isoValues.size(); i++) {
-        float iso = isoValues[i];
-        Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
-        pressureDensityMesh.shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
-        pressureDensityMesh.shader->setFloat("isolevel", iso);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+//    //We create an integer texture with new GL_EXT_texture_integer formats
+//    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
+//    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
 
-        // display the mesh
-        pressureDensityMesh.reorderVertices(camPos);
-        pressureDensityMesh.display(GL_POINTS);
-    }
+//    //Triangle Table texture//
+//    //This texture store the vertex index list for
+//    //generating the triangles of each configurations.
+//    //(cf. MarchingCubes.cpp)
+
+//    glGenTextures(1, &triTableTex);
+//    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
+//    glEnable(GL_TEXTURE_2D);
+//    glBindTexture(GL_TEXTURE_2D, triTableTex);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+//    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
+//    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
+
+
+//    GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
+
+//    // Ignore parameters to hide some voxels
+////    pressureDensityMesh.shader->setVector("min_vertice_positions", Vector3::min());
+////    pressureDensityMesh.shader->setVector("max_vertice_positions", Vector3::max());
+////    pressureDensityMesh.shader->setFloat("min_isolevel", -1000.f); // 3.5f);
+////    pressureDensityMesh.shader->setFloat("max_isolevel", 1000.f);
+
+//    for (size_t i = 0; i < isoValues.size(); i++) {
+//        float iso = isoValues[i];
+//        Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
+//        pressureDensityMesh.shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
+//        pressureDensityMesh.shader->setFloat("isolevel", iso);
+
+//        // display the mesh
+//        pressureDensityMesh.reorderVertices(camPos);
+//        pressureDensityMesh.display(GL_POINTS);
+//    }
 }
 
 void FlowFieldInterface::displayFlows(Vector3 camPos)
@@ -141,6 +143,7 @@ void FlowFieldInterface::displayFlows(Vector3 camPos)
     for (size_t i = 0; i < this->displayedFlowfields.size(); i++) {
         if (!this->displayedFlowfields[i])
             continue;
+
         Vector3 color = HSVtoRGB(float(i) / float(displayedFlowfields.size() - 1), 1.f, 1.f);
         Mesh& flowMesh = this->flowMeshes[i];
         if (flowMesh.shader != nullptr)
@@ -199,7 +202,7 @@ void FlowFieldInterface::updateFlowfieldDebugMesh()
     float maxPressure = this->pressureDensityVoxels.max();
 
     for (size_t i = 0; i < this->flowMeshes.size(); i++) {
-        Matrix3<Vector3> flowNormalized = this->voxelGrid->getFlowfield(i) / maxPressure;
+        /*Matrix3<Vector3> flowNormalized = this->voxelGrid->getFlowfield(i) / maxPressure;
 //        float max = -1, min = std::numeric_limits<float>::max();
 //        for (auto& v : flowNormalized){
 //            max = std::max(max, v.norm2());
@@ -218,22 +221,23 @@ void FlowFieldInterface::updateFlowfieldDebugMesh()
             }
         }
         this->flowMeshes[i].fromArray(normals);
-        this->flowMeshes[i].update();
+        this->flowMeshes[i].update();*/
+        flowMeshes[i] = Mesh::createVectorField(this->voxelGrid->getFlowfield(i).resize(1.f/this->voxelGrid->fluidSimRescale), this->voxelGrid->getDimensions(), &flowMeshes[i]);
     }
 
-
-    Matrix3<Vector3> flowNormalized = this->totalFlow / maxPressure;
-    std::vector<Vector3> normals;
-    for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->getSizeX()-1; x+= this->voxelGrid->fluidSimRescale) {
-        for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->getSizeY()-1; y+= this->voxelGrid->fluidSimRescale) {
-            for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->getSizeZ() - 1; z+= this->voxelGrid->fluidSimRescale) {
-                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
-                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + Vector3(.5f, .5f, .5f));
-            }
-        }
-    }
-    this->sumOfFlowsMesh.fromArray(normals);
-    this->sumOfFlowsMesh.update();
+    this->sumOfFlowsMesh = Mesh::createVectorField(this->totalFlow.resize(1.f / this->voxelGrid->fluidSimRescale), this->voxelGrid->getDimensions(), &sumOfFlowsMesh);
+//    Matrix3<Vector3> flowNormalized = this->totalFlow / maxPressure;
+//    std::vector<Vector3> normals;
+//    for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->getSizeX()-1; x+= this->voxelGrid->fluidSimRescale) {
+//        for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->getSizeY()-1; y+= this->voxelGrid->fluidSimRescale) {
+//            for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->getSizeZ() - 1; z+= this->voxelGrid->fluidSimRescale) {
+//                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
+//                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + Vector3(.5f, .5f, .5f));
+//            }
+//        }
+//    }
+//    this->sumOfFlowsMesh.fromArray(normals);
+//    this->sumOfFlowsMesh.update();
 //    Q_EMIT this->updated();
 }
 

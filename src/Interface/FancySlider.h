@@ -11,6 +11,7 @@ public:
     explicit FancySlider(Qt::Orientation orientation, float min = 0.0, float max = 100.0, float multiplier = 1.0, QWidget *parent = nullptr);
     virtual ~FancySlider();
 
+    float getfValue();
     void setfValue(float val);
     void setfRange(float min, float max);
     float multiplier;

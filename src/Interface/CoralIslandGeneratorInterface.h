@@ -40,6 +40,8 @@ public Q_SLOTS:
     void setHScale(float newVal);
     void setAlpha(float newVal);
 
+    void validateTerrainChange();
+
     void updateCoral();
 
     void afterTerrainUpdated();

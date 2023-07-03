@@ -13,13 +13,15 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("fault
 
 void FaultSlipInterface::display(Vector3 camPos)
 {
-    if (voxelGrid != nullptr) {
-        this->firstSlipControlPoint->display();
-        this->slipVector->display();
-        if (this->planeMesh.shader != nullptr)
-            this->planeMesh.shader->setVector("color", std::vector<float>({.1f, .5f, 1.f, .5f}));
-        this->planeMesh.display();
-    }
+    if (!this->isVisible())
+        return;
+    if (voxelGrid == nullptr)
+        return;
+    this->firstSlipControlPoint->display();
+    this->slipVector->display();
+    if (this->planeMesh.shader != nullptr)
+        this->planeMesh.shader->setVector("color", std::vector<float>({.1f, .5f, 1.f, .5f}));
+    this->planeMesh.display();
 }
 
 void FaultSlipInterface::remesh()
