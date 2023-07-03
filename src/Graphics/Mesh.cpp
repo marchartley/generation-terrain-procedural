@@ -1,5 +1,6 @@
 #include "Graphics/Mesh.h"
 
+#include "DataStructure/BVH.h"
 #include "Graphics/MarchingCubes.h"
 #include "Utils/stl_reader.h"
 
@@ -114,6 +115,7 @@ Mesh &Mesh::fromStl(std::string filename)
             indices.push_back(index);
         }
         this->fromArray(trianglesVec3); //vertices, indices);
+        this->normalize();
     }
     catch (std::exception& e) {
       std::cout << e.what() << std::endl;
@@ -507,6 +509,117 @@ void Mesh::displayNormals()
     glEnd();
 }
 
+void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, std::vector<float> isoValues)
+{
+    std::vector<Vector3> positions(field.size());
+    for (size_t i = 0; i < positions.size(); i++) {
+        positions[i] = field.getCoordAsVector3(i);
+    }
+    this->fromArray(positions);
+    this->update();
+    GlobalsGL::f()->glBindVertexArray(this->vao);
+    this->shader->setTexture3D("dataFieldTex", 0, field + .5f);
+    this->shader->setInt("dataFieldTex", 0);
+    this->shader->setInt("edgeTableTex", 1);
+    this->shader->setInt("triTableTex", 2);
+    this->shader->setFloat("isolevel", 0.f);
+    this->shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+    this->shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+    this->shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+    this->shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+    this->shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+    this->shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+    this->shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+    this->shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+    this->shader->setBool("useMarchingCubes", true);
+    //Edge Table texture//
+    //This texture store the 256 different configurations of a marching cube.
+    //This is a table accessed with a bitfield of the 8 cube edges states
+    //(edge cut by isosurface or totally in or out).
+    //(cf. MarchingCubes.cpp)
+
+    GLuint edgeTableTex, triTableTex;
+    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
+    //Integer textures must use nearest filtering mode
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //We create an integer texture with new GL_EXT_texture_integer formats
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
+
+    //Triangle Table texture//
+    //This texture store the vertex index list for
+    //generating the triangles of each configurations.
+    //(cf. MarchingCubes.cpp)
+
+    glGenTextures(1, &triTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, triTableTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
+
+
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
+
+    // Ignore parameters to hide some voxels
+//    this->shader->setVector("min_vertice_positions", Vector3::min());
+//    this->shader->setVector("max_vertice_positions", Vector3::max());
+//    this->shader->setFloat("min_isolevel", -1000.f); // 3.5f);
+//    this->shader->setFloat("max_isolevel", 1000.f);
+
+    for (size_t i = 0; i < isoValues.size(); i++) {
+        float iso = isoValues[i];
+        Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
+        this->shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
+        this->shader->setFloat("isolevel", iso);
+
+        // display the mesh
+        this->reorderVertices(cameraPosition);
+        this->display(GL_POINTS);
+    }
+}
+
+void Mesh::displayAsVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, float maxMaginitude, bool normalize)
+{
+    if (maxMaginitude > 0.f) {
+        for (auto& v : field)
+            v.maxMagnitude(maxMaginitude);
+    }
+    if (normalize) {
+        field.normalize();
+    }
+    std::vector<Vector3> normals;
+    for (int x = 0; x < field.sizeX - 1; x++) {
+        for (int y = 0; y < field.sizeY - 1; y++) {
+            for (int z = 0; z < field.sizeZ - 1; z++) {
+                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
+                normals.push_back(Vector3(x, y, z) + field.at(x, y, z) + Vector3(.5f, .5f, .5f));
+            }
+        }
+    }
+    if (finalDimensions.isValid()) {
+        Vector3 ratio = finalDimensions / field.getDimensions();
+        for (auto& n : normals) {
+            n *= ratio;
+        }
+    }
+    this->fromArray(normals);
+    this->display(GL_LINES);
+}
+
 void Mesh::setShader(std::shared_ptr<Shader> shader)
 {
 
@@ -597,7 +710,7 @@ void Mesh::reorderAny(Vector3 camPos, int nbVertexToUse)
     this->needToUpdateColors = true;
 }
 
-std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices)
+std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices) const
 {
     if (indices.empty()) {
         indices = std::vector<int>(this->vertexArray.size());
@@ -891,4 +1004,143 @@ Mesh Mesh::applyMarchingCubes(Matrix3<float>& values)
         }
     }
     return marched;
+}
+
+Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
+{
+    AABBox myDims(this->vertexArray);
+    Matrix3<int> res(dimensions);
+
+    BVHTree tree(this->getTriangles());
+
+    int dimX = dimensions.x;
+    int dimY = dimensions.y;
+    int dimZ = dimensions.z;
+
+#pragma omp parallel for collapse(3)
+    for (int x = 0; x < dimX; x++) {
+        for (int y = 0; y < dimY; y++) {
+            for (int z = 0; z < dimZ; z++) {
+                Vector3 pos = Vector3(x, y, z)/(dimensions / myDims.dimensions()) + myDims.min();
+                Vector3 ray = Vector3(pos.x, pos.y + myDims.dimensions().y + 1, pos.z);
+                res.at(x, y, z) = (tree.query(pos, ray).size() % 2 == 0 ? 0 : 1);
+//                std::cout << x << " " << y << " " << z << " -> from " << pos << " to " << ray << ": " << tree.query(pos, ray).size() << " triangles (/" << this->getTriangles().size() << ")" << std::endl;
+            }
+        }
+    }
+    return res;
+}
+
+Mesh Mesh::createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
+{
+    if (maxMaginitude > 0.f) {
+        for (auto& v : field)
+            v.maxMagnitude(maxMaginitude);
+    }
+    if (normalize) {
+        field.normalize();
+    }
+    std::vector<Vector3> normals;
+    for (int x = 0; x < field.sizeX - 1; x++) {
+        for (int y = 0; y < field.sizeY - 1; y++) {
+            for (int z = 0; z < field.sizeZ - 1; z++) {
+                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
+                normals.push_back(Vector3(x, y, z) + field.at(x, y, z) + Vector3(.5f, .5f, .5f));
+            }
+        }
+    }
+    if (finalDimensions.isValid()) {
+        Vector3 ratio = finalDimensions / field.getDimensions();
+        for (auto& n : normals) {
+            n *= ratio;
+        }
+    }
+    if (mesh == nullptr)
+        return Mesh(normals, nullptr, true, GL_LINES);
+    else {
+        return mesh->fromArray(normals);
+    }
+}
+
+void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPosition, std::vector<float> isoValues)
+{
+    std::vector<Vector3> positions(field.size());
+    for (size_t i = 0; i < positions.size(); i++) {
+        positions[i] = field.getCoordAsVector3(i);
+    }
+    mesh.fromArray(positions);
+    mesh.update();
+    GlobalsGL::f()->glBindVertexArray(mesh.vao);
+    mesh.shader->setTexture3D("dataFieldTex", 0, field + .5f);
+    mesh.shader->setInt("dataFieldTex", 0);
+    mesh.shader->setInt("edgeTableTex", 1);
+    mesh.shader->setInt("triTableTex", 2);
+    mesh.shader->setFloat("isolevel", 0.f);
+    mesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
+    mesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
+    mesh.shader->setVector("vertDecals[2]", Vector3(1.0, 1.0, 0.0));
+    mesh.shader->setVector("vertDecals[3]", Vector3(0.0, 1.0, 0.0));
+    mesh.shader->setVector("vertDecals[4]", Vector3(0.0, 0.0, 1.0));
+    mesh.shader->setVector("vertDecals[5]", Vector3(1.0, 0.0, 1.0));
+    mesh.shader->setVector("vertDecals[6]", Vector3(1.0, 1.0, 1.0));
+    mesh.shader->setVector("vertDecals[7]", Vector3(0.0, 1.0, 1.0));
+    mesh.shader->setBool("useMarchingCubes", true);
+    //Edge Table texture//
+    //This texture store the 256 different configurations of a marching cube.
+    //This is a table accessed with a bitfield of the 8 cube edges states
+    //(edge cut by isosurface or totally in or out).
+    //(cf. MarchingCubes.cpp)
+
+    GLuint edgeTableTex, triTableTex;
+    GlobalsGL::f()->glGenTextures(1, &edgeTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE1);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, edgeTableTex);
+    //Integer textures must use nearest filtering mode
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    //We create an integer texture with new GL_EXT_texture_integer formats
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 256, 1, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::cubeEdges));
+
+    //Triangle Table texture//
+    //This texture store the vertex index list for
+    //generating the triangles of each configurations.
+    //(cf. MarchingCubes.cpp)
+
+    glGenTextures(1, &triTableTex);
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE2);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, triTableTex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_ALPHA16I_EXT, 16, 256, 0,
+    GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
+
+
+    GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
+
+    // Ignore parameters to hide some voxels
+//    mesh.shader->setVector("min_vertice_positions", Vector3::min());
+//    mesh.shader->setVector("max_vertice_positions", Vector3::max());
+//    mesh.shader->setFloat("min_isolevel", -1000.f); // 3.5f);
+//    mesh.shader->setFloat("max_isolevel", 1000.f);
+
+    for (size_t i = 0; i < isoValues.size(); i++) {
+        float iso = isoValues[i];
+        Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
+        mesh.shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
+        mesh.shader->setFloat("isolevel", iso);
+
+        // display the mesh
+        mesh.reorderVertices(cameraPosition);
+        mesh.display(GL_POINTS);
+    }
 }

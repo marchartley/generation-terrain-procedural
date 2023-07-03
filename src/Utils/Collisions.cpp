@@ -61,7 +61,7 @@ float Collision::tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector
     return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
 }
 int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
-Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3)
+Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3, bool strict)
 {
     // Möller–Trumbore intersection algorithm
 //    if (int(s1.x) == 10 && int(s1.z) == 10) {
@@ -75,7 +75,7 @@ Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1
 
     Vector3 h = rayDir.cross(triEdge2);
     float dot = triEdge1.dot(h);
-    if (std::abs(dot) <  1.e-6)
+    if (std::abs(dot) <  1.e-8)
         return Vector3(false); // Ray parallel to the triangle
     float f = 1.f/dot;
     Vector3 s = (rayOrigin - t1);

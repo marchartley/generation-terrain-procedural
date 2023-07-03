@@ -1,6 +1,6 @@
 #version 430
 
-varying vec4 fragColor;
+out vec4 fragColor;
 
 struct PositionalLight {
     vec4 ambiant;
@@ -62,6 +62,6 @@ void main(void)
         specular += lights[iLight].specular * material.specular * pow(max(iCosPhi, 0.0), material.shininness);
     }
 
-    fragColor = vec4(ambiant + diffuse + specular);
+    fragColor = vec4((ambiant + diffuse + specular).xyz, 1.0);
 
 }
