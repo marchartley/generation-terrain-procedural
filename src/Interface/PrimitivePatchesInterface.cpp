@@ -383,20 +383,12 @@ QLayout *PrimitivePatchesInterface::createGUI()
                 manipulatedAsUnary->translate(translation); // Just update it
             } else { // Otherwise, create a new Unary operator
                 ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
-                translate->composableA = this->selectedPatch();
+                translate->composableA() = this->selectedPatch();
                 translate->translate(translation);
                 translate->name = "Translation";
                 if (this->selectedPatch() == this->implicitTerrain.get()) {
                     this->implicitTerrain->composables = {translate};
                 } else {
-                    ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
-                    if (parentAsOperator) {
-                        if (this->selectedPatch() == parentAsOperator->composableA) {
-                            parentAsOperator->composableA = translate;
-                        } else {
-                            parentAsOperator->composableB = translate;
-                        }
-                    }
                     ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
                     if (parentAsNaryOperator) {
                         for (auto& c : parentAsNaryOperator->composables)
@@ -548,12 +540,12 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     if (_parent == nullptr) {
         this->implicitTerrain->composables = {operation};
     } else {
-        ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(_parent);
-        if (parentAsOperator) {
-            if (previousMain == parentAsOperator->composableA)
-                parentAsOperator->composableA = operation;
+        ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
+        if (parentAsBinary) {
+            if (previousMain == parentAsBinary->composableA())
+                parentAsBinary->composableA() = operation;
             else
-                parentAsOperator->composableB = operation;
+                parentAsBinary->composableB() = operation;
         }
         ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(_parent);
         if (parentAsNaryOperator) {
@@ -677,27 +669,27 @@ void PrimitivePatchesInterface::setSelectedBlendingFactor(float newVal) {
 void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* asOp = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
+    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
     ImplicitUnaryOperator* noisePatch;
 
-    if (asOp == nullptr) {
-        asOp = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+    if (AsBin == nullptr) {
+        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
     }
-    if (asOp != nullptr) {
-        noisePatch = asOp;
+    if (AsBin != nullptr) {
+        noisePatch = AsBin;
     } else {
         noisePatch = new ImplicitUnaryOperator;
-        noisePatch->composableA = selectedPatch;
+        noisePatch->composableA() = selectedPatch;
         if (selectedPatch == this->implicitTerrain.get()) {
             this->implicitTerrain->composables = {noisePatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitOperator* parentAsOperator = dynamic_cast<ImplicitOperator*>(_parent);
-            if (parentAsOperator) {
-                if (selectedPatch == parentAsOperator->composableA)
-                    parentAsOperator->composableA = noisePatch;
+            ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
+            if (parentAsBinary) {
+                if (selectedPatch == parentAsBinary->composableA())
+                    parentAsBinary->composableA() = noisePatch;
                 else
-                    parentAsOperator->composableB = noisePatch;
+                    parentAsBinary->composableB() = noisePatch;
             }
         }
     }
@@ -712,27 +704,27 @@ void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
 void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* asOp = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
+    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
     ImplicitUnaryOperator* distortionPatch;
 
-    if (asOp == nullptr) {
-        asOp = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+    if (AsBin == nullptr) {
+        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
     }
-    if (asOp != nullptr) {
-        distortionPatch = asOp;
+    if (AsBin != nullptr) {
+        distortionPatch = AsBin;
     } else {
         distortionPatch = new ImplicitUnaryOperator;
-        distortionPatch->composableA = selectedPatch;
+        distortionPatch->composableA() = selectedPatch;
         if (selectedPatch == this->implicitTerrain.get()) {
             this->implicitTerrain->composables = {distortionPatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
+            ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
             if (parent) {
-                if (selectedPatch == parent->composableA)
-                    parent->composableA = distortionPatch;
+                if (selectedPatch == parent->composableA())
+                    parent->composableA() = distortionPatch;
                 else
-                    parent->composableB = distortionPatch;
+                    parent->composableB() = distortionPatch;
             }
         }
     }
@@ -758,27 +750,27 @@ void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
 void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* asOp = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
+    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
     ImplicitUnaryOperator* distortionPatch;
 
-    if (asOp == nullptr) {
-        asOp = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+    if (AsBin == nullptr) {
+        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
     }
-    if (asOp != nullptr) {
-        distortionPatch = asOp;
+    if (AsBin != nullptr) {
+        distortionPatch = AsBin;
     } else {
         distortionPatch = new ImplicitUnaryOperator;
-        distortionPatch->composableA = selectedPatch;
+        distortionPatch->composableA() = selectedPatch;
         if (selectedPatch == this->implicitTerrain.get()) {
             this->implicitTerrain->composables = {distortionPatch};
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
-            ImplicitOperator* parent = dynamic_cast<ImplicitOperator*>(_parent);
+            ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
             if (parent) {
-                if (selectedPatch == parent->composableA)
-                    parent->composableA = distortionPatch;
+                if (selectedPatch == parent->composableA())
+                    parent->composableA() = distortionPatch;
                 else
-                    parent->composableB = distortionPatch;
+                    parent->composableB() = distortionPatch;
             }
         }
     }
@@ -850,7 +842,7 @@ void PrimitivePatchesInterface::rippleScene()
 
 //        UnaryOpRotate rotationTransfo(Vector3(0, 0, waterFlow.toEulerAngles().z), Vector3(rippleWidth * .5f, rippleDepth * .5f, 0));
         ImplicitUnaryOperator* rotation = new ImplicitUnaryOperator;
-        rotation->composableA = ripple;
+        rotation->composableA() = ripple;
         rotation->rotate(0, 0, waterFlow.toEulerAngles().z);
         allRipples->composables.push_back(rotation);
 //        std::cout << pos << std::endl;
@@ -890,18 +882,18 @@ void PrimitivePatchesInterface::deformationFromFlow()
         AABBox bbox = patch->getSupportBBox();
         if (bbox.dimensions().norm2() < 50*50*50) {
             wrap->addWrapFunction(voxelGrid->getFlowfield().subset(bbox.min(), bbox.max()).resize(10, 10, 10) * 0.1f);
-            wrap->composableA = patch;
+            wrap->composableA() = patch;
             ImplicitPatch* parent = this->naiveApproachToGetParent(patch);
             ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(parent);
             ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(parent);
-            ImplicitOperator* asBinary = dynamic_cast<ImplicitOperator*>(parent);
+            ImplicitBinaryOperator* asBinary = dynamic_cast<ImplicitBinaryOperator*>(parent);
             if (asUnary) {
-                asUnary->composableA = wrap;
+                asUnary->composableA() = wrap;
             } else if (asBinary) {
-                if (patch == asBinary->composableA)
-                    asBinary->composableA = wrap;
+                if (patch == asBinary->composableA())
+                    asBinary->composableA() = wrap;
                 else
-                    asBinary->composableB = wrap;
+                    asBinary->composableB() = wrap;
             } else if (asNary) {
                 for (size_t i = 0; i < asNary->composables.size(); i++)
                     if (asNary->composables[i] == patch)
@@ -910,12 +902,12 @@ void PrimitivePatchesInterface::deformationFromFlow()
         } else {
             ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(patch);
             ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(patch);
-            ImplicitOperator* asBinary = dynamic_cast<ImplicitOperator*>(patch);
+            ImplicitBinaryOperator* asBinary = dynamic_cast<ImplicitBinaryOperator*>(patch);
             if (asUnary) {
-                queue.push_back(asUnary->composableA);
+                queue.push_back(asUnary->composableA());
             } else if (asBinary) {
-                queue.push_back(asBinary->composableA);
-                queue.push_back(asBinary->composableB);
+                queue.push_back(asBinary->composableA());
+                queue.push_back(asBinary->composableB());
             } else if (asNary) {
                 for (size_t i = 0; i < asNary->composables.size(); i++)
                     queue.push_back(asNary->composables[i]);
@@ -1158,12 +1150,12 @@ void PrimitivePatchesInterface::findAllSubfiles()
         if (current->used_json_filename != "")
             allSubfiles.push_back(current->used_json_filename);
 
-        ImplicitOperator* asOp = dynamic_cast<ImplicitOperator*>(current);
-        if (asOp != nullptr) {
-            if (asOp->composableA != nullptr)
-                pendingPatches.push_back(asOp->composableA);
-            if (asOp->composableB != nullptr)
-                pendingPatches.push_back(asOp->composableB);
+        ImplicitBinaryOperator* AsBin = dynamic_cast<ImplicitBinaryOperator*>(current);
+        if (AsBin != nullptr) {
+            if (AsBin->composableA() != nullptr)
+                pendingPatches.push_back(AsBin->composableA());
+            if (AsBin->composableB() != nullptr)
+                pendingPatches.push_back(AsBin->composableB());
         }
     }
 }
@@ -1240,21 +1232,21 @@ void PrimitivePatchesInterface::displayPatchesTree()
         labels.push_back(label);
         maxDepth = std::max(maxDepth, int(directions.size()));
 
-        ImplicitOperator* asOp = dynamic_cast<ImplicitOperator*>(current);
-        if (asOp != nullptr) {
-            if (asOp->composableA != nullptr) {
+        ImplicitBinaryOperator* AsBin = dynamic_cast<ImplicitBinaryOperator*>(current);
+        if (AsBin != nullptr) {
+            if (AsBin->composableA() != nullptr) {
                 auto directionsForA = directions;
-                if (asOp->composableB == nullptr) { // A is unique child
+                if (AsBin->composableB() == nullptr) { // A is unique child
                     directionsForA.push_back(0);
                 } else {
                     directionsForA.push_back(-1);
                 }
-                queueWithDirections.push_back({asOp->composableA, directionsForA, currentIndex});
+                queueWithDirections.push_back({AsBin->composableA(), directionsForA, currentIndex});
             }
-            if (asOp->composableB != nullptr) {
+            if (AsBin->composableB() != nullptr) {
                 auto directionsForB = directions;
                 directionsForB.push_back(1);
-                queueWithDirections.push_back({asOp->composableB, directionsForB, currentIndex});
+                queueWithDirections.push_back({AsBin->composableB(), directionsForB, currentIndex});
             }
         }
     }
@@ -1307,7 +1299,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         // Create a translation operation to move the new patch
         ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
         translate->translate(translation);
-        translate->composableA = patch;
+        translate->composableA() = patch;
         // Return the translation operation
         translate->updateCache();
         return translate;
@@ -1332,7 +1324,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         if (this->currentPositioning == ImplicitPatch::PositionalLabel::FIXED_POS && position.z != 0.f) {
             ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
             translate->translate(Vector3(0.f, 0.f, position.z));
-            translate->composableA = primitive;
+            translate->composableA() = primitive;
             // Return the translation operation
             translate->updateCache();
             return translate;
@@ -1341,16 +1333,16 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
     }
 }
 
-ImplicitPatch *PrimitivePatchesInterface::createOperationPatchFromParameters(ImplicitPatch *composableA, ImplicitPatch *composableB, ImplicitOperator *replacedPatch)
+ImplicitPatch *PrimitivePatchesInterface::createOperationPatchFromParameters(ImplicitPatch *composableA, ImplicitPatch *composableB, ImplicitBinaryOperator *replacedPatch)
 {
-    ImplicitOperator* operation;
+    ImplicitBinaryOperator* operation;
     if (replacedPatch == nullptr)
-        operation = new ImplicitOperator;
+        operation = new ImplicitBinaryOperator;
     else
         operation = replacedPatch;
 
-    operation->composableA = composableA;
-    operation->composableB = composableB;
+    operation->composableA() = composableA;
+    operation->composableB() = composableB;
     operation->composeFunction = currentOperation;
     operation->positionalB = currentPositioning;
     operation->blendingFactor = selectedBlendingFactor;
@@ -1384,19 +1376,6 @@ ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch
             continue;
         visitedPatches.insert(current);
         // Check children if they exist
-        ImplicitOperator* currentAsOperator = dynamic_cast<ImplicitOperator*>(current);
-        if (currentAsOperator) {
-            if (currentAsOperator->composableA) {
-                if (currentAsOperator->composableA == child)
-                    return current;
-                waitingPatches.push_back(currentAsOperator->composableA);
-            }
-            if (currentAsOperator->composableB) {
-                if (currentAsOperator->composableB == child)
-                    return current;
-                waitingPatches.push_back(currentAsOperator->composableB);
-            }
-        }
         ImplicitNaryOperator* currentAsNary = dynamic_cast<ImplicitNaryOperator*>(current);
         if (currentAsNary) {
             for (auto& c : currentAsNary->composables) {
@@ -1448,16 +1427,10 @@ void PrimitivePatchesInterface::updatePrimitiveList()
             waitingPatches.pop_back();
             primitiveSelectionGui->addItem(new HierarchicalListWidgetItem((locked ? "*" : "") + current->toString(), current->index, level));
             this->storedPatches.push_back(current);
-            ImplicitOperator* currentAsOperator = dynamic_cast<ImplicitOperator*>(current);
+            ImplicitBinaryOperator* currentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(current);
+            ImplicitUnaryOperator* currentAsUnary = dynamic_cast<ImplicitUnaryOperator*>(current);
             ImplicitNaryOperator* currentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(current);
-            if (currentAsOperator) {
-                if (currentAsOperator->composableA) {
-                    waitingPatches.push_back({currentAsOperator->composableA, level+1, childrenAreLocked});
-                }
-                if (currentAsOperator->composableB) {
-                    waitingPatches.push_back({currentAsOperator->composableB, level+1, childrenAreLocked});
-                }
-            } else if (currentAsNaryOperator) {
+            if (currentAsNaryOperator) {
                 for (const auto& c : currentAsNaryOperator->composables)
                     waitingPatches.push_back({c, level+1, childrenAreLocked});
             }
@@ -1467,7 +1440,7 @@ void PrimitivePatchesInterface::updatePrimitiveList()
                 nbPrimitives ++;
             else if (dynamic_cast<ImplicitUnaryOperator*>(current) != nullptr)
                 nbUnaryOperators ++;
-            else if (currentAsOperator)
+            else if (currentAsBinary)
                 nbBinaryOperators ++;
             else
                 nbNaryOperators ++;
@@ -1481,25 +1454,25 @@ void PrimitivePatchesInterface::updatePrimitiveList()
 
 void PrimitivePatchesInterface::cleanPatch(ImplicitPatch *_patch)
 {
-    ImplicitOperator* patch = dynamic_cast<ImplicitOperator*>(_patch);
+    ImplicitBinaryOperator* patch = dynamic_cast<ImplicitBinaryOperator*>(_patch);
     if (!patch) // Not a composition ? Nothing to do
         return;
 
     // Check if it only contains Identity patches. In this case, transform it into an Identity function
-    if (patch->composableA && patch->composableB) {
-        if (patch->composableA->name == "Identity" && patch->composableB->name == "Identity") {
+    if (patch->composableA() && patch->composableB()) {
+        if (patch->composableA()->name == "Identity" && patch->composableB()->name == "Identity") {
             patch->name = "Identity";
             patch->composeFunction = ImplicitPatch::CompositionFunction::NONE;
 //            patch->dimension = Vector3(0, 0, 0);
-            patch->composableA = nullptr;
-            patch->composableB = nullptr;
+            patch->composableA() = nullptr;
+            patch->composableB() = nullptr;
         }
     }
 
-    if (patch->composableA && patch->composableB) {
+    if (patch->composableA() && patch->composableB()) {
         // If it's a composite, clean children before, so we can use their clean data
-        cleanPatch(patch->composableA);
-        cleanPatch(patch->composableB);
+        cleanPatch(patch->composableA());
+        cleanPatch(patch->composableB());
     } else {
         // Nothing to do (?)
     }
@@ -1613,12 +1586,12 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
 PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller, ImplicitPatch *patchToModify)
     : QDialog(), caller(caller), patch(patchToModify)
 {
-    bool patchIsOperation = (dynamic_cast<ImplicitOperator*>(patch) != nullptr);
+    bool patchIsOperation = (dynamic_cast<ImplicitBinaryOperator*>(patch) != nullptr);
 
     QVBoxLayout* layout = new QVBoxLayout();
 
     if (patchIsOperation) {
-        ImplicitOperator* patchAsOperator = dynamic_cast<ImplicitOperator*>(patch);
+        ImplicitBinaryOperator* patchAsBinary = dynamic_cast<ImplicitBinaryOperator*>(patch);
         QRadioButton* stackingButton = new QRadioButton("Stack");
         QRadioButton* blendingButton = new QRadioButton("Blend");
         QRadioButton* replacingButton = new QRadioButton("Replace");
@@ -1649,33 +1622,33 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
                                                 }));
         layout->addWidget(createHorizontalGroup({ applyIntersectionButton, swapButton }));
 
-        stackingButton->setChecked(patchAsOperator->composeFunction == ImplicitPatch::CompositionFunction::STACK);
-        blendingButton->setChecked(patchAsOperator->composeFunction == ImplicitPatch::CompositionFunction::BLEND);
-        replacingButton->setChecked(patchAsOperator->composeFunction == ImplicitPatch::CompositionFunction::REPLACE);
-        oneSideBlendButton->setChecked(patchAsOperator->composeFunction == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND);
+        stackingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::STACK);
+        blendingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::BLEND);
+        replacingButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::REPLACE);
+        oneSideBlendButton->setChecked(patchAsBinary->composeFunction == ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND);
 
-        abovePosButton->setChecked(patchAsOperator->positionalB == ImplicitPatch::PositionalLabel::ABOVE);
-        insideTopPosButton->setChecked(patchAsOperator->positionalB == ImplicitPatch::PositionalLabel::INSIDE_TOP);
-        insideBottomPosButton->setChecked(patchAsOperator->positionalB == ImplicitPatch::PositionalLabel::INSIDE_BOTTOM);
-        fixedPosButton->setChecked(patchAsOperator->positionalB == ImplicitPatch::PositionalLabel::FIXED_POS);
+        abovePosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::ABOVE);
+        insideTopPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_TOP);
+        insideBottomPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::INSIDE_BOTTOM);
+        fixedPosButton->setChecked(patchAsBinary->positionalB == ImplicitPatch::PositionalLabel::FIXED_POS);
 
-        blendingFactorSlider->setfValue(patchAsOperator->blendingFactor);
-        applyIntersectionButton->setChecked(patchAsOperator->withIntersectionOnB);
+        blendingFactorSlider->setfValue(patchAsBinary->blendingFactor);
+        applyIntersectionButton->setChecked(patchAsBinary->withIntersectionOnB);
 
-        QObject::connect(stackingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->composeFunction = ImplicitPatch::CompositionFunction::STACK; });
-        QObject::connect(blendingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->composeFunction = ImplicitPatch::CompositionFunction::BLEND; });
-        QObject::connect(replacingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->composeFunction = ImplicitPatch::CompositionFunction::REPLACE; });
-        QObject::connect(oneSideBlendButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->composeFunction = ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND; });
+        QObject::connect(stackingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::STACK; });
+        QObject::connect(blendingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::BLEND; });
+        QObject::connect(replacingButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::REPLACE; });
+        QObject::connect(oneSideBlendButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->composeFunction = ImplicitPatch::CompositionFunction::ONE_SIDE_BLEND; });
 
-        QObject::connect(abovePosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->positionalB = ImplicitPatch::PositionalLabel::ABOVE; });
-        QObject::connect(insideTopPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->positionalB = ImplicitPatch::PositionalLabel::INSIDE_TOP; });
-        QObject::connect(insideBottomPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->positionalB = ImplicitPatch::PositionalLabel::INSIDE_BOTTOM; });
-        QObject::connect(fixedPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsOperator->positionalB = ImplicitPatch::PositionalLabel::FIXED_POS; });
+        QObject::connect(abovePosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::ABOVE; });
+        QObject::connect(insideTopPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_TOP; });
+        QObject::connect(insideBottomPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::INSIDE_BOTTOM; });
+        QObject::connect(fixedPosButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) patchAsBinary->positionalB = ImplicitPatch::PositionalLabel::FIXED_POS; });
         QObject::connect(blendingFactorSlider, &FancySlider::floatValueChanged, this, [=](float newVal) {
-            patchAsOperator->blendingFactor = newVal;
+            patchAsBinary->blendingFactor = newVal;
         });
-        QObject::connect(applyIntersectionButton, &QCheckBox::toggled, this, [=](bool checked) { patchAsOperator->withIntersectionOnB = checked; });
-        QObject::connect(swapButton, &QPushButton::pressed, this, [=]() { patchAsOperator->swapAB(); });
+        QObject::connect(applyIntersectionButton, &QCheckBox::toggled, this, [=](bool checked) { patchAsBinary->withIntersectionOnB = checked; });
+        QObject::connect(swapButton, &QPushButton::pressed, this, [=]() { patchAsBinary->swapAB(); });
 
 
     } else {
