@@ -11,25 +11,25 @@ BiomeInterface::BiomeInterface(QWidget* parent)
 
 void BiomeInterface::display(Vector3 camPos)
 {
-    if (this->isVisible()) {
-        auto queue = std::vector<std::shared_ptr<BiomeInstance>>({this->rootBiome});
-        while (!queue.empty()) {
-            auto& current = queue.front();
-            queue.erase(queue.begin());
-            if (!isIn(current->classname, allBiomeNames))
-                allBiomeNames.push_back(current->classname);
-           for (auto& c : current->instances)
-               queue.push_back(c);
+    if (!this->isVisible())
+        return;
+    auto queue = std::vector<std::shared_ptr<BiomeInstance>>({this->rootBiome});
+    while (!queue.empty()) {
+        auto& current = queue.front();
+        queue.erase(queue.begin());
+        if (!isIn(current->classname, allBiomeNames))
+            allBiomeNames.push_back(current->classname);
+       for (auto& c : current->instances)
+           queue.push_back(c);
+    }
+    for (size_t i = 0; i < selectionPlanes.size(); i++) {
+        auto& selectionPlane = selectionPlanes[i];
+        if (selectionPlane.shader != nullptr) {
+            int classIndex = std::distance(allBiomeNames.begin(), std::find(allBiomeNames.begin(), allBiomeNames.end(), this->selectedBiomes[i]->classname));
+            Vector3 color = HSVtoRGB(float(classIndex) / (float)(allBiomeNames.size() - 1), 1.f, 1.f);
+            selectionPlane.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f});
         }
-        for (size_t i = 0; i < selectionPlanes.size(); i++) {
-            auto& selectionPlane = selectionPlanes[i];
-            if (selectionPlane.shader != nullptr) {
-                int classIndex = std::distance(allBiomeNames.begin(), std::find(allBiomeNames.begin(), allBiomeNames.end(), this->selectedBiomes[i]->classname));
-                Vector3 color = HSVtoRGB(float(classIndex) / (float)(allBiomeNames.size() - 1), 1.f, 1.f);
-                selectionPlane.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f});
-            }
-            selectionPlane.display();
-        }
+        selectionPlane.display();
     }
 }
 
