@@ -53,6 +53,12 @@ public:
     Matrix3(std::vector<std::vector<T>> data);
     Matrix3(std::vector<T> data, size_t sizeX, size_t sizeY, int sizeZ = -1);
 
+    const T& at(int i, int j, int k = 0) const;
+    const T& at(Vector3 pos) const;
+    const T& at(size_t i) const;
+    const T& operator()(size_t x, size_t y, size_t z = 0) const;
+    const T& operator[](size_t i) const;
+    const T& operator[](Vector3 pos) const;
     T& at(int i, int j, int k = 0);
     T& at(Vector3 pos);
     T& at(size_t i);
@@ -212,9 +218,9 @@ public:
     std::size_t size() const { return end() - begin(); }
     bool empty() const { return begin() == end(); }
 
-    Vector3 getMirrorPosition(Vector3 pos);
-    Vector3 getWrappedPosition(Vector3 pos);
-    Vector3 getRepeatPosition(Vector3 pos);
+    Vector3 getMirrorPosition(Vector3 pos) const;
+    Vector3 getWrappedPosition(Vector3 pos) const;
+    Vector3 getRepeatPosition(Vector3 pos) const;
 
     Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
@@ -382,6 +388,94 @@ T Matrix3<T>::interpolate(float x, float y, float z, RETURN_VALUE_ON_OUTSIDE pad
 }
 
 template<class T>
+const T &Matrix3<T>::at(Vector3 pos) const
+{
+    return this->at(pos.x, pos.y, pos.z);
+}
+template<class T>
+const T &Matrix3<T>::at(int i, int j, int k) const
+{
+    if (checkCoord(i, j, k)) {
+        int index = getIndex(i, j, k);
+        return this->data[index];
+    }
+    bool raiseError = raiseErrorOnBadCoord;
+    Vector3 newPos(i, j, k);
+    if (!raiseErrorOnBadCoord) {
+        if (returned_value_on_outside == DEFAULT_VALUE)
+            return defaultValueOnBadCoord;
+
+        if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
+            return defaultValueOnBadCoord;
+        if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
+            return defaultValueOnBadCoord;
+        if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
+            return defaultValueOnBadCoord;
+
+        if (returned_value_on_outside == MIRROR_VALUE)
+            newPos = getMirrorPosition(newPos);
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            newPos = getWrappedPosition(newPos);
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            newPos = getRepeatPosition(newPos);
+
+    }
+    if (!raiseError)
+        return this->at(newPos);
+    else
+        throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
+            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+
+template<class T>
+const T &Matrix3<T>::at(size_t i) const
+{
+    if (i >= 0 && i < sizeX * sizeY * sizeZ) {
+        return this->data[i];
+    }
+    int x, y, z;
+    std::tie(x, y, z) = this->getCoord(i);
+
+    bool raiseError = raiseErrorOnBadCoord;
+    Vector3 newPos(x, y, z);
+    if (!raiseErrorOnBadCoord) {
+        if (returned_value_on_outside == DEFAULT_VALUE)
+            return defaultValueOnBadCoord;
+
+        if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
+            return defaultValueOnBadCoord;
+        if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
+            return defaultValueOnBadCoord;
+        if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
+            return defaultValueOnBadCoord;
+
+        if (returned_value_on_outside == MIRROR_VALUE)
+            newPos = getMirrorPosition(newPos);
+        else if (returned_value_on_outside == WRAPPED_VALUE)
+            newPos = getWrappedPosition(newPos);
+        else if (returned_value_on_outside == REPEAT_VALUE)
+            newPos = getRepeatPosition(newPos);
+    }
+    if (!raiseError)
+        return this->at(newPos);
+    else
+        throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
+            + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
+}
+template<typename T>
+const T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) const {
+    return this->at(x, y, z);
+}
+template<typename T>
+const T& Matrix3<T>::operator[](size_t i) const {
+    return this->at(i);
+}
+template<typename T>
+const T& Matrix3<T>::operator[](Vector3 pos) const {
+    return this->at(pos);
+}
+
+template<class T>
 T &Matrix3<T>::at(Vector3 pos)
 {
     return this->at(pos.x, pos.y, pos.z);
@@ -400,18 +494,11 @@ T &Matrix3<T>::at(int i, int j, int k)
             return defaultValueOnBadCoord;
 
         if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
-            return defaultValueOnBadCoord; // raiseError = true;
+            return defaultValueOnBadCoord;
         if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
-            return defaultValueOnBadCoord; // raiseError = true;
+            return defaultValueOnBadCoord;
         if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
-            return defaultValueOnBadCoord; // raiseError = true;
-        /*
-        else if (returned_value_on_outside == MIRROR_VALUE)
-            return this->at(getMirrorPosition(Vector3(i, j, k)));
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            return this->at(getWrappedPosition(Vector3(i, j, k)));
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            return this->at(getRepeatPosition(Vector3(i, j, k)));*/
+            return defaultValueOnBadCoord;
 
         if (returned_value_on_outside == MIRROR_VALUE)
             newPos = getMirrorPosition(newPos);
@@ -435,18 +522,7 @@ T &Matrix3<T>::at(size_t i)
         return this->data[i];
     }
     int x, y, z;
-    std::tie(x, y, z) = this->getCoord(i);/*
-    if (!raiseErrorOnBadCoord) {
-        if (returned_value_on_outside == DEFAULT_VALUE)
-            return defaultValueOnBadCoord;
-        else if (returned_value_on_outside == MIRROR_VALUE)
-            return this->at(getMirrorPosition(Vector3(x, y, z)));
-        else if (returned_value_on_outside == WRAPPED_VALUE)
-            return this->at(getWrappedPosition(Vector3(x, y, z)));
-        else if (returned_value_on_outside == REPEAT_VALUE)
-            return this->at(getRepeatPosition(Vector3(x, y, z)));
-    }
-    */
+    std::tie(x, y, z) = this->getCoord(i);
 
     bool raiseError = raiseErrorOnBadCoord;
     Vector3 newPos(x, y, z);
@@ -455,11 +531,11 @@ T &Matrix3<T>::at(size_t i)
             return defaultValueOnBadCoord;
 
         if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
-            return defaultValueOnBadCoord; // raiseError = true;
+            return defaultValueOnBadCoord;
         if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
-            return defaultValueOnBadCoord; // raiseError = true;
+            return defaultValueOnBadCoord;
         if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
-            return defaultValueOnBadCoord; // raiseError = true;
+            return defaultValueOnBadCoord;
 
         if (returned_value_on_outside == MIRROR_VALUE)
             newPos = getMirrorPosition(newPos);
@@ -1510,7 +1586,7 @@ Matrix3<T> Matrix3<T>::convolution(Matrix3<U>& convMatrix, CONVOLUTION_BORDERS b
 }
 
 template<class T>
-Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)
+Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)  const
 {
     float x = pos.x;
     float y = pos.y;
@@ -1522,7 +1598,7 @@ Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)
 }
 
 template<class T>
-Vector3 Matrix3<T>::getWrappedPosition(Vector3 pos)
+Vector3 Matrix3<T>::getWrappedPosition(Vector3 pos) const
 {
     Vector3 rounded = pos.roundedDown();
     Vector3 decimals = pos - rounded;
@@ -1537,7 +1613,7 @@ Vector3 Matrix3<T>::getWrappedPosition(Vector3 pos)
 }
 
 template<class T>
-Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos)
+Vector3 Matrix3<T>::getRepeatPosition(Vector3 pos) const
 {
     Vector3 returned;
     returned.x = std::min(std::max(0.f, pos.x), (float)sizeX - 1);
