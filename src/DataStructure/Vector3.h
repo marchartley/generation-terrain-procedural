@@ -32,8 +32,8 @@ public:
 
     static std::vector<Vector3> getAABBoxVertices(Vector3 mini, Vector3 maxi);
 
-    friend std::ostream& operator<<(std::ostream& io, const Vector3& v);
-    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v);
+    friend std::ostream& operator<<(std::ostream& io, const Vector3& bbox);
+    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> bbox);
 
     float dot(Vector3 o);
     Vector3 cross(Vector3 o);
@@ -238,6 +238,10 @@ public:
     static Vector3 random(Vector3 mini, Vector3 maxi);
 
     Vector3 intersects(const Vector3& rayStart, const Vector3& rayEnd);
+
+    std::string toString() const {return "AABBox from " + min().toString() + " to " + max().toString(); }
+    friend std::ostream& operator<<(std::ostream& io, const AABBox& v);
+    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> v);
 };
 
 #include "Utils/json.h"
