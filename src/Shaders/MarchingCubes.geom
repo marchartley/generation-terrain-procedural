@@ -105,12 +105,12 @@ float cubeVal(vec3 voxelPos, int i){
 vec3 getNormal(vec3 p) {
     vec3 maxDims = min(textureSize(dataFieldTex, 0), max_vertice_positions);
     vec3 minDims = max(vec3(0.0), min_vertice_positions);
-    vec3 x0 = clamp(p + vec3(0.01, 0, 0), minDims, maxDims);
-    vec3 x1 = clamp(p - vec3(0.01, 0, 0), minDims, maxDims);
-    vec3 y0 = clamp(p + vec3(0, 0.01, 0), minDims, maxDims);
-    vec3 y1 = clamp(p - vec3(0, 0.01, 0), minDims, maxDims);
-    vec3 z0 = clamp(p + vec3(0, 0, 0.01), minDims, maxDims);
-    vec3 z1 = clamp(p - vec3(0, 0, 0.01), minDims, maxDims);
+    vec3 x0 = clamp(p + vec3(0.1, 0, 0), minDims, maxDims);
+    vec3 x1 = clamp(p - vec3(0.1, 0, 0), minDims, maxDims);
+    vec3 y0 = clamp(p + vec3(0, 0.1, 0), minDims, maxDims);
+    vec3 y1 = clamp(p - vec3(0, 0.1, 0), minDims, maxDims);
+    vec3 z0 = clamp(p + vec3(0, 0, 0.1), minDims, maxDims);
+    vec3 z1 = clamp(p - vec3(0, 0, 0.1), minDims, maxDims);
     float dx = clamp(cubeVal(x0) - cubeVal(x1), -1, 1);
     float dy = clamp(cubeVal(y0) - cubeVal(y1), -1, 1);
     float dz = clamp(cubeVal(z0) - cubeVal(z1), -1, 1);

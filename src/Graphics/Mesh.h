@@ -3,6 +3,7 @@
 
 #include "Utils/Globals.h"
 #include "DataStructure/Vector3.h"
+#include "DataStructure/Matrix3.h"
 #include "Graphics/Shader.h"
 #include <vector>
 #include <map>
@@ -36,6 +37,9 @@ public:
     void display(GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
 
+    void displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
+    void displayAsVectorField(Matrix3<Vector3> field, Vector3 finalDimensions = Vector3(false), float maxMaginitude = -1, bool normalize = false);
+
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
     void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
 
@@ -50,13 +54,20 @@ public:
     void reorderTriangles(Vector3 camPos);
     void reorderAny(Vector3 camPos, int nbVertexToUse);
 
-    std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>());
+    std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>()) const;
 
     std::string toOBJ();
     std::string toOFF();
     std::string toSTL();
 
     Mesh applyMarchingCubes(Matrix3<float> &values);
+
+    Matrix3<int> voxelize(Vector3 dimensions) const;
+
+
+    static Mesh createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false);
+
+    static void displayScalarField(Matrix3<float> field, Mesh& mesh, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
 
 
     unsigned int bufferID;

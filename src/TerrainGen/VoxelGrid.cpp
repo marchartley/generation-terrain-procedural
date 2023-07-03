@@ -140,8 +140,8 @@ void VoxelGrid::computeMultipleFlowfields(int steps)
     for (size_t iCurrent = 0; iCurrent < nbCurrentsToCompute; iCurrent++) {
 //        if (iCurrent > 0) continue;
         Vector3 simulationDimensions = Vector3(this->multipleFluidSimulations[iCurrent].sizeX, this->multipleFluidSimulations[iCurrent].sizeY, this->multipleFluidSimulations[iCurrent].sizeZ);
-//        this->multipleFluidSimulations[iCurrent].setObstacles(obstacleMap);
-        this->multipleFluidSimulations[iCurrent].setObstacles(geom);
+        this->multipleFluidSimulations[iCurrent].setObstacles(obstacleMap);
+//        this->multipleFluidSimulations[iCurrent].setObstacles(geom);
         for (int x = 0; x < simulationDimensions.x; x++) {
             for (int y = 0; y < simulationDimensions.y; y++) {
                 for (int z = 0; z < simulationDimensions.z; z++) {
@@ -244,11 +244,11 @@ void VoxelGrid::initMap()
         this->chunks[i]->LoDIndex = 1; // std::min(i % this->numberOfChunksY() + i / this->numberOfChunksX(), this->chunks[i]->LoDs.size() - 1);
     }
 */
-    float dt = 1.f;
-    float diffusion = 0.0f;
-    float viscosity = 0.1f;
-    int fluidSolverIterations = 1;
-    this->fluidSimRescale = 6;
+    float dt = 0.1f;
+    float diffusion = 0.1f;
+    float viscosity = 0.01f;
+    int fluidSolverIterations = 5;
+    this->fluidSimRescale = 4;
     this->fluidSimulation = StableFluids::StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale, this->getSizeY() / this->fluidSimRescale, this->getSizeZ() / this->fluidSimRescale, dt, diffusion, viscosity, fluidSolverIterations);
     this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
 
