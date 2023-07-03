@@ -73,18 +73,22 @@ public:
 
     void integrateParticles(double dt, Vector3 gravity);
     void pushParticlesApart(int numIters);
-    void handleParticleCollisions(Vector3 obstaclePos, float obstacleRadius);
+//    void handleParticleCollisions(Vector3 obstaclePos, float obstacleRadius);
     void updateParticleDensity();
     void transferVelocities(bool toGrid, float flipRatio);
     void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true);
     void step();
     void simulate();
 
-    void handleCollisions() {};
+    void handleCollisions();
 
 
     Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     void addVelocity(int x, int y, int z, Vector3 amount);
+
+    bool useVelocityForCollisionDetection;
+
+    std::vector<Particle> savedState;
 };
 
 

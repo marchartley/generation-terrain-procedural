@@ -11,7 +11,7 @@ namespace StableFluids {
 
 // The process is only partially understood in my head, see Josh Stam's paper for more understanding (Real-Time Fluid Dynamics for Games, 2003)
 class StableFluidsSimulation : public FluidSimulation
-{
+{/*
 public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusion, float viscosity, int solverIterations);
@@ -50,7 +50,7 @@ public:
 
 
 
-    /*
+    */
 public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations);
@@ -270,7 +270,6 @@ public:
         }
         this->set_bounds(arr, inverseOnBounds);
     }
-    */
 };
 
 }

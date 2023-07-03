@@ -63,7 +63,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
 
     this->particles.resize(maxParticles);
     for (int i = 0; i < maxParticles; i++) {
-        particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f));
+        particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f)) + Vector3(0, 0, this->dimensions.z);
     }
 
     //    this->numParticles = 0;
@@ -72,7 +72,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
 void FLIPSimulation::integrateParticles(double dt, Vector3 gravity) {
     for (Particle& p : particles) {
         p.velocity += gravity * dt;
-        p.position += p.velocity * dt;
+        p.position = Vector3::wrap(p.position + p.velocity * dt, Vector3(), this->dimensions);
     }
 }
 
@@ -120,6 +120,14 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
     float minDist = 2.0 * particleRadius;
     float minDist2 = minDist * minDist;
 
+    std::vector<bool> lockedParticles(numParticles);
+    Vector3 radiusBox = Vector3(1, 1, 1) * particleRadius;
+//#pragma omp parallel for
+//    for (int i = 0; i < numParticles; i++) {
+//        auto closeBorders = obstacleTrianglesOctree->queryRange(particles[i].position - radiusBox, particles[i].position + radiusBox);
+//        lockedParticles[i] = closeBorders.size() > 0;
+//    }
+
     for (int iter = 0; iter < numIters; iter++) {
     #pragma omp parallel for
         for (int i = 0; i < numParticles; i++) {
@@ -158,8 +166,10 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
                             float dLen = std::sqrt(d2);
                             float s = 0.5 * (minDist - dLen) / dLen;
                             d *= s;
-                            particles[i].position -= d;
-                            particles[id].position += d;
+//                            if (!lockedParticles[i])
+                                particles[i].position -= d;
+//                            if (!lockedParticles[id])
+                                particles[id].position += d;
 
                             // Diffuse colors
 //                            for (int k = 0; k < 3; k++) {
@@ -177,70 +187,42 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
     }
 }
 
-void FLIPSimulation::handleParticleCollisions(Vector3 obstaclePos, float obstacleRadius) {
+void FLIPSimulation::handleCollisions() {
     float h = 1.0 / fInvSpacing;
     float r = particleRadius;
 //    float or2 = obstacleRadius * obstacleRadius;
-    float minDist = obstacleRadius + r;
-    float minDist2 = minDist * minDist;
+//    float minDist = obstacleRadius + r;
+//    float minDist2 = minDist * minDist;
 
     Vector3 min(h + r, h + r, h + r);
     Vector3 max((fNumX - 1) * h - r, (fNumY - 1) * h - r, (fNumZ - 1) * h - r);
 
     int numParticles = this->particles.size();
 
-//#pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < numParticles; i++) {
         Vector3& pos = particles[i].position;
         Vector3& vel = particles[i].velocity;
 
-        /*
-        Vector3 d = pos - obstaclePos;
-        float d2 = d.dot(d);
-
-        // Obstacle collision
-        if (d2 < minDist2) {
-//            vel = scene.obstacleVel;
-            vel *= -1.f;
-        }*/
-/*
-        // Wall collisions
-        if (pos.x < min.x) {
-            pos.x = min.x;
-            vel.x = 0.0;
-        }
-        if (pos.x > max.x) {
-            pos.x = max.x;
-            vel.x = 0.0;
-        }
-        if (pos.y < min.y) {
-            pos.y = min.y;
-            vel.y = 0.0;
-        }
-        if (pos.y > max.y) {
-            pos.y = max.y;
-            vel.y = 0.0;
-        }
-        if (pos.z < min.z) {
-            pos.z = min.z;
-            vel.z = 0.0;
-        }
-        if (pos.z > max.z) {
-            pos.z = max.z;
-            vel.z = 0.0;
-        }*/
-
-        Vector3 endPos = pos + vel.normalized();
-        std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(pos, endPos);
-        std::cout << "~" << nearbyTriangles.size() / 3 << "/" << triangles.size() << std::endl;
+        Vector3 startPos = (useVelocityForCollisionDetection ? pos : savedState[i].position);
+        Vector3 endPos = (useVelocityForCollisionDetection ? pos + vel.normalized() : pos);
+        Vector3 diff = endPos - startPos;
+        std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(startPos - diff * 3.f, endPos + diff * 3.f);
+//        std::cout << "~" << nearbyTriangles.size() / 3 << "/" << triangles.size() << std::endl;
         // Check for intersections with nearby triangles
         for (auto& triangleData : nearbyTriangles) {
             auto& triangle = this->triangles[triangleData.index];
-            Vector3 collisionPoint = Collision::segmentToTriangleCollision(pos, endPos, triangle[0], triangle[1], triangle[2]);
+            Vector3 collisionPoint = Collision::segmentToTriangleCollision(startPos - diff, endPos + diff, triangle[0], triangle[1], triangle[2]);
             if (collisionPoint.isValid()) {
-                std::cout << "Collide! " << vel;
-                vel = collisionPoint - pos;
-                std::cout << " -> " << vel << std::endl;
+                if (useVelocityForCollisionDetection) {
+                    Vector3 normal = (triangle[1] - triangle[0]).cross(triangle[2] - triangle[0]).normalize();
+                    vel = vel.normalized().reflexion(normal) * vel.norm(); //collisionPoint - startPos;
+                    if (vel.dot(normal) < 0)
+                        vel *= -1.f;
+                    pos = collisionPoint + vel;
+                } else {
+                    pos = collisionPoint + (startPos - collisionPoint) * .1f;
+                }
                 break;
             }
         }
@@ -555,8 +537,8 @@ void FLIPSimulation::step()
 {
 //    float dt = 0.1; // Time step
     float gravityValue = 9.81; // Acceleration due to gravity
-    Vector3 obstaclePos(0, 0, 0);
-    float obstacleRadius = 0.0; // Radius of obstacle
+//    Vector3 obstaclePos(0, 0, 0);
+//    float obstacleRadius = 0.0; // Radius of obstacle
     int numIterations = 100; // Number of iterations for each step
     float overRelaxation = 1.0; // Over-relaxation parameter
     bool compensateDrift = true; // Whether to compensate for drift
@@ -570,9 +552,13 @@ void FLIPSimulation::step()
 //    particles = copy;
 
 
+    savedState = this->particles;
     integrateParticles(dt, gravity);
+    this->useVelocityForCollisionDetection = true;
+    handleCollisions();
     pushParticlesApart(numIterations);
-    handleParticleCollisions(obstaclePos, obstacleRadius);
+    this->useVelocityForCollisionDetection = false;
+    handleCollisions();
     updateParticleDensity();
     transferVelocities(true, flipRatio);
     solveIncompressibility(numIterations, dt, overRelaxation, compensateDrift);
