@@ -359,8 +359,8 @@ T Matrix3<T>::interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding)
 
     bool previousErrorConfig = this->raiseErrorOnBadCoord;
     RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
-    this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = padding;
+//    this->raiseErrorOnBadCoord = false;
+//    this->returned_value_on_outside = padding;
     T f000 = this->at(round + Vector3(0, 0, 0));
     T f100 = this->at(round + Vector3(1, 0, 0));
     T f010 = this->at(round + Vector3(0, 1, 0));

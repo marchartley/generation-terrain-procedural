@@ -864,3 +864,13 @@ Vector3 AABBox::intersects(const Vector3& rayStart, const Vector3& rayEnd) {
     Vector3 intersectionPoint = rayStart + direction * tNear; // calculate intersection point
     return intersectionPoint;
 }
+
+std::ostream& operator<<(std::ostream& io, const AABBox& bbox) {
+    io << bbox.toString();
+    return io;
+}
+
+std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> bbox) {
+    io << bbox->toString();
+    return io;
+}
