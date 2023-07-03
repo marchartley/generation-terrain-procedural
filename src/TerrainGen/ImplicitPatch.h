@@ -3,7 +3,7 @@
 
 class ImplicitPatch;
 class ImplicitPrimitive;
-class ImplicitOperator;
+class ImplicitBinaryOperator;
 class ImplicitUnaryOperator;
 class ImplicitNaryOperator;
 class ImplicitCSG;
@@ -123,6 +123,12 @@ public:
     virtual bool contains(Vector3 v);
     virtual bool contains(float x, float y, float z);
 
+    virtual bool contains(PredefinedShapes shape) = 0;
+    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape) = 0;
+
+    Vector3 getGlobalPositionOf(Vector3 posInsidePatch);
+    Vector3 getLocalPositionOf(Vector3 globalPosition);
+
 //    virtual size_t getCurrentHistoryIndex() const;
 
     virtual float getSizeX() { return this->getBBox().max().x; }
@@ -166,6 +172,10 @@ public:
 
     static std::function<float(Vector3)> convert2DfunctionTo3Dfunction(std::function<float(Vector3)> func);
 
+    ImplicitPatch* getParent() const;
+    void setParent(ImplicitPatch* newParent);
+    ImplicitPatch* parent = nullptr;
+
     static int currentMaxIndex;
 
     static std::string json_identifier;
@@ -194,6 +204,9 @@ public:
     void setDimensions(Vector3 newDimensions);
     void setSupportDimensions(Vector3 newSupportDimensions);
 
+    bool contains(PredefinedShapes shape) { return this->predefinedShape == shape; }
+    std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
     virtual ImplicitPatch* copy() const;
 
     Vector3 position = Vector3(false);
@@ -212,9 +225,37 @@ public:
     static ImplicitPrimitive* fromHeightmap(Matrix3<float> heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
 };
 
-class ImplicitOperator : public ImplicitPatch {
+class ImplicitNaryOperator : public ImplicitPatch {
 public:
-    ImplicitOperator();
+    ImplicitNaryOperator();
+
+    float evaluate(Vector3 pos);
+    std::map<TerrainTypes, float> getMaterials(Vector3 pos);
+    AABBox getSupportBBox();
+    AABBox getBBox();
+    void update();
+    std::string toString();
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+
+    bool contains(PredefinedShapes shape);
+    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
+    void augment();
+
+    void updateCache();
+
+    virtual ImplicitPatch* copy() const;
+
+    virtual void addChild(ImplicitPatch* newChild, int index = -1);
+    virtual void deleteAllChildren();
+
+    std::vector<ImplicitPatch*> composables;
+};
+
+class ImplicitBinaryOperator : public ImplicitNaryOperator {
+public:
+    ImplicitBinaryOperator();
 
     float evaluate(Vector3 pos);
     std::map<TerrainTypes, float> getMaterials(Vector3 pos);
@@ -228,6 +269,9 @@ public:
     std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(Vector3 pos);
     std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(Vector3 pos);
 
+    bool contains(PredefinedShapes shape);
+    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
     AABBox getSupportBBox();
     AABBox getBBox();
     void update();
@@ -239,13 +283,18 @@ public:
 
     void swapAB();
 
+
     Vector3 getEvaluationPositionForComposableA(Vector3 pos);
     Vector3 getEvaluationPositionForComposableB(Vector3 pos);
 
     virtual ImplicitPatch* copy() const;
+    virtual void addChild(ImplicitPatch* newChild, int index);
+    virtual void deleteAllChildren();
 
-    ImplicitPatch* composableA = nullptr;
-    ImplicitPatch* composableB = nullptr;
+//    ImplicitPatch* composableA = nullptr;
+//    ImplicitPatch* composableB = nullptr;
+    ImplicitPatch*& composableA();
+    ImplicitPatch*& composableB();
 
     CompositionFunction composeFunction;
     PositionalLabel positionalB;
@@ -255,7 +304,7 @@ public:
     bool withIntersectionOnB = false; // Intersection or Union
 };
 
-class ImplicitUnaryOperator : public ImplicitOperator {
+class ImplicitUnaryOperator : public ImplicitNaryOperator {
 public:
     ImplicitUnaryOperator();
 
@@ -268,12 +317,19 @@ public:
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
 
+    bool contains(PredefinedShapes shape);
+    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
     std::function<Vector3(Vector3)> wrapFunction;
     std::function<Vector3(Vector3)> unwrapFunction;
     std::function<float(Vector3)> noiseFunction;
     std::vector<UnaryOp> transforms;
 
 //    virtual ImplicitPatch* copy() const;
+    virtual void addChild(ImplicitPatch* newChild, int index = 0);
+    virtual void deleteAllChildren();
+
+    ImplicitPatch*& composableA();
 
     void translate(Vector3 translation);
     void rotate(float angleX, float angleY, float angleZ);
@@ -294,25 +350,6 @@ public:
 };
 
 
-class ImplicitNaryOperator : public ImplicitPatch {
-public:
-    ImplicitNaryOperator();
-
-    float evaluate(Vector3 pos);
-    std::map<TerrainTypes, float> getMaterials(Vector3 pos);
-    AABBox getSupportBBox();
-    AABBox getBBox();
-    void update();
-    std::string toString();
-    nlohmann::json toJson();
-    static ImplicitPatch* fromJson(nlohmann::json content);
-
-    void updateCache();
-
-    virtual ImplicitPatch* copy() const;
-
-    std::vector<ImplicitPatch*> composables;
-};
 
 class UnaryOp {
 public:

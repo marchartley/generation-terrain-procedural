@@ -155,7 +155,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
         if (type == "PRIMITIVE")
             result = ImplicitPrimitive::fromJson(content);
         else if (type == "COMPOSE" || type == "BINARY")
-            result = ImplicitOperator::fromJson(content);
+            result = ImplicitBinaryOperator::fromJson(content);
         else if (type == "UNARY")
             result = ImplicitUnaryOperator::fromJson(content);
         else if (type == "NARY")
@@ -267,10 +267,44 @@ bool ImplicitPatch::contains(float x, float y, float z)
     return this->contains(Vector3(x, y, z));
 }
 
+Vector3 ImplicitPatch::getGlobalPositionOf(Vector3 posInsidePatch)
+{
+    Vector3 position = posInsidePatch;
+    ImplicitPatch* current = this;
+    while(current->getParent()) {
+        current = current->getParent();
+        ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(current);
+        if (asUnary) {
+            position = asUnary->wrapFunction(position);
+        }
+    }
+    return position - this->getBBox().min();
+}
+
+Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
+{
+    Vector3 position = globalPosition;
+    std::vector<ImplicitPatch*> ancestry;
+    ImplicitPatch* current = this;
+    while(current->getParent()) {
+        current = current->getParent();
+        ancestry.push_back(current);
+    }
+    std::reverse(ancestry.begin(), ancestry.end());
+    for (size_t i = 0; i < ancestry.size(); i++) {
+        ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(ancestry[i]);
+        if (asUnary) {
+            position = asUnary->unwrapFunction(position);
+        }
+    }
+    return position - this->getBBox().min();
+}
+
 Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
-    if (_cached)
+    if (_cached) {
         return this->_cachedVoxelized;
+    }
 
     if (!dimensions.isValid())
         dimensions = this->getBBox().max();
@@ -512,23 +546,6 @@ void ImplicitPrimitive::update()
     } else {
         this->evalFunction = ImplicitPatch::createPredefinedShapeFunction(this->predefinedShape, this->dimensions, this->parametersProvided[0], this->optionalCurve);
     }
-    // This is kinda f*cked up...
-    /*copy->setDimensions(this->dimensions);
-    copy->setSupportDimensions(this->supportDimensions);
-    copy->position = this->position;
-    copy->material = this->material;
-    copy->parametersProvided = this->parametersProvided;
-    copy->index = this->index;
-    copy->name = this->name;
-    copy->predefinedShape = this->predefinedShape;
-    copy->heightmapFilename = this->heightmapFilename;
-    copy->used_json_filename = this->used_json_filename;
-    copy->cachedHeightmap = this->cachedHeightmap;
-
-    *this = *copy; // Not sure this is legal
-    delete copy;
-
-    }*/
 }
 
 std::string ImplicitPrimitive::toString()
@@ -604,6 +621,14 @@ void ImplicitPrimitive::setSupportDimensions(Vector3 newSupportDimensions)
     this->supportDimensions = newSupportDimensions;
 }
 
+std::vector<ImplicitPatch *> ImplicitPrimitive::findAll(PredefinedShapes shape)
+{
+    if (this->contains(shape)) {
+        return {this};
+    }
+    return {};
+}
+
 ImplicitPatch *ImplicitPrimitive::copy() const
 {
     ImplicitPrimitive* copy = new ImplicitPrimitive(*this);
@@ -612,7 +637,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions, ImplicitPrimitive *prim)
 {
-    std::string ext = getExtension(filename);
+    std::string ext = toUpper(getExtension(filename));
     if (isIn(ext, {"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
         int imgW, imgH, nbChannels;
         unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
@@ -664,6 +689,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, st
     prim->cachedHeightmap = heightmap;
     prim->cachedHeightmap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     prim->cachedHeightmap.raiseErrorOnBadCoord = false;
+    prim->material = ROCK;
     prim->update();
     return prim;
 }
@@ -673,12 +699,12 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, st
 
 
 
-ImplicitOperator::ImplicitOperator()
+ImplicitBinaryOperator::ImplicitBinaryOperator()
 {
-
+    this->composables = std::vector<ImplicitPatch*>(2);
 }
 
-float ImplicitOperator::evaluate(Vector3 pos)
+float ImplicitBinaryOperator::evaluate(Vector3 pos)
 {
     // Get the function, depending on the chosen operator
     float evalA = this->evaluateA(pos);
@@ -705,7 +731,7 @@ float ImplicitOperator::evaluate(Vector3 pos)
     */
 }
 
-std::map<TerrainTypes, float> ImplicitOperator::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(Vector3 pos)
 {
     // Get materials on A, get materials on B
     // Take the operator final evaluation
@@ -835,7 +861,7 @@ std::map<TerrainTypes, float> ImplicitOperator::getMaterials(Vector3 pos)
     return result;
 }
 
-float ImplicitOperator::evaluateFromAandB(float evalA, float evalB)
+float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
 {
     if (this->withIntersectionOnB && evalA < ImplicitPatch::isovalue) {
         return evalA; // TODO: Check if we need to use "isovalue" in the condition
@@ -854,51 +880,61 @@ float ImplicitOperator::evaluateFromAandB(float evalA, float evalB)
     return evaluation;
 }
 
-float ImplicitOperator::evaluateA(Vector3 pos)
+float ImplicitBinaryOperator::evaluateA(Vector3 pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
 
-    return this->composableA->evaluate(evaluationPosA);
+    return this->composableA()->evaluate(evaluationPosA);
 }
 
-float ImplicitOperator::evaluateB(Vector3 pos)
+float ImplicitBinaryOperator::evaluateB(Vector3 pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
 
-    return this->composableB->evaluate(evaluationPosB);
+    return this->composableB()->evaluate(evaluationPosB);
 }
 
-std::map<TerrainTypes, float> ImplicitOperator::getMaterialsA(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(Vector3 pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
-    return this->composableA->getMaterials(evaluationPosA);
+    return this->composableA()->getMaterials(evaluationPosA);
 }
 
-std::map<TerrainTypes, float> ImplicitOperator::getMaterialsB(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(Vector3 pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
-    return this->composableB->getMaterials(evaluationPosB);
+    return this->composableB()->getMaterials(evaluationPosB);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitOperator::getMaterialsAndTotalEvaluationA(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(Vector3 pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
-    return this->composableA->getMaterialsAndTotalEvaluation(evaluationPosA);
+    return this->composableA()->getMaterialsAndTotalEvaluation(evaluationPosA);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitOperator::getMaterialsAndTotalEvaluationB(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(Vector3 pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
-    return this->composableB->getMaterialsAndTotalEvaluation(evaluationPosB);
+    return this->composableB()->getMaterialsAndTotalEvaluation(evaluationPosB);
 }
 
-AABBox ImplicitOperator::getSupportBBox()
+bool ImplicitBinaryOperator::contains(PredefinedShapes shape)
 {
-    auto AABBoxA = this->composableA->getSupportBBox();
+    return this->composableA()->contains(shape) || this->composableB()->contains(shape);
+}
+
+std::vector<ImplicitPatch *> ImplicitBinaryOperator::findAll(PredefinedShapes shape)
+{
+    return vectorMerge(this->composableA()->findAll(shape), this->composableB()->findAll(shape));
+}
+
+AABBox ImplicitBinaryOperator::getSupportBBox()
+{
+    auto AABBoxA = this->composableA()->getSupportBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
         return AABBoxA;
     }
-    auto AABBoxB = this->composableB->getSupportBBox();
+    auto AABBoxB = this->composableB()->getSupportBBox();
 
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
@@ -919,13 +955,13 @@ AABBox ImplicitOperator::getSupportBBox()
     return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
-AABBox ImplicitOperator::getBBox()
+AABBox ImplicitBinaryOperator::getBBox()
 {
-    auto AABBoxA = this->composableA->getBBox();
+    auto AABBoxA = this->composableA()->getBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
         return AABBoxA;
     }
-    auto AABBoxB = this->composableB->getBBox();
+    auto AABBoxB = this->composableB()->getBBox();
 
     if (this->positionalB == PositionalLabel::ABOVE) {
         // If stacked on composable A, composable B can get higher
@@ -946,17 +982,17 @@ AABBox ImplicitOperator::getBBox()
     return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
-void ImplicitOperator::update()
+void ImplicitBinaryOperator::update()
 {
     // Guess we have nothing to do...
 }
 
-std::string ImplicitOperator::toString()
+std::string ImplicitBinaryOperator::toString()
 {
-    return this->name + ": Operation between " + (composableA ? "#" + std::to_string(composableA->index) : "undefined") + " and " + (composableB ? "#" + std::to_string(composableB->index) : "undefined");
+    return this->name + ": Operation between " + (composableA() ? "#" + std::to_string(composableA()->index) : "undefined") + " and " + (composableB() ? "#" + std::to_string(composableB()->index) : "undefined");
 }
 
-nlohmann::json ImplicitOperator::toJson()
+nlohmann::json ImplicitBinaryOperator::toJson()
 {
     nlohmann::json content;
     if (!this->used_json_filename.empty()) {
@@ -978,10 +1014,10 @@ nlohmann::json ImplicitOperator::toJson()
         content["index"] = this->index;
         content["positionalB"] = stringFromPositionalLabel(this->positionalB);
         content["useIntersection"] = this->withIntersectionOnB;
-        if (this->composableA)
-            content["composableA"] = this->composableA->toJson();
-        if (this->composableB)
-            content["composableB"] = this->composableB->toJson();
+        if (this->composableA())
+            content["composableA"] = this->composableA()->toJson();
+        if (this->composableB())
+            content["composableB"] = this->composableB()->toJson();
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
         content["mirrored"] = this->mirrored;
     }
@@ -989,11 +1025,11 @@ nlohmann::json ImplicitOperator::toJson()
     return content;
 }
 
-ImplicitPatch *ImplicitOperator::fromJson(nlohmann::json content)
+ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
 {
-    ImplicitOperator* patch = new ImplicitOperator;
-    patch->composableA = ImplicitPatch::fromJson(content["composableA"]);
-    patch->composableB = ImplicitPatch::fromJson(content["composableB"]);
+    ImplicitBinaryOperator* patch = new ImplicitBinaryOperator;
+    patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
+    patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
     patch->name = content["name"];
     patch->composeFunction = compositionOperationFromString(content["operator"]);
     patch->blendingFactor = content["blendingFactor"];
@@ -1009,45 +1045,53 @@ ImplicitPatch *ImplicitOperator::fromJson(nlohmann::json content)
     return patch;
 }
 
-void ImplicitOperator::updateCache()
+void ImplicitBinaryOperator::updateCache()
 {
     ImplicitPatch::updateCache();
-    if (this->composableA != nullptr)
-        this->composableA->updateCache();
-    if (this->composableB != nullptr)
-        this->composableB->updateCache();
+    if (this->composableA() != nullptr)
+        this->composableA()->updateCache();
+    if (this->composableB() != nullptr)
+        this->composableB()->updateCache();
 }
 
-void ImplicitOperator::swapAB()
+void ImplicitBinaryOperator::swapAB()
 {
-    if (this->composableB != nullptr) {
-        std::swap(this->composableA, this->composableB);
-        this->composableA->updateCache();
-        this->composableB->updateCache();
+    if (this->composableB() != nullptr) {
+        std::swap(this->composableA(), this->composableB());
+        this->composableA()->updateCache();
+        this->composableB()->updateCache();
     }
 }
 
-Vector3 ImplicitOperator::getEvaluationPositionForComposableA(Vector3 pos)
+void ImplicitBinaryOperator::deleteAllChildren()
+{
+    for (auto& child : composables) {
+        delete child;
+    }
+    this->composables.resize(2, nullptr);
+}
+
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(Vector3 pos)
 {
     return pos; // Nothing to do
 }
 
-Vector3 ImplicitOperator::getEvaluationPositionForComposableB(Vector3 pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(Vector3 pos)
 {
     // Get the correct evaluation position for the B composent
     float offsetB = 0.f;
     if (this->positionalB == ABOVE) {
-        offsetB = this->composableA->getMaxHeight(pos);
+        offsetB = this->composableA()->getMaxHeight(pos);
     } else if (this->positionalB == INSIDE_TOP) {
-        offsetB = this->composableA->getMaxHeight(pos) - this->composableB->getDimensions().z;
+        offsetB = this->composableA()->getMaxHeight(pos) - this->composableB()->getDimensions().z;
     } else if (this->positionalB == INSIDE_BOTTOM) {
-        offsetB = this->composableA->getMinHeight(pos);
+        offsetB = this->composableA()->getMinHeight(pos);
     } else if (this->positionalB == FIXED_POS) {
         offsetB = 0.f;
     } else if (this->positionalB == SMOOTH_ABOVE) {
-        float heightB = this->composableB->getDimensions().z;
-        float heightA = heightA = std::min(heightB, this->composableA->getMaxHeight(pos));
-        float minHeightA = this->composableA->getMinimalHeight(this->composableB->getBBox());
+        float heightB = this->composableB()->getDimensions().z;
+        float heightA = heightA = std::min(heightB, this->composableA()->getMaxHeight(pos));
+        float minHeightA = this->composableA()->getMinimalHeight(this->composableB()->getBBox());
         float heightInterp = interpolation::wyvill(heightA, minHeightA, (minHeightA + heightB));
 //        offsetB = (1.f - heightInterp / heightB) * heightB;
         pos.z *= (heightInterp / heightB);
@@ -1058,10 +1102,27 @@ Vector3 ImplicitOperator::getEvaluationPositionForComposableB(Vector3 pos)
     return pos;
 }
 
-ImplicitPatch *ImplicitOperator::copy() const
+ImplicitPatch *ImplicitBinaryOperator::copy() const
 {
-    ImplicitOperator* copy = new ImplicitOperator(*this);
+    ImplicitBinaryOperator* copy = new ImplicitBinaryOperator(*this);
     return copy;
+}
+
+void ImplicitBinaryOperator::addChild(ImplicitPatch *newChild, int index)
+{
+    if (index != 0 && index != 1)
+        throw std::out_of_range("On a binary operator, only the child[0] or child[1] can be affected. In the function, the index given is " + std::to_string(index));
+
+    ImplicitNaryOperator::addChild(newChild, index);
+}
+
+ImplicitPatch*& ImplicitBinaryOperator::composableA()
+{
+    return this->composables[0];
+}
+ImplicitPatch*& ImplicitBinaryOperator::composableB()
+{
+    return this->composables[1];
 }
 
 
@@ -1070,8 +1131,8 @@ ImplicitPatch *ImplicitOperator::copy() const
 
 ImplicitUnaryOperator::ImplicitUnaryOperator()
 {
-//    this->wrapFunction = [](Vector3 pos) { return pos; };
-//    this->unwrapFunction = [](Vector3 pos) { return pos; };
+    this->composables = std::vector<ImplicitPatch*>(1);
+
     this->wrapFunction = [=](Vector3 pos) {
         for (int i = 0; i < this->transforms.size(); i++)
             pos = this->transforms[i].wrap(pos);
@@ -1088,7 +1149,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
 float ImplicitUnaryOperator::evaluate(Vector3 pos)
 {
     Vector3 evaluationPos = this->unwrapFunction(pos);
-    float evaluation = this->composableA->evaluate(evaluationPos) + this->noiseFunction(pos);
+    float evaluation = this->composableA()->evaluate(evaluationPos) + this->noiseFunction(pos);
     evaluation = std::clamp(evaluation, 0.f, 1.f);
 
     return evaluation;
@@ -1097,7 +1158,7 @@ float ImplicitUnaryOperator::evaluate(Vector3 pos)
 std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
 {
     Vector3 evaluationPos = this->unwrapFunction(pos);
-    auto [eval, materials] = this->composableA->getMaterialsAndTotalEvaluation(evaluationPos);
+    auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
     if (eval > 0.f) {
         float noiseValue = this->noiseFunction(pos);
         for (auto& [mat, val] : materials) {
@@ -1109,7 +1170,7 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
 
 AABBox ImplicitUnaryOperator::getSupportBBox()
 {
-    auto AABBox = this->composableA->getSupportBBox();
+    auto AABBox = this->composableA()->getSupportBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
     for (auto& vert : vertices) // call transform function
@@ -1120,7 +1181,7 @@ AABBox ImplicitUnaryOperator::getSupportBBox()
 
 AABBox ImplicitUnaryOperator::getBBox()
 {
-    auto AABBox = this->composableA->getBBox();
+    auto AABBox = this->composableA()->getBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
     for (auto& vert : vertices) // call transform function
@@ -1131,7 +1192,7 @@ AABBox ImplicitUnaryOperator::getBBox()
 
 std::string ImplicitUnaryOperator::toString()
 {
-    return this->name + ": Unary operation on " + (composableA ? "#" + std::to_string(composableA->index) : "undefined");
+    return this->name + ": Unary operation on " + (composableA() ? "#" + std::to_string(composableA()->index) : "undefined");
 }
 
 nlohmann::json ImplicitUnaryOperator::toJson()
@@ -1157,8 +1218,8 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         content["noise"] = vec3_to_json(this->_noise);
         content["scale"] = vec3_to_json(this->_scale);
         content["distortion"] = vec3_to_json(this->_distortion);
-        if (this->composableA)
-            content["composableA"] = this->composableA->toJson();
+        if (this->composableA())
+            content["composableA"] = this->composableA()->toJson();
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
         content["spreadFactor"] = this->_spreadingFactor;
         content["mirrored"] = this->mirrored;
@@ -1170,7 +1231,7 @@ nlohmann::json ImplicitUnaryOperator::toJson()
 ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitUnaryOperator* patch = new ImplicitUnaryOperator;
-    patch->composableA = ImplicitPatch::fromJson(content["composableA"]);
+    patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
     patch->name = content["name"];
     patch->index = content["index"];
     Vector3 rotation = json_to_vec3(content["rotation"]);
@@ -1212,6 +1273,38 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 
     patch->update();
     return patch;
+}
+
+bool ImplicitUnaryOperator::contains(PredefinedShapes shape)
+{
+    return this->composableA()->contains(shape);
+}
+
+std::vector<ImplicitPatch *> ImplicitUnaryOperator::findAll(PredefinedShapes shape)
+{
+    return this->composableA()->findAll(shape);
+}
+
+void ImplicitUnaryOperator::addChild(ImplicitPatch *newChild, int index)
+{
+
+    if (index != 0)
+        throw std::out_of_range("On a unary operator, only the child[0] can be affected. In the function, the index given is " + std::to_string(index));
+
+    ImplicitNaryOperator::addChild(newChild, index);
+}
+
+void ImplicitUnaryOperator::deleteAllChildren()
+{
+    for (auto& child : composables) {
+        delete child;
+    }
+    this->composables.resize(1, nullptr);
+}
+
+ImplicitPatch *&ImplicitUnaryOperator::composableA()
+{
+    return this->composables[0];
 }
 
 void ImplicitUnaryOperator::translate(Vector3 translation)
@@ -1261,7 +1354,7 @@ void ImplicitUnaryOperator::addWrapFunction(Matrix3<Vector3> func)
 //    AABBox dims = this->getSupportBBox();
     this->transforms.push_back(UnaryOpWrap([=](Vector3 pos) -> Vector3 {
         auto f = func;
-        auto supportBBox = this->composableA->getSupportBBox();
+        auto supportBBox = this->composableA()->getSupportBBox();
         Vector3 normalizedPos = supportBBox.normalize(pos);
         Vector3 posInMatrix = normalizedPos * (f.getDimensions() - Vector3(1, 1, 1));
         Vector3 distortionValue = f.interpolate(posInMatrix);
@@ -1556,6 +1649,16 @@ std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std:
         return std::max(0.f, isovalue);
     };
     return _3Dfunction;
+}
+
+ImplicitPatch* ImplicitPatch::getParent() const
+{
+    return this->parent;
+}
+
+void ImplicitPatch::setParent(ImplicitPatch* newParent)
+{
+    this->parent = newParent;
 }
 
 /*
@@ -2083,6 +2186,29 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
     return patch;
 }
 
+bool ImplicitNaryOperator::contains(PredefinedShapes shape)
+{
+    for (auto& compo : composables)
+        if (compo->contains(shape))
+            return true;
+    return false;
+}
+
+std::vector<ImplicitPatch *> ImplicitNaryOperator::findAll(PredefinedShapes shape)
+{
+    std::vector<ImplicitPatch*> res;
+    for (auto& compo : this->composables)
+        res = vectorMerge(res, compo->findAll(shape));
+    return res;
+}
+
+void ImplicitNaryOperator::augment()
+{
+    if (this->contains(PredefinedShapes::Mountain) && this->contains(PredefinedShapes::MountainChain)) {
+//        this->composables.push_back(ImplicitPrimitive::createPredefinedShape(Polygon, Vector3(0, 0, 20), 0.f, {}));
+    }
+}
+
 void ImplicitNaryOperator::updateCache()
 {
     ImplicitPatch::updateCache();
@@ -2093,4 +2219,21 @@ void ImplicitNaryOperator::updateCache()
 ImplicitPatch *ImplicitNaryOperator::copy() const
 {
     return new ImplicitNaryOperator(*this);
+}
+
+void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
+{
+    if (index == -1)
+        this->composables.push_back(newChild);
+    else
+        this->composables[index] = newChild;
+    newChild->setParent(this);
+}
+
+void ImplicitNaryOperator::deleteAllChildren()
+{
+    for (auto& child : composables) {
+        delete child;
+    }
+    this->composables.clear();
 }

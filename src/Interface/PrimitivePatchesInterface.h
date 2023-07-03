@@ -80,7 +80,7 @@ public Q_SLOTS:
 
 protected:
     ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
-    ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitOperator* replacedPatch = nullptr);
+    ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitBinaryOperator* replacedPatch = nullptr);
     ImplicitPatch* findPrimitiveById(int ID);
     ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
     std::vector<ImplicitPatch*> naiveApproachToGetAllParents(ImplicitPatch* child);
