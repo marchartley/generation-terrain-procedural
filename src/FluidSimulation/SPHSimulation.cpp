@@ -233,7 +233,7 @@ std::vector<size_t> SPHSimulation::getNeighbors(Vector3& position, float maxDist
 }
 void SPHSimulation::relaxDensity() {
     float threshold = 0.1f;  // Set this to a suitable value
-    int maxIterations = 2;  // Set this to a suitable value
+    int maxIterations = 0;  // Set this to a suitable value
 
     for (int iteration = 0; iteration < maxIterations; ++iteration) {
         // Compute the density error for each particle
@@ -268,15 +268,15 @@ void SPHSimulation::step() {
     float timeKDTree = timeIt([=]() { this->computeNeighbors(); });
     std::vector<Particle> previousState = particles;
     bool nans = false;
-    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
+//    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     float timeDensity = timeIt([=]() { this->computeDensityAndPressure(); });
-    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
+//    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     float timeForces = timeIt([=]() { this->computeForces(); });
-    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
-    float timeRelaxation = timeIt([=]() { this->relaxDensity(); });
-    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
+//    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
+    float timeRelaxation = timeIt([=]() { /*this->relaxDensity();*/ });
+//    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     float timeIntegration = timeIt([=]() { this->integrate(); });
-    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
+//    for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     float timeCollisions = timeIt([=]() { this->handleCollisions(); });
     for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     computeTime += (timeKDTree + timeDensity + timeRelaxation + timeForces + timeIntegration + timeCollisions);

@@ -4,7 +4,7 @@
 void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &triangles) {
     this->triangles = triangles;
     // Create Octree
-    Vector3 halfDimension(sizeX / 2, sizeY / 2, sizeZ / 2);
+    Vector3 halfDimension(sizeX / 2.f, sizeY / 2.f, sizeZ / 2.f);
     Vector3 origin = halfDimension; //(0, 0, 0);
     obstacleTrianglesOctree = new Octree(origin, halfDimension);
 
