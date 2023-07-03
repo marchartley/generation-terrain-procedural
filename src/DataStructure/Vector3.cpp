@@ -815,7 +815,19 @@ Vector3 json_to_vec3(nlohmann::json json)
     return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
 }
 
+AABBox::AABBox()
+    : AABBox(Vector3(0, 0, 0), Vector3(0, 0, 0))
+{
+
+}
+
 AABBox::AABBox(Vector3 mini, Vector3 maxi) : mini(mini), maxi(maxi)
+{
+
+}
+
+AABBox::AABBox(std::vector<Vector3> allPointsToContain)
+    : AABBox(Vector3::min(allPointsToContain), Vector3::max(allPointsToContain))
 {
 
 }
@@ -831,4 +843,24 @@ Vector3 AABBox::normalize(Vector3 p)
 Vector3 AABBox::random(Vector3 mini, Vector3 maxi)
 {
     return Vector3::random(mini, maxi);
+}
+
+Vector3 AABBox::intersects(const Vector3& rayStart, const Vector3& rayEnd) {
+    Vector3 direction = (rayEnd - rayStart).normalized();
+    Vector3 tMin = (min() - rayStart) / direction;
+    Vector3 tMax = (max() - rayStart) / direction;
+
+    if (tMin.x > tMax.x) std::swap(tMin.x, tMax.x);
+    if (tMin.y > tMax.y) std::swap(tMin.y, tMax.y);
+    if (tMin.z > tMax.z) std::swap(tMin.z, tMax.z);
+
+    float tNear = std::max({tMin.x, tMin.y, tMin.z});
+    float tFar = std::min({tMax.x, tMax.y, tMax.z});
+
+    if (tNear > tFar || tFar < 0) {
+        return Vector3::invalid();  // return invalid Vector3 if no intersection
+    }
+
+    Vector3 intersectionPoint = rayStart + direction * tNear; // calculate intersection point
+    return intersectionPoint;
 }

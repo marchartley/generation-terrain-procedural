@@ -89,6 +89,7 @@ SOURCES += \
     src/Biomes/BiomeUtils.cpp \
 #    src/Biomes/InstancesTree.cpp \
 #    src/Biomes/ModelsTree.cpp \
+    src/DataStructure/BVH.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/Octree.cpp \
@@ -207,6 +208,7 @@ HEADERS += \
     src/Biomes/BiomeUtils.h \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
+    src/DataStructure/BVH.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/Octree.h \

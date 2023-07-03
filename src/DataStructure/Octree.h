@@ -32,14 +32,14 @@ public:
 
     ~Octree();
 
-    void insert(const Vector3& point, const int& pointIndex);
+    bool insert(const Vector3& point, const int& pointIndex);
 
     std::vector<OctreeNodeData> queryRange(const Vector3& start, const Vector3& end);
 
 private:
-    void insert(OctreeNode* node, const Vector3& point, const int &pointIndex);
+    bool insert(OctreeNode* node, const Vector3& point, const int &pointIndex);
 
-    void queryRange(OctreeNode* node, const Vector3& start, const Vector3& end, std::vector<OctreeNodeData> &result);
+    void queryRange(OctreeNode* node, const Vector3& start, const Vector3& end, std::vector<OctreeNodeData> &result, int level = 0);
 };
 
 #endif // OCTREE_H

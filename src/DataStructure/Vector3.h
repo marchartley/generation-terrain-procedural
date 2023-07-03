@@ -128,6 +128,7 @@ public:
 
     bool isValid() const { return this->valid && (this->x == this->x && this->y == this->y && this->z == this->z); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
+    static Vector3 invalid() { return Vector3(false); }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     explicit operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
@@ -221,7 +222,9 @@ namespace std {
 
 class AABBox { //: public std::pair<Vector3, Vector3> {
 public:
+    AABBox();
     AABBox(Vector3 mini, Vector3 maxi);
+    AABBox(std::vector<Vector3> allPointsToContain);
     Vector3 min() const { return this->mini; }
     Vector3 max() const { return this->maxi; }
     Vector3 dimensions() const { return max() - min(); }
@@ -233,6 +236,8 @@ public:
     Vector3 maxi;
 
     static Vector3 random(Vector3 mini, Vector3 maxi);
+
+    Vector3 intersects(const Vector3& rayStart, const Vector3& rayEnd);
 };
 
 #include "Utils/json.h"
