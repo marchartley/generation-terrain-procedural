@@ -32,12 +32,13 @@ public Q_SLOTS:
 
 protected:
     Mesh particlesMesh;
-    Mesh ghostsMesh;
-    Mesh connectionsMesh;
 
     FLIP::FLIPSimulation simulation;
 
     std::vector<BSpline> particlePaths;
+
+
+    Mesh debugObstacleMesh;
 };
 
 #endif // FLIPSIMULATIONINTERFACE_H

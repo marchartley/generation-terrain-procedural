@@ -21,6 +21,11 @@ FancySlider::~FancySlider()
 {
 
 }
+
+float FancySlider::getfValue()
+{
+    return this->value() * this->multiplier;
+}
 void FancySlider::setfValue(float val)
 {
     int a = int(std::round(val / multiplier));

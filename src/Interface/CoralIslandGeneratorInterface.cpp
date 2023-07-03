@@ -78,7 +78,7 @@ QLayout *CoralIslandGeneratorInterface::createGUI()
     horizontalScaleSlider->setfValue(hScale);
     alphaSlider->setfValue(alpha);
 
-    QObject::connect(applyButton, &QPushButton::pressed, this, &CoralIslandGeneratorInterface::updateCoral);
+    QObject::connect(applyButton, &QPushButton::pressed, this, &CoralIslandGeneratorInterface::validateTerrainChange);
     QObject::connect(subsidenceSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setSubsidence);
     QObject::connect(coralLevelsSlider, &RangeSlider::minValueChanged, this, &CoralIslandGeneratorInterface::setCoralLevelMin);
     QObject::connect(coralLevelsSlider, &RangeSlider::maxValueChanged, this, &CoralIslandGeneratorInterface::setCoralLevelMax);
@@ -99,10 +99,10 @@ void CoralIslandGeneratorInterface::hide()
 
 void CoralIslandGeneratorInterface::show()
 {
-    return ActionInterface::show();
     if (this->heightmap) {
         this->startingHeightmap = *this->heightmap;
     }
+    return ActionInterface::show();
 }
 
 void CoralIslandGeneratorInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
@@ -144,6 +144,13 @@ void CoralIslandGeneratorInterface::setAlpha(float newVal)
 {
     alpha = newVal;
     updateCoral();
+}
+
+void CoralIslandGeneratorInterface::validateTerrainChange()
+{
+    if (this->heightmap) {
+        this->startingHeightmap.heights = this->heightmap->heights;
+    }
 }
 
 void CoralIslandGeneratorInterface::updateCoral()

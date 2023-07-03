@@ -95,6 +95,8 @@ void ErosionInterface::computePredefinedRocksLocations()
 
 void ErosionInterface::display(Vector3 camPos)
 {
+    if (!this->isVisible())
+        return;
     if (this->displayTrajectories) {
         this->rocksPathSuccess.display(GL_LINES, 3.f);
         this->rocksPathFailure.display(GL_LINES, 3.f);
@@ -153,7 +155,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
         std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
         erod.maxRockSize = this->erosionSize;
-        erod.maxRockStrength = this->erosionStrength;
+        erod.maxRockStrength = this->erosionStrength / 10.f;
         erod.rockAmount = this->erosionQtt;
 
         int nbPos, nbErosions;
@@ -721,8 +723,8 @@ QLayout *ErosionInterface::createGUI()
 
     FancySlider* initialCapacitySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
 
-    QPushButton* confirmButton = new QPushButton("Envoyer");
-    QPushButton* confirmFromCamButton = new QPushButton("Camera");
+    QPushButton* confirmButton = new QPushButton("Random");
+    QPushButton* confirmFromCamButton = new QPushButton("From surface");
     QPushButton* confirmFromSkyButton = new QPushButton("Pluie");
 
     QCheckBox* displayTrajectoriesButton = new QCheckBox("Display");
@@ -748,19 +750,27 @@ QLayout *ErosionInterface::createGUI()
 
     QPushButton* lotsOfTestsButton = new QPushButton("Do tests");
 
-    erosionLayout->addWidget(createMultipleSliderGroup({
-                                                           {"Taille", rockSizeSlider},
+    QRadioButton* waterDensity = new QRadioButton("Hydraulic");
+    QRadioButton* airDensity = new QRadioButton("Aeolian");
+
+    QRadioButton* particleSizeSmall = new QRadioButton("Small");
+    QRadioButton* particleSizeMedium = new QRadioButton("Medium");
+    QRadioButton* particleSizeBig = new QRadioButton("Big");
+
+    erosionLayout->addWidget(createVerticalGroup({
+                                                     createMultipleSliderGroup({
+//                                                           {"Taille", rockSizeSlider},
                                                            {"Strength", rockStrengthSlider},
                                                            {"Quantity", rockQttSlider},
-                                                           {"gravity", gravitySlider},
-                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
-                                                           {"bounciness", bouncinessSlider},
+//                                                           {"gravity", gravitySlider},
+//                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
+//                                                           {"bounciness", bouncinessSlider},
 //                                                           {"minSpeed", minSpeedSlider},
 //                                                           {"maxSpeed", maxSpeedSlider},
-                                                           {"max Capacity Factor", maxCapacityFactorSlider},
-                                                           {"erosion Factor", erosionFactorSlider},
-                                                           {"deposit Factor", depositFactorSlider},
-                                                           {"matter Density", matterDensitySlider},
+//                                                           {"max Capacity Factor", maxCapacityFactorSlider},
+//                                                           {"erosion Factor", erosionFactorSlider},
+//                                                           {"deposit Factor", depositFactorSlider},
+//                                                           {"matter Density", matterDensitySlider},
 //                                                           {"material Impact", materialImpactSlider},
                                                            {"air Rotation", airFlowfieldRotationSlider},
                                                            {"water Rotation", waterFlowfieldRotationSlider},
@@ -768,16 +778,23 @@ QLayout *ErosionInterface::createGUI()
                                                            {"water Force", waterForceSlider},
                                                            {"nb iterations", iterationSlider},
 //                                                           {"dt", dtSlider},
-                                                           {"ShearConstantK", shearingStressConstantKSlider},
-                                                           {"ShearRatePower", shearingRatePowerSlider},
-                                                           {"ErosionPower", erosionPowerValueSlider},
-                                                           {"Critical shear stress", criticalShearStressSlider},
+//                                                           {"ShearConstantK", shearingStressConstantKSlider},
+//                                                           {"ShearRatePower", shearingRatePowerSlider},
+//                                                           {"ErosionPower", erosionPowerValueSlider},
+//                                                           {"Critical shear stress", criticalShearStressSlider},
                                                            {"Initial capacity", initialCapacitySlider},
-                                                       }));
+                                                       }),
+                                                     createHorizontalGroup({
+                                                         airDensity, waterDensity
+                                                     }),
+                                                     createHorizontalGroup({
+                                                         particleSizeSmall, particleSizeMedium, particleSizeBig
+                                                     })
+                                                 }));
     erosionLayout->addWidget(createVerticalGroup({
-                                                     confirmButton,
                                                      confirmFromCamButton,
                                                      confirmFromSkyButton,
+                                                     confirmButton,
                                                      displayTrajectoriesButton,
                                                      createVerticalGroup({
                                                          applyOnHeightmap,
@@ -792,7 +809,7 @@ QLayout *ErosionInterface::createGUI()
                                                          labAir, browseAirFlow,
                                                          useSimulatedFlowfield
                                                      }),
-                                                     lotsOfTestsButton,
+//                                                     lotsOfTestsButton,
                                                      createVerticalGroup({
                                                          useImageDensity,
                                                          labDensityField,
@@ -855,6 +872,13 @@ QLayout *ErosionInterface::createGUI()
 
     QObject::connect(lotsOfTestsButton, &QPushButton::pressed, this, &ErosionInterface::testManyManyErosionParameters);
 
+    QObject::connect(airDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 500.f; });
+    QObject::connect(waterDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 1662.f; });
+
+    QObject::connect(particleSizeSmall, &QRadioButton::pressed, this, [=]() { this->erosionSize = 4.f; });
+    QObject::connect(particleSizeMedium, &QRadioButton::pressed, this, [=]() { this->erosionSize = 8.f; });
+    QObject::connect(particleSizeBig, &QRadioButton::pressed, this, [=]() { this->erosionSize = 12.f; });
+
     rockSizeSlider->setfValue(this->erosionSize);
     rockStrengthSlider->setfValue(this->erosionStrength);
     rockQttSlider->setfValue(this->erosionQtt);
@@ -899,6 +923,13 @@ QLayout *ErosionInterface::createGUI()
     useNativeDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::NATIVE);
     useImageDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::DENSITY_IMAGE);
     labDensityField->setText("File: " + QString::fromStdString(getFilename(this->densityFieldImagePath)));
+
+    airDensity->setChecked(this->matterDensity < 1000.f);
+    waterDensity->setChecked(this->matterDensity >= 1000.f);
+
+    particleSizeSmall->setChecked(this->erosionSize < 5.f);
+    particleSizeMedium->setChecked(this->erosionSize >= 5.f && this->erosionSize < 10.f);
+    particleSizeBig->setChecked(this->erosionSize >= 10.f);
     return erosionLayout;
 }
 

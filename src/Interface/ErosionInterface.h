@@ -58,7 +58,7 @@ protected:
 
     float erosionSize = 8.f;
     float erosionStrength = .35f;
-    int erosionQtt = 1;
+    int erosionQtt = 450;
     float rockRandomness = .1f;
 
     float gravity = .981f;
@@ -90,7 +90,7 @@ protected:
 
     UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP;
 
-    bool displayTrajectories = true;
+    bool displayTrajectories = false;
 
     std::string waterFlowImagePath = "";
     std::string airFlowImagePath = "";
