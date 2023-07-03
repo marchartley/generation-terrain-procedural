@@ -259,7 +259,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
         Vector3 airDir = Vector3(0, airForce, 0).rotate(0, 0, (airFlowfieldRotation / 180) * PI);
         Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
         for (size_t i = 0; i < flowfieldValues.size(); i++) {
-            if (flowfieldValues.getCoordAsVector3(i).x > flowfieldValues.sizeX / 2) continue;
+//            if (flowfieldValues.getCoordAsVector3(i).x > flowfieldValues.sizeX / 2) continue;
             if (voxelGrid->environmentalDensities.at(i) < 100) { // In the air
                 flowfieldValues.at(i) = airDir;
             } else { // In water
@@ -520,6 +520,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
             particle.dir *= 0.99f;
 //            std::cout << dir.norm() << std::endl;
 
+//            if (erosionValuesAndPositions.size() > 2) {
+//                steps = -1000;
+//            }
             if ((hasBeenAtLeastOnceInside && nextPos.z < 0/*!Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy())*/) || particle.pos.z < 0 || steps < 0 || particle.dir.norm2() < 1e-4) {
                 if ((steps < 0 || particle.dir.norm2() < 1e-3) && depositFactor > 0.f) {
                     erosionValuesAndPositions.push_back({-particle.capacity, particle.pos - Vector3(0, 0, 0/*2.f * particle.radius - .2f*/)});
@@ -553,7 +556,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
             int size = particleSize;
             val *= 100.f;
             if (iRock == erosionValuesAndPositions.size() - 1) {
-                size *= 2.f;
+//                size *= 2.f;
 //                val *= .5f;
             }
 //            summary += val;
@@ -779,7 +782,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
             }
         }
     }
-    voxelGrid->applyModification(erosionMatrix);
+    voxelGrid->applyModification(erosionMatrix * 20.f);
 //    if (applyChanges)
 //        grid->remeshAll();
     return allCoords;

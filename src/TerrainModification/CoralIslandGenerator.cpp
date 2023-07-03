@@ -70,10 +70,10 @@ Matrix3<float> CoralIslandGenerator::generate(Matrix3<float> heights, float subs
     for (size_t i = 0; i < insideCorals.size(); i++)
         outsideCorals[i] *= aFactorIHaveToCheck2[i];
 
-    Plotter::getInstance()->reset();
-    Plotter::getInstance()->addImage(1.f - (distanceFromLowerCorals.abs() / (distanceFromLowerCorals.abs() * insideCorals).max()), true);
-    Plotter::getInstance()->show();
-    Plotter::getInstance()->draw();
+//    Plotter::getInstance()->reset();
+//    Plotter::getInstance()->addImage(1.f - (distanceFromLowerCorals.abs() / (distanceFromLowerCorals.abs() * insideCorals).max()), true);
+//    Plotter::getInstance()->show();
+//    Plotter::getInstance()->draw();
 
     Matrix3<float> finalMap = Matrix3<float>::max(Matrix3<float>::max(insideCorals, outsideCorals)/* * clamp(std::pow(1.f - subsidence, .5f) + .8f, 0.f, 1.f)*/, heights * subsidence);
 //= np.maximum(np.maximum(insideCorals, outsideCorals) * clamp((1-subsidence)**0.5 + .8, 0, 1), heights * subsidence)
