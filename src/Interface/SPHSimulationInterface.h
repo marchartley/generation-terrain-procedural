@@ -3,15 +3,15 @@
 
 class SPHSimulationInterface;
 #include <QWidget>
-#include "Interface/ActionInterface.h"
+#include "Interface/AbstractFluidSimulationInterface.h"
 #include "FluidSimulation/SPHSimulation.h"
 
-class SPHSimulationInterface : public ActionInterface
+class SPHSimulationInterface : public AbstractFluidSimulationInterface
 {
     Q_OBJECT
 public:
     SPHSimulationInterface(QWidget *parent = nullptr);
-
+/*
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
     void display(Vector3 camPos = Vector3(false));
@@ -38,6 +38,7 @@ protected:
     SPH::SPHSimulation simulation;
 
     std::vector<BSpline> particlePaths;
+    */
 };
 
 #endif // SPHSIMULATIONINTERFACE_H

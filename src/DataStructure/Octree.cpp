@@ -1,4 +1,6 @@
 #include "Octree.h"
+#include "Utils/Collisions.h"
+#include <set>
 
 OctreeNode::OctreeNode(const Vector3 &origin, const Vector3 &halfDimension)
     : origin(origin), halfDimension(halfDimension) {
@@ -6,7 +8,9 @@ OctreeNode::OctreeNode(const Vector3 &origin, const Vector3 &halfDimension)
 }
 
 OctreeNode::~OctreeNode() {
-    for (int i = 0; i < 8; ++i) delete children[i];
+    for (int i = 0; i < 8; ++i)
+        if (children[i])
+            delete children[i];
 }
 
 bool OctreeNode::intersects(const Vector3 &start, const Vector3 &end) const {
@@ -26,11 +30,26 @@ Octree::Octree() : root(nullptr)
 Octree::Octree(const Vector3 &origin, const Vector3 &halfDimension)
     : root(new OctreeNode(origin, halfDimension))
 {
-//    std::cout << "Root : " << origin << " -- " << halfDimension << std::endl;
+}
+
+Octree::Octree(const std::vector<std::vector<Vector3> > &triangles)
+{/*
+    Vector3 minPoint = Vector3::max();
+    Vector3 maxPoint = Vector3::min();
+    for (size_t i = 0; i < triangles.size(); ++i) {
+        for (const auto& vertex : triangles[i]) {
+            minPoint = Vector3::min(minPoint, vertex);
+            maxPoint = Vector3::max(maxPoint, vertex);
+        }
+    }
+    AABBox box(minPoint, maxPoint);
+    root = new OctreeNode(box.center(), box.dimensions() * .5f);*/
+    this->insert(triangles);
 }
 
 Octree::~Octree() {
-    delete root;
+    if (this->root)
+        delete root;
 }
 
 bool Octree::insert(const Vector3 &point, const int& pointIndex) {
@@ -39,12 +58,68 @@ bool Octree::insert(const Vector3 &point, const int& pointIndex) {
     return insert(root, point, pointIndex);
 }
 
-std::vector<OctreeNodeData> Octree::queryRange(const Vector3 &start, const Vector3 &end) {
+bool Octree::insert(std::vector<std::vector<Vector3> > triangles)
+{
+    if (!this->root) {
+        Vector3 mini = Vector3::max(), maxi = Vector3::min();
+        for (const auto& t : triangles) {
+            mini = Vector3::min({mini, t[0], t[1], t[2]});
+            maxi = Vector3::max({maxi, t[0], t[1], t[2]});
+        }
+        this->root = new OctreeNode((mini + maxi) * .5f, (maxi - mini) * .5f);
+    }
+    bool atLeastOneGood = false;
+    for (size_t i = 0; i < triangles.size(); i++) {
+        atLeastOneGood |= (insert(triangles[i][0], i) || insert(triangles[i][1], i) || insert(triangles[i][2], i));
+    }
+    return atLeastOneGood;
+}
+
+std::vector<OctreeNodeData> Octree::queryRange(const Vector3 &start, const Vector3 &end) const {
     Vector3 _start = Vector3::min(start, end);
     Vector3 _end = Vector3::max(start, end);
     std::vector<OctreeNodeData> result;
-    queryRange(root, _start, _end, result);
+    if (this->root)
+        queryRange(root, _start, _end, result);
     return result;
+}
+
+Vector3 Octree::getIntersection(const Vector3 &start, const Vector3 &end, const std::vector<std::vector<Vector3>>& triangles) const
+{
+    std::vector<OctreeNodeData> allData = this->queryRange(start, end);
+    std::set<int> possibleTriangles;
+    for (auto& data : allData)
+        possibleTriangles.insert(data.index);
+
+    Vector3 intersectionPoint(false);
+    for (int triIndex : possibleTriangles) {
+        auto& triangle = triangles[triIndex];
+        Vector3 collide = Collision::segmentToTriangleCollision(start, end, triangle[0], triangle[1], triangle[2]);
+        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - start) < (intersectionPoint - start))) {
+            intersectionPoint = collide;
+        }
+    }
+    return intersectionPoint;
+}
+
+std::pair<Vector3, Vector3> Octree::getIntersectionAndNormal(const Vector3 &start, const Vector3 &end, const std::vector<std::vector<Vector3> > &triangles) const
+{
+    std::vector<OctreeNodeData> allData = this->queryRange(start, end);
+    std::set<int> possibleTriangles;
+    for (auto& data : allData)
+        possibleTriangles.insert(data.index);
+
+    Vector3 intersectionPoint(false);
+    Vector3 normal;
+    for (int triIndex : possibleTriangles) {
+        auto& triangle = triangles[triIndex];
+        Vector3 collide = Collision::segmentToTriangleCollision(start, end, triangle[0], triangle[1], triangle[2]);
+        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - start) < (intersectionPoint - start))) {
+            intersectionPoint = collide;
+            normal = (triangle[0] - triangle[1]).cross(triangle[0] - triangle[2]);
+        }
+    }
+    return { intersectionPoint, normal.normalize() };
 }
 
 bool Octree::insert(OctreeNode *node, const Vector3 &point, const int& pointIndex) {
@@ -82,7 +157,7 @@ bool Octree::insert(OctreeNode *node, const Vector3 &point, const int& pointInde
     return insertValidated;
 }
 
-void Octree::queryRange(OctreeNode *node, const Vector3 &start, const Vector3 &end, std::vector<OctreeNodeData> &result, int level) {
+void Octree::queryRange(OctreeNode *node, const Vector3 &start, const Vector3 &end, std::vector<OctreeNodeData> &result, int level) const {
     // If the node does not intersect with the query range, return
     if (!node->intersects(start, end)) {
         return;

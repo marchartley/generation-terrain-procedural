@@ -99,7 +99,7 @@ void LayerBasedGrid::reorderLayers()
         bool reorderingNeeded = true;
         while (reorderingNeeded) {
             reorderingNeeded = false;
-            for (size_t i = 0; i < stack.size() - 1; i++) {
+            for (int i = 0; i < int(stack.size() - 1); i++) {
 //                if (densA > 0.f && densB > 0.f) { // If it's AIR or WATER, don't do anything, I guess
                 if ((stack[i].first == TerrainTypes::SAND || stack[i + 1].first == TerrainTypes::SAND) && (isIn(stack[i].first, LayerBasedGrid::invisibleLayers) || isIn(stack[i+1].first, LayerBasedGrid::invisibleLayers))) {
                     float densA = LayerBasedGrid::densityFromMaterial(stack[i].first);
@@ -172,7 +172,7 @@ void LayerBasedGrid::from2DGrid(Heightmap grid)
     for (int x = 0; x < grid.getSizeX(); x++) {
         for (int y = 0; y < grid.getSizeY(); y++) {
             this->layers.at(x, y) = {
-                { TerrainTypes::SAND, grid.getHeight(x, y) },
+                { TerrainTypes::DIRT, grid.getHeight(x, y) },
                 { TerrainTypes::WATER, grid.getMaxHeight() - grid.getHeight(x, y) }
             };
         }
@@ -202,6 +202,12 @@ void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
             }
         }
     }
+}
+
+void LayerBasedGrid::fromImplicit(ImplicitPatch *implicitTerrain)
+{
+    this->reset();
+    this->add(implicitTerrain);
 }
 
 VoxelGrid LayerBasedGrid::toVoxelGrid()
@@ -259,6 +265,11 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
 //    auto end = std::chrono::system_clock::now();
 //    std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(end -start).count() << "ms" << std::endl;
     return values;
+}
+
+Matrix3<float> LayerBasedGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
+{
+    return voxelize();
 }
 
 std::map<TerrainTypes, float> LayerBasedGrid::getKernel(Vector3 pos, float kernelSize)
@@ -437,6 +448,24 @@ void LayerBasedGrid::thermalErosion()
     this->reorderLayers();
 }
 
+void LayerBasedGrid::cleanLayer(int x, int y, float minLayerHeight)
+{
+    auto& stack = layers.at(x, y);
+    while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
+        stack.pop_back();
+    for (size_t i = 0; i < stack.size(); i++) {
+        if (stack[i].second < minLayerHeight) {
+            stack.erase(stack.begin() + i);
+        }
+    }
+    for (int i = stack.size() - 2; i >= 0; i--) {
+        if (stack[i].first == stack[i+1].first) {
+            stack[i].second += stack[i+1].second;
+            stack.erase(stack.begin() + i + 1);
+        }
+    }
+}
+
 void LayerBasedGrid::cleanLayers(float minLayerHeight)
 {
     size_t nbStacks = layers.size();
@@ -449,12 +478,54 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
                 stack.erase(stack.begin() + i);
             }
         }
+        for (int i = stack.size() - 2; i >= 0; i--) {
+            if (stack[i].first == stack[i+1].first) {
+                stack[i].second += stack[i+1].second;
+                stack.erase(stack.begin() + i + 1);
+            }
+        }
     }
 }
 
 LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material)
 {
     auto initialColumn = this->layers.at(x, y);
+    auto zLevels = std::vector<std::pair<TerrainTypes, std::pair<float, float>>>();
+    float currentHeight = 0.f;
+    for (size_t i = 0; i < initialColumn.size(); i++) {
+        auto [mat, height] = initialColumn[i];
+
+        float startHeight = currentHeight;
+        float endHeight = currentHeight + height;
+
+        if (startZ > endHeight || endZ < startHeight) {
+            zLevels.push_back({mat, {startHeight, endHeight}}); // Nothing to do on this layer
+        } else {
+            // Under new layer
+            float startUnder = startHeight;
+            float endUnder = std::min(endHeight, startZ); // Min is not really useful since we checked that endHeight >= startZ.
+            zLevels.push_back({mat, {startUnder, endUnder}});
+
+            // Inside new layer
+            float startIn = endUnder;
+            float endIn = std::min(endHeight, endZ);
+            zLevels.push_back({mat, {startIn, endIn}});
+
+            // Above new layer
+            float startAbove = endIn;
+            float endAbove = endHeight;
+            zLevels.push_back({mat, {startAbove, endAbove}});
+        }
+    }
+    this->layers.at(x, y).resize(zLevels.size());
+    for (size_t i = 0; i < zLevels.size(); i++) {
+        this->layers.at(x, y)[i] = {zLevels[i].first, (zLevels[i].second.second - zLevels[i].second.first)};
+    }
+    this->cleanLayer(x, y);
+    return this;
+
+
+    /*auto initialColumn = this->layers.at(x, y);
     auto& column = this->layers.at(x, y);
     float currentHeight = 0.f;
     int stackIndex = 0;
@@ -485,14 +556,7 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
         currentHeight += height;
         stackIndex ++;
     }
-
-//    for (auto& [mat, height] : initialColumn)
-//        std::cout << height << " > ";
-//    std::cout << "  ->  ";
-//    for (auto& [mat, height] : column)
-//        std::cout << height << " > ";
-//    std::cout << std::endl;
-    return this;
+    return this;*/
 }
 /*
 void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanceFalloff, float distancePower)
@@ -579,11 +643,9 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     int minY = std::max(0, int(minPos.y));
     int maxY = std::min(int(this->getSizeY()), int(maxPos.y));
     float minZ = std::max(0.f, minPos.z);
-    float maxZ = std::min(float(maxPos.z), 20.f);
-    std::cout << "Evaluation from " << Vector3(minX, minY, minZ) << " to " << Vector3(maxX, maxY, maxZ) << std::endl;
+    float maxZ = std::min(float(maxPos.z), 40.f);
     float zResolution = 1.f;
     int nbEvaluations = 0;
-    auto start = std::chrono::system_clock::now();
     #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
@@ -630,7 +692,8 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
                             maxValue = value;
                         }
                     }
-//                    if (totalValue >= .5f)
+                    if (maxValue < ImplicitPatch::isovalue)
+                        selectedMaterial = AIR;
                     this->addLayer(Vector3(x, y), zResolution, selectedMaterial); //LayerBasedGrid::materialFromDensity(selectedDensity));
                 }
 //                else
@@ -647,26 +710,28 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
             }
         }
     }
-    auto end = std::chrono::system_clock::now();
-    auto totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Evaluation time: " << totalTime << "ms for " << nbEvaluations << " points (mean = " << totalTime/(float)nbEvaluations << "ms/eval)" << std::endl;
     this->cleanLayers();
 //    this->reorderLayers();
     _historyIndex ++;
     return;
 }
 
-Mesh LayerBasedGrid::getGeometry()
+Mesh LayerBasedGrid::getGeometry(Vector3 reducedResolution)
 {
+    Vector3 initialDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    if (!reducedResolution.isValid())
+        reducedResolution = this->getDimensions();
+    Vector3 dimensions = Vector3(reducedResolution.x, reducedResolution.y, 1);
+    auto copiedLayers = this->layers.resizeNearest(dimensions);
     std::vector<Vector3> vertices;
 
 //    auto layersAndHeights = this->getMaterialAndHeightsGrid();
 //    auto layers = layersAndHeights.first;
 //    auto heights = layersAndHeights.second;
 
-    for (int x = 0; x < this->getSizeX(); x++) {
-        for (int y = 0; y < this->getSizeY(); y++) {
-            auto layers = this->layers.at(x, y);
+    for (int x = 0; x < copiedLayers.sizeX; x++) {
+        for (int y = 0; y < copiedLayers.sizeY; y++) {
+            auto layers = copiedLayers.at(x, y);
             float currentHeight = 0.f;
 
             for (size_t i = 0; i < layers.size(); i++) {
@@ -689,6 +754,7 @@ Mesh LayerBasedGrid::getGeometry()
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
+    m.scale(initialDimensions / dimensions);
     return m;
 }
 

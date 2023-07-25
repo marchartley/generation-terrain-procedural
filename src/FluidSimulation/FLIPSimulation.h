@@ -8,14 +8,6 @@
 #include "DataStructure/Matrix3.h"
 #include "FluidSimulation/FluidSimulation.h"
 
-namespace FLIP {
-
-class Particle {
-public:
-    Vector3 position;
-    Vector3 velocity;
-};
-
 
 class FLIPSimulation : public FluidSimulation
 {
@@ -84,7 +76,8 @@ public:
 
 
     Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
-    void addVelocity(int x, int y, int z, Vector3 amount);
+    Vector3 getVelocity(int x, int y, int z);
+    void addVelocity(int x, int y, int z, const Vector3& amount);
 
     bool useVelocityForCollisionDetection;
 
@@ -381,5 +374,5 @@ public:
     }
 };
 */
-} // namespace FLIP
+
 #endif // FLIPSIMULATION_H

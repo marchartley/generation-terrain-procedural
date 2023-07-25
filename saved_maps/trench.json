@@ -2,114 +2,175 @@
 	"implicitPatches": {
 		"composables": [
 			{
-				"composables": [
-					{
-						"blendingFactor": 2.0,
-						"composableA": {
-							"densityValue": -2.5,
-							"dimensions": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"index": 4,
-							"material": "WATER",
-							"mirrored": false,
-							"name": "",
-							"optionalCurve": {
-								"closed": false,
-								"points": []
-							},
-							"position": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"shape": "None",
-							"sigmaValue": 0.0,
-							"supportDimensions": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"type": "primitive"
+				"blendingFactor": 2.0,
+				"composableA": {
+					"dimensions": {
+						"x": 100.0,
+						"y": 100.0,
+						"z": 40.0
+					},
+					"file": "saved_maps/heightmaps/flat (copy).png",
+					"material": "ROCK",
+					"position": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					}
+				},
+				"composableB": {
+					"composableA": {
+						"densityValue": 1.5,
+						"dimensions": {
+							"x": 69.76554870605469,
+							"y": 106.21222686767578,
+							"z": 12.543305397033691
 						},
-						"composableB": {
-							"composableA": {
-								"dimensions": {
-									"x": 0.0,
-									"y": 0.0,
-									"z": 1.1754943508222875e-38
-								},
-								"file": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/saved_maps/river.png",
-								"material": "ROCK",
-								"position": {
-									"x": 0.0,
-									"y": 0.0,
-									"z": 0.0
-								}
-							},
-							"distortion": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"index": 2,
-							"mirrored": false,
-							"name": "",
-							"noise": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"optionalCurve": {
-								"closed": false,
-								"points": []
-							},
-							"rotation": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"scale": {
-								"x": 1.0,
-								"y": 1.0,
-								"z": 1.0
-							},
-							"spreadFactor": 0.0,
-							"translation": {
-								"x": 10.94952392578125,
-								"y": 16.311996459960938,
-								"z": 0.0
-							},
-							"type": "unary"
-						},
-						"index": 1,
+						"filename": "",
+						"index": 4,
+						"material": "ROCK",
 						"mirrored": false,
-						"name": "Blend",
-						"operator": "Blend",
+						"name": "Mountainchain",
 						"optionalCurve": {
 							"closed": false,
-							"points": []
+							"points": [
+								{
+									"x": 63.715545654296875,
+									"y": 6.050000190734863,
+									"z": 6.050000190734863
+								},
+								{
+									"x": 16.899314880371094,
+									"y": 39.95427322387695,
+									"z": 6.161015510559082
+								},
+								{
+									"x": 6.050000190734863,
+									"y": 72.65697479248047,
+									"z": 6.4933061599731445
+								},
+								{
+									"x": 13.339509010314941,
+									"y": 100.16222381591797,
+									"z": 6.400444984436035
+								}
+							]
 						},
-						"positionalB": "FIXED_POS",
-						"type": "compose",
-						"useIntersection": false
-					}
-				],
-				"index": 0,
+						"position": {
+							"x": 12.408690452575684,
+							"y": -3.500126838684082,
+							"z": 0.0
+						},
+						"shape": "MountainChain",
+						"sigmaValue": 16.200000762939453,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"index": 3,
+					"mirrored": false,
+					"name": "Translation",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"spreadFactor": 0.0,
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 13.383624076843262
+					},
+					"type": "unary"
+				},
+				"index": 2,
 				"mirrored": false,
-				"name": "Identity",
+				"name": "Blend",
+				"operator": "Blend",
 				"optionalCurve": {
 					"closed": false,
 					"points": []
 				},
-				"type": "nary"
+				"positionalB": "FIXED_POS",
+				"type": "compose",
+				"useIntersection": false
+			},
+			{
+				"densityValue": 1.5,
+				"dimensions": {
+					"x": 86.49163818359375,
+					"y": 114.88260650634766,
+					"z": 20.200000762939453
+				},
+				"filename": "",
+				"index": 1,
+				"material": "ROCK",
+				"mirrored": false,
+				"name": "Polygon",
+				"optionalCurve": {
+					"closed": false,
+					"points": [
+						{
+							"x": 100.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						{
+							"x": 75.99470520019531,
+							"y": 0.01,
+							"z": 0.0
+						},
+						{
+							"x": 25.3701171875,
+							"y": 35.311038970947266,
+							"z": 0.0
+						},
+						{
+							"x": 10.0,
+							"y": 65.9408187866211,
+							"z": 0.0
+						},
+						{
+							"x": 14.410865783691406,
+							"y": 70.1137924194336,
+							"z": 0.0
+						},
+						{
+							"x": 24.184253692626953,
+							"y": 100.88260650634766,
+							"z": 0.0
+						},
+						{
+							"x": 100.24490356445313,
+							"y": 100.73367309570313,
+							"z": 0.0
+						},
+						{
+							"x": 100.24490356445313,
+							"y": 99.73367309570313,
+							"z": 0.0
+						}
+					]
+				},
+				"position": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Polygon",
+				"sigmaValue": 5.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
 			}
 		],
 		"index": 0,
 		"mirrored": false,
-		"name": "",
+		"name": "Identity",
 		"optionalCurve": {
 			"closed": false,
 			"points": []

@@ -1,7 +1,4 @@
 #include "FLIPSimulation.h"
-using namespace FLIP;
-
-
 
 
 FLIPSimulation::FLIPSimulation()
@@ -188,14 +185,14 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
 }
 
 void FLIPSimulation::handleCollisions() {
-    float h = 1.0 / fInvSpacing;
-    float r = particleRadius;
+//    float h = 1.0 / fInvSpacing;
+//    float r = particleRadius;
 //    float or2 = obstacleRadius * obstacleRadius;
 //    float minDist = obstacleRadius + r;
 //    float minDist2 = minDist * minDist;
 
-    Vector3 min(h + r, h + r, h + r);
-    Vector3 max((fNumX - 1) * h - r, (fNumY - 1) * h - r, (fNumZ - 1) * h - r);
+//    Vector3 min(h + r, h + r, h + r);
+//    Vector3 max((fNumX - 1) * h - r, (fNumY - 1) * h - r, (fNumZ - 1) * h - r);
 
     int numParticles = this->particles.size();
 
@@ -208,7 +205,6 @@ void FLIPSimulation::handleCollisions() {
         Vector3 endPos = (useVelocityForCollisionDetection ? pos + vel.normalized() : pos);
         Vector3 diff = endPos - startPos;
         std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(startPos - diff * 3.f, endPos + diff * 3.f);
-//        std::cout << "~" << nearbyTriangles.size() / 3 << "/" << triangles.size() << std::endl;
         // Check for intersections with nearby triangles
         for (auto& triangleData : nearbyTriangles) {
             auto& triangle = this->triangles[triangleData.index];
@@ -241,7 +237,7 @@ void FLIPSimulation::updateParticleDensity() {
     int numParticles = this->particles.size();
 #pragma omp parallel for
     for (int i = 0; i < numParticles; i++) {
-        Vector3& pos = particles[i].position;
+        Vector3 pos = particles[i].position;
 
         pos.x = clamp(pos.x, h, (fNumX - 1) * h);
         pos.y = clamp(pos.y, h, (fNumY - 1) * h);
@@ -535,6 +531,7 @@ void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRe
 
 void FLIPSimulation::step()
 {
+    currentStep++;
 //    float dt = 0.1; // Time step
     float gravityValue = 9.81; // Acceleration due to gravity
 //    Vector3 obstaclePos(0, 0, 0);
@@ -574,19 +571,29 @@ void FLIPSimulation::simulate() {
 
 Matrix3<Vector3> FLIPSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
-    Matrix3<Vector3> velocities(sizeX, sizeY, sizeZ);
-    Matrix3<float> amount(sizeX, sizeY, sizeZ);
+    if (_cachedStep != currentStep) {
+        _cachedStep = currentStep;
+        Matrix3<Vector3> velocities(dimensions);
+        Matrix3<float> amount(dimensions);
 
-    for (auto& particle : this->particles) {
-        velocities[particle.position] += particle.velocity;
-        amount[particle.position] += 1;
+        for (auto& particle : this->particles) {
+            velocities[particle.position] += particle.velocity;
+            amount[particle.position] += 1;
+        }
+        for (size_t i = 0; i < velocities.size(); i++)
+            velocities[i] /= amount[i];
+
+        this->_cachedVelocity = velocities;
     }
-    for (size_t i = 0; i < velocities.size(); i++)
-        velocities[i] /= amount[i];
-    return velocities.resize(newSizeX, newSizeY, newSizeZ);
+    return _cachedVelocity.resize(newSizeX, newSizeY, newSizeZ);
 }
 
-void FLIPSimulation::addVelocity(int x, int y, int z, Vector3 amount)
+Vector3 FLIPSimulation::getVelocity(int x, int y, int z)
+{
+    return FluidSimulation::getVelocity(x, y, z);
+}
+
+void FLIPSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
 {
     float radiusEffect = 1.f;
     Vector3 effectArea(x, y, z);

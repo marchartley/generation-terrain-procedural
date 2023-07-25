@@ -45,6 +45,7 @@ public Q_SLOTS:
     void browseDensityFieldFromFile();
 
     void computePredefinedRocksLocations();
+    void recomputeAboveVoxelRocksPositions();
 
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
@@ -70,7 +71,7 @@ protected:
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
     float matterDensity = 500.f;
-    float materialImpact = 0.f;
+    float materialImpact = 1.f;
 
     float airFlowfieldRotation = 0.f;
     float waterFlowfieldRotation = 90.f;
@@ -95,6 +96,8 @@ protected:
     std::string waterFlowImagePath = "";
     std::string airFlowImagePath = "";
     std::string densityFieldImagePath = "";
+
+    FluidSimType selectedSimulationType = LBM;
 
     UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
     UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;

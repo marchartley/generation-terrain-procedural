@@ -6,6 +6,7 @@
 #define UNUSED(expr) (void)(expr)
 
 std::default_random_engine random_gen::random_generator;
+FastNoiseLite random_gen::perlinNoise;
 
 
 QOpenGLContext* GlobalsGL::_context;

@@ -92,7 +92,11 @@ Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1
     if (t < 0.f || 1.f < t)
         return Vector3(false); // Intersection before or after the ray
 
-    return rayOrigin + rayDir * t;
+    Vector3 intersectionPoint = rayOrigin + rayDir * t;
+    if (!strict && (intersectionPoint == t1 || intersectionPoint == t2 || intersectionPoint == t3)) // Edge case of collision exactly on the corner
+        return Vector3(false);
+
+    return intersectionPoint;
 }
 
 Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal, bool limitRayLength)

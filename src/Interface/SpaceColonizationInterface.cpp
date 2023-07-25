@@ -7,6 +7,7 @@
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : ActionInterface("space_colonization", parent)
 {
     this->startingPoint = std::make_unique<ControlPoint>();
+    this->pathsMeshes.displayShape = GL_LINES;
 //    this->
 }
 
@@ -42,7 +43,7 @@ void SpaceColonizationInterface::display(Vector3 camPos)
     this->startingPoint->display();
     if (this->pathsMeshes.shader != nullptr)
         this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-    this->pathsMeshes.display(GL_LINES, 5.f);
+    this->pathsMeshes.display(/*GL_LINES,*/ 5.f);
 }
 
 void SpaceColonizationInterface::replay(nlohmann::json action)
@@ -131,7 +132,7 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
 //        pt.z = 80; // TO REMOVE
     this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, startPos, 10.f);
     this->colonizer->nodeMinDistance = 1.f; // this->voxelGrid->blockSize;
-    this->colonizer->nodeMaxDistance = this->voxelGrid->getChunkSize() * 5; // this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
+    this->colonizer->nodeMaxDistance = 20.f; // this->voxelGrid->getChunkSize() * 5; // this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
 
     for (size_t i = 0; i < keyPoints.size(); i++) {
         this->controlPoints.push_back(std::make_unique<ControlPoint>(keyPoints[i], 5.f));

@@ -236,6 +236,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                                                }}
                                           }));
     Q_EMIT this->updated();
+    Q_EMIT this->terrainUpdated();
 }
 
 void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
@@ -244,7 +245,7 @@ void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared
 }
 
 void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
-{
+{    
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
@@ -274,6 +275,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         if (!json_content.contains("actions")) {
             if (json_content.contains(ImplicitPatch::json_identifier)) {
                 this->createTerrainFromImplicitPatches(json_content);
+                Q_EMIT this->updated();
+                Q_EMIT this->terrainUpdated();
                 return;
             } else {
                 this->createTerrainFromBiomes(json_content);
@@ -313,7 +316,19 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_noise", false}
                                           }));
     this->setWaterLevel(this->waterLevel);
+
+
+//    Mesh m;
+//    m.fromFBX("saved_maps/Geometry/cube_open.fbx").scale(100.f).translate(Vector3(50, 50, 25));
+////    m.fromFBX("C:/codes/Qt/Shared_folder_IRIT_Seafile/cartes_partagees/FBX/SM_SeaweedA.FBX").scale(100.f).translate(Vector3(50, 50, 25));
+//    std::cout << "Is watertight? " << m.isWatertight() << std::endl;
+//    m.fromFBX("saved_maps/Geometry/cube.fbx").scale(100.f).translate(Vector3(50, 50, 25));
+////    m.fromFBX("C:/codes/Qt/Shared_folder_IRIT_Seafile/cartes_partagees/FBX/SM_SeaweedA.FBX").scale(100.f).translate(Vector3(50, 50, 25));
+//    std::cout << "Is watertight? " << m.isWatertight() << std::endl;
+//    voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
+//    voxelGrid->fromCachedData();
     Q_EMIT this->updated();
+    Q_EMIT this->terrainUpdated();
 }
 
 void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
@@ -338,10 +353,13 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
 
 void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
 {
-    *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
-    this->layerGrid->add(implicitTerrain.get());
-    this->voxelGrid->fromLayerBased(*layerGrid);
-    this->heightmap->fromLayerGrid(*layerGrid);
+    std::cout << "Load implicit: " << timeIt([&]() {
+        *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
+    }) << "ms" << std::endl;
+    std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+    std::cout << "To voxels: " << timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+//    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromVoxelGrid(*voxelGrid.get()); }) << "ms" << std::endl;
 }
 
 void TerrainGenerationInterface::saveTerrain(std::string filename)
@@ -521,7 +539,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
 
     layersMesh = Mesh(std::make_shared<Shader>(vShader_layers, fShader_layers, gShader_layers),
-                          true, GL_TRIANGLES);
+                          true, GL_POINTS);
     layersMesh.useIndices = false;
 
     Matrix3<int> materials; Matrix3<float> matHeights;
@@ -537,10 +555,10 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     layersMesh.update();
 
     implicitMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
-                            true, GL_TRIANGLES);
+                            true, GL_POINTS);
 
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
-                            true, GL_TRIANGLES);
+                            true, GL_POINTS);
     Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
     std::vector<Vector3> points(isoData.size());
     for (size_t i = 0; i < points.size(); i++) {
@@ -954,7 +972,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
             }
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
-            this->heightmapMesh.display(GL_POINTS);
+            this->heightmapMesh.display(/*GL_POINTS*/);
         }
     }
     else if (mapMode == VOXEL_MODE) {
@@ -1018,7 +1036,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
                 layersMesh.fromArray(layersPoints);
                 layersMesh.update();
 //            }
-            this->layersMesh.display(GL_POINTS);
+            this->layersMesh.display(/*GL_POINTS*/);
         }
     } else if (mapMode == IMPLICIT_MODE) {
         if (this->implicitTerrain == nullptr) {

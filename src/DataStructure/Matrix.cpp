@@ -28,11 +28,17 @@ Matrix::Matrix(int n, int m, float** data){
     }
 }
 Matrix::Matrix(std::vector<std::vector<float>> data)
+    : Matrix(data.size(), data[0].size())
 {
-    (*this) = data;
+    for (int i = 0; i < data.size(); i++) {
+        for (int j = 0; j < data[0].size(); j++) {
+            (*this)[i][j] = data[i][j];
+        }
+    }
+//    (*this) = data;
 }
 
-float Matrix::det()
+float Matrix::det() const
 {
     float determinant = 0;
     if (this->size() == 1) {
@@ -49,15 +55,15 @@ float Matrix::det()
     }
     return determinant;
 }
-Matrix Matrix::adj()
+Matrix Matrix::adj() const
 {
     return this->cofactors().transpose();
 }
-Matrix Matrix::inverse()
+Matrix Matrix::inverse() const
 {
     return this->adj() / this->det();
 }
-Matrix Matrix::cofactors()
+Matrix Matrix::cofactors() const
 {
     Matrix temp(*this);
     // Looping for each element of the matrix
@@ -70,7 +76,7 @@ Matrix Matrix::cofactors()
     }
     return temp;
 }
-Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore)
+Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore) const
 {
     Matrix temp(this->size() - 1, this->size() - 1);
     int i = 0, j = 0;
@@ -91,7 +97,7 @@ Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore)
     return temp;
 }
 
-Matrix Matrix::transpose()
+Matrix Matrix::transpose() const
 {
     Matrix temp(this[0].size(), this->size());
     for(size_t row = 0; row < this->size(); row++)
@@ -100,7 +106,7 @@ Matrix Matrix::transpose()
     return temp;
 }
 
-Matrix Matrix::product(Matrix m)
+Matrix Matrix::product(Matrix m) const
 {
     Matrix temp((*this)[0].size(), m[0].size());
     for (size_t row = 0; row < (*this)[0].size(); row++) {
@@ -114,7 +120,7 @@ Matrix Matrix::product(Matrix m)
     return temp;
 }
 
-float Matrix::trace()
+float Matrix::trace() const
 {
     float trace = 0.0;
     for (size_t i = 0; i < this->size(); i++)
@@ -122,7 +128,7 @@ float Matrix::trace()
     return trace;
 }
 
-std::string Matrix::displayValues()
+std::string Matrix::displayValues() const
 {
     std::string txt = "";
     for (size_t col = 0; col < this->size(); col ++) {
@@ -134,13 +140,13 @@ std::string Matrix::displayValues()
     return txt;
 }
 
-std::string Matrix::toString()
+std::string Matrix::toString() const
 {
     return "Matrix (" + std::to_string(this->size()) + "x" + std::to_string(this[0].size()) + ") :\n" + this->displayValues();
     //    return txt;
 }
 
-std::string Matrix::displayValuesOneLine()
+std::string Matrix::displayValuesOneLine() const
 {
     std::string txt = "";
     for (size_t col = 0; col < this->size(); col ++) {
@@ -175,6 +181,11 @@ Matrix& Matrix::operator-=(const Matrix& o)
         for(size_t col = 0; col < o[0].size(); col++)
             (*this)[row][col] -= o[row][col];
     return (*this);
+}
+
+Matrix Matrix::matprod(Matrix A, Matrix B)
+{
+    return A.product(B);
 }
 Matrix operator*(Matrix a, const Matrix& o)
 {

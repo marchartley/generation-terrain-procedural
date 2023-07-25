@@ -1,10 +1,11 @@
 #include "SPHSimulationInterface.h"
 
-SPHSimulationInterface::SPHSimulationInterface(QWidget *parent) : ActionInterface("SPHSimulation", parent)
+SPHSimulationInterface::SPHSimulationInterface(QWidget *parent) : AbstractFluidSimulationInterface("SPHSimulation", parent)
 {
-
+    _simulation = GlobalTerrainProperties::get()->simulations[SPH];// = dynamic_cast<SPHSimulation*>(_simulation);
+//    _simulation = new SPHSimulation();
 }
-
+/*
 void SPHSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
@@ -87,15 +88,6 @@ void SPHSimulationInterface::updateSimulationMesh()
         particlesMesh.fromArray(trianglesParticles);
         ghostsMesh.fromArray(trianglesGhosts);
     }) << "ms render" << std::endl;
-/*
-    trianglesParticles.clear();
-    for (size_t i = 0; i < simulation.particles.size(); i++) {
-        for (size_t j : simulation.precomputedNeighbors[i]) {
-            trianglesParticles.push_back(simulation.particles[i].position * scale);
-            trianglesParticles.push_back(simulation.particles[j].position * scale);
-        }
-    }
-    connectionsMesh.fromArray(trianglesParticles);*/
 }
 
 void SPHSimulationInterface::show()
@@ -128,3 +120,4 @@ void SPHSimulationInterface::updateParticles()
     }
     simulation.initialize(triangles);
 }
+*/

@@ -1,7 +1,5 @@
 #include "SPHSimulation.h"
 
-using namespace SPH;
-
 SPHSimulation::SPHSimulation()
 {
     this->dimensions = Vector3(100, 100, 30);
@@ -12,7 +10,8 @@ SPHSimulation::SPHSimulation()
 
 SPHSimulation::~SPHSimulation()
 {
-    delete this->tree;
+    if (this->tree)
+        delete this->tree;
 }
 
 void SPHSimulation::computeNeighbors() {
@@ -105,8 +104,6 @@ void SPHSimulation::initialize(std::vector<std::vector<Vector3> > meshBoundaries
     for (int i = 0; i < int(particles.size()); i++)
         particles[i].index = i;
     tree = new KDTree(particles);
-
-    std::cout << nbParticles << " fluid particles for " << particles.size() - nbParticles << " ghost particles" << std::endl;
 }
 
 void SPHSimulation::computeDensityAndPressure() {
@@ -265,6 +262,7 @@ void SPHSimulation::relaxDensity() {
 
 
 void SPHSimulation::step() {
+    currentStep++;
     float timeKDTree = timeIt([=]() { this->computeNeighbors(); });
     std::vector<Particle> previousState = particles;
     bool nans = false;
@@ -290,72 +288,32 @@ void SPHSimulation::step() {
 
 Matrix3<Vector3> SPHSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
-    Matrix3<Vector3> velocities(sizeX, sizeY, sizeZ);
-    Matrix3<float> amount(sizeX, sizeY, sizeZ);
+    if (_cachedStep != currentStep) {
+        _cachedStep = currentStep;
+        Matrix3<Vector3> velocities(dimensions);
+        Matrix3<float> amount(dimensions);
 
-    for (auto& particle : this->particles) {
-        velocities[particle.position] += particle.velocity;
-        amount[particle.position] += 1;
+        for (auto& particle : this->particles) {
+            velocities[particle.position] += particle.velocity;
+            amount[particle.position] += 1;
+        }
+        for (size_t i = 0; i < velocities.size(); i++)
+            velocities[i] /= amount[i];
+        _cachedVelocity = velocities;
     }
-    for (size_t i = 0; i < velocities.size(); i++)
-        velocities[i] /= amount[i];
-    return velocities.resize(newSizeX, newSizeY, newSizeZ);
+    return _cachedVelocity.resize(newSizeX, newSizeY, newSizeZ);
 }
 
-void SPHSimulation::addVelocity(int x, int y, int z, Vector3 amount)
+Vector3 SPHSimulation::getVelocity(int x, int y, int z)
+{
+    return FluidSimulation::getVelocity(x, y, z);
+}
+
+void SPHSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
 {
     float radiusEffect = 1.f;
     Vector3 effectArea(x, y, z);
     for (auto& particleIdx : this->getNeighbors(effectArea, radiusEffect)) {
         this->particles[particleIdx].velocity += amount;
-    }
-}
-
-KDNode::KDNode(size_t pIndex, int a) : particleIndex(pIndex), left(NULL), right(NULL), axis(a) {}
-
-
-KDTree::KDTree(std::vector<Particle> &particles) {
-    root = build(particles, 0);
-}
-
-KDNode* KDTree::build(std::vector<Particle> particles, int depth) {
-    if (particles.empty()) {
-        return NULL;
-    }
-
-    int axis = depth % 3;
-    std::sort(particles.begin(), particles.end(), [axis](Particle a, Particle b) {
-        return a.position[axis] < b.position[axis];
-    });
-
-    int median = particles.size() / 2;
-    KDNode* node = new KDNode(particles[median].index, axis);
-
-    std::vector<Particle> left(particles.begin(), particles.begin() + median);
-    std::vector<Particle> right(particles.begin() + median + 1, particles.end());
-
-    node->left = build(left, depth + 1);
-    node->right = build(right, depth + 1);
-
-    return node;
-}
-
-void KDTree::findNeighbors(std::vector<Particle> &particles, KDNode *node, Vector3 &position, float maxDistance, std::vector<size_t> &neighbors) {
-    if (node == NULL) {
-        return;
-    }
-
-    float d = position[node->axis] - particles[node->particleIndex].position[node->axis];
-    KDNode* nearest = d < 0 ? node->left : node->right;
-    KDNode* farthest = d < 0 ? node->right : node->left;
-
-    findNeighbors(particles, nearest, position, maxDistance, neighbors);
-
-    if (d * d < maxDistance * maxDistance) {
-        if ((particles[node->particleIndex].position - position).magnitude() < maxDistance) {
-            neighbors.push_back(node->particleIndex);
-        }
-
-        findNeighbors(particles, farthest, position, maxDistance, neighbors);
     }
 }

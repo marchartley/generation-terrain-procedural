@@ -45,7 +45,7 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints)
 
 Vector3 BSpline::getPoint(float x)
 {
-    if (points.size() >= 2)
+    if (points.size() > 2)
         return this->getCatmullPoint(x);
 
     if(points.size() == 0)
@@ -90,7 +90,8 @@ float BSpline::estimateClosestTime(Vector3 pos, float epsilon)
         return 0;
     } else if (this->points.size() == 2) {
         Vector3 line = (this->points[1] - this->points[0]);
-        return clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
+        float time = clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
+        return time;
     }
     float closestTime = 0;
     float minDistance = std::numeric_limits<float>::max();
@@ -119,9 +120,14 @@ Vector3 BSpline::estimateClosestPos(Vector3 pos, float epsilon)
     // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
     return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
 }
+
+float BSpline::estimateSqrDistanceFrom(Vector3 pos, float epsilon)
+{
+    return (this->estimateClosestPos(pos, epsilon) - pos).norm2();
+}
 float BSpline::estimateDistanceFrom(Vector3 pos, float epsilon)
 {
-    return (this->estimateClosestPos(pos, epsilon) - pos).norm();
+    return std::sqrt(this->estimateSqrDistanceFrom(pos, epsilon));
 }
 
 float BSpline::estimateSignedDistanceFrom(Vector3 pos, float epsilon)

@@ -20,6 +20,50 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+/*
+    ImplicitPrimitive* primA = new ImplicitPrimitive;
+    ImplicitPrimitive* primB = new ImplicitPrimitive;
+    ImplicitNaryOperator* nary = new ImplicitNaryOperator;
+    ImplicitBinaryOperator* binary = new ImplicitBinaryOperator;
+    ImplicitUnaryOperator* unary = new ImplicitUnaryOperator;
+
+    nary->addChild(binary);
+    binary->addChild(primA, 0);
+    binary->addChild(unary, 1);
+    unary->addChild(primA);
+
+    primA->dimensions = Vector3(2, 2, 0);
+    primA->position = Vector3(5, 5, 0) - primA->dimensions*.5f;
+
+    primB->dimensions = Vector3(1, 1, 0);
+    primB->position = Vector3(10, 10, 0) - primB->dimensions*.5f;
+
+//    unary->scale(Vector3(3, 3, 1));
+//    unary->translate(Vector3(1, 0, 0));
+//    unary->rotate(0, 0, M_PI / 2.f);
+
+//    std::cout << nary->getBBox() << std::endl;
+
+    Vector3 pos, newPos;
+
+    pos = Vector3(0, 0, 0);
+    newPos = primA->getGlobalPositionOf(pos);
+    std::cout << "Position " << pos << " becomes " << newPos << std::endl;
+
+    pos = Vector3(3, 0, 0);
+    newPos = primA->getGlobalPositionOf(pos);
+    std::cout << "Position " << pos << " becomes " << newPos << std::endl;
+
+    pos = Vector3(0, 3, 0);
+    newPos = primA->getGlobalPositionOf(pos);
+    std::cout << "Position " << pos << " becomes " << newPos << std::endl;
+
+    pos = Vector3(3, 3, 0);
+    newPos = primA->getGlobalPositionOf(pos);
+    std::cout << "Position " << pos << " becomes " << newPos << std::endl;
+
+    return 0;*/
+
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -98,9 +142,9 @@ int main(int argc, char *argv[])
                         count += (grid[i].type == 2 ? 1 : 0);
                     }
                 }
-                std::cout << "\n";
+                std::cout << "/n";
             }
-            std::cout << "\n" << count << "\n" << std::endl;
+            std::cout << "/n" << count << "/n" << std::endl;
         }
     }) << "ms" << std::endl;
 

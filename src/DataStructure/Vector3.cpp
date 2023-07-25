@@ -35,11 +35,11 @@ Vector3::Vector3(const float *coords, bool valid)
 
 }
 
-float Vector3::norm() {
+float Vector3::norm() const {
     if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 }
-float Vector3::norm2() {
+float Vector3::norm2() const {
     if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return this->x * this->x + this->y * this->y + this->z * this->z;
 }
@@ -57,7 +57,7 @@ Vector3 Vector3::normalized() const {
     return a.normalize();
 }
 
-Vector3 Vector3::abs()
+Vector3 Vector3::abs() const
 {
     Vector3 a = *this;
     a.x = std::abs(x);
@@ -107,9 +107,29 @@ bool Vector3::isAlmostVertical()
     return std::abs(this->dot(Vector3(0, 0, 1))) > 0.999;
 }
 
-Matrix Vector3::toMatrix()
+Matrix Vector3::toMatrix() const
 {
     return Matrix(3, 1, (float*)(*this));
+}
+
+Matrix Vector3::toRotationMatrix() const
+{
+    Matrix Rx (3, 3, std::vector<float>({
+                   1, 0, 0,
+                   0, cos(this->x), -sin(this->x),
+                   0, sin(this->x), cos(this->x)
+               }).data());
+    Matrix Rz (3, 3, std::vector<float>({
+                    cos(this->y), 0, -sin(this->y),
+                    0, 1, 0,
+                    sin(this->y), 0, cos(this->y)
+                }).data());
+    Matrix Ry (3, 3, std::vector<float>({
+                    cos(this->z), -sin(this->z), 0,
+                    sin(this->z), cos(this->z), 0,
+                    0, 0, 1
+                }).data());
+    return Rx.product(Ry).product(Rz);
 }
 
 Vector3 Vector3::toEulerAngles()
@@ -140,18 +160,47 @@ Vector3 Vector3::eulerAnglesWith(Vector3 other)
     return result;*/
 }
 
+Vector3 Vector3::getAllAnglesWith(const Vector3 &otherVector) const
+{
+    if (*this == otherVector)
+        return Vector3(0.f, 0.f, 0.f);
+    float onX = this->getSignedAngleAroundAxisWith(otherVector, Vector3(1, 0, 0));
+    float onY = this->getSignedAngleAroundAxisWith(otherVector, Vector3(0, 1, 0));
+    float onZ = this->getSignedAngleAroundAxisWith(otherVector, Vector3(0, 0, 1));
+    return Vector3(onX, onY, onZ);
+}
+
+float Vector3::getAngleWith(const Vector3& otherVector) const
+{
+    Vector3 vA = this->normalized();
+    Vector3 vB = otherVector.normalized();
+    return std::acos(vA.dot(vB));
+}
+
+float Vector3::getSignedAngleAroundAxisWith(const Vector3 &otherVector, const Vector3 &axis) const
+{
+    Vector3 normalizedAxis = axis.normalized();
+    Vector3 vA = *this - normalizedAxis * this->dot(normalizedAxis); //this->normalized();
+    Vector3 vB = otherVector - normalizedAxis * otherVector.dot(normalizedAxis);; //.normalized();
+    if (vA == vB)
+        return 0.f;
+//    float dot = vA.dot(vB);
+    Vector3 cross = vA.cross(vB);
+    if (cross.norm2() < 1e-5)
+        return 0.f;
+    float angle = vA.getAngleWith(vB);
+    if (cross.dot(axis) < 0)
+        angle = -angle;
+    return angle;
+}
+
 Vector3 Vector3::quaternionToEuler(qglviewer::Quaternion quaternion)
 {
-//    std::cout << "Axis : " << Vector3(quaternion.axis()) << "\nAngle : " << quaternion.angle() << std::endl;
-//    QQuaternion q(quaternion.angle(), quaternion.axis().x, quaternion.axis().y, quaternion.axis().z);
-//    auto angles = q.toEulerAngles();
-//    return Vector3(deg2rad(angles.x()), deg2rad(angles.y()), deg2rad(angles.z()));
     return Vector3::quaternionToEuler(quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 }
 
 Vector3 Vector3::quaternionToEuler(float x, float y, float z, float w)
 {
-//    std::cout << "x: " << x << "\ny: " << y << "\nz: " << z << "\nw: " << w << std::endl;
     Vector3 angles;
 
     // roll (x-axis rotation)
@@ -172,10 +221,10 @@ Vector3 Vector3::quaternionToEuler(float x, float y, float z, float w)
     return angles;
 }
 
-float Vector3::dot(Vector3 o) {
+float Vector3::dot(const Vector3& o) const {
     return (this->x * o.x) + (this->y * o.y) + (this->z * o.z);
 }
-Vector3 Vector3::cross(Vector3 o) {
+Vector3 Vector3::cross(const Vector3& o) const {
     Vector3 v(this->y * o.z - this->z * o.y,
               this->z * o.x - this->x * o.z,
               this->x * o.y - this->y * o.x);
@@ -232,12 +281,12 @@ Vector3 Vector3::wrap(Vector3 p, Vector3 mini, Vector3 maxi)
     return wrap;
 }
 
-float Vector3::magnitude()
+float Vector3::magnitude() const
 {
     return this->norm();
 }
 
-float Vector3::length()
+float Vector3::length() const
 {
     return this->norm();
 }
@@ -354,23 +403,7 @@ Vector3& Vector3::rotate(float angle_x, float angle_y, float angle_z) {
     return this->rotate(Vector3(angle_x, angle_y, angle_z));
 }
 Vector3& Vector3::rotate(Vector3 eulerAngles) {
-    Matrix Rx (3, 3, std::vector<float>({
-                   1, 0, 0,
-                   0, cos(eulerAngles.x), -sin(eulerAngles.x),
-                   0, sin(eulerAngles.x), cos(eulerAngles.x)
-               }).data());
-    Matrix Rz (3, 3, std::vector<float>({
-                    cos(eulerAngles.y), 0, -sin(eulerAngles.y),
-                    0, 1, 0,
-                    sin(eulerAngles.y), 0, cos(eulerAngles.y)
-                }).data());
-    Matrix Ry (3, 3, std::vector<float>({
-                    cos(eulerAngles.z), -sin(eulerAngles.z), 0,
-                    sin(eulerAngles.z), cos(eulerAngles.z), 0,
-                    0, 0, 1
-                }).data());
-    Matrix R = Rx.product(Ry).product(Rz);
-    return this->applyTransform(R);
+    return this->applyTransform(eulerAngles.toRotationMatrix());
     /*Matrix newCoords = R.product(this->toMatrix());
     this->x = newCoords[0][0];
     this->y = newCoords[1][0];
@@ -455,53 +488,18 @@ Vector3 Vector3::reflexion(Vector3 normal)
     return *this - n2d;
 }
 
-//Vector3 &Vector3::setDirection(Vector3 dir, Vector3 upVector)
-//{
-//    Vector3 forward = Vector3(0, 0, 1);//upVector.normalized();
-//    if (dir == forward) return *this;
-
-//    Vector3 old_right = Vector3(1, 0, 0);//this->normalized();
-//    Vector3 old_upVector = forward.cross(old_right);
-//    Vector3 right = dir.cross(upVector);
-////    dir -= *this->normalized();
-//    forward.normalize(); upVector.normalize(); right.normalize(); old_upVector.normalize(); old_right.normalize();
-////    float angle_heading = std::acos(dir.x) - std::acos(forward.x);
-////    float angle_pitch = std::acos(dir.y) - std::acos(forward.y);
-////    float angle_bank = std::acos(dir.z) - std::acos(forward.z);
-
-//    float angle_heading = std::atan2(dir.y, dir.x) - std::atan2(forward.x, forward.y);
-//    float angle_pitch = std::asin(dir.z) - std::asin(forward.z);
-//    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
-//                                  1.0) - std::atan2(old_right.dot(old_upVector) / old_right.norm(), 1.0);
-
-//    /*std::cout << "Forward   : " << forward <<
-//                 "\nold Right : " << old_right <<
-//                 "\nold Up    : " << old_upVector <<
-//                 "\nnew Forwa : " << dir <<
-//                 "\nnew Right : " << right <<
-//                 "\nnew Up    : " << upVector <<
-//                 "\nrotation  : " << Vector3(angle_heading, angle_pitch, angle_bank) << std::endl;*/
-//    return this->rotate(angle_heading, angle_pitch, angle_bank).normalize();
-
-//    /*
-//    dir.normalize(); upVector.normalize();
-//    Vector3 right = dir.cross(upVector);
-//    float angle_heading = std::atan2(dir.y, dir.x);
-//    float angle_pitch = std::asin(dir.z);
-//    float angle_bank = std::atan2(right.dot(upVector) / right.norm(),
-//                                  1.0);
-//    return this->rotate(angle_heading, angle_pitch, angle_bank);*/
-//}
+Vector3 Vector3::fromMatrix(Matrix mat)
+{
+    if (mat.size() == 1) {
+        return Vector3(mat[0][0], mat[0][1], mat[0][2]);
+    } else if (mat[0].size() == 1) {
+        return Vector3(mat[0][0], mat[1][0], mat[2][0]);
+    } else {
+        throw std::domain_error("Cannot transform Matrix " + mat.toString() + " to Vector3");
+    }
+}
 
 
-
-
-
-
-//Vector3 operator+(Vector3 a, Vector3&b) {
-//    a += b;
-//    return a;
-//}
 Vector3 operator+(Vector3 a, Vector3 b) {
     a += b;
     return a;
@@ -643,7 +641,8 @@ Vector3 operator/(Vector3 b, float a) {
 
 bool operator==(Vector3 a, Vector3 b)
 {
-    return int(a.x * 1000) == int(b.x * 1000) && int(a.y * 1000) == int(b.y * 1000) && int(a.z * 1000) == int(b.z * 1000);
+    float epsilon = 1e-8;
+    return std::abs(a.x - b.x) < epsilon && std::abs(a.y - b.y) < epsilon && std::abs(a.z - b.z) < epsilon; //int(a.x * 1e8) == int(b.x * 1e8) && int(a.y * 1e8) == int(b.y * 1e8) && int(a.z * 1e8) == int(b.z * 1e8);
 }
 
 Vector3 operator-(Vector3 v) {

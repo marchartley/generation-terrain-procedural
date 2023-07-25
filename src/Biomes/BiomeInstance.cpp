@@ -28,7 +28,6 @@ int BiomeInstance::getLevel(bool ignorePriorityOffset)
 
 void BiomeInstance::completeIfNeeded()
 {
-//    std::cout << "Completing " << this->classname << std::endl;
     if (classname == "arche")
         completeArch();
     else if (classname == "tranchee" || classname == "passe-corail")
@@ -55,14 +54,11 @@ std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, Vector3 
     if (!newPosition.isValid())
         newPosition = newArea.center();
     cloneBiome->position = newPosition;
-//    std::cout << "Previous area : " << this->area << " - new area : " << cloneBiome->area << std::endl;
-//    std::cout << "Previous instance size : " << this->instances.size() << " - new size : ";
     cloneBiome->instances.clear();
 
     Voronoi diagram(this->instances.size(), newArea);
     std::vector<BSpline> subareas = diagram.solve();
 
-//    std::cout << this->instances.size() << " (nb subareas = " << subareas.size() << ")" << std::endl;
     for (size_t i = 0; i < this->instances.size() && i < subareas.size(); i++) {
         std::shared_ptr<BiomeInstance> newChild = this->instances[i]->clone(subareas[i], diagram.pointset[i]);
         newChild->parent = cloneBiome;
