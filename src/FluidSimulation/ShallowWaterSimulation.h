@@ -5,8 +5,6 @@
 #include <string>
 #include <iostream>
 
-namespace ShallowWater {
-
 class Pipe;
 class GridCell;
 class ShallowWaterSimulation;
@@ -80,6 +78,5 @@ public:
 void visualize(std::vector<GridCell> &grid, int N, int resized = -1);
 void visualize_diff(std::vector<GridCell> initialgrid, std::vector<GridCell> grid, int N, int resized = -1);
 
-}
 
 #endif // SHALLOWWATERSIMULATION_H

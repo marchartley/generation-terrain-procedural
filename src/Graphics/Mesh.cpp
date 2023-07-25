@@ -3,6 +3,7 @@
 #include "DataStructure/BVH.h"
 #include "Graphics/MarchingCubes.h"
 #include "Utils/stl_reader.h"
+#include "Graphics/ofbx.h"
 
 std::vector<Mesh*> Mesh::all_meshes;
 
@@ -123,6 +124,60 @@ Mesh &Mesh::fromStl(std::string filename)
     return *this;
 }
 
+Mesh &Mesh::fromFBX(std::string filename)
+{
+    this->clear();
+
+    FILE* fp = fopen(filename.c_str(), "rb");
+
+    if (!fp) return *this;
+
+    fseek(fp, 0, SEEK_END);
+    long file_size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    auto* content = new ofbx::u8[file_size];
+    fread(content, 1, file_size, fp);
+
+    ofbx::LoadFlags flags =
+            ofbx::LoadFlags::TRIANGULATE |
+    //		ofbx::LoadFlags::IGNORE_MODELS |
+            ofbx::LoadFlags::IGNORE_BLEND_SHAPES |
+            ofbx::LoadFlags::IGNORE_CAMERAS |
+            ofbx::LoadFlags::IGNORE_LIGHTS |
+            ofbx::LoadFlags::IGNORE_TEXTURES |
+            ofbx::LoadFlags::IGNORE_SKIN |
+            ofbx::LoadFlags::IGNORE_BONES |
+            ofbx::LoadFlags::IGNORE_PIVOTS |
+            ofbx::LoadFlags::IGNORE_MATERIALS |
+            ofbx::LoadFlags::IGNORE_POSES |
+            ofbx::LoadFlags::IGNORE_VIDEOS |
+            ofbx::LoadFlags::IGNORE_LIMBS |
+    //		ofbx::LoadFlags::IGNORE_MESHES |
+            ofbx::LoadFlags::IGNORE_ANIMATIONS;
+
+    auto scene = ofbx::load((ofbx::u8*)content, file_size, (ofbx::u16)flags);
+    if (scene->getGeometryCount() == 0)
+        return *this;
+//    for (int i = 0; i < scene->getGeometryCount(); i++) {
+    int i = 0;
+        auto geom = scene->getGeometry(i);
+        auto verts = geom->getVertices();
+        auto norms = geom->getNormals();
+        int nbVertices = geom->getVertexCount();
+        std::vector<Vector3> vertices(nbVertices);
+        std::vector<Vector3> normals(nbVertices);
+        for (int j = 0; j < nbVertices; j++) {
+            vertices[j] = Vector3(verts[j].x, verts[j].y, verts[j].z);
+            normals[j] = Vector3(norms[j].x, norms[j].y, norms[j].z);
+        }
+        this->normalsArray.insert(normalsArray.end(), normals.begin(), normals.end());
+        this->vertexArray.insert(vertexArray.end(), vertices.begin(), vertices.end());
+//    }
+    this->fromArray(vertexArray);
+    this->normalize();
+    return *this;
+}
+
 Mesh& Mesh::normalize()
 {
     Vector3 minAABBox(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
@@ -231,6 +286,7 @@ void Mesh::computeNormals()
     this->normalsArray.clear();
     this->normalsArrayIndex.clear();
     this->normalsArrayFloat.clear();
+    if (this->displayShape != GL_TRIANGLES) return;
     this->normalsArrayIndex.resize(this->indices.size());
     for (size_t i = 0; i < this->vertexArray.size(); i+=3)
     {
@@ -358,16 +414,7 @@ Mesh Mesh::extractGeometryFromShaders(Matrix3<float>& values)
     GlobalsGL::f()->glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeOfEdgeFeedback*dataSize, data);
 //    GlobalsGL::f()->glGetNamedBufferSubData(feedback_buffer, 0, dataSize, data);
     */
-    Mesh copy = this->applyMarchingCubes(values);/*
-    copy.vertexArray.clear();
-    for (size_t i = 0; i < dataSize / (3 * sizeof(float)); i++) {
-        Vector3 pos = Vector3(
-                    data[3 * i + 0],
-                    data[3 * i + 1],
-                    data[3 * i + 2]);
-        copy.vertexArray.push_back(pos);
-    }
-    std::cout << copy.vertexArray.size() / 3 << " triangles to store" << std::endl;*/
+    Mesh copy = this->applyMarchingCubes(values);
     std::ofstream off;
     off.open("test.off");
     off << copy.toOFF();
@@ -447,11 +494,11 @@ void Mesh::pushToBuffer()
 #endif
     this->bufferReady = true;
 }
-void Mesh::display(GLenum shape, float lineWeight)
+void Mesh::display(float lineWeight) // GLenum shape, float lineWeight)
 {
     if (!isDisplayed)
         return;
-    if (shape != -1) this->displayShape = shape;
+//    if (shape != -1) this->displayShape = shape;
     this->update();
     if(this->shader != nullptr) {
         this->shader->use();
@@ -515,6 +562,7 @@ void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, st
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);
     }
+    this->displayShape = GL_POINTS;
     this->fromArray(positions);
     this->update();
     GlobalsGL::f()->glBindVertexArray(this->vao);
@@ -588,7 +636,7 @@ void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, st
 
         // display the mesh
         this->reorderVertices(cameraPosition);
-        this->display(GL_POINTS);
+        this->display(/*GL_POINTS*/);
     }
 }
 
@@ -616,8 +664,9 @@ void Mesh::displayAsVectorField(Matrix3<Vector3> field, Vector3 finalDimensions,
             n *= ratio;
         }
     }
+    this->displayShape = GL_LINES;
     this->fromArray(normals);
-    this->display(GL_LINES);
+    this->display(/*GL_LINES*/);
 }
 
 void Mesh::setShader(std::shared_ptr<Shader> shader)
@@ -1024,11 +1073,79 @@ Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
                 Vector3 pos = Vector3(x, y, z)/(dimensions / myDims.dimensions()) + myDims.min();
                 Vector3 ray = Vector3(pos.x, pos.y + myDims.dimensions().y + 1, pos.z);
                 res.at(x, y, z) = (tree.query(pos, ray).size() % 2 == 0 ? 0 : 1);
-//                std::cout << x << " " << y << " " << z << " -> from " << pos << " to " << ray << ": " << tree.query(pos, ray).size() << " triangles (/" << this->getTriangles().size() << ")" << std::endl;
             }
         }
     }
     return res;
+}
+
+Matrix3<int> Mesh::voxelizeSurface(Vector3 dimensions) const
+{
+    AABBox myDims(this->vertexArray);
+    Matrix3<int> res(dimensions, -1.f);
+    auto triangles = this->getTriangles();
+    int nbTris = triangles.size();
+
+    Octree tree(myDims.center(), myDims.dimensions() * .5f);
+    tree.insert(triangles);
+
+    int dimX = dimensions.x;
+    int dimY = dimensions.y;
+    int dimZ = dimensions.z;
+
+#pragma omp parallel for collapse(3)
+    for (int x = 0; x < dimX; x++) {
+        for (int y = 0; y < dimY; y++) {
+            for (int z = 0; z < dimZ; z++) {
+                Vector3 pos = Vector3(x, y, z);
+                std::vector<OctreeNodeData> possibleTriangles = tree.queryRange(pos, pos + Vector3(1, 1, 1));
+                for (auto& data : possibleTriangles) {
+                    auto triangle = triangles[data.index];
+//                for (int i = 0; i < nbTris; i++) {
+//                    auto triangle = triangles[i];
+
+                    if (Collision::intersectionTriangleAABBox(triangle[0], triangle[1], triangle[2], pos, pos + Vector3(1, 1, 1))) {
+                        res.at(pos) = 1.f;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return res;
+}
+
+bool Mesh::isWatertight()
+{
+    bool previousVal = this->useIndices;
+    this->useIndices = true;
+    this->computeIndices();
+    this->useIndices = previousVal;
+
+//    auto triangles = this->getTriangles();
+    std::map<std::pair<int, int>, int> edgesCount;
+    for (size_t i = 0; i < this->vertexArray.size(); i += 3) {
+        std::vector<int> ids({indices[i], indices[i + 1], indices[i + 2]});
+        std::sort(ids.begin(), ids.end());
+        if (edgesCount.count({ids[0], ids[1]}) == 0)
+            edgesCount[{ids[0], ids[1]}] = 0;
+        edgesCount[{ids[0], ids[1]}] ++;
+        if (edgesCount.count({ids[0], ids[2]}) == 0)
+            edgesCount[{ids[0], ids[2]}] = 0;
+        edgesCount[{ids[0], ids[2]}] ++;
+        if (edgesCount.count({ids[1], ids[2]}) == 0)
+            edgesCount[{ids[1], ids[2]}] = 0;
+        edgesCount[{ids[1], ids[2]}] ++;
+    }
+
+    for (auto& edge : edgesCount) {
+        int count = edge.second;
+        if (count != 2)
+            return false;
+    }
+    return true;
+
+
 }
 
 Mesh Mesh::createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
@@ -1041,9 +1158,9 @@ Mesh Mesh::createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, Me
         field.normalize();
     }
     std::vector<Vector3> normals;
-    for (int x = 0; x < field.sizeX - 1; x++) {
-        for (int y = 0; y < field.sizeY - 1; y++) {
-            for (int z = 0; z < field.sizeZ - 1; z++) {
+    for (int x = 0; x < field.sizeX; x++) {
+        for (int y = 0; y < field.sizeY; y++) {
+            for (int z = 0; z < field.sizeZ; z++) {
                 normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
                 normals.push_back(Vector3(x, y, z) + field.at(x, y, z) + Vector3(.5f, .5f, .5f));
             }
@@ -1068,6 +1185,7 @@ void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPo
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);
     }
+    mesh.displayShape = GL_POINTS;
     mesh.fromArray(positions);
     mesh.update();
     GlobalsGL::f()->glBindVertexArray(mesh.vao);
@@ -1141,6 +1259,6 @@ void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPo
 
         // display the mesh
         mesh.reorderVertices(cameraPosition);
-        mesh.display(GL_POINTS);
+        mesh.display(/*GL_POINTS*/);
     }
 }

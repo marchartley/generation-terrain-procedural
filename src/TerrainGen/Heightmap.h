@@ -10,6 +10,7 @@ class Heightmap;
 #include "DataStructure/Matrix3.h"
 #include "TerrainGen/LayerBasedGrid.h"
 #include "TerrainGen/TerrainModel.h"
+#include "TerrainGen/ImplicitPatch.h"
 
 class Heightmap : public TerrainModel {
 public:
@@ -53,20 +54,22 @@ public:
 
     void raise(Matrix3<float> elevation);
 
-    void fromVoxelGrid(VoxelGrid& voxelGrid);
-    void fromLayerGrid(LayerBasedGrid& layerGrid);
+    Heightmap& fromVoxelGrid(VoxelGrid& voxelGrid);
+    Heightmap& fromLayerGrid(LayerBasedGrid& layerGrid);
+    Heightmap& fromImplicit(ImplicitPatch *implicitTerrain);
+    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
     void saveMap(std::string filename) { return this->saveHeightmap(filename); }
-    void retrieveMap(std::string filename) { return this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
-    void loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
+    void retrieveMap(std::string filename) { this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
+    Heightmap& loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
     void saveHeightmap(std::string heightmap_filename);
 
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
     Vector3 findSurfaceBetween(Vector3 start, Vector3 end);
 
-    Mesh getGeometry();
+    virtual Mesh getGeometry(Vector3 reducedResolution = Vector3(false));
 
     void initMap() {};
 

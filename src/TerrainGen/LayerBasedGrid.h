@@ -35,9 +35,11 @@ public:
 
     void from2DGrid(Heightmap grid);
     void fromVoxelGrid(VoxelGrid& voxelGrid);
+    void fromImplicit(ImplicitPatch* implicitTerrain);
 
     VoxelGrid toVoxelGrid();
     Matrix3<float> voxelize(int fixedHeight = -1, float kernelSize = 1.f);
+    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
     std::map<TerrainTypes, float> getKernel(Vector3 pos, float kernelSize);
     std::pair<TerrainTypes, float> getMaterialAndHeight(Vector3 pos);
 
@@ -48,13 +50,14 @@ public:
 
     void thermalErosion();
 
+    void cleanLayer(int x, int y, float minLayerHeight = 0.1f);
     void cleanLayers(float minLayerHeight = 0.1f);
 
     LayerBasedGrid *transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material);
 
     void add(ImplicitPatch* patch);
 
-    Mesh getGeometry();
+    virtual Mesh getGeometry(Vector3 reducedResolution = Vector3(false));
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);

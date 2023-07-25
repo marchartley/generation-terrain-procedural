@@ -433,7 +433,8 @@ def main():
     profileRandomMin, profileRandomMax = 0.0, 0.2
 
     islandSketch = IslandSketch(topViewAx, sideViewAx, distortionsAx)
-    for iSample in range(100000):
+    # for iSample in range(100000):
+    for iSample in range(1):
         if os.path.exists(f"{dataset_path}heightmaps/{iSample}.png"):
             continue
         profileRandomness = getRandom(profileRandomMin, profileRandomMax)
@@ -471,7 +472,7 @@ def main():
             randomProfileCurve.append(
                 _randomProfileCurve[i] * (1.0 + n.noise2(i / 100, iSample * 10000) * profileRandomness))
         islandSketch.profileSketch.setCurve(randomProfileCurve)
-        islandSketch.createMapsFromSketch(path=dataset_path, filePrefix=str(iSample))
+        islandSketch.createMapsFromSketch(path="test_island_heightmap", filePrefix=str(iSample))
 
         distortionMaps = distortionMaps[:1]
     islandSketch.update()

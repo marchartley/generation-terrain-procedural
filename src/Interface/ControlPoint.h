@@ -162,7 +162,7 @@ public:
     void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
     void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
-    Vector3 getRotation() const { return Vector3::quaternionToEuler(this->rotation()); }
+    Vector3 getRotation() const; // { return Vector3::quaternionToEuler(this->rotation()); }
     Vector3 getPosition() const { return this->position(); }
     Vector3 getFluidTranslation() const {
         if (positionsHistory.empty()) return Vector3();
@@ -188,6 +188,7 @@ public:
     Vector3 initialRotation;
 
     Vector3 pressedPosBeforeAction;
+    Vector3 currentMousePosOnAction;
 
     Mesh mesh;
     Sphere shape;
@@ -236,7 +237,7 @@ protected:
 
     bool mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir);
     bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
-    bool mouseOnRotationCircle(Vector3 rayOrigin, Vector3 rayDir);
+    std::pair<Axis, Vector3> mouseOnRotationCircle(const Vector3& rayOrigin, const Vector3& rayDir);
 
     bool stillOnInitialState = true;
 

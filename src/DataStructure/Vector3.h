@@ -35,8 +35,8 @@ public:
     friend std::ostream& operator<<(std::ostream& io, const Vector3& bbox);
     friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> bbox);
 
-    float dot(Vector3 o);
-    Vector3 cross(Vector3 o);
+    float dot(const Vector3& o) const;
+    Vector3 cross(const Vector3& o) const;
     Vector3 rounded(int precision = 0) const;
     Vector3 roundedUp(int precision = 0) const;
     Vector3 roundedDown(int precision = 0) const;
@@ -44,13 +44,13 @@ public:
     Vector3 ceil() const;
     static Vector3 wrap(Vector3 p, Vector3 mini, Vector3 maxi);
 
-    float magnitude();
-    float length();
-    float norm();
-    float norm2();
+    float magnitude() const;
+    float length() const;
+    float norm() const;
+    float norm2() const;
     Vector3& normalize();
     Vector3 normalized() const;
-    Vector3 abs();
+    Vector3 abs() const;
     Vector3& setMag(float newMag);
     Vector3& maxMagnitude(float maxMag);
     Vector3& minMagnitude(float minMag);
@@ -81,10 +81,17 @@ public:
 
     float divergence() { return x + y + z; }
 
-    Matrix toMatrix();
+    static Vector3 fromMatrix(Matrix mat);
+    Matrix toMatrix() const;
+    Matrix toRotationMatrix() const;
+
 
     Vector3 toEulerAngles();
     Vector3 eulerAnglesWith(Vector3 other);
+
+    Vector3 getAllAnglesWith(const Vector3& otherVector) const;
+    float getAngleWith(const Vector3 &otherVector) const;
+    float getSignedAngleAroundAxisWith(const Vector3 &otherVector, const Vector3& axis) const;
 
     static Vector3 quaternionToEuler(qglviewer::Quaternion quaternion);
     static Vector3 quaternionToEuler(float x, float y, float z, float w);
@@ -175,7 +182,7 @@ public:
 
     float& operator[](size_t i);
 
-    std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")"; }
+    std::string toString() const {return "Vector3 (" + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ")" + (this->isValid() ? "" : "[INVALID]"); }
 //    const char* toHashString() const {return std::to_string(x) + "," + std::to_string(y) + "," + std::to_string(z); }
 
     Vector3 xxx() const { return Vector3(x, x, x); }

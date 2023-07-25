@@ -30,7 +30,10 @@ ViewerInterface::ViewerInterface() {
     this->meshInstanceAmplificationInterface = std::make_shared<MeshInstanceAmplificationInterface>(this);
     this->sphSimulationInterface = std::make_shared<SPHSimulationInterface>(this);
     this->flipSimulationInterface = std::make_shared<FLIPSimulationInterface>(this);
+    this->warpFluidSimulationInterface = std::make_shared<WarpFluidSimulationInterface>(this);
+    this->LbmFluidSimulationInterface = std::make_shared<LBMFluidSimulationInterface>(this);
     this->coralIslandGeneratorInterface = std::make_shared<CoralIslandGeneratorInterface>(this);
+    this->spheroidalErosionInterface = std::make_shared<SpheroidalErosionInterface>(this);
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
                 {
@@ -52,7 +55,10 @@ ViewerInterface::ViewerInterface() {
                     { "primitivePatchInterface", patchesInterface},
                     { "SPHSimulation", sphSimulationInterface },
                     { "FLIPSimulation", flipSimulationInterface },
-                    { "coralIslandGeneratorInterface", coralIslandGeneratorInterface}
+                    { "WarpFluidSimulation", warpFluidSimulationInterface },
+                    { "LBMFluidSimulation", LbmFluidSimulationInterface },
+                    { "coralIslandGeneratorInterface", coralIslandGeneratorInterface},
+                    { "spheroidalErosionInterface", spheroidalErosionInterface}
                 });
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -68,8 +74,10 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/coral_long.png");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat (copy).png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
@@ -183,7 +191,10 @@ void ViewerInterface::setupUi()
         {karstPathGeneration,                   "karst_peytavie_button.png",    "Create karsts with graphs",            diggingMenu},
         {sphSimulationInterface,                "",                             "SPH Simulation",                       physicsMenu},
         {flipSimulationInterface,               "",                             "FLIP Simulation",                      physicsMenu},
-        {coralIslandGeneratorInterface,         "",                             "Create coral island",                  diggingMenu}
+        {warpFluidSimulationInterface,          "",                             "Warp fluid Simulation",                physicsMenu},
+        {LbmFluidSimulationInterface,           "",                             "LBM fluid Simulation",                 physicsMenu},
+        {coralIslandGeneratorInterface,         "",                             "Create coral island",                  diggingMenu},
+        {spheroidalErosionInterface,            "",                             "Spheroidal erosion (Beardall 2010",    physicsMenu}
     };
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu* , std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -407,6 +418,7 @@ void ViewerInterface::openInterface(std::shared_ptr<ActionInterface> object)
     this->hideAllInteractiveParts();
     if (lastOpenedInterface && lastOpenedInterface == object) {
         lastOpenedInterface = nullptr;
+        this->frame->clearContent();
         this->frame->hide();
     } else {
         lastOpenedInterface = object;

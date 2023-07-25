@@ -33,8 +33,17 @@ float ImplicitPatch::getMaxHeight(Vector3 pos)
 
         this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
-            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
-            if (eval >= ImplicitPatch::isovalue) {
+//            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
+            auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
+            float totalPositive = 0.f, totalNegative = 0.f;
+            for (auto& [mat, val] : materials) {
+                if (isIn(mat, LayerBasedGrid::invisibleLayers)) {
+                    totalNegative += val;
+                } else {
+                    totalPositive += val;
+                }
+            }
+            if (totalEval >= ImplicitPatch::isovalue && totalPositive > totalNegative) {
                 this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = z;
                 break;
             }
@@ -209,14 +218,14 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
 
-Mesh ImplicitPatch::getGeometry()
+Mesh ImplicitPatch::getGeometry(Vector3 reducedResolution)
 {
-    Vector3 dimensions = this->getDimensions();
-    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
-    layer.add(this);
+    Vector3 dimensions = (reducedResolution.isValid() ? reducedResolution : this->getDimensions());
+//    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
+//    layer.add(this);
     VoxelGrid voxels;
-    voxels.fromLayerBased(layer);
-    return voxels.getGeometry();
+    voxels.fromImplicit(this);
+    return voxels.getGeometry(dimensions);
 }
 
 Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
@@ -248,12 +257,12 @@ Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minP
 
 float ImplicitPatch::getHeight(float x, float y)
 {
-    return this->_cachedMaxHeight.at(x, y);
+    return this->getHeight(Vector3(x, y, 0));
 }
 
 float ImplicitPatch::getHeight(Vector3 pos)
 {
-    return this->getHeight(pos.x, pos.y);
+    return this->getMaxHeight(pos);
 }
 
 bool ImplicitPatch::contains(Vector3 v)
@@ -269,16 +278,16 @@ bool ImplicitPatch::contains(float x, float y, float z)
 
 Vector3 ImplicitPatch::getGlobalPositionOf(Vector3 posInsidePatch)
 {
-    Vector3 position = posInsidePatch;
+    Vector3 position = posInsidePatch + this->getBBox().min();
     ImplicitPatch* current = this;
     while(current->getParent()) {
         current = current->getParent();
         ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(current);
         if (asUnary) {
-            position = asUnary->wrapFunction(position);
+            position = asUnary->applyTransform(position);
         }
     }
-    return position - this->getBBox().min();
+    return position;
 }
 
 Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
@@ -294,7 +303,7 @@ Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
     for (size_t i = 0; i < ancestry.size(); i++) {
         ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(ancestry[i]);
         if (asUnary) {
-            position = asUnary->unwrapFunction(position);
+            position = asUnary->inverseTransform(position); // asUnary->unwrapFunction(position);
         }
     }
     return position - this->getBBox().min();
@@ -327,17 +336,11 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
                     pos + Vector3(1, 1, 1)*/
                 };
                 float allPositiveVals = 0.f;
+                float allNegativeVals = 0.f;
                 std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
                 for (size_t i = 0; i < evaluations.size(); i++) {
                     auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
                     evaluations[i] = {totalEval, matVals};
-    //                auto [totalEval1, matVals1] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 0, 1));
-    //                auto [totalEval2, matVals2] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 1, 0));
-    //                auto [totalEval3, matVals3] = this->getMaterialsAndTotalEvaluation(pos + Vector3(0, 1, 1));
-    //                auto [totalEval4, matVals4] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 0, 0));
-    //                auto [totalEval5, matVals5] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 0, 1));
-    //                auto [totalEval6, matVals6] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 1, 0));
-    //                auto [totalEval7, matVals7] = this->getMaterialsAndTotalEvaluation(pos + Vector3(1, 1, 1));
 
 
                     float positiveVal = 0.f;
@@ -349,9 +352,10 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
                     }
                     totalEval = positiveVal;
                     allPositiveVals += positiveVal;
+                    allNegativeVals += negativeVal;
                 }
 
-                allPositiveVals /= float(evaluations.size());
+                allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
                 if (allPositiveVals >= ImplicitPatch::isovalue) {
                     /*TerrainTypes maxType;
                     float maxVal = 0.f;
@@ -528,6 +532,9 @@ void ImplicitPrimitive::update()
 {
 
     if (this->predefinedShape == ImplicitHeightmap) {
+        if (this->cachedHeightmap.size() == 0) {
+            this->cachedHeightmap = Heightmap(this->heightmapFilename, this->dimensions.x, this->dimensions.y).heights;
+        }
         if (this->cachedHeightmap.height() > 1) {
             this->evalFunction = [=](Vector3 pos) -> float {
                 return (this->getBBox().contains(pos) ? clamp(this->cachedHeightmap.interpolate(pos) + ImplicitPatch::isovalue, 0.f, 1.f) : 0.f);
@@ -550,6 +557,9 @@ void ImplicitPrimitive::update()
 
 std::string ImplicitPrimitive::toString()
 {
+    if (this->name == "") {
+        this->name = stringFromPredefinedShape(this->predefinedShape);
+    }
     return this->name + ": Primitive " + this->name + " #" + std::to_string(this->index);
 }
 
@@ -583,6 +593,7 @@ nlohmann::json ImplicitPrimitive::toJson()
         content["sigmaValue"] = this->parametersProvided[0];
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
         content["mirrored"] = this->mirrored;
+        content["filename"] = this->heightmapFilename;
     }
 
     return content;
@@ -605,6 +616,8 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
     patch->parametersProvided = {content["sigmaValue"]};
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
+    if (content.contains("filename"))
+        patch->heightmapFilename = content["filename"];
     patch->update();
     return patch;
 }
@@ -1028,8 +1041,8 @@ nlohmann::json ImplicitBinaryOperator::toJson()
 ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitBinaryOperator* patch = new ImplicitBinaryOperator;
-    patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
-    patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
+    patch->addChild(ImplicitPatch::fromJson(content["composableA"]), 0);//patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
+    patch->addChild(ImplicitPatch::fromJson(content["composableB"]), 1);//patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
     patch->name = content["name"];
     patch->composeFunction = compositionOperationFromString(content["operator"]);
     patch->blendingFactor = content["blendingFactor"];
@@ -1132,7 +1145,9 @@ ImplicitPatch*& ImplicitBinaryOperator::composableB()
 ImplicitUnaryOperator::ImplicitUnaryOperator()
 {
     this->composables = std::vector<ImplicitPatch*>(1);
-
+    this->noiseFunction = [](Vector3) { return 0.f; };
+}
+/*
     this->wrapFunction = [=](Vector3 pos) {
         for (int i = 0; i < this->transforms.size(); i++)
             pos = this->transforms[i].wrap(pos);
@@ -1145,21 +1160,97 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     };
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
-
+*/
 float ImplicitUnaryOperator::evaluate(Vector3 pos)
 {
-    Vector3 evaluationPos = this->unwrapFunction(pos);
+//    Vector3 evaluationPos = this->unwrapFunction(pos);
+    Vector3 evaluationPos = inverseTransform(pos);
     float evaluation = this->composableA()->evaluate(evaluationPos) + this->noiseFunction(pos);
     evaluation = std::clamp(evaluation, 0.f, 1.f);
 
     return evaluation;
 }
 
+void ImplicitUnaryOperator::addTranslation(const Vector3 &translation) {
+    this->_translation += translation;
+    auto translationTransform = [translation](const Vector3& point) {
+        return point + translation;
+    };
+    auto inverseTranslationTransform = [translation](const Vector3& point) {
+        return point - translation;
+    };
+    addTransformation(translationTransform, inverseTranslationTransform);
+}
+
+void ImplicitUnaryOperator::addRotation(Vector3 rotationAngles) {
+    this->_rotation += rotationAngles;
+    Matrix rotationMatrix = rotationAngles.toRotationMatrix();
+    auto rotationTransform = [=](const Vector3& point) {
+        Vector3 center = this->composableA()->getBBox().center();
+        return center + Vector3::fromMatrix(rotationMatrix.product((point - center).toMatrix()));
+    };
+    auto inverseRotationTransform = [=](const Vector3& point) {
+        Vector3 center = this->composableA()->getBBox().center();
+        return center + Vector3::fromMatrix(rotationMatrix.inverse().product((point - center).toMatrix()));
+    };
+    addTransformation(rotationTransform, inverseRotationTransform);
+}
+
+void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
+    this->_scale *= scaleFactors;
+    auto scalingTransform = [=](const Vector3& point) {
+        Vector3 center = this->composableA()->getBBox().center();
+        return center + (point - center) * scaleFactors; //Vector3(point.x * scaleFactors.x, point.y * scaleFactors.y, point.z * scaleFactors.z);
+    };
+    auto inverseScalingTransform = [=](const Vector3& point) {
+        Vector3 center = this->composableA()->getBBox().center();
+        return center + (point - center) / scaleFactors; // Vector3(point.x / scaleFactors.x, point.y / scaleFactors.y, point.z / scaleFactors.z);
+    };
+    addTransformation(scalingTransform, inverseScalingTransform);
+}
+
+void ImplicitUnaryOperator::addDisplacementField(const Matrix3<Vector3> &displacementField) {
+    auto displacementTransform = [&displacementField](const Vector3& point) {
+        // Use the displacement field to transform the point
+        return point + displacementField.interpolate(point);
+    };
+    auto inverseDisplacementTransform = [&displacementField](const Vector3& point) {
+        // Iteratively "walk" back to the original point
+        Vector3 oldPoint;
+        Vector3 newPoint = point;
+        const int maxIterations = 100;  // Define an appropriate limit for your use case
+        int iterations = 0;
+        do {
+            if (++iterations > maxIterations) {
+                throw std::runtime_error("Inverse transformation could not be found");
+            }
+            oldPoint = newPoint;
+            newPoint = oldPoint - displacementField.interpolate(oldPoint);
+        } while ((newPoint - oldPoint).length() > 1e-6); // Use a small threshold to stop the iteration
+        return newPoint;
+    };
+    addTransformation(displacementTransform, inverseDisplacementTransform);
+}
+
+Vector3 ImplicitUnaryOperator::applyTransform(Vector3 pos) const
+{
+    for (int i = 0; i < transformations.size(); i++)
+        pos = transformations[i].first(pos);
+    return pos;
+}
+
+Vector3 ImplicitUnaryOperator::inverseTransform(Vector3 pos) const
+{
+    for (int i = transformations.size() - 1; i >= 0; i--)
+        pos = transformations[i].second(pos);
+    return pos;
+}
+
 std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
 {
-    Vector3 evaluationPos = this->unwrapFunction(pos);
+    Vector3 evaluationPos = this->inverseTransform(pos);
     auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
-    if (eval > 0.f) {
+            if (eval > 0.f) {
         float noiseValue = this->noiseFunction(pos);
         for (auto& [mat, val] : materials) {
             val += (noiseValue * (val / eval));
@@ -1167,7 +1258,31 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
     }
     return materials;
 }
+AABBox ImplicitUnaryOperator::getSupportBBox() {
+    auto AABBox = this->composableA()->getSupportBBox();
+    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
+    for (auto& vert : vertices) { // call transform function
+        vert = inverseTransform(vert);
+    }
+
+    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
+}
+
+AABBox ImplicitUnaryOperator::getBBox()
+{
+    auto AABBox = this->composableA()->getBBox();
+    auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
+
+//    std::cout << "Transformations : " << this->transformations.size() << std::endl;
+
+    for (auto& vert : vertices) { // call transform function
+        vert = applyTransform(vert);
+    }
+
+    return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
+}
+/*
 AABBox ImplicitUnaryOperator::getSupportBBox()
 {
     auto AABBox = this->composableA()->getSupportBBox();
@@ -1188,7 +1303,7 @@ AABBox ImplicitUnaryOperator::getBBox()
         vert = this->wrapFunction(vert);
 
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
-}
+}*/
 
 std::string ImplicitUnaryOperator::toString()
 {
@@ -1213,11 +1328,6 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         content["type"] = "unary";
         content["name"] = this->name;
         content["index"] = this->index;
-        content["translation"] = vec3_to_json(this->_translation);
-        content["rotation"] = vec3_to_json(this->_rotation);
-        content["noise"] = vec3_to_json(this->_noise);
-        content["scale"] = vec3_to_json(this->_scale);
-        content["distortion"] = vec3_to_json(this->_distortion);
         if (this->composableA())
             content["composableA"] = this->composableA()->toJson();
         content["optionalCurve"] = bspline_to_json(this->optionalCurve);
@@ -1230,32 +1340,42 @@ nlohmann::json ImplicitUnaryOperator::toJson()
 
 ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
 {
-    ImplicitUnaryOperator* patch = new ImplicitUnaryOperator;
-    patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
+    ImplicitUnaryOperator* patch; // = new ImplicitUnaryOperator;
+    Vector3 rotation = Vector3(0, 0, 0);
+    Vector3 translation = Vector3(0, 0, 0);
+    Vector3 scale = Vector3(1, 1, 1);
+    Vector3 noise = Vector3(0, 0, 0);
+    Vector3 distortion = Vector3(0, 0, 0);
+    if (content.contains("translation") && json_to_vec3(content["translation"]) != Vector3()) {
+        patch = new ImplicitTranslation();
+        translation = json_to_vec3(content["translation"]);
+    } else if (content.contains("scale") && json_to_vec3(content["scale"]) != Vector3(1, 1, 1)) {
+        patch =  new ImplicitScaling();
+        scale = json_to_vec3(content["scale"]);
+        if (scale == Vector3())
+            scale = Vector3(1.f, 1.f, 1.f);
+    } else if (content.contains("rotation") && json_to_vec3(content["rotation"]) != Vector3()) {
+        patch =  new ImplicitRotation();
+        rotation = json_to_vec3(content["rotation"]);
+    } else if (content.contains("noise") && json_to_vec3(content["noise"]) != Vector3()) {
+        patch = new ImplicitNoise();
+        noise = json_to_vec3(content["noise"]);
+    } else if (content.contains("distortion") && json_to_vec3(content["distortion"]) != Vector3()) {
+        patch = new ImplicitWraping();
+        distortion = json_to_vec3(content["distortion"]);
+    } else if (content.contains("spreadFactor") && content["spreadFactor"] != 0) {
+        patch = new ImplicitSpread();
+        patch->spread(content["spreadFactor"]);
+    } else {
+        patch = new ImplicitUnaryOperator();
+    }
+    patch->addChild(ImplicitPatch::fromJson(content["composableA"]));
     patch->name = content["name"];
     patch->index = content["index"];
-    Vector3 rotation = json_to_vec3(content["rotation"]);
-    Vector3 translation = json_to_vec3(content["translation"]);
-    Vector3 scale;
-    Vector3 noise;
-    Vector3 distortion;
-    if (content.contains("scale"))
-        scale = json_to_vec3(content["scale"]);
-    if (scale == Vector3())
-        scale = Vector3(1.f, 1.f, 1.f);
-    if (content.contains("noise"))
-        noise = json_to_vec3(content["noise"]);
-    if (content.contains("distortion"))
-        distortion = json_to_vec3(content["distortion"]);
-    if (content.contains("spreadFactor")) {
-        if (content["spreadFactor"] != 0) {
-            patch->spread(content["spreadFactor"]);
-        }
-    }
 
     if (translation != Vector3()) patch->translate(translation);
     if (scale != Vector3(1.f, 1.f, 1.f)) patch->scale(scale);
-    if (rotation != Vector3()) patch->rotate(rotation.x, rotation.y, rotation.z);
+    if (rotation != Vector3()) patch->rotate(rotation);
     if (noise != Vector3()) patch->addRandomNoise(noise.x, noise.y, noise.z);
 //    if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
     if (distortion != Vector3()) {
@@ -1309,25 +1429,32 @@ ImplicitPatch *&ImplicitUnaryOperator::composableA()
 
 void ImplicitUnaryOperator::translate(Vector3 translation)
 {
-    this->_translation += translation;
-    this->transforms.push_back(UnaryOpTranslate(translation));
+    return this->addTranslation(translation);
+    /*this->_translation += translation;
+    this->transforms.push_back(UnaryOpTranslate(translation));*/
 }
 
-void ImplicitUnaryOperator::rotate(float angleX, float angleY, float angleZ)
+void ImplicitUnaryOperator::rotate(Vector3 angles) //float angleX, float angleY, float angleZ)
 {
+    return this->addRotation(angles); // Vector3(angleX, angleY, angleZ));
+    /*
     this->_rotation += Vector3(angleX, angleY, angleZ);
 
     auto AABBox = this->getBBox();
     Vector3 center = AABBox.center();
     this->transforms.push_back(UnaryOpRotate(Vector3(angleX, angleY, angleZ), center));
+    */
 }
 
 void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
 {
+    return this->addScaling(scaleFactor);
+    /*
     this->_scale *= scaleFactor;
     auto BBox = this->getBBox();
     Vector3 center = BBox.center();
     this->transforms.push_back(UnaryOpScale(scaleFactor, center));
+    */
 }
 
 void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float offset)
@@ -1588,7 +1715,7 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     polygon.points.push_back(polygon.points.front());
     return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (Vector3 pos) -> float {
         ShapeCurve polygon(_polygon);
-        return (polygon.contains(pos.xy()) ? height : 0.f);
+        return (polygon.contains(pos.xy(), false) ? height : 0.f);
     });
 }
 
@@ -1596,22 +1723,25 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
 {
     return [=] (Vector3 pos) -> float {
         BSpline path = _path;
-        float closestTime = path.estimateClosestTime(pos);
-        Vector3 closestPoint = path.getPoint(closestTime);
-
-        Vector3 newBasisX = path.getFrenetNormal(closestTime) * sigma;
-        Vector3 newBasisY = path.getFrenetDirection(closestTime) * sigma;
-        Vector3 newBasisZ = path.getFrenetBinormal(closestTime) * sigma;
+//        float closestTime = path.estimateClosestTime(pos);
+//        Vector3 closestPoint = path.getPoint(closestTime);
+        float epsilon = 1e-1;
+        return 1.f - (path.estimateDistanceFrom(pos, epsilon) / (sigma));
+        /*Vector3 newBasisX = path.getFrenetDirection(closestTime); // * sigma;
+        Vector3 newBasisY = path.getFrenetBinormal(closestTime); // * sigma;
+        Vector3 newBasisZ = path.getFrenetNormal(closestTime); //  * sigma;
         ShapeCurve shape = ShapeCurve({
                                           Vector3(-.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ),
                                           Vector3(-.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ),
-                                          Vector3(0.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ),
-                                          Vector3(0.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ)
+                                          Vector3(0.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ),
+                                          Vector3(0.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ)
                                       });
+        shape.scale(sigma);
         shape.translate(closestPoint);
 
-        float res = ImplicitPatch::isovalue - shape.estimateSignedDistanceFrom(pos);
-        return std::max(res, 0.f);
+        float res = ImplicitPatch::isovalue - shape.estimateSignedDistanceFrom(pos);*/
+//        float res = /*ImplicitPatch::isovalue - */(closestPoint - pos).norm() / sigma;
+//        return std::max(res, 0.f);
         /*
         float distance = (pos - closestPoint).norm() / sigma;
         float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f);
@@ -1651,12 +1781,12 @@ std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std:
     return _3Dfunction;
 }
 
-ImplicitPatch* ImplicitPatch::getParent() const
+ImplicitNaryOperator* ImplicitPatch::getParent() const
 {
     return this->parent;
 }
 
-void ImplicitPatch::setParent(ImplicitPatch* newParent)
+void ImplicitPatch::setParent(ImplicitNaryOperator *newParent)
 {
     this->parent = newParent;
 }
@@ -2174,7 +2304,7 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitNaryOperator* patch = new ImplicitNaryOperator;
     for (auto& compoJson : content["composables"]) {
-        patch->composables.push_back(ImplicitPatch::fromJson(compoJson));
+        patch->addChild(ImplicitPatch::fromJson(compoJson));
     }
     patch->name = content["name"];
     patch->index = content["index"];
@@ -2223,11 +2353,15 @@ ImplicitPatch *ImplicitNaryOperator::copy() const
 
 void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
 {
-    if (index == -1)
+    if (index == -1) {
         this->composables.push_back(newChild);
-    else
+    } else {
+        if (composables[index])
+            this->composables[index]->parent = nullptr;
         this->composables[index] = newChild;
+    }
     newChild->setParent(this);
+//    std::cout << newChild->toString() << " is now child of " << this->toString() << std::endl;
 }
 
 void ImplicitNaryOperator::deleteAllChildren()
@@ -2236,4 +2370,76 @@ void ImplicitNaryOperator::deleteAllChildren()
         delete child;
     }
     this->composables.clear();
+}
+
+nlohmann::json ImplicitTranslation::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["translation"] = vec3_to_json(this->_translation);
+    return content;
+}
+
+ImplicitPatch *ImplicitTranslation::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
+}
+
+nlohmann::json ImplicitRotation::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["rotation"] = vec3_to_json(this->_rotation);
+    return content;
+}
+
+ImplicitPatch *ImplicitRotation::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
+}
+
+nlohmann::json ImplicitScaling::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["scale"] = vec3_to_json(this->_scale);
+    return content;
+}
+
+ImplicitPatch *ImplicitScaling::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
+}
+
+nlohmann::json ImplicitWraping::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["distortion"] = vec3_to_json(this->_distortion);
+    return content;
+}
+
+ImplicitPatch *ImplicitWraping::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
+}
+
+nlohmann::json ImplicitNoise::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["noise"] = vec3_to_json(this->_noise);
+    return content;
+}
+
+ImplicitPatch *ImplicitNoise::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
+}
+
+nlohmann::json ImplicitSpread::toJson()
+{
+    nlohmann::json content = ImplicitUnaryOperator::toJson();
+    content["spreadFactor"] = this->_spreadingFactor;
+    return content;
+}
+
+ImplicitPatch *ImplicitSpread::fromJson(nlohmann::json content)
+{
+    return ImplicitUnaryOperator::fromJson(content);
 }

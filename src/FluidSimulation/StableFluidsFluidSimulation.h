@@ -7,18 +7,17 @@
 
 #include "FluidSimulation/FluidSimulation.h"
 
-namespace StableFluids {
-
 // The process is only partially understood in my head, see Josh Stam's paper for more understanding (Real-Time Fluid Dynamics for Games, 2003)
 class StableFluidsSimulation : public FluidSimulation
-{/*
+{
+/*
 public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusion, float viscosity, int solverIterations);
     virtual ~StableFluidsSimulation() {}
 
 //    void setObstacles(const std::vector<std::vector<Vector3>>& triangles);
-//    void setObstacles(Matrix3<float> obstacle);
+    void setObstacles(Matrix3<float> obstacle);
 
     void handleCollisions();
     Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
@@ -38,6 +37,7 @@ public:
     void project();
 
     void advect();
+};
 
 
 
@@ -47,22 +47,20 @@ public:
 
 
 
-
-
-
-    */
+*/
 public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations);
 
     void setObstacles(Matrix3<float> new_obstacles);
     void addDensity(int x, int y, int z, float amount);
-    void addVelocity(int x, int y, int z, Vector3 amount);
+    void addVelocity(int x, int y, int z, const Vector3& amount);
     void setMaxSpeed(float speed);
 
     void handleCollisions() {};
 
     Matrix3<Vector3> getVelocities(int rescaleX = -1, int rescaleY = -1, int rescaleZ = -1);
+    Vector3 getVelocity(int x, int y, int z);
 
     void step();
     void diffuseVelocity();
@@ -77,7 +75,7 @@ public:
     float dt;
     float diffusionAmount;
     float viscosity;
-    float maxSpeed = 1.0;
+    float maxSpeed = 100.0;
     float maxSpeedSquared;
 
     int currentStep = 0;
@@ -272,5 +270,4 @@ public:
     }
 };
 
-}
 #endif // STABLEFLUIDSSIMULATION_H

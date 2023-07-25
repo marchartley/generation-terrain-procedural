@@ -467,7 +467,6 @@ CombinMap CombinMap::dual(Brin *oneExteriorBrin, Brin *oneEdgeTowardInfinity)
         for (size_t iBrin = 0; iBrin < myBrins.size(); iBrin++) {
             if (isIn(myBrins[iBrin], myFaces[iFace])) {
                 edgeToFace[myBrins[iBrin]] = iFace;
-                std::cout << "Brin " << myBrins[iBrin]->index << " -> Face " << iFace << std::endl;
             }
         }
     }

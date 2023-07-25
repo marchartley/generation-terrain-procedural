@@ -1,6 +1,27 @@
 #ifndef FLOWFIELDINTERFACE_H
 #define FLOWFIELDINTERFACE_H
 
+
+class FlowFieldInterface;
+#include <QWidget>
+#include "Interface/AbstractFluidSimulationInterface.h"
+#include "FluidSimulation/StableFluidsFluidSimulation.h"
+
+class FlowFieldInterface : public AbstractFluidSimulationInterface
+{
+    Q_OBJECT
+public:
+    FlowFieldInterface(QWidget *parent = nullptr);
+
+//    void updateParticlesMesh();
+
+public Q_SLOTS:
+//    void updateParticles();
+
+protected:
+};
+
+/*
 class FlowFieldInterface;
 #include <QWidget>
 #include "Interface/ActionInterface.h"
@@ -12,7 +33,6 @@ class FlowFieldInterface : public ActionInterface
 public:
     FlowFieldInterface(QWidget *parent = nullptr);
 
-//    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch);
 
     void display(Vector3 camPos = Vector3(false));
@@ -45,6 +65,7 @@ protected:
     std::vector<bool> displayedFlowfields;
     bool displayingPressure = false;
     bool displayingSumOfFlows = false;
+    bool computeAtEachFrame = true;
 };
-
+*/
 #endif // FLOWFIELDINTERFACE_H

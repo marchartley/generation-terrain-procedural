@@ -4,8 +4,6 @@
 #include "Utils/FastNoiseLit.h"
 #include "Utils/Utils.h"
 
-namespace ShallowWater {
-
 void visualize(std::vector<GridCell> &grid, int N, int resized) {
 
     Matrix3<float> values(N, N);
@@ -15,10 +13,6 @@ void visualize(std::vector<GridCell> &grid, int N, int resized) {
     if (resized > 0) {
         values = values.resize(resized, resized, 1);
     }
-
-    std::cout << values.displayAsPlot() << std::endl;
-    std::cout << values.min() << "   " << values.max() << "\n\n\n";
-    std::cout << std::endl;
 }
 
 void visualize_diff(std::vector<GridCell> initialgrid, std::vector<GridCell> grid, int N, int resized) {
@@ -28,7 +22,7 @@ void visualize_diff(std::vector<GridCell> initialgrid, std::vector<GridCell> gri
             diff[i * N + j] = initialgrid[i * N + j] - grid[i * N + j];
         }
     }
-    ShallowWater::visualize(diff, N, resized);
+    visualize(diff, N, resized);
 }
 GridCell operator-(const GridCell& cell1, const GridCell& cell2) {
     GridCell res;
@@ -174,4 +168,3 @@ void ShallowWaterSimulation::init(int N)
     }
 }
 
-}

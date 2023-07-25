@@ -414,7 +414,7 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms" << std::endl;
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
-void Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
+Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     Matrix3<float> voxels = voxelGrid.getVoxelValues();
 
     this->heights = Matrix3<float>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
@@ -433,9 +433,10 @@ void Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     }
 //    this->computeNormals();
 //    this->createMesh();
+    return *this;
 }
 
-void Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
+Heightmap& Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
 {
     this->heights = Matrix3<float>(layerGrid.getSizeX(), layerGrid.getSizeY());
     for (size_t x = 0; x < this->getSizeX(); x++) {
@@ -443,9 +444,30 @@ void Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
             this->heights.at(x, y) = layerGrid.getHeight(x, y);
         }
     }
+    return *this;
 }
 
-void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
+Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
+{
+    this->heights = Matrix3<float>(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
+    int sX = this->getSizeX(), sY = this->getSizeY();
+#pragma omp parallel for collapse(2)
+    for (int x = 0; x < sX; x++) {
+        for (int y = 0; y < sY; y++) {
+            this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
+        }
+    }
+    return *this;
+}
+
+Matrix3<float> Heightmap::getVoxelized(Vector3 dimensions, Vector3 scale)
+{
+    VoxelGrid v;
+    v.from2DGrid(*this);
+    return v.getVoxelValues();
+}
+
+Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
 {
     float *data = nullptr;
     int imgW = 0, imgH = 0, nbChannels;
@@ -475,7 +497,7 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
             std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
             std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
             exit (-1);
-            return;
+            return *this;
         }
         data = new float[imgW * imgH];
         for (int i = 0; i < imgW * imgH; i++)
@@ -513,6 +535,7 @@ void Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny
 //        map *= (maxHeight / max);
 //    }
 //    this->heights = map;
+    return *this;
 }
 
 void Heightmap::saveHeightmap(std::string heightmap_filename)
@@ -577,15 +600,17 @@ Vector3 Heightmap::findSurfaceBetween(Vector3 start, Vector3 end)
 
 }
 
-Mesh Heightmap::getGeometry()
+Mesh Heightmap::getGeometry(Vector3 reducedResolution)
 {
     std::vector<Vector3> vertices;
-    vertices.resize(6 * (this->getSizeX() - 1) * (this->getSizeY() - 1) );
-    auto heights = this->getHeights();
+    Vector3 initialDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    Vector3 dimensions = (reducedResolution.isValid() ? (reducedResolution.xy() + Vector3(0, 0, 1)) : initialDimensions);
+    auto heights = this->getHeights().resize(dimensions);
+    vertices.resize(6 * (heights.sizeX - 1) * (heights.sizeY - 1) );
 
     size_t i = 0;
-    for (int x = 0; x < this->getSizeX() - 1; x++) {
-        for (int y = 0; y < this->getSizeY() - 1; y++) {
+    for (int x = 0; x < heights.sizeX - 1; x++) {
+        for (int y = 0; y < heights.sizeY - 1; y++) {
             vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
             vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
             vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
@@ -600,6 +625,7 @@ Mesh Heightmap::getGeometry()
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
+    m.scale(initialDimensions / dimensions);
     return m;
 }
 

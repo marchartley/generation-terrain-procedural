@@ -1,16 +1,13 @@
 #include "FluidSimulation/StableFluidsFluidSimulation.h"
 
-
-using namespace StableFluids;
-
 /*
 StableFluids::StableFluidsSimulation::StableFluidsSimulation() {}
 
 StableFluids::StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusion, float viscosity, int solverIterations)
     : FluidSimulation(sizeX, sizeY, sizeZ), diffusion(diffusion), viscosity(viscosity), dt(dt), solverIterations(solverIterations)
 {
-    velocity = Matrix3<Vector3>(sizeX, sizeY, sizeZ);
-    density = Matrix3<float>(sizeX, sizeY, sizeZ);
+    velocity = Matrix3<Vector3>(dimensions);
+    density = Matrix3<float>(dimensions);
 
     velocity.raiseErrorOnBadCoord = false;
     velocity.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -23,7 +20,7 @@ void StableFluids::StableFluidsSimulation::step() {
     project();
     advect();
     project();
-//    handleCollisions();
+    handleCollisions();
 }
 
 //void StableFluids::StableFluidsSimulation::addDensity(int x, int y, int z, float amount) {
@@ -35,9 +32,11 @@ void StableFluids::StableFluidsSimulation::addVelocity(int x, int y, int z, Vect
 }
 
 void StableFluids::StableFluidsSimulation::diffuse() {
-    float a = dt * viscosity * sizeX * sizeY * sizeZ * diffusion;
+    int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
+    float a = dt * viscosity * dimensions.x * dimensions.y * dimensions.z * diffusion;
     for (int k = 0; k < solverIterations; ++k) { // 20 iterations is a common choice
         auto oldVelocities = velocity;
+        oldVelocities.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 #pragma omp parallel for collapse(3)
         for (int x = 0; x < sizeX; ++x) {
             for (int y = 0; y < sizeY; ++y) {
@@ -54,8 +53,9 @@ void StableFluids::StableFluidsSimulation::diffuse() {
 }
 
 void StableFluids::StableFluidsSimulation::project() {
-    Matrix3<float> divergence(sizeX, sizeY, sizeZ);
-    Matrix3<float> pressure(sizeX, sizeY, sizeZ);
+    Matrix3<float> divergence(dimensions);
+    Matrix3<float> pressure(dimensions);
+    int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
 
     // Compute divergence of velocity field
 #pragma omp parallel for collapse(3)
@@ -106,7 +106,8 @@ void StableFluids::StableFluidsSimulation::project() {
 }
 
 void StableFluids::StableFluidsSimulation::advect() {
-    Matrix3<Vector3> newVelocity(sizeX, sizeY, sizeZ);
+    Matrix3<Vector3> newVelocity(dimensions);
+    int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
 
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < sizeX; ++x) {
@@ -133,6 +134,7 @@ void StableFluids::StableFluidsSimulation::advect() {
 }
 
 void StableFluids::StableFluidsSimulation::handleCollisions() {
+    int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
 //#pragma omp parallel for collapse(3)
     for (int x = 0; x < sizeX; ++x) {
         for (int y = 0; y < sizeY; ++y) {
@@ -141,7 +143,7 @@ void StableFluids::StableFluidsSimulation::handleCollisions() {
 
                 if (obstacleGrid.at(pos)) {
                     velocity.at(pos) = obstacleGradient.at(pos) * velocity.at(pos).norm();
-                } else {
+                } else if (obstacleTrianglesOctree) {
                     // Query Octree for nearby triangles
                     Vector3 endPos = pos + velocity.at(pos).normalized();
                     std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(pos, endPos);
@@ -151,7 +153,7 @@ void StableFluids::StableFluidsSimulation::handleCollisions() {
                         auto& triangle = this->triangles[triangleData.index];
                         Vector3 collisionPoint = Collision::segmentToTriangleCollision(pos, endPos, triangle[0], triangle[1], triangle[2]);
                         if (collisionPoint.isValid()) {
-                            velocity.at(pos) = collisionPoint - pos;
+                            velocity.at(pos) = (collisionPoint - pos).normalized() * velocity.at(pos).norm();
                             break;
                         }
                     }
@@ -162,10 +164,19 @@ void StableFluids::StableFluidsSimulation::handleCollisions() {
 }
 
 Matrix3<Vector3> StableFluids::StableFluidsSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ) {
-    return (this->velocity * (this->obstacleGrid - 1).abs().resize(this->velocity.getDimensions())).resize(newSizeX, newSizeY, newSizeZ);
+    return (this->velocity * (1.f - this->obstacleGrid)).resize(newSizeX, newSizeY, newSizeZ);
 }
 
-
+void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
+{
+    FluidSimulation::setObstacles(new_obstacles);
+    for(size_t i = 0; i < new_obstacles.data.size(); i++) {
+        if (new_obstacles[i] > 0.001) {
+//            this->velocity[i] = Vector3();
+//            this->velocity_old[i] = Vector3();
+        }
+    }
+}
 */
 
 /*
@@ -177,22 +188,22 @@ StableFluidsSimulation::StableFluidsSimulation()
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
     : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
-    obstacles = Matrix3<float>(sizeX, sizeY, sizeZ);
-    density_old = Matrix3<float>(sizeX, sizeY, sizeZ);
-    density = Matrix3<float>(sizeX, sizeY, sizeZ);
+    obstacles = Matrix3<float>(dimensions);
+    density_old = Matrix3<float>(dimensions);
+    density = Matrix3<float>(dimensions);
 
-    velocity = Matrix3<Vector3>(sizeX, sizeY, sizeZ);
-    velocity_old = Matrix3<Vector3>(sizeX, sizeY, sizeZ);
+    velocity = Matrix3<Vector3>(dimensions);
+    velocity_old = Matrix3<Vector3>(dimensions);
 
-    divergence = Matrix3<float>(sizeX, sizeY, sizeZ);
-    pressure = Matrix3<float>(sizeX, sizeY, sizeZ);
+    divergence = Matrix3<float>(dimensions);
+    pressure = Matrix3<float>(dimensions);
 
     maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
 void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
-    this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ).binarize(0.5);
+    this->obstacles = new_obstacles.resize(dimensions).binarize(0.5);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {
             this->velocity[i] = Vector3();
@@ -277,7 +288,7 @@ void StableFluidsSimulation::diffuseVelocity()
 
 void StableFluidsSimulation::advectVelocity()
 {
-    Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(sizeX, sizeY, sizeZ) * dt;
+    Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(dimensions) * dt;
 
     velocity_old.raiseErrorOnBadCoord = false;
 #pragma omp parallel for collapse(3)
@@ -388,31 +399,33 @@ void StableFluidsSimulation::setVelocityBounds()
     }
 }
 */
+
+
+
 StableFluidsSimulation::StableFluidsSimulation()
 {
 
 }
 
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
-    : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
+    : FluidSimulation(sizeX, sizeY, sizeZ), sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
-    obstacles = Matrix3<float>(sizeX, sizeY, sizeZ);
-    density_old = Matrix3<float>(sizeX, sizeY, sizeZ);
-    density = Matrix3<float>(sizeX, sizeY, sizeZ);
+    obstacles = Matrix3<float>(dimensions);
+    density_old = Matrix3<float>(dimensions);
+    density = Matrix3<float>(dimensions);
 
-    velocity = Matrix3<Vector3>(sizeX, sizeY, sizeZ);
-    velocity_old = Matrix3<Vector3>(sizeX, sizeY, sizeZ);
+    velocity = Matrix3<Vector3>(dimensions);
+    velocity_old = Matrix3<Vector3>(dimensions);
 
-    divergence = Matrix3<float>(sizeX, sizeY, sizeZ);
-    pressure = Matrix3<float>(sizeX, sizeY, sizeZ);
+    divergence = Matrix3<float>(dimensions);
+    pressure = Matrix3<float>(dimensions);
 
     maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
 void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
 {
-    std::cout << sizeX << " " << sizeY << " " << sizeZ << std::endl;
-    this->obstacles = new_obstacles.resize(sizeX, sizeY, sizeZ);
+    this->obstacles = new_obstacles.resize(dimensions);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {
             this->velocity[i] = Vector3();
@@ -426,7 +439,7 @@ void StableFluidsSimulation::addDensity(int x, int y, int z, float amount)
     this->density(x, y, z) += amount;
 }
 
-void StableFluidsSimulation::addVelocity(int x, int y, int z, Vector3 amount)
+void StableFluidsSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
 {
     this->velocity(x, y, z) += amount;
 }
@@ -439,22 +452,20 @@ void StableFluidsSimulation::setMaxSpeed(float speed)
 
 Matrix3<Vector3> StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
 {
-    return this->velocity.resize(rescaleX, rescaleY, rescaleZ);
-    /*Matrix3<Vector3> mat(sizeX, sizeY, sizeZ);
-    for (size_t i = 0; i < mat.data.size(); i++)
-        mat.at(i) = (Vector3(1, 0, 0) * obstacles.at(i) );
-    return mat.resize(rescaleX, rescaleY, rescaleZ);*/
+    if (_cachedStep != currentStep) {
+        _cachedStep = currentStep;
+        _cachedVelocity = velocity;
+    }
+    return _cachedVelocity.resize(rescaleX, rescaleY, rescaleZ);
+}
+
+Vector3 StableFluidsSimulation::getVelocity(int x, int y, int z)
+{
+    return FluidSimulation::getVelocity(x, y, z);
 }
 
 void StableFluidsSimulation::step()
 {
-    /*
-    this->diffuse(this->velocity, this->velocity_old, this->diffusionAmount, true);
-    this->project();
-    this->advect(this->velocity, this->velocity_old, true);
-
-    this->project();
-    this->diffuse();*/
     this->currentStep ++;
     this->velocityStep();
 //    this->densityStep(); // This is actually useless right now. Maybe we could use it to erod the walls depending on the density, but that's not for now.
@@ -469,12 +480,12 @@ void StableFluidsSimulation::velocityStep()
     this->diffuseVelocity(); // Removed for now (considering viscosity = 0)
 //    velocity_old = velocity; // Replaced by a simple affectation
 
-    this->projectVelocity();
+//    this->projectVelocity();
 
-    swapArrays(this->velocity_old, this->velocity);
-    this->advectVelocity();
-    this->projectVelocity();
-    this->setVelocityBounds();
+//    swapArrays(this->velocity_old, this->velocity);
+//    this->advectVelocity();
+//    this->projectVelocity();
+//    this->setVelocityBounds();
 }
 
 void StableFluidsSimulation::diffuseVelocity()
@@ -506,7 +517,7 @@ void StableFluidsSimulation::diffuseVelocity()
 
 void StableFluidsSimulation::advectVelocity()
 {
-    Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(sizeX, sizeY, sizeZ) * dt;
+    Vector3 dt0 = Vector3(1.f, 1.f, 1.f) * dt; // = Vector3(dimensions) * dt;
 
     velocity_old.raiseErrorOnBadCoord = false;
     for (int x = 0; x < sizeX; x++) {
@@ -601,12 +612,11 @@ void StableFluidsSimulation::setVelocityBounds()
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 origin(x, y, z);
-                if (velocity(x, y, z).norm2() > this->maxSpeedSquared) velocity(x, y, z) = velocity(x, y, z).normalized() * this->maxSpeed;
+                if (velocity(x, y, z).norm2() > this->maxSpeedSquared) velocity(x, y, z).setMag(this->maxSpeed);
                 bool isGoingThroughObstable = (velocity.checkCoord(origin + velocity.at(origin) * 1.5f) ? obstacles.at(origin + velocity.at(origin) * 1.5f) > .01 : false);
                 if (isGoingThroughObstable) {
                     if (inverseOnBounds) {
-                        velocity.at(x, y, z) = boundariesGradient(x, y, z).normalized() * velocity.at(x, y, z).norm(); //velocity.at(x, y, z) - boundariesGradient(x, y, z).normalized() * (velocity.at(x, y, z).normalized().dot(boundariesGradient(x, y, z).normalized() * -1.f) * .05f) * 2.f;
-//                        std::cout << "Obstacle on " << Vector3(x, y, z) << " velocity = " << velocity.at(x, y, z) << std::endl;
+                        velocity.at(x, y, z) = boundariesGradient(x, y, z).normalized() * velocity.at(x, y, z).norm();
                     } else if (nullifyOnBounds) {
                         velocity.at(x, y, z) *= 0.f;
                     }
@@ -615,3 +625,4 @@ void StableFluidsSimulation::setVelocityBounds()
         }
     }
 }
+

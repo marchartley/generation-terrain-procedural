@@ -90,6 +90,7 @@ SOURCES += \
 #    src/Biomes/InstancesTree.cpp \
 #    src/Biomes/ModelsTree.cpp \
     src/DataStructure/BVH.cpp \
+    src/DataStructure/KDTree.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/Octree.cpp \
@@ -102,9 +103,11 @@ SOURCES += \
         src/FastWFC/wfc.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
+    src/FluidSimulation/LBMFluidSimulation.cpp \
     src/FluidSimulation/SPHSimulation.cpp \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
+    src/FluidSimulation/WarpedFluidSimulation.cpp \
         src/Graph/Graph.cpp \
         src/Graph/FastPoissonGraph.cpp \
         src/Graph/GraphNode.cpp \
@@ -123,6 +126,9 @@ SOURCES += \
         src/Graphics/Mesh.cpp \
         src/Graphics/ShaderElement.cpp \
         src/Graphics/Sphere.cpp \
+    src/Graphics/miniz.c \
+    src/Graphics/ofbx.cpp \
+    src/Interface/AbstractFluidSimulationInterface.cpp \
         src/Interface/ActionInterface.cpp \
     src/Interface/BiomeInterface.cpp \
         src/Interface/ControlPoint.cpp \
@@ -140,6 +146,7 @@ SOURCES += \
         src/Interface/Interface.cpp \
         src/Interface/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
+    src/Interface/LBMFluidSimulationInterface.cpp \
         src/Interface/ManualEditionInterface.cpp \
     src/Interface/MeshInstanceAmplificationInterface.cpp \
         src/Interface/PathCameraConstraint.cpp \
@@ -149,6 +156,7 @@ SOURCES += \
         src/Interface/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
+    src/Interface/SpheroidalErosionInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/StickyFrame.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
@@ -157,9 +165,11 @@ SOURCES += \
         src/Interface/UndoRedoInterface.cpp \
         src/Interface/Viewer.cpp \
         src/Interface/VisitingCamera.cpp \
+    src/Interface/WarpFluidSimulationInterface.cpp \
         src/Karst/KarstHole.cpp \
         src/Karst/KarstHoleProfile.cpp \
         src/Karst/KarstPathsGeneration.cpp \
+    src/TerrainGen/GlobalTerrainProperties.cpp \
     src/TerrainGen/Heightmap.cpp \
     src/TerrainGen/ImplicitPatch.cpp \
         src/TerrainGen/LayerBasedGrid.cpp \
@@ -169,6 +179,7 @@ SOURCES += \
     src/TerrainModification/CoralIslandGenerator.cpp \
         src/TerrainModification/FaultSlip.cpp \
         src/TerrainModification/RockErosion.cpp \
+    src/TerrainModification/SpheroidalWeathering.cpp \
         src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
@@ -209,6 +220,7 @@ HEADERS += \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
     src/DataStructure/BVH.h \
+    src/DataStructure/KDTree.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/Octree.h \
@@ -231,9 +243,11 @@ HEADERS += \
     src/FastWFC/wfc.hpp \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
+    src/FluidSimulation/LBMFluidSimulation.h \
     src/FluidSimulation/SPHSimulation.h \
     src/FluidSimulation/ShallowWaterSimulation.h \
     src/FluidSimulation/StableFluidsFluidSimulation.h \
+    src/FluidSimulation/WarpedFluidSimulation.h \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \
@@ -252,6 +266,9 @@ HEADERS += \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
     src/Graphics/Sphere.h \
+    src/Graphics/miniz.h \
+    src/Graphics/ofbx.h \
+    src/Interface/AbstractFluidSimulationInterface.h \
     src/Interface/ActionInterface.h \
     src/Interface/BiomeInterface.h \
     src/Interface/ControlPoint.h \
@@ -269,6 +286,7 @@ HEADERS += \
     src/Interface/Interface.h \
     src/Interface/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
+    src/Interface/LBMFluidSimulationInterface.h \
     src/Interface/ManualEditionInterface.h \
     src/Interface/MeshInstanceAmplificationInterface.h \
     src/Interface/PathCameraConstraint.h \
@@ -278,6 +296,7 @@ HEADERS += \
     src/Interface/Slider3D.h \
     src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
+    src/Interface/SpheroidalErosionInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/StickyFrame.h \
     src/Interface/TerrainGenerationInterface.h \
@@ -286,8 +305,10 @@ HEADERS += \
     src/Interface/UndoRedoInterface.h \
     src/Interface/Viewer.h \
     src/Interface/VisitingCamera.h \
+    src/Interface/WarpFluidSimulationInterface.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \
+    src/TerrainGen/GlobalTerrainProperties.h \
     src/TerrainGen/Heightmap.h \
     src/TerrainGen/ImplicitPatch.h \
     src/TerrainGen/LayerBasedGrid.h \
@@ -297,6 +318,7 @@ HEADERS += \
     src/TerrainModification/CoralIslandGenerator.h \
     src/TerrainModification/FaultSlip.h \
     src/TerrainModification/RockErosion.h \
+    src/TerrainModification/SpheroidalWeathering.h \
     src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
     src/TreeColonisation/TreeColonisation.h \

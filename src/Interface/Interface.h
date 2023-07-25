@@ -27,7 +27,10 @@
 #include "Interface/MeshInstanceAmplificationInterface.h"
 #include "Interface/SPHSimulationInterface.h"
 #include "Interface/FLIPSimulationInterface.h"
+#include "Interface/WarpFluidSimulationInterface.h"
+#include "Interface/LBMFluidSimulationInterface.h"
 #include "Interface/CoralIslandGeneratorInterface.h"
+#include "Interface/SpheroidalErosionInterface.h"
 #include "Interface/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
@@ -83,7 +86,10 @@ public:
     std::shared_ptr<MeshInstanceAmplificationInterface> meshInstanceAmplificationInterface;
     std::shared_ptr<SPHSimulationInterface> sphSimulationInterface;
     std::shared_ptr<FLIPSimulationInterface> flipSimulationInterface;
+    std::shared_ptr<WarpFluidSimulationInterface> warpFluidSimulationInterface;
+    std::shared_ptr<LBMFluidSimulationInterface> LbmFluidSimulationInterface;
     std::shared_ptr<CoralIslandGeneratorInterface> coralIslandGeneratorInterface;
+    std::shared_ptr<SpheroidalErosionInterface> spheroidalErosionInterface;
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 

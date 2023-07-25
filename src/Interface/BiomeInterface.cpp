@@ -137,30 +137,6 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         rootBiome = predefinedBiomeInstance;
     } else {
         rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
-        /*for (int _ = 0; _ < 5; _++) {
-            rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
-            for (auto& inst: rootBiome->instances) {
-                Qt::GlobalColor color = Qt::gray;
-                if (inst->classname == "lagon") {
-                    color = Qt::cyan;
-                } else if (inst->classname == "recif-frangeant") {
-                    color = Qt::darkRed;
-                } else if (inst->classname == "plage") {
-                    color = Qt::yellow;
-                } else if (inst->classname == "recif-barriere") {
-                    color = Qt::red;
-                } else if (inst->classname == "profondeurs") {
-                    color = Qt::darkBlue;
-                } else if (inst->classname == "ile") {
-                    color = Qt::green;
-                }
-    //            std::cout << inst->classname << std::endl;
-                Plotter::getInstance()->addPlot(inst->area.shrink(0.5f).closedPath(), inst->classname, color);
-            }
-            Plotter::getInstance()->exec();
-            Plotter::getInstance()->reset();
-        }
-        exit(0);*/
     }
     heightmap->getBiomeIndices() = Matrix3<int>(heightmap->getDimensions(), 0);
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
@@ -177,7 +153,6 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             continue;
         }
         if (current->classname == "point") {
-//            std::cout << "Biome " << current->getInstanceName() << " is not valid" << std::endl;
             continue;
         }
         sortedBiomes.push_back(current);
@@ -343,13 +318,10 @@ void BiomeInterface::randomize()
 
     // If the main biome has already been computed, regenerate it
     if (rootBiome->instances.size() > 0) {
-        std::cout << "A" << std::endl;
         this->modifiedBiomeModel = *rootBiome->toBiomeModel();
-        std::cout << "B" << std::endl;
         /// TODO : don't modify the original biomeModel ...
         this->biomeModel = *(std::make_shared<BiomeModel>(modifiedBiomeModel)->clone());
     }
-    std::cout << "Generating from model :\n" << this->biomeModel.toJson().dump(4) << std::endl;
     this->generateBiomes();
 }
 
@@ -772,7 +744,6 @@ void BiomeInterface::updateBiomeSelectionGui()
         if (BiomeInstance::instancedBiomes.find(biomeID) == BiomeInstance::instancedBiomes.end())
             continue; // Biome not registered... This shouldn't occur.
         auto biome = BiomeInstance::instancedBiomes[biomeID];
-//        std::cout << "Adding " << biome->getInstanceName() << " #" << biome->instanceID << " (depth : " << biome->getLevel(true) << ")" << std::endl;
         if (biome != nullptr && !biome->isRoot()) {
             filteredIDs.push_back(biome->instanceID);
             biomeSelectionGui->addItem(new HierarchicalListWidgetItem(biome->getInstanceName(), biome->instanceID, biome->getLevel(true)));

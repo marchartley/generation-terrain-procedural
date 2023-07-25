@@ -51,7 +51,7 @@ public:
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
     std::tuple<std::vector<BSpline>, int, int> Apply(EROSION_APPLIED applyOn,
-                                                    float& particleSimulationTime, float& terrainModifTime,
+                                                    float& preparationTime, float& particleSimulationTime, float& terrainModifTime,
                                                     Vector3 startingPoint = Vector3(false),
                                                     Vector3 originalDirection = Vector3(false),
                                                     float randomnessFactor = 0.05,
@@ -82,9 +82,9 @@ public:
                                                      Matrix3<Vector3> airFlow = Matrix3<Vector3>(),
                                                      DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
                                                      Matrix3<float> densityMap = Matrix3<float>(),
-                                                     float initialCapacity = 0.f
-                                                     );
-
+                                                     float initialCapacity = 0.f,
+                                                     FluidSimType fluidSimType = FluidSimType::LBM);
+/*
     std::tuple<std::vector<BSpline>, int, int> ApplyOnAnyTerrain(TerrainModel* terrain,
                                                                  float& particleSimulationTime,
                                                                  float& terrainModifTime,
@@ -119,7 +119,7 @@ public:
                                                                  DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
                                                                  Matrix3<float> densityMap = Matrix3<float>(),
                                                                  float initialCapacity = 0.f);
-
+*/
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);

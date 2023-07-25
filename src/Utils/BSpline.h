@@ -19,6 +19,7 @@ public:
     Vector3 getSecondDerivative(float x);
     float estimateClosestTime(Vector3 pos, float epsilon = 1e-5);
     Vector3 estimateClosestPos(Vector3 pos, float epsilon = 1e-3);
+    float estimateSqrDistanceFrom(Vector3 pos, float epsilon = 1e-3);
     float estimateDistanceFrom(Vector3 pos, float epsilon = 1e-3);
     float estimateSignedDistanceFrom(Vector3 pos, float epsilon = 1e-3);
     float length();

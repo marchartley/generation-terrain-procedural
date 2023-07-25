@@ -111,7 +111,7 @@ public:
 
     virtual void saveMap(std::string filename) { }
     virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
-    virtual Mesh getGeometry();
+    virtual Mesh getGeometry(Vector3 reducedResolution = Vector3(false));
 
     virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
@@ -172,9 +172,9 @@ public:
 
     static std::function<float(Vector3)> convert2DfunctionTo3Dfunction(std::function<float(Vector3)> func);
 
-    ImplicitPatch* getParent() const;
-    void setParent(ImplicitPatch* newParent);
-    ImplicitPatch* parent = nullptr;
+    ImplicitNaryOperator *getParent() const;
+    void setParent(ImplicitNaryOperator* newParent);
+    ImplicitNaryOperator* parent = nullptr;
 
     static int currentMaxIndex;
 
@@ -304,6 +304,126 @@ public:
     bool withIntersectionOnB = false; // Intersection or Union
 };
 
+
+class ImplicitUnaryOperator : public ImplicitNaryOperator {
+public:
+    using TransformFunction = std::function<Vector3(const Vector3&)>;
+
+    ImplicitUnaryOperator();
+
+    void addTransformation(TransformFunction transform, TransformFunction inverse) {
+        transformations.emplace_back(std::move(transform), std::move(inverse));
+    }
+
+    float evaluate(Vector3 point);
+
+    void addTranslation(const Vector3& translation);
+
+    void addRotation(Vector3 rotationAngles);
+
+    void addScaling(const Vector3& scaleFactors);
+
+    void addDisplacementField(const Matrix3<Vector3>& displacementField);
+
+    Vector3 applyTransform(Vector3 pos) const;
+    Vector3 inverseTransform(Vector3 pos) const;
+
+
+    std::map<TerrainTypes, float> getMaterials(Vector3 pos);
+
+    AABBox getSupportBBox();
+    AABBox getBBox();
+    std::string toString();
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+
+    bool contains(PredefinedShapes shape);
+    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
+//    std::function<Vector3(Vector3)> wrapFunction;
+//    std::function<Vector3(Vector3)> unwrapFunction;
+    std::function<float(Vector3)> noiseFunction;
+    std::vector<UnaryOp> transforms;
+
+//    virtual ImplicitPatch* copy() const;
+    virtual void addChild(ImplicitPatch* newChild, int index = 0);
+    virtual void deleteAllChildren();
+
+    ImplicitPatch*& composableA();
+
+    void translate(Vector3 translation);
+    void rotate(Vector3 angles); //float angleX, float angleY, float angleZ);
+    void scale(Vector3 scaleFactor);
+
+    void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
+    void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
+    void addWrapFunction(Matrix3<Vector3> func);
+    void spread(float factor = 1.f);
+    void addWavelets();
+
+    Vector3 _translation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
+    Vector3 _rotation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
+    Vector3 _scale = Vector3(1, 1, 1);
+    Vector3 _distortion = Vector3(0.f, 0.f, 0.f);
+    Vector3 _noise = Vector3(0.f, 0.f, 0.f);
+    float _spreadingFactor = 0.f;
+
+private:
+    std::vector<std::pair<TransformFunction, TransformFunction>> transformations;
+};
+
+class ImplicitTranslation : public ImplicitUnaryOperator {
+public:
+    ImplicitTranslation() : ImplicitUnaryOperator() { this->name = "Translation"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+class ImplicitRotation : public ImplicitUnaryOperator {
+public:
+    ImplicitRotation() : ImplicitUnaryOperator() { this->name = "Rotation"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+class ImplicitScaling : public ImplicitUnaryOperator {
+public:
+    ImplicitScaling() : ImplicitUnaryOperator() { this->name = "Scaling"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+class ImplicitWraping : public ImplicitUnaryOperator {
+public:
+    ImplicitWraping() : ImplicitUnaryOperator() { this->name = "Wraping"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+class ImplicitNoise : public ImplicitUnaryOperator {
+public:
+    ImplicitNoise() : ImplicitUnaryOperator() { this->name = "Noise"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+class ImplicitSpread : public ImplicitUnaryOperator {
+public:
+    ImplicitSpread() : ImplicitUnaryOperator() { this->name = "Spread"; }
+
+    nlohmann::json toJson();
+    static ImplicitPatch* fromJson(nlohmann::json content);
+};
+
+
+
+
+/*
 class ImplicitUnaryOperator : public ImplicitNaryOperator {
 public:
     ImplicitUnaryOperator();
@@ -348,6 +468,11 @@ public:
     Vector3 _noise = Vector3(0.f, 0.f, 0.f);
     float _spreadingFactor = 0.f;
 };
+*/
+
+
+
+
 
 
 

@@ -78,17 +78,21 @@ public:
     bool checkCoord(Vector3 pos) const;
     bool checkIndex(size_t i) const;
 
-    T interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE);
-    T interpolate(float x, float y, float z = 0, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE);
+    T interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE) const;
+    T interpolate(float x, float y, float z = 0, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE) const;
     Matrix3<T>& addValueAt(T value, Vector3 coord);
-    Matrix3<T>& addValueAt(T value, float x, float y, float z);
+    Matrix3<T>& addValueAt(T value, float x, float y, float z = 0.f);
 
     int getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect = true) const;
     int getNumberNeighbors(Vector3 pos, bool using4connect = true) const;
 
-    Matrix3<T> resize(float factor, RESIZE_MODE mode = LINEAR);
-    Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR);
-    Matrix3 resize(Vector3 newSize, RESIZE_MODE mode = LINEAR);
+    Matrix3<T> resize(float factor, RESIZE_MODE mode = LINEAR) const;
+    Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR) const;
+    Matrix3 resize(Vector3 newSize, RESIZE_MODE mode = LINEAR) const;
+
+    Matrix3<T> resizeNearest(float factor) const;
+    Matrix3<T> resizeNearest(size_t newX, size_t newY, size_t newZ) const;
+    Matrix3 resizeNearest(Vector3 newSize) const;
 
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
     Matrix3<T> subset(Vector3 start, Vector3 end);
@@ -352,7 +356,7 @@ bool Matrix3<T>::checkIndex(size_t i) const
 }
 
 template<class T>
-T Matrix3<T>::interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding)
+T Matrix3<T>::interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding) const
 {
     Vector3 round = coord.floor();
     Vector3 cellOffset = coord - round;
@@ -376,13 +380,13 @@ T Matrix3<T>::interpolate(Vector3 coord, RETURN_VALUE_ON_OUTSIDE padding)
                         ((
                              f001 * (1-cellOffset.x) + f101 * cellOffset.x) * (1-cellOffset.y) + (
                              f011 * (1-cellOffset.x) + f111 * cellOffset.x) * cellOffset.y) * cellOffset.z;
-    this->raiseErrorOnBadCoord = previousErrorConfig;
-    this->returned_value_on_outside = previousOutsideConfig;
+//    this->raiseErrorOnBadCoord = previousErrorConfig;
+//    this->returned_value_on_outside = previousOutsideConfig;
     return interpol;
 }
 
 template<class T>
-T Matrix3<T>::interpolate(float x, float y, float z, RETURN_VALUE_ON_OUTSIDE padding)
+T Matrix3<T>::interpolate(float x, float y, float z, RETURN_VALUE_ON_OUTSIDE padding) const
 {
     return interpolate(Vector3(x, y, z), padding);
 }
@@ -898,9 +902,6 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-//                std::cout << "[" << x << ", " << y << ", " << z << "] : " << at(x + 1, y, z) << " - " << at(x - 1, y, z) << ", " << at(x, y+1, z) << " - " << at(x, y-1, z) << ", " << at(x, y, z+1) << " - " << at(x, y, z-1) << " = " << Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
-//                                                                                                                                                                                                          (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
-//                                                                                                                                                                                                          (at(x, y, z + 1) - at(x, y, z - 1)) * .5f) << std::endl;
                 returningGrid.at(x, y, z) = Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
                                                     (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
                                                     (at(x, y, z + 1) - at(x, y, z - 1)) * .5f);
@@ -1192,7 +1193,7 @@ int Matrix3<T>::getNumberNeighbors(Vector3 pos, bool using4connect) const
 }
 
 template<typename T>
-Matrix3<T> Matrix3<T>::resize(float factor, RESIZE_MODE mode)
+Matrix3<T> Matrix3<T>::resize(float factor, RESIZE_MODE mode) const
 {
     Vector3 newSize = this->getDimensions() * factor;
     if (newSize.x < 1) newSize.x = 1;
@@ -1201,13 +1202,14 @@ Matrix3<T> Matrix3<T>::resize(float factor, RESIZE_MODE mode)
     return this->resize(newSize, mode);
 }
 template<typename T>
-Matrix3<T> Matrix3<T>::resize(Vector3 newSize, RESIZE_MODE mode)
+Matrix3<T> Matrix3<T>::resize(Vector3 newSize, RESIZE_MODE mode) const
 {
     return this->resize(newSize.x, newSize.y, newSize.z, mode);
 }
 template<typename T>
-Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode)
+Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode) const
 {
+    if (newX == sizeX && newY == sizeY && newZ == sizeZ) return *this;
     Matrix3<T> newMat(newX, newY, newZ);
     newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
@@ -1248,18 +1250,7 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
             }
         }
     } else if (mode == NEAREST) {
-        // Apply interpolations
-        for (int x = 0; x < newX; x++) {
-            int x_rounded = std::round(x * rx);
-            for (int y = 0; y < newY; y++) {
-                int y_rounded = std::round(y * ry);
-                for (int z = 0; z < newZ; z++) {
-                    int z_rounded = std::round(z * rz);
-                    T res = this->at(x_rounded, y_rounded, z_rounded);
-                    newMat.at(x, y, z) = res;
-                }
-            }
-        }
+        newMat = this->resizeNearest(newX, newY, newZ);
     } else if (mode == MAX_VAL || mode == MIN_VAL) {
 //        for (auto& val : newMat)
 //            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
@@ -1305,6 +1296,46 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
         }
     }
     newMat.raiseErrorOnBadCoord = this->raiseErrorOnBadCoord;
+    return newMat;
+}
+
+
+template<class T>
+Matrix3<T> Matrix3<T>::resizeNearest(float factor) const
+{
+    Vector3 newSize = this->getDimensions() * factor;
+    if (newSize.x < 1) newSize.x = 1;
+    if (newSize.y < 1) newSize.y = 1;
+    if (newSize.z < 1) newSize.z = 1;
+    return this->resizeNearest(newSize);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::resizeNearest(Vector3 newSize) const
+{
+    return this->resizeNearest(newSize.x, newSize.y, newSize.z);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) const
+{
+    if (newX == sizeX && newY == sizeY && newZ == sizeZ) return *this;
+    Matrix3<T> newMat(newX, newY, newZ);
+    newMat.raiseErrorOnBadCoord = false;
+    float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
+
+    // Apply interpolations
+    for (int x = 0; x < newX; x++) {
+        int x_rounded = std::round(x * rx);
+        for (int y = 0; y < newY; y++) {
+            int y_rounded = std::round(y * ry);
+            for (int z = 0; z < newZ; z++) {
+                int z_rounded = std::round(z * rz);
+                T res = this->at(x_rounded, y_rounded, z_rounded);
+                newMat.at(x, y, z) = res;
+            }
+        }
+    }
     return newMat;
 }
 
@@ -1593,7 +1624,7 @@ Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)  const
     float z = pos.z;
     x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
     y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
-    z = int(x < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
     return Vector3(x, y, z);
 }
 
@@ -1742,7 +1773,6 @@ Matrix3<T> Matrix3<T>::wrapWith(BSpline original, BSpline wrapperCurve)
 template<class T>
 Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(Matrix3<Vector3> wrapper)
 {
-//    std::cout << "Max : " << wrapper.max() << " - Min : " << wrapper.min() << std::endl;
     Matrix3<T> result = *this; //(getDimensions());
     this->raiseErrorOnBadCoord = false;
     this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;

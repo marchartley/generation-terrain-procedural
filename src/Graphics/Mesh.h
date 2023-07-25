@@ -18,6 +18,7 @@ public:
     Mesh& fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
 
     Mesh& fromStl(std::string filename);
+    Mesh& fromFBX(std::string filename);
 
     Mesh& normalize();
     Mesh& scale(float factor);
@@ -34,7 +35,7 @@ public:
 
     void update();
     void pushToBuffer();
-    void display(GLenum shape = -1, float lineWeight = 1);
+    void display(float lineWeight = -1.f); //GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
 
     void displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
@@ -63,6 +64,9 @@ public:
     Mesh applyMarchingCubes(Matrix3<float> &values);
 
     Matrix3<int> voxelize(Vector3 dimensions) const;
+    Matrix3<int> voxelizeSurface(Vector3 dimensions) const;
+
+    bool isWatertight();
 
 
     static Mesh createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false);
@@ -73,7 +77,7 @@ public:
     unsigned int bufferID;
     bool bufferReady = false;
 
-    bool useIndices = true;
+    bool useIndices = false;
 
     bool needToUpdatePositions = true;
     bool needToUpdateTextures = true;

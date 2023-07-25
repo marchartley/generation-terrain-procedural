@@ -19,6 +19,7 @@
 #include <iostream>
 //#include "Graphics/Shader.h"
 //#include "Utils/Utils.h"
+#include "Utils/FastNoiseLit.h"
 
 #define numVAOs 1000
 #define numVBOs 4000
@@ -31,6 +32,7 @@ GLuint vbo[numVBOs];*/
 class random_gen {
 public:
     static std::default_random_engine random_generator;
+    static FastNoiseLite perlinNoise;
     static float generate(float min, float max) {
         std::uniform_real_distribution<float> distribution(min, max);
         return distribution(random_gen::random_generator);
@@ -51,6 +53,10 @@ public:
     static float generate_normal() {
         std::uniform_real_distribution<float> distribution(0.f, 1.f);
         return distribution(random_gen::random_generator);
+    }
+
+    static float generate_perlin(float x, float y, float z = 0) {
+        return perlinNoise.GetNoise(x, y, z);
     }
 };
 

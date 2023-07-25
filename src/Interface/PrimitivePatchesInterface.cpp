@@ -4,11 +4,15 @@
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"
 //#include "Utils/stb_image.h"
+#include "Utils/ShapeCurve.h"
 
 PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     : ActionInterface("PrimitivePatchesInterface", parent)
 {
     previewMesh.cullFace = false;
+    patchAABBoxMesh.displayShape = GL_LINES;
+    parametricCurveMesh.displayShape = GL_LINES;
+    debuggingVoxelsMesh.displayShape = GL_POINTS;
 
 //    this->implicitTerrain = new ImplicitPrimitive;
 //    this->implicitTerrain->name = "Identity";
@@ -42,7 +46,7 @@ void PrimitivePatchesInterface::display(Vector3 camPos)
         glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         patchAABBoxMesh.shader->setVector("color", std::vector<float>({0.f, 0.8f, 0.4f, 1.0f}));
-        patchAABBoxMesh.display(GL_LINES, 3.f);
+        patchAABBoxMesh.display(/*GL_LINES,*/ 3.f);
         glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
     }
     this->primitiveControlPoint->display();
@@ -155,6 +159,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     QCheckBox* applyIntersectionButton = new QCheckBox("Intersection");
 
+    QPushButton* createStructureButton = new QPushButton("Auto gen.");
+
     primitiveSelectionGui = new HierarchicalListWidget(this);
 
     layout->addWidget(createMultiColumnGroup({
@@ -205,7 +211,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
                                                     {"Height", heightSlider},
                                                     {"Sigma", sigmaSlider}
                                           }));
-    layout->addWidget(applyIntersectionButton);
+    layout->addWidget(createHorizontalGroup({applyIntersectionButton, createStructureButton}));
     layout->addWidget(createHorizontalGroup({addNoiseButton, addDistoButton, addSpreadButton, addRipplesButton, deformFromFlowButton}));
     layout->addWidget(resetButton);
     layout->addWidget(primitiveSelectionGui);
@@ -232,7 +238,6 @@ QLayout *PrimitivePatchesInterface::createGUI()
         if (checked) {
             this->setSelectedShape(ImplicitPatch::PredefinedShapes::ImplicitHeightmap);
             this->openFileForNewPatch();
-//            createSphereButton->setChecked(true);
         }
     });
     QObject::connect(createRippleButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Ripple); });
@@ -289,6 +294,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(enableHotreloadButton, &QCheckBox::toggled, this, [=](bool checked) {
         this->enableHotReloading = checked;
     });
+    QObject::connect(createStructureButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::structureAutoGeneration);
 
     createSphereButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Sphere);
     createBlockButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Block);
@@ -318,8 +324,6 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     blendingFactorSlider->setfValue(this->selectedBlendingFactor);
 
-//    densitySlider->setfValue(this->selectedDensity);
-//    TerrainTypes currentMat = LayerBasedGrid::materialFromDensity(this->selectedDensity);
     airDensityCheckbox->setChecked(this->selectedTerrainType == AIR);
     waterDensityCheckbox->setChecked(this->selectedTerrainType == WATER);
     coralDensityCheckbox->setChecked(this->selectedTerrainType == CORAL);
@@ -339,7 +343,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     this->updatePrimitiveList();
 
-    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::currentItemChanged, this, &PrimitivePatchesInterface::updateSelectedPrimitiveItem);
+//    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::currentItemChanged, this, &PrimitivePatchesInterface::updateSelectedPrimitiveItem);
+    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemClicked, this, [=](QListWidgetItem* item) { updateSelectedPrimitiveItem(item); });
     QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemDoubleClicked, this, &PrimitivePatchesInterface::openPrimitiveModificationDialog);
 //    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemChangedHierarchy, this, &PrimitivePatchesInterface::modifyPrimitiveHierarchy);
 
@@ -350,62 +355,9 @@ QLayout *PrimitivePatchesInterface::createGUI()
     this->primitiveControlPoint->allowAllAxisTranslation(true);
     this->primitiveControlPoint->hide();
 
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::modified, this, [=](){
-        // Get patch being manipulated
-        if (this->selectedPatch() != nullptr) {
-            // Display modified AABBox
-            auto AABBox = this->selectedPatch()->getBBox();
-            Vector3 minPos = AABBox.min();
-            Vector3 maxPos = AABBox.max();
-            Vector3 dim = maxPos - minPos;
-            std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
-            for (auto& p : box) {
-                p = (p * dim) + /*minPos + */primitiveControlPoint->getPosition(); //p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - currentlySelectedPatch->getDimensions().xy() * .5f);//p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - (currentlySelectedPatch->getDimensions() * .5f).xy());
-            }
-            this->patchAABBoxMesh.fromArray(box);
-            this->patchAABBoxMesh.update();
-        }
-    });
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, [=](Vector3 translation){
-//        QObject::blockSignals(true);
-        // Get patch being manipulated
-        if (this->selectedPatch() != nullptr) {
-            primitiveControlPoint->blockSignals(true);
-            primitiveSelectionGui->blockSignals(true);
-
-            ImplicitUnaryOperator* manipulatedAsUnary = dynamic_cast<ImplicitUnaryOperator*>(this->selectedPatch());
-            if (manipulatedAsUnary == nullptr) {
-                // It's not an unary yet, but the parent might be
-                manipulatedAsUnary = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
-            }
-
-            if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
-                manipulatedAsUnary->translate(translation); // Just update it
-            } else { // Otherwise, create a new Unary operator
-                ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
-                translate->composableA() = this->selectedPatch();
-                translate->translate(translation);
-                translate->name = "Translation";
-                if (this->selectedPatch() == this->implicitTerrain.get()) {
-                    this->implicitTerrain->composables = {translate};
-                } else {
-                    ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
-                    if (parentAsNaryOperator) {
-                        for (auto& c : parentAsNaryOperator->composables)
-                            if (this->selectedPatch() == c)
-                                c = translate;
-                    }
-                }
-                this->storedPatches.push_back(translate);
-                this->updatePrimitiveList();
-                this->primitiveSelectionGui->setCurrentItem(translate->index);
-            }
-            this->updateMapWithCurrentPatch();
-
-            primitiveControlPoint->blockSignals(false);
-            primitiveSelectionGui->blockSignals(false);
-        }
-    });
+    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::modified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
+    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
+    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
     /*
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, [=](Vector3 rotation){
         primitiveControlPoint->blockSignals(true);
@@ -538,14 +490,15 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     ImplicitPatch* operation = this->createOperationPatchFromParameters(previousMain, patch); // *newOperation;
 
     if (_parent == nullptr) {
-        this->implicitTerrain->composables = {operation};
+        this->implicitTerrain->deleteAllChildren();
+        this->implicitTerrain->addChild(operation);
     } else {
         ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
         if (parentAsBinary) {
             if (previousMain == parentAsBinary->composableA())
-                parentAsBinary->composableA() = operation;
+                parentAsBinary->addChild(operation, 0);
             else
-                parentAsBinary->composableB() = operation;
+                parentAsBinary->addChild(operation, 1);
         }
         ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(_parent);
         if (parentAsNaryOperator) {
@@ -554,7 +507,7 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
                 if (previousMain == parentAsNaryOperator->composables[iComposable])
                     break;
             }
-            parentAsNaryOperator->composables[iComposable] = operation;
+            parentAsNaryOperator->addChild(operation, iComposable);
 
         }
 
@@ -568,8 +521,8 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
     this->storedPatches.push_back(implicitTerrain.get());
     this->updatePrimitiveList();
 
-    if (this->mainFilename != "")
-        this->savePatchesAsFile(this->mainFilename);
+//    if (this->mainFilename != "")
+//        this->savePatchesAsFile(this->mainFilename);
 
 }
 
@@ -593,14 +546,6 @@ void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes
         vert -= functionSize.xy() * .5f;
     }
 
-//    ImplicitPrimitive* previewPatch = ImplicitPatch::createPredefinedShape(newShape, this->functionSize, this->selectedSigma);
-//    previewPatch->material = this->selectedTerrainType;
-//    Vector3 resolution = Vector3(20, 20, 20);
-//    Vector3 ratio = (patchSupportedDimensions) / (resolution /*+ Vector3(1, 1, 1)*/);
-//    debuggingVoxelsPosition = newPosition - functionSize * Vector3(1.f, 1.f, 0.f);
-//    debuggingVoxelsScale = Vector3(2.f, 2.f, 2.f);
-//    debuggingVoxels = previewPatch->getVoxelized(Vector3(false), debuggingVoxelsScale);
-//    debuggingVoxels = debuggingVoxels.resize(debuggingVoxelsScale);
     this->previewMesh.fromArray(vertices);
     this->previewMesh.update();
 }
@@ -620,13 +565,23 @@ void PrimitivePatchesInterface::resetPatch()
     this->storedPatches.clear();
 //    delete this->implicitTerrain;
     ImplicitPatch::currentMaxIndex = -1;
-    this->implicitTerrain->composables.clear(); // = new ImplicitPrimitive;
+    this->implicitTerrain->deleteAllChildren(); // = new ImplicitPrimitive;
     this->implicitTerrain->name = "Identity";
     this->updateMapWithCurrentPatch();
     this->storedPatches.push_back(implicitTerrain.get());
     this->updatePrimitiveList();
 //    voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
     //    voxelGrid->fromIsoData();
+
+//    this->addParametricPoint(Vector3(45, 0, 0));
+//    this->addParametricPoint(Vector3(35, 0, 0));
+//    this->addParametricPoint(Vector3(25, 0, 0));
+//    this->currentShapeSelected = ImplicitPatch::ParametricTunnel;
+//    this->selectedSigma = 5.f;
+//    this->createPatchFromParameters(Vector3());
+//    this->updateMapWithCurrentPatch();
+//    this->storedPatches.push_back(implicitTerrain.get());
+//    this->updatePrimitiveList();
 }
 
 void PrimitivePatchesInterface::updateMapWithCurrentPatch()
@@ -638,6 +593,7 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
 //    this->implicitTerrain->cleanCache();
     this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
     voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
+    voxelGrid->smoothVoxels();
 //    voxelGrid->fromCachedData();
     heightmap->fromLayerGrid(*layerGrid);
     this->savePatchesAsFile(this->mainFilename);
@@ -669,27 +625,28 @@ void PrimitivePatchesInterface::setSelectedBlendingFactor(float newVal) {
 void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
-    ImplicitUnaryOperator* noisePatch;
+    ImplicitNoise* AsBin = dynamic_cast<ImplicitNoise*>(selectedPatch);
+    ImplicitNoise* noisePatch;
 
     if (AsBin == nullptr) {
-        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+        AsBin = dynamic_cast<ImplicitNoise*>(this->naiveApproachToGetParent(selectedPatch));
     }
     if (AsBin != nullptr) {
         noisePatch = AsBin;
     } else {
-        noisePatch = new ImplicitUnaryOperator;
-        noisePatch->composableA() = selectedPatch;
+        noisePatch = new ImplicitNoise;
+        noisePatch->addChild(selectedPatch);
         if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->composables = {noisePatch};
+            this->implicitTerrain->deleteAllChildren();
+            this->implicitTerrain->addChild(noisePatch);
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitBinaryOperator* parentAsBinary = dynamic_cast<ImplicitBinaryOperator*>(_parent);
             if (parentAsBinary) {
                 if (selectedPatch == parentAsBinary->composableA())
-                    parentAsBinary->composableA() = noisePatch;
+                    parentAsBinary->addChild(noisePatch, 0);
                 else
-                    parentAsBinary->composableB() = noisePatch;
+                    parentAsBinary->addChild(noisePatch, 1);
             }
         }
     }
@@ -704,27 +661,28 @@ void PrimitivePatchesInterface::addNoiseOnSelectedPatch()
 void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
-    ImplicitUnaryOperator* distortionPatch;
+    ImplicitWraping* AsBin = dynamic_cast<ImplicitWraping*>(selectedPatch);
+    ImplicitWraping* distortionPatch;
 
     if (AsBin == nullptr) {
-        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+        AsBin = dynamic_cast<ImplicitWraping*>(this->naiveApproachToGetParent(selectedPatch));
     }
     if (AsBin != nullptr) {
         distortionPatch = AsBin;
     } else {
-        distortionPatch = new ImplicitUnaryOperator;
-        distortionPatch->composableA() = selectedPatch;
+        distortionPatch = new ImplicitWraping;
+        distortionPatch->addChild(selectedPatch);
         if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->composables = {distortionPatch};
+            this->implicitTerrain->deleteAllChildren();
+            this->implicitTerrain->addChild(distortionPatch);
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
             if (parent) {
                 if (selectedPatch == parent->composableA())
-                    parent->composableA() = distortionPatch;
+                    parent->addChild(distortionPatch, 0);
                 else
-                    parent->composableB() = distortionPatch;
+                    parent->addChild(distortionPatch, 1);
             }
         }
     }
@@ -750,27 +708,28 @@ void PrimitivePatchesInterface::addDistortionOnSelectedPatch()
 void PrimitivePatchesInterface::addSpreadOnSelectedPatch()
 {
     ImplicitPatch* selectedPatch = this->selectedPatch();
-    ImplicitUnaryOperator* AsBin = dynamic_cast<ImplicitUnaryOperator*>(selectedPatch);
-    ImplicitUnaryOperator* distortionPatch;
+    ImplicitSpread* AsBin = dynamic_cast<ImplicitSpread*>(selectedPatch);
+    ImplicitSpread* distortionPatch;
 
     if (AsBin == nullptr) {
-        AsBin = dynamic_cast<ImplicitUnaryOperator*>(this->naiveApproachToGetParent(selectedPatch));
+        AsBin = dynamic_cast<ImplicitSpread*>(this->naiveApproachToGetParent(selectedPatch));
     }
     if (AsBin != nullptr) {
         distortionPatch = AsBin;
     } else {
-        distortionPatch = new ImplicitUnaryOperator;
-        distortionPatch->composableA() = selectedPatch;
+        distortionPatch = new ImplicitSpread;
+        distortionPatch->addChild(selectedPatch);
         if (selectedPatch == this->implicitTerrain.get()) {
-            this->implicitTerrain->composables = {distortionPatch};
+            this->implicitTerrain->deleteAllChildren();
+            this->implicitTerrain->addChild(distortionPatch);
         } else {
             ImplicitPatch* _parent = this->naiveApproachToGetParent(selectedPatch);
             ImplicitBinaryOperator* parent = dynamic_cast<ImplicitBinaryOperator*>(_parent);
             if (parent) {
                 if (selectedPatch == parent->composableA())
-                    parent->composableA() = distortionPatch;
+                    parent->addChild(distortionPatch, 0);
                 else
-                    parent->composableB() = distortionPatch;
+                    parent->addChild(distortionPatch, 1);
             }
         }
     }
@@ -800,32 +759,17 @@ void PrimitivePatchesInterface::rippleScene()
                 Vector3 pos(x, y, z);
                 if (terrainSurface.at(pos) == 0) continue;
                 bool isSurface = (terrainSurface.at(pos + Vector3(0, 0, 1)) == 0);
-                /*bool isSurface = false;
-                for (int dx = -1; dx < 2; dx++) {
-                    for (int dy = -1; dy < 2; dy++) {
-                        for (int dz = -1; dz < 2; dz++) {
-                            if (terrainSurface.at(x+dx, y+dy, z+dz) == 0)
-                                isSurface = true;
-                        }
-                    }
-                }*/
-//                if (z > 10)
-//                    isSurface = false;
                 if (isSurface) {
                     terrainSurface.at(pos) = 1;
                     waterSpeed.at(pos) = std::abs(1 - flowfield.at(pos).dot(normals.at(pos)));
                     if (waterSpeed.at(pos) > 0.01)
                         allSurfaceVoxels.push_back(pos);
-//                    std::cout << voxelGrid->getVoxelValues().at(pos) << std::endl;
                 } else {
                     terrainSurface.at(pos) = 0;
                 }
             }
         }
     }
-//    terrainSurface = terrainSurface.resize(Vector3(10, 10, 10), RESIZE_MODE::MAX_VAL);
-//    terrainSurface = terrainSurface.resize(waterSpeed.getDimensions(), RESIZE_MODE::FILL_WITH_DEFAULT);
-
     ImplicitNaryOperator* allRipples = new ImplicitNaryOperator;
 
     std::shuffle(allSurfaceVoxels.begin(), allSurfaceVoxels.end(), random_gen::random_generator);
@@ -841,10 +785,10 @@ void PrimitivePatchesInterface::rippleScene()
         ripple->material = TerrainTypes::DIRT;
 
 //        UnaryOpRotate rotationTransfo(Vector3(0, 0, waterFlow.toEulerAngles().z), Vector3(rippleWidth * .5f, rippleDepth * .5f, 0));
-        ImplicitUnaryOperator* rotation = new ImplicitUnaryOperator;
-        rotation->composableA() = ripple;
-        rotation->rotate(0, 0, waterFlow.toEulerAngles().z);
-        allRipples->composables.push_back(rotation);
+        ImplicitRotation* rotation = new ImplicitRotation;
+        rotation->addChild(ripple);
+        rotation->rotate(Vector3(0, 0, waterFlow.toEulerAngles().z));
+        allRipples->addChild(rotation);
 //        std::cout << pos << std::endl;
     }
     /*for (int x = 0; x < terrainSurface.sizeX; x++) {
@@ -866,7 +810,7 @@ void PrimitivePatchesInterface::rippleScene()
 
 
 
-    this->implicitTerrain->composables.push_back(allRipples);
+    this->implicitTerrain->addChild(allRipples);
     this->storedPatches.push_back(allRipples);
     this->updateMapWithCurrentPatch();
     this->updatePrimitiveList();
@@ -878,26 +822,26 @@ void PrimitivePatchesInterface::deformationFromFlow()
     while (!queue.empty()) {
         auto patch = queue[0];
         queue.erase(queue.begin());
-        ImplicitUnaryOperator* wrap = new ImplicitUnaryOperator;
+        ImplicitWraping* wrap = new ImplicitWraping;
         AABBox bbox = patch->getSupportBBox();
         if (bbox.dimensions().norm2() < 50*50*50) {
             wrap->addWrapFunction(voxelGrid->getFlowfield().subset(bbox.min(), bbox.max()).resize(10, 10, 10) * 0.1f);
-            wrap->composableA() = patch;
+            wrap->addChild(patch);
             ImplicitPatch* parent = this->naiveApproachToGetParent(patch);
             ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(parent);
             ImplicitUnaryOperator* asUnary = dynamic_cast<ImplicitUnaryOperator*>(parent);
             ImplicitBinaryOperator* asBinary = dynamic_cast<ImplicitBinaryOperator*>(parent);
             if (asUnary) {
-                asUnary->composableA() = wrap;
+                asUnary->addChild(wrap);
             } else if (asBinary) {
                 if (patch == asBinary->composableA())
-                    asBinary->composableA() = wrap;
+                    asBinary->addChild(wrap, 0);
                 else
-                    asBinary->composableB() = wrap;
+                    asBinary->addChild(wrap, 1);
             } else if (asNary) {
                 for (size_t i = 0; i < asNary->composables.size(); i++)
                     if (asNary->composables[i] == patch)
-                        asNary->composables[i] = wrap;
+                        asNary->addChild(wrap, i);
             }
         } else {
             ImplicitNaryOperator* asNary = dynamic_cast<ImplicitNaryOperator*>(patch);
@@ -937,7 +881,8 @@ void PrimitivePatchesInterface::loadPatchesFromFile(std::string filename)
     nlohmann::json json_content = nlohmann::json::parse(content);
     this->lastTimeFileHasBeenModified = QFileInfo(QString::fromStdString(filename)).lastModified();
     if (json_content.contains(ImplicitPatch::json_identifier)) {
-        this->implicitTerrain->composables = {ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier])};
+        *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitNaryOperator::fromJson(json_content[ImplicitPatch::json_identifier]));
+//        this->implicitTerrain->composables = {ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier])};
         this->updateMapWithCurrentPatch();
         this->updatePrimitiveList();
     } else {
@@ -976,17 +921,335 @@ void PrimitivePatchesInterface::hotReloadFile()
     }
 }
 
+void PrimitivePatchesInterface::autoGeneratePasse(const Matrix3<float> &terrainSurface, const Matrix3<Vector3> &waterFlow, const Matrix3<Vector3> &surfaceNormals, const std::vector<Vector3> &availablePositions)
+{
+    auto lagoons = this->implicitTerrain->findAll(ImplicitPatch::Polygon);
+    auto barriers = this->implicitTerrain->findAll(ImplicitPatch::MountainChain);
+    ImplicitPrimitive* barrier = dynamic_cast<ImplicitPrimitive*>(barriers[0]);
+    BSpline transformedBarrierCurve;
+    for (size_t i = 0; i < barrier->optionalCurve.points.size(); i++) {
+        Vector3 firstPointInCurve = barrier->optionalCurve.points[i];
+        Vector3 transformedPoint = barrier->getGlobalPositionOf(firstPointInCurve);
+        transformedBarrierCurve.points.push_back(transformedPoint);
+    }
+
+    ImplicitPrimitive* lagoon = dynamic_cast<ImplicitPrimitive*>(lagoons[0]);
+    ShapeCurve transformedLagoonArea;
+    for (size_t i = 0; i < lagoon->optionalCurve.points.size(); i++) {
+        Vector3 firstPointInCurve = lagoon->optionalCurve.points[i];
+        Vector3 transformedPoint = lagoon->getGlobalPositionOf(firstPointInCurve);
+        transformedLagoonArea.points.push_back(transformedPoint.xy());
+    }
+
+    Matrix3<float> sqrDistToBarrier(voxelGrid->getDimensions(), -1.f);
+    Matrix3<Vector3> barrierCurveNormals(voxelGrid->getDimensions());
+
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+
+
+        if (!transformedLagoonArea.contains(pos.xy())) {
+            float closestTime = transformedBarrierCurve.estimateClosestTime(pos);
+            Vector3 closestPoint = transformedBarrierCurve.getPoint(closestTime);
+            sqrDistToBarrier.at(pos) = (pos - closestPoint).norm2(); //transformedBarrierCurve.estimateSqrDistanceFrom(pos);
+            barrierCurveNormals.at(pos) = transformedBarrierCurve.getNormal(closestTime);
+        } else {
+            sqrDistToBarrier.at(pos) = 100000.f;
+            barrierCurveNormals.at(pos) = Vector3(false);
+        }
+    }
+
+    Vector3 bestFitPos;
+    float bestFitScore = std::numeric_limits<float>::max();
+
+    float distToBarrier;
+    Vector3 surfaceNormal;
+    Vector3 waterVel;
+
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+        float score = 0;
+
+        if (sqrDistToBarrier.at(pos) > 15*15) score += 100;
+        if (waterFlow.at(pos).norm2() < 0.01) score += 200;
+        else score -= waterFlow.at(pos).normalized().dot(surfaceNormals.at(pos)) * 100.f;
+
+        if (score < bestFitScore) {
+            bestFitScore = score;
+            bestFitPos = pos;
+
+            distToBarrier = std::sqrt(sqrDistToBarrier.at(pos));
+            waterVel = waterFlow.at(pos);
+            surfaceNormal = surfaceNormals.at(pos);
+        }
+    }
+    std::cout << "Adding at " << bestFitPos << " because score = " << bestFitScore << std::endl;
+    std::cout << "Distance to a barrier : " << distToBarrier <<
+                 "\nWater velocity : " << waterVel <<
+                 "\nSurface normal : " << surfaceNormal <<
+                 "\nScore = - vel . normal * 100.0 = " << -waterVel.normalized().dot(surfaceNormal) * 100.f
+              << std::endl;
+
+    Vector3 startingPosition = bestFitPos;
+    Vector3 passDirection = surfaceNormals.at(startingPosition).xy().normalize();
+    Vector3 endingPosition = startingPosition + passDirection * 40.f;
+
+    Vector3 diff = endingPosition - startingPosition;
+
+    int nbPoints = 4;
+    std::vector<Vector3> passPositions;
+    for (int i = 0; i < nbPoints + 2; i++) {
+        Vector3 originalPoint = startingPosition + i * diff / (nbPoints + 1.f) + Vector3::random().xy() * diff.norm() / (2.f * nbPoints);
+        originalPoint.z = this->implicitTerrain->getHeight(originalPoint);
+        passPositions.push_back(originalPoint);
+    }
+
+    float width = diff.norm() * .5f;
+    AABBox dimensions(passPositions);
+
+//    dimensions.mini -= Vector3(width, width, width);
+//    dimensions.maxi += Vector3(width, width, width);
+    Vector3 start = dimensions.min();
+    for (auto& p : passPositions)
+        p = p - dimensions.min(); // + Vector3(width, width, width);
+    ImplicitPrimitive* pass = ImplicitPrimitive::createPredefinedShape(ImplicitPatch::ParametricTunnel, dimensions.dimensions() + Vector3(width, width, width), width, passPositions);
+    pass->material = WATER;
+    pass->position = start; //Vector3::min(startingPosition, endingPosition); // - dimensions.dimensions() * .5f;
+    pass->name = "Pass (autogen)";
+
+    this->implicitTerrain->addChild(pass);
+}
+
+void PrimitivePatchesInterface::autoGenerateDelta(const Matrix3<float> &terrainSurface, const Matrix3<Vector3> &waterFlow, const Matrix3<Vector3> &surfaceNormals, const std::vector<Vector3> &availablePositions)
+{
+    auto lagoons = this->implicitTerrain->findAll(ImplicitPatch::Polygon);
+    auto passes = this->implicitTerrain->findAll(ImplicitPatch::ParametricTunnel);
+    ImplicitPrimitive* passe = dynamic_cast<ImplicitPrimitive*>(passes[0]);
+    BSpline transformedPasseCurve;
+    for (size_t i = 0; i < passe->optionalCurve.points.size(); i++) {
+        Vector3 firstPointInCurve = passe->optionalCurve.points[i];
+        Vector3 transformedPoint = passe->getGlobalPositionOf(firstPointInCurve);
+        transformedPasseCurve.points.push_back(transformedPoint);
+    }
+    ImplicitPrimitive* lagoon = dynamic_cast<ImplicitPrimitive*>(lagoons[0]);
+    ShapeCurve transformedLagoonArea;
+    for (size_t i = 0; i < lagoon->optionalCurve.points.size(); i++) {
+        Vector3 firstPointInCurve = lagoon->optionalCurve.points[i];
+        Vector3 transformedPoint = lagoon->getGlobalPositionOf(firstPointInCurve);
+        transformedLagoonArea.points.push_back(transformedPoint.xy());
+    }
+
+    Matrix3<float> sqrDistToPasse(voxelGrid->getDimensions(), -1.f);
+    Matrix3<Vector3> passeDirections(voxelGrid->getDimensions());
+
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+        Vector3 passStarting = transformedPasseCurve.points.front();
+        Vector3 passEnding = transformedPasseCurve.points.back();
+
+        if (transformedLagoonArea.contains(pos.xy())) {
+            if ((pos - passStarting).norm2() < (pos - passEnding).norm2()) {
+                sqrDistToPasse.at(pos) = (pos - passStarting).norm2();
+                passeDirections.at(pos) = -transformedPasseCurve.getDirection(0.f);
+            } else {
+                sqrDistToPasse.at(pos) = (pos - passEnding).norm2();
+                passeDirections.at(pos) = transformedPasseCurve.getDirection(1.f);
+            }
+        } else {
+            sqrDistToPasse.at(pos) = 10000.f;
+            passeDirections.at(pos) = Vector3(false);
+        }
+    }
+
+    Vector3 bestFitPos;
+    float bestFitScore = std::numeric_limits<float>::max();
+
+    float distToPasse;
+    Vector3 surfaceNormal;
+    Vector3 waterVel;
+
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+        float score = 0;
+
+        if (!passeDirections.at(pos).isValid()) score = 1000;
+        else score = sqrDistToPasse.at(pos);
+
+        if (score < bestFitScore) {
+            bestFitScore = score;
+            bestFitPos = pos;
+
+            distToPasse = std::sqrt(sqrDistToPasse.at(pos));
+            waterVel = waterFlow.at(pos);
+            surfaceNormal = surfaceNormals.at(pos);
+        }
+    }
+    std::cout << "Adding at " << bestFitPos << " because score = " << bestFitScore << std::endl;
+    std::cout << "Distance to a passe : " << distToPasse <<
+                 "\nScore = dist = " << sqrDistToPasse.at(bestFitPos)
+              << std::endl;
+
+    Vector3 startingPosition = bestFitPos;
+
+    int nbRivers = 2;
+    int nbPoints = 4;
+    ImplicitNaryOperator* deltaContainer = new ImplicitNaryOperator;
+    deltaContainer->name = "Delta (autogen)";
+    float riverLength = (2.f / float(nbRivers)) * passe->parametersProvided[0];
+    for (int iRiver = 0; iRiver < nbRivers; iRiver++) {
+        Vector3 passDirection = passeDirections.at(startingPosition).xy().normalize();
+        passDirection.rotate(0, 0, interpolation::inv_linear(float(iRiver) / float(nbRivers - 1), -M_PI*.25f, M_PI*.25f));
+        Vector3 endingPosition = startingPosition + passDirection * riverLength;
+
+        Vector3 diff = endingPosition - startingPosition;
+
+        std::vector<Vector3> riverPositions;
+        for (int i = 0; i < nbPoints + 2; i++) {
+            Vector3 originalPoint = startingPosition + i * diff / (nbPoints + 1.f) + Vector3::random().xy() * diff.norm() / (2.f * nbPoints);
+            originalPoint.z = this->implicitTerrain->getHeight(originalPoint);
+            riverPositions.push_back(originalPoint);
+        }
+
+        float width = diff.norm() * .5f;
+        AABBox dimensions(riverPositions);
+
+        Vector3 start = dimensions.min();
+        for (auto& p : riverPositions)
+            p = p - dimensions.min();
+        ImplicitPrimitive* river = ImplicitPrimitive::createPredefinedShape(ImplicitPatch::ParametricTunnel, dimensions.dimensions() + Vector3(width, width, width), width, riverPositions);
+        river->material = WATER;
+        river->position = start;
+        deltaContainer->addChild(river);
+    }
+
+    this->implicitTerrain->addChild(deltaContainer);
+}
+
+void PrimitivePatchesInterface::autoGenerateMotu(const Matrix3<float> &terrainSurface, const Matrix3<Vector3> &waterFlow, const Matrix3<Vector3> &surfaceNormals, const std::vector<Vector3> &availablePositions)
+{
+    auto passes = this->implicitTerrain->findAll(ImplicitPatch::ParametricTunnel);
+    std::vector<BSpline> transformedPassesCurves(passes.size());
+    for (size_t i = 0; i < passes.size(); i++) {
+        ImplicitPrimitive* passe = dynamic_cast<ImplicitPrimitive*>(passes[0]);
+        BSpline transformedPasseCurve;
+        for (size_t i = 0; i < passe->optionalCurve.points.size(); i++) {
+            Vector3 firstPointInCurve = passe->optionalCurve.points[i];
+            Vector3 transformedPoint = passe->getGlobalPositionOf(firstPointInCurve);
+            transformedPasseCurve.points.push_back(transformedPoint);
+        }
+        transformedPassesCurves[i] = transformedPasseCurve;
+    }
+
+    Matrix3<float> sqrDistTo3Passes(voxelGrid->getDimensions(), 100000);
+    Matrix3<std::vector<float>> sqrDistToEachPasses(voxelGrid->getDimensions(), std::vector<float>(passes.size(), 1000000));
+    Matrix3<std::vector<int>> indicesToClosestPasses(voxelGrid->getDimensions(), std::vector<int>(passes.size()));
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+        auto& distToEach = sqrDistToEachPasses.at(pos);
+        auto& indices = indicesToClosestPasses.at(pos);
+
+        for (size_t iPasse = 0; iPasse < transformedPassesCurves.size(); iPasse++) {
+            distToEach[iPasse] = transformedPassesCurves[iPasse].estimateSqrDistanceFrom(pos);
+            indices[iPasse] = iPasse;
+        }
+//        std::sort(sqrDistToEachPasses.at(pos).begin(), sqrDistToEachPasses.at(pos).end());
+        std::sort(indices.begin(), indices.end(), [&](int a, int b) { return distToEach[a] < distToEach[b]; });
+        sqrDistTo3Passes.at(pos) = distToEach[indices[0]] + distToEach[indices[1]] + distToEach[indices[2]];
+    }
+
+    Vector3 bestFitPos;
+    float bestFitScore = std::numeric_limits<float>::max();
+
+    float distToPasses = -1;
+    Vector3 surfaceNormal = Vector3(false);
+    Vector3 waterVel = Vector3(false);
+
+    for (size_t i = 0; i < availablePositions.size(); i++) {
+        const Vector3& pos = availablePositions[i];
+        float score = 0;
+
+//        if (!passeDirections.at(pos).isValid()) score = 1000;
+//        else score = sqrDistToPasse.at(pos);
+        score = sqrDistTo3Passes.at(pos);
+
+        if (score < bestFitScore) {
+            bestFitScore = score;
+            bestFitPos = pos;
+
+            distToPasses = std::sqrt(sqrDistTo3Passes.at(pos));
+            waterVel = waterFlow.at(pos);
+            surfaceNormal = surfaceNormals.at(pos);
+        }
+    }
+    std::cout << "Adding at " << bestFitPos << " because score = " << bestFitScore << std::endl;
+    std::cout << "Distance to a passe : " << distToPasses <<
+                 "\nScore = dist = " << sqrDistTo3Passes.at(bestFitPos)
+              << std::endl;
+
+    Vector3 avgPassesDirections;
+    auto& distToEach = sqrDistToEachPasses.at(bestFitPos);
+    auto& indices = indicesToClosestPasses.at(bestFitPos);
+    for (int i = 0; i < 3; i++) {
+        avgPassesDirections += transformedPassesCurves[indices[i]].getDirection(transformedPassesCurves[indices[i]].estimateClosestTime(bestFitPos));
+    }
+    avgPassesDirections /= 3.f;
+    Vector3 startingPosition = bestFitPos + avgPassesDirections * 5.f;
+
+    ImplicitPrimitive* motu = ImplicitPrimitive::createPredefinedShape(ImplicitPatch::Dune, Vector3(30, 30, 10), 0.f);
+    motu->position = startingPosition - motu->dimensions.xy() * .5f;
+    motu->material = SAND;
+    motu->name = "Motu (autogen)";
+
+    this->implicitTerrain->addChild(motu);
+}
+
+void PrimitivePatchesInterface::autoGenerateLongShore(const Matrix3<float> &terrainSurface, const Matrix3<Vector3> &waterFlow, const Matrix3<Vector3> &surfaceNormals, const std::vector<Vector3> &availablePositions)
+{
+
+}
+
+void PrimitivePatchesInterface::structureAutoGeneration()
+{    
+    Matrix3<float> terrainSurface = voxelGrid->getVoxelValues().binarize();
+    Matrix3<Vector3> waterFlow = voxelGrid->getFlowfield().resize(Vector3(10, 10, 10), RESIZE_MODE::MAX_VAL).resize(terrainSurface.getDimensions());
+    Matrix3<Vector3> surfaceNormals = terrainSurface.toDistanceMap().gradient();
+    for (size_t i = 0; i < surfaceNormals.size(); i++)
+        surfaceNormals[i].normalize();
+
+    terrainSurface = terrainSurface - terrainSurface.erode();
+    std::vector<Vector3> availablePositions;
+    availablePositions.reserve(terrainSurface.sizeX * terrainSurface.sizeY * 2);
+    for (size_t i = 0; i < terrainSurface.size(); i++)
+        if (terrainSurface[i]) availablePositions.push_back(terrainSurface.getCoordAsVector3(i));
+
+    // Get 1000 random points
+    std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
+    availablePositions.resize(std::min(1000, int(availablePositions.size())));
+
+
+    if (this->implicitTerrain->findAll(ImplicitPatch::ParametricTunnel).empty()) {
+        this->autoGeneratePasse(terrainSurface, waterFlow, surfaceNormals, availablePositions);
+    } else if (this->implicitTerrain->findAll(ImplicitPatch::ParametricTunnel).size() == 1) {
+        this->autoGenerateDelta(terrainSurface, waterFlow, surfaceNormals, availablePositions);
+    } else {
+        this->autoGenerateMotu(terrainSurface, waterFlow, surfaceNormals, availablePositions);
+    }
+
+    this->updatePrimitiveList();
+    this->updateMapWithCurrentPatch();
+}
+
 void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *current, QListWidgetItem *previous) {
     bool newSelectionIsExisting = false;
-    this->currentlySelectedPatch = nullptr;
     if (current) {
         auto selectedPatchItem = dynamic_cast<HierarchicalListWidgetItem*>(current);
         int selectedPatchID = selectedPatchItem->ID;
-        this->currentlySelectedPatch = this->findPrimitiveById(selectedPatchID);
-        if (currentlySelectedPatch != nullptr) {
+        auto newlySelectedPatch = this->findPrimitiveById(selectedPatchID);
+        if (newlySelectedPatch != nullptr && newlySelectedPatch != currentlySelectedPatch) {
+            this->currentlySelectedPatch = newlySelectedPatch; //this->findPrimitiveById(selectedPatchID);
             auto patchAABBox = currentlySelectedPatch->getBBox();
-            auto patchSupportedAABBox = currentlySelectedPatch->getSupportBBox();
-//            Vector3 patchDimensions = patchAABBox.dimensions();
+            auto patchSupportedAABBox = currentlySelectedPatch->getBBox();
+//            auto patchSupportedAABBox = currentlySelectedPatch->getSupportBBox();
             Vector3 patchSupportedDimensions = patchSupportedAABBox.dimensions();
             Vector3 controlPosition = patchAABBox.min();
             this->primitiveControlPoint->setPosition(controlPosition /*+ (selectedPatch->getDimensions() * .5f).xy()*/);
@@ -998,7 +1261,8 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
 
             Vector3 resolution = Vector3(20, 20, 20);
             Vector3 ratio = (patchSupportedDimensions) / (resolution /*+ Vector3(1, 1, 1)*/);
-            this->debuggingVoxelsPosition = this->selectedPatch()->getSupportBBox().min();
+            this->debuggingVoxelsPosition = this->selectedPatch()->getBBox().min();
+//            this->debuggingVoxelsPosition = this->selectedPatch()->getSupportBBox().min();
             this->debuggingVoxelsScale = ratio;
             debuggingVoxels = Matrix3<float>(resolution);
             debuggingVoxels.raiseErrorOnBadCoord = false;
@@ -1011,18 +1275,19 @@ void PrimitivePatchesInterface::updateSelectedPrimitiveItem(QListWidgetItem *cur
                 }
             }
             this->debugMeshDisplayed = true;
+            auto hierarchy = naiveApproachToGetAllParents(currentlySelectedPatch);
+            for (auto& node : hierarchy) {
+                std::cout << node->name << "\n";
+            }
+            std::cout << std::endl;
         }
-        auto hierarchy = naiveApproachToGetAllParents(currentlySelectedPatch);
-        for (auto& node : hierarchy) {
-            std::cout << node->name << "\n";
-        }
-        std::cout << std::endl;
     }
     if (!newSelectionIsExisting) {
         this->patchAABBoxMesh.fromArray(std::vector<Vector3>{});
         this->patchAABBoxMesh.update();
         this->primitiveControlPoint->hide();
         this->debugMeshDisplayed = false;
+        this->currentlySelectedPatch = nullptr;
     }
     Q_EMIT updated();
 }
@@ -1205,7 +1470,7 @@ void PrimitivePatchesInterface::addParametricPoint(Vector3 point)
 
 void PrimitivePatchesInterface::displayParametricCurve()
 {
-    parametricCurveMesh.display(GL_LINES, 5.f);
+    parametricCurveMesh.display(/*GL_LINES,*/ 5.f);
 }
 
 void PrimitivePatchesInterface::displayPatchesTree()
@@ -1269,7 +1534,115 @@ void PrimitivePatchesInterface::displayPatchesTree()
 //    QObject::connect(plt, &Plotter::finished, this, [=](int result) {
 //        std::cout << "Closed with result " << result << std::endl;
 //        plt->close();
-//    });
+    //    });
+}
+
+void PrimitivePatchesInterface::moveDebugBoxWithControlPoint()
+{
+    // Get patch being manipulated
+    if (this->selectedPatch() != nullptr) {
+        // Display modified AABBox
+        auto BBox = this->selectedPatch()->getBBox();
+        Vector3 minPos = BBox.min();
+        Vector3 maxPos = BBox.max();
+        Vector3 dim = maxPos - minPos;
+        std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
+        for (auto& p : box) {
+            p = (p * dim) + /*minPos + */primitiveControlPoint->getPosition(); //p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - currentlySelectedPatch->getDimensions().xy() * .5f);//p * currentlySelectedPatch->getDimensions() + (primitiveControlPoint->getPosition() - (currentlySelectedPatch->getDimensions() * .5f).xy());
+            p = (p - BBox.center()).rotate(-primitiveControlPoint->getRotation()) + BBox.center();
+        }
+        this->patchAABBoxMesh.fromArray(box);
+        this->patchAABBoxMesh.update();
+    }
+}
+
+void PrimitivePatchesInterface::translatePatch(Vector3 translation)
+{
+//        QObject::blockSignals(true);
+    // Get patch being manipulated
+    if (this->selectedPatch() != nullptr) {
+        primitiveControlPoint->blockSignals(true);
+        primitiveSelectionGui->blockSignals(true);
+
+        ImplicitTranslation* manipulatedAsUnary = dynamic_cast<ImplicitTranslation*>(this->selectedPatch());
+        if (manipulatedAsUnary == nullptr) {
+            // It's not an unary yet, but the parent might be
+            manipulatedAsUnary = dynamic_cast<ImplicitTranslation*>(this->naiveApproachToGetParent(this->selectedPatch()));
+        }
+
+        if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
+            manipulatedAsUnary->translate(translation); // Just update it
+        } else { // Otherwise, create a new Unary operator
+            ImplicitTranslation* translate = new ImplicitTranslation;
+            if (this->selectedPatch() == this->implicitTerrain.get()) {
+                this->implicitTerrain->deleteAllChildren();
+                this->implicitTerrain->addChild(translate);
+            } else {
+                ImplicitNaryOperator* parentAsNaryOperator = this->selectedPatch()->getParent(); //dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
+                if (parentAsNaryOperator) {
+                    for (size_t i = 0; i < parentAsNaryOperator->composables.size(); i++) {
+                        if (parentAsNaryOperator->composables[i] == selectedPatch()) {
+                            parentAsNaryOperator->addChild(translate, i);
+                            break;
+                        }
+                    }
+                }
+            }
+            translate->addChild(this->selectedPatch());
+            translate->translate(translation);
+            this->storedPatches.push_back(translate);
+            this->updatePrimitiveList();
+            this->primitiveSelectionGui->setCurrentItem(translate->index);
+
+
+        }
+        this->updateMapWithCurrentPatch();
+
+        primitiveControlPoint->blockSignals(false);
+        primitiveSelectionGui->blockSignals(false);
+    }
+}
+
+void PrimitivePatchesInterface::rotatePatch(Vector3 rotation)
+{
+//        QObject::blockSignals(true);
+    // Get patch being manipulated
+    if (this->selectedPatch() != nullptr) {
+        primitiveControlPoint->blockSignals(true);
+        primitiveSelectionGui->blockSignals(true);
+
+        ImplicitRotation* manipulatedAsUnary = dynamic_cast<ImplicitRotation*>(this->selectedPatch());
+        if (manipulatedAsUnary == nullptr) {
+            // It's not an unary yet, but the parent might be
+            manipulatedAsUnary = dynamic_cast<ImplicitRotation*>(this->naiveApproachToGetParent(this->selectedPatch()));
+        }
+
+        if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
+            manipulatedAsUnary->rotate(rotation); // Just update it
+        } else { // Otherwise, create a new Unary operator
+            ImplicitRotation* translate = new ImplicitRotation;
+            translate->addChild(this->selectedPatch());
+            translate->rotate(rotation);
+            if (this->selectedPatch() == this->implicitTerrain.get()) {
+                this->implicitTerrain->deleteAllChildren();
+                this->implicitTerrain->addChild(translate);
+            } else {
+                ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
+                if (parentAsNaryOperator) {
+                    for (auto& c : parentAsNaryOperator->composables)
+                        if (this->selectedPatch() == c)
+                            c = translate;
+                }
+            }
+            this->storedPatches.push_back(translate);
+            this->updatePrimitiveList();
+            this->primitiveSelectionGui->setCurrentItem(translate->index);
+        }
+        this->updateMapWithCurrentPatch();
+
+        primitiveControlPoint->blockSignals(false);
+        primitiveSelectionGui->blockSignals(false);
+    }
 }
 
 ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 position, ImplicitPatch *replacedPatch)
@@ -1297,9 +1670,9 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
 //        Vector3 center = (BBoxMin + BBoxMax) * .5f;
         Vector3 translation = position;
         // Create a translation operation to move the new patch
-        ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
+        ImplicitTranslation* translate = new ImplicitTranslation;
         translate->translate(translation);
-        translate->composableA() = patch;
+        translate->addChild(patch);
         // Return the translation operation
         translate->updateCache();
         return translate;
@@ -1322,9 +1695,9 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         primitive->material = this->selectedTerrainType;
         primitive->name = toCapitalize(stringFromPredefinedShape(currentShapeSelected));
         if (this->currentPositioning == ImplicitPatch::PositionalLabel::FIXED_POS && position.z != 0.f) {
-            ImplicitUnaryOperator* translate = new ImplicitUnaryOperator;
+            ImplicitTranslation* translate = new ImplicitTranslation;
             translate->translate(Vector3(0.f, 0.f, position.z));
-            translate->composableA() = primitive;
+            translate->addChild(primitive);
             // Return the translation operation
             translate->updateCache();
             return translate;
@@ -1341,8 +1714,8 @@ ImplicitPatch *PrimitivePatchesInterface::createOperationPatchFromParameters(Imp
     else
         operation = replacedPatch;
 
-    operation->composableA() = composableA;
-    operation->composableB() = composableB;
+    operation->addChild(composableA, 0);
+    operation->addChild(composableB, 1);
     operation->composeFunction = currentOperation;
     operation->positionalB = currentPositioning;
     operation->blendingFactor = selectedBlendingFactor;
@@ -1423,6 +1796,8 @@ void PrimitivePatchesInterface::updatePrimitiveList()
         while (!waitingPatches.empty()) {
             auto [current, level, locked] = waitingPatches.back();
             current->index = currentIndex++;
+            if (current != this->implicitTerrain.get() && current->parent == nullptr)
+                    std::cout << current->toString() << " has no parent" << std::endl;
             bool childrenAreLocked = locked || (current->used_json_filename != "" && patchesCanBeLocked && current->used_json_filename != this->mainFilename);
             waitingPatches.pop_back();
             primitiveSelectionGui->addItem(new HierarchicalListWidgetItem((locked ? "*" : "") + current->toString(), current->index, level));
@@ -1454,6 +1829,9 @@ void PrimitivePatchesInterface::updatePrimitiveList()
 
 void PrimitivePatchesInterface::cleanPatch(ImplicitPatch *_patch)
 {
+    auto Nary = dynamic_cast<ImplicitNaryOperator*>(_patch);
+    Nary->deleteAllChildren();
+    /*
     ImplicitBinaryOperator* patch = dynamic_cast<ImplicitBinaryOperator*>(_patch);
     if (!patch) // Not a composition ? Nothing to do
         return;
@@ -1475,11 +1853,13 @@ void PrimitivePatchesInterface::cleanPatch(ImplicitPatch *_patch)
         cleanPatch(patch->composableB());
     } else {
         // Nothing to do (?)
-    }
+    }*/
 }
 
 void PrimitivePatchesInterface::displayDebuggingVoxels()
 {
+    if (!this->selectedPatch())
+        return;
     std::vector<float> isoValues = {0.9f, 0.5f, 0.2f};
 //    std::vector<float> isoValues = {0.9f, 0.8f, 0.65f, 0.5f, 0.35f, 0.2f, 0.1f};
 
@@ -1547,16 +1927,17 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE0);
 
     // Scale the debugging mesh to the right size
-    auto suppDim = this->selectedPatch()->getSupportDimensions();
+//    auto suppDim = this->selectedPatch()->getSupportDimensions();
+    auto suppDim = this->selectedPatch()->getDimensions();
     Vector3 scaleToDisplayPatch = suppDim / debuggingVoxels.getDimensions(); // Vector3(1.f, 1.f, 1.f); // 1.f / this->debuggingVoxelsScale; //currentlySelectedPatch->getDimensions() / debuggingVoxels.getDimensions();
     debuggingVoxelsMesh.shader->setVector("scale", scaleToDisplayPatch);
 
     // Translate the debugging mesh to the right position
-    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
+    //    Vector3 positionToDisplayPatch = this->selectedPatch()->getSupportBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
+    Vector3 positionToDisplayPatch = this->selectedPatch()->getBBox().min(); // this->debuggingVoxelsPosition * debuggingVoxels.getDimensions() * .5f; // currentlySelectedPatch->getBBox().first; //currentlySelectedPatch->position - currentlySelectedPatch->getDimensions() - Vector3(1.f, 1.f, 1.f) * scaleToDisplayPatch;
     debuggingVoxelsMesh.shader->setFloat("offsetX", positionToDisplayPatch.x);
     debuggingVoxelsMesh.shader->setFloat("offsetY", positionToDisplayPatch.y);
     debuggingVoxelsMesh.shader->setFloat("offsetZ", positionToDisplayPatch.z);
-    std::cout << positionToDisplayPatch << " " << scaleToDisplayPatch << std::endl;
 
     // Ignore parameters to hide some voxels
     debuggingVoxelsMesh.shader->setVector("min_vertice_positions", Vector3::min());
@@ -1571,7 +1952,7 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
         debuggingVoxelsMesh.shader->setFloat("isolevel", iso);
 
         // display the mesh
-        debuggingVoxelsMesh.display(GL_POINTS);
+        debuggingVoxelsMesh.display();
     }
 }
 
@@ -1754,10 +2135,10 @@ PatchReplacementDialog::PatchReplacementDialog(PrimitivePatchesInterface* caller
         QObject::connect(createFromFileButton, &QRadioButton::toggled, this, [=](bool checked) {
             if (checked) {
                 patchAsPrimitive->predefinedShape = ImplicitPatch::PredefinedShapes::ImplicitHeightmap;
-                QString q_filename = QFileDialog::getOpenFileName(this, QString("Open a composition"), QString::fromStdString("saved_maps/"));
+                QString q_filename = QDir(QDir::currentPath()).relativeFilePath(QFileDialog::getOpenFileName(this, QString("Open a composition"), QString::fromStdString("saved_maps/")));
                 std::string filename = q_filename.toStdString();
                 if (!q_filename.isEmpty()) {
-                    patchAsPrimitive->used_json_filename = q_filename.toStdString();
+                    patchAsPrimitive->used_json_filename = filename;
                 }
             }
         });

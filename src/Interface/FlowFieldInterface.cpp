@@ -1,5 +1,15 @@
 #include "FlowFieldInterface.h"
 
+
+FlowFieldInterface::FlowFieldInterface(QWidget *parent)
+    : AbstractFluidSimulationInterface("Stable Fluids", parent)
+{
+    _simulation = GlobalTerrainProperties::get()->simulations[STABLE]; // = dynamic_cast<StableFluidsSimulation*>(_simulation);
+//    *_simulation = StableFluidsSimulation();
+}
+
+
+/*
 FlowFieldInterface::FlowFieldInterface(QWidget *parent) : ActionInterface("flowfield", parent)
 {
 
@@ -45,7 +55,8 @@ void FlowFieldInterface::display(Vector3 camPos)
     this->displayPressureDensities(camPos);
     this->displayFlows(camPos);
     this->displaySumOfFlows(camPos);
-    this->recomputeFlowfield(10);
+    if (this->computeAtEachFrame)
+        this->recomputeFlowfield(10);
 }
 
 void FlowFieldInterface::displayPressureDensities(Vector3 camPos)
@@ -167,26 +178,23 @@ void FlowFieldInterface::displaySumOfFlows(Vector3 camPos)
 void FlowFieldInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
-        this->voxelGrid->computeFlowfield();
+        this->voxelGrid->computeFlowfield(LBM);
     }
 }
 
 void FlowFieldInterface::recomputeFlowfield(int steps)
 {
-    this->voxelGrid->computeMultipleFlowfields(steps);
+    this->voxelGrid->computeMultipleFlowfields(LBM, steps, this->implicitTerrain.get());
 
-    this->totalFlow = this->voxelGrid->getFlowfield(0);
-    for (size_t i = 1; i < this->voxelGrid->multipleFlowFields.size(); i++)
-        this->totalFlow += this->voxelGrid->getFlowfield(i);
+    totalFlow = voxelGrid->getFlowfield(LBM);
 
-    pressureDensityVoxels = -this->totalFlow.divergence();// Matrix3<float>(this->totalFlow.getDimensions());
-//    for (size_t i = 0; i < pressureDensityVoxels.size(); i++) {
-//        float currentHeight = pressureDensityVoxels.getCoordAsVector3(i).z;
-//        if (2 < currentHeight && currentHeight < pressureDensityVoxels.sizeZ - 3)
-//            pressureDensityVoxels[i] = this->totalFlow[i].norm();
+//    this->totalFlow = this->voxelGrid->getFlowfield(0);
+//    for (size_t i = 1; i < this->voxelGrid->multipleFlowFields.size(); i++)
+//        this->totalFlow += this->voxelGrid->getFlowfield(i);
+
+    pressureDensityVoxels = -this->totalFlow.divergence();
 //    }
     pressureDensityVoxels.normalize();
-    std::cout << pressureDensityVoxels.max() << std::endl;
 
     this->updateFlowfieldDebugMesh();
 
@@ -199,46 +207,17 @@ void FlowFieldInterface::recomputeFlowfield(int steps)
 
 void FlowFieldInterface::updateFlowfieldDebugMesh()
 {
-    float maxPressure = this->pressureDensityVoxels.max();
-
+//    float maxPressure = this->pressureDensityVoxels.max();
+    float maxFlow = 0.f;
     for (size_t i = 0; i < this->flowMeshes.size(); i++) {
-        /*Matrix3<Vector3> flowNormalized = this->voxelGrid->getFlowfield(i) / maxPressure;
-//        float max = -1, min = std::numeric_limits<float>::max();
-//        for (auto& v : flowNormalized){
-//            max = std::max(max, v.norm2());
-//            min = std::min(min, v.norm2());
-//        }
-//        for (auto& v : flowNormalized)
-//            v /= max;
-//        flowNormalized /= maxPressure;
-        std::vector<Vector3> normals;
-        for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->getSizeX()-1; x+= this->voxelGrid->fluidSimRescale) {
-            for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->getSizeY()-1; y+= this->voxelGrid->fluidSimRescale) {
-                for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->getSizeZ() - 1; z+= this->voxelGrid->fluidSimRescale) {
-                    normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
-                    normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + Vector3(.5f, .5f, .5f));
-                }
-            }
-        }
-        this->flowMeshes[i].fromArray(normals);
-        this->flowMeshes[i].update();*/
-        flowMeshes[i] = Mesh::createVectorField(this->voxelGrid->getFlowfield(i).resize(1.f/this->voxelGrid->fluidSimRescale), this->voxelGrid->getDimensions(), &flowMeshes[i]);
+//        Mesh::createVectorField(this->voxelGrid->getFlowfield(i).resize(this->voxelGrid->multipleFluidSimulations[0].dimensions) / 100.f, this->voxelGrid->getDimensions(), &flowMeshes[i]);
+//        maxFlow = std::max(maxFlow, this->voxelGrid->getFlowfield(i).resize(this->voxelGrid->multipleFluidSimulations[0].dimensions).max().norm());
+        Mesh::createVectorField(this->voxelGrid->getFlowfield(LBM).resize(this->voxelGrid->multipleFluidSimulations[0].dimensions) / 100.f, this->voxelGrid->getDimensions(), &flowMeshes[i]);
+        maxFlow = std::max(maxFlow, this->voxelGrid->getFlowfield(LBM).resize(this->voxelGrid->multipleFluidSimulations[0].dimensions).max().norm());
     }
+    std::cout << "Max flow: " << maxFlow << std::endl;
 
-    this->sumOfFlowsMesh = Mesh::createVectorField(this->totalFlow.resize(1.f / this->voxelGrid->fluidSimRescale), this->voxelGrid->getDimensions(), &sumOfFlowsMesh);
-//    Matrix3<Vector3> flowNormalized = this->totalFlow / maxPressure;
-//    std::vector<Vector3> normals;
-//    for (int x = this->voxelGrid->fluidSimRescale; x < this->voxelGrid->getSizeX()-1; x+= this->voxelGrid->fluidSimRescale) {
-//        for (int y = this->voxelGrid->fluidSimRescale; y < this->voxelGrid->getSizeY()-1; y+= this->voxelGrid->fluidSimRescale) {
-//            for (int z = this->voxelGrid->fluidSimRescale; z < this->voxelGrid->getSizeZ() - 1; z+= this->voxelGrid->fluidSimRescale) {
-//                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
-//                normals.push_back(Vector3(x, y, z) + (flowNormalized.at(x, y, z) * (float)voxelGrid->fluidSimRescale) + Vector3(.5f, .5f, .5f));
-//            }
-//        }
-//    }
-//    this->sumOfFlowsMesh.fromArray(normals);
-//    this->sumOfFlowsMesh.update();
-//    Q_EMIT this->updated();
+    Mesh::createVectorField(this->totalFlow.resize(1.f / this->voxelGrid->fluidSimRescale) / 100.f, this->voxelGrid->getDimensions(), &sumOfFlowsMesh);
 }
 
 void FlowFieldInterface::hide()
@@ -260,6 +239,7 @@ QLayout* FlowFieldInterface::createGUI()
     QPushButton* flowFieldComputeButton = new QPushButton("Calculer");
     QCheckBox* flowFieldDisplayPressureButton = new QCheckBox("Display pressure");
     QCheckBox* flowFieldDisplayAllFlowsButton = new QCheckBox("Display sum");
+    QCheckBox* autoComputeFlowsButton = new QCheckBox("Compute each frame");
 
     for (size_t i = 0; i < this->displayedFlowfields.size(); i++) {
         QCheckBox* displayFlow = new QCheckBox(QString::fromStdString("Flow #" + std::to_string(i + 1)));
@@ -271,14 +251,18 @@ QLayout* FlowFieldInterface::createGUI()
 
 
     flowFieldLayout->addWidget(flowFieldDisplayPressureButton);
-    flowFieldLayout->addWidget(flowFieldComputeButton);
     flowFieldLayout->addWidget(flowFieldDisplayAllFlowsButton);
+    flowFieldLayout->addWidget(flowFieldComputeButton);
+    flowFieldLayout->addWidget(autoComputeFlowsButton);
 
     flowFieldDisplayPressureButton->setChecked(this->displayingPressure);
     flowFieldDisplayAllFlowsButton->setChecked(this->displayingSumOfFlows);
+    autoComputeFlowsButton->setChecked(this->computeAtEachFrame);
     QObject::connect(flowFieldDisplayPressureButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayingPressure = checked; } );
     QObject::connect(flowFieldDisplayAllFlowsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayingSumOfFlows = checked; } );
     QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=]() { this->recomputeFlowfield(30); } );
+    QObject::connect(autoComputeFlowsButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; } );
 
     return flowFieldLayout;
 }
+*/
