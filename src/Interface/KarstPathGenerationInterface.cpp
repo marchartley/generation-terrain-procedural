@@ -14,9 +14,6 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent) : Ac
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
                                                                       });
-    this->pathsMeshes.displayShape = GL_LINES;
-    this->waterLevelMesh.displayShape = GL_LINES;
-
     QObject::connect(this->sourceControlPoint.get(), &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
     QObject::connect(this->fractureVector.get(), &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
     QObject::connect(this->waterHeightSlider.get(), &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
@@ -39,10 +36,10 @@ void KarstPathGenerationInterface::display(Vector3 camPos)
     this->fractureVector->display();
     if (this->waterLevelMesh.shader != nullptr)
         this->waterLevelMesh.shader->setVector("color", std::vector<float>({0/255.f, 0/255.f, 255/255.f, 1.f}));
-    this->waterLevelMesh.display(/*GL_LINES,*/ 5.f);
+    this->waterLevelMesh.display(GL_LINES, 5.f);
     if (this->pathsMeshes.shader != nullptr)
         this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-    this->pathsMeshes.display(/*GL_LINES,*/ 5.f);
+    this->pathsMeshes.display(GL_LINES, 5.f);
     this->waterHeightSlider->display();
 }
 

@@ -8,14 +8,14 @@ GlobalTerrainProperties::GlobalTerrainProperties()
     float dt = 0.1f;
     float diffusion = 0.8f;
     float viscosity = 0.01f;
-    int fluidSolverIterations = 20;
+    int fluidSolverIterations = 5;
     float density = 1000.f;
     Vector3 fluidSimRescale = Vector3(4, 4, 4);
 
     Vector3 simulationSize = Vector3(100, 100, 50) / fluidSimRescale;
     this->simulations[FluidSimType::FLIP] = new FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, 1, .2f, 20000, dt);
     this->simulations[FluidSimType::SPH] = new SPHSimulation();
-    this->simulations[FluidSimType::LBM] = new LBMFluidSimulation(false);
+    this->simulations[FluidSimType::LBM] = new LBMFluidSimulation(true);
 //    this->simulations[FluidSimType::SHALLOW] = new ShallowWaterSimulation();
     this->simulations[FluidSimType::STABLE] = new StableFluidsSimulation(simulationSize.x, simulationSize.y, simulationSize.z, dt, diffusion, viscosity, fluidSolverIterations);
     this->simulations[FluidSimType::WARP] = new WarpedFluidSimulation(simulationSize.x, simulationSize.y, simulationSize.z);

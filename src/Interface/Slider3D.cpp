@@ -25,7 +25,6 @@ void Slider3D::setPosition(Vector3 newPos)
     this->maxPos += movement;
     this->sliderControlPoint->move(this->sliderControlPoint->getPosition() + movement);
     this->sliderControlPoint->custom_constraint = new SliderConstraint(minPos, maxPos);
-    this->sliderMesh.displayShape = GL_LINES;
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
@@ -70,7 +69,7 @@ float Slider3D::setValue(Vector3 newPos)
 void Slider3D::display()
 {
     this->sliderControlPoint->display();
-    this->sliderMesh.display(/*GL_LINES,*/ 3.f);
+    this->sliderMesh.display(GL_LINES, 3.f);
 }
 
 float Slider3D::getValue()

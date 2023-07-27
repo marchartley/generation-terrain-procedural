@@ -10,9 +10,6 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     : ActionInterface("PrimitivePatchesInterface", parent)
 {
     previewMesh.cullFace = false;
-    patchAABBoxMesh.displayShape = GL_LINES;
-    parametricCurveMesh.displayShape = GL_LINES;
-    debuggingVoxelsMesh.displayShape = GL_POINTS;
 
 //    this->implicitTerrain = new ImplicitPrimitive;
 //    this->implicitTerrain->name = "Identity";
@@ -46,7 +43,7 @@ void PrimitivePatchesInterface::display(Vector3 camPos)
         glGetIntegerv(GL_POLYGON_MODE, &polygonMode);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         patchAABBoxMesh.shader->setVector("color", std::vector<float>({0.f, 0.8f, 0.4f, 1.0f}));
-        patchAABBoxMesh.display(/*GL_LINES,*/ 3.f);
+        patchAABBoxMesh.display(GL_LINES, 3.f);
         glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
     }
     this->primitiveControlPoint->display();
@@ -1470,7 +1467,7 @@ void PrimitivePatchesInterface::addParametricPoint(Vector3 point)
 
 void PrimitivePatchesInterface::displayParametricCurve()
 {
-    parametricCurveMesh.display(/*GL_LINES,*/ 5.f);
+    parametricCurveMesh.display(GL_LINES, 5.f);
 }
 
 void PrimitivePatchesInterface::displayPatchesTree()
@@ -1952,7 +1949,7 @@ void PrimitivePatchesInterface::displayDebuggingVoxels()
         debuggingVoxelsMesh.shader->setFloat("isolevel", iso);
 
         // display the mesh
-        debuggingVoxelsMesh.display();
+        debuggingVoxelsMesh.display(GL_POINTS);
     }
 }
 

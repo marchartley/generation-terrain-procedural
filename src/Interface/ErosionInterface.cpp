@@ -19,10 +19,10 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     const char* vNoShader = "src/Shaders/no_shader.vert";
     const char* fNoShader = "src/Shaders/no_shader.frag";
 
-    this->rocksPathFailure = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->rocksPathFailure = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->rocksPathFailure.useIndices = false;
     this->rocksPathFailure.shader->setVector("color", std::vector<float>({.7f, .2f, .1f, .5f}));
-    this->rocksPathSuccess = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->rocksPathSuccess = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->rocksPathSuccess.useIndices = false;
     this->rocksPathSuccess.shader->setVector("color", std::vector<float>({.1f, .7f, .2f, .5f}));
 
@@ -109,8 +109,8 @@ void ErosionInterface::display(Vector3 camPos)
     if (!this->isVisible())
         return;
     if (this->displayTrajectories) {
-        this->rocksPathSuccess.display(/*GL_LINES,*/ 3.f);
-        this->rocksPathFailure.display(/*GL_LINES,*/ 3.f);
+        this->rocksPathSuccess.display(GL_LINES, 3.f);
+        this->rocksPathFailure.display(GL_LINES, 3.f);
     }
 }
 
@@ -164,7 +164,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     this->rocksPathFailure.clear();
     auto startingTime = std::chrono::system_clock::now();
     int totalPos = 0, totalErosions = 0;
-    float sumPreprocessTime = 0.f, sumParticleSimulationTime = 0.f, sumTerrainModifTime = 0.f;
+    float sumParticleSimulationTime = 0.f, sumTerrainModifTime = 0.f;
     for (int iteration = 0; iteration < numberOfIterations; iteration++) {
         std::cout << "Iteration " << iteration + 1 << " / " << numberOfIterations << std::endl;
         erod.maxRockSize = this->erosionSize;
@@ -172,7 +172,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
         erod.rockAmount = this->erosionQtt;
 
         int nbPos, nbErosions;
-        float preprocessTime, particleSimulationTime, terrainModifTime;
+        float particleSimulationTime, terrainModifTime;
 //        auto flowfieldFunction = this->computeFlowfieldFunction();
         Matrix3<Vector3> waterFlowfield = Matrix3<Vector3>();
         Matrix3<Vector3> airFlowfield = Matrix3<Vector3>();
@@ -219,7 +219,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
         }
 
 
-        std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(this->applyOn, preprocessTime, particleSimulationTime, terrainModifTime,
+        std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(this->applyOn, particleSimulationTime, terrainModifTime,
                                                                     Vector3(false),
                                                                     Vector3(false),
                                                                     this->rockRandomness,
@@ -255,7 +255,6 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 
         totalPos += nbPos;
         totalErosions += nbErosions;
-        sumPreprocessTime += preprocessTime;
         sumParticleSimulationTime += particleSimulationTime;
         sumTerrainModifTime += terrainModifTime;
         std::vector<Vector3> asOneVector;
@@ -276,7 +275,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     auto endingTime = std::chrono::system_clock::now();
     float totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startingTime).count();
     std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "ms  (" << totalPos/1000 << "k pos, " << totalErosions/1000 << "k erosions)" << std::endl;
-    std::cout << "(" << sumPreprocessTime << "ms for preprocess, " << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalTime - (sumPreprocessTime + sumParticleSimulationTime + sumTerrainModifTime) << "ms for the display) => " << (sumParticleSimulationTime + sumTerrainModifTime) << "ms for algo." << std::endl;
+    std::cout << "(" << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime) << "ms for the display) => " << (sumParticleSimulationTime + sumTerrainModifTime) << "ms for algo." << std::endl;
 
 //    UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
 
@@ -560,12 +559,12 @@ void ErosionInterface::testManyManyErosionParameters()
 //            erod.heightmap = heightmap.get();
             auto startingTime = std::chrono::system_clock::now();
             int totalPos = 0, totalErosions = 0;
-            float sumPreprocessTime = 0.f, sumParticleSimulationTime = 0.f, sumTerrainModifTime = 0.f;
+            float sumParticleSimulationTime = 0.f, sumTerrainModifTime = 0.f;
             float totalMeshingTime = 0.f;
             int nbIterations = 100;
             for (int iteration = 0; iteration < nbIterations; iteration++) {
                 int nbPos, nbErosions;
-                float preprocessTime, particleSimulationTime, terrainModifTime;
+                float particleSimulationTime, terrainModifTime;
 
 
                 if (iteration % 10 == 0 and false) {
@@ -602,7 +601,6 @@ void ErosionInterface::testManyManyErosionParameters()
 //                std::tie(lastRocksLaunched, nbPos, nbErosions) = erod.Apply(terrainType, particleSimulationTime, terrainModifTime,
                 std::tie(lastRocksLaunched, nbPos, nbErosions) = this->erosionProcess.Apply(
                             terrainType,
-                            preprocessTime,
                             particleSimulationTime,
                             terrainModifTime,
                             Vector3(false),
@@ -636,7 +634,6 @@ void ErosionInterface::testManyManyErosionParameters()
 
                 totalPos += nbPos;
                 totalErosions += nbErosions;
-                sumPreprocessTime += preprocessTime;
                 sumParticleSimulationTime += particleSimulationTime;
                 sumTerrainModifTime += terrainModifTime;
 //                *heightmap = *erod.heightmap;
@@ -646,7 +643,7 @@ void ErosionInterface::testManyManyErosionParameters()
             auto endingTime = std::chrono::system_clock::now();
             float totalTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingTime - startingTime).count();
             std::cout << "Simulation time for " << numberOfIterations * erosionQtt << " particles: " << totalTime << "ms  (" << totalPos/1000 << "k pos, " << totalErosions/1000 << "k erosions)" << std::endl;
-            std::cout << "(" << sumPreprocessTime << "ms for preprocess, " << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalMeshingTime << "ms for meshing and " << totalTime - (sumPreprocessTime + sumParticleSimulationTime + sumTerrainModifTime + totalMeshingTime) << "ms for the rest)" << std::endl;
+            std::cout << "(" << sumParticleSimulationTime << "ms for particle simulation, " << sumTerrainModifTime << "ms for applying changes, " << totalMeshingTime << "ms for meshing and " << totalTime - (sumParticleSimulationTime + sumTerrainModifTime + totalMeshingTime) << "ms for the rest)" << std::endl;
 
             std::string parametersToCSV = "";
             for (const auto& param : params)

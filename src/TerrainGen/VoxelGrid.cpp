@@ -668,16 +668,11 @@ Matrix3<float> VoxelGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
     return this->getVoxelValues();
 }
 
-Mesh VoxelGrid::getGeometry(Vector3 reducedResolution)
+Mesh VoxelGrid::getGeometry()
 {
     auto triTable = MarchingCubes::triangleTable;
 //    auto edges = MarchingCubes::cubeEdges;
-    Matrix3<float> values;
-    Vector3 initialDimensions = this->getDimensions();
-    if (!reducedResolution.isValid())
-        reducedResolution = this->getDimensions();
-    values = this->getVoxelValues().resize(reducedResolution).meanSmooth(5, 5, 5);
-
+    auto values = this->getVoxelValues().meanSmooth(5, 5, 5);
     values.defaultValueOnBadCoord = -1;
 
     float offsetX = 0.f;
@@ -842,7 +837,6 @@ Mesh VoxelGrid::getGeometry(Vector3 reducedResolution)
             }
         }
     }
-    marched.scale(initialDimensions / reducedResolution);
     return marched;
 }
 /*

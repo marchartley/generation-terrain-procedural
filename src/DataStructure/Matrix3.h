@@ -90,10 +90,6 @@ public:
     Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR) const;
     Matrix3 resize(Vector3 newSize, RESIZE_MODE mode = LINEAR) const;
 
-    Matrix3<T> resizeNearest(float factor) const;
-    Matrix3<T> resizeNearest(size_t newX, size_t newY, size_t newZ) const;
-    Matrix3 resizeNearest(Vector3 newSize) const;
-
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
     Matrix3<T> subset(Vector3 start, Vector3 end);
     Matrix3<T>& paste(Matrix3<T>& matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
@@ -1209,7 +1205,6 @@ Matrix3<T> Matrix3<T>::resize(Vector3 newSize, RESIZE_MODE mode) const
 template<typename T>
 Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode) const
 {
-    if (newX == sizeX && newY == sizeY && newZ == sizeZ) return *this;
     Matrix3<T> newMat(newX, newY, newZ);
     newMat.raiseErrorOnBadCoord = false;
     float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
@@ -1250,7 +1245,18 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
             }
         }
     } else if (mode == NEAREST) {
-        newMat = this->resizeNearest(newX, newY, newZ);
+        // Apply interpolations
+        for (int x = 0; x < newX; x++) {
+            int x_rounded = std::round(x * rx);
+            for (int y = 0; y < newY; y++) {
+                int y_rounded = std::round(y * ry);
+                for (int z = 0; z < newZ; z++) {
+                    int z_rounded = std::round(z * rz);
+                    T res = this->at(x_rounded, y_rounded, z_rounded);
+                    newMat.at(x, y, z) = res;
+                }
+            }
+        }
     } else if (mode == MAX_VAL || mode == MIN_VAL) {
 //        for (auto& val : newMat)
 //            val = (mode == MAX_VAL ? std::numeric_limits<T>::min() : std::numeric_limits<T>::max());
@@ -1296,46 +1302,6 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
         }
     }
     newMat.raiseErrorOnBadCoord = this->raiseErrorOnBadCoord;
-    return newMat;
-}
-
-
-template<class T>
-Matrix3<T> Matrix3<T>::resizeNearest(float factor) const
-{
-    Vector3 newSize = this->getDimensions() * factor;
-    if (newSize.x < 1) newSize.x = 1;
-    if (newSize.y < 1) newSize.y = 1;
-    if (newSize.z < 1) newSize.z = 1;
-    return this->resizeNearest(newSize);
-}
-
-template<class T>
-Matrix3<T> Matrix3<T>::resizeNearest(Vector3 newSize) const
-{
-    return this->resizeNearest(newSize.x, newSize.y, newSize.z);
-}
-
-template<class T>
-Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) const
-{
-    if (newX == sizeX && newY == sizeY && newZ == sizeZ) return *this;
-    Matrix3<T> newMat(newX, newY, newZ);
-    newMat.raiseErrorOnBadCoord = false;
-    float rx = (this->sizeX - 1) / std::max(1.f, (float)(newX - 1)), ry = (this->sizeY - 1) / std::max(1.f, (float)(newY - 1)), rz = (this->sizeZ - 1) / std::max(1.f, (float)(newZ - 1));
-
-    // Apply interpolations
-    for (int x = 0; x < newX; x++) {
-        int x_rounded = std::round(x * rx);
-        for (int y = 0; y < newY; y++) {
-            int y_rounded = std::round(y * ry);
-            for (int z = 0; z < newZ; z++) {
-                int z_rounded = std::round(z * rz);
-                T res = this->at(x_rounded, y_rounded, z_rounded);
-                newMat.at(x, y, z) = res;
-            }
-        }
-    }
     return newMat;
 }
 
@@ -1624,7 +1590,7 @@ Vector3 Matrix3<T>::getMirrorPosition(Vector3 pos)  const
     float z = pos.z;
     x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
     y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
-    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    z = int(x < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
     return Vector3(x, y, z);
 }
 

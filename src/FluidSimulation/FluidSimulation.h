@@ -29,7 +29,6 @@ class FluidSimulation
 {
 public:
     FluidSimulation();
-    FluidSimulation(Vector3 dims);
     FluidSimulation(int sizeX, int sizeY, int sizeZ);
     virtual ~FluidSimulation() {
     }

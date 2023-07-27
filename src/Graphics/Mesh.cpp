@@ -286,7 +286,6 @@ void Mesh::computeNormals()
     this->normalsArray.clear();
     this->normalsArrayIndex.clear();
     this->normalsArrayFloat.clear();
-    if (this->displayShape != GL_TRIANGLES) return;
     this->normalsArrayIndex.resize(this->indices.size());
     for (size_t i = 0; i < this->vertexArray.size(); i+=3)
     {
@@ -494,11 +493,11 @@ void Mesh::pushToBuffer()
 #endif
     this->bufferReady = true;
 }
-void Mesh::display(float lineWeight) // GLenum shape, float lineWeight)
+void Mesh::display(GLenum shape, float lineWeight)
 {
     if (!isDisplayed)
         return;
-//    if (shape != -1) this->displayShape = shape;
+    if (shape != -1) this->displayShape = shape;
     this->update();
     if(this->shader != nullptr) {
         this->shader->use();
@@ -562,7 +561,6 @@ void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, st
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);
     }
-    this->displayShape = GL_POINTS;
     this->fromArray(positions);
     this->update();
     GlobalsGL::f()->glBindVertexArray(this->vao);
@@ -636,7 +634,7 @@ void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, st
 
         // display the mesh
         this->reorderVertices(cameraPosition);
-        this->display(/*GL_POINTS*/);
+        this->display(GL_POINTS);
     }
 }
 
@@ -664,9 +662,8 @@ void Mesh::displayAsVectorField(Matrix3<Vector3> field, Vector3 finalDimensions,
             n *= ratio;
         }
     }
-    this->displayShape = GL_LINES;
     this->fromArray(normals);
-    this->display(/*GL_LINES*/);
+    this->display(GL_LINES);
 }
 
 void Mesh::setShader(std::shared_ptr<Shader> shader)
@@ -1185,7 +1182,6 @@ void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPo
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);
     }
-    mesh.displayShape = GL_POINTS;
     mesh.fromArray(positions);
     mesh.update();
     GlobalsGL::f()->glBindVertexArray(mesh.vao);
@@ -1259,6 +1255,6 @@ void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPo
 
         // display the mesh
         mesh.reorderVertices(cameraPosition);
-        mesh.display(/*GL_POINTS*/);
+        mesh.display(GL_POINTS);
     }
 }

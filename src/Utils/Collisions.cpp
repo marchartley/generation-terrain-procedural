@@ -2,7 +2,7 @@
 
 
 // Source : http://paulbourke.net/geometry/pointlineplane/
-Vector3 Collision::intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector3 p3, Vector3 p4)
+Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& p4)
 {
     Vector3 l21 = (p1 - p2); // .normalized();
     Vector3 l13 = (p3 - p1); // .normalized();
@@ -25,7 +25,7 @@ Vector3 Collision::intersectionBetweenTwoSegments(Vector3 p1, Vector3 p2, Vector
     return p1 + (p2 - p1) * mu_a;
 }
 
-float Collision::shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vector3 p21, Vector3 p22)
+float Collision::shortestDistanceBetweenSegments(const Vector3& p11, const Vector3& p12, const Vector3& p21, const Vector3& p22)
 {
     Vector3 d1 = p12 - p11;
     Vector3 d2 = p22 - p21;
@@ -57,11 +57,11 @@ float Collision::shortestDistanceBetweenSegments(Vector3 p11, Vector3 p12, Vecto
     }
     return (c2 - c1).norm();
 }
-float Collision::tetrahedronSignedVolume(Vector3 a, Vector3 b, Vector3 c, Vector3 d) {
+float Collision::tetrahedronSignedVolume(const Vector3& a, const Vector3& b, const Vector3& c, const Vector3& d) {
     return (1.f/6.f) * (c-a).cross((b-a)).dot((d-a));
 }
 int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
-Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1, Vector3 t2, Vector3 t3, bool strict)
+Vector3 Collision::segmentToTriangleCollision(const Vector3& s1, const Vector3& s2, const Vector3& t1, const Vector3& t2, const Vector3& t3, bool strict)
 {
     // Möller–Trumbore intersection algorithm
 //    if (int(s1.x) == 10 && int(s1.z) == 10) {
@@ -99,7 +99,7 @@ Vector3 Collision::segmentToTriangleCollision(Vector3 s1, Vector3 s2, Vector3 t1
     return intersectionPoint;
 }
 
-Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vector3 planeCenter, Vector3 planeNormal, bool limitRayLength)
+Vector3 Collision::intersectionRayPlane(const Vector3& rayOrigin, const Vector3& rayDir, const Vector3& planeCenter, const Vector3& planeNormal, bool limitRayLength)
 {
     // assuming vectors are all normalized
     float denom = planeNormal.dot(rayDir);
@@ -117,13 +117,13 @@ Vector3 Collision::intersectionRayPlane(Vector3 rayOrigin, Vector3 rayDir, Vecto
     return Vector3(false);
 }
 
-Vector3 Collision::intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vector3 sphereCenter, float sphereRadius, bool returnClosestPoint)
+Vector3 Collision::intersectionRaySphere(const Vector3& rayOrigin, const Vector3& _rayDir, const Vector3& sphereCenter, float sphereRadius, bool returnClosestPoint)
 {
     // Using Joachimsthal's Equation
     // Found from https://en.wikipedia.org/wiki/Line%E2%80%93sphere_intersection
     // ad^2 + bd + c = 0 with a = ||u||^2, b = 2 * (u dot rayToCenter) and c = ||rayToCenter||^2 - r^2
     // Here ||u|| = 1
-    rayDir.normalize();
+    Vector3 rayDir = _rayDir.normalized();
     Vector3 centerToRay = rayOrigin - sphereCenter;
     //float a = 1.f;
     //float b = 2 * rayDir.dot(centerToRay);
@@ -162,16 +162,18 @@ Vector3 Collision::intersectionRaySphere(Vector3 rayOrigin, Vector3 rayDir, Vect
     }
 }
 
-bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 minAABBox, Vector3 maxAABBox)
+bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1, const Vector3& t2, const Vector3& minAABBox, const Vector3& maxAABBox)
 {
     Vector3 box = maxAABBox - minAABBox;
-    return Collision::intersectionTriangleAABBox(t0, t1, t2, (minAABBox + maxAABBox)/2, Vector3(box.x * .5f, 0, 0), Vector3(0, box.y * .5f, 0), Vector3(0, 0, box.z * .5f));
+    bool planeIntersection = Collision::intersectionAABBoxPlane(minAABBox, maxAABBox, {t0, t1, t2});
+    bool triangleIntersection = Collision::intersectionTriangleAABBox(t0, t1, t2, (minAABBox + maxAABBox)/2, Vector3(box.x * .5f, 0, 0), Vector3(0, box.y * .5f, 0), Vector3(0, 0, box.z * .5f));
+    return planeIntersection && triangleIntersection;
 }
 
-std::tuple<float, float> project(std::vector<Vector3> vertices, Vector3 axis) {
+std::tuple<float, float> project(std::vector<Vector3> vertices, const Vector3& _axis) {
     float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::min();
     float projection;
-    axis.normalize();
+    Vector3 axis = _axis.normalized();
 
     for (auto& v : vertices) {
         projection = axis.dot(v);
@@ -180,7 +182,7 @@ std::tuple<float, float> project(std::vector<Vector3> vertices, Vector3 axis) {
     }
     return std::make_tuple(proj_min, proj_max);
 }
-bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, Vector3 boxCenter, Vector3 halfSizeX, Vector3 halfSizeY, Vector3 halfSizeZ)
+bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1, const Vector3& t2, const Vector3& boxCenter, const Vector3& halfSizeX, const Vector3& halfSizeY, const Vector3& halfSizeZ)
 {
     // Taken from https://stackoverflow.com/a/17503268/9863298
 
@@ -224,7 +226,7 @@ bool Collision::intersectionTriangleAABBox(Vector3 t0, Vector3 t1, Vector3 t2, V
     return true;
 }
 
-Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxMin, Vector3 boxMax)
+Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const Vector3& boxMin, const Vector3& boxMax)
 {
 //    Vector3 box = (boxMax - boxMin);
 //    orig -= boxMin;
@@ -274,7 +276,7 @@ Vector3 Collision::intersectionRayAABBox(Vector3 orig, Vector3 dir, Vector3 boxM
 
 }
 
-bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> _polygon)
+bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polygon)
 {
     std::vector<Vector3> polygon;
     for (auto& p : _polygon)
@@ -320,7 +322,7 @@ bool Collision::pointInPolygon(Vector3 point, std::vector<Vector3> _polygon)
     return (nb_intersections % 2) == 1;
 }
 
-Vector3 Collision::projectPointOnSegment(Vector3 point, Vector3 segmentStart, Vector3 segmentEnd)
+Vector3 Collision::projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd)
 {
     Vector3 startToPoint = point - segmentStart;
     Vector3 segment = segmentEnd - segmentStart;
@@ -329,7 +331,97 @@ Vector3 Collision::projectPointOnSegment(Vector3 point, Vector3 segmentStart, Ve
     return segmentStart + t * segment;
 }
 
-Vector3 Collision::projectPointOnSphere(Vector3 point, Vector3 sphereCenter, float sphereRadius)
+Vector3 Collision::projectPointOnSphere(const Vector3& point, const Vector3& sphereCenter, float sphereRadius)
 {
     return sphereCenter + (point - sphereCenter).normalize() * sphereRadius;
+}
+
+float Collision::pointToTriangleDistanceSquared(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& point) {
+    Vector3 edge0 = p2 - p1;
+    Vector3 edge1 = p3 - p1;
+    Vector3 v0 = p1 - point;
+
+    float a = edge0.dot(edge0);
+    float b = edge0.dot(edge1);
+    float c = edge1.dot(edge1);
+    float d = edge0.dot(v0);
+    float e = edge1.dot(v0);
+
+    float det = a*c - b*b;
+    float s = b*e - c*d;
+    float t = b*d - a*e;
+
+    if (s + t < det) {
+        if (s < 0.0f) {
+            if (t < 0.0f) {
+                if (d < 0.0f) {
+                    s = std::clamp(-d/a, 0.0f, 1.0f);
+                    t = 0.0f;
+                } else {
+                    s = 0.0f;
+                    t = std::clamp(-e/c, 0.0f, 1.0f);
+                }
+            } else {
+                s = 0.0f;
+                t = std::clamp(-e/c, 0.0f, 1.0f);
+            }
+        } else if (t < 0.0f) {
+            s = std::clamp(-d/a, 0.0f, 1.0f);
+            t = 0.0f;
+        } else {
+            float invDet = 1.0f / det;
+            s *= invDet;
+            t *= invDet;
+        }
+    } else {
+        if (s < 0.0f) {
+            float tmp0 = b + d;
+            float tmp1 = c + e;
+            if (tmp1 > tmp0) {
+                float numer = tmp1 - tmp0;
+                float denom = a - 2*b + c;
+                s = std::clamp(numer/denom, 0.0f, 1.0f);
+                t = 1 - s;
+            } else {
+                t = std::clamp(-e/c, 0.0f, 1.0f);
+                s = 0.0f;
+            }
+        } else if (t < 0.0f) {
+            if (a + d > b + e) {
+                float numer = c + e - b - d;
+                float denom = a - 2*b + c;
+                s = std::clamp(numer/denom, 0.0f, 1.0f);
+                t = 1 - s;
+            } else {
+                s = std::clamp(-e/c, 0.0f, 1.0f);
+                t = 0.0f;
+            }
+        } else {
+            float numer = c + e - b - d;
+            float denom = a - 2*b + c;
+            s = std::clamp(numer/denom, 0.0f, 1.0f);
+            t = 1 - s;
+        }
+    }
+
+    Vector3 closestPointOnTriangle = p1 + s * edge0 + t * edge1;
+    Vector3 diff = closestPointOnTriangle - point;
+
+    return diff.dot(diff); // Return the squared distance
+}
+
+bool Collision::intersectionAABBoxPlane(const Vector3 &boxMin, const Vector3 &boxMax, const Triangle &triangle)
+{
+    // Get box center and half-diagonal (vector from center to corner)
+    Vector3 boxCenter = (boxMin + boxMax) / 2;
+    Vector3 boxHalfDiagonal = boxMax - boxCenter;
+
+    // Compute dot product of box half-diagonal with plane normal
+    float dot = boxHalfDiagonal.dot(triangle.normal);
+
+    // Compute signed distance from box center to plane
+    float dist = triangle.normal.dot(boxCenter) + triangle.d;
+
+    // Box intersects plane if distance to plane is within box's extent along plane normal
+    return std::abs(dist) <= std::abs(dot * 1.5f); // (very big epsilon...)
 }

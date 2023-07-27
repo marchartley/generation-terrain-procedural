@@ -57,7 +57,7 @@ public:
 
     void add(ImplicitPatch* patch);
 
-    virtual Mesh getGeometry(Vector3 reducedResolution = Vector3(false));
+    Mesh getGeometry();
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
