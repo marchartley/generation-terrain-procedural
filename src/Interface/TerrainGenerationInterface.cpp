@@ -236,7 +236,6 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                                                }}
                                           }));
     Q_EMIT this->updated();
-    Q_EMIT this->terrainUpdated();
 }
 
 void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
@@ -275,8 +274,6 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         if (!json_content.contains("actions")) {
             if (json_content.contains(ImplicitPatch::json_identifier)) {
                 this->createTerrainFromImplicitPatches(json_content);
-                Q_EMIT this->updated();
-                Q_EMIT this->terrainUpdated();
                 return;
             } else {
                 this->createTerrainFromBiomes(json_content);
@@ -328,7 +325,6 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 //    voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
 //    voxelGrid->fromCachedData();
     Q_EMIT this->updated();
-    Q_EMIT this->terrainUpdated();
 }
 
 void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_content)
@@ -539,7 +535,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
 
     layersMesh = Mesh(std::make_shared<Shader>(vShader_layers, fShader_layers, gShader_layers),
-                          true, GL_POINTS);
+                          true, GL_TRIANGLES);
     layersMesh.useIndices = false;
 
     Matrix3<int> materials; Matrix3<float> matHeights;
@@ -555,10 +551,10 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     layersMesh.update();
 
     implicitMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
-                            true, GL_POINTS);
+                            true, GL_TRIANGLES);
 
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
-                            true, GL_POINTS);
+                            true, GL_TRIANGLES);
     Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
     std::vector<Vector3> points(isoData.size());
     for (size_t i = 0; i < points.size(); i++) {
@@ -972,7 +968,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
             }
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
-            this->heightmapMesh.display(/*GL_POINTS*/);
+            this->heightmapMesh.display(GL_POINTS);
         }
     }
     else if (mapMode == VOXEL_MODE) {
@@ -1036,7 +1032,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
                 layersMesh.fromArray(layersPoints);
                 layersMesh.update();
 //            }
-            this->layersMesh.display(/*GL_POINTS*/);
+            this->layersMesh.display(GL_POINTS);
         }
     } else if (mapMode == IMPLICIT_MODE) {
         if (this->implicitTerrain == nullptr) {

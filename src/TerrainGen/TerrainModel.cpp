@@ -34,7 +34,6 @@ size_t TerrainModel::getCurrentHistoryIndex() const
 
 void TerrainModel::initFluidSim()
 {
-    return;
     float dt = 0.1f;
     float diffusion = 0.8f;
     float viscosity = 0.01f;
@@ -45,7 +44,7 @@ void TerrainModel::initFluidSim()
     Vector3 simulationSize = this->getDimensions() / fluidSimRescale;
     *properties->simulations[FluidSimType::FLIP] = FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, 1, .2f, 20000, dt);
     *properties->simulations[FluidSimType::SPH] = SPHSimulation();
-    *properties->simulations[FluidSimType::LBM] = LBMFluidSimulation(false);
+    *properties->simulations[FluidSimType::LBM] = LBMFluidSimulation(true);
 //    *properties->simulations[FluidSimType::SHALLOW] = ShallowWaterSimulation();
     *properties->simulations[FluidSimType::STABLE] = StableFluidsSimulation(simulationSize.x, simulationSize.y, simulationSize.z, dt, diffusion, viscosity, fluidSolverIterations);
     *properties->simulations[FluidSimType::WARP] = WarpedFluidSimulation(simulationSize.x, simulationSize.y, simulationSize.z);
@@ -189,7 +188,7 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
             /***
              * Implicit affect flowfield part :
              ***/
-            /*for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
+            for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
                 auto& curve = allTunnelsCurves[iTunnel];
                 Vector3 inputFlow = simulation->getVelocity(curve.points.front());
                 float inputStrength = inputFlow.norm();
@@ -217,7 +216,7 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
                     }
                 }
             }
-            */
+
             /***
              * End Implicit affect flowfield
              ***/

@@ -14,23 +14,12 @@ void AbstractFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap>
     const char* vNoShader = "src/Shaders/no_shader.vert";
     const char* fNoShader = "src/Shaders/no_shader.frag";
 
-    this->particlesMesh = Mesh(std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader), true, GL_POINTS);
+    this->particlesMesh = Mesh(std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader));
     this->particlesMesh.useIndices = false;
-    this->vectorsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->vectorsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->vectorsMesh.useIndices = false;
     this->boundariesMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->boundariesMesh.useIndices = false;
-
-    for (int x = 0; x < _simulation->dimensions.x; x++) {
-        for (int y = 0; y < _simulation->dimensions.y; y++) {
-            for (int z = 0; z < _simulation->dimensions.z; z++) {
-                if (x == 0)
-                    this->_simulation->setVelocity(0, y, z, Vector3(.1f, 0.f, 0.f));
-                else
-                    this->_simulation->setVelocity(0, y, z, Vector3());
-            }
-        }
-    }
 
     this->updateBoundariesMesh();
     this->updateSimulationMeshes();
@@ -47,21 +36,21 @@ void AbstractFluidSimulationInterface::display(Vector3 camPos)
 
     if (displayBoundaries) {
         boundariesMesh.shader->setVector("color", std::vector<float>{0.f, 1.f, 0.f, .4f});
-        boundariesMesh.display();
+        boundariesMesh.display(GL_TRIANGLES);
         boundariesMesh.shader->setVector("color", std::vector<float>{0.f, 0.f, 0.f, .4f});
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        boundariesMesh.display();
+        boundariesMesh.display(GL_TRIANGLES);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     if (displayParticles) {
         particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
         particlesMesh.reorderVertices(camPos);
-        particlesMesh.display(/*GL_POINTS*/);
+        particlesMesh.display(GL_POINTS);
     }
     if (displayVectors) {
         vectorsMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .8f});
 //        vectorsMesh.reorderLines(camPos);
-        vectorsMesh.display(/*GL_LINES,*/ 3);
+        vectorsMesh.display(GL_LINES, 3);
     }
 }
 
@@ -127,19 +116,7 @@ void AbstractFluidSimulationInterface::hide()
 
 void AbstractFluidSimulationInterface::afterTerrainUpdated()
 {
-    for (int x = 0; x < _simulation->dimensions.x; x++) {
-        for (int y = 0; y < _simulation->dimensions.y; y++) {
-            for (int z = 0; z < _simulation->dimensions.z; z++) {
-                if (x == 0)
-                    this->_simulation->setVelocity(0, y, z, Vector3(.1f, 0, -.1f));
-                else
-                    this->_simulation->setVelocity(0, y, z, Vector3());
-            }
-        }
-    }
-
     this->updateBoundariesMesh();
-    this->updateSimulationMeshes();
 }
 
 void AbstractFluidSimulationInterface::updateParticlesMesh()
@@ -163,7 +140,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
         }
     }
 
-//    _simulation->setObstacles(triangles);
+    _simulation->setObstacles(triangles);
     _simulation->setObstacles(values.binarize());
 
     std::vector<Vector3> allVertices;

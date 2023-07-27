@@ -218,14 +218,14 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
 
-Mesh ImplicitPatch::getGeometry(Vector3 reducedResolution)
+Mesh ImplicitPatch::getGeometry()
 {
-    Vector3 dimensions = (reducedResolution.isValid() ? reducedResolution : this->getDimensions());
-//    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
-//    layer.add(this);
+    Vector3 dimensions = this->getDimensions();
+    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
+    layer.add(this);
     VoxelGrid voxels;
-    voxels.fromImplicit(this);
-    return voxels.getGeometry(dimensions);
+    voxels.fromLayerBased(layer);
+    return voxels.getGeometry();
 }
 
 Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)

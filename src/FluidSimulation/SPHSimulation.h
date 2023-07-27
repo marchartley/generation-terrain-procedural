@@ -17,7 +17,7 @@ public:
     virtual ~SPHSimulation();
 
     std::vector<Particle> particles;
-    Vector3 dimensions;
+//    Vector3 dimensions;
     KDTree* tree = nullptr;
 
     int nbParticles;

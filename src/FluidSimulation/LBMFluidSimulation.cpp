@@ -1,7 +1,7 @@
 #include "LBMFluidSimulation.h"
 
 LBMFluidSimulation::LBMFluidSimulation(bool uses3D)
-    : FluidSimulation((uses3D ? Vector3(30, 30, 50) : Vector3(100, 100, 1))), uses3D(uses3D)
+    : FluidSimulation(30, 30, (uses3D ? 50 : 1)), uses3D(uses3D)
 {
     c = (uses3D ? c3D : c2D);
 //    Matrix3<float> heights(dimensions);
@@ -12,11 +12,11 @@ LBMFluidSimulation::LBMFluidSimulation(bool uses3D)
     f.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     f_next.raiseErrorOnBadCoord = false;
     f_next.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-//    for (int y = 0; y < f.sizeY; y++) {
-//        for (int z = 0; z < f.sizeZ; z++) {
-//            this->setVelocity(0, y, z, Vector3(.1f, 0, -.1f));
-//        }
-//    }
+    for (int y = 0; y < f.sizeY; y++) {
+        for (int z = 0; z < f.sizeZ; z++) {
+            this->setVelocity(0, y, z, Vector3(.1f, 0, -.1f));
+        }
+    }
 }
 
 
@@ -151,7 +151,7 @@ void LBMFluidSimulation::stream() {
 }
 void LBMFluidSimulation::step() {
     currentStep++;
-    float tau = 1000.f;
+    float tau = 10000.f;
     // Compute the macroscopic velocity and the equilibrium distribution function at each cell
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < f.sizeX; x++) {
@@ -172,11 +172,12 @@ void LBMFluidSimulation::step() {
     }
     f = f_next;
 
+
     // Handle interactions with obstacles
     handleCollisions();
-
     // Perform the streaming step
     stream();
+
 
     float minVal = std::numeric_limits<float>::max(), maxVal = std::numeric_limits<float>::min();
     for (int i = 0; i < f.size(); i++) {
@@ -266,10 +267,10 @@ void LBMFluidSimulation::addObstacles(const Matrix3<float> &obstacles)
         addedObstacleGrid = Matrix3<float>(obstacles.sizeX, obstacles.sizeY);
         for (int x = 0; x < obstacles.sizeX; x++) {
             for (int y = 0; y < obstacles.sizeY; y++) {
-                int height = 0;
+                float height = 0;
                 while(obstacles.at(x, y, obstacles.sizeZ - height) <= 0 && height < obstacles.sizeZ)
                     height++;
-                addedObstacleGrid.at(x, y) = height;
+                addedObstacleGrid.at(x, y) = height / float(obstacles.sizeZ);
             }
         }
     }

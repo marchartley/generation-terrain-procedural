@@ -7,12 +7,6 @@ FluidSimulation::FluidSimulation()
 
 }
 
-FluidSimulation::FluidSimulation(Vector3 dims)
-    : FluidSimulation(dims.x, dims.y, dims.z)
-{
-
-}
-
 FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ)
     : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(Matrix3<int>(sizeX, sizeY, sizeZ)), obstacleGradient(Matrix3<Vector3>(sizeX, sizeY, sizeZ))
 {
@@ -58,9 +52,10 @@ void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &tri
     // Insert triangles into Octree
     for (size_t iTriangle = 0; iTriangle < triangles.size(); iTriangle++) {
         const auto& triangle = triangles[iTriangle];
-        for (const auto& vertex : triangle) {
-            obstacleTrianglesOctree->insert(vertex, iTriangle);
-        }
+        obstacleTrianglesOctree->insert(triangle[0], triangle[1], triangle[2], iTriangle);
+//        for (const auto& vertex : triangle) {
+//            obstacleTrianglesOctree->insert(vertex, iTriangle);
+//        }
     }
 }
 

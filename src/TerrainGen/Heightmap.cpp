@@ -600,17 +600,15 @@ Vector3 Heightmap::findSurfaceBetween(Vector3 start, Vector3 end)
 
 }
 
-Mesh Heightmap::getGeometry(Vector3 reducedResolution)
+Mesh Heightmap::getGeometry()
 {
     std::vector<Vector3> vertices;
-    Vector3 initialDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
-    Vector3 dimensions = (reducedResolution.isValid() ? (reducedResolution.xy() + Vector3(0, 0, 1)) : initialDimensions);
-    auto heights = this->getHeights().resize(dimensions);
-    vertices.resize(6 * (heights.sizeX - 1) * (heights.sizeY - 1) );
+    vertices.resize(6 * (this->getSizeX() - 1) * (this->getSizeY() - 1) );
+    auto heights = this->getHeights();
 
     size_t i = 0;
-    for (int x = 0; x < heights.sizeX - 1; x++) {
-        for (int y = 0; y < heights.sizeY - 1; y++) {
+    for (int x = 0; x < this->getSizeX() - 1; x++) {
+        for (int y = 0; y < this->getSizeY() - 1; y++) {
             vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
             vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
             vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
@@ -625,7 +623,6 @@ Mesh Heightmap::getGeometry(Vector3 reducedResolution)
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
-    m.scale(initialDimensions / dimensions);
     return m;
 }
 

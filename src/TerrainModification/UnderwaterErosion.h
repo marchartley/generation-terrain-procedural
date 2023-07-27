@@ -51,7 +51,7 @@ public:
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
     std::tuple<std::vector<BSpline>, int, int> Apply(EROSION_APPLIED applyOn,
-                                                    float& preparationTime, float& particleSimulationTime, float& terrainModifTime,
+                                                    float& particleSimulationTime, float& terrainModifTime,
                                                     Vector3 startingPoint = Vector3(false),
                                                     Vector3 originalDirection = Vector3(false),
                                                     float randomnessFactor = 0.05,

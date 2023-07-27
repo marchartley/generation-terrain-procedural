@@ -155,7 +155,7 @@ void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& v
 }
 
 std::tuple<std::vector<BSpline>, int, int>
-UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float &particleSimulationTime, float &terrainModifTime, Vector3 startingPoint, Vector3 originalDirection, float randomnessFactor, bool fallFromSky,
+UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime, float &terrainModifTime, Vector3 startingPoint, Vector3 originalDirection, float randomnessFactor, bool fallFromSky,
                          float gravity,
                          float bouncingCoefficient,
                          float bounciness,
@@ -185,8 +185,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
                          float initialCapacity,
                          FluidSimType fluidSimType)
 {
-    auto startingPrepTime = std::chrono::system_clock::now();
-
     TerrainModel *terrain = nullptr;
     if (applyOn == EROSION_APPLIED::DENSITY_VOXELS) {
         terrain = voxelGrid;
@@ -205,25 +203,11 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
 
     std::vector<std::vector<Vector3>> triangles;
     Octree* boundariesTree;
-    float timeOctree;
-//   timeOctree = timeIt([&]() {
-//        triangles = terrain->getGeometry().getTriangles();
-//        boundariesTree = new Octree(triangles);
-//        delete boundariesTree;
-//    });
-//    std::cout << timeOctree << "ms for " << triangles.size() << " triangles" << std::endl;
-    timeOctree = timeIt([&]() {
-        triangles = terrain->getGeometry(Vector3(30, 30, 30)).getTriangles();
+    float octreeTime = timeIt([&]() {
+        triangles = terrain->getGeometry().getTriangles();
         boundariesTree = new Octree(triangles);
-        delete boundariesTree;
     });
-//    std::cout << timeOctree << "ms for " << triangles.size() << " triangles" << std::endl;
-//    timeOctree = timeIt([&]() {
-//        triangles = terrain->getGeometry(Vector3(10, 10, 10)).getTriangles();
-//        boundariesTree = new Octree(triangles);
-//        delete boundariesTree;
-//    });
-    std::cout << timeOctree << "ms for " << triangles.size() << " triangles" << std::endl;
+    std::cout << "Time for computing the octree of " << triangles.size() << " tris : " << octreeTime << "ms." << std::endl;
 
     Vector3 terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
     float starting_distance = pow(terrainSize.maxComp()/2.f, 2);
@@ -272,10 +256,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
     for (auto& n : normals)
         n.normalize();
 
-    Matrix3<float> modifications(terrain->getDimensions());
+    Matrix3<float> modifications(initialMapValues.getDimensions());
 
-//    Matrix3<Vector3> gravityfieldValues = Matrix3<Vector3>(voxelGrid->getDimensions(), Vector3(0, 0, -gravity));
-    Matrix3<Vector3> gravityfieldValues = Matrix3<Vector3>(1, 1, 1, Vector3(0, 0, -gravity));
+    Matrix3<Vector3> gravityfieldValues = Matrix3<Vector3>(voxelGrid->getDimensions(), Vector3(0, 0, -gravity));
     gravityfieldValues.raiseErrorOnBadCoord = false;
     gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
 
@@ -318,8 +301,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
     RockErosion::createPrecomputedAttackMask(particleSize * 2);
     RockErosion::createPrecomputedAttackMask2D(particleSize);
     RockErosion::createPrecomputedAttackMask2D(particleSize * 2);
-
-    auto endingPrepTime = std::chrono::system_clock::now();
 
     auto startTime = std::chrono::system_clock::now();
 
@@ -464,15 +445,15 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
                 particle.dir += flowfield * flowfieldInfluence * dt;
                 if (Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy()))
                     hasBeenAtLeastOnceInside = true;
-//                auto [collisionPoint, normal] = boundariesTree.getIntersectionAndNormal(particle.pos, nextPos, triangles);
-//                if (collisionPoint.isValid()) {
-                if (terrain->checkIsInGround(nextPos)) {
+                auto [collisionPoint, normal] = boundariesTree->getIntersectionAndNormal(particle.pos, nextPos, triangles);
+                if (collisionPoint.isValid()) {
+//                if (terrain->checkIsInGround(nextPos)) {
                     justHit = false;
-                    Vector3 normal;
-                    if (asHeightmap)
-                        normal = normals.at(nextPos.xy());
-                    else
-                        normal = normals.at(nextPos);
+//                    Vector3 normal;
+//                    if (asHeightmap)
+//                        normal = normals.at(nextPos.xy());
+//                    else
+//                        normal = normals.at(nextPos);
 
                     float resistance = 0.f;
 //                    if (densityUsed == DENSITY_TYPE::DENSITY_IMAGE)
@@ -512,7 +493,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
                         bounce -= normal * bounce.dot(normal) * (1.f - bounciness);
                         particle.dir = bounce * bouncingCoefficient;
 
-//                        particle.pos = collisionPoint;
+                        particle.pos = collisionPoint;
 //                        if (terrain->checkIsInGround(particle.pos + particle.dir))
 //                            particle.dir *= -1.f;
                     }
@@ -655,7 +636,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float& preparationTime, float 
     }
     auto endModificationTime = std::chrono::system_clock::now();
 
-    preparationTime = std::chrono::duration_cast<std::chrono::milliseconds>(endingPrepTime - startingPrepTime).count();
     particleSimulationTime = std::chrono::duration_cast<std::chrono::milliseconds>(endParticleTime - startTime).count();
     terrainModifTime = std::chrono::duration_cast<std::chrono::milliseconds>(endModificationTime - endParticleTime).count();
     return {tunnels, positions, erosions};

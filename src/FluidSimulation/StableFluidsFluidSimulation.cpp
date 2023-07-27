@@ -480,12 +480,12 @@ void StableFluidsSimulation::velocityStep()
     this->diffuseVelocity(); // Removed for now (considering viscosity = 0)
 //    velocity_old = velocity; // Replaced by a simple affectation
 
-//    this->projectVelocity();
+    this->projectVelocity();
 
-//    swapArrays(this->velocity_old, this->velocity);
-//    this->advectVelocity();
-//    this->projectVelocity();
-//    this->setVelocityBounds();
+    swapArrays(this->velocity_old, this->velocity);
+    this->advectVelocity();
+    this->projectVelocity();
+    this->setVelocityBounds();
 }
 
 void StableFluidsSimulation::diffuseVelocity()

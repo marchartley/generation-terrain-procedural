@@ -326,9 +326,6 @@ ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool u
     : state(state), useManipFrame(useTheManipulatedFrame), shape(radius, getPosition(), 10, 10), radius(radius)
 {
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
-    this->translationMeshes = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true, GL_LINES);
-    this->rotationMeshes = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true, GL_LINES);
-
     this->move(pos);
     this->stillOnInitialState = false; // true;
     this->prevPosition = pos;
@@ -526,19 +523,19 @@ void ControlPoint::display()
             if (this->allowedTranslations[X]) {
                 this->translationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
                 this->translationMeshes.fromArray({this->getPosition() - Vector3(1.0, 0.0, 0.0) * arrowSize, this->getPosition() + Vector3(1.0, 0.0, 0.0) * arrowSize});
-                this->translationMeshes.display(/*GL_LINES,*/ (isApplyingTranslation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
             }
             // Display Y (green)
             if (this->allowedTranslations[X]) {
                 this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
                 this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 1.0, 0.0) * arrowSize, this->getPosition() + Vector3(0.0, 1.0, 0.0) * arrowSize});
-                this->translationMeshes.display(/*GL_LINES,*/ (isApplyingTranslation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
             }
             // Display Z (blue)
             if (this->allowedTranslations[X]) {
                 this->translationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
                 this->translationMeshes.fromArray({this->getPosition() - Vector3(0.0, 0.0, 1.0) * arrowSize, this->getPosition() + Vector3(0.0, 0.0, 1.0) * arrowSize});
-                this->translationMeshes.display(/*GL_LINES,*/ (isApplyingTranslation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->translationMeshes.display(GL_LINES, (isApplyingTranslation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
             }
         } else if (this->mesh.shader != nullptr ){
             this->translationMeshes.shader = std::make_shared<Shader>(*this->mesh.shader);
@@ -548,7 +545,7 @@ void ControlPoint::display()
             if (this->allowedRotations[X]) {
                 this->rotationMeshes.shader->setVector("color", std::vector<float>({1.0, 0.0, 0.0, 1.0}));
                 this->rotationMeshes.fromArray(computeCircle(X));
-                this->rotationMeshes.display(/*GL_LINES,*/ (isApplyingRotation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == X ? controlAxisSizeSelected : controlAxisSizeUnselected));
                 if (isApplyingRotation && currentAxis == X) {
 //                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
                     this->rotationHelperSphere.display();
@@ -558,7 +555,7 @@ void ControlPoint::display()
             if (this->allowedRotations[Y]) {
                 this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 1.0, 0.0, 1.0}));
                 this->rotationMeshes.fromArray(computeCircle(Y));
-                this->rotationMeshes.display(/*GL_LINES,*/ (isApplyingRotation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == Y ? controlAxisSizeSelected : controlAxisSizeUnselected));
                 if (isApplyingRotation && currentAxis == Y) {
 //                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
                     this->rotationHelperSphere.display();
@@ -568,7 +565,7 @@ void ControlPoint::display()
             if (this->allowedRotations[Z]) {
                 this->rotationMeshes.shader->setVector("color", std::vector<float>({0.0, 0.0, 1.0, 1.0}));
                 this->rotationMeshes.fromArray(computeCircle(Z));
-                this->rotationMeshes.display(/*GL_LINES,*/ (isApplyingRotation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
+                this->rotationMeshes.display(GL_LINES, (isApplyingRotation && currentAxis == Z ? controlAxisSizeSelected : controlAxisSizeUnselected));
                 if (isApplyingRotation && currentAxis == Z) {
 //                    this->rotationHelperSphere.translate(Vector3(1, 0, 0));
                     this->rotationHelperSphere.display();

@@ -35,7 +35,7 @@ public:
 
     void update();
     void pushToBuffer();
-    void display(float lineWeight = -1.f); //GLenum shape = -1, float lineWeight = 1);
+    void display(GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
 
     void displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
@@ -77,7 +77,7 @@ public:
     unsigned int bufferID;
     bool bufferReady = false;
 
-    bool useIndices = false;
+    bool useIndices = true;
 
     bool needToUpdatePositions = true;
     bool needToUpdateTextures = true;

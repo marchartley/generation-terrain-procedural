@@ -7,7 +7,6 @@
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : ActionInterface("space_colonization", parent)
 {
     this->startingPoint = std::make_unique<ControlPoint>();
-    this->pathsMeshes.displayShape = GL_LINES;
 //    this->
 }
 
@@ -43,7 +42,7 @@ void SpaceColonizationInterface::display(Vector3 camPos)
     this->startingPoint->display();
     if (this->pathsMeshes.shader != nullptr)
         this->pathsMeshes.shader->setVector("color", std::vector<float>({255/255.f, 0/255.f, 0/255.f, 1.f}));
-    this->pathsMeshes.display(/*GL_LINES,*/ 5.f);
+    this->pathsMeshes.display(GL_LINES, 5.f);
 }
 
 void SpaceColonizationInterface::replay(nlohmann::json action)

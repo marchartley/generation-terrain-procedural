@@ -95,6 +95,7 @@ SOURCES += \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/Octree.cpp \
     src/DataStructure/Tree.cpp \
+    src/DataStructure/Triangle.cpp \
         src/DataStructure/Vector3.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
@@ -225,6 +226,7 @@ HEADERS += \
     src/DataStructure/Matrix3.h \
     src/DataStructure/Octree.h \
     src/DataStructure/Tree.h \
+    src/DataStructure/Triangle.h \
     src/DataStructure/Vector3.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \

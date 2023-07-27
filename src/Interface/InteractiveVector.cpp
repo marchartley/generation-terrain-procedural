@@ -20,8 +20,7 @@ InteractiveVector::InteractiveVector(Vector3 start, Vector3 end)
     this->startingControlPoint->allowAllAxisRotations(true);
     this->startingControlPoint->allowAllAxisTranslation(true);
     this->endingControlPoint->allowAllAxisTranslation(true);
-    this->arrowMesh.displayShape = GL_LINES;
-    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
+//    this->arrowMesh.shareShader(this->startingControlPoint->mesh);
 
     QObject::connect(this->startingControlPoint.get(), &ControlPoint::modified, this, [=](){
         Q_EMIT this->modified(this->getResultingVector());
@@ -38,7 +37,7 @@ void InteractiveVector::display()
     this->startingControlPoint->display();
     this->endingControlPoint->display();
     this->arrowMesh.fromArray(this->getArrowPath());
-    this->arrowMesh.display(/*GL_LINES,*/ 3.f);
+    this->arrowMesh.display(GL_LINES, 3.f);
 }
 
 void InteractiveVector::setPosition(Vector3 start)

@@ -20,7 +20,7 @@ public:
 
     virtual void saveMap(std::string filename) = 0;
     virtual void retrieveMap(std::string filename) = 0;
-    virtual Mesh getGeometry(Vector3 reducedResolution = Vector3(false)) = 0;
+    virtual Mesh getGeometry() = 0;
 
     virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false)) = 0;
 
@@ -55,8 +55,8 @@ public:
 
     virtual Matrix3<Vector3> getFlowfield(FluidSimType simu = LBM);
 //    virtual Matrix3<Vector3> getFlowfield(size_t flowIndex);
-    virtual void computeFlowfield(FluidSimType simu = STABLE);
-    virtual void computeMultipleFlowfields(FluidSimType simu = STABLE, int steps = 30, TerrainModel* implicit = nullptr);
+    virtual void computeFlowfield(FluidSimType simu = LBM);
+    virtual void computeMultipleFlowfields(FluidSimType simu = LBM, int steps = 30, TerrainModel* implicit = nullptr);
 
     Matrix3<float>& getEnvironmentalDensities();
     void updateEnvironmentalDensities(float waterLevel);
