@@ -20,7 +20,7 @@ public:
 
     virtual void saveMap(std::string filename) = 0;
     virtual void retrieveMap(std::string filename) = 0;
-    virtual Mesh getGeometry() = 0;
+    virtual Mesh getGeometry(Vector3 dimensions = Vector3(false)) = 0;
 
     virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false)) = 0;
 

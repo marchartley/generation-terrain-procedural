@@ -94,6 +94,8 @@ SOURCES += \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/Octree.cpp \
+    src/DataStructure/Particle.cpp \
+    src/DataStructure/SpacePartitioning.cpp \
     src/DataStructure/Tree.cpp \
     src/DataStructure/Triangle.cpp \
         src/DataStructure/Vector3.cpp \
@@ -225,6 +227,8 @@ HEADERS += \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/Octree.h \
+    src/DataStructure/Particle.h \
+    src/DataStructure/SpacePartitioning.h \
     src/DataStructure/Tree.h \
     src/DataStructure/Triangle.h \
     src/DataStructure/Vector3.h \

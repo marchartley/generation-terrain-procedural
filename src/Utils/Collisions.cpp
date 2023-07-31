@@ -164,10 +164,13 @@ Vector3 Collision::intersectionRaySphere(const Vector3& rayOrigin, const Vector3
 
 bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1, const Vector3& t2, const Vector3& minAABBox, const Vector3& maxAABBox)
 {
-    Vector3 box = maxAABBox - minAABBox;
-    bool planeIntersection = Collision::intersectionAABBoxPlane(minAABBox, maxAABBox, {t0, t1, t2});
-    bool triangleIntersection = Collision::intersectionTriangleAABBox(t0, t1, t2, (minAABBox + maxAABBox)/2, Vector3(box.x * .5f, 0, 0), Vector3(0, box.y * .5f, 0), Vector3(0, 0, box.z * .5f));
-    return planeIntersection && triangleIntersection;
+//    Vector3 box = maxAABBox - minAABBox;
+    AABBox box(minAABBox - Vector3(1, 1, 1), maxAABBox + Vector3(1, 1, 1));
+    Vector3 halfDims = box.dimensions() * .5f;
+    return Collision::intersectionAABBoxPlane(box.min(), box.max(), {t0, t1, t2}) && Collision::intersectionTriangleAABBox(t0, t1, t2, box.center(), Vector3(halfDims.x, 0, 0), Vector3(0, halfDims.y, 0), Vector3(0, 0, halfDims.z));
+//    bool planeIntersection = Collision::intersectionAABBoxPlane(box.min(), box.max(), {t0, t1, t2});
+//    bool triangleIntersection = Collision::intersectionTriangleAABBox(t0, t1, t2, box.center(), Vector3(halfDims.x, 0, 0), Vector3(0, halfDims.y, 0), Vector3(0, 0, halfDims.z));
+//    return planeIntersection && triangleIntersection;
 }
 
 std::tuple<float, float> project(std::vector<Vector3> vertices, const Vector3& _axis) {
@@ -417,11 +420,14 @@ bool Collision::intersectionAABBoxPlane(const Vector3 &boxMin, const Vector3 &bo
     Vector3 boxHalfDiagonal = boxMax - boxCenter;
 
     // Compute dot product of box half-diagonal with plane normal
-    float dot = boxHalfDiagonal.dot(triangle.normal);
+//    float dot = boxHalfDiagonal.dot(triangle.normal);
 
     // Compute signed distance from box center to plane
-    float dist = triangle.normal.dot(boxCenter) + triangle.d;
+    float dist = triangle.normal.dot(boxCenter) - triangle.d;
+    // Compute box's extent along plane normal
+    Vector3 absNormal(std::abs(triangle.normal.x), std::abs(triangle.normal.y), std::abs(triangle.normal.z));
+    float extent = boxHalfDiagonal.dot(absNormal);
 
-    // Box intersects plane if distance to plane is within box's extent along plane normal
-    return std::abs(dist) <= std::abs(dot * 1.5f); // (very big epsilon...)
+    // Box intersects plane if absolute distance to plane is within box's extent along plane normal
+    return std::abs(dist) <= extent;
 }

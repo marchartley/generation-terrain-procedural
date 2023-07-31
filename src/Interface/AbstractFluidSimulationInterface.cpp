@@ -131,8 +131,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
 
     Matrix3<float> bigValues = voxelGrid->getVoxelValues();
     Matrix3<float> values = bigValues.resize(20, 20, 10);
-    Mesh m;
-    auto triangles = m.applyMarchingCubes(values).getTriangles();
+    auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
         for (auto& p : tri) {
             p /= values.getDimensions();
@@ -143,9 +142,13 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     _simulation->setObstacles(triangles);
     _simulation->setObstacles(values.binarize());
 
+    auto usedTrianglesIndices = _simulation->obstacleTriangleTree.getAllStoredTrianglesIndices();
+//    std::vector<size_t> usedTrianglesIndices(triangles.size());
+//    for (size_t i = 0; i < usedTrianglesIndices.size(); i++)
+//        usedTrianglesIndices[i] = i;
     std::vector<Vector3> allVertices;
-    allVertices.reserve(triangles.size() * 3);
-    for (size_t iTriangle = 0; iTriangle < triangles.size(); iTriangle++) {
+    allVertices.reserve(usedTrianglesIndices.size() * 3);
+    for (auto iTriangle : usedTrianglesIndices) {
         const auto& triangle = triangles[iTriangle];
         for (const auto& vertex : triangle) {
             allVertices.push_back(vertex * (finalDimensions / _simulation->dimensions));

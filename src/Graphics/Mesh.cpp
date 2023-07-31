@@ -413,7 +413,7 @@ Mesh Mesh::extractGeometryFromShaders(Matrix3<float>& values)
     GlobalsGL::f()->glGetBufferSubData(GL_TRANSFORM_FEEDBACK_BUFFER, 0, sizeOfEdgeFeedback*dataSize, data);
 //    GlobalsGL::f()->glGetNamedBufferSubData(feedback_buffer, 0, dataSize, data);
     */
-    Mesh copy = this->applyMarchingCubes(values);
+    Mesh copy = Mesh::applyMarchingCubes(values);
     std::ofstream off;
     off.open("test.off");
     off << copy.toOFF();
@@ -884,7 +884,7 @@ std::string Mesh::toSTL()
     myfile.close();*/
 }
 
-Mesh Mesh::applyMarchingCubes(Matrix3<float>& values)
+Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
 {
     auto triTable = MarchingCubes::triangleTable;
     auto edges = MarchingCubes::cubeEdges;
@@ -1057,7 +1057,8 @@ Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
     AABBox myDims(this->vertexArray);
     Matrix3<int> res(dimensions);
 
-    BVHTree tree(this->getTriangles());
+    BVHTree tree;
+    tree.build(Triangle::vectorsToTriangles(this->getTriangles()));
 
     int dimX = dimensions.x;
     int dimY = dimensions.y;
@@ -1069,7 +1070,7 @@ Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
             for (int z = 0; z < dimZ; z++) {
                 Vector3 pos = Vector3(x, y, z)/(dimensions / myDims.dimensions()) + myDims.min();
                 Vector3 ray = Vector3(pos.x, pos.y + myDims.dimensions().y + 1, pos.z);
-                res.at(x, y, z) = (tree.query(pos, ray).size() % 2 == 0 ? 0 : 1);
+                res.at(x, y, z) = (tree.getIntersection(pos, ray).isValid() ? 0 : 1); //(tree.query(pos, ray).size() % 2 == 0 ? 0 : 1);
             }
         }
     }
@@ -1081,10 +1082,13 @@ Matrix3<int> Mesh::voxelizeSurface(Vector3 dimensions) const
     AABBox myDims(this->vertexArray);
     Matrix3<int> res(dimensions, -1.f);
     auto triangles = this->getTriangles();
-    int nbTris = triangles.size();
 
-    Octree tree(myDims.center(), myDims.dimensions() * .5f);
-    tree.insert(triangles);
+    for (auto& t : triangles)
+        for (auto& p : t)
+            p = (p + Vector3(.5f, .5f, .5f)) * dimensions;
+
+    BVHTree tree;
+    tree.build(Triangle::vectorsToTriangles(triangles));
 
     int dimX = dimensions.x;
     int dimY = dimensions.y;
@@ -1095,17 +1099,8 @@ Matrix3<int> Mesh::voxelizeSurface(Vector3 dimensions) const
         for (int y = 0; y < dimY; y++) {
             for (int z = 0; z < dimZ; z++) {
                 Vector3 pos = Vector3(x, y, z);
-                std::vector<OctreeNodeData> possibleTriangles = tree.queryRange(pos, pos + Vector3(1, 1, 1));
-                for (auto& data : possibleTriangles) {
-                    auto triangle = triangles[data.index];
-//                for (int i = 0; i < nbTris; i++) {
-//                    auto triangle = triangles[i];
-
-                    if (Collision::intersectionTriangleAABBox(triangle[0], triangle[1], triangle[2], pos, pos + Vector3(1, 1, 1))) {
-                        res.at(pos) = 1.f;
-                        break;
-                    }
-                }
+                if (tree.getIntersection(pos, pos + Vector3(1, 1, 1)).isValid())
+                    res.at(pos) = 1.f;
             }
         }
     }

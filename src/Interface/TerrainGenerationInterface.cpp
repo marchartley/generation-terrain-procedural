@@ -288,6 +288,19 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     } else if (ext == "STL") {
         Mesh m;
         m.fromStl(filename);
+        if (m.isWatertight())
+            voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
+        else
+            voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
+        voxelGrid->fromCachedData();
+        heightmap->fromVoxelGrid(*voxelGrid);
+        layerGrid->fromVoxelGrid(*voxelGrid);
+    } else if (ext == "FBX") {
+        Mesh m;
+        if (m.isWatertight())
+            voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
+        else
+            voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
         voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
         voxelGrid->fromCachedData();
         heightmap->fromVoxelGrid(*voxelGrid);

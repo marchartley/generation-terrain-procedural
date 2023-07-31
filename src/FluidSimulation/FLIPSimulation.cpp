@@ -203,8 +203,19 @@ void FLIPSimulation::handleCollisions() {
 
         Vector3 startPos = (useVelocityForCollisionDetection ? pos : savedState[i].position);
         Vector3 endPos = (useVelocityForCollisionDetection ? pos + vel.normalized() : pos);
-        Vector3 diff = endPos - startPos;
-        std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(startPos - diff * 3.f, endPos + diff * 3.f);
+//        Vector3 diff = endPos - startPos;
+        auto [collisionPoint, collisionNormal] = obstacleTriangleTree.getIntersectionAndNormal(startPos, endPos);
+        if (collisionPoint.isValid()) {
+            if (useVelocityForCollisionDetection) {
+                vel = vel.normalized().reflexion(collisionNormal) * vel.norm(); //collisionPoint - startPos;
+                if (vel.dot(collisionNormal) < 0)
+                    vel *= -1.f;
+                pos = collisionPoint + vel;
+            } else {
+                pos = collisionPoint + (startPos - collisionPoint) * .1f;
+            }
+        }
+        /*std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(startPos - diff * 3.f, endPos + diff * 3.f);
         // Check for intersections with nearby triangles
         for (auto& triangleData : nearbyTriangles) {
             auto& triangle = this->triangles[triangleData.index];
@@ -221,7 +232,7 @@ void FLIPSimulation::handleCollisions() {
                 }
                 break;
             }
-        }
+        }*/
     }
 }
 

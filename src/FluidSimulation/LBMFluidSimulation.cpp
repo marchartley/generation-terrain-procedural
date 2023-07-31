@@ -57,7 +57,36 @@ void LBMFluidSimulation::handleCollisions() {
                     if (obstacleGrid.at(segmentStart)) {
                         for (int i = 0; i < c.size(); i++)
                             f.at(segmentStart)[i] = 0;
-                    } else if (obstacleTrianglesOctree) {
+                    } else if (obstacleTriangleTree.root) {
+                        for (int i = 0; i < c.size(); i++) {
+                            Vector3 segmentEnd = segmentStart + c[i];
+                            auto [intersection, normal] = obstacleTriangleTree.getIntersectionAndNormal(segmentStart, segmentEnd);
+                            if (intersection.isValid()) {
+        //                        f.at(x, y, z)[i] = 0.f;
+
+                                // Reflect the velocity direction
+                                Vector3 reflected = c[i] - 2 * (c[i].dot(normal)) * normal;
+
+                                // Find the closest lattice direction to the reflected direction
+                                int closest = 0;
+                                float minAngle = std::numeric_limits<float>::max();
+                                for (int j = 0; j < c.size(); j++) {
+                                    float angle = std::acos(c[j].normalize().dot(reflected.normalize()));
+                                    if (angle < minAngle) {
+                                        minAngle = angle;
+                                        closest = j;
+                                    }
+                                }
+
+                                // Swap the distribution functions
+        //                        std::swap(f.at(x, y, z)[i], f.at(x, y, z)[closest]);
+                                f.at(x, y, z)[closest] += f.at(x, y, z)[i];
+                                f.at(x, y, z)[i] = 0;
+                            }
+                        }
+                } /*
+
+                    else if (obstacleTrianglesOctree) {
                         for (int i = 0; i < c.size(); i++) {
                             Vector3 segmentEnd = segmentStart + c[i];
                             Vector3 intersection(false);
@@ -99,7 +128,7 @@ void LBMFluidSimulation::handleCollisions() {
                                 f.at(x, y, z)[i] = 0;
                             }
                         }
-                    }
+                    }*/
                     for (int i = 0; i < c.size(); i++) {
                         Vector3 segmentEnd = segmentStart + c[i];
                         if (!Vector3::isInBox(segmentEnd, Vector3(), this->dimensions))

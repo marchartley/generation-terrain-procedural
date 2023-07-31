@@ -600,15 +600,20 @@ Vector3 Heightmap::findSurfaceBetween(Vector3 start, Vector3 end)
 
 }
 
-Mesh Heightmap::getGeometry()
+Mesh Heightmap::getGeometry(Vector3 dimensions)
 {
+    Vector3 originalDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    if (!dimensions.isValid())
+        dimensions = originalDimensions;
+    dimensions.z = 1;
+
     std::vector<Vector3> vertices;
-    vertices.resize(6 * (this->getSizeX() - 1) * (this->getSizeY() - 1) );
-    auto heights = this->getHeights();
+    vertices.resize(6 * (dimensions.x - 1) * (dimensions.y - 1) );
+    auto heights = this->getHeights().resize(dimensions);
 
     size_t i = 0;
-    for (int x = 0; x < this->getSizeX() - 1; x++) {
-        for (int y = 0; y < this->getSizeY() - 1; y++) {
+    for (int x = 0; x < dimensions.x - 1; x++) {
+        for (int y = 0; y < dimensions.y - 1; y++) {
             vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
             vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
             vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
@@ -623,6 +628,7 @@ Mesh Heightmap::getGeometry()
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
+    m.scale(originalDimensions / dimensions);
     return m;
 }
 

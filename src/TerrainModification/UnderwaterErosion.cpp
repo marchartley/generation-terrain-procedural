@@ -1,3 +1,4 @@
+#include "DataStructure/BVH.h"
 #include "Utils/Globals.h"
 #include "UnderwaterErosion.h"
 #include "TerrainModification/RockErosion.h"
@@ -201,13 +202,71 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
     ImplicitPatch* asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
     LayerBasedGrid* asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
 
-    std::vector<std::vector<Vector3>> triangles;
+    std::vector<std::vector<Vector3>> triangles = terrain->getGeometry(Vector3(30, 30, 30)).getTriangles();
+    BVHTree boundariesTree;
+    boundariesTree.build(Triangle::vectorsToTriangles(triangles));
+    /*
     Octree* boundariesTree;
-    float octreeTime = timeIt([&]() {
-        triangles = terrain->getGeometry().getTriangles();
-        boundariesTree = new Octree(triangles);
+    std::vector<std::pair<Vector3, Vector3>> rays(1000);
+    std::vector<Vector3> groundTruth(rays.size());
+    for (size_t i = 0; i < rays.size(); i++) {
+        Vector3 rayStart = Vector3::random(Vector3(-10, -10, -10), terrain->getDimensions() + Vector3(10, 10, 10));
+        Vector3 rayEnd = Vector3::random(Vector3(-10, -10, -10), terrain->getDimensions() + Vector3(10, 10, 10));
+        rays[i] = {rayStart, rayEnd};
+    }
+    int dataCapacity;
+    float octreeTime, intersectionTime, bvhTime;
+    octreeTime = timeIt([&]() {
+        dataCapacity = 20;
+        boundariesTree = new Octree(triangles, dataCapacity);
     });
-    std::cout << "Time for computing the octree of " << triangles.size() << " tris : " << octreeTime << "ms." << std::endl;
+    intersectionTime = timeIt([&]() {
+        for (size_t i = 0; i < rays.size(); i++) {
+            auto [rayStart, rayEnd] = rays[i];
+            Vector3 intersection = boundariesTree->getIntersection(rayStart, rayEnd, triangles);
+            groundTruth[i] = intersection;
+        }
+    });
+    delete boundariesTree;
+    std::cout << "Time for computing the octree of " << triangles.size() << " tris with " << dataCapacity << " capacity : " << octreeTime << "ms. Intersections : " << intersectionTime << "ms/" << rays.size() << " rays." << std::endl;
+    octreeTime = timeIt([&]() {
+        dataCapacity = 10;
+        boundariesTree = new Octree(triangles, dataCapacity);
+    });
+    intersectionTime = timeIt([&]() {
+        for (auto [rayStart, rayEnd] : rays) {
+            Vector3 intersection = boundariesTree->getIntersection(rayStart, rayEnd, triangles);
+        }
+    });
+    delete boundariesTree;
+    std::cout << "Time for computing the octree of " << triangles.size() << " tris with " << dataCapacity << " capacity : " << octreeTime << "ms. Intersections : " << intersectionTime << "ms/" << rays.size() << " rays." << std::endl;
+    octreeTime = timeIt([&]() {
+        dataCapacity = 500;
+        boundariesTree = new Octree(triangles, dataCapacity);
+    });
+    intersectionTime = timeIt([&]() {
+        for (auto [rayStart, rayEnd] : rays) {
+            Vector3 intersection = boundariesTree->getIntersection(rayStart, rayEnd, triangles);
+        }
+    });
+    std::cout << "Time for computing the octree of " << triangles.size() << " tris with " << dataCapacity << " capacity : " << octreeTime << "ms. Intersections : " << intersectionTime << "ms/" << rays.size() << " rays." << std::endl;
+
+
+    BVHTree bvh;
+    bvhTime = timeIt([&]() {
+        bvh = BVHTree(triangles);
+    });
+    float distanceError = 0.f;
+    intersectionTime = timeIt([&]() {
+        for (size_t i = 0; i < rays.size(); i++) {
+            auto [rayStart, rayEnd] = rays[i];
+            Vector3 intersection = bvh.getIntersection(rayStart, rayEnd);
+            if (groundTruth[i].isValid())
+                distanceError += (intersection - groundTruth[i]).norm2();
+        }
+    });
+    std::cout << "Time for computing the BVH of " << triangles.size() << " tris : " << bvhTime << "ms. Intersections : " << intersectionTime << "ms/" << rays.size() << " rays." << std::endl;
+    std::cout << "Error = " << distanceError << std::endl;*/
 
     Vector3 terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
     float starting_distance = pow(terrainSize.maxComp()/2.f, 2);
@@ -445,7 +504,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn, float &particleSimulationTime,
                 particle.dir += flowfield * flowfieldInfluence * dt;
                 if (Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy()))
                     hasBeenAtLeastOnceInside = true;
-                auto [collisionPoint, normal] = boundariesTree->getIntersectionAndNormal(particle.pos, nextPos, triangles);
+                auto [collisionPoint, normal] = boundariesTree.getIntersectionAndNormal(particle.pos, nextPos);
+//                auto [collisionPoint, normal] = boundariesTree->getIntersectionAndNormal(particle.pos, nextPos, triangles);
                 if (collisionPoint.isValid()) {
 //                if (terrain->checkIsInGround(nextPos)) {
                     justHit = false;
