@@ -1,29 +1,12 @@
 #ifndef FLUIDSIMULATION_H
 #define FLUIDSIMULATION_H
 
+#include "DataStructure/BVH.h"
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Octree.h"
-
-class Particle;
-class KDTree;
-
-class Particle {
-public:
-    Vector3 position;
-    Vector3 velocity;
-    Vector3 force;
-    float density;
-    float pressure;
-    float mass;
-    float smoothingRadius;
-    float gasConstant;
-    float restDensity;
-    float viscosity;
-    bool isGhost;
-
-    int index;
-};
+#include "DataStructure/Particle.h"
+#include "DataStructure/KDTree.h"
 
 class FluidSimulation
 {
@@ -62,35 +45,12 @@ public:
     std::vector<std::vector<Vector3>> triangles;
     Matrix3<float> obstacleGrid;
     Matrix3<Vector3> obstacleGradient;
-    Octree* obstacleTrianglesOctree;
+//    Octree* obstacleTrianglesOctree;
+    BVHTree obstacleTriangleTree;
 
     int currentStep = 0;
     int _cachedStep = -1;
     Matrix3<Vector3> _cachedVelocity;
-};
-
-
-class KDNode {
-public:
-    size_t particleIndex;
-    KDNode* left;
-    KDNode* right;
-    int axis;
-
-    KDNode(size_t pIndex, int a);
-};
-
-class KDTree {
-public:
-    KDTree();
-    ~KDTree();
-    KDNode* root;
-
-    KDTree(std::vector<Particle>& particles);
-
-    KDNode* build(std::vector<Particle> particles, int depth);
-
-    void findNeighbors(std::vector<Particle>& particles, KDNode* node, Vector3& position, float maxDistance, std::vector<size_t>& neighbors);
 };
 
 #endif // FLUIDSIMULATION_H

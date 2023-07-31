@@ -69,7 +69,7 @@ public:
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
     Vector3 findSurfaceBetween(Vector3 start, Vector3 end);
 
-    Mesh getGeometry();
+    Mesh getGeometry(Vector3 dimensions = Vector3(false));
 
     void initMap() {};
 

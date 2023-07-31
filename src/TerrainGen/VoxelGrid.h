@@ -81,7 +81,7 @@ public:
     Matrix3<float> getVoxelValues();
     Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
-    Mesh getGeometry();
+    Mesh getGeometry(Vector3 dimensions = Vector3(false));
 
 //    std::tuple<int, int, int, int> getChunksAndVoxelIndices(Vector3 pos);
 //    std::tuple<int, int, int, int> getChunksAndVoxelIndices(float x, float y, float z);

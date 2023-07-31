@@ -668,8 +668,15 @@ Matrix3<float> VoxelGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
     return this->getVoxelValues();
 }
 
-Mesh VoxelGrid::getGeometry()
+Mesh VoxelGrid::getGeometry(Vector3 dimensions)
 {
+    Vector3 originalDimensions = this->getDimensions();
+    if (!dimensions.isValid())
+        dimensions = originalDimensions;
+    Mesh m = Mesh::applyMarchingCubes(this->getVoxelValues().resize(dimensions).meanSmooth(5, 5, 5));
+    m.scale(originalDimensions / dimensions);
+    return m;
+    /*
     auto triTable = MarchingCubes::triangleTable;
 //    auto edges = MarchingCubes::cubeEdges;
     auto values = this->getVoxelValues().meanSmooth(5, 5, 5);
@@ -837,7 +844,7 @@ Mesh VoxelGrid::getGeometry()
             }
         }
     }
-    return marched;
+    return marched;*/
 }
 /*
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {

@@ -41,6 +41,7 @@ void TerrainModel::initFluidSim()
     float density = 1000.f;
     this->fluidSimRescale = Vector3(4, 4, 4);
 
+    /*
     Vector3 simulationSize = this->getDimensions() / fluidSimRescale;
     *properties->simulations[FluidSimType::FLIP] = FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, 1, .2f, 20000, dt);
     *properties->simulations[FluidSimType::SPH] = SPHSimulation();
@@ -48,6 +49,7 @@ void TerrainModel::initFluidSim()
 //    *properties->simulations[FluidSimType::SHALLOW] = ShallowWaterSimulation();
     *properties->simulations[FluidSimType::STABLE] = StableFluidsSimulation(simulationSize.x, simulationSize.y, simulationSize.z, dt, diffusion, viscosity, fluidSolverIterations);
     *properties->simulations[FluidSimType::WARP] = WarpedFluidSimulation(simulationSize.x, simulationSize.y, simulationSize.z);
+    */
     /*
     this->fluidSimulation = StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale.x, this->getSizeY() / this->fluidSimRescale.y, this->getSizeZ() / this->fluidSimRescale.z, dt, diffusion, viscosity, fluidSolverIterations);
 

@@ -716,17 +716,24 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     return;
 }
 
-Mesh LayerBasedGrid::getGeometry()
+Mesh LayerBasedGrid::getGeometry(Vector3 dimensions)
 {
     std::vector<Vector3> vertices;
+
+    Vector3 originalDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    if (!dimensions.isValid())
+        dimensions = originalDimensions;
+    dimensions.z = 1; // Force the Z to 1
+
+    auto copiedLayers = this->layers.resizeNearest(dimensions);
 
 //    auto layersAndHeights = this->getMaterialAndHeightsGrid();
 //    auto layers = layersAndHeights.first;
 //    auto heights = layersAndHeights.second;
 
-    for (int x = 0; x < this->getSizeX(); x++) {
-        for (int y = 0; y < this->getSizeY(); y++) {
-            auto layers = this->layers.at(x, y);
+    for (int x = 0; x < dimensions.x; x++) {
+        for (int y = 0; y < dimensions.y; y++) {
+            auto layers = copiedLayers.at(x, y);
             float currentHeight = 0.f;
 
             for (size_t i = 0; i < layers.size(); i++) {
@@ -749,6 +756,7 @@ Mesh LayerBasedGrid::getGeometry()
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
+    m.scale(originalDimensions / dimensions);
     return m;
 }
 

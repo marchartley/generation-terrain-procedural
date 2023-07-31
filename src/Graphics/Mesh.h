@@ -61,7 +61,7 @@ public:
     std::string toOFF();
     std::string toSTL();
 
-    Mesh applyMarchingCubes(Matrix3<float> &values);
+    static Mesh applyMarchingCubes(const Matrix3<float> &values);
 
     Matrix3<int> voxelize(Vector3 dimensions) const;
     Matrix3<int> voxelizeSurface(Vector3 dimensions) const;

@@ -111,7 +111,7 @@ public:
 
     virtual void saveMap(std::string filename) { }
     virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
-    virtual Mesh getGeometry();
+    virtual Mesh getGeometry(Vector3 dimensions = Vector3(false));
 
     virtual Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
