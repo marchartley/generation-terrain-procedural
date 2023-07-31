@@ -74,7 +74,7 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat (copy).png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
@@ -89,7 +89,7 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;

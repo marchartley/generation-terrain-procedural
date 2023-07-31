@@ -288,7 +288,7 @@ std::map<TerrainTypes, float> LayerBasedGrid::getKernel(Vector3 pos, float kerne
             float widthX = 1.f; //std::min(x+1.f, maxX) - std::max(x+0.f, minX);
             float widthY = 1.f; // std::min(y+1.f, maxY) - std::max(y+0.f, minY);
             float currentHeight = 0.f;
-            int currentStack = 0;
+            size_t currentStack = 0;
             while (currentHeight < maxZ && currentStack < this->layers.at(x, y).size()) {
                 auto [blockMaterial, blockHeight] = this->layers.at(x, y)[currentStack];
                 float start = clamp(currentHeight, minZ, maxZ);
@@ -356,7 +356,7 @@ Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 min
 
 std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
-    int x = 0;
+//    int x = 0;
     if (true || currentHistoryIndex != _historyIndex)
     {
         int maxStackSize = 0;
@@ -509,7 +509,7 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
             // Inside new layer
             float startIn = endUnder;
             float endIn = std::min(endHeight, endZ);
-            zLevels.push_back({mat, {startIn, endIn}});
+            zLevels.push_back({material, {startIn, endIn}});
 
             // Above new layer
             float startAbove = endIn;

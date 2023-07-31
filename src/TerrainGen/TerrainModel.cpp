@@ -88,13 +88,13 @@ Matrix3<Vector3> TerrainModel::getFlowfield(size_t flowIndex)
     return properties->simulations[LBM]->getVelocities(dimensions.x, dimensions.y, dimensions.z);
 }
 */
-void TerrainModel::computeFlowfield(FluidSimType simu)
-{
-//    return properties->simulations[simu]->step();
-    this->computeMultipleFlowfields(simu);
-}
+//void TerrainModel::computeFlowfield(FluidSimType simu)
+//{
+////    return properties->simulations[simu]->step();
+//    this->computeMultipleFlowfields(simu);
+//}
 
-void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, TerrainModel *implicit)
+void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *implicit)
 {
     FluidSimulation* simulation = this->properties->simulations[simu];
     auto primitives = dynamic_cast<ImplicitNaryOperator*>(implicit);
@@ -113,7 +113,7 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
      * Implicit affect flowfield part :
      ***/
     std::vector<BSpline> allTunnelsCurves;
-    std::vector<Matrix3<float>> rasterizedCurves;
+    std::vector<Matrix3<float>> rasterizedTunnelCurves;
     auto tunnelsPatches = primitives->findAll(ImplicitPatch::ParametricTunnel);
     for (auto& tunnelPatch : tunnelsPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
@@ -136,7 +136,35 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
                     }
                 }
             }
-            rasterizedCurves.push_back(rasterizedCurve);
+            rasterizedTunnelCurves.push_back(rasterizedCurve);
+        }
+    }
+
+    std::vector<BSpline> allReefCurves;
+    std::vector<Matrix3<float>> rasterizedReefCurves;
+    auto reefPatches = primitives->findAll(ImplicitPatch::MountainChain);
+    for (auto& reefPatch : reefPatches) {
+        auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(reefPatch);
+        if (asPrimitive) {
+            BSpline curve = asPrimitive->optionalCurve;
+            for (auto& p : curve.points) {
+                p = asPrimitive->getGlobalPositionOf(p);
+                p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
+            }
+            allReefCurves.push_back(curve);
+            Matrix3<float> rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
+            for (int x = 0; x < rasterizedCurve.sizeX; x++) {
+                for (int y = 0; y < rasterizedCurve.sizeY; y++) {
+                    for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
+                        Vector3 pos(x, y, z);
+                        float closestTime = curve.estimateClosestTime(pos);
+                        Vector3 closest = curve.getPoint(closestTime);
+                        if ((pos - closest).norm2() < (asPrimitive->parametersProvided[0] / fluidSimRescale.x) * (asPrimitive->parametersProvided[0] / fluidSimRescale.x))
+                            rasterizedCurve.at(pos) = closestTime;
+                    }
+                }
+            }
+            rasterizedReefCurves.push_back(rasterizedCurve);
         }
     }
 
@@ -159,7 +187,8 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
                     }
                 }
             }
-            rasterizedArea = 1.f - rasterizedArea.toDistanceMap().normalize();
+            auto distanceMap = rasterizedArea.toDistanceMap().normalize();
+            rasterizedArea = (1.f - distanceMap * distanceMap * 0.6f);
             rasterizedLagoonAreas.push_back(rasterizedArea);
         }
     }
@@ -169,8 +198,8 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
      * End Implicit affect flowfield
      ***/
 
-#pragma omp parallel for
-    for (size_t iCurrent = 0; iCurrent < nbCurrentsToCompute; iCurrent++) {
+//#pragma omp parallel for
+//    for (size_t iCurrent = 0; iCurrent < nbCurrentsToCompute; iCurrent++) {
 //        if (iCurrent > 0) continue;
         Vector3 simulationDimensions = simulation->dimensions;
         simulation->setObstacles(obstacleMap);
@@ -179,7 +208,7 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
             for (int y = 0; y < simulationDimensions.y; y++) {
                 for (int z = 0; z < simulationDimensions.z; z++) {
                     Vector3 pos(x, y, z);
-                    if (!Vector3::isInBox(pos - (sea_current.normalized() * 2.f), Vector3(), simulationDimensions))
+//                    if (!Vector3::isInBox(pos - (sea_current.normalized() * 2.f), Vector3(), simulationDimensions))
                         simulation->setVelocity(x, y, z, sea_current);
 //                        this->multipleFluidSimulations[iCurrent].velocity(x, y, z) = this->multipleSeaCurrents[iCurrent];// / this->fluidSimRescale;
                 }
@@ -190,21 +219,6 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
             /***
              * Implicit affect flowfield part :
              ***/
-            for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
-                auto& curve = allTunnelsCurves[iTunnel];
-                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
-                float inputStrength = inputFlow.norm();
-
-                Matrix3<float>& rasterizedCurve = rasterizedCurves[iTunnel];
-                for (int x = 0; x < rasterizedCurve.sizeX; x++) {
-                    for (int y = 0; y < rasterizedCurve.sizeY; y++) {
-                        for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
-                            Vector3 direction = curve.getDirection(rasterizedCurve.at(x, y, z));
-                            simulation->addVelocity(x, y, z, direction * inputStrength);
-                        }
-                    }
-                }
-            }
 
             for (size_t iLagoon = 0; iLagoon < rasterizedLagoonAreas.size(); iLagoon++) {
 
@@ -219,16 +233,52 @@ void TerrainModel::computeMultipleFlowfields(FluidSimType simu, int steps, Terra
                 }
             }
 
+            for (size_t iTunnel = 0; iTunnel < allTunnelsCurves.size(); iTunnel++) {
+                auto& curve = allTunnelsCurves[iTunnel];
+                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
+                float inputStrength = inputFlow.norm();
+
+                Matrix3<float>& rasterizedCurve = rasterizedTunnelCurves[iTunnel];
+                for (int x = 0; x < rasterizedCurve.sizeX; x++) {
+                    for (int y = 0; y < rasterizedCurve.sizeY; y++) {
+                        for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
+                            Vector3 direction = curve.getDirection(rasterizedCurve.at(x, y, z));
+                            simulation->addVelocity(x, y, z, direction * inputStrength);
+                        }
+                    }
+                }
+            }
+
+            for (size_t iReef = 0; iReef < allReefCurves.size(); iReef++) {
+                auto& curve = allReefCurves[iReef];
+//                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
+//                float inputStrength = inputFlow.norm();
+
+                Matrix3<float>& rasterizedCurve = rasterizedReefCurves[iReef];
+                for (int x = 0; x < rasterizedCurve.sizeX; x++) {
+                    for (int y = 0; y < rasterizedCurve.sizeY; y++) {
+                        for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
+                            Vector3 pos(x, y, z);
+                            Vector3 direction = curve.getDirection(rasterizedCurve.at(pos));
+                            Vector3 currentFlow = simulation->getVelocity(pos);
+                            simulation->addVelocity(x, y, z, std::max(0.f, 1.f - curve.estimateDistanceFrom(pos) / 5.f) * direction * (direction.dot(currentFlow) > 0 ? 1.f : -1.f));
+//                            simulation->addVelocity(x, y, z, direction * inputStrength);
+                        }
+                    }
+                }
+            }
+
             /***
              * End Implicit affect flowfield
              ***/
-//            this->multipleFluidSimulations[iCurrent].step();
-            simulation->step();
+
+//            simulation->step();
         }
 //        std::cout << "Max " << iCurrent << " " << this->multipleFluidSimulations[iCurrent].velocity.max() << " sum " << this->multipleFluidSimulations[iCurrent].velocity.sum() << "\n" << std::flush;
 //        this->multipleFlowFields[iCurrent] = this->multipleFluidSimulations[iCurrent].getVelocities(this->getSizeX(), this->getSizeY(), this->getSizeZ());
 //        std::cout << "Max " << iCurrent << " " << this->multipleFlowFields[iCurrent].max() << " " << this->multipleFlowFields[iCurrent].max().norm() << " sum " << this->multipleFlowFields[iCurrent].sum() << "\n" << std::flush;
-    }
+//    }
+        simulation->currentStep++;
 
 }
 

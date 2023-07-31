@@ -141,7 +141,8 @@ void LBMFluidSimulation::handleCollisions() {
         for (int x = 0; x < f.sizeX; x++) {
             for (int y = 0; y < f.sizeY; y++) {
                 for (int i = 0; i < c.size(); i++) {
-                    f.at(x, y)[i] = std::min(f.at(x, y)[i], obstacleGrid.at(Vector3(x, y) + c[i]));
+                    f.at(x, y)[i] = obstacleGrid.at(Vector3(x, y) + c[i]);
+//                    f.at(x, y)[i] = std::min(f.at(x, y)[i], obstacleGrid.at(Vector3(x, y) + c[i]));
                 }
             }
         }
@@ -202,10 +203,10 @@ void LBMFluidSimulation::step() {
     f = f_next;
 
 
-    // Handle interactions with obstacles
-    handleCollisions();
     // Perform the streaming step
     stream();
+    // Handle interactions with obstacles
+    handleCollisions();
 
 
     float minVal = std::numeric_limits<float>::max(), maxVal = std::numeric_limits<float>::min();
@@ -275,13 +276,14 @@ void LBMFluidSimulation::setObstacles(const Matrix3<float> &obstacles)
     if (uses3D) {
         return FluidSimulation::setObstacles(obstacles);
     } else {
-        this->obstacleGrid = Matrix3<float>(obstacles.sizeX, obstacles.sizeY);
+        this->obstacleGrid = Matrix3<float>(this->dimensions);
+        obstacles.resize(this->dimensions.x, this->dimensions.y, obstacles.sizeZ);
         for (int x = 0; x < obstacles.sizeX; x++) {
             for (int y = 0; y < obstacles.sizeY; y++) {
-                int height = 0;
+                float height = 0;
                 while(obstacles.at(x, y, obstacles.sizeZ - height) <= 0 && height < obstacles.sizeZ)
                     height++;
-                obstacleGrid.at(x, y) = height / this->dimensions.z;
+                obstacleGrid.at(x, y) = height / float(obstacles.sizeZ);
             }
         }
     }

@@ -55,8 +55,8 @@ public:
 
     virtual Matrix3<Vector3> getFlowfield(FluidSimType simu = LBM);
 //    virtual Matrix3<Vector3> getFlowfield(size_t flowIndex);
-    virtual void computeFlowfield(FluidSimType simu = LBM);
-    virtual void computeMultipleFlowfields(FluidSimType simu = LBM, int steps = 30, TerrainModel* implicit = nullptr);
+//    virtual void computeFlowfield(FluidSimType simu = LBM);
+    virtual void computeFlowfield(FluidSimType simu = LBM, int steps = 30, TerrainModel* implicit = nullptr);
 
     Matrix3<float>& getEnvironmentalDensities();
     void updateEnvironmentalDensities(float waterLevel);
