@@ -1216,15 +1216,15 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
 
     if (mode == LINEAR) {
         // Apply interpolations
-        for (int x = 0; x < newX; x++) {
+        for (size_t x = 0; x < newX; x++) {
             int x_original = int(x * rx);
             int x_plus_1 = (x_original >= this->sizeX - 1 ? x_original : x_original + 1);
             float d_x = (x * rx) - x_original;
-            for (int y = 0; y < newY; y++) {
+            for (size_t y = 0; y < newY; y++) {
                 int y_original = int(y * ry);
                 int y_plus_1 = (y_original >= this->sizeY - 1 ? y_original : y_original + 1);
                 float d_y = (y * ry) - y_original;
-                for (int z = 0; z < newZ; z++) {
+                for (size_t z = 0; z < newZ; z++) {
                     int z_original = int(z * rz);
                     int z_plus_1 = (z_original >= this->sizeZ - 1 ? z_original : z_original + 1);
                     float d_z = (z * rz) - z_original;

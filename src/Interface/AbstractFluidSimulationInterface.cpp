@@ -159,6 +159,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
 
 void AbstractFluidSimulationInterface::computeSimulation(int nbSteps)
 {
-    for (int i = 0; i < nbSteps; i++)
-        _simulation->step();
+    this->voxelGrid->computeFlowfield(LBM, nbSteps, this->implicitTerrain.get());
+//    for (int i = 0; i < nbSteps; i++)
+//        _simulation->step();
 }
