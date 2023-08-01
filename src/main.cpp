@@ -96,19 +96,25 @@ int main(int argc, char *argv[])
     EnvObject::sandDeposit = Matrix3<float>(100, 100);
 
     EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
-    reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 50, 0)});
+    reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)});
 
     EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
-    passe->curve = BSpline({Vector3(0, 0, 0), Vector3(20, 10, 0), Vector3(20, 30, 0), Vector3(50, 50, 0)});
+    passe->curve = BSpline({Vector3(10, 10, 0), Vector3(40, 10, 0), Vector3(40, 50, 0), Vector3(70, 70, 0)});
 
-    EnvObject::applyEffects();
+    for (int _ = 0; _ < 10; _++)
+        EnvObject::applyEffects();
 
     Matrix3<Vector3> img(EnvObject::sandDeposit.getDimensions());
     for (size_t i = 0; i < img.size(); i++) {
-        img[i] = Vector3(EnvObject::sandDeposit[i] * 100.f, EnvObject::flowfield[i].x, EnvObject::flowfield[i].y);
+        img[i] = Vector3(EnvObject::sandDeposit[i], 0, 0);
+//        Vector3 hsv = img.getCoordAsVector3(i);
+//        hsv.x /= img.sizeX;
+//        hsv.y /= img.sizeY;
+//        hsv.z = 1.f;
+//        img[i] = HSVtoRGB(hsv.x, hsv.y, hsv.z);
     }
 
-//    Plotter::getInstance()->addImage(img, false);
+//    Plotter::getInstance()->addImage(img, true);
     Plotter::getInstance()->addImage(EnvObject::sandDeposit, true);
     return Plotter::getInstance()->exec();
 /*

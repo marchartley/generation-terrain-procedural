@@ -668,6 +668,7 @@ Matrix3<T> Matrix3<T>::dilate(float t)
         copy.raiseErrorOnBadCoord = false;
         copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         float dt = (t < 1.f ? t : 1.f);
+        #pragma omp parallel for collapse(3)
         for (int x = 0; x < res.sizeX; x++) {
             for (int y = 0; y < res.sizeY; y++) {
                 for (int z = 0; z < res.sizeZ; z++) {
@@ -697,6 +698,7 @@ Matrix3<T> Matrix3<T>::erode(float t)
         copy.raiseErrorOnBadCoord = false;
         copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         float dt = (t < 1.f ? t : 1.f);
+        #pragma omp parallel for collapse(3)
         for (int x = 0; x < res.sizeX; x++) {
             for (int y = 0; y < res.sizeY; y++) {
                 for (int z = 0; z < res.sizeZ; z++) {
@@ -844,6 +846,7 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
     center -= Vector3((sizeOnX > 1 ? .5 : 0), (sizeOnY > 1 ? .5 : 0), (sizeOnZ > 1 ? .5 : 0));
     float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
     float sqrSigma = sigma * sigma;
+    #pragma omp parallel for collapse(3)
     for (int x = 0; x < gaussian.sizeX; x++) {
         for (int y = 0; y < gaussian.sizeY; y++) {
             for (int z = 0; z < gaussian.sizeZ; z++) {
@@ -1583,6 +1586,7 @@ Matrix3<T> Matrix3<T>::convolution(Matrix3<U>& convMatrix, CONVOLUTION_BORDERS b
     this->raiseErrorOnBadCoord = false;
 //    this->defaultValueOnBadCoord = 0;
 
+    #pragma omp parallel for collapse(3)
     for (int x = 0; x < result.sizeX; x++) {
         for (int y = 0; y < result.sizeY; y++) {
             for (int z = 0; z < result.sizeZ; z++) {
