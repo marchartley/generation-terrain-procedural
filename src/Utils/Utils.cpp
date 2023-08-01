@@ -4,7 +4,7 @@
 #include <thread>
 #include <chrono>
 
-std::vector<std::string> split(std::string str, char c)
+std::vector<std::string> split(std::string str, std::string c)
 {
     std::vector<std::string> result;
     size_t pos = str.npos;
@@ -41,7 +41,7 @@ bool checkPathExists(std::string path)
 
 bool makedir(std::string path)
 {
-    std::vector<std::string> splitted = split(path, '/');
+    std::vector<std::string> splitted = split(path, "/");
     int result = 0;
     std::string currentPath = "";
     for (size_t i = 0; i < splitted.size(); i++) {
@@ -200,16 +200,30 @@ float deg2rad(float deg)
     return (deg * PI) / 180.f;
 }
 
-float gaussian(Vector3 size, Vector3 position, float sigma)
-{
-    float oneOverSqrt2Pi = 1.f/(2 * 3.141592 * sigma * sigma);
+float gaussian(float sigma, float sqrDist) {
+    float oneOverSqrt2Pi = 1.f/(2 * M_PI * sigma * sigma);
     float sqrSigma = 2 * sigma * sigma;
-    position -= (size * .5f);
-    float gaussian = std::exp(-position.norm2()/sqrSigma) * oneOverSqrt2Pi;
-    return gaussian;
+    return std::exp(-sqrDist/sqrSigma) * oneOverSqrt2Pi;
 }
 
-float normalizedGaussian(Vector3 size, Vector3 position, float sigma)
+float gaussian(const Vector3& size, const Vector3& position, float sigma)
+{
+//    float oneOverSqrt2Pi = 1.f/(2 * M_PI * sigma * sigma);
+//    float sqrSigma = 2 * sigma * sigma;
+    return gaussian(sigma, (position - (size * .5f)).norm2());
+//    float gaussian = std::exp(-position.norm2()/sqrSigma) * oneOverSqrt2Pi;
+//    return gaussian;
+}
+
+float normalizedGaussian(float sigma, float sqrDist)
+{
+    float maxValue = gaussian(sigma, 0.f);
+    if (maxValue > 0.f)
+        return gaussian(sigma, sqrDist) / maxValue;
+    return 0.f;
+}
+
+float normalizedGaussian(const Vector3& size, const Vector3& position, float sigma)
 {
     float maxValue = gaussian(size, size * .5f, sigma);
     if (maxValue > 0.f)
@@ -278,9 +292,14 @@ std::string replaceInString(std::string initial, std::string toReplace, std::str
 
 std::string getFilename(std::string path)
 {
-    std::vector<std::string> fullPath = split(path, '/');
-    fullPath = split(fullPath.back(), '\\');
+    std::vector<std::string> fullPath = split(path, "/");
+    fullPath = split(fullPath.back(), "\\");
     return fullPath.back();
+}
+
+std::string simplify(std::string s)
+{
+    return toLower(replaceInString(replaceInString(s, "_", ""), "-", ""));
 }
 
 

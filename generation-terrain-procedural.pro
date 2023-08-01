@@ -101,6 +101,7 @@ SOURCES += \
         src/DataStructure/Vector3.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
+    src/EnvObject/EnvObject.cpp \
         src/FastWFC/propagator.cpp \
         src/FastWFC/wave.cpp \
         src/FastWFC/wfc.cpp \
@@ -234,6 +235,7 @@ HEADERS += \
     src/DataStructure/Vector3.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
+    src/EnvObject/EnvObject.h \
     src/FastWFC/color.hpp \
     src/FastWFC/direction.hpp \
     src/FastWFC/external/rapidxml.hpp \

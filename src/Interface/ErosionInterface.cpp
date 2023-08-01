@@ -449,9 +449,9 @@ void ErosionInterface::testManyManyErosionParameters()
         std::string header, lineContent;
         std::vector<std::string> headerValues, sLineValues;
         std::getline(mainCSVfile, header); // get header
-        headerValues = split(header, ';');
+        headerValues = split(header, ";");
         while (std::getline(mainCSVfile, lineContent)) {
-            sLineValues = split(lineContent, ';');
+            sLineValues = split(lineContent, ";");
             std::map<std::string, float> testedParameters;
             for (size_t i = 0; i < sLineValues.size(); i++) {
                 float val;

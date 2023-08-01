@@ -21,7 +21,7 @@ std::vector<float> extractAllValuesFromLine(std::string line, bool isBinary) {
             values.push_back((int)item);
         }
     } else {
-        std::vector<std::string> items = split(line, ' ');
+        std::vector<std::string> items = split(line, " ");
         for (const auto& item : items) {
             values.push_back(std::stof(item));
         }
