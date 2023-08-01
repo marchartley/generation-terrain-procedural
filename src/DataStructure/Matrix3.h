@@ -141,8 +141,8 @@ public:
     Vector3 gradient(float posX, float posY, float posZ = 0);
 
     Matrix3<int> skeletonize();
-    Matrix3<T> dilate();
-    Matrix3<T> erode();
+    Matrix3<T> dilate(float t = 1.f);
+    Matrix3<T> erode(float t = 1.f);
 
     T trace();
 
@@ -660,51 +660,59 @@ Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::dilate()
+Matrix3<T> Matrix3<T>::dilate(float t)
 {
-    Matrix3<T> copy = *this;
-    copy.raiseErrorOnBadCoord = false;
-    copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     Matrix3<T> res = *this;
-    for (int x = 0; x < res.sizeX; x++) {
-        for (int y = 0; y < res.sizeY; y++) {
-            for (int z = 0; z < res.sizeZ; z++) {
-                T maxVal = res.at(x, y, z);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dy = -1; dy <= 1; dy++) {
-                        for (int dz = -1; dz <= 1; dz++) {
-                            maxVal = std::max(maxVal, copy.at(x + dx, y + dy, z + dz));
+    while (t > 0.f) {
+        Matrix3<T> copy = res;
+        copy.raiseErrorOnBadCoord = false;
+        copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+        float dt = (t < 1.f ? t : 1.f);
+        for (int x = 0; x < res.sizeX; x++) {
+            for (int y = 0; y < res.sizeY; y++) {
+                for (int z = 0; z < res.sizeZ; z++) {
+                    T maxVal = res.at(x, y, z);
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            for (int dz = -1; dz <= 1; dz++) {
+                                maxVal = std::max(maxVal, copy.at(x + dx, y + dy, z + dz));
+                            }
                         }
                     }
+                    res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * maxVal;
                 }
-                res.at(x, y, z) = maxVal;
             }
         }
+        t -= 1.f;
     }
     return res;
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::erode()
+Matrix3<T> Matrix3<T>::erode(float t)
 {
-    Matrix3<T> copy = *this;
-    copy.raiseErrorOnBadCoord = false;
-    copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     Matrix3<T> res = *this;
-    for (int x = 0; x < res.sizeX; x++) {
-        for (int y = 0; y < res.sizeY; y++) {
-            for (int z = 0; z < res.sizeZ; z++) {
-                T minVal = res.at(x, y, z);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dy = -1; dy <= 1; dy++) {
-                        for (int dz = -1; dz <= 1; dz++) {
-                            minVal = std::min(minVal, copy.at(x + dx, y + dy, z + dz));
+    while (t > 0.f) {
+        Matrix3<T> copy = res;
+        copy.raiseErrorOnBadCoord = false;
+        copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+        float dt = (t < 1.f ? t : 1.f);
+        for (int x = 0; x < res.sizeX; x++) {
+            for (int y = 0; y < res.sizeY; y++) {
+                for (int z = 0; z < res.sizeZ; z++) {
+                    T minVal = res.at(x, y, z);
+                    for (int dx = -1; dx <= 1; dx++) {
+                        for (int dy = -1; dy <= 1; dy++) {
+                            for (int dz = -1; dz <= 1; dz++) {
+                                minVal = std::min(minVal, copy.at(x + dx, y + dy, z + dz));
+                            }
                         }
                     }
+                    res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * minVal;;
                 }
-                res.at(x, y, z) = minVal;
             }
         }
+        t -= 1.f;
     }
     return res;
 }

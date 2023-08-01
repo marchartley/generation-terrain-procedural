@@ -2023,40 +2023,40 @@ std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction op
 
 ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
 {
-    name = toUpper(name);
-    if (name == "SPHERE")
+    name = simplify(name);
+    if (name == "sphere")
         return ImplicitPatch::PredefinedShapes::Sphere;
-    else if (name == "BLOCK")
+    else if (name == "block")
         return ImplicitPatch::PredefinedShapes::Block;
-    else if (name == "GAUSSIAN")
+    else if (name == "gaussian")
         return ImplicitPatch::PredefinedShapes::Gaussian;
-    else if (name == "CYLINDER")
+    else if (name == "cylinder")
         return ImplicitPatch::PredefinedShapes::Cylinder;
-    else if (name == "ROCK")
+    else if (name == "rock")
         return ImplicitPatch::PredefinedShapes::Rock;
-    else if (name == "MOUNTAIN")
+    else if (name == "mountain")
         return ImplicitPatch::PredefinedShapes::Mountain;
-    else if (name == "DUNE")
+    else if (name == "dune")
         return ImplicitPatch::PredefinedShapes::Dune;
-    else if (name == "BASIN")
+    else if (name == "basin")
         return ImplicitPatch::PredefinedShapes::Basin;
-    else if (name == "CAVE")
+    else if (name == "cave")
         return ImplicitPatch::PredefinedShapes::Cave;
-    else if (name == "ARCH")
+    else if (name == "arch")
         return ImplicitPatch::PredefinedShapes::Arch;
-    else if (name == "NOISE2D")
+    else if (name == "noise2d")
         return ImplicitPatch::PredefinedShapes::Noise2D;
-    else if (name == "MOUNTAINCHAIN")
+    else if (name == "mountainchain")
         return ImplicitPatch::PredefinedShapes::MountainChain;
-    else if (name == "POLYGON")
+    else if (name == "polygon")
         return ImplicitPatch::PredefinedShapes::Polygon;
-    else if (name == "IMPLICIT_HEIGHTMAP")
+    else if (name == "implicitheightmap")
         return ImplicitPatch::PredefinedShapes::ImplicitHeightmap;
-    else if (name == "PARAMETRIC_TUNNEL")
+    else if (name == "parametrictunnel")
         return ImplicitPatch::PredefinedShapes::ParametricTunnel;
-    else if (name == "NONE")
+    else if (name == "none")
         return ImplicitPatch::PredefinedShapes::None;
-    else if (name == "RIPPLE")
+    else if (name == "ripple")
         return ImplicitPatch::PredefinedShapes::Ripple;
 
     // Error

@@ -19,7 +19,7 @@ std::string replaceInString(std::string initial, std::string toReplace, std::str
 
 bool startsWith(std::string text, std::string needle);
 bool endsWith(std::string text, std::string needle);
-std::vector<std::string> split(std::string str, char c);
+std::vector<std::string> split(std::string str, std::string c);
 std::vector<std::string> split(std::string str);
 bool makedir(std::string path);
 bool checkPathExists(std::string path);
@@ -30,6 +30,7 @@ std::string toLower(std::string s);
 std::string toCapitalize(std::string s);
 std::string getExtension(std::string file);
 std::string getFilename(std::string path);
+std::string simplify(std::string s);
 
 float rad2deg(float rad);
 float deg2rad(float deg);
@@ -121,8 +122,10 @@ U remap(T val, T oldMin, T oldMax, U newMin, U newMax)
     return lerp(oldProgress, newMin, newMax);
 }
 
-float gaussian(Vector3 size, Vector3 position, float sigma);
-float normalizedGaussian(Vector3 size, Vector3 position, float sigma);
+float gaussian(float sigma, float sqrDist);
+float gaussian(const Vector3 &size, const Vector3 &position, float sigma);
+float normalizedGaussian(float sigma, float sqrDist);
+float normalizedGaussian(const Vector3& size, const Vector3& position, float sigma);
 
 
 template<typename T>

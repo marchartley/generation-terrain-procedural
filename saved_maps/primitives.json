@@ -1,0 +1,88 @@
+[
+  {
+    "name": "Passe",
+    "type": "curve",
+    "rule": "d2(Reef) - <current.vel,Reef.normal>",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.02,
+      "binormal": 0.0
+    },
+    "sand": 0.2,
+		"dimensions": {
+			"x": 5,
+			"y": 20,
+			"z": 0
+		},
+		"geometry": "ParametricTunnel",
+		"material": "water"
+  }, 
+  {
+    "name": "Reef",
+    "type": "area",
+    "rule": "d2(Island.center)",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.2,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+		"dimensions": {
+			"x": 0,
+			"y": 0,
+			"z": 0
+		},
+		"geometry": "ParametricTunnel",
+		"material": "sand"
+  }, 
+  {
+    "name": "Island",
+    "type": "area",
+    "rule": "",
+    "flow": {
+      "direction": 0.5,
+      "normal": 0.2,
+      "binormal": 0.0
+    },
+    "sand": 0.4,
+		"dimensions": {
+			"x": 20,
+			"y": 0,
+			"z": 0
+		},
+		"geometry": "Mountain",
+		"material": "Rock"
+  }, 
+  {
+    "name": "Boulder",
+    "type": "point",
+    "rule": "d2(Reef) - 5 - current.vel",
+    "flow": 0.0,
+    "sand": 0.4,
+		"dimensions": {
+			"x": 3,
+			"y": 0,
+			"z": 0
+		},
+		"geometry": "Sphere",
+		"material": "Dirt"
+  }, 
+  {
+    "name": "Delta",
+    "type": "curve",
+    "rule": "d2(Passe.end)",
+    "flow": {
+      "direction": 0.8,
+      "normal": 0.8,
+      "binormal": 0.0
+    },
+		"dimensions": {
+			"x": 4,
+			"y": 10,
+			"z": 0
+		},
+    "sand": 0.8,
+		"geometry": "ParametricTunnel",
+		"material": "water"
+  }
+]

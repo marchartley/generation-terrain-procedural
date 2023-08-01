@@ -67,6 +67,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 {
     this->setVoxelValues(layerBased.voxelize(fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight));
+    this->smoothVoxels();
 }
 
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
