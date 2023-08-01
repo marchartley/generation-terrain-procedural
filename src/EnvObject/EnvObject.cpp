@@ -182,13 +182,14 @@ EnvObject *EnvObject::instantiate(std::string objectName)
 
 void EnvObject::applyEffects()
 {
+    EnvObject::flowfield.reset();
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applyFlowModifcation();
     }
-    EnvObject::sandDeposit.wrapWith(EnvObject::flowfield * 0.1f);
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
+    EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield);
 }
 
 EnvPoint::EnvPoint()
@@ -287,7 +288,7 @@ void EnvCurve::applySandDeposit()
         }
     }
     sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min() - sand.getDimensions() * .5f);
+    EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
 }
 
 void EnvCurve::applyFlowModifcation()
@@ -305,7 +306,7 @@ void EnvCurve::applyFlowModifcation()
             flow.at(x, y, 0) = impact * translatedCurve.getDirection(translatedCurve.estimateClosestTime(Vector3(x, y, 0)));
         }
     }
-    EnvObject::flowfield.paste(flow, box.min() - flow.getDimensions() * .5f);
+    EnvObject::flowfield.add(flow, box.min() /*- flow.getDimensions() * .5f*/);
 }
 
 EnvArea::EnvArea()
@@ -362,7 +363,7 @@ void EnvArea::applySandDeposit()
         }
     }
     sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min() - sand.getDimensions() * .5f);
+    EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
 }
 
 void EnvArea::applyFlowModifcation()
@@ -378,5 +379,5 @@ void EnvArea::applyFlowModifcation()
 //            flow.at(x, y, 0) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0))) * translatedCurve.getDirection(translatedCurve.estimateClosestTime(Vector3(x, y, 0)));
 //        }
 //    }
-    EnvObject::flowfield.add(flow, box.min() - flow.getDimensions() * .5f);
+    EnvObject::flowfield.add(flow, box.min() /*- flow.getDimensions() * .5f*/);
 }
