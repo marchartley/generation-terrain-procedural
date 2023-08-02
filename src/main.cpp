@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
 
     EnvObject::readFile("saved_maps/primitives.json");
     EnvObject::sandDeposit = Matrix3<float>(100, 100);
-
+    /*
     EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
     reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)});
 
@@ -107,16 +107,17 @@ int main(int argc, char *argv[])
     Matrix3<Vector3> img(EnvObject::sandDeposit.getDimensions());
     for (size_t i = 0; i < img.size(); i++) {
         img[i] = Vector3(EnvObject::sandDeposit[i], 0, 0);
-//        Vector3 hsv = img.getCoordAsVector3(i);
-//        hsv.x /= img.sizeX;
-//        hsv.y /= img.sizeY;
-//        hsv.z = 1.f;
-//        img[i] = HSVtoRGB(hsv.x, hsv.y, hsv.z);
+        Vector3 hsv = img.getCoordAsVector3(i);
+        hsv.x /= img.sizeX;
+        hsv.y /= img.sizeY;
+        hsv.z = 1.f;
+        img[i] = HSVtoRGB(hsv.x, hsv.y, hsv.z);
     }
 
-//    Plotter::getInstance()->addImage(img, true);
+    Plotter::getInstance()->addImage(img, true);
     Plotter::getInstance()->addImage(EnvObject::sandDeposit, true);
     return Plotter::getInstance()->exec();
+    */
 /*
     int isize = 64;
     int jsize = 64;
