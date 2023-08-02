@@ -235,6 +235,14 @@ void EnvPoint::applyFlowModifcation()
     EnvObject::flowfield.add(flow, this->position - Vector3(radius, radius));
 }
 
+ImplicitPatch* EnvPoint::createImplicitPatch()
+{
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius), 0);
+    patch->position = this->position;
+    patch->material = this->material;
+    return patch;
+}
+
 EnvCurve::EnvCurve()
     : EnvObject()
 {
@@ -309,6 +317,17 @@ void EnvCurve::applyFlowModifcation()
     EnvObject::flowfield.add(flow, box.min() /*- flow.getDimensions() * .5f*/);
 }
 
+ImplicitPatch* EnvCurve::createImplicitPatch()
+{
+    BSpline translatedCurve = this->curve;
+    AABBox box(this->curve.points);
+    translatedCurve.translate(box.min());
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions(), 0, translatedCurve);
+    patch->position = box.min();
+    patch->material = this->material;
+    return patch;
+}
+
 EnvArea::EnvArea()
     : EnvObject()
 {
@@ -359,11 +378,12 @@ void EnvArea::applySandDeposit()
 
     for (int x = 0; x < sand.sizeX; x++) {
         for (int y = 0; y < sand.sizeY; y++) {
-            sand.at(x, y, 0) = (translatedCurve.contains(Vector3(x, y, 0)) ? 1.f : 0.f); //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+            bool inside = translatedCurve.contains(Vector3(x, y, 0));
+            sand.at(x, y, 0) = (inside ? 1.f : 0.f); //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
         }
     }
     sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
+    EnvObject::sandDeposit.add(sand, box.min());
 }
 
 void EnvArea::applyFlowModifcation()
@@ -379,5 +399,17 @@ void EnvArea::applyFlowModifcation()
 //            flow.at(x, y, 0) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0))) * translatedCurve.getDirection(translatedCurve.estimateClosestTime(Vector3(x, y, 0)));
 //        }
 //    }
-    EnvObject::flowfield.add(flow, box.min() /*- flow.getDimensions() * .5f*/);
+    EnvObject::flowfield.add(flow, box.min());
+}
+
+ImplicitPatch* EnvArea::createImplicitPatch()
+{
+    BSpline translatedCurve = this->area;
+    AABBox box(this->area.points);
+    translatedCurve.translate(box.min());
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions(), 0, translatedCurve);
+    patch->position = box.min();
+    patch->material = this->material;
+//    patch->name = ""
+    return patch;
 }

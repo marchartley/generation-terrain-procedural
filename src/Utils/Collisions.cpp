@@ -1,5 +1,6 @@
 #include "Collisions.h"
 
+#include "DataStructure/Quaternion.h"
 
 // Source : http://paulbourke.net/geometry/pointlineplane/
 Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& p4)
@@ -281,6 +282,65 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
 
 bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polygon)
 {
+    if (_polygon.size() < 3) return false; // A polygon must have at least 3 vertices.
+
+    // Calculate the centroid of the polygon.
+    Vector3 center = std::accumulate(_polygon.begin(), _polygon.end(), Vector3()) / static_cast<float>(_polygon.size());
+
+    // Calculate the normal of the polygon by taking the cross product of two non-collinear edges.
+    Vector3 edge1 = _polygon[1] - _polygon[0];
+    Vector3 edge2 = _polygon[2] - _polygon[1];
+    Vector3 normal = edge1.cross(edge2).normalized();
+
+    // Define the initial direction vector in the plane of the polygon as the normal of the polygon rotated slightly.
+    float rotationAngle = 0.01; // in radians
+    Vector3 direction = edge1.normalized(); //Quaternion::AxisAngle(normal, rotationAngle).toVector3() * edge1;
+
+    // Find the maximum distance between any two vertices of the polygon.
+    float maxDistance = 0;
+    for (size_t i = 0; i < _polygon.size(); i++) {
+        for (size_t j = i + 1; j < _polygon.size(); j++) {
+            float distance = (_polygon[i] - _polygon[j]).norm();
+            maxDistance = std::max(maxDistance, distance);
+        }
+    }
+
+    // Adjust the direction of the ray until it is not parallel to any edge of the polygon.
+    bool isParallel;
+    do {
+        isParallel = false;
+        for (size_t i = 0; i < _polygon.size(); i++) {
+            Vector3 edge = _polygon[(i+1)%_polygon.size()] - _polygon[i];
+            Vector3 crossProduct = direction.cross(edge);
+            if (crossProduct.norm() < 1e-5) { // if the cross product is near zero, the vectors are parallel
+                isParallel = true;
+                break;
+            }
+        }
+        if (isParallel) {
+//            direction = Quaternion::AxisAngle(normal, rotationAngle).toVector3() * direction;
+            Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
+            direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
+        }
+    } while (isParallel);
+
+    // Create the ray from the center towards the direction with a length greater than the maxDistance.
+    Vector3 ray = center + direction.normalized() * maxDistance * 1.1f;
+
+    // Check intersections of the ray with all the edges of the polygon.
+    int nb_intersections = 0;
+    for (size_t i = 0; i < _polygon.size(); i++) {
+        if (Collision::intersectionBetweenTwoSegments(point, ray, _polygon[i], _polygon[(i+1)%_polygon.size()]).isValid())
+            nb_intersections++;
+    }
+
+    // If the number of intersections is odd, the point is inside the polygon.
+    return (nb_intersections % 2) == 1;
+
+
+
+
+    /*
     std::vector<Vector3> polygon;
     for (auto& p : _polygon)
         if (polygon.empty() || (p - polygon.back()).norm2() > 0.01)
@@ -288,7 +348,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polyg
 
     if (polygon.size() < 2) return false;
 
-    size_t firstIndex = 0, secondIndex = 0;
+    size_t firstIndex = 0, secondIndex = 1;
 
     Vector3 firstVertex = polygon[firstIndex];
     Vector3 secondVertex = polygon[secondIndex];
@@ -296,12 +356,14 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polyg
     float polygonLength = 0;
     for (size_t i = 0; i < polygon.size(); i++) {
         center += polygon[i];
-        if (i > 0)
-            polygonLength += (polygon[i] - polygon[i - 1]).norm();
+//        if (i > 0)
+//            polygonLength += (polygon[i] - polygon[i - 1]).norm();
+        polygonLength = std::max(polygonLength, (point - polygon[i]).norm());
     }
+    polygonLength = std::sqrt(polygonLength) + 1.f;
     center /= (float)polygon.size();
     // First, lets find a good plane to define our shape
-    while (std::abs((firstVertex - center).normalized().dot((secondVertex - center).normalized())) < (1 - 1e-5)) {
+    while (std::abs((firstVertex - center).normalized().dot((secondVertex - center).normalized())) < (1 - 1e-3)) {
         secondIndex ++;
         if (secondIndex >= polygon.size()) {
             secondIndex = 0;
@@ -323,6 +385,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polyg
     }
     // If there's a odd number of intersections, the point is inside
     return (nb_intersections % 2) == 1;
+    */
 }
 
 Vector3 Collision::projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd)

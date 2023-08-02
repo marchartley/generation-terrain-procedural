@@ -55,6 +55,7 @@ public:
     static std::pair<Vector3, EnvObject*> getVectorOf(std::string objectName, const Vector3& position);
 
     static EnvObject* instantiate(std::string objectName);
+    virtual ImplicitPatch* createImplicitPatch() = 0;
 
     static void applyEffects();
 };
@@ -73,6 +74,7 @@ public:
     virtual EnvPoint* clone();
     virtual void applySandDeposit();
     virtual void applyFlowModifcation();
+    virtual ImplicitPatch* createImplicitPatch();
 };
 
 class EnvCurve : public EnvObject {
@@ -90,6 +92,7 @@ public:
     virtual EnvCurve* clone();
     virtual void applySandDeposit();
     virtual void applyFlowModifcation();
+    virtual ImplicitPatch* createImplicitPatch();
 };
 
 class EnvArea : public EnvObject {
@@ -106,6 +109,7 @@ public:
     virtual EnvArea* clone();
     virtual void applySandDeposit();
     virtual void applyFlowModifcation();
+    virtual ImplicitPatch* createImplicitPatch();
 };
 
 #endif // ENVOBJECT_H
