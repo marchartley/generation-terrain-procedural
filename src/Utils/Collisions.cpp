@@ -280,8 +280,15 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
 
 }
 
-bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> _polygon)
+bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygon)
 {
+    std::vector<Vector3> _polygon;
+    for (auto& p : polygon)
+        if (_polygon.empty() || (p - _polygon.back()).norm2() > 0.01)
+            _polygon.push_back(p);
+    if (_polygon.front() == _polygon.back())
+        _polygon.pop_back();
+
     if (_polygon.size() < 3) return false; // A polygon must have at least 3 vertices.
 
     // Calculate the centroid of the polygon.
