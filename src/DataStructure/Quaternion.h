@@ -44,6 +44,8 @@ public:
     void toAxisAngle(Vector3& axis, float& angle) const;
     static Quaternion fromAxisAngle(const Vector3& axis, float angle);
 
+    Matrix toRotationMatrix() const;
+    Quaternion fromRotationMatrix(const Matrix& m);
 
 
 

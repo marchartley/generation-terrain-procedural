@@ -130,6 +130,28 @@ Quaternion Quaternion::fromAxisAngle(const Vector3 &axis, float angle) {
     return Quaternion(std::cos(angle / 2), axis.x * s, axis.y * s, axis.z * s);
 }
 
+Matrix Quaternion::toRotationMatrix() const {
+    Matrix R(3, 3);
+    R[0][0] = 1 - 2*y*y - 2*z*z;
+    R[0][1] = 2*x*y - 2*z*w;
+    R[0][2] = 2*x*z + 2*y*w;
+    R[1][0] = 2*x*y + 2*z*w;
+    R[1][1] = 1 - 2*x*x - 2*z*z;
+    R[1][2] = 2*y*z - 2*x*w;
+    R[2][0] = 2*x*z - 2*y*w;
+    R[2][1] = 2*y*z + 2*x*w;
+    R[2][2] = 1 - 2*x*x - 2*y*y;
+    return R;
+}
+
+Quaternion Quaternion::fromRotationMatrix(const Matrix &m) {
+    float w = std::sqrt(1.0 + m[0][0] + m[1][1] + m[2][2]) / 2.0;
+    float x = (m[2][1] - m[1][2]) / (4.0*w);
+    float y = (m[0][2] - m[2][0]) / (4.0*w);
+    float z = (m[1][0] - m[0][1]) / (4.0*w);
+    return Quaternion(w, x, y, z);
+}
+
 Quaternion Quaternion::operator*(const Quaternion &b) const {
     return Quaternion(
                 w * b.w - x * b.x - y * b.y - z * b.z,  // new w

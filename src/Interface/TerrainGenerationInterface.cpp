@@ -373,8 +373,8 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
     EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
     passe->curve = BSpline({Vector3(10, 10, 0), Vector3(40, 10, 0), Vector3(40, 50, 0), Vector3(70, 70, 0)});
 
-//    this->implicitTerrain->addChild(reef->createImplicitPatch());
-//    this->implicitTerrain->addChild(passe->createImplicitPatch());
+    this->implicitTerrain->addChild(reef->createImplicitPatch());
+    this->implicitTerrain->addChild(passe->createImplicitPatch());
 
     std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
     std::cout << "To voxels: " << timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;

@@ -102,11 +102,17 @@ void CoralIslandGeneratorInterface::show()
     if (this->heightmap) {
         this->startingHeightmap = *this->heightmap;
     }
+
     return ActionInterface::show();
 }
 
 void CoralIslandGeneratorInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
 {
+    if (this->isVisible()) {
+        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
+        coralBoulderGen.step();
+        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
+    }
     return ActionInterface::mouseClickedOnMapEvent(mousePosInMap, mouseInMap, event, model);
 }
 

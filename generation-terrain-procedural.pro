@@ -181,6 +181,7 @@ SOURCES += \
     src/TerrainGen/TerrainModel.cpp \
         src/TerrainGen/VoxelChunk.cpp \
         src/TerrainGen/VoxelGrid.cpp \
+    src/TerrainModification/CoralGrowth.cpp \
     src/TerrainModification/CoralIslandGenerator.cpp \
         src/TerrainModification/FaultSlip.cpp \
         src/TerrainModification/RockErosion.cpp \
@@ -325,6 +326,7 @@ HEADERS += \
     src/TerrainGen/TerrainModel.h \
     src/TerrainGen/VoxelChunk.h \
     src/TerrainGen/VoxelGrid.h \
+    src/TerrainModification/CoralGrowth.h \
     src/TerrainModification/CoralIslandGenerator.h \
     src/TerrainModification/FaultSlip.h \
     src/TerrainModification/RockErosion.h \
