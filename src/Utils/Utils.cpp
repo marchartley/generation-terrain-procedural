@@ -285,7 +285,7 @@ std::string replaceInString(std::string initial, std::string toReplace, std::str
     std::string replaced = initial;
     while (replaced.find(toReplace.c_str()) != replaced.npos) {
         size_t pos = replaced.find(toReplace.c_str());
-        replaced.replace(pos, replacing.size(), replacing);
+        replaced.replace(pos, toReplace.size(), replacing);
     }
     return replaced;
 }

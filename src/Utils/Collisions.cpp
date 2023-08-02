@@ -283,13 +283,17 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
 bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygon)
 {
     std::vector<Vector3> _polygon;
-    for (auto& p : polygon)
+    _polygon.reserve(polygon.size());
+    for (const auto& p : polygon)
         if (_polygon.empty() || (p - _polygon.back()).norm2() > 0.01)
             _polygon.push_back(p);
     if (_polygon.front() == _polygon.back())
         _polygon.pop_back();
 
     if (_polygon.size() < 3) return false; // A polygon must have at least 3 vertices.
+
+    if (!AABBox(_polygon).contains(point))
+        return false;
 
     // Calculate the centroid of the polygon.
     Vector3 center = std::accumulate(_polygon.begin(), _polygon.end(), Vector3()) / static_cast<float>(_polygon.size());
@@ -299,6 +303,11 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
     Vector3 edge2 = _polygon[2] - _polygon[1];
     Vector3 normal = edge1.cross(edge2).normalized();
 
+    float epsilon = 1e-5;
+    Vector3 pointToCenter = center - point;
+    if (std::abs(pointToCenter.dot(normal)) > epsilon)
+        return false;
+
     // Define the initial direction vector in the plane of the polygon as the normal of the polygon rotated slightly.
     float rotationAngle = 0.01; // in radians
     Vector3 direction = edge1.normalized(); //Quaternion::AxisAngle(normal, rotationAngle).toVector3() * edge1;
@@ -306,11 +315,12 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
     // Find the maximum distance between any two vertices of the polygon.
     float maxDistance = 0;
     for (size_t i = 0; i < _polygon.size(); i++) {
-        for (size_t j = i + 1; j < _polygon.size(); j++) {
-            float distance = (_polygon[i] - _polygon[j]).norm();
+//        for (size_t j = i + 1; j < _polygon.size(); j++) {
+            float distance = (_polygon[i] - point).norm2();
             maxDistance = std::max(maxDistance, distance);
-        }
+//        }
     }
+    maxDistance = std::sqrt(maxDistance);
 
     // Adjust the direction of the ray until it is not parallel to any edge of the polygon.
     bool isParallel;
@@ -319,7 +329,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
         for (size_t i = 0; i < _polygon.size(); i++) {
             Vector3 edge = _polygon[(i+1)%_polygon.size()] - _polygon[i];
             Vector3 crossProduct = direction.cross(edge);
-            if (crossProduct.norm() < 1e-5) { // if the cross product is near zero, the vectors are parallel
+            if (crossProduct.norm2() < 1e-5) { // if the cross product is near zero, the vectors are parallel
                 isParallel = true;
                 break;
             }

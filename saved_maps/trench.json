@@ -26,7 +26,7 @@
 							"z": 12.543305397033691
 						},
 						"filename": "",
-						"index": 9,
+						"index": 8,
 						"material": "ROCK",
 						"mirrored": false,
 						"name": "Mountainchain",
@@ -69,7 +69,7 @@
 						},
 						"type": "primitive"
 					},
-					"index": 8,
+					"index": 7,
 					"mirrored": false,
 					"name": "Translation",
 					"optionalCurve": {
@@ -84,7 +84,7 @@
 					},
 					"type": "unary"
 				},
-				"index": 7,
+				"index": 6,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",
@@ -104,7 +104,7 @@
 					"z": 20.0
 				},
 				"filename": "",
-				"index": 6,
+				"index": 5,
 				"material": "ROCK",
 				"mirrored": false,
 				"name": "Polygon",
@@ -166,6 +166,140 @@
 					"z": 0.0
 				},
 				"type": "primitive"
+			},
+			{
+				"composableA": {
+					"densityValue": 0.3499999940395355,
+					"dimensions": {
+						"x": 100.0,
+						"y": 100.0,
+						"z": 30.0
+					},
+					"filename": "",
+					"index": 4,
+					"material": "SAND",
+					"mirrored": false,
+					"name": "Parametric_Tunnel",
+					"optionalCurve": {
+						"closed": true,
+						"points": [
+							{
+								"x": 0.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							{
+								"x": 100.0,
+								"y": 0.0,
+								"z": 0.0
+							},
+							{
+								"x": 100.0,
+								"y": 100.0,
+								"z": 0.0
+							},
+							{
+								"x": 0.0,
+								"y": 100.0,
+								"z": 0.0
+							}
+						]
+					},
+					"position": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"shape": "Parametric_Tunnel",
+					"sigmaValue": 15.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 3,
+				"mirrored": false,
+				"name": "Translation",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"spreadFactor": 0.0,
+				"translation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 27.481163024902344
+				},
+				"type": "unary"
+			},
+			{
+				"composableA": {
+					"densityValue": -2.5,
+					"dimensions": {
+						"x": 60.0,
+						"y": 60.0,
+						"z": 10.0
+					},
+					"filename": "",
+					"index": 2,
+					"material": "WATER",
+					"mirrored": false,
+					"name": "Parametric_Tunnel",
+					"optionalCurve": {
+						"closed": false,
+						"points": [
+							{
+								"x": 20.0,
+								"y": 20.0,
+								"z": 0.0
+							},
+							{
+								"x": 50.0,
+								"y": 20.0,
+								"z": 0.0
+							},
+							{
+								"x": 50.0,
+								"y": 60.0,
+								"z": 0.0
+							},
+							{
+								"x": 80.0,
+								"y": 80.0,
+								"z": 0.0
+							}
+						]
+					},
+					"position": {
+						"x": 10.0,
+						"y": 10.0,
+						"z": 0.0
+					},
+					"shape": "Parametric_Tunnel",
+					"sigmaValue": 5.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 1,
+				"mirrored": false,
+				"name": "Translation",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"spreadFactor": 0.0,
+				"translation": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 15.43295669555664
+				},
+				"type": "unary"
 			}
 		],
 		"index": 0,

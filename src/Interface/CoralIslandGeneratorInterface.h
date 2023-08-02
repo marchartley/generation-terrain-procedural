@@ -1,6 +1,7 @@
 #ifndef CORALISLANDGENERATORINTERFACE_H
 #define CORALISLANDGENERATORINTERFACE_H
 
+#include "TerrainModification/CoralGrowth.h"
 #include "TerrainModification/CoralIslandGenerator.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
@@ -60,6 +61,8 @@ public:
     CoralIslandGenerator coralGen;
 
     Heightmap startingHeightmap;
+
+    CoralGrowth coralBoulderGen;
 
 };
 

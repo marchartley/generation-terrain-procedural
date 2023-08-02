@@ -89,7 +89,8 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+        terrainGenerationInterface->createTerrainFromNoise(30, 30, 30, true);
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;

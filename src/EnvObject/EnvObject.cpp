@@ -322,7 +322,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch()
     BSpline translatedCurve = this->curve;
     AABBox box(this->curve.points);
     translatedCurve.translate(box.min());
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions(), 0, translatedCurve);
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + Vector3(0, 0, this->width*2.f), this->width, translatedCurve);
     patch->position = box.min();
     patch->material = this->material;
     return patch;
@@ -407,7 +407,7 @@ ImplicitPatch* EnvArea::createImplicitPatch()
     BSpline translatedCurve = this->area;
     AABBox box(this->area.points);
     translatedCurve.translate(box.min());
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions(), 0, translatedCurve);
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + Vector3(0, 0, this->width * 2.f), this->width, translatedCurve);
     patch->position = box.min();
     patch->material = this->material;
 //    patch->name = ""

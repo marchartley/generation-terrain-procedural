@@ -167,6 +167,7 @@ public:
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
     Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
+    Matrix3<int> isosurface(T isovalue) const;
 
     template<typename U>
     operator Matrix3<U>() {
@@ -997,6 +998,34 @@ Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValu
         }
     }
     return bin;
+}
+
+template<class T>
+Matrix3<int> Matrix3<T>::isosurface(T isovalue) const
+{
+    Matrix3<int> surface = Matrix3<int>(this->getDimensions());
+    Matrix3<T> copy = *this;
+    copy.raiseErrorOnBadCoord = false;
+    copy.defaultValueOnBadCoord = T();
+    bool useZ = (this->sizeZ > 1);
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if (!this->at(x, y, z)) continue;
+                bool isSurface = false;
+                for (int dx = -1; dx <= 1 && !isSurface; dx++) {
+                    for (int dy = -1; dy <= 1 && !isSurface; dy++) {
+                        for (int dz = (useZ ? -1 : 0); dz <= (useZ ? 1 : 0); dz++) {
+                            if (!this->at(x + dx, y + dy, z + dz))
+                                isSurface = true;
+                        }
+                    }
+                }
+                surface.at(x, y, z) = 1;
+            }
+        }
+    }
+    return surface;
 }
 
 template<typename T>
