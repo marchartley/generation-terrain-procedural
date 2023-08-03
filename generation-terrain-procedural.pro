@@ -103,9 +103,9 @@ SOURCES += \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
     src/EnvObject/EnvObject.cpp \
-        src/FastWFC/propagator.cpp \
-        src/FastWFC/wave.cpp \
-        src/FastWFC/wfc.cpp \
+#        src/FastWFC/propagator.cpp \
+#        src/FastWFC/wave.cpp \
+#        src/FastWFC/wfc.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -239,19 +239,19 @@ HEADERS += \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
     src/EnvObject/EnvObject.h \
-    src/FastWFC/color.hpp \
-    src/FastWFC/direction.hpp \
-    src/FastWFC/external/rapidxml.hpp \
-    src/FastWFC/image.hpp \
-    src/FastWFC/overlapping_wfc.hpp \
-    src/FastWFC/propagator.hpp \
-    src/FastWFC/rapidxml_utils.hpp \
-    src/FastWFC/tiling_wfc.hpp \
-    src/FastWFC/utils.hpp \
-    src/FastWFC/utils/array2D.hpp \
-    src/FastWFC/utils/array3D.hpp \
-    src/FastWFC/wave.hpp \
-    src/FastWFC/wfc.hpp \
+#    src/FastWFC/color.hpp \
+#    src/FastWFC/direction.hpp \
+#    src/FastWFC/external/rapidxml.hpp \
+#    src/FastWFC/image.hpp \
+#    src/FastWFC/overlapping_wfc.hpp \
+#    src/FastWFC/propagator.hpp \
+#    src/FastWFC/rapidxml_utils.hpp \
+#    src/FastWFC/tiling_wfc.hpp \
+#    src/FastWFC/utils.hpp \
+#    src/FastWFC/utils/array2D.hpp \
+#    src/FastWFC/utils/array3D.hpp \
+#    src/FastWFC/wave.hpp \
+#    src/FastWFC/wfc.hpp \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \

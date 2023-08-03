@@ -1,6 +1,6 @@
 #version 430
 //New G80 extensions
-#extension GL_EXT_geometry_shader4 : enable
+//#extension GL_EXT_geometry_shader4 : enable
 #extension GL_EXT_gpu_shader4 : enable
 
 layout ( points ) in;
