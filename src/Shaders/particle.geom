@@ -1,7 +1,7 @@
 #version 430
 
 //#extension GL_EXT_geometry_shader4 : enable
-//#extension GL_EXT_gpu_shader4 : enable
+#extension GL_EXT_gpu_shader4 : enable
 
 layout ( points ) in;
 layout ( triangle_strip, max_vertices = 4 ) out;
