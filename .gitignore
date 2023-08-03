@@ -97,3 +97,4 @@ Python_tests\.ipynb_checkpoints\*
 
 usersmarchappdata*
 *.pth
+.qglviewer.xml
