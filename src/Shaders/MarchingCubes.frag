@@ -322,9 +322,9 @@ void main(void)
         mat3 TBNz = transpose(mat3(Tz, Bz, Nz));
 
         vec2 normalTextureOffset = vec2(biomeNormalValue, 0);
-        vec3 xaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
-        vec3 yaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
-        vec3 zaxis = texture2D(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
+        vec3 xaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
+        vec3 yaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
+        vec3 zaxis = texture(allBiomesNormalTextures, normalTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesNormalTextures, 1.0)) * 0.99).rgb;
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
         N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
@@ -395,14 +395,14 @@ void main(void)
         vec2 realColorTextureOffset = vec2(realBiomeColorValue, 0);
         // biome val == real biome val => no need to have a mix (alpha = 0)
         float alpha = 1 - clamp(wyvill(length(fbmWrap)/5.0), 0.0, 1.0) * (biomeColorValue == realBiomeColorValue ? 0.0 : 1.0);
-        vec3 xaxis = mix(texture2D(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
-                         texture2D(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+        vec3 xaxis = mix(texture(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+                         texture(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.yz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          alpha).rgb;
-        vec3 yaxis = mix(texture2D(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
-                         texture2D(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+        vec3 yaxis = mix(texture(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+                         texture(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.xz / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          alpha).rgb;
-        vec3 zaxis = mix(texture2D(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
-                         texture2D(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+        vec3 zaxis = mix(texture(allBiomesColorTextures, colorTextureOffset     + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
+                         texture(allBiomesColorTextures, realColorTextureOffset + (fract(realFragmentPosition.xy / scale) * vec2(1.0/maxBiomesColorTextures, 1.0)) * 0.99),
                          alpha).rgb;
         fragColor = vec4((vec4(blending.x * xaxis + blending.y * yaxis + blending.z * zaxis, 1.0) * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
 
