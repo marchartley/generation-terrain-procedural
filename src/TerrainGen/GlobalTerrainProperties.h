@@ -56,7 +56,7 @@ public:
 //    WarpedFluidSimulation* warpSimulation;
 
 
-    Matrix3<float> environmentalDensities;
+    GridF environmentalDensities;
 };
 
 std::string stringFromFluidSimType(FluidSimType type);

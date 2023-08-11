@@ -58,8 +58,8 @@ protected:
     std::vector<Mesh> flowMeshes;
     Mesh sumOfFlowsMesh;
 
-    Matrix3<float> pressureDensityVoxels;
-    Matrix3<Vector3> totalFlow;
+    GridF pressureDensityVoxels;
+    GridV3 totalFlow;
     Mesh pressureDensityMesh;
 
     std::vector<bool> displayedFlowfields;

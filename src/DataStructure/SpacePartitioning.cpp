@@ -5,26 +5,6 @@ SpacePartitioning::SpacePartitioning()
 {
 
 }
-/*
-SpacePartitioning::SpacePartitioning(const std::vector<Triangle> &triangles)
-    : triangles(triangles)
-{
-}
-
-SpacePartitioning::SpacePartitioning(const std::vector<std::vector<Vector3> > &triangles)
-    : SpacePartitioning(Triangle::vectorsToTriangles(triangles))
-{
-}
-*/
-//SpacePartitioning &SpacePartitioning::build(const std::vector<Triangle> &triangles)
-//{
-//    this->triangles = triangles;
-//}
-
-//SpacePartitioning &SpacePartitioning::build(const std::vector<std::vector<Vector3> > &triangles) const
-//{
-//    return this->build(Triangle::vectorsToTriangles(triangles));
-//}
 
 Vector3 SpacePartitioning::getIntersection(const Vector3 &rayStart, const Vector3 &rayEnd) const
 {
@@ -33,8 +13,11 @@ Vector3 SpacePartitioning::getIntersection(const Vector3 &rayStart, const Vector
 
 std::pair<Vector3, Vector3> SpacePartitioning::getIntersectionAndNormal(const Vector3 &rayStart, const Vector3 &rayEnd) const
 {
+    if (this->triangles.empty()) return {Vector3(false), Vector3(false)};
     auto [position, index] = this->getIntersectionAndTriangleIndex(rayStart, rayEnd);
-    return {position, triangles[index].normal};
+    if (position.isValid())
+        return {position, triangles[index].normal};
+    return {Vector3(false), Vector3(false)};
 }
 
 std::vector<Vector3> SpacePartitioning::getAllIntersections(const Vector3 &rayStart, const Vector3 &rayEnd) const
@@ -42,7 +25,8 @@ std::vector<Vector3> SpacePartitioning::getAllIntersections(const Vector3 &raySt
     auto posAndIndices = this->getAllIntersectionsAndTrianglesIndices(rayStart, rayEnd);
     std::vector<Vector3> intersections;
     for (auto& [pos, index] : posAndIndices) {
-        intersections.push_back(pos);
+        if (pos.isValid())
+            intersections.push_back(pos);
     }
     return intersections;
 }
@@ -52,7 +36,8 @@ std::vector<std::pair<Vector3, Vector3> > SpacePartitioning::getAllIntersections
     auto posAndIndices = this->getAllIntersectionsAndTrianglesIndices(rayStart, rayEnd);
     std::vector<std::pair<Vector3, Vector3>> intersections;
     for (auto& [pos, index] : posAndIndices) {
-        intersections.push_back({pos, triangles[index].normal});
+        if (pos.isValid())
+            intersections.push_back({pos, triangles[index].normal});
     }
     return intersections;
 }
@@ -67,8 +52,3 @@ std::vector<Triangle> SpacePartitioning::getAllStoredTriangles() const
     }
     return result;
 }
-
-//std::pair<Vector3, size_t> SpacePartitioning::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd) const
-//{
-
-//}

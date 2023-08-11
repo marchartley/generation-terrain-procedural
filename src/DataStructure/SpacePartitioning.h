@@ -23,8 +23,9 @@ public:
     virtual std::set<size_t> getAllStoredTrianglesIndices() const = 0;
     virtual std::vector<Triangle> getAllStoredTriangles() const;
 
-protected:
-    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd) const = 0;
+//protected:
+    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, std::set<size_t> ignoredTriangles = {}) const = 0;
+    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, size_t ignoredTriangle) const = 0;
     virtual std::vector<std::pair<Vector3, size_t>> getAllIntersectionsAndTrianglesIndices(const Vector3& rayStart, const Vector3& rayEnd) const = 0;
     std::vector<Triangle> triangles;
 };

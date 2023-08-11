@@ -10,10 +10,10 @@ public:
 
     void step();
 
-    Matrix3<float> volume;
-    Matrix3<float> coralArea;
-    Matrix3<float> highErosionArea;
-    Matrix3<float> highDepositArea;
+    GridF volume;
+    GridF coralArea;
+    GridF highErosionArea;
+    GridF highDepositArea;
 
     Vector3 waterflow = Vector3(1, 0, 0);
     Vector3 terrainSize = Vector3(30, 30, 30);

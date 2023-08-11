@@ -94,8 +94,8 @@ public:
     Matrix3<T> resizeNearest(size_t newX, size_t newY, size_t newZ) const;
     Matrix3<T> resizeNearest(Vector3 newSize) const;
 
-    Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1);
-    Matrix3<T> subset(Vector3 start, Vector3 end);
+    Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1) const;
+    Matrix3<T> subset(Vector3 start, Vector3 end) const;
     Matrix3<T>& paste(Matrix3<T>& matrixToPaste, Vector3 upperLeftFrontCorner = Vector3());
     Matrix3<T>& paste(Matrix3<T>& matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(Matrix3<T>& matrixToAdd, Vector3 upperLeftFrontCorner, bool useInterpolation = false);
@@ -257,7 +257,7 @@ template<class T>
 std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError, std::string separator)
 {
     if (patterns.empty())
-        patterns = {"#", "=", "-", "."};
+        patterns = {".", "-", "=", "#"};
 
     if (min == 0.f && max == 0.f) {
         min = this->min();
@@ -347,6 +347,7 @@ bool Matrix3<T>::checkCoord(int x, int y, int z) const
 template<class T>
 bool Matrix3<T>::checkCoord(Vector3 pos) const
 {
+    if (pos.minComp() < 0 || pos.x > sizeX-1 || pos.y > sizeY-1 || pos.z > sizeZ-1) return false;
     return checkCoord(pos.x, pos.y, pos.z);
 }
 
@@ -1380,7 +1381,7 @@ Matrix3<T> Matrix3<T>::resizeNearest(Vector3 newSize) const
 
 
 template<typename T>
-Matrix3<T> Matrix3<T>::subset(Vector3 start, Vector3 end)
+Matrix3<T> Matrix3<T>::subset(Vector3 start, Vector3 end) const
 {
     if (start.z == 0 && end.z == 0)
         end.z = -1; // Give it the default value so it will be managed by the main function
@@ -1388,7 +1389,7 @@ Matrix3<T> Matrix3<T>::subset(Vector3 start, Vector3 end)
 }
 
 template<typename T>
-Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int startZ, int endZ)
+Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int startZ, int endZ) const
 {
     if (endZ == -1) endZ = this->sizeZ;
     Matrix3<T> croppedMatrix(std::max(endX - startX, 0), std::max(endY - startY, 0), std::max(endZ - startZ, 0));
@@ -1915,5 +1916,8 @@ Vector3 Matrix3<T>::getDimensions() const
 }
 
 
+typedef Matrix3<float> GridF;
+typedef Matrix3<int> GridI;
+typedef Matrix3<Vector3> GridV3;
 
 #endif // MATRIX3_H

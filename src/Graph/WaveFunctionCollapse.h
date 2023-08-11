@@ -11,20 +11,20 @@ class WaveFunctionCollapse
 {
 public:
     WaveFunctionCollapse();
-    WaveFunctionCollapse(std::vector<Matrix3<int>> constraints);
+    WaveFunctionCollapse(std::vector<GridI> constraints);
     void run(int sizeX, int sizeY, int sizeZ = 1);
     bool step();
 
     Vector3 getLowestEntropyCellIndex();
     bool propagate(Vector3 from, bool forceNeighborsPropagation = false);
 
-    static std::vector<Matrix3<int>> createLabelsFromImage(Matrix3<int> image, Vector3 tilesDim = Vector3(3, 3, 1));
+    static std::vector<GridI> createLabelsFromImage(GridI image, Vector3 tilesDim = Vector3(3, 3, 1));
 
     Vector3 tilesDim;
     Vector3 tilesAnchor;
-    std::vector<Matrix3<int>> constraints;
-    Matrix3<int> finalMap;
-    Matrix3<int> modifiedCell;
+    std::vector<GridI> constraints;
+    GridI finalMap;
+    GridI modifiedCell;
     Matrix3<std::vector<int>> availablePatternsOnCell;
 };
 

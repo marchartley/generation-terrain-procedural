@@ -2,10 +2,10 @@
 
 CoralGrowth::CoralGrowth()
 {
-    volume = Matrix3<float>(terrainSize);
-    coralArea = Matrix3<float>(terrainSize);
-    highErosionArea = Matrix3<float>(terrainSize);
-    highDepositArea = Matrix3<float>(terrainSize);
+    volume = GridF(terrainSize);
+    coralArea = GridF(terrainSize);
+    highErosionArea = GridF(terrainSize);
+    highDepositArea = GridF(terrainSize);
 
     for (int x = 0; x < terrainSize.x; x++) {
         for (int y = 0; y < terrainSize.y; y++) {
@@ -26,8 +26,8 @@ void CoralGrowth::step()
     highErosionArea.reset();
     highDepositArea.reset();
 
-    Matrix3<float> surface = (1.f - volume.binarize()).toDistanceMap();
-    Matrix3<Vector3> normals = surface.gradient();
+    GridF surface = (1.f - volume.binarize()).toDistanceMap();
+    GridV3 normals = surface.gradient();
     for (auto& n : normals)
         n.normalize();
     for (auto& val : surface)
@@ -71,7 +71,7 @@ void CoralGrowth::step()
 
     highDepositArea *= ratio;
 
-    Matrix3<float> modifications = (highDepositArea - highErosionArea).meanSmooth(5, 5, 5);
+    GridF modifications = (highDepositArea - highErosionArea).meanSmooth(5, 5, 5);
 
     volume += modifications;
 }

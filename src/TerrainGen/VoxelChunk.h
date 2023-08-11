@@ -18,7 +18,7 @@ class VoxelChunk : public std::enable_shared_from_this<VoxelChunk>
 {
 public:
     VoxelChunk();
-    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, Matrix3<float> iso_data, VoxelGrid* parent);
+    VoxelChunk(int x, int y, int sizeX, int sizeY,  int height, GridF iso_data, VoxelGrid* parent);
     ~VoxelChunk();
 
     void display();
@@ -32,7 +32,7 @@ public:
     void letGravityMakeSandFall();
     void computeGroups();
 
-    void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
+    void applyModification(GridF modifications, Vector3 anchor = Vector3());
     bool undo();
     bool redo();
 
@@ -47,7 +47,7 @@ public:
 
     float getVoxelValue(int x, int y, int z);
     float getVoxelValue(Vector3 pos);
-    Matrix3<float>& getVoxelValues();
+    GridF& getVoxelValues();
 
     std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 
@@ -58,14 +58,14 @@ public:
 
 
 //protected:
-    Matrix3<float> iso_data;
+    GridF iso_data;
     int x, y;
     int z = 0; // Will be important later!
     int sizeX, sizeY, sizeZ;
-    Matrix3<int> voxelGroups;
-    Matrix3<Vector3> flowField;
-    Matrix3<int> distanceField;
-    Matrix3<float> pressureField;
+    GridI voxelGroups;
+    GridV3 flowField;
+    GridI distanceField;
+    GridF pressureField;
     int LoDIndex = 1;
     std::vector<int> LoDs;
 
@@ -80,12 +80,12 @@ public:
 
     size_t currentHistoryIndex = 0;
 
-    std::vector<Matrix3<float>> voxelsValuesStack;
+    std::vector<GridF> voxelsValuesStack;
     std::vector<Vector3> voxelsValuesAnchorStack;
 
 
     int _cachedHistoryIndex = -1;
-    Matrix3<float> _cachedVoxelValues;
+    GridF _cachedVoxelValues;
 //    static CubeMesh cubeMesh;
 };
 

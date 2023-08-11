@@ -5,7 +5,7 @@ SpheroidalWeathering::SpheroidalWeathering(std::shared_ptr<VoxelGrid> voxelGrid)
 {
     if (voxelGrid) {
         voxels = voxelGrid->getVoxelValues().binarize();
-        decimation = Matrix3<float>(voxels.getDimensions(), 1.f);
+        decimation = GridF(voxels.getDimensions(), 1.f);
     }
 }
 
@@ -20,11 +20,11 @@ void SpheroidalWeathering::applyErosion()
 
     if (decimation.size() == 0) {
         voxels = voxelGrid->getVoxelValues().binarize();
-        decimation = Matrix3<float>(voxels.getDimensions(), 1.f);
+        decimation = GridF(voxels.getDimensions(), 1.f);
     }
 
-    Matrix3<float> airPercents = Matrix3<float>(voxels.getDimensions());
-    Matrix3<float> layerDurability = Matrix3<float>(voxels.getDimensions());
+    GridF airPercents = GridF(voxels.getDimensions());
+    GridF layerDurability = GridF(voxels.getDimensions());
     FastNoiseLite noise;
     noise.SetFractalType(FastNoiseLite::FractalType_FBm);
     float minDurability = 0.f, maxDurability = 1.f;
@@ -99,7 +99,7 @@ void SpheroidalWeathering::applyErosion()
     voxelGrid->setVoxelValues(voxels - .25f);
 }
 
-void SpheroidalWeathering::_erode(Matrix3<float> &voxels, const Vector3 &pos)
+void SpheroidalWeathering::_erode(GridF &voxels, const Vector3 &pos)
 {
     if (voxels.at(pos) <= .75f) { // Is colluvium
 //        voxels.at(pos) = 0.f;
@@ -110,11 +110,11 @@ void SpheroidalWeathering::_erode(Matrix3<float> &voxels, const Vector3 &pos)
     }
 }
 
-void SpheroidalWeathering::_deposition(Matrix3<float> &voxels)
+void SpheroidalWeathering::_deposition(GridF &voxels)
 {
     float talusHeight = 3; // std::atan(deg2rad(30));
 
-//    Matrix3<float> _voxels = voxels;
+//    GridF _voxels = voxels;
 
     for (int x = 0; x < voxels.sizeX; x++) {
         for (int y = 0; y < voxels.sizeY; y++) {

@@ -8,7 +8,7 @@ class CoralIslandGenerator
 public:
     CoralIslandGenerator();
 
-    static Matrix3<float> generate(Matrix3<float> heights, float subsidence, float waterLevel, float coralMin, float maxCoralHeight, float verticalScale, float horizontalScale, float alpha);
+    static GridF generate(GridF heights, float subsidence, float waterLevel, float coralMin, float maxCoralHeight, float verticalScale, float horizontalScale, float alpha);
 };
 
 #endif // CORALISLANDGENERATOR_H

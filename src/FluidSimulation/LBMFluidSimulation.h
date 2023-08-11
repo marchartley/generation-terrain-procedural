@@ -17,12 +17,12 @@ public:
     void step();
 
 
-    virtual Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
+    virtual GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     Vector3 getVelocity(int x, int y, int z);
     void addVelocity(int x, int y, int z, const Vector3& amount);
     void setVelocity(int x, int y, int z, const Vector3& amount);
-    void setObstacles(const Matrix3<float> &obstacles);
-    void addObstacles(const Matrix3<float>& obstacles);
+    void setObstacles(const GridF &obstacles);
+    void addObstacles(const GridF& obstacles);
 
     float getWi(int i);
 
@@ -64,8 +64,8 @@ public:
     std::vector<Vector3> c;
 
     // Initialize the distribution functions
-    Matrix3<Matrix3<float>> f;
-    Matrix3<Matrix3<float>> f_next;
+    Matrix3<GridF> f;
+    Matrix3<GridF> f_next;
 
     bool uses3D = false;
 };

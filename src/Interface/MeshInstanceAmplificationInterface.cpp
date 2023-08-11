@@ -60,7 +60,7 @@ void MeshInstanceAmplificationInterface::display(Vector3 camPos)
                     }
                 }
             }
-            Matrix3<Vector3> gradientTerrain = values.gradient();
+            GridV3 gradientTerrain = values.gradient();
             gradientTerrain.raiseErrorOnBadCoord = false;
             gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
             for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {

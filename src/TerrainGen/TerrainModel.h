@@ -48,17 +48,19 @@ public:
 
     virtual bool checkIsInGround(Vector3 position) = 0;
 
-    virtual Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f)) = 0;
+    virtual GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f)) = 0;
 
     void initFluidSim();
     void initEnvironmentalDensities();
 
-    virtual Matrix3<Vector3> getFlowfield(FluidSimType simu = LBM);
-//    virtual Matrix3<Vector3> getFlowfield(size_t flowIndex);
+    virtual GridV3 getNormals() = 0;
+
+    virtual GridV3 getFlowfield(FluidSimType simu = LBM);
+//    virtual GridV3 getFlowfield(size_t flowIndex);
 //    virtual void computeFlowfield(FluidSimType simu = LBM);
     virtual void computeFlowfield(FluidSimType simu = LBM, int steps = 30, TerrainModel* implicit = nullptr);
 
-    Matrix3<float>& getEnvironmentalDensities();
+    GridF& getEnvironmentalDensities();
     void updateEnvironmentalDensities(float waterLevel);
 
 
@@ -79,11 +81,11 @@ public:
 
 //    std::vector<StableFluidsSimulation> multipleFluidSimulations;
 //    std::vector<Vector3> multipleSeaCurrents;
-//    std::vector<Matrix3<Vector3>> multipleFlowFields;
+//    std::vector<GridV3> multipleFlowFields;
 
-//    Matrix3<Vector3> flowField;
-    Matrix3<int> distanceField;
-    Matrix3<float> pressureField;
+//    GridV3 flowField;
+    GridI distanceField;
+    GridF pressureField;
 
     Vector3 sea_current = Vector3(1.f, 0.0, 0.0);
 

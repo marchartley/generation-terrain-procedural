@@ -45,7 +45,7 @@ public Q_SLOTS:
     void browseDensityFieldFromFile();
 
     void computePredefinedRocksLocations();
-    void recomputeAboveVoxelRocksPositions();
+    void recomputeAboveVoxelRocksPositions(TerrainModel *terrain);
 
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
@@ -56,11 +56,14 @@ protected:
     std::function<Vector3(Vector3)> computeFlowfieldFunction();
     Mesh rocksPathSuccess;
     Mesh rocksPathFailure;
+    Mesh boundariesMesh;
 
     float erosionSize = 8.f;
     float erosionStrength = .35f;
-    int erosionQtt = 450;
+    int erosionQtt = 1000;
     float rockRandomness = .1f;
+
+    int maxParticles = 1000;
 
     float gravity = .981f;
     float bouncingCoefficient = 0.15f; // 1.f;
@@ -85,7 +88,7 @@ protected:
     float erosionPowerValue = 1.f;
     float criticalShearStress = .8f;
 
-    int numberOfIterations = 1;
+    int numberOfIterations = 8;
 
     float initialCapacity = .0f;
 

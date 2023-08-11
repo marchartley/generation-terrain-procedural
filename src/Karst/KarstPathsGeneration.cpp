@@ -50,16 +50,16 @@ float FractureDirection::cost(Vector3 nodeA, Vector3 nodeB) const
 }
 
 KarstPathsGeneration::KarstPathsGeneration()
-//    : KarstPathsGeneration(Matrix3<int>(0, 0, 0), Vector3(0, 0, 0))
+//    : KarstPathsGeneration(GridI(0, 0, 0), Vector3(0, 0, 0))
 {
 
 }
 
-KarstPathsGeneration::KarstPathsGeneration(Matrix3<int> availablityMap, Vector3 karst_dimensions, float poissonDistance, float gamma)
+KarstPathsGeneration::KarstPathsGeneration(GridI availablityMap, Vector3 karst_dimensions, float poissonDistance, float gamma)
     : gamma(gamma)
 {
     this->karst_available_matrix = availablityMap.resize(karst_dimensions, RESIZE_MODE::MIN_VAL);
-    this->porosityMap = Matrix3<float>(karst_dimensions);
+    this->porosityMap = GridF(karst_dimensions);
     this->graph = FastPoissonGraph<int>(this->karst_available_matrix, poissonDistance, 30);
     this->tortuosityOffsets = std::vector<Vector3>(this->graph.nodes.size());
 }
@@ -128,7 +128,7 @@ void KarstPathsGeneration::addFractureDirection(FractureDirection fractureDirect
     this->fracturesDirections.push_back(fractureDirection);
 }
 
-void KarstPathsGeneration::addPorosityMap(Matrix3<float> porosity)
+void KarstPathsGeneration::addPorosityMap(GridF porosity)
 {
     this->porosityMap += porosity.resize(this->porosityMap.sizeX, this->porosityMap.sizeY, this->porosityMap.sizeZ, LINEAR);
 }
@@ -162,7 +162,7 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
 
     this->finalPaths.clear();
     this->allPaths = Matrix3<std::vector<int>>(this->specialNodes.size(), this->specialNodes.size());
-    Matrix3<float> pathDistances(this->specialNodes.size(), this->specialNodes.size(), 1, std::numeric_limits<float>::max());
+    GridF pathDistances(this->specialNodes.size(), this->specialNodes.size(), 1, std::numeric_limits<float>::max());
     // Compute all paths
     std::vector<float> distances;
     std::vector<int> prec;

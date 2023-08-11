@@ -316,3 +316,14 @@ void sleep(int milliseconds)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds) );
 }
+
+std::string showTime(float milliseconds)
+{
+    if (milliseconds < 1000 * 10) { // < 10 sec
+        return std::to_string(int(milliseconds)) + "ms";
+    } else if (milliseconds < 1000 * 60 * 10) { // < 10 min
+        return std::to_string(int(milliseconds / 1000)) + "s";
+    } else { // > 10 min
+        return std::to_string(int(milliseconds / (1000 * 60))) + "min" + std::to_string(int(milliseconds) % (1000 * 60)) + "s (" + std::to_string(int(milliseconds / 1000)) + "s)";
+    }
+}

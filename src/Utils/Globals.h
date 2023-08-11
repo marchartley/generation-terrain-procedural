@@ -3,6 +3,7 @@
 
 #include "Utils/stb_image.h"
 #include "Utils/stb_image_write.h"
+#include "Utils/stb_image_resize.h"
 #define useModernOpenGL 1
 
 //class random_gen;

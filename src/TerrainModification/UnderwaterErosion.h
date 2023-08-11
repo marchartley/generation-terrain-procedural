@@ -50,7 +50,7 @@ public:
 
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
-    std::tuple<std::vector<BSpline>, int, int> Apply(EROSION_APPLIED applyOn,
+    std::tuple<std::vector<BSpline>, int, int> Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
                                                     float& particleSimulationTime, float& terrainModifTime,
                                                     Vector3 startingPoint = Vector3(false),
                                                     Vector3 originalDirection = Vector3(false),
@@ -78,10 +78,10 @@ public:
                                                      std::vector<std::pair<Vector3, Vector3>> posAndDirs = {},
 //                                                     std::function<Vector3(Vector3)> flowfieldFunction = nullptr
                                                      FLOWFIELD_TYPE flowType = BASIC,
-                                                     Matrix3<Vector3> waterFlow = Matrix3<Vector3>(),
-                                                     Matrix3<Vector3> airFlow = Matrix3<Vector3>(),
+                                                     GridV3 waterFlow = GridV3(),
+                                                     GridV3 airFlow = GridV3(),
                                                      DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
-                                                     Matrix3<float> densityMap = Matrix3<float>(),
+                                                     GridF densityMap = GridF(),
                                                      float initialCapacity = 0.f,
                                                      FluidSimType fluidSimType = FluidSimType::LBM);
 /*
@@ -114,10 +114,10 @@ public:
                                                                  std::vector<std::pair<Vector3, Vector3>> posAndDirs = {},
              //                                                     std::function<Vector3(Vector3)> flowfieldFunction = nullptr
                                                                   FLOWFIELD_TYPE flowType = BASIC,
-                                                                  Matrix3<Vector3> waterFlow = Matrix3<Vector3>(),
-                                                                  Matrix3<Vector3> airFlow = Matrix3<Vector3>(),
+                                                                  GridV3 waterFlow = GridV3(),
+                                                                  GridV3 airFlow = GridV3(),
                                                                  DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
-                                                                 Matrix3<float> densityMap = Matrix3<float>(),
+                                                                 GridF densityMap = GridF(),
                                                                  float initialCapacity = 0.f);
 */
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);

@@ -845,6 +845,8 @@ Vector3 AABBox::random(Vector3 mini, Vector3 maxi)
 }
 
 Vector3 AABBox::intersects(const Vector3& rayStart, const Vector3& rayEnd) {
+    if (this->contains(rayStart)) return rayStart;
+
     Vector3 direction = (rayEnd - rayStart).normalized();
     Vector3 tMin = (min() - rayStart) / direction;
     Vector3 tMax = (max() - rayStart) / direction;

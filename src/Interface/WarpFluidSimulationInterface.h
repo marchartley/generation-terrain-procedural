@@ -39,7 +39,7 @@ protected:
 
 //    WarpFluid::WarpedFluidSimulation simulation;
 
-//    Matrix3<Vector3> velocity;
+//    GridV3 velocity;
 
 //    bool displayBoundaries = false;
 };

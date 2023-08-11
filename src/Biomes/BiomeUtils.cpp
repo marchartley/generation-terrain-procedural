@@ -12,7 +12,7 @@ std::string biomeName(int ID) {
 }
 
 FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph<int> adjencyGraph) {
-    Matrix3<int> available(100, 100, 1, 1); // All available
+    GridI available(100, 100, 1, 1); // All available
     int maxNeighbors = 6;
     int maxNeighboringTries = 20;
     FastPoissonGraph<int> graph(available);

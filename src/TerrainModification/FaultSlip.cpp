@@ -10,8 +10,8 @@ FaultSlip::FaultSlip()
 
 void FaultSlip::Apply(std::shared_ptr<VoxelGrid> grid, bool applyRemeshing)
 {
-    Matrix3<float> voxelValues = grid->getVoxelValues();
-    Matrix3<float> transportMatrix(voxelValues.sizeX, voxelValues.sizeY, voxelValues.sizeZ, 0);
+    GridF voxelValues = grid->getVoxelValues();
+    GridF transportMatrix(voxelValues.sizeX, voxelValues.sizeY, voxelValues.sizeZ, 0);
     transportMatrix.raiseErrorOnBadCoord = false;
     voxelValues.defaultValueOnBadCoord = -0.01;
     voxelValues.raiseErrorOnBadCoord = false;

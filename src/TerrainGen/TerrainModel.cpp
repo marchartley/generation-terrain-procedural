@@ -58,7 +58,7 @@ void TerrainModel::initFluidSim()
     this->multipleSeaCurrents.resize(4);
     for (size_t i = 0; i < this->multipleFluidSimulations.size(); i++) {
         this->multipleFluidSimulations[i] = StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale.x, this->getSizeY() / this->fluidSimRescale.y, this->getSizeZ() / this->fluidSimRescale.z, dt, diffusion, viscosity, fluidSolverIterations);
-        this->multipleFlowFields[i] = Matrix3<Vector3>(this->getDimensions());
+        this->multipleFlowFields[i] = GridV3(this->getDimensions());
     }
     float waterStrength = 1.f;
     this->multipleSeaCurrents = {
@@ -72,17 +72,17 @@ void TerrainModel::initFluidSim()
 
 void TerrainModel::initEnvironmentalDensities()
 {
-    this->properties->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
+    this->properties->environmentalDensities = GridF(this->getDimensions(), 1); // Fill with air density for now
 }
 
 
-Matrix3<Vector3> TerrainModel::getFlowfield(FluidSimType simu)
+GridV3 TerrainModel::getFlowfield(FluidSimType simu)
 {
 //    return this->getFlowfield(0);
     return properties->simulations[simu]->getVelocities(this->getDimensions());
 }
 /*
-Matrix3<Vector3> TerrainModel::getFlowfield(size_t flowIndex)
+GridV3 TerrainModel::getFlowfield(size_t flowIndex)
 {
     Vector3 dimensions = this->getDimensions();
     return properties->simulations[LBM]->getVelocities(dimensions.x, dimensions.y, dimensions.z);
@@ -100,7 +100,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
     auto primitives = dynamic_cast<ImplicitNaryOperator*>(implicit);
     auto smallerVoxelGrid = this->getVoxelized().resize(simulation->dimensions);
 //    auto geom = Mesh().applyMarchingCubes(smallerVoxelGrid).getTriangles(); //this->getGeometry().getTriangles();
-    Matrix3<float> obstacleMap = smallerVoxelGrid.binarize();
+    GridF obstacleMap = smallerVoxelGrid.binarize();
     auto densities = this->getEnvironmentalDensities().resize(simulation->dimensions);
     float maxDensity = densities.max();
     for (size_t i = 0; i < obstacleMap.size(); i++)
@@ -113,7 +113,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
      * Implicit affect flowfield part :
      ***/
     std::vector<BSpline> allTunnelsCurves;
-    std::vector<Matrix3<float>> rasterizedTunnelCurves;
+    std::vector<GridF> rasterizedTunnelCurves;
     auto tunnelsPatches = primitives->findAll(ImplicitPatch::ParametricTunnel);
     for (auto& tunnelPatch : tunnelsPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
@@ -124,7 +124,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
             allTunnelsCurves.push_back(curve);
-            Matrix3<float> rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
+            GridF rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
             for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                 for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                     for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -141,7 +141,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
     }
 
     std::vector<BSpline> allReefCurves;
-    std::vector<Matrix3<float>> rasterizedReefCurves;
+    std::vector<GridF> rasterizedReefCurves;
     auto reefPatches = primitives->findAll(ImplicitPatch::MountainChain);
     for (auto& reefPatch : reefPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(reefPatch);
@@ -152,7 +152,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
             allReefCurves.push_back(curve);
-            Matrix3<float> rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
+            GridF rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
             for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                 for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                     for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -168,7 +168,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         }
     }
 
-    std::vector<Matrix3<float>> rasterizedLagoonAreas;
+    std::vector<GridF> rasterizedLagoonAreas;
     auto lagoonPatches = primitives->findAll(ImplicitPatch::Polygon);
     for (auto& lagoonPatch : lagoonPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
@@ -178,7 +178,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
-            Matrix3<float> rasterizedArea(smallerVoxelGrid.getDimensions(), -1.f);
+            GridF rasterizedArea(smallerVoxelGrid.getDimensions(), -1.f);
             for (int x = 0; x < rasterizedArea.sizeX; x++) {
                 for (int y = 0; y < rasterizedArea.sizeY; y++) {
                     for (int z = 0; z < rasterizedArea.sizeZ; z++) {
@@ -222,7 +222,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
 
             for (size_t iLagoon = 0; iLagoon < rasterizedLagoonAreas.size(); iLagoon++) {
 
-                Matrix3<float>& rasterizedArea = rasterizedLagoonAreas[iLagoon];
+                GridF& rasterizedArea = rasterizedLagoonAreas[iLagoon];
                 for (int x = 0; x < rasterizedArea.sizeX; x++) {
                     for (int y = 0; y < rasterizedArea.sizeY; y++) {
                         for (int z = 0; z < rasterizedArea.sizeZ; z++) {
@@ -238,7 +238,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                 Vector3 inputFlow = simulation->getVelocity(curve.points.front());
                 float inputStrength = inputFlow.norm();
 
-                Matrix3<float>& rasterizedCurve = rasterizedTunnelCurves[iTunnel];
+                GridF& rasterizedCurve = rasterizedTunnelCurves[iTunnel];
                 for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                     for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                         for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -254,7 +254,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
 //                Vector3 inputFlow = simulation->getVelocity(curve.points.front());
 //                float inputStrength = inputFlow.norm();
 
-                Matrix3<float>& rasterizedCurve = rasterizedReefCurves[iReef];
+                GridF& rasterizedCurve = rasterizedReefCurves[iReef];
                 for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                     for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                         for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -283,10 +283,10 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
 }
 
 
-Matrix3<float> &TerrainModel::getEnvironmentalDensities()
+GridF &TerrainModel::getEnvironmentalDensities()
 {
     if (this->properties->environmentalDensities.size() < 2) {
-        this->properties->environmentalDensities = Matrix3<float>(this->getDimensions());
+        this->properties->environmentalDensities = GridF(this->getDimensions());
         this->updateEnvironmentalDensities(0.f);
     }
     return this->properties->environmentalDensities;

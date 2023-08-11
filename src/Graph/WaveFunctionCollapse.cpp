@@ -7,7 +7,7 @@ WaveFunctionCollapse::WaveFunctionCollapse()
 
 }
 
-WaveFunctionCollapse::WaveFunctionCollapse(std::vector<Matrix3<int> > constraints)
+WaveFunctionCollapse::WaveFunctionCollapse(std::vector<GridI > constraints)
     : constraints(constraints)
 {
     this->tilesDim = constraints[0].getDimensions();
@@ -19,12 +19,12 @@ void WaveFunctionCollapse::run(int sizeX, int sizeY, int sizeZ)
     std::cout << "Started" << std::endl;
     do {
         std::cout << "Reseting the algorithm" << std::endl;
-        this->finalMap = Matrix3<int>(sizeX, sizeY, sizeZ, -1);
+        this->finalMap = GridI(sizeX, sizeY, sizeZ, -1);
         std::vector<int> allPossible(this->constraints.size());
         for (size_t i = 0; i < constraints.size(); i++)
             allPossible[i] = i;
         this->availablePatternsOnCell = Matrix3<std::vector<int>>(sizeX, sizeY, sizeZ, allPossible);
-        this->modifiedCell = Matrix3<int>(sizeX, sizeY, sizeZ, 0);
+        this->modifiedCell = GridI(sizeX, sizeY, sizeZ, 0);
 
         for (size_t i = 0; i < finalMap.size(); i++) {
             Vector3 pos = finalMap.getCoordAsVector3(i);
@@ -164,7 +164,7 @@ bool WaveFunctionCollapse::propagate(Vector3 from, bool forceNeighborsPropagatio
 
                     // Check all his possible state against all ours
                     for (size_t iState = 0; iState < availablePatternsOnCell.at(from).size(); iState ++) {
-                        Matrix3<int>& checkedState = constraints[availablePatternsOnCell.at(from)[iState]];
+                        GridI& checkedState = constraints[availablePatternsOnCell.at(from)[iState]];
                         bool stopTestingThisState = false;
                         // Neighbor is set, just check his state
                         if (finalMap.at(neighborPos) != -1) {
@@ -199,9 +199,9 @@ bool WaveFunctionCollapse::propagate(Vector3 from, bool forceNeighborsPropagatio
     }*/
 }
 
-std::vector<Matrix3<int> > WaveFunctionCollapse::createLabelsFromImage(Matrix3<int> image, Vector3 tilesDim)
+std::vector<GridI > WaveFunctionCollapse::createLabelsFromImage(GridI image, Vector3 tilesDim)
 {
-    std::vector<Matrix3<int> > patterns;
+    std::vector<GridI > patterns;
     Vector3 halfDimLow = Vector3(1, 1, 0);
     Vector3 halfDimHigh = Vector3(1, 1, 0);
     for (int x = halfDimLow.x; x < image.sizeX - halfDimHigh.x; x++) {

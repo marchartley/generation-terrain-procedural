@@ -5,17 +5,17 @@
 #include <chrono>
 #include "Utils/Utils.h"
 
-VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, Matrix3<float> iso_data, VoxelGrid *parent)
+VoxelChunk::VoxelChunk(int x, int y, int sizeX, int sizeY, int height, GridF iso_data, VoxelGrid *parent)
     : iso_data(iso_data), x(x), y(y), sizeX(sizeX), sizeY(sizeY), sizeZ(height), parent(parent) {
 
-    this->voxelGroups = Matrix3<int>(this->sizeX, this->sizeY, this->sizeZ, -1);
+    this->voxelGroups = GridI(this->sizeX, this->sizeY, this->sizeZ, -1);
     this->applyModification(iso_data);
-    this->flowField = Matrix3<Vector3>(this->sizeX, this->sizeY, this->sizeZ);
+    this->flowField = GridV3(this->sizeX, this->sizeY, this->sizeZ);
 //    this->updateLoDsAvailable();
 //    this->computeDistanceField();
 }
 
-VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, Matrix3<float>(), nullptr)
+VoxelChunk::VoxelChunk() : VoxelChunk(0, 0, 0, 0, 0, GridF(), nullptr)
 {
 
 }
@@ -26,14 +26,14 @@ VoxelChunk::~VoxelChunk()
 void VoxelChunk::computeFlowfield(Vector3 sea_current)
 {
     computeDistanceField();
-    Matrix3<Vector3> pressionGradient = this->pressureField.gradient();
+    GridV3 pressionGradient = this->pressureField.gradient();
     this->flowField = pressionGradient * (-1.f) + sea_current;
 }
 
 void VoxelChunk::computeDistanceField()
 {
-    this->distanceField = Matrix3<int>(this->sizeX, this->sizeY, this->sizeZ, 9999999);
-    this->pressureField = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ, 0);
+    this->distanceField = GridI(this->sizeX, this->sizeY, this->sizeZ, 9999999);
+    this->pressureField = GridF(this->sizeX, this->sizeY, this->sizeZ, 0);
     // Check left
     for (int x = 1; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
@@ -149,7 +149,7 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     else {/*
         this->mesh.fromArray(CubeMesh::cubesVertices);
         std::vector<Vector3> voxelsPos;
-        Matrix3<float> allVals = this->getVoxelValues();
+        GridF allVals = this->getVoxelValues();
         for (int x = 0; x < this->sizeX; x++) {
             for (int y = 0; y < this->sizeY; y++) {
                 for (int z = 0; z < this->height; z++) {
@@ -246,7 +246,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
     int LoD = this->LoDs[this->LoDIndex % this->LoDs.size()];//std::max(0, std::min(LoD, std::min(std::min(this->sizeX, this->sizeY), this->height)));
     std::vector<Vector3> colors;
     std::vector<Vector3> normals;
-    Matrix3<float> map = this->getVoxelValues();
+    GridF map = this->getVoxelValues();
 
 //    map = map.meanSmooth(3, 3, 3, true);
 
@@ -343,7 +343,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
 
 void VoxelChunk::makeItFall()
 {
-    Matrix3<float> valuesAfterGravity(this->sizeX, this->sizeY, this->sizeZ);
+    GridF valuesAfterGravity(this->sizeX, this->sizeY, this->sizeZ);
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
             for(int z = 0; z < this->sizeZ - 1; z++) {
@@ -358,7 +358,7 @@ void VoxelChunk::makeItFall()
 }
 void VoxelChunk::letGravityMakeSandFall()
 {
-    Matrix3<float> transportMatrix(this->sizeX, this->sizeY, this->sizeZ);
+    GridF transportMatrix(this->sizeX, this->sizeY, this->sizeZ);
     float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
     for (int x = 0; x < this->sizeX; x++) {
         for(int y = 0; y < this->sizeY; y++) {
@@ -402,9 +402,9 @@ void VoxelChunk::computeGroups()
 {
     int currentMarker = 0;
     std::set<int> neighbors_coords;
-    Matrix3<int> connected(this->sizeX, this->sizeY, this->sizeZ);
-    Matrix3<int> labels(this->sizeX, this->sizeY, this->sizeZ, -1);
-    Matrix3<float> voxelValues = this->getVoxelValues();
+    GridI connected(this->sizeX, this->sizeY, this->sizeZ);
+    GridI labels(this->sizeX, this->sizeY, this->sizeZ, -1);
+    GridF voxelValues = this->getVoxelValues();
     for (size_t i = 0; i < voxelValues.size(); i++) {
         if (voxelValues[i] > 0.f) connected[i] = 1;
     }
@@ -439,7 +439,7 @@ void VoxelChunk::computeGroups()
     this->voxelGroups = labels;
 }
 
-void VoxelChunk::applyModification(Matrix3<float> modifications, Vector3 anchor)
+void VoxelChunk::applyModification(GridF modifications, Vector3 anchor)
 {
     modifications.raiseErrorOnBadCoord = false;
     // If there is a modification and we did some "undo's" before,
@@ -505,13 +505,13 @@ float VoxelChunk::getVoxelValue(Vector3 pos)
     return this->getVoxelValue(pos.x, pos.y, pos.z);
 }
 
-Matrix3<float>& VoxelChunk::getVoxelValues()
+GridF& VoxelChunk::getVoxelValues()
 {
 
     if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
         this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
 
-        this->_cachedVoxelValues = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+        this->_cachedVoxelValues = GridF(this->sizeX, this->sizeY, this->sizeZ);
         for (size_t i = 0; i < this->currentHistoryIndex; i++)
             _cachedVoxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
     }

@@ -20,8 +20,8 @@ public:
     virtual void step() = 0;
     virtual void handleCollisions() = 0;
 
-    Matrix3<Vector3> getVelocities(const Vector3 &dimensions);
-    virtual Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ) = 0;
+    GridV3 getVelocities(const Vector3 &dimensions);
+    virtual GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ) = 0;
     virtual Vector3 getVelocity(const Vector3& pos);
     virtual Vector3 getVelocity(int x, int y, int z) = 0;
     virtual void addVelocity(const Vector3& pos, const Vector3& amount);
@@ -30,9 +30,9 @@ public:
     virtual void setVelocity(int x, int y, int z, const Vector3& amount);
 
     virtual void setObstacles(const std::vector<std::vector<Vector3>>& triangles);
-    virtual void setObstacles(const Matrix3<float>& obstacle);
+    virtual void setObstacles(const GridF& obstacle);
     virtual void addObstacles(const std::vector<std::vector<Vector3>>& triangles);
-    virtual void addObstacles(const Matrix3<float> &obstacle);
+    virtual void addObstacles(const GridF &obstacle);
 
 
     void simulate() {
@@ -43,14 +43,14 @@ public:
     Vector3 dimensions;
 //    int sizeX, sizeY, sizeZ;
     std::vector<std::vector<Vector3>> triangles;
-    Matrix3<float> obstacleGrid;
-    Matrix3<Vector3> obstacleGradient;
+    GridF obstacleGrid;
+    GridV3 obstacleGradient;
 //    Octree* obstacleTrianglesOctree;
     BVHTree obstacleTriangleTree;
 
     int currentStep = 0;
     int _cachedStep = -1;
-    Matrix3<Vector3> _cachedVelocity;
+    GridV3 _cachedVelocity;
 };
 
 #endif // FLUIDSIMULATION_H

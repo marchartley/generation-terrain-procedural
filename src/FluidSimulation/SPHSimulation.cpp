@@ -286,12 +286,12 @@ void SPHSimulation::step() {
     }
 }
 
-Matrix3<Vector3> SPHSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
+GridV3 SPHSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        Matrix3<Vector3> velocities(dimensions);
-        Matrix3<float> amount(dimensions);
+        GridV3 velocities(dimensions);
+        GridF amount(dimensions);
 
         for (auto& particle : this->particles) {
             velocities[particle.position] += particle.velocity;

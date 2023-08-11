@@ -87,6 +87,7 @@ public:
     Vector3 getDimensions();
     Vector3 getSupportDimensions();
 
+    virtual GridV3 getNormals();
     Vector3 getNormal(Vector3 pos);
 
     void setIndex(int newIndex = -1);
@@ -135,7 +136,7 @@ public:
     virtual float getSizeY() { return this->getBBox().max().y; }
     virtual float getSizeZ() { return this->getBBox().max().z; }
 
-    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
     int index = -1;
     std::string name;
@@ -181,9 +182,9 @@ public:
     static std::string json_identifier;
 
 //protected:
-    Matrix3<float> _cachedMinHeight;
-    Matrix3<float> _cachedMaxHeight;
-    Matrix3<float> _cachedVoxelized;
+    GridF _cachedMinHeight;
+    GridF _cachedMaxHeight;
+    GridF _cachedVoxelized;
     bool _cached = false;
 };
 
@@ -219,10 +220,10 @@ public:
     std::vector<float> parametersProvided;
 
     std::string heightmapFilename = "";
-    Matrix3<float> cachedHeightmap;
+    GridF cachedHeightmap;
 
     static ImplicitPrimitive* fromHeightmap(std::string filename, Vector3 dimensions = Vector3(false), ImplicitPrimitive *prim = nullptr);
-    static ImplicitPrimitive* fromHeightmap(Matrix3<float> heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
+    static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
 };
 
 class ImplicitNaryOperator : public ImplicitPatch {
@@ -323,7 +324,7 @@ public:
 
     void addScaling(const Vector3& scaleFactors);
 
-    void addDisplacementField(const Matrix3<Vector3>& displacementField);
+    void addDisplacementField(const GridV3& displacementField);
 
     Vector3 applyTransform(Vector3 pos) const;
     Vector3 inverseTransform(Vector3 pos) const;
@@ -357,7 +358,7 @@ public:
 
     void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
     void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
-    void addWrapFunction(Matrix3<Vector3> func);
+    void addWrapFunction(GridV3 func);
     void spread(float factor = 1.f);
     void addWavelets();
 
@@ -457,7 +458,7 @@ public:
 
     void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
     void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
-    void addWrapFunction(Matrix3<Vector3> func);
+    void addWrapFunction(GridV3 func);
     void spread(float factor = 1.f);
     void addWavelets();
 
@@ -498,8 +499,8 @@ class UnaryOpWrap: public UnaryOp {
 public:
     UnaryOpWrap(FastNoiseLite noise, Vector3 strength);
     UnaryOpWrap(std::function<Vector3(Vector3)> func);
-    UnaryOpWrap(Matrix3<Vector3> wrapper);
-    Matrix3<Vector3> wrapper;
+    UnaryOpWrap(GridV3 wrapper);
+    GridV3 wrapper;
 };
 class UnaryOpSpread: public UnaryOp {
 public:

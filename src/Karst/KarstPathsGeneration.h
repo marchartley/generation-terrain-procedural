@@ -39,7 +39,7 @@ class KarstPathsGeneration
 {
 public:
     KarstPathsGeneration();
-    KarstPathsGeneration(Matrix3<int> availablityMap, Vector3 karst_dimensions, float poissonDistance = 1.f, float gamma = 1.f);
+    KarstPathsGeneration(GridI availablityMap, Vector3 karst_dimensions, float poissonDistance = 1.f, float gamma = 1.f);
 
     void resetSpecialNodes();
     void setSpecialNode(int node, KARST_NODE_TYPE mode);
@@ -49,7 +49,7 @@ public:
     void addWaterHeight(WaterHeight waterHeight);
     void addPorositySphere(PorositySphere porositySphere);
     void addFractureDirection(FractureDirection fractureDirection);
-    void addPorosityMap(Matrix3<float> porosity);
+    void addPorosityMap(GridF porosity);
 
     void createEdges(int maxNumberNeighbors, float maxNeighboringDistance);
 
@@ -70,7 +70,7 @@ public:
     Matrix3<std::vector<int>> allPaths;
     std::vector<std::vector<int>> finalPaths;
 
-    Matrix3<int> karst_available_matrix;
+    GridI karst_available_matrix;
 
     float gamma;
 
@@ -78,7 +78,7 @@ public:
     std::vector<WaterHeight> waterHeights;
     std::vector<PorositySphere> porositySpheres;
     std::vector<FractureDirection> fracturesDirections;
-    Matrix3<float> porosityMap;
+    GridF porosityMap;
 };
 
 #endif // KARSTPATHSGENERATION_H

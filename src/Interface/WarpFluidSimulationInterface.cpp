@@ -86,7 +86,7 @@ void WarpFluidSimulationInterface::updateSimulationMesh()
         std::vector<Vector3> trianglesParticles;
         std::vector<Vector3> colors;
 
-        Matrix3<float> pressure = Matrix3<float>(simulation.dimensions);
+        GridF pressure = GridF(simulation.dimensions);
         pressure.data = simulation.p;
         pressure.normalize();
 
@@ -122,7 +122,7 @@ void WarpFluidSimulationInterface::computeFromTerrain(TerrainModel *terrain)
     auto asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
     auto asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
 
-    Matrix3<float> heights;
+    GridF heights;
     if (asVoxels) {
         heights = Heightmap().fromVoxelGrid(*asVoxels).heights;
     } else if (asHeightmap) {
@@ -135,9 +135,9 @@ void WarpFluidSimulationInterface::computeFromTerrain(TerrainModel *terrain)
         throw std::domain_error("Was not able to compute WarpFluid because we couldn't cast the terrain model");
     }
 
-    Matrix3<Vector3> gradients = heights.gradient();
+    GridV3 gradients = heights.gradient();
     Vector3 flowDir = simulation->mainDirection.normalized();
-    auto velocity = Matrix3<Vector3>(gradients.getDimensions());
+    auto velocity = GridV3(gradients.getDimensions());
     for (size_t i = 0; i < gradients.size(); i++) {
         auto& g = gradients[i];
         if (g != Vector3()) {

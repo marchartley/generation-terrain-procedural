@@ -225,7 +225,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     return triangles;
 }
 
-std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vector<Vector3>>  precomputedTriangles)
+std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vector3>>  precomputedTriangles)
 {
     std::vector<std::vector<Vector3>> triangles = precomputedTriangles;
     if (triangles.empty())
@@ -249,7 +249,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
         }
     }
     /*
-    Matrix3<float> mask((maxVec - minVec) + Vector3(1, 1, 1), 0);
+    GridF mask((maxVec - minVec) + Vector3(1, 1, 1), 0);
 
     for (auto& triangle : triangles) {
         Vector3 minTriangle = mask.getDimensions(), maxTriangle = Vector3(0, 0, 0);
@@ -301,7 +301,7 @@ std::tuple<Matrix3<float>, Vector3> KarstHole::generateMask(std::vector<std::vec
         cylindersStart.push_back(std::get<0>(cylinder) - minVec);
         cylindersEnd.push_back(std::get<1>(cylinder) - minVec);
     }
-    Matrix3<float> mask((maxVec - minVec));
+    GridF mask((maxVec - minVec));
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < mask.sizeX; x++) {
         for (int y = 0; y < mask.sizeY; y++) {

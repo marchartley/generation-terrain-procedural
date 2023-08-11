@@ -74,8 +74,8 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
                                    });
 
 
-    Matrix3<float> voxels = voxelGrid->getVoxelValues();
-    Matrix3<int> availableGrid(voxelGrid->getDimensions(), 0.f); // (voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+    GridF voxels = voxelGrid->getVoxelValues();
+    GridI availableGrid(voxelGrid->getDimensions(), 0.f); // (voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
@@ -121,8 +121,8 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
 void KarstPathGenerationInterface::computeKarst()
 {
     if (karstCreator->graph.nodes.empty()) return;
-    Matrix3<float> porosityMap(voxelGrid->getDimensions(), 1.f); // voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
-    Matrix3<float> voxelValues = voxelGrid->getVoxelValues();
+    GridF porosityMap(voxelGrid->getDimensions(), 1.f); // voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 1.f);
+    GridF voxelValues = voxelGrid->getVoxelValues();
     for (int x = 0; x < porosityMap.sizeX; x++) {
         for (int y = 0; y < porosityMap.sizeY; y++) {
             for (int z = 0; z < porosityMap.sizeZ; z++) {

@@ -47,10 +47,10 @@ public:
     void clearLightSources(std::string pname);
     void setPositionalLight(std::string pname, PositionalLight& value);
     void setMaterial(std::string pname, Material& value);
-    void setTexture2D(std::string pname, int index, Matrix3<int> texture);
+    void setTexture2D(std::string pname, int index, GridI texture);
     void setTexture2D(std::string pname, int index, int width, int height, int* data);
     void setTexture2D(std::string pname, int index, int width, int height, int** data);
-    void setTexture3D(std::string pname, int index, Matrix3<float> texture);
+    void setTexture3D(std::string pname, int index, GridF texture);
 //    void setMatrix(std::string pname, Matrix value);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);

@@ -191,7 +191,7 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
-void Plotter::addImage(Matrix3<Vector3> image, bool normalize)
+void Plotter::addImage(GridV3 image, bool normalize)
 {
     if (normalize) {
         image.normalize();
@@ -210,9 +210,9 @@ void Plotter::addImage(Matrix3<Vector3> image, bool normalize)
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 }
 
-void Plotter::addImage(Matrix3<float> image, bool normalize)
+void Plotter::addImage(GridF image, bool normalize)
 {
-    Matrix3<Vector3> copy(image.getDimensions());
+    GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
         float val = image[i];
 //        if (i == 40400)
@@ -224,12 +224,12 @@ void Plotter::addImage(Matrix3<float> image, bool normalize)
 
 void Plotter::addImage(Matrix3<double> image, bool normalize)
 {
-    return this->addImage((Matrix3<float>)image, normalize);
+    return this->addImage((GridF)image, normalize);
 }
 
-void Plotter::addImage(Matrix3<int> image, bool normalize)
+void Plotter::addImage(GridI image, bool normalize)
 {
-    return this->addImage((Matrix3<float>)image, normalize);
+    return this->addImage((GridF)image, normalize);
 }
 
 void Plotter::draw()

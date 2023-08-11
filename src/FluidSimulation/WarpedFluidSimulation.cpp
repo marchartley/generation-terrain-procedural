@@ -7,7 +7,7 @@ WarpedFluidSimulation::WarpedFluidSimulation()
 WarpedFluidSimulation::WarpedFluidSimulation(int x, int y, int z)
     : FluidSimulation(x, y, z)
 {
-    velocities = Matrix3<Vector3>(dimensions, mainDirection);
+    velocities = GridV3(dimensions, mainDirection);
 }
 
 void WarpedFluidSimulation::step()
@@ -21,7 +21,7 @@ void WarpedFluidSimulation::handleCollisions()
     // Nothing to do
 }
 
-Matrix3<Vector3> WarpedFluidSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
+GridV3 WarpedFluidSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;

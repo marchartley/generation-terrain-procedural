@@ -6,19 +6,19 @@ Matrix3Graph::Matrix3Graph()
     /*
     std::vector<std::shared_ptr<GraphNode<T>>> nodes;
 
-    Matrix3<int> nodesIndices;
-    Matrix3<int> connectionMatrix;
-    Matrix3<int> precedenceMatrix;
-    Matrix3<float> adjencyMatrix;
+    GridI nodesIndices;
+    GridI connectionMatrix;
+    GridI precedenceMatrix;
+    GridF adjencyMatrix;
     */
 }
 
-Matrix3Graph::Matrix3Graph(Matrix3<int> matrix)
+Matrix3Graph::Matrix3Graph(GridI matrix)
 {
     this->initFromBinary(matrix);
 }
 
-Matrix3Graph& Matrix3Graph::initFromBinary(Matrix3<int> matrix)
+Matrix3Graph& Matrix3Graph::initFromBinary(GridI matrix)
 {
     this->originalMatrix = matrix; // Save it for later use
     this->nodes.clear();
@@ -26,8 +26,8 @@ Matrix3Graph& Matrix3Graph::initFromBinary(Matrix3<int> matrix)
         GraphNode<int> node(matrix[i], matrix.getCoordAsVector3(i),i);
         this->nodes.push_back(std::make_shared<GraphNode<int>>(node));
     }
-    // this->connectionMatrix = Matrix3<int>(this->nodes.size(), this->nodes.size());
-    // this->adjencyMatrix = Matrix3<float>(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
+    // this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size());
+    // this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
 
     for (int x = 0; x < matrix.sizeX; x++) {
         for (int y = 0; y < matrix.sizeY; y++) {
@@ -88,10 +88,10 @@ Matrix3Graph& Matrix3Graph::computeSurface()
     return *this;
 }
 
-Matrix3Graph& Matrix3Graph::computeSurface(Matrix3<int> matrix)
+Matrix3Graph& Matrix3Graph::computeSurface(GridI matrix)
 {
-    Matrix3<float> distMap = matrix.toDistanceMap();
-    Matrix3<int> binaryMap(distMap.sizeX, distMap.sizeY, distMap.sizeZ);
+    GridF distMap = matrix.toDistanceMap();
+    GridI binaryMap(distMap.sizeX, distMap.sizeY, distMap.sizeZ);
     for (size_t i = 0; i < binaryMap.size(); i++) {
         if (std::abs(distMap[i] - 1.f) < 0.01f)
             binaryMap[i] = 1;

@@ -13,11 +13,15 @@ void AbstractFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap>
     const char* fParticleShader = "src/Shaders/particle.frag";
     const char* vNoShader = "src/Shaders/no_shader.vert";
     const char* fNoShader = "src/Shaders/no_shader.frag";
+    const char* vMCShader = "src/Shaders/MarchingCubes.vert";
+    const char* fMCShader = "src/Shaders/no_shader.frag";
+    const char* gMCShader = "src/Shaders/MarchingCubes.geom";
 
     this->particlesMesh = Mesh(std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader));
     this->particlesMesh.useIndices = false;
     this->vectorsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->vectorsMesh.useIndices = false;
+//    this->boundariesMesh = Mesh(std::make_shared<Shader>(vMCShader, fMCShader, gMCShader));
     this->boundariesMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->boundariesMesh.useIndices = false;
 
@@ -35,12 +39,10 @@ void AbstractFluidSimulationInterface::display(Vector3 camPos)
     }
 
     if (displayBoundaries) {
-        boundariesMesh.shader->setVector("color", std::vector<float>{0.f, 1.f, 0.f, .4f});
-        boundariesMesh.display(GL_TRIANGLES);
-        boundariesMesh.shader->setVector("color", std::vector<float>{0.f, 0.f, 0.f, .4f});
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        boundariesMesh.display(GL_TRIANGLES);
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+//        Mesh::displayScalarField(voxelGrid->getVoxelValues(), boundariesMesh, camPos, {-.4f, 0.f, .4f});
+
+        boundariesMesh.displayWithOutlines(std::vector<float>{0.f, 1.f, 0.f, .4f}, GL_TRIANGLES);
     }
     if (displayParticles) {
         particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
@@ -91,7 +93,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()
 {
-    Matrix3<Vector3> velocities = _simulation->getVelocities(20, 20, 20);
+    GridV3 velocities = _simulation->getVelocities(20, 20, 20);
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 2.f);
 }
 
@@ -129,13 +131,12 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     if (voxelGrid == nullptr) return;
     Vector3 finalDimensions = voxelGrid->getDimensions();
 
-    Matrix3<float> bigValues = voxelGrid->getVoxelValues();
-    Matrix3<float> values = bigValues.resize(20, 20, 10);
+    GridF bigValues = voxelGrid->getVoxelValues();
+    GridF values = bigValues.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
     auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
         for (auto& p : tri) {
-            p /= values.getDimensions();
-            p *= _simulation->dimensions;
+            p *= _simulation->dimensions / values.getDimensions();
         }
     }
 

@@ -16,10 +16,10 @@ ImplicitPatch::ImplicitPatch()
     this->index = currentMaxIndex;*/
     this->setIndex();
 
-    this->_cachedMaxHeight = Matrix3<float>(1, 1, 1, 0.f);
+    this->_cachedMaxHeight = GridF(1, 1, 1, 0.f);
     this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
     this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
-    this->_cachedMinHeight = Matrix3<float>(1, 1, 1, 0.f);
+    this->_cachedMinHeight = GridF(1, 1, 1, 0.f);
     this->_cachedMinHeight.raiseErrorOnBadCoord = false;
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
@@ -134,6 +134,16 @@ Vector3 ImplicitPatch::getSupportDimensions()
     return AABBox.dimensions();
 }
 
+GridV3 ImplicitPatch::getNormals()
+{
+    GridV3 normals = -this->getVoxelized().gradient();
+    for (auto& n : normals)
+        n.normalize();
+    normals.raiseErrorOnBadCoord = false;
+    normals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    return normals;
+}
+
 Vector3 ImplicitPatch::getNormal(Vector3 pos)
 {
     float delta = 1e-3; // Not too big, not too small...
@@ -194,11 +204,11 @@ void ImplicitPatch::updateCache()
     this->_cached = false;
     Vector3 dim = Vector3::max(Vector3(1, 1), this->getDimensions().roundedUp());
 
-    this->_cachedMaxHeight = Matrix3<float>(dim.x, dim.y, 1, -1.f);
+    this->_cachedMaxHeight = GridF(dim.x, dim.y, 1, -1.f);
     this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
     this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
 
-    this->_cachedMinHeight = Matrix3<float>(dim.x, dim.y, 1, -1.f);
+    this->_cachedMinHeight = GridF(dim.x, dim.y, 1, -1.f);
     this->_cachedMinHeight.raiseErrorOnBadCoord = false;
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
@@ -312,7 +322,7 @@ Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
     return position - this->getBBox().min();
 }
 
-Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
     if (_cached) {
         return this->_cachedVoxelized;
@@ -321,7 +331,7 @@ Matrix3<float> ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
     if (!dimensions.isValid())
         dimensions = this->getBBox().max();
 
-    this->_cachedVoxelized = Matrix3<float>(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
+    this->_cachedVoxelized = GridF(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
     #pragma omp parallel for collapse(3)
     for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
@@ -654,7 +664,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions, ImplicitPrimitive *prim)
 {
     std::string ext = toUpper(getExtension(filename));
-    if (isIn(ext, {"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
+    if (isIn(ext, std::set<std::string>{"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
         int imgW, imgH, nbChannels;
         unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
         if (data == NULL)
@@ -665,7 +675,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector
             exit (-1);
             return nullptr;
         }
-        Matrix3<float> map(imgW, imgH);
+        GridF map(imgW, imgH);
         for (int x = 0; x < imgW; x++) {
             for (int y = 0; y < imgH; y++) {
                 float value = (float)data[x + y * imgW];
@@ -682,12 +692,12 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector
     } else {
         VoxelGrid voxels = VoxelGrid();
         voxels.retrieveMap(filename);
-        Matrix3<float> map = voxels.getVoxelValues();
+        GridF map = voxels.getVoxelValues();
         return ImplicitPrimitive::fromHeightmap(map, filename, prim);
     }
 }
 
-ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(Matrix3<float> heightmap, std::string filename, ImplicitPrimitive *prim)
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string filename, ImplicitPrimitive *prim)
 {
     if (prim == nullptr)
         prim = new ImplicitPrimitive;
@@ -1212,7 +1222,7 @@ void ImplicitUnaryOperator::addScaling(const Vector3 &scaleFactors) {
     addTransformation(scalingTransform, inverseScalingTransform);
 }
 
-void ImplicitUnaryOperator::addDisplacementField(const Matrix3<Vector3> &displacementField) {
+void ImplicitUnaryOperator::addDisplacementField(const GridV3 &displacementField) {
     auto displacementTransform = [&displacementField](const Vector3& point) {
         // Use the displacement field to transform the point
         return point + displacementField.interpolate(point);
@@ -1382,7 +1392,7 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     if (noise != Vector3()) patch->addRandomNoise(noise.x, noise.y, noise.z);
 //    if (distortion != Vector3()) patch->addRandomWrap(distortion.x, distortion.y, distortion.z);
     if (distortion != Vector3()) {
-        patch->addWrapFunction(Matrix3<Vector3>({
+        patch->addWrapFunction(GridV3({
                                                        { Vector3(0.5, 0, 0), Vector3(0.7, -.2, 0), Vector3(1, -1, 0) },
                                                        { Vector3(0.0, 0, 0), Vector3(0.7, 0, 0), Vector3(2, 0, 0) },
                                                        { Vector3(0.5, 0, 0), Vector3(0.7, .2, 0), Vector3(1, 1, 0) }
@@ -1479,7 +1489,7 @@ void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float o
     this->transforms.push_back(UnaryOpWrap(noise, Vector3(amplitude, period, offset)));
 }
 
-void ImplicitUnaryOperator::addWrapFunction(Matrix3<Vector3> func)
+void ImplicitUnaryOperator::addWrapFunction(GridV3 func)
 {
 //    AABBox dims = this->getSupportBBox();
     this->transforms.push_back(UnaryOpWrap([=](Vector3 pos) -> Vector3 {
@@ -1942,7 +1952,7 @@ UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
     };
 }
 
-UnaryOpWrap::UnaryOpWrap(Matrix3<Vector3> wrapper)
+UnaryOpWrap::UnaryOpWrap(GridV3 wrapper)
     : wrapper(wrapper)
 {
     this->wrap = [=] (Vector3 pos) {

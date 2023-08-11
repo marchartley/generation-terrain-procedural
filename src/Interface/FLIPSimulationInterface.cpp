@@ -13,7 +13,7 @@ void FLIPSimulationInterface::updateParticlesMesh()
     std::vector<Vector3> particlePositions;
     std::vector<Vector3> colors;
 
-    Matrix3<float> pressure = Matrix3<float>(simulation->dimensions);
+    GridF pressure = GridF(simulation->dimensions);
     pressure.data = simulation->p;
     pressure.normalize();
 

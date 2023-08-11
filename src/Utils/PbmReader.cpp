@@ -39,7 +39,7 @@ std::vector<float> extractAllValuesFromFile(std::ifstream& file, bool isBinary) 
     return values;
 }
 
-Matrix3<float> PbmReader::readGrayscale(std::string path)
+GridF PbmReader::readGrayscale(std::string path)
 {
     std::ifstream file(path);
     int magicNumber, nW, nH, maxValue;
@@ -54,7 +54,7 @@ Matrix3<float> PbmReader::readGrayscale(std::string path)
     }
 }
 
-Matrix3<Vector3> PbmReader::readColor(std::string path)
+GridV3 PbmReader::readColor(std::string path)
 {
     std::ifstream file(path);
     int magicNumber, nW, nH, maxValue;
@@ -97,25 +97,25 @@ int PbmReader::getMagicNumberAndSizes(std::ifstream& file, int& imgW, int& imgH,
     return -1;
 }
 
-Matrix3<float> PbmReader::readP1(std::ifstream& file, int nW, int nH)
+GridF PbmReader::readP1(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<float> img(nW, nH);
+    GridF img(nW, nH);
     auto values = extractAllValuesFromFile(file, false);
     img.data = values;
     return img;
 }
 
-Matrix3<float> PbmReader::readP2(std::ifstream& file, int nW, int nH)
+GridF PbmReader::readP2(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<float> img(nW, nH);
+    GridF img(nW, nH);
     auto values = extractAllValuesFromFile(file, false);
     img.data = values;
     return img;
 }
 
-Matrix3<Vector3> PbmReader::readP3(std::ifstream& file, int nW, int nH)
+GridV3 PbmReader::readP3(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<Vector3> img(nW, nH);
+    GridV3 img(nW, nH);
     auto values = extractAllValuesFromFile(file, false);
     for (size_t i = 0; i < values.size() / 3; i++)
         img[i] = Vector3(
@@ -126,25 +126,25 @@ Matrix3<Vector3> PbmReader::readP3(std::ifstream& file, int nW, int nH)
     return img;
 }
 
-Matrix3<float> PbmReader::readP4(std::ifstream& file, int nW, int nH)
+GridF PbmReader::readP4(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<float> img(nW, nH);
+    GridF img(nW, nH);
     auto values = extractAllValuesFromFile(file, true);
     img.data = values;
     return img;
 }
 
-Matrix3<float> PbmReader::readP5(std::ifstream& file, int nW, int nH)
+GridF PbmReader::readP5(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<float> img(nW, nH);
+    GridF img(nW, nH);
     auto values = extractAllValuesFromFile(file, true);
     img.data = values;
     return img;
 }
 
-Matrix3<Vector3> PbmReader::readP6(std::ifstream& file, int nW, int nH)
+GridV3 PbmReader::readP6(std::ifstream& file, int nW, int nH)
 {
-    Matrix3<Vector3> img(nW, nH);
+    GridV3 img(nW, nH);
     auto values = extractAllValuesFromFile(file, true);
     for (size_t i = 0; i < values.size() / 3; i++)
         img[i] = Vector3(

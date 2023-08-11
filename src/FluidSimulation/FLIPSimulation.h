@@ -75,7 +75,7 @@ public:
     void handleCollisions();
 
 
-    Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
+    GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     Vector3 getVelocity(int x, int y, int z);
     void addVelocity(int x, int y, int z, const Vector3& amount);
 
@@ -102,9 +102,9 @@ public:
 
     std::vector<Vector3> particles;
     std::vector<Vector3> velocities;
-    Matrix3<Vector3> grid;
-    Matrix3<float> gridW;
-//    Matrix3<Vector3> activeCells;
+    GridV3 grid;
+    GridF gridW;
+//    GridV3 activeCells;
     float spacing = 1.f;
     int nbParticles;
     float dt = 0.01f;

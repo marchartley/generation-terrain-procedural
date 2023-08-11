@@ -81,10 +81,10 @@ public:
     void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(Matrix3<Vector3> image, bool normalize = false);
-    void addImage(Matrix3<float> image, bool normalize = false);
+    void addImage(GridV3 image, bool normalize = false);
+    void addImage(GridF image, bool normalize = false);
     void addImage(Matrix3<double> image, bool normalize = false);
-    void addImage(Matrix3<int> image, bool normalize = false);
+    void addImage(GridI image, bool normalize = false);
 
     void draw();
     int exec();

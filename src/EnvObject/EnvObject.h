@@ -43,9 +43,9 @@ public:
     static std::function<float(Vector3)> parseFittingFunction(std::string formula);
 
 
-    static Matrix3<Vector3> flowfield;
-    static Matrix3<Vector3> terrainNormals;
-    static Matrix3<float> sandDeposit;
+    static GridV3 flowfield;
+    static GridV3 terrainNormals;
+    static GridF sandDeposit;
 
     static std::map<std::string, EnvObject*> availableObjects;
     static std::vector<EnvObject*> instantiatedObjects;

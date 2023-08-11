@@ -38,15 +38,17 @@ public:
     void fromImplicit(ImplicitPatch* implicitTerrain);
 
     VoxelGrid toVoxelGrid();
-    Matrix3<float> voxelize(int fixedHeight = -1, float kernelSize = 1.f);
-    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF voxelize(int fixedHeight = -1, float kernelSize = 1.f);
+    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
     std::map<TerrainTypes, float> getKernel(Vector3 pos, float kernelSize);
     std::pair<TerrainTypes, float> getMaterialAndHeight(Vector3 pos);
 
     Vector3 getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
     Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
 
-    std::pair<Matrix3<int>, Matrix3<float>> getMaterialAndHeightsGrid();
+    std::pair<GridI, GridF> getMaterialAndHeightsGrid();
+
+    virtual GridV3 getNormals();
 
     void thermalErosion();
 
@@ -65,8 +67,8 @@ public:
     static float minDensityFromMaterial(TerrainTypes material);
     static float maxDensityFromMaterial(TerrainTypes material);
 
-    static std::vector<TerrainTypes> invisibleLayers;
-    static std::vector<TerrainTypes> instanciableLayers;
+    static std::set<TerrainTypes> invisibleLayers;
+    static std::set<TerrainTypes> instanciableLayers;
 
     std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> transformationRules;
 
@@ -90,7 +92,7 @@ public:
     void reset() { this->layers = previousState; }
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }
 protected:
-    std::pair<Matrix3<int>, Matrix3<float> > _cachedMaterialAndHeights;
+    std::pair<GridI, GridF > _cachedMaterialAndHeights;
 
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> layers;
     Matrix3<std::vector<std::pair<TerrainTypes, float>>> previousState;
