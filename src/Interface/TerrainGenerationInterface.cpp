@@ -116,8 +116,9 @@ void TerrainGenerationInterface::layersToAll()
 
 void TerrainGenerationInterface::implicitToVoxels()
 {
-    voxelGrid->_cachedVoxelValues = implicitTerrain->getVoxelized();
-    voxelGrid->fromCachedData();
+    voxelGrid->fromImplicit(implicitTerrain.get());
+//    voxelGrid->_cachedVoxelValues = implicitTerrain->getVoxelized();
+//    voxelGrid->fromCachedData();
 }
 
 void TerrainGenerationInterface::implicitToLayers()
@@ -161,7 +162,7 @@ void TerrainGenerationInterface::displayWaterLevel()
 void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, bool noise2D, float noiseStrength, float frequency, float lacunarity, float noise_shifting)
 {
 //    std::cout << noiseStrength << " " << frequency << " " << lacunarity << std::endl;
-    Matrix3<float> values(nx, ny, nz);
+    GridF values(nx, ny, nz);
 
     // Create and configure FastNoise object
     if (frequency > 0.f) {
@@ -221,8 +222,9 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
         this->layerGrid = std::make_shared<LayerBasedGrid>();
 
 //    *voxelGrid = tempMap;
-    voxelGrid->_cachedVoxelValues = values;
-    voxelGrid->fromCachedData();
+//    voxelGrid->_cachedVoxelValues = values;
+//    voxelGrid->fromCachedData();
+    voxelGrid->setVoxelValues(values);
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
 
@@ -290,20 +292,20 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         Mesh m;
         m.fromStl(filename);
         if (m.isWatertight())
-            voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
+            voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
         else
-            voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
-        voxelGrid->fromCachedData();
+            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
+//        voxelGrid->fromCachedData();
         heightmap->fromVoxelGrid(*voxelGrid);
         layerGrid->fromVoxelGrid(*voxelGrid);
     } else if (ext == "FBX") {
         Mesh m;
         if (m.isWatertight())
-            voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
+            voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
         else
-            voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
-        voxelGrid->_cachedVoxelValues = m.voxelize(voxelGrid->getDimensions());
-        voxelGrid->fromCachedData();
+            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
+//        voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
+//        voxelGrid->fromCachedData();
         heightmap->fromVoxelGrid(*voxelGrid);
         layerGrid->fromVoxelGrid(*voxelGrid);
     }else /*if (ext == "DATA" || ext.empty())*/ {
@@ -349,8 +351,8 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
         this->voxelGrid = std::make_shared<VoxelGrid>();
 
     *heightmap = Heightmap(124, 124, 40.f);
-    heightmap->raise(Matrix3<float>(heightmap->getSizeX(), heightmap->getSizeY(), 1.f, 20.f));
-//    this->heightmap->heights = Matrix3<float>(124, 124, 1, 20.f);
+    heightmap->raise(GridF(heightmap->getSizeX(), heightmap->getSizeY(), 1.f, 20.f));
+//    this->heightmap->heights = GridF(124, 124, 1, 20.f);
 //    this->heightmap->maxHeight = 40.f;
 
     this->voxelGrid->from2DGrid(*this->heightmap);
@@ -562,7 +564,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
                           true, GL_TRIANGLES);
     layersMesh.useIndices = false;
 
-    Matrix3<int> materials; Matrix3<float> matHeights;
+    GridI materials; GridF matHeights;
     std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
     layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
     layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
@@ -579,7 +581,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
     marchingCubeMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_mc_voxels),
                             true, GL_TRIANGLES);
-    Matrix3<float> isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
+    GridF isoData = this->voxelGrid->getVoxelValues(); //.resize(15, 15, 15);
     std::vector<Vector3> points(isoData.size());
     for (size_t i = 0; i < points.size(); i++) {
         isoData[i] = (std::max(-3.f, std::min(3.f, isoData[i])) / 6.f) + 0.5;
@@ -669,7 +671,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
     this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
 
-    Matrix3<float> heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
+    GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
     std::vector<Vector3> positions(heightData.size());
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = heightData.getCoordAsVector3(i);
@@ -685,9 +687,9 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     implicitMesh.shader->setInt("heightmapFieldTex", 3);
     layersMesh.shader->setInt("heightmapFieldTex", 3);
 
-    Matrix3<float> heights = heightmap->getHeights();
+    GridF heights = heightmap->getHeights();
     float *heightmapData = new float[heights.size() * 4];
-    Matrix3<Vector3> gradients = heights.gradient();
+    GridV3 gradients = heights.gradient();
     for (size_t i = 0; i < heights.size(); i++) {
         gradients[i] = (gradients[i].normalized() + Vector3(1, 1, 1)) / 2.f;
         heightmapData[i * 4 + 0] = gradients[i].x;
@@ -732,9 +734,9 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 //    QTemporaryDir tempTextureDir;
     QDirIterator iTex("src/assets/textures/", QDir::Files, QDirIterator::Subdirectories);
 //    QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
-    Matrix3<Vector3> allColorTextures;
-    Matrix3<Vector3> allNormalTextures;
-    Matrix3<Vector3> allDisplacementTextures;
+    GridV3 allColorTextures;
+    GridV3 allNormalTextures;
+    GridV3 allDisplacementTextures;
     int indexColorTextureClass = 0;
     int indexNormalTextureClass = 0;
     int indexDisplacementTextureClass = 0;
@@ -749,7 +751,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
         }
     }
     size_t nbFiles = filesToLoad.size();
-    std::vector<Matrix3<Vector3>> texturesMaps(nbFiles);
+    std::vector<GridV3> texturesMaps(nbFiles);
     int textureSizes = 128;
     auto startTime = std::chrono::system_clock::now();
     #pragma omp parallel for
@@ -759,7 +761,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
             std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
             int imgW, imgH, c;
             unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
-            texturesMaps[i] = Matrix3<Vector3>(imgW, imgH);
+            texturesMaps[i] = GridV3(imgW, imgH);
             for (int x = 0; x < imgW; x++) {
                 for (int y = 0; y < imgH; y++) {
                     unsigned char r = data[3 * (x + y * imgW) + 0];
@@ -771,15 +773,15 @@ void TerrainGenerationInterface::prepareShader(bool reload)
             texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
             stbi_image_free(data);
     }
-    allColorTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
-    allNormalTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
-    allDisplacementTextures = Matrix3<Vector3>(textureSizes * colorTexturesIndex.size(), textureSizes);
+    allColorTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+    allNormalTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+    allDisplacementTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
     auto endTempTime = std::chrono::system_clock::now();
     for (size_t i = 0; i < nbFiles; i++) {
         QString dir = filesToLoad[i];
         QString basename = QFileInfo(dir).baseName();
         std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-        Matrix3<Vector3>& map = texturesMaps[i];
+        GridV3& map = texturesMaps[i];
         int index = colorTexturesIndex[textureClass];
         if (basename == "color") {
             allColorTextures.paste(map, Vector3(textureSizes * index, 0));
@@ -930,12 +932,12 @@ void TerrainGenerationInterface::display(Vector3 camPos)
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 
-    Matrix3<float> heights = heightmap->getHeights();
+    GridF heights = heightmap->getHeights();
     float maxHeight = heights.max();
     this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
     this->heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
     float *heightmapData = new float[heights.size() * 4];
-    Matrix3<Vector3> gradients = heights.gradient();
+    GridV3 gradients = heights.gradient();
     int maxColorTextureIndex = 0;
     for (auto biome : colorTexturesIndex) {
         maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
@@ -984,7 +986,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
         } else {
 //            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
 
-            Matrix3<float> heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
+            GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
             std::vector<Vector3> positions(heightData.size());
             for (size_t i = 0; i < positions.size(); i++) {
                 positions[i] = heightData.getCoordAsVector3(i);
@@ -999,7 +1001,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            Matrix3<float> values = voxelGrid->getVoxelValues();
+            GridF values = voxelGrid->getVoxelValues();
             if (marchingCubeMesh.vertexArray.size() != values.size()) {
                 std::vector<Vector3> points(values.size());
                 for (size_t i = 0; i < points.size(); i++) {
@@ -1043,8 +1045,8 @@ void TerrainGenerationInterface::display(Vector3 camPos)
 
             //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                 this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
-                Matrix3<int> materials;
-                Matrix3<float> matHeights;
+                GridI materials;
+                GridF matHeights;
                 std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
                 layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
                 layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
@@ -1062,7 +1064,7 @@ void TerrainGenerationInterface::display(Vector3 camPos)
         if (this->implicitTerrain == nullptr) {
             std::cerr << "No implicit terrain to display" << std::endl;
         } else {
-            Matrix3<float> values;
+            GridF values;
             std::cout << "evals: " << timeIt([&]() { values = implicitTerrain->getVoxelized(voxelGrid->getDimensions()); }) << "ms" << std::endl;
 //            std::cout << values.sum() << std::endl;
             implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);

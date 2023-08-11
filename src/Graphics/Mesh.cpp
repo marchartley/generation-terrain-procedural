@@ -67,6 +67,17 @@ Mesh Mesh::merge(std::vector<std::shared_ptr<Mesh>> others)
     return *this;
 }
 
+
+//Mesh &Mesh::fromArray(std::vector<std::vector<Vector3> > triangles, std::vector<int> indices)
+//{
+//    std::vector<Vector3> flattenVertices(triangles.size() * 3);
+//    for (size_t i = 0; i < triangles.size(); i++) {
+//        flattenVertices[3 * i + 0] = triangles[i][0];
+//        flattenVertices[3 * i + 1] = triangles[i][1];
+//        flattenVertices[3 * i + 2] = triangles[i][2];
+//    }
+//    return this->fromArray(flattenVertices, indices);
+//}
 Mesh& Mesh::fromArray(std::vector<Vector3> vertices, std::vector<int> indices)
 {
     if (indices.empty()) {
@@ -351,7 +362,7 @@ void Mesh::computeColors()
     this->needToUpdateColors = true;
 }
 
-Mesh Mesh::extractGeometryFromShaders(Matrix3<float>& values)
+Mesh Mesh::extractGeometryFromShaders(GridF& values)
 {
     /*
     GLuint vertices_positions_buffer;
@@ -542,7 +553,18 @@ void Mesh::display(GLenum shape, float lineWeight)
         }
         glEnd();
 #endif
-    glLineWidth(previousLineWidth[0]);
+        glLineWidth(previousLineWidth[0]);
+}
+
+void Mesh::displayWithOutlines(std::vector<float> faceColor, GLenum shape, float lineWeight)
+{
+    this->shader->setVector("color", faceColor);
+    this->display(shape, lineWeight);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    this->shader->setVector("color", std::vector{0.f, 0.f, 0.f, faceColor[3]});
+    this->display(shape, lineWeight);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    this->shader->setVector("color", std::vector{0.f, 0.f, 0.f, faceColor[3]});
 }
 
 void Mesh::displayNormals()
@@ -555,7 +577,7 @@ void Mesh::displayNormals()
     glEnd();
 }
 
-void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, std::vector<float> isoValues)
+void Mesh::displayAsScalarField(GridF field, Vector3 cameraPosition, std::vector<float> isoValues)
 {
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {
@@ -638,7 +660,7 @@ void Mesh::displayAsScalarField(Matrix3<float> field, Vector3 cameraPosition, st
     }
 }
 
-void Mesh::displayAsVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, float maxMaginitude, bool normalize)
+void Mesh::displayAsVectorField(GridV3 field, Vector3 finalDimensions, float maxMaginitude, bool normalize)
 {
     if (maxMaginitude > 0.f) {
         for (auto& v : field)
@@ -884,10 +906,11 @@ std::string Mesh::toSTL()
     myfile.close();*/
 }
 
-Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
+Mesh Mesh::applyMarchingCubes(const GridF& values)
 {
+//    auto _values = values.subset(Vector3(), values.getDimensions() - Vector3(1, 1, 1));
     auto triTable = MarchingCubes::triangleTable;
-    auto edges = MarchingCubes::cubeEdges;
+    auto edges = MarchingCubes::edgeToCorner;
     float offsetX = 0.f;
     float offsetY = 0.f;
     float offsetZ = 0.f;
@@ -895,6 +918,16 @@ Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
     float isolevel = 0.f;
 
     Vector3 vertDecals[8] = {
+
+        Vector3(-.5f, -.5f, -.5f),
+        Vector3(0.5f, -.5f, -.5f),
+        Vector3(0.5f, 0.5f, -.5f),
+        Vector3(-.5f, 0.5f, -.5f),
+        Vector3(-.5f, -.5f, 0.5f),
+        Vector3(0.5f, -.5f, 0.5f),
+        Vector3(0.5f, 0.5f, 0.5f),
+        Vector3(-.5f, 0.5f, 0.5f)
+        /*
         Vector3(0.0, 0.0, 0.0),
         Vector3(1.0, 0.0, 0.0),
         Vector3(1.0, 1.0, 0.0),
@@ -902,19 +935,20 @@ Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
         Vector3(0.0, 0.0, 1.0),
         Vector3(1.0, 0.0, 1.0),
         Vector3(1.0, 1.0, 1.0),
-        Vector3(0.0, 1.0, 1.0)
+        Vector3(0.0, 1.0, 1.0)*/
     };
-    std::function cubePos = [&](Vector3 voxelPos, int i) -> Vector3 {
+    std::function cubePos = [&](const Vector3& voxelPos, int i) -> Vector3 {
         return voxelPos + vertDecals[i];
     };
 
     //Get vertex i value within current marching cube
-    std::function cubeVal = [&](Vector3 pos) -> float {
-        if (!values.checkCoord(pos)) return -1.f;
+    std::function cubeVal = [&](const Vector3& pos) -> float {
+        if (!values.checkCoord(pos) || pos.minComp() <= 0) return isolevel - 0.0001f;
+//        if (pos.z == 0) return 1.f;
         return values.at(pos);
     };
     //Get vertex i value within current marching cube
-    std::function cubeVali = [&](Vector3 voxelPos, int i) -> float {
+    std::function cubeVali = [&](const Vector3& voxelPos, int i) -> float {
         return cubeVal(cubePos(voxelPos, i));
     };
 
@@ -924,74 +958,49 @@ Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
     };
 
     //Compute interpolated vertex along an edge
-    std::function vertexInterp = [&](float isolevel, Vector3 v0, float l0, Vector3 v1, float l1) -> Vector3 {
-        float iso = std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
+    std::function vertexInterp = [&](float isolevel, const Vector3& v0, float l0, const Vector3& v1, float l1) -> Vector3 {
+        float epsilon = 1e-3;
+        if (std::abs(l0 - l1) < epsilon) return (v0 + v1) * .5f;
+        float iso = 1.f - std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
         return v0 * iso + v1 * (1.f - iso);
-//        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
+        //        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
     };
 
-    std::function getPosition = [&](Vector3 position, Vector3 _offset) -> Vector3 {
-    //    return position + vec4(_offset, 0.0);
-        _offset += Vector3(offsetX, offsetY, offsetZ);
-        position *= scale;
-
-//        float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xyz - min_vertice_positions)), mincomp(abs(position.xyz + vec3(1.0) - max_vertice_positions))) : 1.0);
-        Vector3 off = _offset * 1.f; // (clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 1.0));
-        return position + off; //clamp(position + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
-    //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+    std::function getPosition = [&](const Vector3& position, const Vector3& _offset) -> Vector3 {
+        Vector3 off = (_offset + Vector3(offsetX, offsetY, offsetZ)) * 1.f;
+        return (position * scale) + off;
     };
 
-    std::function getCubeIndex = [&](Vector3 voxPos, Vector3 normal) -> int {
+    std::function getCubeIndex = [&](/*const Vector3& voxPos, */const std::vector<float>& cubeVals) -> int {
         int cubeindex = 0;
-        float cubeVal0 = cubeVali(voxPos, 0);
-        float cubeVal1 = cubeVali(voxPos, 1);
-        float cubeVal2 = cubeVali(voxPos, 2);
-        float cubeVal3 = cubeVali(voxPos, 3);
-        float cubeVal4 = cubeVali(voxPos, 4);
-        float cubeVal5 = cubeVali(voxPos, 5);
-        float cubeVal6 = cubeVali(voxPos, 6);
-        float cubeVal7 = cubeVali(voxPos, 7);
+//        float cubeVal0 = cubeVali(voxPos, 0);
+//        float cubeVal1 = cubeVali(voxPos, 1);
+//        float cubeVal2 = cubeVali(voxPos, 2);
+//        float cubeVal3 = cubeVali(voxPos, 3);
+//        float cubeVal4 = cubeVali(voxPos, 4);
+//        float cubeVal5 = cubeVali(voxPos, 5);
+//        float cubeVal6 = cubeVali(voxPos, 6);
+//        float cubeVal7 = cubeVali(voxPos, 7);
         float refined_isolevel = isolevel + 0.0001;
         //Determine the index into the edge table which
         //tells us which vertices are inside of the surface
-        cubeindex  = int(cubeVal0 < refined_isolevel);
-        cubeindex += int(cubeVal1 < refined_isolevel)*2;
-        cubeindex += int(cubeVal2 < refined_isolevel)*4;
-        cubeindex += int(cubeVal3 < refined_isolevel)*8;
-        cubeindex += int(cubeVal4 < refined_isolevel)*16;
-        cubeindex += int(cubeVal5 < refined_isolevel)*32;
-        cubeindex += int(cubeVal6 < refined_isolevel)*64;
-        cubeindex += int(cubeVal7 < refined_isolevel)*128;
+//        cubeindex  = int(cubeVal0 < refined_isolevel);
+//        cubeindex += int(cubeVal1 < refined_isolevel)*2;
+//        cubeindex += int(cubeVal2 < refined_isolevel)*4;
+//        cubeindex += int(cubeVal3 < refined_isolevel)*8;
+//        cubeindex += int(cubeVal4 < refined_isolevel)*16;
+//        cubeindex += int(cubeVal5 < refined_isolevel)*32;
+//        cubeindex += int(cubeVal6 < refined_isolevel)*64;
+//        cubeindex += int(cubeVal7 < refined_isolevel)*128;
+        for (int i = 0; i < 8; i++)
+            cubeindex += int(cubeVals[i] < refined_isolevel) << i;
 
-        normal = Vector3(0, 0, 0);
-
-        if (cubeindex != 0 && cubeindex != 255) {
-            Vector3 vertlist[12];
-
-            //Find the vertices where the surface intersects the cube
-            vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
-            vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
-            vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
-            vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
-            vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
-            vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
-            vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
-            vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
-            vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
-            vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
-            vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
-            vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
-
-
-//            vec3 edge1 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 1)];
-//            vec3 edge2 = vertlist[triTableValue(cubeindex, 0)] - vertlist[triTableValue(cubeindex, 2)];
-//            normal = normalize(cross(edge1, edge2));
-        }
         return cubeindex;
     };
 
     Mesh marched;
-    float refined_isolevel = isolevel + 0.0001;
+    marched.vertexArray.reserve(100000); // Yeah I don't know...
+    float refined_isolevel = isolevel; // + 0.0001;
     Vector3 vertlist[12];
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
@@ -999,35 +1008,42 @@ Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
                 Vector3 position = Vector3(x, y, z);
                 Vector3 voxPos = position;
 
-                float cubeVal0 = cubeVali(voxPos, 0);
-                float cubeVal1 = cubeVali(voxPos, 1);
-                float cubeVal2 = cubeVali(voxPos, 2);
-                float cubeVal3 = cubeVali(voxPos, 3);
-                float cubeVal4 = cubeVali(voxPos, 4);
-                float cubeVal5 = cubeVali(voxPos, 5);
-                float cubeVal6 = cubeVali(voxPos, 6);
-                float cubeVal7 = cubeVali(voxPos, 7);
+                std::vector<float> cubeVals(8);
+                for (int i = 0; i < 8; i++)
+                    cubeVals[i] = cubeVali(voxPos, i);
+//                float cubeVal0 = cubeVali(voxPos, 0);
+//                float cubeVal1 = cubeVali(voxPos, 1);
+//                float cubeVal2 = cubeVali(voxPos, 2);
+//                float cubeVal3 = cubeVali(voxPos, 3);
+//                float cubeVal4 = cubeVali(voxPos, 4);
+//                float cubeVal5 = cubeVali(voxPos, 5);
+//                float cubeVal6 = cubeVali(voxPos, 6);
+//                float cubeVal7 = cubeVali(voxPos, 7);
 
-                Vector3 normal;
-                int cubeindex = getCubeIndex(voxPos, normal);
+                int cubeindex = getCubeIndex(/*voxPos, */cubeVals);
 
                 //Cube is entirely in/out of the surface
                 if (cubeindex == 0 || cubeindex == 255)
                     continue;
 
+                for (int iEdge = 0; iEdge < 12; iEdge++)  {
+                    int p0 = edges[iEdge][0];
+                    int p1 = edges[iEdge][1];
+                    vertlist[iEdge] = vertexInterp(refined_isolevel, cubePos(voxPos, p0), cubeVals[p0], cubePos(voxPos, p1), cubeVals[p1]);
+                }
                 //Find the vertices where the surface intersects the cube
-                vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
-                vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
-                vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
-                vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
-                vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
-                vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
-                vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
-                vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
-                vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
-                vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
-                vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
-                vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
+//                vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
+//                vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
+//                vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
+//                vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
+//                vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
+//                vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
+//                vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
+//                vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
+//                vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
+//                vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
+//                vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
+//                vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
 
                 int i = 0;
                 while(true){
@@ -1049,13 +1065,14 @@ Mesh Mesh::applyMarchingCubes(const Matrix3<float>& values)
             }
         }
     }
+    marched.scale((values.getDimensions() + Vector3(1, 1, 1)) / values.getDimensions()).translate(-Vector3(.5, .5, .5));
     return marched;
 }
 
-Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
+GridI Mesh::voxelize(Vector3 dimensions) const
 {
     AABBox myDims(this->vertexArray);
-    Matrix3<int> res(dimensions);
+    GridI res(dimensions);
 
     BVHTree tree;
     tree.build(Triangle::vectorsToTriangles(this->getTriangles()));
@@ -1077,10 +1094,10 @@ Matrix3<int> Mesh::voxelize(Vector3 dimensions) const
     return res;
 }
 
-Matrix3<int> Mesh::voxelizeSurface(Vector3 dimensions) const
+GridI Mesh::voxelizeSurface(Vector3 dimensions) const
 {
     AABBox myDims(this->vertexArray);
-    Matrix3<int> res(dimensions, -1.f);
+    GridI res(dimensions, -1.f);
     auto triangles = this->getTriangles();
 
     for (auto& t : triangles)
@@ -1140,7 +1157,7 @@ bool Mesh::isWatertight()
 
 }
 
-Mesh Mesh::createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
+Mesh Mesh::createVectorField(GridV3 field, Vector3 finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
 {
     if (maxMaginitude > 0.f) {
         for (auto& v : field)
@@ -1171,7 +1188,7 @@ Mesh Mesh::createVectorField(Matrix3<Vector3> field, Vector3 finalDimensions, Me
     }
 }
 
-void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPosition, std::vector<float> isoValues)
+void Mesh::displayScalarField(GridF field, Mesh &mesh, Vector3 cameraPosition, std::vector<float> isoValues)
 {
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {
@@ -1242,6 +1259,7 @@ void Mesh::displayScalarField(Matrix3<float> field, Mesh &mesh, Vector3 cameraPo
 //    mesh.shader->setFloat("min_isolevel", -1000.f); // 3.5f);
 //    mesh.shader->setFloat("max_isolevel", 1000.f);
 
+    std::sort(isoValues.begin(), isoValues.end(), [&](float A, float B) { return A > B; });
     for (size_t i = 0; i < isoValues.size(); i++) {
         float iso = isoValues[i];
         Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);

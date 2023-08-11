@@ -18,7 +18,7 @@ Heightmap::Heightmap(int nx, int ny, float heightFactor) {
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(10);
 
-    this->heights = Matrix3<float>(nx, ny);
+    this->heights = GridF(nx, ny);
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
             float z = noise.GetNoise((float)x, (float)y);
@@ -85,8 +85,8 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
         float water = initialWaterVolume;
         float sediment = 0;
 
-        Matrix3<Vector3> gradients = heights.gradient();
-        Matrix3<float> precomputedHeights = heights;
+        GridV3 gradients = heights.gradient();
+        GridF precomputedHeights = heights;
         float erosionDepositionBalance = 0.f;
 
         for (int lifetime = 0; lifetime < maxDropletLifetime; lifetime++) {
@@ -124,7 +124,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                 // Add the sediment to the four nodes of the current cell using bilinear interpolation
                 // Deposition is not distributed over a radius (like erosion) so that it can fill small pits
                 precomputedHeights.raiseErrorOnBadCoord = false;
-                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
+                GridF brush = GridF::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
                 brush = (brush / brush.sum()) * amountToDeposit;// * amountToDeposit * 1.f;
                 for (int x = 0; x < brush.sizeX; x++) {
                     for (int y = 0; y < brush.sizeY; y++) {
@@ -139,7 +139,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
                 // Erode a fraction of the droplet's current carry capacity.
                 // Clamp the erosion to the change in height so that it doesn't dig a hole in the terrain behind the droplet
                 float amountToErode = std::min ((sedimentCapacity - sediment) * erodeSpeed, -deltaHeight);
-                Matrix3<float> brush = Matrix3<float>::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
+                GridF brush = GridF::gaussian(erosionRadius * 2, erosionRadius * 2, 1, 2.f, (pos - pos.floor()));
                 brush = (brush / brush.sum()) * amountToErode;
                 // Use erosion brush to erode from all nodes inside the droplet's erosion radius
                 for (int x = 0; x < brush.sizeX; x++) {
@@ -187,7 +187,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
 //            continue;
         float totalMatterToMove = 0;
         float height = heights.at(i);
-        Matrix3<float> displacement(3, 3, 1);
+        GridF displacement(3, 3, 1);
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 if (x == 0 && y == 0) continue;
@@ -211,7 +211,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
     heights.returned_value_on_outside = prevReturn;
 }
 
-void windCascade(Vector3 pos, Matrix3<float>& ground, Matrix3<float>& sand, float roughness, float settling, float dt) {
+void windCascade(Vector3 pos, GridF& ground, GridF& sand, float roughness, float settling, float dt) {
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             if (x == 0 && y == 0) continue;
@@ -244,11 +244,11 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
     windDirection *= Vector3(1, 1, 0); // Keep only X and Y
     // Create a heightmap for sand and a heightmap for bedrocks
     this->heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-    Matrix3<float> normalizedInitialHeights = this->heights / 80.f; // .normalized();
+    GridF normalizedInitialHeights = this->heights / 80.f; // .normalized();
     float maxHeight = 80.f; // heights.max();
 //    float bedrocksProportionInGround = .0f;
-    Matrix3<float> ground = normalizedInitialHeights * bedrocksProportionInGround;
-    Matrix3<float> sand = normalizedInitialHeights * (1 - bedrocksProportionInGround);
+    GridF ground = normalizedInitialHeights * bedrocksProportionInGround;
+    GridF sand = normalizedInitialHeights * (1 - bedrocksProportionInGround);
     ground.raiseErrorOnBadCoord = false;
     ground.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     sand.raiseErrorOnBadCoord = false;
@@ -362,7 +362,7 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
     return traces;
 }
 
-void Heightmap::raise(Matrix3<float> elevation)
+void Heightmap::raise(GridF elevation)
 {
     this->heights += elevation;
 }
@@ -397,7 +397,7 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
         faults.push_back(BSpline(points));
     }
 
-    Matrix3<float> faultsImpact(getSizeX(), getSizeY());
+    GridF faultsImpact(getSizeX(), getSizeY());
     auto start = std::chrono::system_clock::now();
     for (int x = 0; x < getSizeX(); x++) {
         for (int y = 0; y < getSizeY(); y++) {
@@ -415,9 +415,9 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
-    Matrix3<float> voxels = voxelGrid.getVoxelValues();
+    GridF voxels = voxelGrid.getVoxelValues();
 
-    this->heights = Matrix3<float>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
+    this->heights = GridF(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
@@ -438,7 +438,7 @@ Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
 
 Heightmap& Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
 {
-    this->heights = Matrix3<float>(layerGrid.getSizeX(), layerGrid.getSizeY());
+    this->heights = GridF(layerGrid.getSizeX(), layerGrid.getSizeY());
     for (size_t x = 0; x < this->getSizeX(); x++) {
         for (size_t y = 0; y < this->getSizeY(); y++) {
             this->heights.at(x, y) = layerGrid.getHeight(x, y);
@@ -449,7 +449,7 @@ Heightmap& Heightmap::fromLayerGrid(LayerBasedGrid &layerGrid)
 
 Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
 {
-    this->heights = Matrix3<float>(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
+    this->heights = GridF(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
     int sX = this->getSizeX(), sY = this->getSizeY();
 #pragma omp parallel for collapse(2)
     for (int x = 0; x < sX; x++) {
@@ -460,7 +460,7 @@ Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
     return *this;
 }
 
-Matrix3<float> Heightmap::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF Heightmap::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
     VoxelGrid v;
     v.from2DGrid(*this);
@@ -511,7 +511,7 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
 
 //    float max = 0;
 
-    Matrix3<float> map(imgW, imgH);
+    GridF map(imgW, imgH);
     for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
             int index = (imgW - (x + 1)) + y * imgW;
@@ -632,13 +632,13 @@ Mesh Heightmap::getGeometry(Vector3 dimensions)
     return m;
 }
 
-Matrix3<Vector3> Heightmap::getNormals()
+GridV3 Heightmap::getNormals()
 {
-    Matrix3<float> vals = this->heights;
+    GridF vals = this->heights;
     vals.normalize();
     vals.raiseErrorOnBadCoord = false;
     vals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    Matrix3<Vector3> normals(vals.getDimensions());
+    GridV3 normals(vals.getDimensions());
 
     for (int x = 0; x < normals.sizeX; x++) {
         for (int y = 0; y < normals.sizeY; y++) {

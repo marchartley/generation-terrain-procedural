@@ -17,18 +17,18 @@ public:
     virtual ~StableFluidsSimulation() {}
 
 //    void setObstacles(const std::vector<std::vector<Vector3>>& triangles);
-    void setObstacles(Matrix3<float> obstacle);
+    void setObstacles(GridF obstacle);
 
     void handleCollisions();
-    Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
+    GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     void step();
 //    void addDensity(int x, int y, int z, float amount);
     void addVelocity(int x, int y, int z, Vector3 amount);
 
 //private:
     float diffusion = 0.f, viscosity = 0.1f;
-    Matrix3<Vector3> velocity;
-    Matrix3<float> density;
+    GridV3 velocity;
+    GridF density;
     float dt = 0.01;
     int solverIterations = 20;
 
@@ -52,14 +52,14 @@ public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations);
 
-    void setObstacles(Matrix3<float> new_obstacles);
+    void setObstacles(GridF new_obstacles);
     void addDensity(int x, int y, int z, float amount);
     void addVelocity(int x, int y, int z, const Vector3& amount);
     void setMaxSpeed(float speed);
 
     void handleCollisions() {};
 
-    Matrix3<Vector3> getVelocities(int rescaleX = -1, int rescaleY = -1, int rescaleZ = -1);
+    GridV3 getVelocities(int rescaleX = -1, int rescaleY = -1, int rescaleZ = -1);
     Vector3 getVelocity(int x, int y, int z);
 
     void step();
@@ -82,16 +82,16 @@ public:
 
     int iterations;
 
-    Matrix3<float> density_old;
-    Matrix3<float> density;
+    GridF density_old;
+    GridF density;
 
-    Matrix3<Vector3> velocity;
-    Matrix3<Vector3> velocity_old;
+    GridV3 velocity;
+    GridV3 velocity_old;
 
-    Matrix3<float> divergence;
-    Matrix3<float> pressure;
+    GridF divergence;
+    GridF pressure;
 
-    Matrix3<float> obstacles;
+    GridF obstacles;
 
     Vector3 meanVel;
 
@@ -215,7 +215,7 @@ public:
 
     template<typename T>
     void advect(Matrix3<T>& arr, Matrix3<T>& old_array,
-                Matrix3<Vector3>& velocity_array, bool inverseOnBounds = false)
+                GridV3& velocity_array, bool inverseOnBounds = false)
     {
         float x0, y0, z0, x1, y1, z1;
 

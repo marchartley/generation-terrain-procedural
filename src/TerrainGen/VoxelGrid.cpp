@@ -5,7 +5,7 @@
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)
 //    : /*blockSize(blockSize),*/ noise_shifting(noise_shifting)
 {
-    this->_cachedVoxelValues = Matrix3<float>(nx /* * chunkSize*/, ny /* * chunkSize*/, nz /* * chunkSize + 1*/, 1.f);
+    this->_cachedVoxelValues = GridF(nx /* * chunkSize*/, ny /* * chunkSize*/, nz /* * chunkSize + 1*/, 1.f);
     this->initMap();
     this->fromCachedData();
 }
@@ -22,7 +22,7 @@ VoxelGrid::~VoxelGrid()
 }
 void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
     float zScale = 2.f;
-    this->_cachedVoxelValues = Matrix3<float>(grid.getSizeX(), grid.getSizeY(), grid.getSizeZ() * zScale);
+    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), grid.getSizeZ() * zScale);
     this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
@@ -38,10 +38,10 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
         subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
         subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = Matrix3<float>((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, grid.getMaxHeight(), 0.f);
+    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, grid.getMaxHeight(), 0.f);
     this->initMap();
 
-    Matrix3<float> gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
+    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
     gridHeights.raiseErrorOnBadCoord = false;
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
@@ -59,6 +59,10 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
             }
         }
     }
+//    Vector3 miniDims(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 5);
+//    Vector3 maxiDims(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, _cachedVoxelValues.sizeZ);
+//    _cachedVoxelValues = _cachedVoxelValues.resize(miniDims);
+//    _cachedVoxelValues = _cachedVoxelValues.resize(maxiDims);
     this->fromCachedData();
     this->smoothVoxels();
     this->smoothVoxels();
@@ -99,7 +103,7 @@ VoxelGrid* VoxelGrid::fromCachedData()
     return this;
 }
 
-void VoxelGrid::setVoxelValues(const Matrix3<float> &values)
+void VoxelGrid::setVoxelValues(const GridF &values)
 {
     this->_cachedVoxelValues = values;
     this->initMap();
@@ -117,7 +121,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
 {
     auto smallerVoxelGrid = this->getVoxelValues().resize(this->multipleFluidSimulations[0].dimensions);
 //    auto geom = Mesh().applyMarchingCubes(smallerVoxelGrid).getTriangles(); //this->getGeometry().getTriangles();
-    Matrix3<float> obstacleMap = smallerVoxelGrid.binarize();
+    GridF obstacleMap = smallerVoxelGrid.binarize();
     auto densities = this->getEnvironmentalDensities().resize(this->multipleFluidSimulations[0].dimensions);
     float maxDensity = densities.max();
     for (size_t i = 0; i < obstacleMap.size(); i++)
@@ -129,7 +133,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
      /// Implicit affect flowfield part :
      ///
     std::vector<BSpline> allTunnelsCurves;
-    std::vector<Matrix3<float>> rasterizedCurves;
+    std::vector<GridF> rasterizedCurves;
     auto tunnelsPatches = primitives->findAll(ImplicitPatch::ParametricTunnel);
     for (auto& tunnelPatch : tunnelsPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
@@ -140,7 +144,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
             allTunnelsCurves.push_back(curve);
-            Matrix3<float> rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
+            GridF rasterizedCurve(smallerVoxelGrid.getDimensions(), -1.f);
             for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                 for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                     for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -156,7 +160,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
         }
     }
 
-    std::vector<Matrix3<float>> rasterizedLagoonAreas;
+    std::vector<GridF> rasterizedLagoonAreas;
     auto lagoonPatches = primitives->findAll(ImplicitPatch::Polygon);
     for (auto& lagoonPatch : lagoonPatches) {
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
@@ -166,7 +170,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
-            Matrix3<float> rasterizedArea(smallerVoxelGrid.getDimensions(), -1.f);
+            GridF rasterizedArea(smallerVoxelGrid.getDimensions(), -1.f);
             for (int x = 0; x < rasterizedArea.sizeX; x++) {
                 for (int y = 0; y < rasterizedArea.sizeY; y++) {
                     for (int z = 0; z < rasterizedArea.sizeZ; z++) {
@@ -210,7 +214,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
                 Vector3 inputFlow = this->multipleFluidSimulations[iCurrent].velocity.at(curve.points.front());
                 float inputStrength = inputFlow.norm();
 
-                Matrix3<float>& rasterizedCurve = rasterizedCurves[iTunnel];
+                GridF& rasterizedCurve = rasterizedCurves[iTunnel];
                 for (int x = 0; x < rasterizedCurve.sizeX; x++) {
                     for (int y = 0; y < rasterizedCurve.sizeY; y++) {
                         for (int z = 0; z < rasterizedCurve.sizeZ; z++) {
@@ -223,7 +227,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
 
             for (size_t iLagoon = 0; iLagoon < rasterizedLagoonAreas.size(); iLagoon++) {
 
-                Matrix3<float>& rasterizedArea = rasterizedLagoonAreas[iLagoon];
+                GridF& rasterizedArea = rasterizedLagoonAreas[iLagoon];
                 for (int x = 0; x < rasterizedArea.sizeX; x++) {
                     for (int y = 0; y < rasterizedArea.sizeY; y++) {
                         for (int z = 0; z < rasterizedArea.sizeZ; z++) {
@@ -316,7 +320,7 @@ void VoxelGrid::initMap()
     int iChunk = 0;
     for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
         for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), Matrix3<float>(chunkSize, chunkSize, this->getSizeZ(), 0.f), this);
+            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), GridF(chunkSize, chunkSize, this->getSizeZ(), 0.f), this);
             this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
             this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
             iChunk++;
@@ -341,14 +345,14 @@ void VoxelGrid::initMap()
     int fluidSolverIterations = 5;
     this->fluidSimRescale = Vector3(4, 4, 4);
     this->fluidSimulation = StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale.x, this->getSizeY() / this->fluidSimRescale.y, this->getSizeZ() / this->fluidSimRescale.z, dt, diffusion, viscosity, fluidSolverIterations);
-    this->environmentalDensities = Matrix3<float>(this->getDimensions(), 1); // Fill with air density for now
+    this->environmentalDensities = GridF(this->getDimensions(), 1); // Fill with air density for now
 
     this->multipleFluidSimulations.resize(4);
     this->multipleFlowFields.resize(4);
     this->multipleSeaCurrents.resize(4);
     for (size_t i = 0; i < this->multipleFluidSimulations.size(); i++) {
         this->multipleFluidSimulations[i] = StableFluidsSimulation(this->getSizeX() / this->fluidSimRescale.x, this->getSizeY() / this->fluidSimRescale.y, this->getSizeZ() / this->fluidSimRescale.z, dt, diffusion, viscosity, fluidSolverIterations);
-        this->multipleFlowFields[i] = Matrix3<Vector3>(this->getDimensions());
+        this->multipleFlowFields[i] = GridV3(this->getDimensions());
     }
     float waterStrength = 1.f;
     this->multipleSeaCurrents = {
@@ -391,17 +395,17 @@ void VoxelGrid::letGravityMakeSandFall(bool remesh)
 }
 void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
 {
-    Matrix3<float> transportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
-    Matrix3<float> currentTransportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
-    Matrix3<float> voxelValues = this->getVoxelValues();
-    Matrix3<Vector3> flow(this->getSizeX(), this->getSizeY(), this->getSizeZ(), this->sea_current); // To change with real flow
+    GridF transportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    GridF currentTransportMatrix(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    GridF voxelValues = this->getVoxelValues();
+    GridV3 flow(this->getSizeX(), this->getSizeY(), this->getSizeZ(), this->sea_current); // To change with real flow
     float gravityForce = 1.f;
-//    Matrix3<Vector3> flow = this->flowField;
+//    GridV3 flow = this->flowField;
     float sandLowerLimit = 0.0, sandUpperLimit = 1.0;
 
     int iter = 0;
     do {
-        currentTransportMatrix = Matrix3<float>(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+        currentTransportMatrix = GridF(this->getSizeX(), this->getSizeY(), this->getSizeZ());
         std::vector<Vector3> sandyPositions;
         for (size_t i = 0; i < voxelValues.size(); i++) {
             if (sandLowerLimit <= voxelValues[i] + transportMatrix[i] && voxelValues[i] + transportMatrix[i] < sandUpperLimit) {
@@ -448,10 +452,10 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
     this->applyModification(transportMatrix);
 }
 
-Matrix3<float> VoxelGrid::shareSandWithNeighbors()
+GridF VoxelGrid::shareSandWithNeighbors()
 {
-    Matrix3<float> allVoxels = this->getVoxelValues();
-    Matrix3<float> transport(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    GridF allVoxels = this->getVoxelValues();
+    GridF transport(this->getSizeX(), this->getSizeY(), this->getSizeZ());
     allVoxels.raiseErrorOnBadCoord = false;
     allVoxels.defaultValueOnBadCoord = std::numeric_limits<float>::max();
     for (int x = 0; x < this->getSizeX(); x++) {
@@ -487,7 +491,7 @@ Matrix3<float> VoxelGrid::shareSandWithNeighbors()
     return transport;
 }
 
-void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
+void VoxelGrid::applyModification(GridF modifications, Vector3 anchor)
 {
     if (currentHistoryIndex < this->voxelsValuesStack.size()) {
         this->voxelsValuesStack.erase(this->voxelsValuesStack.begin() + currentHistoryIndex, this->voxelsValuesStack.end());
@@ -499,14 +503,14 @@ void VoxelGrid::applyModification(Matrix3<float> modifications, Vector3 anchor)
     this->voxelsValuesAnchorStack.push_back(anchor);
 }
 
-void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float factor, Vector3 anchor)
+void VoxelGrid::add2DHeightModification(GridF heightmapModifier, float factor, Vector3 anchor)
 {
     /// Two possibilities : either inverse the voxel values when needed, or just add random values based on Perlin noise
-    Matrix3<float> modification(this->getDimensions(), 0.f);
-    Matrix3<float> previousValues = this->getVoxelValues();
+    GridF modification(this->getDimensions(), 0.f);
+    GridF previousValues = this->getVoxelValues();
 
     /// Third possibility : Apply deformation on the Z-axis
-    Matrix3<Vector3> deformation(this->getDimensions());
+    GridV3 deformation(this->getDimensions());
     float maxDepthAllowed = this->getSizeZ();
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {
@@ -520,7 +524,7 @@ void VoxelGrid::add2DHeightModification(Matrix3<float> heightmapModifier, float 
             }
         }
     }
-    Matrix3<float> newVoxels = previousValues.wrapWith(deformation) - previousValues;
+    GridF newVoxels = previousValues.wrapWith(deformation) - previousValues;
 
     this->applyModification(newVoxels, anchor);
 
@@ -559,14 +563,20 @@ bool VoxelGrid::redo()
 size_t VoxelGrid::getCurrentHistoryIndex() const
 {
     return this->currentHistoryIndex;
-//    return this->chunks.front()->currentHistoryIndex;
+    //    return this->chunks.front()->currentHistoryIndex;
+}
+
+GridF VoxelGrid::getHeights()
+{
+    return _cachedMaxHeights;
 }
 
 float VoxelGrid::getHeight(float x, float y) {
-    for (int z = this->getSizeZ() - 1; z >= 0; z--)
-        if (this->getVoxelValue(x, y, z) > 0.f)
-            return z;
-    return 0;
+    return this->getHeights().at(x, y);
+//    for (int z = this->getSizeZ() - 1; z >= 0; z--)
+//        if (this->getVoxelValue(x, y, z) > 0.f)
+//            return z;
+//    return 0;
 }
 
 bool VoxelGrid::contains(Vector3 v) {
@@ -605,9 +615,9 @@ void VoxelGrid::computeVoxelGroups()
 {
     int currentMarker = 0;
     std::set<int> neighbors_coords;
-    Matrix3<int> connected(this->getSizeX(), this->getSizeY(), this->getSizeZ());
-    Matrix3<int> labels(this->getSizeX(), this->getSizeY(), this->getSizeZ(), -1);
-    Matrix3<float> voxelValues = this->getVoxelValues();
+    GridI connected(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+    GridI labels(this->getSizeX(), this->getSizeY(), this->getSizeZ(), -1);
+    GridF voxelValues = this->getVoxelValues();
 
     for (size_t i = 0; i < voxelValues.size(); i++) {
         if (voxelValues[i] > 0.f) connected[i] = 1;
@@ -645,26 +655,28 @@ void VoxelGrid::computeVoxelGroups()
 //        vc->voxelGroups = labels.subset(vc->x, vc->x + vc->sizeX, vc->y, vc->y + vc->sizeY, 0, 0 + vc->sizeZ);
 }
 
-Matrix3<float> VoxelGrid::getVoxelValues()
+GridF VoxelGrid::getVoxelValues()
 {
     if (this->_cachedHistoryIndex != int(this->getCurrentHistoryIndex())) {
         this->_cachedHistoryIndex = this->getCurrentHistoryIndex();
 
-        this->_cachedVoxelValues = Matrix3<float>(this->getSizeX(), this->getSizeY(), this->getSizeZ());
+        this->_cachedVoxelValues = GridF(this->getSizeX(), this->getSizeY(), this->getSizeZ());
         this->_cachedVoxelValues.raiseErrorOnBadCoord = false;
         for (int i = 0; i < this->currentHistoryIndex; i++)
             _cachedVoxelValues.add(this->voxelsValuesStack[i], this->voxelsValuesAnchorStack[i]);
-        /*
-         for (auto& vc : this->chunks) {
-            this->_cachedVoxelValues.paste(vc->getVoxelValues(), vc->x, vc->y, 0);
+
+        _cachedMaxHeights = GridF(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 1, -1);
+        for (int i = _cachedVoxelValues.size() - 1; i >= 0; i--) {
+            Vector3 p = _cachedVoxelValues.getCoordAsVector3(i);
+            if (_cachedMaxHeights.at(p.x, p.y) < 0 && _cachedVoxelValues[i] > 0) {
+                _cachedMaxHeights.at(p.x, p.y) = p.z;
+            }
         }
-        */
-//        this->updateLayersRepresentation();
     }
     return this->_cachedVoxelValues;
 }
 
-Matrix3<float> VoxelGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF VoxelGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
     return this->getVoxelValues();
 }
@@ -882,12 +894,12 @@ void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
 }
 void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
 {
-    this->applyModification(Matrix3<float>(1, 1, 1, -this->getVoxelValue(x, y, z) + newVal), Vector3(x, y, z));
+    this->applyModification(GridF(1, 1, 1, -this->getVoxelValue(x, y, z) + newVal), Vector3(x, y, z));
     /*
     int iChunk, voxPosX, voxPosY, _z;
     std::tie(iChunk, voxPosX, voxPosY, _z) = this->getChunksAndVoxelIndices(x, y, z);
     if (iChunk != -1) {
-        Matrix3<float> setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->sizeZ);
+        GridF setterMatrix(this->chunks[iChunk]->sizeX, this->chunks[iChunk]->sizeY, this->chunks[iChunk]->sizeZ);
         setterMatrix.at(voxPosX, voxPosY, _z) = -this->chunks[iChunk]->getVoxelValue(voxPosX, voxPosY, _z) + newVal;
         this->chunks[iChunk]->applyModification(setterMatrix);
 //        this->chunks[iChunk]->voxelValues(voxPosX, voxPosY, _z) = newVal;
@@ -907,15 +919,15 @@ float VoxelGrid::getOriginalVoxelValue(float x, float y, float z) {
         return this->chunks[iChunk]->voxelsValuesStack[0].at(voxPosX, voxPosY, _z);
     return -1;
 }*//*
-Matrix3<Vector3> VoxelGrid::getFlowfield()
+GridV3 VoxelGrid::getFlowfield()
 {
     return this->getFlowfield(0);
 }
 
-Matrix3<Vector3> VoxelGrid::getFlowfield(size_t flowIndex)
+GridV3 VoxelGrid::getFlowfield(size_t flowIndex)
 {
-    Matrix3<float> binary = this->getVoxelValues().binarize(0.f, false);
-//    return Matrix3<Vector3>(this->getDimensions(), Vector3(1, 0, 0)) * binary;
+    GridF binary = this->getVoxelValues().binarize(0.f, false);
+//    return GridV3(this->getDimensions(), Vector3(1, 0, 0)) * binary;
     return this->multipleFlowFields[flowIndex] * binary;
 }*/
 /*
@@ -994,7 +1006,7 @@ int VoxelGrid::getMaxLoD()
 */
 void VoxelGrid::saveState()
 {
-    Matrix3<float> voxelValues = this->getVoxelValues();
+    GridF voxelValues = this->getVoxelValues();
     this->voxelsValuesStack.clear();
     this->voxelsValuesAnchorStack.clear();
     this->currentHistoryIndex = 0;
@@ -1039,7 +1051,7 @@ void VoxelGrid::retrieveMap(std::string filename)
     in >> _x >> _y >> _z >> _chunkSize;
     this->chunkSize = _chunkSize;
     Vector3 finalSize = this->getDimensions();
-    this->_cachedVoxelValues = Matrix3<float>(_x, _y, _z, 0.f);
+    this->_cachedVoxelValues = GridF(_x, _y, _z, 0.f);
     initMap();
 
     if (_chunkSize > 0) {
@@ -1048,10 +1060,10 @@ void VoxelGrid::retrieveMap(std::string filename)
         for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
             for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
                 Vector3 offset(xChunk * chunkSize, yChunk * chunkSize, 0.f);
-    //            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), Matrix3<float>(chunkSize, chunkSize, _z), this); //->shared_from_this());
+    //            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), GridF(chunkSize, chunkSize, _z), this); //->shared_from_this());
     //            this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
     //            this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
-    //            Matrix3<float> values = Matrix3<float>(this->chunkSize, this->chunkSize, _z);
+    //            GridF values = GridF(this->chunkSize, this->chunkSize, _z);
                 for (int x = 0; x < chunkSize; x++) {
                     for (int y = 0; y < chunkSize; y++) {
                         for (int z = 0; z < this->getSizeZ(); z++) {
@@ -1085,7 +1097,7 @@ void VoxelGrid::retrieveMap(std::string filename)
     in >> _x >> _y >> _z >> _chunkSize;
     int chunkSize = _chunkSize;
     Vector3 finalSize = this->getDimensions();
-    this->_cachedVoxelValues = Matrix3<float>(_x, _y, _z, 0.f);
+    this->_cachedVoxelValues = GridF(_x, _y, _z, 0.f);
     initMap();
 
     if (_chunkSize > 0) { // Compatibility with previous terrain saving system
@@ -1183,8 +1195,18 @@ std::string VoxelGrid::toShortString()
 
 void VoxelGrid::smoothVoxels()
 {
-    Matrix3<float> voxelValues = this->getVoxelValues();
+    GridF voxelValues = this->getVoxelValues();
     this->applyModification(voxelValues.meanSmooth(3, 3, 3) - voxelValues);
+}
+
+GridV3 VoxelGrid::getNormals()
+{
+    GridV3 normals = -this->getVoxelValues().gradient();
+    for (auto& n : normals)
+        n.normalize();
+    normals.raiseErrorOnBadCoord = false;
+    normals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    return normals;
 }
 
 void VoxelGrid::saveHeightmap(std::string heightmap_filename)
@@ -1198,7 +1220,7 @@ void VoxelGrid::saveHeightmap(std::string heightmap_filename)
 
 //    float newHeight = std::max(this->maxHeight, this->heights.max());
 
-    Matrix3<float> heights(width, height);
+    GridF heights(width, height);
     for (int x = 0; x < heights.sizeX; x++) {
         for (int y = 0; y < heights.sizeY; y++) {
             for (int z = this->getSizeZ() - 1; z >= 0; z--) {

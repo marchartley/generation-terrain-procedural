@@ -354,6 +354,7 @@ HEADERS += \
     src/Utils/matplotlibcpp.h \
     src/Utils/stb_image.h \
     src/Utils/stb_image_write.h \
+    src/Utils/stb_image_resize.h \
     src/Utils/stl_reader.h \
     src/sim-fluid-loganzartman/Box.hpp \
     src/sim-fluid-loganzartman/DebugLine.hpp \

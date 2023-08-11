@@ -43,24 +43,21 @@ public:
     void fromLayerBased(LayerBasedGrid layerBased, int fixedHeight = -1);
     void fromImplicit(ImplicitPatch* implicitTerrain, int fixedHeight = -1);
     VoxelGrid *fromCachedData();
-    void setVoxelValues(const Matrix3<float>& values);
+    void setVoxelValues(const GridF& values);
 
     void initMap();
 
     void makeItFall(float erosionStrength = 0.0);
     void letGravityMakeSandFall(bool remesh = true);
     void letGravityMakeSandFallWithFlow(bool remesh = true);
-    Matrix3<float> shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
-    void applyModification(Matrix3<float> modifications, Vector3 anchor = Vector3());
-    void add2DHeightModification(Matrix3<float> heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
+    GridF shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
+    void applyModification(GridF modifications, Vector3 anchor = Vector3());
+    void add2DHeightModification(GridF heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
     bool undo();
     bool redo();
     size_t getCurrentHistoryIndex() const;
 
-//    int numberOfChunksX() { return std::ceil(this->getSizeX() / (float)this->chunkSize); }
-//    int numberOfChunksY() { return std::ceil(this->getSizeY() / (float)this->chunkSize); }
-
-//    std::vector<Matrix3<float>> tempData;
+    GridF getHeights();
     float getHeight(float x, float y);
 
     bool contains(Vector3 v);
@@ -68,7 +65,6 @@ public:
 
     virtual bool checkIsInGround(Vector3 position);
 
-//    void remeshAll();
     void limitVoxelValues(float limitedValue);
 
     std::string toString();
@@ -76,45 +72,18 @@ public:
 
     void smoothVoxels();
 
+    virtual GridV3 getNormals();
 
     void computeVoxelGroups();
-    Matrix3<float> getVoxelValues();
-    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelValues();
+    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
     Mesh getGeometry(Vector3 dimensions = Vector3(false));
 
-//    std::tuple<int, int, int, int> getChunksAndVoxelIndices(Vector3 pos);
-//    std::tuple<int, int, int, int> getChunksAndVoxelIndices(float x, float y, float z);
     float getVoxelValue(Vector3 pos);
     float getVoxelValue(float x, float y, float z);
     void setVoxelValue(Vector3 pos, float newVal);
     void setVoxelValue(float x, float y, float z, float newVal);
-//    float getOriginalVoxelValue(Vector3 pos);
-//    float getOriginalVoxelValue(float x, float y, float z);
-//    Matrix3<Vector3> getFlowfield();
-//    Matrix3<Vector3> getFlowfield(size_t flowIndex);
-//    Vector3 getFlowfield(Vector3 pos);
-//    Vector3 getFlowfield(float x, float y, float z);
-//    void setFlowfield(Vector3 pos, Vector3 newVal);
-//    void setFlowfield(float x, float y, float z, Vector3 newVal);
-//    int getVoxelGroup(Vector3 pos);
-//    int getVoxelGroup(float x, float y, float z);
-//    void setVoxelGroup(Vector3 pos, int newVal);
-//    void setVoxelGroup(float x, float y, float z, int newVal);
-//    bool getVoxelIsOnGround(Vector3 pos);
-//    bool getVoxelIsOnGround(float x, float y, float z);
-//    void setVoxelIsOnGround(Vector3 pos, bool newVal);
-//    void setVoxelIsOnGround(float x, float y, float z, bool newVal);
-
-//    void computeFlowfield();
-//    void computeMultipleFlowfields(int steps = 30, ImplicitNaryOperator* primitives = nullptr);
-
-//    void affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize = 3);
-//    void affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize = 3);
-//    void affectFlowfieldAround(Vector3 pos, float alphaEffect, int kernelSize = 3);
-//    void affectFlowfieldAround(float x, float y, float z, float alphaEffect, int kernelSize = 3);
-
-//    int getMaxLoD();
 
     void saveState();
 
@@ -145,13 +114,11 @@ public:
 
 
     float getNoiseValue(int x, int y, int z, float noise_shift = 0.f);
-//    int _cachedHistoryIndex = -1;
-    Matrix3<float> _cachedVoxelValues;
+    GridF _cachedVoxelValues;
+    GridF _cachedMaxHeights;
 
-    std::vector<Matrix3<float>> voxelsValuesStack;
+    std::vector<GridF> voxelsValuesStack;
     std::vector<Vector3> voxelsValuesAnchorStack;
-//    void computeFlowfield(FluidSimType type);
-//    void computeMultipleFlowfields(FluidSimType type, int steps = 30, ImplicitNaryOperator *primitives = nullptr);
 };
 
 #endif // VOXELGRID_H

@@ -6,8 +6,8 @@ StableFluids::StableFluidsSimulation::StableFluidsSimulation() {}
 StableFluids::StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusion, float viscosity, int solverIterations)
     : FluidSimulation(sizeX, sizeY, sizeZ), diffusion(diffusion), viscosity(viscosity), dt(dt), solverIterations(solverIterations)
 {
-    velocity = Matrix3<Vector3>(dimensions);
-    density = Matrix3<float>(dimensions);
+    velocity = GridV3(dimensions);
+    density = GridF(dimensions);
 
     velocity.raiseErrorOnBadCoord = false;
     velocity.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -53,8 +53,8 @@ void StableFluids::StableFluidsSimulation::diffuse() {
 }
 
 void StableFluids::StableFluidsSimulation::project() {
-    Matrix3<float> divergence(dimensions);
-    Matrix3<float> pressure(dimensions);
+    GridF divergence(dimensions);
+    GridF pressure(dimensions);
     int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
 
     // Compute divergence of velocity field
@@ -106,7 +106,7 @@ void StableFluids::StableFluidsSimulation::project() {
 }
 
 void StableFluids::StableFluidsSimulation::advect() {
-    Matrix3<Vector3> newVelocity(dimensions);
+    GridV3 newVelocity(dimensions);
     int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
 
 #pragma omp parallel for collapse(3)
@@ -163,11 +163,11 @@ void StableFluids::StableFluidsSimulation::handleCollisions() {
     }
 }
 
-Matrix3<Vector3> StableFluids::StableFluidsSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ) {
+GridV3 StableFluids::StableFluidsSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ) {
     return (this->velocity * (1.f - this->obstacleGrid)).resize(newSizeX, newSizeY, newSizeZ);
 }
 
-void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
+void StableFluidsSimulation::setObstacles(GridF new_obstacles)
 {
     FluidSimulation::setObstacles(new_obstacles);
     for(size_t i = 0; i < new_obstacles.data.size(); i++) {
@@ -188,20 +188,20 @@ StableFluidsSimulation::StableFluidsSimulation()
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
     : sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
-    obstacles = Matrix3<float>(dimensions);
-    density_old = Matrix3<float>(dimensions);
-    density = Matrix3<float>(dimensions);
+    obstacles = GridF(dimensions);
+    density_old = GridF(dimensions);
+    density = GridF(dimensions);
 
-    velocity = Matrix3<Vector3>(dimensions);
-    velocity_old = Matrix3<Vector3>(dimensions);
+    velocity = GridV3(dimensions);
+    velocity_old = GridV3(dimensions);
 
-    divergence = Matrix3<float>(dimensions);
-    pressure = Matrix3<float>(dimensions);
+    divergence = GridF(dimensions);
+    pressure = GridF(dimensions);
 
     maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
-void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
+void StableFluidsSimulation::setObstacles(GridF new_obstacles)
 {
     this->obstacles = new_obstacles.resize(dimensions).binarize(0.5);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
@@ -228,7 +228,7 @@ void StableFluidsSimulation::setMaxSpeed(float speed)
     this->maxSpeedSquared = speed * speed;
 }
 
-Matrix3<Vector3> StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
+GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
 {
 
     return this->velocity.resize(rescaleX, rescaleY, rescaleZ);
@@ -330,7 +330,7 @@ void StableFluidsSimulation::densityStep()
 
 void StableFluidsSimulation::projectVelocity()
 {
-    this->pressure = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+    this->pressure = GridF(this->sizeX, this->sizeY, this->sizeZ);
 
     // What is "h"??? In Josh Stam's code, it's just 1/N
     // So I think that if "h" is big (.5 < h < 1.), there are alternating attraction/repulsion "poles"
@@ -346,7 +346,7 @@ void StableFluidsSimulation::projectVelocity()
 
     this->pressure = divergence;
     this->pressure.raiseErrorOnBadCoord = false;
-    Matrix3<float> tmp = pressure;
+    GridF tmp = pressure;
     for (int i = 0; i < this->iterations; i++) {
 #pragma omp parallel for collapse(3)
         for (int x = 0; x < sizeX; x++) {
@@ -368,9 +368,9 @@ void StableFluidsSimulation::projectVelocity()
     }
     this->pressure.raiseErrorOnBadCoord = true;
 
-//    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / (-h * 2.f);
+//    GridV3 pressureGradient = this->pressure.gradient() / (-h * 2.f);
     // Following ethanjli code :
-    Matrix3<Vector3> pressureGradient = this->pressure.gradient() * -h;
+    GridV3 pressureGradient = this->pressure.gradient() * -h;
     this->velocity += pressureGradient;
     this->setVelocityBounds();
 }
@@ -379,7 +379,7 @@ void StableFluidsSimulation::setVelocityBounds()
 {
     bool nullifyOnBounds = false;
     bool inverseOnBounds = true;
-    Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
+    GridV3 boundariesGradient = this->obstacles.gradient() * (-1.f);
 
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < sizeX; x++) {
@@ -410,20 +410,20 @@ StableFluidsSimulation::StableFluidsSimulation()
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
     : FluidSimulation(sizeX, sizeY, sizeZ), sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
-    obstacles = Matrix3<float>(dimensions);
-    density_old = Matrix3<float>(dimensions);
-    density = Matrix3<float>(dimensions);
+    obstacles = GridF(dimensions);
+    density_old = GridF(dimensions);
+    density = GridF(dimensions);
 
-    velocity = Matrix3<Vector3>(dimensions);
-    velocity_old = Matrix3<Vector3>(dimensions);
+    velocity = GridV3(dimensions);
+    velocity_old = GridV3(dimensions);
 
-    divergence = Matrix3<float>(dimensions);
-    pressure = Matrix3<float>(dimensions);
+    divergence = GridF(dimensions);
+    pressure = GridF(dimensions);
 
     maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
-void StableFluidsSimulation::setObstacles(Matrix3<float> new_obstacles)
+void StableFluidsSimulation::setObstacles(GridF new_obstacles)
 {
     this->obstacles = new_obstacles.resize(dimensions);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
@@ -450,7 +450,7 @@ void StableFluidsSimulation::setMaxSpeed(float speed)
     this->maxSpeedSquared = speed * speed;
 }
 
-Matrix3<Vector3> StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
+GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int rescaleZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
@@ -558,7 +558,7 @@ void StableFluidsSimulation::densityStep()
 
 void StableFluidsSimulation::projectVelocity()
 {
-    this->pressure = Matrix3<float>(this->sizeX, this->sizeY, this->sizeZ);
+    this->pressure = GridF(this->sizeX, this->sizeY, this->sizeZ);
 
     // What is "h"??? In Josh Stam's code, it's just 1/N
     // So I think that if "h" is big (.5 < h < 1.), there are alternating attraction/repulsion "poles"
@@ -574,7 +574,7 @@ void StableFluidsSimulation::projectVelocity()
 
     this->pressure = divergence;
     this->pressure.raiseErrorOnBadCoord = false;
-    Matrix3<float> tmp = pressure;
+    GridF tmp = pressure;
     for (int i = 0; i < this->iterations; i++) {
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
@@ -595,9 +595,9 @@ void StableFluidsSimulation::projectVelocity()
     }
     this->pressure.raiseErrorOnBadCoord = true;
 
-//    Matrix3<Vector3> pressureGradient = this->pressure.gradient() / (-h * 2.f);
+//    GridV3 pressureGradient = this->pressure.gradient() / (-h * 2.f);
     // Following ethanjli code :
-    Matrix3<Vector3> pressureGradient = this->pressure.gradient() * -h;
+    GridV3 pressureGradient = this->pressure.gradient() * -h;
     this->velocity += pressureGradient;
 //    this->setVelocityBounds();
 }
@@ -606,7 +606,7 @@ void StableFluidsSimulation::setVelocityBounds()
 {
     bool nullifyOnBounds = false;
     bool inverseOnBounds = true;
-    Matrix3<Vector3> boundariesGradient = this->obstacles.gradient() * (-1.f);
+    GridV3 boundariesGradient = this->obstacles.gradient() * (-1.f);
 
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {

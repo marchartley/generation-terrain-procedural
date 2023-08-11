@@ -10,22 +10,22 @@ class Pathfinding
 public:
     template<class T>
     static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, std::vector<std::shared_ptr<GraphNode<T>>>& nodes, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, Matrix3<float>& adjencyMap, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, Matrix3<float>& adjencyMap);
-    static std::pair<Matrix3<float>, Matrix3<int>> ShortestPathFrom(Matrix3<float>& adjencyMap);
+    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, GridF& adjencyMap, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
+    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, GridF& adjencyMap);
+    static std::pair<GridF, GridI> ShortestPathFrom(GridF& adjencyMap);
 
     static std::vector<int> getPath(int dest, std::vector<int> prec);
 
     template<class T>
     static std::pair<float, std::vector<int>> AStar(std::vector<std::shared_ptr<GraphNode<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<float, std::vector<int>> AStar(Matrix3<float>& adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<std::vector<float>, std::vector<int>> Djikstra(Matrix3<float>& adjencyMap, int source);
-    static std::pair<std::vector<float>, std::vector<int>> BellmanFord(Matrix3<float>& adjencyMap, int source);
-    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFasterAlgorithm(Matrix3<float>& adjencyMap, int source, bool useSmallLabelFirst = false, bool useLargeLabelLast = false);
-    static bool containsNegativeCycle(const std::vector<float>& distanceVector, Matrix3<float>& adjencyMap);
-    static std::pair<Matrix3<float>, Matrix3<int>> FloydWarshall(Matrix3<float>& adjencyMap);
-    static std::pair<Matrix3<float>, Matrix3<int>> FloydWarshallImproved(Matrix3<float>& adjencyMap);
-    static std::pair<Matrix3<float>, Matrix3<int>> Johnson(Matrix3<float>& adjencyMap);
+    static std::pair<float, std::vector<int>> AStar(GridF& adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
+    static std::pair<std::vector<float>, std::vector<int>> Djikstra(GridF& adjencyMap, int source);
+    static std::pair<std::vector<float>, std::vector<int>> BellmanFord(GridF& adjencyMap, int source);
+    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFasterAlgorithm(GridF& adjencyMap, int source, bool useSmallLabelFirst = false, bool useLargeLabelLast = false);
+    static bool containsNegativeCycle(const std::vector<float>& distanceVector, GridF& adjencyMap);
+    static std::pair<GridF, GridI> FloydWarshall(GridF& adjencyMap);
+    static std::pair<GridF, GridI> FloydWarshallImproved(GridF& adjencyMap);
+    static std::pair<GridF, GridI> Johnson(GridF& adjencyMap);
 
 };
 

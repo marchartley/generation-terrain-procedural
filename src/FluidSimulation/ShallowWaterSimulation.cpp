@@ -6,7 +6,7 @@
 
 void visualize(std::vector<GridCell> &grid, int N, int resized) {
 
-    Matrix3<float> values(N, N);
+    GridF values(N, N);
     for (int i = 0; i < N*N; i++)
         values[i] = grid[i].height;
 

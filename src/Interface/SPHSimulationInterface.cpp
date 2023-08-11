@@ -109,7 +109,7 @@ void SPHSimulationInterface::updateParticles()
 {
     if (voxelGrid == nullptr) return;
 
-    Matrix3<float> values = voxelGrid->getVoxelValues();
+    GridF values = voxelGrid->getVoxelValues();
     values = values.resize(20, 20, 10);
     Mesh m;
     auto triangles = m.applyMarchingCubes(values).getTriangles();

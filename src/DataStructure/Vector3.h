@@ -123,8 +123,8 @@ public:
 
     static Vector3 nabla;
 
-    float maxComp() { return std::max({x, y, z}); };
-    float minComp() { return std::min({x, y, z}); };
+    float maxComp() const { return std::max({x, y, z}); };
+    float minComp() const { return std::min({x, y, z}); };
 
 
     static bool isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos);

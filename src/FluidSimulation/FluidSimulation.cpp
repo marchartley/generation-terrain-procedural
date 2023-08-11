@@ -8,12 +8,12 @@ FluidSimulation::FluidSimulation()
 }
 
 FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ)
-    : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(Matrix3<int>(sizeX, sizeY, sizeZ)), obstacleGradient(Matrix3<Vector3>(sizeX, sizeY, sizeZ))
+    : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(GridI(sizeX, sizeY, sizeZ)), obstacleGradient(GridV3(sizeX, sizeY, sizeZ))
 {
 //    this->obstacleTrianglesOctree = nullptr;
 }
 
-Matrix3<Vector3> FluidSimulation::getVelocities(const Vector3& dimensions)
+GridV3 FluidSimulation::getVelocities(const Vector3& dimensions)
 {
     return this->getVelocities(dimensions.x, dimensions.y, dimensions.z);
 }
@@ -63,7 +63,7 @@ void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &tri
     */
 }
 
-void FluidSimulation::setObstacles(const Matrix3<float> &obstacle) {
+void FluidSimulation::setObstacles(const GridF &obstacle) {
     this->obstacleGrid = obstacle.resize(dimensions).binarize(0.5);;
     this->obstacleGradient = obstacleGrid.gradient().normalized();
 }
@@ -73,7 +73,7 @@ void FluidSimulation::addObstacles(const std::vector<std::vector<Vector3> > &tri
     this->setObstacles(vectorUnion(triangles, this->triangles));
 }
 
-void FluidSimulation::addObstacles(const Matrix3<float>& obstacle)
+void FluidSimulation::addObstacles(const GridF& obstacle)
 {
     this->setObstacles(this->obstacleGrid + obstacle);
 }

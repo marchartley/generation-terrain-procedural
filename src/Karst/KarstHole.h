@@ -16,7 +16,7 @@ public:
     std::vector<std::vector<Vector3>> generateMesh();
     std::vector<std::vector<Vector3>> computeClosingMesh(std::vector<Vector3>& vertices);
 
-    std::tuple<Matrix3<float>, Vector3> generateMask(std::vector<std::vector<Vector3>> precomputedTriangles = std::vector<std::vector<Vector3>>());
+    std::tuple<GridF, Vector3> generateMask(std::vector<std::vector<Vector3>> precomputedTriangles = std::vector<std::vector<Vector3>>());
 
     KarstHoleProfile startingProfile;
     KarstHoleProfile endingProfile;

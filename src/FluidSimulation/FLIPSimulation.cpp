@@ -580,12 +580,12 @@ void FLIPSimulation::simulate() {
     }
 }
 
-Matrix3<Vector3> FLIPSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
+GridV3 FLIPSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        Matrix3<Vector3> velocities(dimensions);
-        Matrix3<float> amount(dimensions);
+        GridV3 velocities(dimensions);
+        GridF amount(dimensions);
 
         for (auto& particle : this->particles) {
             velocities[particle.position] += particle.velocity;
@@ -708,7 +708,7 @@ void Scene::update() {
 
 FLIPSimulation::FLIPSimulation(float density, float width, float height, float depth, float spacing, float particleRadius, int maxParticles)
 {
-    this->grid = Matrix3<Vector3>(width, depth, height);
+    this->grid = GridV3(width, depth, height);
     this->spacing = spacing;
     this->nbParticles = maxParticles;
     this->reset();
@@ -856,7 +856,7 @@ void FLIPSimulation::solvePressure(int numIterations, float overRelaxation) {
     int numCellsY = grid.height();
     int numCellsZ = grid.depth();
 
-    gridW = Matrix3<float>(numCellsX, numCellsY, numCellsZ);
+    gridW = GridF(numCellsX, numCellsY, numCellsZ);
 
     for (int iter = 0; iter < numIterations; iter++) {
         for (int i = 0; i < numCellsX; i++) {

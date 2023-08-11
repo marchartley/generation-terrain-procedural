@@ -30,10 +30,10 @@ public:
 
     std::vector<std::shared_ptr<GraphNode<T>>> nodes;
 
-    Matrix3<int> nodesIndices;
-    Matrix3<int> connectionMatrix;
-    Matrix3<int> precedenceMatrix;
-    Matrix3<float> adjencyMatrix;
+    GridI nodesIndices;
+    GridI connectionMatrix;
+    GridI precedenceMatrix;
+    GridF adjencyMatrix;
 
     void draw();
 };
@@ -119,19 +119,19 @@ template<class T>
 std::vector<std::shared_ptr<GraphNode<T> > > Graph<T>::addNodes(std::vector<std::shared_ptr<GraphNode<T> > > newNodes)
 {
     int numberOfNodesToAdd = newNodes.size();
-    Matrix3<int> nodesIndices = Matrix3<int>(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+    GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
     nodesIndices.paste(this->nodesIndices);
     this->nodesIndices = nodesIndices;
 
-    Matrix3<int> connectionMatrix = Matrix3<int>(this->connectionMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+    GridI connectionMatrix = GridI(this->connectionMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
     connectionMatrix.paste(this->connectionMatrix);
     this->connectionMatrix = connectionMatrix;
 
-    Matrix3<int> precedenceMatrix = Matrix3<int>(this->precedenceMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+    GridI precedenceMatrix = GridI(this->precedenceMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
     precedenceMatrix.paste(this->precedenceMatrix);
     this->precedenceMatrix = precedenceMatrix;
 
-    Matrix3<float> adjencyMatrix = Matrix3<int>(this->adjencyMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+    GridF adjencyMatrix = GridI(this->adjencyMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
     adjencyMatrix.paste(this->adjencyMatrix);
     this->adjencyMatrix = adjencyMatrix;
 

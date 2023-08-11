@@ -31,8 +31,8 @@ protected:
     std::map<int, Vector3*> pointsConstrainted;
     std::map<int, BSpline*> curvesConstrainted;
 
-    Matrix3<int> distanceConstraintsAvailable;
-    Matrix3<float> distanceConstraints;
+    GridI distanceConstraintsAvailable;
+    GridF distanceConstraints;
     std::map<int, std::tuple<float, float>> objectsNormalConstraints;
 };
 

@@ -87,7 +87,7 @@ void ManualEditionInterface::applyModification()
 
 //    RockErosion rock(size, strength);
 //    rock.Apply(voxelGrid, position, addingMode);
-    Matrix3<float> modif = RockErosion::createPrecomputedAttackMask(size);
+    GridF modif = RockErosion::createPrecomputedAttackMask(size);
     modif *= strength / (modif.at(size * .5f, size * .5f, size * .5f));
     voxelGrid->applyModification(modif * (addingMode ? 1.f : -1.f), position - Vector3(size * .5f, size * .5f, size * .5f));
 

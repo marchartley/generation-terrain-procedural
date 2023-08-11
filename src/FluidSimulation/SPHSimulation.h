@@ -36,7 +36,7 @@ public:
     void relaxDensity();
     void handleCollisions();
     void step();
-    Matrix3<Vector3> getVelocities(int newSizeX, int newSizeY, int newSizeZ);
+    GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     Vector3 getVelocity(int x, int y, int z);
     void addVelocity(int x, int y, int z, const Vector3& amount);
 

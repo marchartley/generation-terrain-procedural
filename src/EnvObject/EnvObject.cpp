@@ -2,14 +2,14 @@
 
 #include <fstream>
 
-Matrix3<Vector3> EnvObject::flowfield;
-Matrix3<Vector3> EnvObject::terrainNormals;
-Matrix3<float> EnvObject::sandDeposit;
+GridV3 EnvObject::flowfield;
+GridV3 EnvObject::terrainNormals;
+GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
 
 void init() {
-    EnvObject::flowfield = Matrix3<Vector3>(100, 100, 1, Vector3(0, 0, 0));
+    EnvObject::flowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
     EnvObject::flowfield.raiseErrorOnBadCoord = false;
     EnvObject::flowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 }
@@ -189,7 +189,7 @@ void EnvObject::applyEffects()
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
-    EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield);
+    EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield * 3.f);
 }
 
 EnvPoint::EnvPoint()
@@ -222,16 +222,16 @@ EnvPoint *EnvPoint::clone()
 
 void EnvPoint::applySandDeposit()
 {
-    Matrix3<float> sand = Matrix3<float>::gaussian(radius, radius, 1, radius * .5f) * this->sandEffect;
+    GridF sand = GridF::gaussian(radius, radius, 1, radius * .5f) * this->sandEffect;
     EnvObject::sandDeposit.add(sand, sand.getDimensions() * .5f);
 
 }
 
 void EnvPoint::applyFlowModifcation()
 {
-//    Matrix3<Vector3> flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
-    Matrix3<float> gauss = Matrix3<float>::gaussian(radius, radius, 1, radius * .5f).normalize();
-    Matrix3<Vector3> flow = Matrix3<Vector3>(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss;
+//    GridV3 flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
+    GridF gauss = GridF::gaussian(radius, radius, 1, radius * .5f).normalize();
+    GridV3 flow = GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss;
     EnvObject::flowfield.add(flow, this->position - Vector3(radius, radius));
 }
 
@@ -288,7 +288,7 @@ void EnvCurve::applySandDeposit()
     BSpline translatedCurve = this->curve;
     for (auto& p : translatedCurve.points)
         p = p + Vector3(width, width, 0) - box.min();
-    Matrix3<float> sand = Matrix3<float>(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
     for (int x = 0; x < sand.sizeX; x++) {
         for (int y = 0; y < sand.sizeY; y++) {
@@ -304,8 +304,8 @@ void EnvCurve::applyFlowModifcation()
     AABBox box = AABBox(this->curve.points);
     BSpline translatedCurve = this->curve;
     for (auto& p : translatedCurve.points)
-        p = p + Vector3(width, width, 0) - box.min();
-    Matrix3<Vector3> flow = Matrix3<Vector3>(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+        p = p + Vector3(width * 2.f, width * 2.f, 0) - box.min();
+    GridV3 flow = GridV3(box.dimensions().x + width * 4.f, box.dimensions().y + width * 4.f);
 
     for (int x = 0; x < flow.sizeX; x++) {
         for (int y = 0; y < flow.sizeY; y++) {
@@ -374,7 +374,7 @@ void EnvArea::applySandDeposit()
     ShapeCurve translatedCurve = this->area;
     for (auto& p : translatedCurve.points)
         p = p + Vector3(width, width, 0) - box.min();
-    Matrix3<float> sand = Matrix3<float>(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
     for (int x = 0; x < sand.sizeX; x++) {
         for (int y = 0; y < sand.sizeY; y++) {
@@ -383,7 +383,7 @@ void EnvArea::applySandDeposit()
         }
     }
     sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min());
+    //EnvObject::sandDeposit.add(sand, box.min());
 }
 
 void EnvArea::applyFlowModifcation()
@@ -392,7 +392,7 @@ void EnvArea::applyFlowModifcation()
     BSpline translatedCurve = this->area;
     for (auto& p : translatedCurve.points)
         p = p + Vector3(width, width, 0) - box.min();
-    Matrix3<Vector3> flow = Matrix3<Vector3>(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+    GridV3 flow = GridV3(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
 //    for (int x = 0; x < flow.sizeX; x++) {
 //        for (int y = 0; y < flow.sizeY; y++) {

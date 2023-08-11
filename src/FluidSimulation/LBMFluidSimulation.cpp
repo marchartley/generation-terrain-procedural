@@ -4,9 +4,9 @@ LBMFluidSimulation::LBMFluidSimulation(bool uses3D)
     : FluidSimulation(30, 30, (uses3D ? 50 : 1)), uses3D(uses3D)
 {
     c = (uses3D ? c3D : c2D);
-//    Matrix3<float> heights(dimensions);
-    f = Matrix3<Matrix3<float>>(dimensions, Matrix3<float>(c.size(), 1));
-    f_next = Matrix3<Matrix3<float>>(dimensions, Matrix3<float>(c.size(), 1));
+//    GridF heights(dimensions);
+    f = Matrix3<GridF>(dimensions, GridF(c.size(), 1));
+    f_next = Matrix3<GridF>(dimensions, GridF(c.size(), 1));
 
     f.raiseErrorOnBadCoord = false;
     f.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
@@ -20,9 +20,9 @@ LBMFluidSimulation::LBMFluidSimulation(bool uses3D)
 }
 
 
-//LBMFluidSimulation(const Matrix3<float>& heights) :
-//    f(heights.sizeX, heights.sizeY, Matrix3<Vector3>(9)),
-//    f_next(heights.sizeX, heights.sizeY, Matrix3<Vector3>(9)) {}
+//LBMFluidSimulation(const GridF& heights) :
+//    f(heights.sizeX, heights.sizeY, GridV3(9)),
+//    f_next(heights.sizeX, heights.sizeY, GridV3(9)) {}
 
 Vector3 LBMFluidSimulation::computeMacroscopicVelocity(int x, int y, int z) {
     Vector3 u(0, 0, 0);
@@ -151,8 +151,8 @@ void LBMFluidSimulation::handleCollisions() {
 
 void LBMFluidSimulation::stream() {
     // Create a temporary copy of the distribution functions
-    Matrix3<Matrix3<float>> f_temp = f;
-    Matrix3<Matrix3<float>> counts(f.getDimensions(), f[0].getDimensions());
+    Matrix3<GridF> f_temp = f;
+    Matrix3<GridF> counts(f.getDimensions(), f[0].getDimensions());
     counts.raiseErrorOnBadCoord = false;
 
     for (int i = 0; i < f.size(); i++)
@@ -221,11 +221,11 @@ void LBMFluidSimulation::step() {
     std::cout << minVal << " " << maxVal << std::endl;
 }
 
-Matrix3<Vector3> LBMFluidSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
+GridV3 LBMFluidSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        Matrix3<Vector3> velocities(this->f.getDimensions());
+        GridV3 velocities(this->f.getDimensions());
         for (int x = 0; x < dimensions.x; x++) {
             for (int y = 0; y < dimensions.y; y++) {
                 for (int z = 0; z < dimensions.z; z++) {
@@ -271,12 +271,12 @@ void LBMFluidSimulation::setVelocity(int x, int y, int z, const Vector3 &amount)
     }
 }
 
-void LBMFluidSimulation::setObstacles(const Matrix3<float> &obstacles)
+void LBMFluidSimulation::setObstacles(const GridF &obstacles)
 {
     if (uses3D) {
         return FluidSimulation::setObstacles(obstacles);
     } else {
-        this->obstacleGrid = Matrix3<float>(this->dimensions);
+        this->obstacleGrid = GridF(this->dimensions);
         obstacles.resize(this->dimensions.x, this->dimensions.y, obstacles.sizeZ);
         for (int x = 0; x < obstacles.sizeX; x++) {
             for (int y = 0; y < obstacles.sizeY; y++) {
@@ -289,13 +289,13 @@ void LBMFluidSimulation::setObstacles(const Matrix3<float> &obstacles)
     }
 }
 
-void LBMFluidSimulation::addObstacles(const Matrix3<float> &obstacles)
+void LBMFluidSimulation::addObstacles(const GridF &obstacles)
 {
-    Matrix3<float> addedObstacleGrid;
+    GridF addedObstacleGrid;
     if (uses3D) {
         addedObstacleGrid = obstacles;
     } else {
-        addedObstacleGrid = Matrix3<float>(obstacles.sizeX, obstacles.sizeY);
+        addedObstacleGrid = GridF(obstacles.sizeX, obstacles.sizeY);
         for (int x = 0; x < obstacles.sizeX; x++) {
             for (int y = 0; y < obstacles.sizeY; y++) {
                 float height = 0;

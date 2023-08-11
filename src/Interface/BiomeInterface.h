@@ -66,10 +66,10 @@ public Q_SLOTS:
 
     void displayUniqueSelection(int selectionIndex);
 
-    Matrix3<float> prepareTrench(std::shared_ptr<BiomeInstance> biome);
-    Matrix3<float> prepareCoralWall(std::shared_ptr<BiomeInstance> biome);
-    Matrix3<float> prepareArche(std::shared_ptr<BiomeInstance> biome);
-    Matrix3<float> preparePatateCorail(std::shared_ptr<BiomeInstance> biome);
+    GridF prepareTrench(std::shared_ptr<BiomeInstance> biome);
+    GridF prepareCoralWall(std::shared_ptr<BiomeInstance> biome);
+    GridF prepareArche(std::shared_ptr<BiomeInstance> biome);
+    GridF preparePatateCorail(std::shared_ptr<BiomeInstance> biome);
 
 Q_SIGNALS:
     void terrainViewModified(Vector3 newOffset, float newScaling);

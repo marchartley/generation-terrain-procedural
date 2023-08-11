@@ -253,7 +253,7 @@ void Shader::setMaterial(std::string pname, Material &value)
 }
 
 // Todo : change the integer type to a template (or select int or float)
-void Shader::setTexture2D(std::string pname, int index, Matrix3<int> texture)
+void Shader::setTexture2D(std::string pname, int index, GridI texture)
 {
     int **data = new int*[texture.sizeY];
     for (int i = 0; i < texture.sizeY; i++) {
@@ -359,7 +359,7 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
 }
 
 // Todo : change the integer type to a template (or select int or float)
-void Shader::setTexture3D(std::string pname, int index, Matrix3<float> texture)
+void Shader::setTexture3D(std::string pname, int index, GridF texture)
 {
     for (auto& val : texture)
         val = std::max(val, 0.f);

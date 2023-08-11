@@ -561,7 +561,7 @@ void CombinMap::clean()
             Brin* twinA = current->beta2;
             Brin* twinB = current->beta1->beta2;
             // "Current" is going to get deleted
-            if (isIn(this->root, {current, current->beta1}))
+            if (isIn(this->root, std::set{current, current->beta1}))
                 this->root = twinA;
             twinA->beta2 = twinB;
             twinB->beta2 = twinA;

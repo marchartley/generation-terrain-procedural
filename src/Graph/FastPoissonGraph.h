@@ -75,7 +75,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     this->sizeX = available_space_matrix.sizeX;
     this->sizeY = available_space_matrix.sizeY;
     this->sizeZ = available_space_matrix.sizeZ;
-    this->nodesIndices = Matrix3<int>(this->sizeX, this->sizeY, this->sizeZ, -1); // Fill all indices to -1 as default values
+    this->nodesIndices = GridI(this->sizeX, this->sizeY, this->sizeZ, -1); // Fill all indices to -1 as default values
     Vector3 sizeVec(this->sizeX, this->sizeY, this->sizeZ);
 
     std::vector<std::shared_ptr<GraphNode<T>>> allNodes;
@@ -165,9 +165,9 @@ void FastPoissonGraph<T>::createEdges(int maxNumberNeighbors, float maxDistanceT
     this->maxNeighborRadius = maxDistanceToNeighbor;
     this->poissonNeighbors = maxNumberNeighbors;
     float sqr_dist = maxNeighborRadius * maxNeighborRadius;
-    this->connectionMatrix = Matrix3<int>(this->nodes.size(), this->nodes.size(), 1, 0);
-    this->adjencyMatrix = Matrix3<float>(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
-    this->precedenceMatrix = Matrix3<int>(this->nodes.size(), this->nodes.size(), 1, -1);
+    this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size(), 1, 0);
+    this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
+    this->precedenceMatrix = GridI(this->nodes.size(), this->nodes.size(), 1, -1);
 
     int cellsToCheckOnX = std::ceil(this->maxNeighborRadius / this->poissonRadius);
     int cellsToCheckOnY = std::ceil(this->maxNeighborRadius / this->poissonRadius);

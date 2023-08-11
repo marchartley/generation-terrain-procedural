@@ -10,13 +10,13 @@ public:
 
     void applyErosion();
 
-    void _erode(Matrix3<float>& voxels, const Vector3& pos);
-    void _deposition(Matrix3<float>& voxels);
+    void _erode(GridF& voxels, const Vector3& pos);
+    void _deposition(GridF& voxels);
 
     std::shared_ptr<VoxelGrid> voxelGrid;
 
-    Matrix3<float> decimation;
-    Matrix3<float> voxels;
+    GridF decimation;
+    GridF voxels;
 };
 
 #endif // SPHEROIDALWEATHERING_H

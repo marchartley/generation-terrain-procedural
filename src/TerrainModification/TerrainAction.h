@@ -9,14 +9,14 @@
 class TerrainAction
 {
 public:
-    TerrainAction(std::string actionType, std::map<std::string, std::string> parameters, Matrix3<float> exactEffect);
+    TerrainAction(std::string actionType, std::map<std::string, std::string> parameters, GridF exactEffect);
 
     nlohmann::json serialize();
     static TerrainAction fromSerialized(nlohmann::json& actionSerialized);
 
     std::string actionType;
     std::map<std::string, std::string> parameters;
-    Matrix3<float> exactEffect;
+    GridF exactEffect;
 };
 
 #endif // TERRAINACTION_H

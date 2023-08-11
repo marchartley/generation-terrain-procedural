@@ -12,6 +12,10 @@ template<class T>
 bool isIn(T elem, std::vector<T> arr) {
     return std::find(arr.begin(), arr.end(), elem) != arr.end();
 }
+template<class T>
+bool isIn(T elem, std::set<T> arr) {
+    return arr.find(elem) != arr.end();
+}
 
 void displayProgress(float percent, bool displayPercent = true, int consoleWidth = 20, std::string progressSign = "=");
 
@@ -46,6 +50,7 @@ void sleep(int milliseconds);
 //    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 //}
 float timeIt(std::function<void()> func);
+std::string showTime(float milliseconds);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

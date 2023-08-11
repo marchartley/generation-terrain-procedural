@@ -84,13 +84,13 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/midCave");
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        terrainGenerationInterface->createTerrainFromNoise(30, 30, 30, true);
+//        terrainGenerationInterface->createTerrainFromNoise(30, 30, 30, true);
 
 //        this->terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = this->terrainGenerationInterface->voxelGrid;
@@ -220,6 +220,7 @@ void ViewerInterface::setupUi()
         {terrainGenerationInterface,    "",                                 "Use voxels as reference",          modelMenu,      [=]() { terrainGenerationInterface->voxelsToAll(); } },
         {terrainGenerationInterface,    "",                                 "Use layers as reference",          modelMenu,      [=]() { terrainGenerationInterface->layersToAll(); } },
         {terrainGenerationInterface,    "",                                 "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
+        {terrainGenerationInterface,    "",                                 "Reload terrain from file",         modelMenu,      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); }},
     };
 
     for (auto& informations : interfacesToOpen) {

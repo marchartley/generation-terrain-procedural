@@ -107,8 +107,8 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
 //    this->voxelGrid = voxelGrid;
-    Matrix3<float> voxels = voxelGrid->getVoxelValues();
-    Matrix3<int> availableGrid(voxelGrid->getDimensions(), 0.f); //(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+    GridF voxels = voxelGrid->getVoxelValues();
+    GridI availableGrid(voxelGrid->getDimensions(), 0.f); //(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {

@@ -14,6 +14,8 @@ Python_tests/_cached*
 Python_tests/erosionData
 Python_tests/synthetic_terrains_dataset/*
 Python_tests/correct_synthetic_terrains_dataset*
+various/
+Python_tests/private_genetics/
 
 doc/
 

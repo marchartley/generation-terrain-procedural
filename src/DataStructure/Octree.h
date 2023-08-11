@@ -45,36 +45,21 @@ public:
 
     Octree();
     Octree(const Vector3& origin, const Vector3& halfDimension, int capacity = 20);
-//    Octree(const std::vector<Triangle>& triangles, int capacity = 20);
-//    Octree(const std::vector<std::vector<Vector3>>& triangles, int capacity = 20);
-
 
     ~Octree();
 
-//    bool insert(const Vector3& p1, const Vector3& p2, const Vector3& p3, const int& pointIndex);
     bool insert(std::vector<Triangle> triangles);
-//    bool insert(std::vector<std::vector<Vector3>> triangles);
 
 
     virtual SpacePartitioning& build(const std::vector<Triangle>& triangles);
     virtual std::set<size_t> getAllStoredTrianglesIndices() const;
-    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd) const;
+    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, std::set<size_t> ignoredTriangles = {}) const;
+    std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, size_t ignoredTriangle) const;
     virtual std::vector<std::pair<Vector3, size_t>> getAllIntersectionsAndTrianglesIndices(const Vector3& rayStart, const Vector3& rayEnd) const;
 
     std::vector<OctreeNodeData> queryRange(const Vector3& start, const Vector3& end) const;
-/*
-    std::pair<Vector3, int> _intersectingTriangleIndex(const Vector3& start, const Vector3& end, const std::vector<Triangle > &triangles) const;
-    Vector3 getIntersection(const Vector3& start, const Vector3& end, const std::vector<Triangle > &triangles) const;
-    std::pair<Vector3, Vector3> getIntersectionAndNormal(const Vector3& start, const Vector3& end, const std::vector<Triangle > &triangles) const;
 
-    Vector3 getIntersection(const Vector3& start, const Vector3& end, const std::vector<std::vector<Vector3>> &triangles) const;
-    std::pair<Vector3, Vector3> getIntersectionAndNormal(const Vector3& start, const Vector3& end, const std::vector<std::vector<Vector3>> &triangles) const;
-
-    std::vector<int> getAllStoredTrianglesIndices() const;
-    std::vector<Triangle> getAllStoredTriangles(const std::vector<Triangle>& triangles) const;
-    std::vector<std::vector<Vector3>> getAllStoredTriangles(const std::vector<std::vector<Vector3>>& triangles) const;
-    */
-protected:
+//protected:
     int maxDataCapacity = 20;
     bool insert(OctreeNode* node, const Vector3& p1, const Vector3& p2, const Vector3& p3, const int &pointIndex);
 

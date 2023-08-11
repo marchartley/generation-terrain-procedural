@@ -64,7 +64,8 @@ void Viewer::init() {
     glEnable(GL_TEXTURE_3D);
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
 //    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-    this->setBackgroundColor(QColor(127, 127, 127));
+    this->setBackgroundColor(QColor(127, 127, 127, 0));
+//    this->setBackgroundColor(QColor(0, 0, 0));
 
     this->camera()->setType(qglviewer::Camera::PERSPECTIVE);
 
@@ -100,9 +101,6 @@ void Viewer::init() {
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-//    ControlPoint::base_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-
-//    ControlPoint::base_shader->setVector("color", std::vector<float>({160/255.f, 5/255.f, 0/255.f, 1.f}));
     this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
 
 
@@ -140,34 +138,14 @@ void Viewer::init() {
     }
     if (this->voxelGrid != nullptr) {
         this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-//        // this->displayMessage(QString::fromStdString(std::string("Screenshots will be saved in folder ") + std::string(this->screenshotFolder)));
     }
-/*
-    if (grid != nullptr) {
-        this->grid->createMesh();
-        this->grid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-    }
-    if (layerGrid != nullptr) {
-        this->layerGrid->createMesh();
-        this->layerGrid->mesh.shader = std::make_shared<Shader>(vShader_voxels, fShader_voxels);
-    }
-    if (voxelGrid != nullptr) {
-
-    }*/
-
-//    Mesh::setShaderToAllMeshesWithoutShader(*Shader::default_shader);
-//    GlobalsGL::f()->glBindVertexArray(raymarchingQuad.vao);
-//    sceneUBO = ShaderUBO("scene_buf", 1, sizeof(rt_scene));
-//    sceneUBO.affectShader(raymarchingQuad.shader);
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
     QGLViewer::init();
-//    this->startAnimation();
 }
 
 void Viewer::draw() {
-//    QGLViewer::draw();
     this->drawingProcess();
     this->window()->setWindowTitle("Simulation - " + QString::number(this->currentFPS()) + "FPS");
 }
@@ -186,6 +164,45 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
+
+    int w = this->camera()->screenWidth();
+    int h = this->camera()->screenHeight();
+    /*GLuint depthBuffer; // Depth buffer for the FBO
+
+    if (fbo == 0) {
+        // Generate and bind the FBO
+        GlobalsGL::f()->glGenFramebuffers(1, &fbo);
+        GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+        // Generate texture
+        GlobalsGL::f()->glGenTextures(1, &texture);
+        GlobalsGL::f()->glBindTexture(GL_TEXTURE_2D, texture);
+        GlobalsGL::f()->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+        GlobalsGL::f()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        GlobalsGL::f()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        // Attach the texture to the FBO
+        GlobalsGL::f()->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
+
+        // Create depth buffer and attach to FBO
+        GlobalsGL::f()->glGenRenderbuffers(1, &depthBuffer);
+        GlobalsGL::f()->glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
+        GlobalsGL::f()->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
+        GlobalsGL::f()->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
+
+        // Check if FBO is complete
+        if (GlobalsGL::f()->glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            std::cerr << "Error setting up framebuffer!" << std::endl;
+        }
+
+        GlobalsGL::f()->glBindRenderbuffer(GL_RENDERBUFFER, 0); // Unbind the renderbuffer
+    }
+
+    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    GlobalsGL::f()->glViewport(0, 0, w, h); // Set the viewport
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+*/
+
     auto allProcessStart = std::chrono::system_clock::now();
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
 //    std::chrono::milliseconds test;
@@ -206,10 +223,7 @@ void Viewer::drawingProcess() {
     camera()->getProjectionMatrix(pMatrix);
     camera()->getModelViewMatrix(mvMatrix);
 
-    this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ);
-    //this->light.position = Vector3(camera()->frame()->position()) + Vector3(0, 0, 100);
-
-    float white[4] = {240/255.f, 240/255.f, 240/255.f, 1.f};
+    this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
     Material ground_material(
                     new float[4] {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
                     new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
@@ -258,7 +272,6 @@ void Viewer::drawingProcess() {
 
     for (auto& actionInterface : this->interfaces) {
         if (actionInterface.first != "terrainGenerationInterface") {
-//            std::cout << "Error on " << actionInterface.first << "?" << std::endl;
             interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(this->camera()->position()); });
         }
     }
@@ -267,7 +280,6 @@ void Viewer::drawingProcess() {
         interfacesTimings[this->interfaces["terrainGenerationInterface"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
 
-//    std::cout << "--" << std::endl;
     if (this->isTakingScreenshots) {
 #ifdef linux
         mode_t prevMode = umask(0011);
@@ -279,7 +291,39 @@ void Viewer::drawingProcess() {
             outfile << voxelGrid->toString();
             outfile.close();
         }
-        this->saveSnapshot(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
+        int nbComp = 4;
+        int size = w * h * nbComp;
+        GLubyte* buffer = new GLubyte[size];
+        GlobalsGL::f()->glPixelStorei(GL_PACK_ALIGNMENT, 1);
+        GlobalsGL::f()->glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+        int newWidth = w * .5f;
+        int newHeight = h * .5f;
+        GLubyte* resized = new GLubyte[newWidth * newHeight * nbComp];
+        stbir_resize_uint8(buffer, w, h, 0, resized, newWidth, newHeight, 0, nbComp);
+        GLubyte* flipped = new GLubyte[newWidth * newHeight * nbComp];
+
+        // Flip the image vertically
+        for (int y = 0; y < newHeight; y++) {
+            for (int x = 0; x < newWidth; x++) {
+                // Calculate the original and target positions
+                int originalIndex = (y * newWidth + x) * nbComp;
+                int targetIndex = ((newHeight - 1 - y) * newWidth + x) * nbComp;
+
+                // Copy the pixel data
+                for (int c = 0; c < nbComp; c++) {
+                    flipped[targetIndex + c] = resized[originalIndex + c];
+                }
+            }
+        }
+        stbi_write_png((this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png").c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
+//        stbi_write_jpg((this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg").c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
+        delete[] buffer;
+        delete[] resized;
+        delete[] flipped;
+
+
+//        this->saveSnapshot(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
 //        this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
 #ifdef linux
         chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
@@ -297,7 +341,7 @@ void Viewer::drawingProcess() {
             std::cout << "\t" << interf->actionType << " : " << time << "ms" << std::endl;
         }
     }
-//    std::cout << "Real FPS : " << this->currentFPS() << std::endl;
+    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the FBO for subsequent rendering
 }
 
 void Viewer::reloadAllShaders()
@@ -524,7 +568,7 @@ bool Viewer::startRecording(std::string folderUsed)
 bool Viewer::stopRecording()
 {
     std::string command = "ffmpeg -f image2 -i ";
-    command += this->screenshotFolder + "%d.jpg -framerate 10 " + this->screenshotFolder + "0.gif";
+    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
     if (this->screenshotIndex > 0) {
         int result = std::system(command.c_str());
         if (result != 0) {

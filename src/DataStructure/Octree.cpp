@@ -162,17 +162,39 @@ std::set<size_t> Octree::getAllStoredTrianglesIndices() const
     return allElements;
 }
 
-std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd) const
+std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
 {
     std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
-    std::set<int> possibleTriangles;
+    std::set<size_t> possibleTriangles;
     for (auto& data : allData)
         possibleTriangles.insert(data.index);
 
 //    std::cout << "Possibly " << possibleTriangles.size() << " triangles colliding ray" << std::endl;
     Vector3 intersectionPoint(false);
     int closestIntersectionIndex = -1;
-    for (int triIndex : possibleTriangles) {
+    for (size_t triIndex : possibleTriangles) {
+        if (isIn(triIndex, ignoredTriangles)) continue;
+        auto& triangle = triangles[triIndex];
+        Vector3 collide = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2]);
+        if (!intersectionPoint.isValid() || (collide.isValid() && (collide - rayStart) < (intersectionPoint - rayStart))) {
+            intersectionPoint = collide;
+            closestIntersectionIndex = triIndex;
+        }
+    }
+    return {intersectionPoint, closestIntersectionIndex};
+}
+
+std::pair<Vector3, size_t> Octree::getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const
+{
+    std::vector<OctreeNodeData> allData = this->queryRange(rayStart, rayEnd);
+    std::set<size_t> possibleTriangles;
+    for (auto& data : allData)
+        possibleTriangles.insert(data.index);
+
+    Vector3 intersectionPoint(false);
+    int closestIntersectionIndex = -1;
+    for (size_t triIndex : possibleTriangles) {
+        if (triIndex == ignoredTriangle) continue;
         auto& triangle = triangles[triIndex];
         Vector3 collide = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2]);
         if (!intersectionPoint.isValid() || (collide.isValid() && (collide - rayStart) < (intersectionPoint - rayStart))) {

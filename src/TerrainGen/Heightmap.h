@@ -18,8 +18,8 @@ public:
     Heightmap(int nx, int ny, float heightFactor);
     Heightmap(std::string heightmap_filename, int nx = 30, int ny = 30, float heightFactor = 10);
 
-    Matrix3<float> getHeights() { return this->heights; }
-    float getHeight(float x, float y) { return this->heights.at(x, y); }
+    GridF getHeights() { return this->heights; }
+    float getHeight(float x, float y) { return this->heights.interpolate(x, y); }
     float getHeight(Vector3 pos) { return this->getHeight(pos.x, pos.y); }
 
     float getMaxHeight();
@@ -52,12 +52,12 @@ public:
                                                   float scale = 40.f,
                                                   float dt = .1f);
 
-    void raise(Matrix3<float> elevation);
+    void raise(GridF elevation);
 
     Heightmap& fromVoxelGrid(VoxelGrid& voxelGrid);
     Heightmap& fromLayerGrid(LayerBasedGrid& layerGrid);
     Heightmap& fromImplicit(ImplicitPatch *implicitTerrain);
-    Matrix3<float> getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
@@ -81,10 +81,10 @@ public:
 
     Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
 
-    Matrix3<Vector3> getNormals();
+    virtual GridV3 getNormals();
 
 //protected:
-    Matrix3<float> heights;
+    GridF heights;
 //    float maxHeight;
     float heightFactor = 1.f;
     Matrix3<std::vector<int>> biomeIndices;

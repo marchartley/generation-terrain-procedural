@@ -20,7 +20,7 @@ std::map<TerrainTypes, std::pair<float, float>> LayerBasedGrid::materialLimits =
     {BEDROCK, {2.f, 3.f}},
 };
 
-std::vector<TerrainTypes> LayerBasedGrid::invisibleLayers = {
+std::set<TerrainTypes> LayerBasedGrid::invisibleLayers = {
     AIR,
     WATER,
     CURRENT_MIDDLE,
@@ -28,7 +28,7 @@ std::vector<TerrainTypes> LayerBasedGrid::invisibleLayers = {
     CURRENT_BOTTOM
 };
 
-std::vector<TerrainTypes> LayerBasedGrid::instanciableLayers = {
+std::set<TerrainTypes> LayerBasedGrid::instanciableLayers = {
     BEDROCK,
     CORAL
 };
@@ -185,7 +185,7 @@ void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
 {
     return; // TODO: Remove this return very soon
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1);
-    Matrix3<float> voxelValues = voxelGrid.getVoxelValues();
+    GridF voxelValues = voxelGrid.getVoxelValues();
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
             for (int z = 0; z < voxelGrid.getSizeZ(); z++) {
@@ -217,10 +217,10 @@ VoxelGrid LayerBasedGrid::toVoxelGrid()
     return vox;
 }
 
-Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
+GridF LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
 {
     float maxHeight = (fixedHeight == -1 ? this->getSizeZ() : fixedHeight);
-    Matrix3<float> values = Matrix3<float>(this->getSizeX(), this->getSizeY(), maxHeight, LayerBasedGrid::densityFromMaterial(TerrainTypes::WATER));
+    GridF values = GridF(this->getSizeX(), this->getSizeY(), maxHeight, LayerBasedGrid::densityFromMaterial(TerrainTypes::WATER));
 
     int sizeX = values.sizeX;
     int sizeY = values.sizeY;
@@ -267,7 +267,7 @@ Matrix3<float> LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
     return values;
 }
 
-Matrix3<float> LayerBasedGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF LayerBasedGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
 {
     return voxelize();
 }
@@ -354,7 +354,7 @@ Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 min
     return this->getFirstIntersectingStack(origin, dir, minPos, maxPos);
 }
 
-std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGrid()
+std::pair<GridI, GridF> LayerBasedGrid::getMaterialAndHeightsGrid()
 {
 //    int x = 0;
     if (true || currentHistoryIndex != _historyIndex)
@@ -363,8 +363,8 @@ std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGri
         for (auto& cell : layers)
             maxStackSize = std::max(maxStackSize, int(cell.size()));
 
-        Matrix3<int> materials(this->getSizeX(), this->getSizeY(), maxStackSize);
-        Matrix3<float> heights(materials.getDimensions());
+        GridI materials(this->getSizeX(), this->getSizeY(), maxStackSize);
+        GridF heights(materials.getDimensions());
 
         for (size_t i = 0; i < layers.size(); i++) {
             for (size_t iStack = 0; iStack < layers[i].size(); iStack++) {
@@ -377,6 +377,16 @@ std::pair<Matrix3<int>, Matrix3<float>> LayerBasedGrid::getMaterialAndHeightsGri
         currentHistoryIndex = _historyIndex;
     }
     return this->_cachedMaterialAndHeights;
+}
+
+GridV3 LayerBasedGrid::getNormals()
+{
+    GridV3 normals = -this->voxelize().gradient();
+    for (auto& n : normals)
+        n.normalize();
+    normals.raiseErrorOnBadCoord = false;
+    normals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    return normals;
 }
 
 void LayerBasedGrid::thermalErosion()
@@ -570,7 +580,7 @@ void LayerBasedGrid::add(Patch2D patch, TerrainTypes material, bool applyDistanc
     int maxX = std::min(this->getSizeX(), int(maxPos.x));
     int minY = std::max(0, int(minPos.y));
     int maxY = std::min(this->getSizeY(), int(maxPos.y));
-    Matrix3<float> distanceMap = Matrix3<float>(maxX - minX, maxY - minY, 1, 1.f);
+    GridF distanceMap = GridF(maxX - minX, maxY - minY, 1, 1.f);
     if (applyDistanceFalloff) {
         distanceMap = distanceMap.toDistanceMap(true);
         distanceMap.normalize();
@@ -601,7 +611,7 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
     int maxY = std::min(this->getSizeY(), int(maxPos.y));
     float minZ = std::max(0.f, minPos.z);
     float maxZ = float(maxPos.z); // std::min(this->getSizeZ(), float(maxPos.z));
-    Matrix3<float> distanceMap = Matrix3<float>(maxX - minX, maxY - minY, 1, 1.f);
+    GridF distanceMap = GridF(maxX - minX, maxY - minY, 1, 1.f);
     if (applyDistanceFalloff) {
         distanceMap = distanceMap.toDistanceMap(true);
         distanceMap.normalize();

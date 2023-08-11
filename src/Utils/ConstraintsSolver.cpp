@@ -1,8 +1,8 @@
 #include "ConstraintsSolver.h"
 
 ConstraintsSolver::ConstraintsSolver()
-    : distanceConstraintsAvailable(Matrix3<int>(0, 0, 0)),
-      distanceConstraints(Matrix3<float>(0, 0, 0))
+    : distanceConstraintsAvailable(GridI(0, 0, 0)),
+      distanceConstraints(GridF(0, 0, 0))
 {
 
 }
@@ -47,14 +47,14 @@ std::map<int, Vector3> ConstraintsSolver::solveWithVoxelGrid(std::shared_ptr<Vox
     }
 
     // If an object has a "normal constraint", extract the available voxels first
-    Matrix3<float> voxels = mainGrid->getVoxelValues();
-    Matrix3<Vector3> gradient = voxels.gradient() * -1.f;
-    Matrix3<float> borders_f = voxels.binarize().toDistanceMap();
-    Matrix3<int>   borders(borders_f.getDimensions(), 0);
+    GridF voxels = mainGrid->getVoxelValues();
+    GridV3 gradient = voxels.gradient() * -1.f;
+    GridF borders_f = voxels.binarize().toDistanceMap();
+    GridI   borders(borders_f.getDimensions(), 0);
     borders.raiseErrorOnBadCoord = false;
     for (size_t i = 0; i < borders.size(); i++)
         borders[i] = (borders_f[i] == 1 ? 1 : 0);
-    Matrix3<float> angles(voxels.getDimensions(), -100.f); // Init to -100rad, update only the borders
+    GridF angles(voxels.getDimensions(), -100.f); // Init to -100rad, update only the borders
     angles.raiseErrorOnBadCoord = false;
     angles.defaultValueOnBadCoord = -100.f;
     Vector3 verticalVector(0, 0, 1);
@@ -73,10 +73,10 @@ std::map<int, Vector3> ConstraintsSolver::solveWithVoxelGrid(std::shared_ptr<Vox
         }
     }
     // Matrix used if a position is placed in the air, to guide it to the closest border
-    Matrix3<int> reconnectionMatrix_i = borders;
+    GridI reconnectionMatrix_i = borders;
     for (auto& val : reconnectionMatrix_i)
         val = 1 - val; // Switch 0 to 1
-    Matrix3<Vector3> reconnectionMatrix = reconnectionMatrix_i.toDistanceMap().gradient() * -1.f;
+    GridV3 reconnectionMatrix = reconnectionMatrix_i.toDistanceMap().gradient() * -1.f;
     int iteration = 0;
     for (iteration = 0; iteration < 350 && minError > 1.0 * number_elements; iteration++) {
         // Shuffle the border voxels, allowing to assign positions to elements easily
@@ -107,8 +107,8 @@ std::map<int, Vector3> ConstraintsSolver::solveWithVoxelGrid(std::shared_ptr<Vox
         while (true) { // Change this condition, one day
             bool atLeastOneDisplacementToDo = false;
 
-            Matrix3<float> currentDistance(number_elements, number_elements, 1, 0.f);
-            Matrix3<Vector3> nodesPairs(number_elements, number_elements);
+            GridF currentDistance(number_elements, number_elements, 1, 0.f);
+            GridV3 nodesPairs(number_elements, number_elements);
             std::vector<Vector3> moves(number_elements);
             for (int i = 0; i < number_elements; i++) {
                 for (int j = 0; j < number_elements; j++) {
@@ -251,8 +251,8 @@ std::map<int, Vector3> ConstraintsSolver::solve(bool checkPossible, float deltaM
         while (true) { // Change this condition, one day
             bool atLeastOneDisplacementToDo = false;
 
-            Matrix3<float> currentDistance(number_elements, number_elements, 1, 0.f);
-            Matrix3<Vector3> nodesPairs(number_elements, number_elements);
+            GridF currentDistance(number_elements, number_elements, 1, 0.f);
+            GridV3 nodesPairs(number_elements, number_elements);
             std::vector<Vector3> moves(number_elements);
             for (int i = 0; i < number_elements; i++) {
                 for (int j = 0; j < number_elements; j++) {
@@ -347,8 +347,8 @@ bool ConstraintsSolver::checkFeasibility(bool verbose)
 void ConstraintsSolver::addConstraintSlot()
 {
     if (distanceConstraintsAvailable.empty()) {
-        distanceConstraintsAvailable = Matrix3<int>(1, 1, 1);
-        distanceConstraints = Matrix3<float>(1, 1, 1);
+        distanceConstraintsAvailable = GridI(1, 1, 1);
+        distanceConstraints = GridF(1, 1, 1);
     } else {
         distanceConstraintsAvailable.insertRow(distanceConstraintsAvailable.sizeX, 0);
         distanceConstraintsAvailable.insertRow(distanceConstraintsAvailable.sizeY, 1);

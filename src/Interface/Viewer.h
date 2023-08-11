@@ -168,6 +168,8 @@ public:
     std::shared_ptr<Shader> raymarchingShader;
     ShaderUBO sceneUBO;
     Mesh raymarchingQuad;
+
+    GLuint fbo, texture;
 };
 
 

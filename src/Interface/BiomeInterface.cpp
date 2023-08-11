@@ -48,8 +48,8 @@ Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, Vector3 pos, Vector3
     return pos;
 }
 
-Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
-    Matrix3<float> erosionMatrix(grid->getDimensions());
+GridF archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
+    GridF erosionMatrix(grid->getDimensions());
     float nb_points_on_path = path.length() / (size/5.f);
     RockErosion rock(size, strength);
     for (const auto& pos : path.getPath(nb_points_on_path)) {
@@ -57,7 +57,7 @@ Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool adding
     }
     erosionMatrix = erosionMatrix.abs();
     erosionMatrix.toDistanceMap();
-    if (erosionMatrix.max() < 1e-6) return Matrix3<float>(0, 0, 0);
+    if (erosionMatrix.max() < 1e-6) return GridF(0, 0, 0);
     erosionMatrix.normalize();
     for (float& m : erosionMatrix) {
         m = interpolation::linear(m, 0.f, 1.0) * strength * (addingMatter ? 1.f : -1.f);
@@ -65,31 +65,31 @@ Matrix3<float> archeTunnel(BSpline path, float size, float strength, bool adding
     }
     return erosionMatrix;
 }
-Matrix3<float> BiomeInterface::prepareTrench(std::shared_ptr<BiomeInstance> biome) {
-    if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
+GridF BiomeInterface::prepareTrench(std::shared_ptr<BiomeInstance> biome) {
+    if (biome->getNumberOfPoints() < 2) return GridF(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(0)->position)); // Start
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .4f + (end - start).cross(Vector3(0, 0, 1)) * .1f));
     Vector3 midpoint2 = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(start + (end - start) * .6f + (end - start).cross(Vector3(0, 0, 1)) * -.1f));
     return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 8.f * this->voxelGridScaleFactor, 3.f, false, voxelGrid);
 }
-Matrix3<float> BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> biome) {
-    if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
+GridF BiomeInterface::prepareCoralWall(std::shared_ptr<BiomeInstance> biome) {
+    if (biome->getNumberOfPoints() < 2) return GridF(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(0)->position)); // Start
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 gradient = voxelGrid->getVoxelValues().gradient(getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels((start + end) * .5f)));
     Vector3 midpoint = (start + end) * .5f + gradient * (end - start).norm() * .2f;
     return archeTunnel(BSpline({start, midpoint, end}), 5.f * this->voxelGridScaleFactor, 3.f, true, voxelGrid);
 }
-Matrix3<float> BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
-    if (biome->getNumberOfPoints() < 2) return Matrix3<float>(0, 0, 0);
+GridF BiomeInterface::prepareArche(std::shared_ptr<BiomeInstance> biome) {
+    if (biome->getNumberOfPoints() < 2) return GridF(0, 0, 0);
     Vector3 start = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(0)->position)); // Start
     Vector3 end = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->getPointInstance(1)->position)); // End
     Vector3 midpoint1 = start + (end - start) * .3f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint1
     Vector3 midpoint2 = start + (end - start) * .6f + Vector3(0, 0, (end - start).norm() / 2.f); // Midpoint2
     return archeTunnel(BSpline({start, midpoint1, midpoint2, end}), 5.f * this->voxelGridScaleFactor, 10.f, true, voxelGrid);
 }
-Matrix3<float> BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) {
+GridF BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) {
     float radius = std::min(5.f, biome->area.containingBoxSize().norm() / 2.f) * this->voxelGridScaleFactor;
     Vector3 patatePosition = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(biome->position)) + Vector3(0, 0, radius/10.f);
     return archeTunnel(BSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
@@ -109,10 +109,10 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     BiomeInstance::instancedBiomes.clear();
 
     Vector3 heightmapDim = Vector3(3*31, 3*31, 1);
-//    this->heightmap->heights = Matrix3<float>(heightmapDim, 20.f);
+//    this->heightmap->heights = GridF(heightmapDim, 20.f);
 //    this->heightmap->maxHeight = 40.f;
     this->heightmap = std::make_shared<Heightmap>(heightmapDim.x, heightmapDim.y, 40.f);
-    heightmap->raise(Matrix3<float>(heightmapDim, 20.f));
+    heightmap->raise(GridF(heightmapDim, 20.f));
 
     Vector3 voxelGridOffsetEnd = (voxelGridOffsetStart + heightmapDim / voxelGridScaleFactor).floor();
     voxelGridOffsetEnd.z = 1; // Force the Z component to be 1, instead of being rounded to 0 in the division
@@ -138,7 +138,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     } else {
         rootBiome = biomeModel.createInstance(initialSpawn, terrainArea);
     }
-    heightmap->getBiomeIndices() = Matrix3<int>(heightmap->getDimensions(), 0);
+    heightmap->getBiomeIndices() = GridI(heightmap->getDimensions(), 0);
     std::vector<std::shared_ptr<BiomeInstance>> biomeQueue;
     std::vector<std::shared_ptr<BiomeInstance>> sortedBiomes;
 
@@ -211,16 +211,16 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     noise.SetFractalGain(0.7);
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(1);
-    heightmap->getBiomeIndices() = heightmap->getBiomeIndices().wrapWithoutInterpolation(Matrix3<Vector3>::fbmNoise2D(noise, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY)  * 50.f);
+    heightmap->getBiomeIndices() = heightmap->getBiomeIndices().wrapWithoutInterpolation(GridV3::fbmNoise2D(noise, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY)  * 50.f);
 
     // First, level the terrain as the biomes design it
-    Matrix3<float> heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
+    GridF heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     for (auto& current : sortedBiomes) {
         if (!current->depthShape.points.empty()) {
             ShapeCurve area = current->area;
             Vector3 AABBoxMin, AABBoxMax;
             std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
-            Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 0.f);
+            GridF falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 0.f);
             for (size_t i = 0; i < falloff2D.size(); i++) {
                 Vector3 pos = falloff2D.getCoordAsVector3(i);
                 if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
@@ -229,7 +229,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
                 }
             }
             float desiredDepth = current->depthShape.getPoint(.5f).y;
-            Matrix3<float> newHeight = falloff2D.binarize() * -desiredDepth/5.f;
+            GridF newHeight = falloff2D.binarize() * -desiredDepth/5.f;
             heightChange += newHeight;
         }
     }
@@ -237,8 +237,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     this->heightmap->raise(heightChange);
     voxelGrid->add2DHeightModification(heightChange.subset(voxelGridOffsetStart, voxelGridOffsetEnd).resize(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1)) /* * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight())*/, 1.5f);
 
-//    Matrix3<float> all2DModifications(heightmapDim);
-//    Matrix3<float> all3DModifications(voxelGrid->getDimensions());
+//    GridF all2DModifications(heightmapDim);
+//    GridF all3DModifications(voxelGrid->getDimensions());
 //    bool allModif3D = false;
 //    bool allModif2D = false;
     // Now add the primitives on top
@@ -249,8 +249,8 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->getMaxHeight());
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
-        Matrix3<float> falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 1.f);
-        Matrix3<float> falloff3D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), voxelGrid->getSizeZ(), 1.f);
+        GridF falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 1.f);
+        GridF falloff3D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), voxelGrid->getSizeZ(), 1.f);
         for (size_t i = 0; i < falloff2D.size(); i++) {
             Vector3 pos = falloff2D.getCoordAsVector3(i);
             if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
@@ -263,10 +263,10 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
                 }
             }
         }
-//        Matrix3<float> subFalloff2D
+//        GridF subFalloff2D
 
-        Matrix3<float> modifications(0, 0, 0);
-        Matrix3<float> heightmapModifier(0, 0, 1, 0.f);
+        GridF modifications(0, 0, 0);
+        GridF heightmapModifier(0, 0, 1, 0.f);
 
         bool modif3D = false;
         bool modif2D = false;
