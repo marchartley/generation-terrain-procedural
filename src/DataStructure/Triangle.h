@@ -6,7 +6,7 @@
 
 class Triangle {
 public:
-    Vector3 vertices[3];
+    std::vector<Vector3> vertices = std::vector<Vector3>(3);
     Vector3 normal;
     float d;
 

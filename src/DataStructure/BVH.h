@@ -43,6 +43,7 @@ public:
     virtual std::vector<std::pair<Vector3, size_t>> getAllIntersectionsAndTrianglesIndices(const Vector3& rayStart, const Vector3& rayEnd) const;
     std::vector<std::pair<Vector3, size_t>> _getAllIntersectionsAndTrianglesIndices(BVHNode* node, const Vector3& rayStart, const Vector3& rayEnd) const;
 
+    int findBestSplitSAH(int start, int end, int axis);
 };
 
 #endif // BVH_H

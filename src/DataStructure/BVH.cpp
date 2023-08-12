@@ -38,8 +38,41 @@ std::set<size_t> BVHTree::getAllStoredTrianglesIndices() const
     return convertVectorToSet(indices);
 }
 
+float computeSurfaceArea(const AABBox& box) {
+    Vector3 dims = box.dimensions();
+    return 2.0f * (dims.x * dims.y + dims.x * dims.z + dims.y * dims.z);
+}
 
-BVHNode *BVHTree::buildBVH(/*std::vector<Triangle> &triangles, */int start, int end)
+int BVHTree::findBestSplitSAH(int start, int end, int axis) {
+    // Initially, set split at the midpoint
+    int mid = start + (end - start) / 2;
+    float bestCost = std::numeric_limits<float>::max();
+
+    for (int i = start; i < end; ++i) {
+        AABBox leftBox, rightBox;
+        // Compute bounding boxes for triangles on each side of the potential split
+        for (int j = start; j <= i; ++j) {
+            leftBox.expand(triangles[j].vertices);
+        }
+        for (int j = i + 1; j < end; ++j) {
+            rightBox.expand(triangles[j].vertices);
+        }
+
+        float leftSA = computeSurfaceArea(leftBox);
+        float rightSA = computeSurfaceArea(rightBox);
+        float cost = leftSA * (i - start + 1) + rightSA * (end - i - 1);
+
+        if (cost < bestCost) {
+            bestCost = cost;
+            mid = i;
+        }
+    }
+
+    return mid;
+}
+
+
+BVHNode *BVHTree::buildBVH(int start, int end)
 {
     BVHNode* node = new BVHNode();
 
@@ -72,9 +105,11 @@ BVHNode *BVHTree::buildBVH(/*std::vector<Triangle> &triangles, */int start, int 
                       return midPoint1[axis] < midPoint2[axis];
                   });
 
-        int mid = start + (end - start) / 2; // Use median splitting
-        node->left = buildBVH(/*triangles, */start, mid);
-        node->right = buildBVH(/*triangles, */mid, end);
+//        int mid = start + (end - start) / 2; // Use median splitting
+        // Use SAH to determine the best split:
+        int mid = findBestSplitSAH(start, end, axis);
+        node->left = buildBVH(start, mid);
+        node->right = buildBVH(mid, end);
     }
 
     return node;
