@@ -839,6 +839,20 @@ Vector3 AABBox::normalize(Vector3 p)
     return ret;
 }
 
+AABBox &AABBox::expand(const Vector3 &newPoint)
+{
+    this->mini = Vector3::min(this->mini, newPoint);
+    this->maxi = Vector3::max(this->maxi, newPoint);
+    return *this;
+}
+
+AABBox& AABBox::expand(const std::vector<Vector3>& newPoints)
+{
+    for (const auto& p : newPoints)
+        this->expand(p);
+    return *this;
+}
+
 Vector3 AABBox::random(Vector3 mini, Vector3 maxi)
 {
     return Vector3::random(mini, maxi);

@@ -786,13 +786,13 @@ std::vector<std::vector<Vector3> > Mesh::getTriangles(std::vector<int> indices) 
             indices[i] = i;
     }
 
-    std::vector<std::vector<Vector3>> triangles;
+    std::vector<std::vector<Vector3>> triangles(indices.size() / 3);
     for (size_t i = 0; i < indices.size(); i += 3) {
-        triangles.push_back(std::vector<Vector3>({
+        triangles[i / 3] = std::vector<Vector3>({
                                                      this->vertexArray[indices[i+0]],
                                                      this->vertexArray[indices[i+1]],
                                                      this->vertexArray[indices[i+2]],
-                                                 }));
+                                                 });
     }
     return triangles;
 }
@@ -908,17 +908,13 @@ std::string Mesh::toSTL()
 
 Mesh Mesh::applyMarchingCubes(const GridF& values)
 {
-//    auto _values = values.subset(Vector3(), values.getDimensions() - Vector3(1, 1, 1));
     auto triTable = MarchingCubes::triangleTable;
     auto edges = MarchingCubes::edgeToCorner;
-    float offsetX = 0.f;
-    float offsetY = 0.f;
-    float offsetZ = 0.f;
     Vector3 scale(1.f, 1.f, 1.f);
     float isolevel = 0.f;
+    float refined_isolevel = isolevel + 0.0001;
 
     Vector3 vertDecals[8] = {
-
         Vector3(-.5f, -.5f, -.5f),
         Vector3(0.5f, -.5f, -.5f),
         Vector3(0.5f, 0.5f, -.5f),
@@ -927,147 +923,62 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
         Vector3(0.5f, -.5f, 0.5f),
         Vector3(0.5f, 0.5f, 0.5f),
         Vector3(-.5f, 0.5f, 0.5f)
-        /*
-        Vector3(0.0, 0.0, 0.0),
-        Vector3(1.0, 0.0, 0.0),
-        Vector3(1.0, 1.0, 0.0),
-        Vector3(0.0, 1.0, 0.0),
-        Vector3(0.0, 0.0, 1.0),
-        Vector3(1.0, 0.0, 1.0),
-        Vector3(1.0, 1.0, 1.0),
-        Vector3(0.0, 1.0, 1.0)*/
-    };
-    std::function cubePos = [&](const Vector3& voxelPos, int i) -> Vector3 {
-        return voxelPos + vertDecals[i];
-    };
-
-    //Get vertex i value within current marching cube
-    std::function cubeVal = [&](const Vector3& pos) -> float {
-        if (!values.checkCoord(pos) || pos.minComp() <= 0) return isolevel - 0.0001f;
-//        if (pos.z == 0) return 1.f;
-        return values.at(pos);
-    };
-    //Get vertex i value within current marching cube
-    std::function cubeVali = [&](const Vector3& voxelPos, int i) -> float {
-        return cubeVal(cubePos(voxelPos, i));
-    };
-
-    //Get triangle table value
-    std::function triTableValue = [&](int i, int j) -> int{
-        return triTable[i][j];
-    };
-
-    //Compute interpolated vertex along an edge
-    std::function vertexInterp = [&](float isolevel, const Vector3& v0, float l0, const Vector3& v1, float l1) -> Vector3 {
-        float epsilon = 1e-3;
-        if (std::abs(l0 - l1) < epsilon) return (v0 + v1) * .5f;
-        float iso = 1.f - std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
-        return v0 * iso + v1 * (1.f - iso);
-        //        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
-    };
-
-    std::function getPosition = [&](const Vector3& position, const Vector3& _offset) -> Vector3 {
-        Vector3 off = (_offset + Vector3(offsetX, offsetY, offsetZ)) * 1.f;
-        return (position * scale) + off;
-    };
-
-    std::function getCubeIndex = [&](/*const Vector3& voxPos, */const std::vector<float>& cubeVals) -> int {
-        int cubeindex = 0;
-//        float cubeVal0 = cubeVali(voxPos, 0);
-//        float cubeVal1 = cubeVali(voxPos, 1);
-//        float cubeVal2 = cubeVali(voxPos, 2);
-//        float cubeVal3 = cubeVali(voxPos, 3);
-//        float cubeVal4 = cubeVali(voxPos, 4);
-//        float cubeVal5 = cubeVali(voxPos, 5);
-//        float cubeVal6 = cubeVali(voxPos, 6);
-//        float cubeVal7 = cubeVali(voxPos, 7);
-        float refined_isolevel = isolevel + 0.0001;
-        //Determine the index into the edge table which
-        //tells us which vertices are inside of the surface
-//        cubeindex  = int(cubeVal0 < refined_isolevel);
-//        cubeindex += int(cubeVal1 < refined_isolevel)*2;
-//        cubeindex += int(cubeVal2 < refined_isolevel)*4;
-//        cubeindex += int(cubeVal3 < refined_isolevel)*8;
-//        cubeindex += int(cubeVal4 < refined_isolevel)*16;
-//        cubeindex += int(cubeVal5 < refined_isolevel)*32;
-//        cubeindex += int(cubeVal6 < refined_isolevel)*64;
-//        cubeindex += int(cubeVal7 < refined_isolevel)*128;
-        for (int i = 0; i < 8; i++)
-            cubeindex += int(cubeVals[i] < refined_isolevel) << i;
-
-        return cubeindex;
     };
 
     Mesh marched;
-    marched.vertexArray.reserve(100000); // Yeah I don't know...
-    float refined_isolevel = isolevel; // + 0.0001;
-    Vector3 vertlist[12];
-    for (int x = 0; x < values.sizeX; x++) {
+    marched.vertexArray.reserve(100000);
+
+    #pragma omp parallel for
+    for (int z = 0; z < values.sizeZ; z++) {
         for (int y = 0; y < values.sizeY; y++) {
-            for (int z = 0; z < values.sizeZ; z++) {
+            for (int x = 0; x < values.sizeX; x++) {
                 Vector3 position = Vector3(x, y, z);
                 Vector3 voxPos = position;
 
                 std::vector<float> cubeVals(8);
                 for (int i = 0; i < 8; i++)
-                    cubeVals[i] = cubeVali(voxPos, i);
-//                float cubeVal0 = cubeVali(voxPos, 0);
-//                float cubeVal1 = cubeVali(voxPos, 1);
-//                float cubeVal2 = cubeVali(voxPos, 2);
-//                float cubeVal3 = cubeVali(voxPos, 3);
-//                float cubeVal4 = cubeVali(voxPos, 4);
-//                float cubeVal5 = cubeVali(voxPos, 5);
-//                float cubeVal6 = cubeVali(voxPos, 6);
-//                float cubeVal7 = cubeVali(voxPos, 7);
+                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) && (voxPos + vertDecals[i]).minComp() > 0 ? values.at(voxPos + vertDecals[i]) : isolevel - 0.0001f;
 
-                int cubeindex = getCubeIndex(/*voxPos, */cubeVals);
+                int cubeindex = 0;
+                for (int i = 0; i < 8; i++)
+                    cubeindex += int(cubeVals[i] < refined_isolevel) << i;
 
-                //Cube is entirely in/out of the surface
                 if (cubeindex == 0 || cubeindex == 255)
                     continue;
 
+                Vector3 vertlist[12];
                 for (int iEdge = 0; iEdge < 12; iEdge++)  {
                     int p0 = edges[iEdge][0];
                     int p1 = edges[iEdge][1];
-                    vertlist[iEdge] = vertexInterp(refined_isolevel, cubePos(voxPos, p0), cubeVals[p0], cubePos(voxPos, p1), cubeVals[p1]);
+                    float l0 = cubeVals[p0];
+                    float l1 = cubeVals[p1];
+                    float epsilon = 1e-3;
+                    if (std::abs(l0 - l1) < epsilon) {
+                        vertlist[iEdge] = (voxPos + vertDecals[p0] + voxPos + vertDecals[p1]) * .5f;
+                    } else {
+                        float iso = 1.f - std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
+                        vertlist[iEdge] = (voxPos + vertDecals[p0]) * iso + (voxPos + vertDecals[p1]) * (1.f - iso);
+                    }
                 }
-                //Find the vertices where the surface intersects the cube
-//                vertlist[0] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 1), cubeVal1);
-//                vertlist[1] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 2), cubeVal2);
-//                vertlist[2] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 3), cubeVal3);
-//                vertlist[3] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 0), cubeVal0);
-//                vertlist[4] = vertexInterp(refined_isolevel, cubePos(voxPos, 4), cubeVal4, cubePos(voxPos, 5), cubeVal5);
-//                vertlist[5] = vertexInterp(refined_isolevel, cubePos(voxPos, 5), cubeVal5, cubePos(voxPos, 6), cubeVal6);
-//                vertlist[6] = vertexInterp(refined_isolevel, cubePos(voxPos, 6), cubeVal6, cubePos(voxPos, 7), cubeVal7);
-//                vertlist[7] = vertexInterp(refined_isolevel, cubePos(voxPos, 7), cubeVal7, cubePos(voxPos, 4), cubeVal4);
-//                vertlist[8] = vertexInterp(refined_isolevel, cubePos(voxPos, 0), cubeVal0, cubePos(voxPos, 4), cubeVal4);
-//                vertlist[9] = vertexInterp(refined_isolevel, cubePos(voxPos, 1), cubeVal1, cubePos(voxPos, 5), cubeVal5);
-//                vertlist[10] = vertexInterp(refined_isolevel, cubePos(voxPos, 2), cubeVal2, cubePos(voxPos, 6), cubeVal6);
-//                vertlist[11] = vertexInterp(refined_isolevel, cubePos(voxPos, 3), cubeVal3, cubePos(voxPos, 7), cubeVal7);
 
                 int i = 0;
-                while(true){
-                    if(triTableValue(cubeindex, i) != -1){
-                        position = vertlist[triTableValue(cubeindex, i+0)];
-                        marched.vertexArray.push_back(position);
-
-                        position = vertlist[triTableValue(cubeindex, i+1)];
-                        marched.vertexArray.push_back(position);
-
-                        position = vertlist[triTableValue(cubeindex, i+2)];
-                        marched.vertexArray.push_back(position);
-                    }else{
-                        break;
+                while(triTable[cubeindex][i] != -1){
+                    #pragma omp critical
+                    {
+                        marched.vertexArray.push_back(vertlist[triTable[cubeindex][i]]);
+                        marched.vertexArray.push_back(vertlist[triTable[cubeindex][i+1]]);
+                        marched.vertexArray.push_back(vertlist[triTable[cubeindex][i+2]]);
                     }
-
-                    i = i + 3;
+                    i += 3;
                 }
             }
         }
     }
+
     marched.scale((values.getDimensions() + Vector3(1, 1, 1)) / values.getDimensions()).translate(-Vector3(.5, .5, .5));
     return marched;
 }
+
 
 GridI Mesh::voxelize(Vector3 dimensions) const
 {

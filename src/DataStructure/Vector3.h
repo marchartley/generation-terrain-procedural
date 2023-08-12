@@ -239,6 +239,9 @@ public:
     Vector3 center() const { return (this->min() + this->max()) * .5f; }
     Vector3 normalize(Vector3 p);
 
+    AABBox& expand(const Vector3& newPoint);
+    AABBox& expand(const std::vector<Vector3>& newPoints);
+
     Vector3 mini;
     Vector3 maxi;
 
