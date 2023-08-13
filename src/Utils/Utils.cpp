@@ -327,3 +327,78 @@ std::string showTime(float milliseconds)
         return std::to_string(int(milliseconds / (1000 * 60))) + "min" + std::to_string(int(milliseconds) % (1000 * 60)) + "s (" + std::to_string(int(milliseconds / 1000)) + "s)";
     }
 }
+
+/*
+std::string displayTable(const Table &table, const std::vector<std::string> &colNames, const std::vector<std::string> &rowNames) {
+    std::stringstream ss;
+
+    const auto& data = table.rows;
+
+    // Rest of the function remains the same...
+
+    if (data.size() != rowNames.size() || (data.size() > 0 && data[0].size() != colNames.size())) {
+        return "Invalid data or column/row names!";
+    }
+
+    std::vector<size_t> colWidths(colNames.size(), 0);
+    for (size_t j = 0; j < colNames.size(); ++j) {
+        colWidths[j] = colNames[j].size();
+        for (size_t i = 0; i < data.size(); ++i) {
+            colWidths[j] = std::max(colWidths[j], variantToStr(data[i][j]).size());
+        }
+    }
+
+    ss << std::setw(8) << " ";
+    for (size_t j = 0; j < colNames.size(); ++j) {
+        ss << std::setw(colWidths[j] + 2) << colNames[j];
+    }
+    ss << '\n';
+
+    for (size_t i = 0; i < data.size(); ++i) {
+        ss << std::setw(8) << rowNames[i];
+        for (size_t j = 0; j < data[i].size(); ++j) {
+            ss << std::setw(colWidths[j] + 2) << variantToStr(data[i][j]);
+        }
+        ss << '\n';
+    }
+
+    return ss.str();
+}
+
+std::string toCSV(const Table &table, const std::vector<std::string> &colNames, const std::vector<std::string> &rowNames) {
+    std::stringstream ss;
+
+    // Check if data dimensions match provided column and row names
+    if (table.rows.size() != rowNames.size() || (table.rows.size() > 0 && table.rows[0].size() != colNames.size())) {
+        return "Invalid data or column/row names!";
+    }
+
+    // Start with column names
+    ss << ",";  // The first column will be for row names
+    for (size_t j = 0; j < colNames.size(); ++j) {
+        ss << colNames[j];
+        if (j < colNames.size() - 1) ss << ",";
+    }
+    ss << '\n';
+
+    // Now, the data
+    for (size_t i = 0; i < table.rows.size(); ++i) {
+        ss << rowNames[i] << ",";  // Row name first
+        for (size_t j = 0; j < table.rows[i].size(); ++j) {
+            ss << variantToStr(table.rows[i][j]);
+            if (j < table.rows[i].size() - 1) ss << ",";
+        }
+        ss << '\n';
+    }
+
+    return ss.str();
+}
+
+std::string variantToStr(const DataVariant &var) {
+    if (std::holds_alternative<float>(var)) {
+        return std::to_string(std::get<float>(var));
+    } else {
+        return std::get<std::string>(var);
+    }
+}
+*/

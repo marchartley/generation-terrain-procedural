@@ -248,7 +248,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
     GridF modifications(initialMapValues.getDimensions());
 
-    GridV3 gravityfieldValues = GridV3(voxelGrid->getDimensions(), Vector3(0, 0, -gravity));
+    GridV3 gravityfieldValues = GridV3(terrainSize, Vector3(0, 0, -gravity));
     gravityfieldValues.raiseErrorOnBadCoord = false;
     gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
 

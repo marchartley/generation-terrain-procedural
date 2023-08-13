@@ -1029,6 +1029,15 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue) const
     return surface;
 }
 
+template<class T>
+Matrix3<T> Matrix3<T>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
+{
+    Matrix3<T> res(sizeX, sizeY, sizeZ);
+    for (auto& v : res)
+        v = random_gen::generate();
+    return res;
+}
+
 template<typename T>
 Matrix3<T>& Matrix3<T>::insertRow(size_t indexToInsert, int affectedDimension, T newData)
 {
