@@ -257,11 +257,13 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 
             Vector3 terrainDims = terrain->getDimensions();
             std::vector<std::vector<Vector3>> triangles;
+            Mesh m;
             sumGeometry += timeIt([&]() {
-                triangles = terrain->getGeometry(/*Vector3(30, 30, 30)*/).getTriangles();
+                m = terrain->getGeometry();
+            });
+            triangles = m.getTriangles();
             triangles.push_back({terrainDims * Vector3(0, 0, 0), terrainDims * Vector3(1, 0, 0), terrainDims * Vector3(1, 1, 0)});
             triangles.push_back({terrainDims * Vector3(1, 1, 0), terrainDims * Vector3(0, 1, 0), terrainDims * Vector3(0, 0, 0)});
-            });
             boundariesTree = BVHTree();
             sumBVH += timeIt([&]() {
                 boundariesTree.build(Triangle::vectorsToTriangles(triangles));

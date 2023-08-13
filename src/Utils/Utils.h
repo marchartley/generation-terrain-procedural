@@ -175,4 +175,52 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 }
 
 
+/*
+template<typename... Ts>
+struct TableRow {
+    std::tuple<Ts...> data;
+    TableRow(Ts... values) : data(values...) {}
+};
+
+using DataVariant = std::variant<std::string, float>;
+
+template<typename... Ts>
+std::vector<DataVariant> rowToVector(const TableRow<Ts...>& row) {
+    return {static_cast<DataVariant>(std::get<Ts>(row.data))...};
+}
+
+std::string variantToStr(const DataVariant& var);
+
+struct Table {
+    std::vector<std::vector<std::variant<std::string, float>>> rows;
+
+    // Convert from std::vector<std::vector<float>>
+    Table(const std::vector<std::vector<float>>& data) {
+        for (const auto& row : data) {
+            std::vector<std::variant<std::string, float>> convertedRow;
+            for (const auto& val : row) {
+                convertedRow.push_back(val);
+            }
+            rows.push_back(convertedRow);
+        }
+    }
+
+    // Convert from TableRow
+    template<typename... Ts>
+    Table(const std::vector<TableRow<Ts...>>& tableRows) {
+        for (const auto& row : tableRows) {
+            std::vector<std::variant<std::string, float>> convertedRow =
+                { std::get<Ts>(row.data)... };
+            rows.push_back(convertedRow);
+        }
+    }
+};
+
+std::string displayTable(const Table& table,
+                         const std::vector<std::string>& colNames,
+                         const std::vector<std::string>& rowNames);
+std::string toCSV(const Table& table,
+                  const std::vector<std::string>& colNames,
+                  const std::vector<std::string>& rowNames);
+*/
 #endif // UTILS_H

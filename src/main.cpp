@@ -1,3 +1,4 @@
+#include "Utils/Table.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
@@ -14,7 +15,6 @@
 #include "EnvObject/EnvObject.h"
 
 
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -26,6 +26,120 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    /*
+    GridF values = GridF::random(100, 100, 50) - .8f;
+    for (int x = 0; x < values.sizeX; x++) {
+        for (int y =0; y < values.sizeY; y++) {
+            for (int z = 0; z < values.sizeZ; z++) {
+                float h = float(z) / float(values.sizeZ);
+                values.at(x, y, z) -= h * .5f;
+            }
+        }
+    }
+//    BVHTree tree;
+    Mesh m = Mesh::applyMarchingCubes(values);
+    auto triangles = Triangle::vectorsToTriangles(m.getTriangles());
+
+    std::ofstream file;
+    file.open("TEST.stl");
+    file << m.toSTL();
+    file.close();
+
+    int intersectionCount;
+    int nbRays = 500000;
+    std::vector<Vector3> starts(nbRays), ends(nbRays);
+    for (int i = 0; i < nbRays; i++) {
+        starts[i] = Vector3::random(Vector3(), values.getDimensions());
+        ends[i] = Vector3::random(Vector3(), values.getDimensions());
+    }
+
+    std::vector<std::string> names;
+    std::vector<std::string> columns = {"nbTriangles", "parallel", "build", "eval", "total"};
+    std::vector<std::vector<float>> timings;
+    std::vector<float> timing;
+
+    float timeBuild, timeEval;
+
+    for (auto tris : {2, 4, 16, 64, 256, 1024}) {
+//    for (auto tris : {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}) {
+        for (auto parallel : {false, true}) {
+            timing = {float(tris), float(parallel)};
+            names.push_back("SAH");
+            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", SAH     ... " << std::flush;
+            BVHTree tree1;
+            tree1.maxTrianglesPerLeaves = tris;
+            tree1.useParallel = parallel;
+            tree1.useSAH = true;
+            tree1.useQuickSelect = false;
+            timeBuild = timeIt([&]() {
+                tree1.build(triangles);
+            });
+            timeEval = timeIt([&]() {
+                intersectionCount = 0;
+                #pragma omp parallel for
+                for (int i = 0; i < nbRays; i++) {
+                    tree1.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
+//                    intersectionCount += int(tree1.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
+                }
+            });
+            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
+            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
+
+
+
+
+            names.push_back("Quick");
+            timing = {float(tris), float(parallel)};
+            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", Quick   ... " << std::flush;
+            BVHTree tree2;
+            tree2.maxTrianglesPerLeaves = tris;
+            tree2.useParallel = parallel;
+            tree2.useSAH = false;
+            tree2.useQuickSelect = true;
+            timeBuild = timeIt([&]() {
+                tree2.build(triangles);
+            });
+            timeEval = timeIt([&]() {
+                intersectionCount = 0;
+                #pragma omp parallel for
+                for (int i = 0; i < nbRays; i++) {
+                    tree2.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
+                //                    intersectionCount += int(tree2.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
+                }
+            });
+            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
+            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
+
+
+
+
+            names.push_back("Midpoint");
+            timing = {float(tris), float(parallel)};
+            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", Midpoint... " << std::flush;
+            BVHTree tree3;
+            tree3.maxTrianglesPerLeaves = tris;
+            tree3.useParallel = parallel;
+            tree3.useSAH = false;
+            tree3.useQuickSelect = false;
+            timeBuild = timeIt([&]() {
+                tree3.build(triangles);
+            });
+            timeEval = timeIt([&]() {
+                intersectionCount = 0;
+                #pragma omp parallel for
+                for (int i = 0; i < nbRays; i++) {
+                    tree3.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
+                //                    intersectionCount += int(tree3.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
+                }
+            });
+            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
+            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
+
+        }
+    }
+    Table results(timings, columns, names);
+    std::cout << results.sortBy("total").displayTable() << std::endl;
+    return 0;*/
 /*
     ImplicitPrimitive* primA = new ImplicitPrimitive;
     ImplicitPrimitive* primB = new ImplicitPrimitive;

@@ -5,13 +5,33 @@
 
 BVHTree::BVHTree() : SpacePartitioning(), root(nullptr)
 {
-
+    memoryPool = new BVHMemoryPool();
 }
 
 BVHTree::~BVHTree()
 {
-    if (root != nullptr)
-        delete root;
+    delete memoryPool;
+//    if (root != nullptr)
+//        delete root;
+}
+
+BVHTree::BVHTree(const BVHTree &other) : SpacePartitioning(other), root(nullptr) {
+    memoryPool = new BVHMemoryPool(*other.memoryPool); // Deep copy
+}
+
+BVHTree &BVHTree::operator=(const BVHTree &other) {
+    if (this != &other) { // Protect against self-assignment
+        /*SpacePartitioning::operator=(other);*/ // call the base class's assignment operator
+
+        // Clean up current resources
+        /*delete memoryPool;*/
+
+        // Deep copy
+        /*root = other.root;*/
+        // ... copy other members ...
+        memoryPool = new BVHMemoryPool(/**other.memoryPool*/);
+    }
+    return *this;
 }
 
 SpacePartitioning& BVHTree::build(const std::vector<Triangle> &triangles)
@@ -42,39 +62,113 @@ float computeSurfaceArea(const AABBox& box) {
     Vector3 dims = box.dimensions();
     return 2.0f * (dims.x * dims.y + dims.x * dims.z + dims.y * dims.z);
 }
+int BVHTree::findBestSplitSAH(int start, int end) {
+    const int MAX_SPLITS = 100; // maximum number of splits to consider
+    int triangleCount = end - start;
+    int step = std::max(1, triangleCount / MAX_SPLITS);
 
-int BVHTree::findBestSplitSAH(int start, int end, int axis) {
-    // Initially, set split at the midpoint
-    int mid = start + (end - start) / 2;
+    std::vector<AABBox> leftCumulativeBoxes(end - start);
+    std::vector<AABBox> rightCumulativeBoxes(end - start);
+
+    // Compute left cumulative bounding boxes
+    leftCumulativeBoxes[0].expand(triangles[start].vertices);
+    for (int i = start + 1; i < end; ++i) {
+        leftCumulativeBoxes[i - start] = leftCumulativeBoxes[i - start - 1];
+        leftCumulativeBoxes[i - start].expand(triangles[i].vertices);
+    }
+
+    // Compute right cumulative bounding boxes
+    rightCumulativeBoxes[end - start - 1].expand(triangles[end - 1].vertices);
+    for (int i = end - 2; i >= start; --i) {
+        rightCumulativeBoxes[i - start] = rightCumulativeBoxes[i - start + 1];
+        rightCumulativeBoxes[i - start].expand(triangles[i].vertices);
+    }
+
     float bestCost = std::numeric_limits<float>::max();
+    int bestSplit = start;
 
-    for (int i = start; i < end; ++i) {
-        AABBox leftBox, rightBox;
-        // Compute bounding boxes for triangles on each side of the potential split
-        for (int j = start; j <= i; ++j) {
-            leftBox.expand(triangles[j].vertices);
-        }
-        for (int j = i + 1; j < end; ++j) {
-            rightBox.expand(triangles[j].vertices);
-        }
+    // Declare shared variables to hold the best cost and best split across threads
+    float globalBestCost = bestCost;
+    int globalBestSplit = bestSplit;
+
+    #pragma omp parallel for shared(globalBestCost, globalBestSplit)
+    for (int i = start; i < end; i += step) {
+        AABBox leftBox = leftCumulativeBoxes[i - start];
+        AABBox rightBox = (i + 1 < end) ? rightCumulativeBoxes[i - start + 1] : AABBox();  // If i+1 is out of bounds, use an empty box
 
         float leftSA = computeSurfaceArea(leftBox);
         float rightSA = computeSurfaceArea(rightBox);
         float cost = leftSA * (i - start + 1) + rightSA * (end - i - 1);
 
-        if (cost < bestCost) {
-            bestCost = cost;
-            mid = i;
+        // Critical section to update the global best cost and best split if the current thread has a better value
+        #pragma omp critical
+        {
+            if (cost < globalBestCost) {
+                globalBestCost = cost;
+                globalBestSplit = i;
+            }
         }
     }
 
-    return mid;
+    return globalBestSplit;
+}
+
+int BVHTree::partition(int start, int end, int pivotIdx, int axis) {
+    Triangle& pivot = triangles[pivotIdx];
+    Vector3 pivotMidPoint = (pivot[0] + pivot[1] + pivot[2]) / 3;
+
+    // Move the pivot value to the end
+    std::swap(triangles[pivotIdx], triangles[end-1]);
+
+    int storeIndex = start;
+
+    for (int i = start; i < end-1; ++i) {
+        Vector3 triangleMidPoint = (triangles[i][0] + triangles[i][1] + triangles[i][2]) / 3;
+        if (triangleMidPoint[axis] < pivotMidPoint[axis]) {
+            std::swap(triangles[i], triangles[storeIndex]);
+            storeIndex++;
+        }
+    }
+
+    // Move pivot to its final place
+    std::swap(triangles[storeIndex], triangles[end-1]);
+
+    return storeIndex;
+}
+
+// QuickSelect to find the median triangle along a given axis.
+int BVHTree::quickSelect(int start, int end, int axis) {
+    if (start == end) {
+        return start;
+    }
+
+    // Choose pivot randomly
+    int pivotIdx = start + rand() % (end - start + 1);
+    pivotIdx = partition(start, end, pivotIdx, axis);
+
+    int median = start + (end - start) / 2;
+
+    if (median == pivotIdx) {
+        return median;
+    } else if (median < pivotIdx) {
+        return quickSelect(start, pivotIdx - 1, axis);
+    } else {
+        return quickSelect(pivotIdx + 1, end, axis);
+    }
+}
+
+BVHNode *BVHTree::allocateNode() {
+    if (useParallel) {
+        return this->memoryPool->parallelAllocate();
+    } else {
+        return this->memoryPool->allocate();
+    }
 }
 
 
 BVHNode *BVHTree::buildBVH(int start, int end)
 {
-    BVHNode* node = new BVHNode();
+    BVHNode* node = allocateNode();
 
     // Compute bounding box of all triangles from start to end
     Vector3 minPoint = Vector3::max();
@@ -85,31 +179,71 @@ BVHNode *BVHTree::buildBVH(int start, int end)
             maxPoint = Vector3::max(maxPoint, triangles[i][ii]);
         }
     }
-    node->box = AABBox(minPoint - Vector3(.5f, .5f, .5f), maxPoint + Vector3(.5f, .5f, .5f));
+    node->box = AABBox(minPoint, maxPoint);
 
-    // Base case: if 2 or fewer triangles, make a leaf node
-    if (end - start <= 2) {
+    // Base case: if number of triangles is less than or equal to maxTrianglesPerLeaves, make a leaf node
+    if (end - start <= maxTrianglesPerLeaves) {
         node->trianglesIndices = std::vector<size_t>(end - start);
         for (int i = 0; i < (end - start); i++)
             node->trianglesIndices[i] = start + i;
-    } else { // Recursive case: partition the triangles and build child nodes
+    } else {
         // Choose an axis and midpoint along that axis to partition the triangles
         Vector3 boxSize = maxPoint - minPoint;
         int axis = boxSize.x > boxSize.y ? (boxSize.x > boxSize.z ? 0 : 2) : (boxSize.y > boxSize.z ? 1 : 2);
 
-        // Sort the triangles based on their midpoint along the chosen axis
-        std::sort(triangles.begin() + start, triangles.begin() + end,
-                  [axis](const Triangle& triangle1, const Triangle& triangle2) {
-                      Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3;
-                      Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3;
-                      return midPoint1[axis] < midPoint2[axis];
-                  });
+        int mid;
+        if (useSAH) {
+            // Sort the triangles based on their midpoint along the chosen axis
+            std::sort(triangles.begin() + start, triangles.begin() + end,
+                [axis](const Triangle& triangle1, const Triangle& triangle2) {
+                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3;
+                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3;
+                    return midPoint1[axis] < midPoint2[axis];
+                });
+            mid = this->findBestSplitSAH(start, end);
+            if (mid == start || mid == end) {
+                // Create a leaf node if we can't split further
+                node->trianglesIndices = std::vector<size_t>(end - start);
+                for (int i = 0; i < (end - start); i++)
+                    node->trianglesIndices[i] = start + i;
+            } else {
+                node->left = buildBVH(start, mid);
+                node->right = buildBVH(mid, end);
+            }
+            return node;
+        } else if (useQuickSelect) {
+            mid = this->quickSelect(start, end-1, axis);
+            if (mid == start || mid == end - 1) {
+                mid = start + (end - start) / 2;
+            }
+        } else {
+            // Sort the triangles based on their midpoint along the chosen axis
+            std::sort(triangles.begin() + start, triangles.begin() + end,
+                [axis](const Triangle& triangle1, const Triangle& triangle2) {
+                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3;
+                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3;
+                    return midPoint1[axis] < midPoint2[axis];
+                });
+            mid = start + (end - start) / 2;
+        }
 
-//        int mid = start + (end - start) / 2; // Use median splitting
-        // Use SAH to determine the best split:
-        int mid = findBestSplitSAH(start, end, axis);
-        node->left = buildBVH(start, mid);
-        node->right = buildBVH(mid, end);
+        if (useParallel) {
+            // Parallelize the BVH node construction for the left and right children using OpenMP
+            #pragma omp parallel sections
+            {
+                #pragma omp section
+                {
+                    node->left = buildBVH(start, mid);
+                }
+                #pragma omp section
+                {
+                    node->right = buildBVH(mid, end);
+                }
+            }
+        } else {
+            node->left = buildBVH(start, mid);
+            node->right = buildBVH(mid, end);
+        }
     }
 
     return node;
@@ -228,3 +362,67 @@ std::vector<std::pair<Vector3, size_t> > BVHTree::_getAllIntersectionsAndTriangl
 
     return result;
 }
+
+BVHNode::BVHNode() : left(nullptr), right(nullptr) {}
+
+BVHNode::~BVHNode() {
+//    if (left != nullptr)
+//        delete left;
+//    if (right != nullptr)
+//        delete right;
+}
+/*
+BVHMemoryPool::BVHMemoryPool() {
+    allocateBlock();
+}
+
+BVHMemoryPool::~BVHMemoryPool() {
+    for (NodeBlock* block : blocks) {
+        delete block;  // Delete each allocated block
+    }
+}
+
+BVHNode* BVHMemoryPool::allocateNode() {
+    if (currentBlock->usedNodes == NodeBlock::BLOCK_SIZE) {
+        allocateBlock();
+    }
+    return &(currentBlock->nodes[currentBlock->usedNodes++]);
+}
+
+BVHNode *BVHMemoryPool::parallelAllocateNode()
+{
+    BVHNode* res;
+    #pragma omp critical
+    {
+        if (currentBlock->usedNodes == NodeBlock::BLOCK_SIZE) {
+            allocateBlock();
+        }
+        res = &(currentBlock->nodes[currentBlock->usedNodes++]);
+    }
+    return res;
+}
+
+void BVHMemoryPool::allocateBlock() {
+    currentBlock = new NodeBlock();  // Use new to allocate
+    blocks.emplace_back(currentBlock);
+}
+
+void BVHMemoryPool::parallelAllocateBlock()
+{
+    #pragma omp critical
+    {
+        currentBlock = new NodeBlock();  // Use new to allocate
+        blocks.emplace_back(currentBlock);
+    }
+}
+
+NodeBlock::NodeBlock()
+{
+    this->nodes = new BVHNode[NodeBlock::BLOCK_SIZE];
+}
+
+NodeBlock::~NodeBlock()
+{
+    delete[] nodes;
+}
+*/
