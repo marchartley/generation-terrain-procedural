@@ -57,14 +57,19 @@ public:
     const T& at(Vector3 pos) const;
     const T& at(size_t i) const;
     const T& operator()(size_t x, size_t y, size_t z = 0) const;
+    const T& operator()(size_t i) const;
+    const T& operator()(const Vector3& pos) const;
     const T& operator[](size_t i) const;
     const T& operator[](Vector3 pos) const;
     T& at(int i, int j, int k = 0);
     T& at(Vector3 pos);
     T& at(size_t i);
-    T& operator()(size_t x, size_t y, size_t z = 0);
+//    T& operator[](size_t x, size_t y);
     T& operator[](size_t i);
     T& operator[](Vector3 pos);
+    T& operator()(size_t x, size_t y, size_t z = 0);
+    T& operator()(size_t i);
+    T& operator()(Vector3 pos);
 
     Vector3 getDimensions() const;
     int width() const;
@@ -473,6 +478,14 @@ const T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) const {
     return this->at(x, y, z);
 }
 template<typename T>
+const T& Matrix3<T>::operator()(size_t i) const {
+    return this->at(i);
+}
+template<typename T>
+const T& Matrix3<T>::operator()(const Vector3& pos) const {
+    return this->at(pos);
+}
+template<typename T>
 const T& Matrix3<T>::operator[](size_t i) const {
     return this->at(i);
 }
@@ -556,16 +569,28 @@ T &Matrix3<T>::at(size_t i)
         throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
             + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
 }
-template<typename T>
-T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) {
-    return this->at(x, y, z);
-}
+//template<typename T>
+//T& Matrix3<T>::operator[](size_t x, size_t y) {
+//    return this->at(x, y);
+//}
 template<typename T>
 T& Matrix3<T>::operator[](size_t i) {
     return this->at(i);
 }
 template<typename T>
 T& Matrix3<T>::operator[](Vector3 pos) {
+    return this->at(pos);
+}
+template<typename T>
+T& Matrix3<T>::operator()(size_t x, size_t y, size_t z) {
+    return this->at(x, y, z);
+}
+template<typename T>
+T& Matrix3<T>::operator()(size_t i) {
+    return this->at(i);
+}
+template<typename T>
+T& Matrix3<T>::operator()(Vector3 pos) {
     return this->at(pos);
 }
 

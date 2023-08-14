@@ -59,7 +59,7 @@ protected:
     Mesh boundariesMesh;
 
     float erosionSize = 8.f;
-    float erosionStrength = .35f;
+    float erosionStrength = .0; // .35f;
     int erosionQtt = 1000;
     float rockRandomness = .1f;
 
@@ -69,7 +69,7 @@ protected:
     float bouncingCoefficient = 0.15f; // 1.f;
     float bounciness = 1.f;
     float minSpeed = .1f;
-    float maxSpeed = 1000.f;
+    float maxSpeed = 5.f;
     float maxCapacityFactor = 1.f;
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
@@ -88,13 +88,13 @@ protected:
     float erosionPowerValue = 1.f;
     float criticalShearStress = .8f;
 
-    int numberOfIterations = 8;
+    int numberOfIterations = 1;
 
     float initialCapacity = .0f;
 
-    UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP;
+    UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS;
 
-    bool displayTrajectories = false;
+    bool displayTrajectories = true;
 
     std::string waterFlowImagePath = "";
     std::string airFlowImagePath = "";

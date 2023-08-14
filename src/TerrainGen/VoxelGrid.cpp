@@ -686,7 +686,13 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
     Vector3 originalDimensions = this->getDimensions();
     if (!dimensions.isValid())
         dimensions = originalDimensions;
-    Mesh m = Mesh::applyMarchingCubes(this->getVoxelValues().resize(dimensions).meanSmooth(5, 5, 5));
+    auto values = this->getVoxelValues().resize(dimensions).meanSmooth(5, 5, 5);
+    for (int x = 0; x < values.sizeX; x++) {
+        for (int y = 0; y < values.sizeY; y++) {
+            values.at(x, y, 0) = 1.f;
+        }
+    }
+    Mesh m = Mesh::applyMarchingCubes(values);
     m.scale(originalDimensions / dimensions);
     return m;
     /*
