@@ -28,23 +28,23 @@ RockErosion::RockErosion(int size, float maxStrength)
 //    this->attackMask = this->createPrecomputedAttackMask(this->size) * this->maxStrength;
 }
 
-void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, Vector3 pos, bool addingMatterMode) {
+void RockErosion::Apply(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, bool addingMatterMode) {
     GridF erosionMatrix(grid->getDimensions());
     grid->applyModification(this->computeErosionMatrix(erosionMatrix, pos, addingMatterMode));
 }
 
-GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)
+GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, const Vector3& pos, bool addingMatterMode, bool useMax)
 {
 //    GridF realMask = this->attackMask * this->maxStrength;
 //    return this->computeErosionMatrix(blankMatrix, attackMask, pos, addingMatterMode, useMax);
     return this->computeErosionMatrix(blankMatrix, this->createPrecomputedAttackMask(this->size) * this->maxStrength, pos, addingMatterMode, useMax);
 }
 
-GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, GridF modifs, Vector3 pos, bool addingMatterMode, bool useMax)
+GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, GridF modifs, const Vector3& pos, bool addingMatterMode, bool useMax)
 {
     return this->computeErosionMatrix(blankMatrix, modifs, pos, addingMatterMode, Vector3(modifs.sizeX/2.f, modifs.sizeY/2.f, modifs.sizeZ/2.f), useMax);
 }
-GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, GridF modifs, Vector3 pos, bool addingMatterMode, Vector3 anchor, bool useMax)
+GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, GridF modifs, const Vector3& pos, bool addingMatterMode, const Vector3& anchor, bool useMax)
 {
     if (useMax) {
         if (addingMatterMode)
@@ -59,7 +59,7 @@ GridF& RockErosion::computeErosionMatrix(GridF& blankMatrix, GridF modifs, Vecto
     return blankMatrix;
 }
 
-GridF &RockErosion::computeErosionMatrix2D(GridF &blankMatrix, Vector3 pos, bool addingMatterMode, bool useMax)
+GridF &RockErosion::computeErosionMatrix2D(GridF &blankMatrix, const Vector3& pos, bool addingMatterMode, bool useMax)
 {
     auto mask = this->createPrecomputedAttackMask2D(this->size);
     mask *= this->maxStrength;

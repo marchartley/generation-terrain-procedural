@@ -11,12 +11,12 @@ class Voronoi
 {
 public:
     Voronoi();
-    Voronoi(int numberRandomPoints, Vector3 maxBoundarie);
-    Voronoi(int numberRandomPoints, Vector3 minBoundarie, Vector3 maxBoundarie);
+    Voronoi(int numberRandomPoints, const Vector3& maxBoundarie);
+    Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vector3& maxBoundarie);
     Voronoi(int numberRandomPoints, ShapeCurve boundingShape);
     Voronoi(std::vector<Vector3> pointset);
-    Voronoi(std::vector<Vector3> pointset, Vector3 maxBoundarie);
-    Voronoi(std::vector<Vector3> pointset, Vector3 minBoundarie, Vector3 maxBoundarie);
+    Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie);
+    Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, const Vector3& maxBoundarie);
     Voronoi(std::vector<Vector3> pointset, ShapeCurve boundingShape);
     std::vector<BSpline> solve(bool randomizeUntilAllPointsAreSet = true, int numberOfRelaxations = 10);
     std::vector<BSpline> relax(int numberOfRelaxations = 1);

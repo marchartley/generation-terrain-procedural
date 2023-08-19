@@ -16,21 +16,21 @@ enum KARST_NODE_TYPE
 
 struct WaterHeight {
     WaterHeight(float height, float max_dist = 50.f, float effect = 1.f);
-    float cost(Vector3 node) const;
+    float cost(const Vector3& node) const;
     float height;
     float effect = 1.f;
     float max_distance_of_effect = 50.f;
 };
 struct PorositySphere {
-    PorositySphere(Vector3 pos, float radius, float effect = 1.f);
-    float cost(Vector3 node) const;
+    PorositySphere(const Vector3& pos, float radius, float effect = 1.f);
+    float cost(const Vector3& node) const;
     Vector3 pos;
     float radius;
     float effect = 1.f;
 };
 struct FractureDirection {
-    FractureDirection(Vector3 direction, float effect = 1.f);
-    float cost(Vector3 nodeA, Vector3 nodeB) const;
+    FractureDirection(const Vector3& direction, float effect = 1.f);
+    float cost(const Vector3& nodeA, const Vector3& nodeB) const;
     Vector3 direction;
     float effect = 1.f;
 };
@@ -39,7 +39,7 @@ class KarstPathsGeneration
 {
 public:
     KarstPathsGeneration();
-    KarstPathsGeneration(GridI availablityMap, Vector3 karst_dimensions, float poissonDistance = 1.f, float gamma = 1.f);
+    KarstPathsGeneration(GridI availablityMap, const Vector3& karst_dimensions, float poissonDistance = 1.f, float gamma = 1.f);
 
     void resetSpecialNodes();
     void setSpecialNode(int node, KARST_NODE_TYPE mode);

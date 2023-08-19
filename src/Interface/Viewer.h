@@ -57,9 +57,9 @@ public:
     ~Viewer();
 
 Q_SIGNALS:
-    void mouseClickOnMap(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
-    void mouseDoubleClickedOnMap(Vector3 mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
-    void mouseMovedOnMap(Vector3 mouseWorldPosition, TerrainModel* model);
+    void mouseClickOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    void mouseDoubleClickedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    void mouseMovedOnMap(const Vector3& mouseWorldPosition, TerrainModel* model);
 
 public Q_SLOTS:
     bool startRecording(std::string folderUsed = "");
@@ -75,7 +75,7 @@ public Q_SLOTS:
 
     void swapCamera(qglviewer::Camera* altCamera, bool useAltCamera);
 
-    void clipViewTemporarily(Vector3 direction, Vector3 center, bool active);
+    void clipViewTemporarily(const Vector3& direction, const Vector3& center, bool active);
 
     void drawingProcess();
     void reloadAllShaders();

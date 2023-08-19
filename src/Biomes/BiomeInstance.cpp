@@ -46,14 +46,15 @@ void BiomeInstance::completeIfNeeded()
 
 }
 
-std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, Vector3 newPosition)
+std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, const Vector3& newPosition)
 {
     std::shared_ptr<BiomeInstance> cloneBiome = std::make_shared<BiomeInstance>(*this);
     BiomeInstance::registerBiomeInstance(cloneBiome);
     cloneBiome->area = newArea;
     if (!newPosition.isValid())
-        newPosition = newArea.center();
-    cloneBiome->position = newPosition;
+        cloneBiome->position = newArea.center();
+    else
+        cloneBiome->position = newPosition;
     cloneBiome->instances.clear();
 
     Voronoi diagram(this->instances.size(), newArea);

@@ -10,9 +10,9 @@ public:
     ShapeCurve(std::vector<Vector3> points);
     ShapeCurve(BSpline path);
 
-    bool contains(Vector3 pos, bool useNativeShape = true);
-    float estimateDistanceFrom(Vector3 pos);
-    float estimateSignedDistanceFrom(Vector3 pos, float epsilon = 1e-3);
+    bool contains(const Vector3& pos, bool useNativeShape = true);
+    float estimateDistanceFrom(const Vector3& pos);
+    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
     float computeArea();
     float computeSignedArea();
 
@@ -23,7 +23,7 @@ public:
     Vector3 planeNormal();
     ShapeCurve grow(float increase);
     ShapeCurve shrink(float decrease);
-    ShapeCurve& translate(Vector3 translation);
+    ShapeCurve& translate(const Vector3& translation);
 
     ShapeCurve& removeDuplicates();
 
@@ -47,8 +47,8 @@ struct ClipVertex {
     int shapeID = -1;
     int index = -1;
 
-    ClipVertex(Vector3 p) : ClipVertex(p, false, false, false) {}
-    ClipVertex(Vector3 p, bool entry, bool exit, bool inside)
+    ClipVertex(const Vector3& p) : ClipVertex(p, false, false, false) {}
+    ClipVertex(const Vector3& p, bool entry, bool exit, bool inside)
         : coord(p), isEntry(entry), isExit(exit), isInside(inside)
     {}
 };

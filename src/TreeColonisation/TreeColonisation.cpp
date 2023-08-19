@@ -6,12 +6,12 @@ TreeColonisation::TreeColonisation()
 {
 }
 
-TreeColonisation::TreeColonisation(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength, float randomness)
+TreeColonisation::TreeColonisation(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength, float randomness)
 {
     init(nodes, startPos, segmentLength, randomness);
 }
 
-TreeColonisation::TreeColonisation(Graph<NODE_TYPE> graph, Vector3 startPos, float segmentLength, float randomness)
+TreeColonisation::TreeColonisation(Graph<NODE_TYPE> graph, const Vector3& startPos, float segmentLength, float randomness)
 {
     std::vector<Vector3> pos;
     for (const auto& node : graph.nodes)
@@ -25,7 +25,7 @@ TreeColonisation::~TreeColonisation()
     this->nodes.clear();
 }
 
-void TreeColonisation::init(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength, float randomness)
+void TreeColonisation::init(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength, float randomness)
 {
     this->segmentLength = segmentLength;
     this->treeSuccess = false;
@@ -196,7 +196,7 @@ Segment::Segment()
 
 }
 
-Segment::Segment(std::shared_ptr<Segment> parent, Vector3 pos, Vector3 direction, float length)
+Segment::Segment(std::shared_ptr<Segment> parent, const Vector3& pos, const Vector3& direction, float length)
     : parent(parent), pos(pos), dir(direction), originalDir(dir), length(length), numberOfCurrentAttractors(0)
 {
 
@@ -238,7 +238,7 @@ Node::Node()
 {
 }
 
-Node::Node(Vector3 pos, NODE_TYPE type)
+Node::Node(const Vector3& pos, NODE_TYPE type)
     : pos(pos), type(type), reached(false)
 {
 

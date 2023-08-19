@@ -32,26 +32,26 @@ public:
     void letGravityMakeSandFall();
     void computeGroups();
 
-    void applyModification(GridF modifications, Vector3 anchor = Vector3());
+    void applyModification(GridF modifications, const Vector3& anchor = Vector3());
     bool undo();
     bool redo();
 
     void resetVoxelsNeighbors();
-    void computeFlowfield(Vector3 sea_current = Vector3()); //int blur_iterations = 5);
+    void computeFlowfield(const Vector3& sea_current = Vector3()); //int blur_iterations = 5);
 
     std::vector<Vector3> applyMarchingCubes(bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 
 
-    bool contains(Vector3 v);
+    bool contains(const Vector3& v);
     bool contains(float x, float y, float z);
 
     float getVoxelValue(int x, int y, int z);
-    float getVoxelValue(Vector3 pos);
+    float getVoxelValue(const Vector3& pos);
     GridF& getVoxelValues();
 
     std::vector<Vector3> computeMarchingCube(Vertex vertices[8], float isolevel, bool useGlobalCoords = false, std::vector<Vector3>* outColors = nullptr, std::vector<Vector3>* outNormals = nullptr);
 
-    Vector3 computeNormal(Vector3 pos);
+    Vector3 computeNormal(const Vector3& pos);
     Vector3 computeNormal(int x, int y, int z);
 
     void computeDistanceField();

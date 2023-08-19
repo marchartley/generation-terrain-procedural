@@ -45,7 +45,7 @@ std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(int x, int y)
     return this->findNodeByID(x * this->sizeX + y);
 }
 
-std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(Vector3 pos)
+std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(const Vector3& pos)
 {
     return this->getNode(pos.x, pos.y);
 }
@@ -116,7 +116,7 @@ int RegularSimplicialComplex::maxNodesValues()
     return max;
 }
 
-bool RegularSimplicialComplex::checkConnection(Vector3 posA, Vector3 posB)
+bool RegularSimplicialComplex::checkConnection(const Vector3& posA, const Vector3& posB)
 {
     auto nodeA = this->getNode(posA);
     auto nodeB = this->getNode(posB);

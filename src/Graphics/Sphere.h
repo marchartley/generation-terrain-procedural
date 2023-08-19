@@ -20,7 +20,7 @@ class Sphere : public CustomInteractiveObject
 {
 public:
     // ctor/dtor
-    Sphere(float radius=1.0f, Vector3 position=Vector3(), int sectorCount=36, int stackCount=18, bool smooth=false);
+    Sphere(float radius=1.0f, const Vector3& position=Vector3(), int sectorCount=36, int stackCount=18, bool smooth=false);
     ~Sphere() {}
 
     // getters/setters

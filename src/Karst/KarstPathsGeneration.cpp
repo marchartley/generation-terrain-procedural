@@ -8,7 +8,7 @@ WaterHeight::WaterHeight(float height, float max_dist, float effect)
 {
 }
 
-float WaterHeight::cost(Vector3 node) const
+float WaterHeight::cost(const Vector3& node) const
 {
     float dist = std::abs(node.z - this->height);
     if (dist < this->max_distance_of_effect) {
@@ -18,12 +18,12 @@ float WaterHeight::cost(Vector3 node) const
     }
 }
 
-PorositySphere::PorositySphere(Vector3 pos, float radius, float effect)
+PorositySphere::PorositySphere(const Vector3& pos, float radius, float effect)
     : pos(pos), radius(radius), effect(effect)
 {
 }
 
-float PorositySphere::cost(Vector3 node) const
+float PorositySphere::cost(const Vector3& node) const
 {
     if ((node - this->pos).norm2() < this->radius*this->radius) {
         return (node - this->pos).norm() / this->radius;
@@ -32,12 +32,12 @@ float PorositySphere::cost(Vector3 node) const
     }
 }
 
-FractureDirection::FractureDirection(Vector3 direction, float effect)
+FractureDirection::FractureDirection(const Vector3& direction, float effect)
     : direction(direction), effect(effect)
 {
 }
 
-float FractureDirection::cost(Vector3 nodeA, Vector3 nodeB) const
+float FractureDirection::cost(const Vector3& nodeA, const Vector3& nodeB) const
 {
     Vector3 dirBA = (nodeA - nodeB).normalized();
     float cost = this->effect * (1 - (std::pow(this->direction.normalized().dot(dirBA), 2)));
@@ -55,7 +55,7 @@ KarstPathsGeneration::KarstPathsGeneration()
 
 }
 
-KarstPathsGeneration::KarstPathsGeneration(GridI availablityMap, Vector3 karst_dimensions, float poissonDistance, float gamma)
+KarstPathsGeneration::KarstPathsGeneration(GridI availablityMap, const Vector3& karst_dimensions, float poissonDistance, float gamma)
     : gamma(gamma)
 {
     this->karst_available_matrix = availablityMap.resize(karst_dimensions, RESIZE_MODE::MIN_VAL);

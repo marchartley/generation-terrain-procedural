@@ -16,7 +16,7 @@ public:
     int getLevel(bool ignorePriorityOffset = false);
     void completeIfNeeded();
 
-    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea, Vector3 newPosition = Vector3(false));
+    std::shared_ptr<BiomeInstance> clone(ShapeCurve newArea, const Vector3& newPosition = Vector3(false));
     std::shared_ptr<BiomeInstance> getPointInstance(int index);
 
     std::string getTextureName();

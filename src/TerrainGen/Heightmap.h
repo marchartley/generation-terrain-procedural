@@ -20,7 +20,7 @@ public:
 
     GridF getHeights() { return this->heights; }
     float getHeight(float x, float y) { return this->heights.interpolate(x, y); }
-    float getHeight(Vector3 pos) { return this->getHeight(pos.x, pos.y); }
+    float getHeight(const Vector3& pos) { return this->getHeight(pos.x, pos.y); }
 
     float getMaxHeight();
     float getHeightFactor() { return this->heightFactor; }
@@ -28,7 +28,7 @@ public:
     float getSizeY() { return this->heights.sizeY; }
     float getSizeZ() { return this->getMaxHeight(); }
 
-    virtual bool checkIsInGround(Vector3 position);
+    virtual bool checkIsInGround(const Vector3& position);
 
     /// Erosion functions (should be in another class, I guess...)
     std::vector<std::vector<Vector3>> hydraulicErosion(int numIterations = 1000,
@@ -57,7 +57,7 @@ public:
     Heightmap& fromVoxelGrid(VoxelGrid& voxelGrid);
     Heightmap& fromLayerGrid(LayerBasedGrid& layerGrid);
     Heightmap& fromImplicit(ImplicitPatch *implicitTerrain);
-    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
@@ -66,10 +66,10 @@ public:
     Heightmap& loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
     void saveHeightmap(std::string heightmap_filename);
 
-    Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
-    Vector3 findSurfaceBetween(Vector3 start, Vector3 end);
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
+    Vector3 findSurfaceBetween(const Vector3& start, const Vector3& end);
 
-    Mesh getGeometry(Vector3 dimensions = Vector3(false));
+    Mesh getGeometry(const Vector3& dimensions = Vector3(false));
 
     void initMap() {};
 

@@ -18,7 +18,7 @@ public:
 
     Matrix3Graph& randomizeEdges(float randomFactor = 1.f, bool allowNegatives = false);
 
-    std::vector<Vector3> shortestPath(Vector3 start, Vector3 end);
+    std::vector<Vector3> shortestPath(const Vector3 &start, const Vector3& end);
 
     GridI originalMatrix;
 };

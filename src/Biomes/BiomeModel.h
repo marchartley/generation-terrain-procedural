@@ -56,7 +56,7 @@ public:
     static BiomeModel fromJson(nlohmann::json json_content);
 
     nlohmann::json toJson();
-    std::shared_ptr<BiomeInstance> createInstance(Vector3 initialPosition = Vector3(500, 500, 0),
+    std::shared_ptr<BiomeInstance> createInstance(const Vector3& initialPosition = Vector3(500, 500, 0),
                                  ShapeCurve initialArea = ShapeCurve({Vector3(0, 0, 0),
                                                                      Vector3(0, 1000, 0),
                                                                      Vector3(1000, 1000, 0),

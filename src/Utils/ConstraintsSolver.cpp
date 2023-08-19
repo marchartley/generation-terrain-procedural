@@ -7,7 +7,7 @@ ConstraintsSolver::ConstraintsSolver()
 
 }
 
-int ConstraintsSolver::addItem(Vector3 *point)
+int ConstraintsSolver::addItem(Vector3* point)
 {
     int ID = distanceConstraints.sizeX;
     this->pointsConstrainted.insert(std::pair<int, Vector3*>(ID, point));

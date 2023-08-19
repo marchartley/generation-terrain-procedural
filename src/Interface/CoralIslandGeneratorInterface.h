@@ -14,7 +14,7 @@ class CoralIslandGeneratorInterface : public ActionInterface
 public:
     CoralIslandGeneratorInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
@@ -32,7 +32,7 @@ public Q_SLOTS:
     void hide();
     void show();
 
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
+    void mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
 
     void setSubsidence(float newVal);
     void setCoralLevelMin(float newVal);

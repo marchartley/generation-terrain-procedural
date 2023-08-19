@@ -24,7 +24,7 @@ void TerrainGenerationInterface::setWaterLevel(float newLevel)
     Q_EMIT updated();
 }
 
-void TerrainGenerationInterface::updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling)
+void TerrainGenerationInterface::updateDisplayedView(const Vector3& newVoxelGridOffset, float newVoxelGridScaling)
 {
     this->voxelGridOffset = newVoxelGridOffset;
     this->voxelGridScaling = newVoxelGridScaling;
@@ -924,7 +924,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
 
 
-void TerrainGenerationInterface::display(Vector3 camPos)
+void TerrainGenerationInterface::display(const Vector3& camPos)
 {
 
     GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);

@@ -21,7 +21,7 @@ class BiomeInterface : public ActionInterface
 public:
     BiomeInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    void affectHeightmap(std::shared_ptr<Grid> heightmap);
@@ -49,7 +49,7 @@ public:
 public Q_SLOTS:
     void displayAllBiomes();
     void interchangeBiomes();
-    void mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
+    void mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
 
     void generateBiomes(std::shared_ptr<BiomeInstance> predefinedBiomeInstance = nullptr);
     void randomize();
@@ -61,7 +61,7 @@ public Q_SLOTS:
 
     void addTunnel(KarstHole& hole);
 
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
+    void mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
     void updateSelectionPlaneToFitBiome(int biomeID, int planeIndex, bool callUpdate = true);
 
     void displayUniqueSelection(int selectionIndex);
@@ -72,11 +72,11 @@ public Q_SLOTS:
     GridF preparePatateCorail(std::shared_ptr<BiomeInstance> biome);
 
 Q_SIGNALS:
-    void terrainViewModified(Vector3 newOffset, float newScaling);
+    void terrainViewModified(const Vector3& newOffset, float newScaling);
 
 protected:
-    Vector3 fromHeightmapPosToVoxels(Vector3 pos);
-    Vector3 fromVoxelsPosToHeightmap(Vector3 pos);
+    Vector3 fromHeightmapPosToVoxels(const Vector3& pos);
+    Vector3 fromVoxelsPosToHeightmap(const Vector3& pos);
     void setBindings();
     void updateBiomeSelectionGui();
     void deleteSelectedBiomes();

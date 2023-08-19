@@ -218,7 +218,7 @@ Mesh& Mesh::scale(float factor_x, float factor_y, float factor_z)
     return scale(Vector3(factor_x, factor_y, factor_z));
 }
 
-Mesh& Mesh::scale(Vector3 factor)
+Mesh& Mesh::scale(const Vector3& factor)
 {
     for (auto& p : this->vertexArray)
         p *= factor;
@@ -229,7 +229,7 @@ Mesh& Mesh::scale(Vector3 factor)
     return *this;
 }
 
-Mesh& Mesh::translate(Vector3 translation)
+Mesh& Mesh::translate(const Vector3& translation)
 {
     for (auto& p : this->vertexArray)
         p += translation;
@@ -245,7 +245,7 @@ Mesh& Mesh::translate(float translation_x, float translation_y, float translatio
     return translate(Vector3(translation_x, translation_y, translation_z));
 }
 
-Mesh& Mesh::rotate(Vector3 rotation)
+Mesh& Mesh::rotate(const Vector3& rotation)
 {
     for (auto& p : this->vertexArray)
         p.rotate(rotation);
@@ -577,7 +577,7 @@ void Mesh::displayNormals()
     glEnd();
 }
 
-void Mesh::displayAsScalarField(GridF field, Vector3 cameraPosition, std::vector<float> isoValues)
+void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues)
 {
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {
@@ -660,7 +660,7 @@ void Mesh::displayAsScalarField(GridF field, Vector3 cameraPosition, std::vector
     }
 }
 
-void Mesh::displayAsVectorField(GridV3 field, Vector3 finalDimensions, float maxMaginitude, bool normalize)
+void Mesh::displayAsVectorField(GridV3 field, const Vector3& finalDimensions, float maxMaginitude, bool normalize)
 {
     if (maxMaginitude > 0.f) {
         for (auto& v : field)
@@ -693,22 +693,22 @@ void Mesh::setShader(std::shared_ptr<Shader> shader)
 
 }
 
-void Mesh::reorderVertices(Vector3 camPos)
+void Mesh::reorderVertices(const Vector3& camPos)
 {
     this->reorderAny(camPos, 1);
 }
 
-void Mesh::reorderLines(Vector3 camPos)
+void Mesh::reorderLines(const Vector3& camPos)
 {
     this->reorderAny(camPos, 2);
 }
 
-void Mesh::reorderTriangles(Vector3 camPos)
+void Mesh::reorderTriangles(const Vector3& camPos)
 {
     this->reorderAny(camPos, 3);
 }
 
-void Mesh::reorderAny(Vector3 camPos, int nbVertexToUse)
+void Mesh::reorderAny(const Vector3& camPos, int nbVertexToUse)
 {
     std::vector<Vector3> lineCenters(vertexArray.size() / nbVertexToUse);
     std::vector<int> newOrder(lineCenters.size());
@@ -991,7 +991,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 }
 
 
-GridI Mesh::voxelize(Vector3 dimensions) const
+GridI Mesh::voxelize(const Vector3& dimensions) const
 {
     AABBox myDims(this->vertexArray);
     GridI res(dimensions);
@@ -1016,7 +1016,7 @@ GridI Mesh::voxelize(Vector3 dimensions) const
     return res;
 }
 
-GridI Mesh::voxelizeSurface(Vector3 dimensions) const
+GridI Mesh::voxelizeSurface(const Vector3& dimensions) const
 {
     AABBox myDims(this->vertexArray);
     GridI res(dimensions, -1.f);
@@ -1079,7 +1079,7 @@ bool Mesh::isWatertight()
 
 }
 
-Mesh Mesh::createVectorField(GridV3 field, Vector3 finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
+Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
 {
     if (maxMaginitude > 0.f) {
         for (auto& v : field)
@@ -1110,7 +1110,7 @@ Mesh Mesh::createVectorField(GridV3 field, Vector3 finalDimensions, Mesh* mesh, 
     }
 }
 
-void Mesh::displayScalarField(GridF field, Mesh &mesh, Vector3 cameraPosition, std::vector<float> isoValues)
+void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosition, std::vector<float> isoValues)
 {
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {

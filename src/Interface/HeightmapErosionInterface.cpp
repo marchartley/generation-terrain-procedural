@@ -15,7 +15,7 @@ void HeightmapErosionInterface::affectTerrains(std::shared_ptr<Heightmap> height
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->windDirectionSelector->setPositions(Vector3(0, 0, voxelGrid->getSizeZ()), (windDirection.normalized() * voxelGrid->getSizeX() / 10.f) * Vector3(1, 1, 0) + Vector3(0, 0, voxelGrid->getSizeZ()));
-    QObject::connect(windDirectionSelector.get(), &InteractiveVector::modified, [&](Vector3 newVal) { this->windDirection = newVal.normalized() * 2.f; } );
+    QObject::connect(windDirectionSelector.get(), &InteractiveVector::modified, [&](const Vector3& newVal) { this->windDirection = newVal.normalized() * 2.f; } );
 }
 
 /*void HeightmapErosionInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
@@ -23,7 +23,7 @@ void HeightmapErosionInterface::affectTerrains(std::shared_ptr<Heightmap> height
     this->heightmap = heightmap;
 }*/
 
-void HeightmapErosionInterface::display(Vector3 camPos)
+void HeightmapErosionInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;

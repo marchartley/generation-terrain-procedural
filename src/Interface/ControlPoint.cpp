@@ -18,7 +18,7 @@ ControlPoint::ControlPoint()
     : ControlPoint(Vector3())
 {}
 
-ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool useTheManipulatedFrame)
+ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state, bool useTheManipulatedFrame)
     : position(pos), radius(radius), currentState(state)
 {
     this->allowAllAxisTranslation(true);
@@ -44,7 +44,7 @@ void ControlPoint::display()
 //    scalingMesh.display();
 }
 
-void ControlPoint::move(Vector3 newPos)
+void ControlPoint::move(const Vector3& newPos)
 {
     this->setPosition(newPos);
 }
@@ -119,7 +119,7 @@ void ControlPoint::show()
 //    scalingMesh.show();
 }
 
-void ControlPoint::setPosition(Vector3 newPosition)
+void ControlPoint::setPosition(const Vector3& newPosition)
 {
     this->position = newPosition;
     // Update meshes?
@@ -160,7 +160,7 @@ void ControlPoint::checkIfGrabsMouse(int x, int y, const qglviewer::Camera * con
     // Check intersection with all widgets
 }
 
-Vector3 ControlPoint::intersectionWithTranslationWidget(Vector3 rayOrigin, Vector3 rayDir)
+Vector3 ControlPoint::intersectionWithTranslationWidget(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     // Check mouse-segments with X, Y, Z. return closest to cam
     Vector3 intersectX = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, X);
@@ -179,7 +179,7 @@ Vector3 ControlPoint::intersectionWithTranslationWidget(Vector3 rayOrigin, Vecto
     else return intersectZ;
 }
 
-Vector3 ControlPoint::intersectionWithRotationWidget(Vector3 rayOrigin, Vector3 rayDir)
+Vector3 ControlPoint::intersectionWithRotationWidget(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     // Check mouse-plane
     Vector3 intersectX = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, X);
@@ -198,7 +198,7 @@ Vector3 ControlPoint::intersectionWithRotationWidget(Vector3 rayOrigin, Vector3 
     else return intersectZ;
 }
 
-Vector3 ControlPoint::intersectionWithScalingWidget(Vector3 rayOrigin, Vector3 rayDir)
+Vector3 ControlPoint::intersectionWithScalingWidget(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     // Check mouse-box
     Vector3 intersectX = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, X);
@@ -217,18 +217,18 @@ Vector3 ControlPoint::intersectionWithScalingWidget(Vector3 rayOrigin, Vector3 r
     else return intersectZ;
 }
 
-ControlPoint::ControlPointAction ControlPoint::hoveredAction(Vector3 rayOrigin, Vector3 rayDir)
+ControlPoint::ControlPointAction ControlPoint::hoveredAction(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     // Get intersection position with all widgets
     // Select closest to cam
 }
 
-ControlPoint::Axis ControlPoint::hoveredAxis(Vector3 rayOrigin, Vector3 rayDir)
+ControlPoint::Axis ControlPoint::hoveredAxis(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     // From hovered action, check each component individually
 }
 
-Vector3 ControlPoint::getIntersectionWithTranslationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis)
+Vector3 ControlPoint::getIntersectionWithTranslationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
 {
     float tolerence = this->radius * .2f;
     float arrowSize = this->radius * 2.f;
@@ -251,7 +251,7 @@ Vector3 ControlPoint::getIntersectionWithTranslationAxis(Vector3 rayOrigin, Vect
     }
 }
 
-Vector3 ControlPoint::getIntersectionWithRotationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis)
+Vector3 ControlPoint::getIntersectionWithRotationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
 {
     float tolerence = this->radius * .2f;
     float circleSize = this->radius * 2.f;
@@ -275,7 +275,7 @@ Vector3 ControlPoint::getIntersectionWithRotationAxis(Vector3 rayOrigin, Vector3
     }
 }
 
-Vector3 ControlPoint::getIntersectionWithScalingAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis)
+Vector3 ControlPoint::getIntersectionWithScalingAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
 {
     float tolerence = this->radius * .2f;
     float boxSize = this->radius * 2.f;
@@ -322,7 +322,7 @@ ControlPoint::ControlPoint()
     this->allowAllAxisTranslation(false);
 }
 
-ControlPoint::ControlPoint(Vector3 pos, float radius, GrabberState state, bool useTheManipulatedFrame)
+ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state, bool useTheManipulatedFrame)
     : state(state), useManipFrame(useTheManipulatedFrame), shape(radius, getPosition(), 10, 10), radius(radius)
 {
     this->mesh = Mesh((ControlPoint::base_shader ? std::make_shared<Shader>(*ControlPoint::base_shader) : nullptr), true);
@@ -721,7 +721,7 @@ std::vector<Vector3> ControlPoint::computeCircle(Axis axis)
     return points;
 }
 
-Vector3 ControlPoint::getIntersectionWithPlane(Vector3 rayOrigin, Vector3 rayDir, Axis axis)
+Vector3 ControlPoint::getIntersectionWithPlane(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis)
 {
     return Collision::intersectionRayPlane(rayOrigin, rayDir, this->getPosition(), Vector3(
                                                (axis == X ? 1.f :  0.f),
@@ -729,12 +729,12 @@ Vector3 ControlPoint::getIntersectionWithPlane(Vector3 rayOrigin, Vector3 rayDir
                                                (axis == Z ? 1.f :  0.f)));
 }
 
-bool ControlPoint::mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir)
+bool ControlPoint::mouseOnCentralSphere(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     return Collision::intersectionRaySphere(rayOrigin, rayDir, this->getPosition(), this->radius).isValid();
 }
 
-bool ControlPoint::mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir)
+bool ControlPoint::mouseOnTranslationArrow(const Vector3& rayOrigin, const Vector3& rayDir)
 {
     float tolerence = this->radius/5.f;
     // X-axis
@@ -826,7 +826,7 @@ std::pair<ControlPoint::Axis, Vector3> ControlPoint::mouseOnRotationCircle(const
     return {bestAxis, bestIntersection - this->getPosition()};
 }
 
-void ControlPoint::move(Vector3 newPos)
+void ControlPoint::move(const Vector3& newPos)
 {
     if (!this->isManipulated()) {
         this->setPosition(newPos.x, newPos.y, newPos.z);

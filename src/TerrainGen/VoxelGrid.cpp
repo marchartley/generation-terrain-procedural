@@ -248,11 +248,11 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
     }
 }*/
 /*
-void VoxelGrid::affectFlowfieldAround(Vector3 pos, Vector3 newVal, int kernelSize)
+void VoxelGrid::affectFlowfieldAround(const Vector3& pos, const Vector3& newVal, int kernelSize)
 {
     this->affectFlowfieldAround(pos.x, pos.y, pos.z, newVal, kernelSize);
 }
-void VoxelGrid::affectFlowfieldAround(float x, float y, float z, Vector3 newVal, int kernelSize)
+void VoxelGrid::affectFlowfieldAround(float x, float y, float z, const Vector3& newVal, int kernelSize)
 {
     Vector3 pos(x, y, z);
     for (int dx = -(kernelSize/2); dx <= (kernelSize/2); dx++) {
@@ -268,7 +268,7 @@ void VoxelGrid::affectFlowfieldAround(float x, float y, float z, Vector3 newVal,
         }
     }
 }
-void VoxelGrid::affectFlowfieldAround(Vector3 pos, float alphaEffect, int kernelSize)
+void VoxelGrid::affectFlowfieldAround(const Vector3& pos, float alphaEffect, int kernelSize)
 {
     this->affectFlowfieldAround(pos.x, pos.y, pos.z, alphaEffect, kernelSize);
 }
@@ -491,7 +491,7 @@ GridF VoxelGrid::shareSandWithNeighbors()
     return transport;
 }
 
-void VoxelGrid::applyModification(GridF modifications, Vector3 anchor)
+void VoxelGrid::applyModification(GridF modifications, const Vector3& anchor)
 {
     if (currentHistoryIndex < this->voxelsValuesStack.size()) {
         this->voxelsValuesStack.erase(this->voxelsValuesStack.begin() + currentHistoryIndex, this->voxelsValuesStack.end());
@@ -503,7 +503,7 @@ void VoxelGrid::applyModification(GridF modifications, Vector3 anchor)
     this->voxelsValuesAnchorStack.push_back(anchor);
 }
 
-void VoxelGrid::add2DHeightModification(GridF heightmapModifier, float factor, Vector3 anchor)
+void VoxelGrid::add2DHeightModification(GridF heightmapModifier, float factor, const Vector3& anchor)
 {
     /// Two possibilities : either inverse the voxel values when needed, or just add random values based on Perlin noise
     GridF modification(this->getDimensions(), 0.f);
@@ -579,7 +579,7 @@ float VoxelGrid::getHeight(float x, float y) {
 //    return 0;
 }
 
-bool VoxelGrid::contains(Vector3 v) {
+bool VoxelGrid::contains(const Vector3& v) {
     return this->contains(v.x, v.y, v.z);
 }
 
@@ -587,7 +587,7 @@ bool VoxelGrid::contains(float x, float y, float z) {
     return (0 <= x && x < this->getSizeX() && 0 <= y && y < this->getSizeY() && 0 <= z && z < this->getSizeZ());
 }
 
-bool VoxelGrid::checkIsInGround(Vector3 position)
+bool VoxelGrid::checkIsInGround(const Vector3& position)
 {
     return this->_cachedVoxelValues.at(position) > 0.f;
 //    return this->getVoxelValues().at(position) > 0.f;
@@ -676,24 +676,25 @@ GridF VoxelGrid::getVoxelValues()
     return this->_cachedVoxelValues;
 }
 
-GridF VoxelGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF VoxelGrid::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
     return this->getVoxelValues();
 }
 
-Mesh VoxelGrid::getGeometry(Vector3 dimensions)
+Mesh VoxelGrid::getGeometry(const Vector3& dimensions)
 {
     Vector3 originalDimensions = this->getDimensions();
+    Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
-        dimensions = originalDimensions;
-    auto values = this->getVoxelValues().resize(dimensions); //.meanSmooth(5, 5, 5);
+        finalDimensions = originalDimensions;
+    auto values = this->getVoxelValues().resize(finalDimensions); //.meanSmooth(5, 5, 5);
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
             values.at(x, y, 0) = 1.f;
         }
     }
     Mesh m = Mesh::applyMarchingCubes(values);
-    m.scale(originalDimensions / dimensions);
+    m.scale(originalDimensions / finalDimensions);
     return m;
     /*
     auto triTable = MarchingCubes::triangleTable;
@@ -717,17 +718,17 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
         Vector3(1.0, 1.0, 1.0),
         Vector3(0.0, 1.0, 1.0)
     };
-    std::function cubePos = [&](Vector3 voxelPos, int i) -> Vector3 {
+    std::function cubePos = [&](const Vector3& voxelPos, int i) -> Vector3 {
         return voxelPos + vertDecals[i];
     };
 
     //Get vertex i value within current marching cube
-    std::function cubeVal = [&](Vector3 pos) -> float {
+    std::function cubeVal = [&](const Vector3& pos) -> float {
         if (!values.checkCoord(pos)) return -1.f;
         return values.at(pos);
     };
     //Get vertex i value within current marching cube
-    std::function cubeVali = [&](Vector3 voxelPos, int i) -> float {
+    std::function cubeVali = [&](const Vector3& voxelPos, int i) -> float {
         return cubeVal(cubePos(voxelPos, i));
     };
 
@@ -737,13 +738,13 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
     };
 
     //Compute interpolated vertex along an edge
-    std::function vertexInterp = [&](float isolevel, Vector3 v0, float l0, Vector3 v1, float l1) -> Vector3 {
+    std::function vertexInterp = [&](float isolevel, const Vector3& v0, float l0, const Vector3& v1, float l1) -> Vector3 {
         float iso = std::clamp((isolevel-l0)/(l1-l0), 0.f, 1.f);
         return v0 * (1.f - iso) + v1 * iso;
 //        return mix(v0, v1, clamp() * scale + vec3(offsetX, offsetY, offsetZ);
     };
 
-    std::function getPosition = [&](Vector3 position, Vector3 _offset) -> Vector3 {
+    std::function getPosition = [&](const Vector3& position, const Vector3& _offset) -> Vector3 {
     //    return position + vec4(_offset, 0.0);
         _offset += Vector3(offsetX, offsetY, offsetZ);
         position *= scale;
@@ -754,7 +755,7 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
     //    return clamp (position + vec4(_offset, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
     };
 
-    std::function getCubeIndex = [&](Vector3 voxPos, Vector3 normal) -> int {
+    std::function getCubeIndex = [&](const Vector3& voxPos, const Vector3& normal) -> int {
         int cubeindex = 0;
         float cubeVal0 = cubeVali(voxPos, 0);
         float cubeVal1 = cubeVali(voxPos, 1);
@@ -866,7 +867,7 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
     return marched;*/
 }
 /*
-std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(Vector3 pos) {
+std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(const Vector3& pos) {
     return getChunksAndVoxelIndices(pos.x, pos.y, pos.z);
 }
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x, float y, float z) {
@@ -883,7 +884,7 @@ std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x, floa
         return std::make_tuple(-1, -1, -1, -1); // -1 = not good coord
     return std::make_tuple(xChunk * (this->getSizeY() / chunkSize) + yChunk, voxPosX, voxPosY, _z);
 }*/
-float VoxelGrid::getVoxelValue(Vector3 pos) {
+float VoxelGrid::getVoxelValue(const Vector3& pos) {
     return this->getVoxelValue(pos.x, pos.y, pos.z);
 }
 
@@ -895,7 +896,7 @@ float VoxelGrid::getVoxelValue(float x, float y, float z) {
     return -1;*/
     return this->getVoxelValues().at(x, y, z);
 }
-void VoxelGrid::setVoxelValue(Vector3 pos, float newVal) {
+void VoxelGrid::setVoxelValue(const Vector3& pos, float newVal) {
     this->setVoxelValue(pos.x, pos.y, pos.z, newVal);
 }
 void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
@@ -914,7 +915,7 @@ void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
     */
 }
 /*
-float VoxelGrid::getOriginalVoxelValue(Vector3 pos) {
+float VoxelGrid::getOriginalVoxelValue(const Vector3& pos) {
     return this->getOriginalVoxelValue(pos.x, pos.y, pos.z);
 }
 
@@ -937,23 +938,23 @@ GridV3 VoxelGrid::getFlowfield(size_t flowIndex)
     return this->multipleFlowFields[flowIndex] * binary;
 }*/
 /*
-Vector3 VoxelGrid::getFlowfield(Vector3 pos) {
+Vector3 VoxelGrid::getFlowfield(const Vector3& pos) {
     return this->getFlowfield(pos.x, pos.y, pos.z);
 }
 
 Vector3 VoxelGrid::getFlowfield(float x, float y, float z) {
     return this->getFlowfield().at(x, y, z);
 }
-void VoxelGrid::setFlowfield(Vector3 pos, Vector3 newVal) {
+void VoxelGrid::setFlowfield(const Vector3& pos, const Vector3& newVal) {
     this->setFlowfield(pos.x, pos.y, pos.z, newVal);
 }
-void VoxelGrid::setFlowfield(float x, float y, float z, Vector3 newVal)
+void VoxelGrid::setFlowfield(float x, float y, float z, const Vector3& newVal)
 {
     this->multipleFlowFields[0].at(x, y, z) = newVal;
 }
 */
 /*
-int VoxelGrid::getVoxelGroup(Vector3 pos) {
+int VoxelGrid::getVoxelGroup(const Vector3& pos) {
     return getVoxelGroup(pos.x, pos.y, pos.z);
 }
 int VoxelGrid::getVoxelGroup(float x, float y, float z) {
@@ -963,7 +964,7 @@ int VoxelGrid::getVoxelGroup(float x, float y, float z) {
         return this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z);
     return -1;
 }*//*
-void VoxelGrid::setVoxelGroup(Vector3 pos, int newVal) {
+void VoxelGrid::setVoxelGroup(const Vector3& pos, int newVal) {
     this->setVoxelGroup(pos.x, pos.y, pos.z, newVal);
 }
 void VoxelGrid::setVoxelGroup(float x, float y, float z, int newVal)
@@ -973,7 +974,7 @@ void VoxelGrid::setVoxelGroup(float x, float y, float z, int newVal)
     if (iChunk != -1)
         this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z) = newVal;
 }*//*
-bool VoxelGrid::getVoxelIsOnGround(Vector3 pos) {
+bool VoxelGrid::getVoxelIsOnGround(const Vector3& pos) {
     return getVoxelIsOnGround(pos.x, pos.y, pos.z);
 }
 bool VoxelGrid::getVoxelIsOnGround(float x, float y, float z) {
@@ -983,7 +984,7 @@ bool VoxelGrid::getVoxelIsOnGround(float x, float y, float z) {
         return this->chunks[iChunk]->voxelGroups(voxPosX, voxPosY, _z) == 0;
     return -1;
 }
-void VoxelGrid::setVoxelIsOnGround(Vector3 pos, bool newVal) {
+void VoxelGrid::setVoxelIsOnGround(const Vector3& pos, bool newVal) {
     this->setVoxelIsOnGround(pos.x, pos.y, pos.z, newVal);
 }
 void VoxelGrid::setVoxelIsOnGround(float x, float y, float z, bool newVal)
@@ -1143,22 +1144,23 @@ void VoxelGrid::retrieveMap(std::string filename)
     this->fromCachedData();
 }
 
-Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    if (!minPos.isValid()) minPos = Vector3();
-    if (!maxPos.isValid()) maxPos = this->getDimensions();
+    AABBox myAABBox = AABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
+//    if (!minPos.isValid()) minPos = Vector3();
+//    if (!maxPos.isValid()) maxPos = this->getDimensions();
 
     Vector3 currPos = origin;
     auto values = this->getVoxelValues();
     values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
     bool beenInBox = false;
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
 
-        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
             float isoval = values.at(currPos);
             if (isoval > 0.0) {
                 return currPos;
@@ -1166,17 +1168,17 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector
             beenInBox = true;
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
-    if (beenInBox && Vector3::isInBox(currPos.xy(), minPos.xy(), maxPos.xy())) {
+    if (beenInBox && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy())) {
         currPos.z = 0;
         return currPos;
     }
     return Vector3(false);
 }
 
-Vector3 VoxelGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 VoxelGrid::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
     return this->getFirstIntersectingVoxel(origin, dir, minPos, maxPos);
 }

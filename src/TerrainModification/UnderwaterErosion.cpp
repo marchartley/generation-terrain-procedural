@@ -33,7 +33,7 @@ void retroChangeFlowfield(std::vector<Vector3>& coords, std::vector<Vector3>& di
     }
 }
 */
-Vector3 getGravityForce(Vector3& position, float gravity, float particleMass, float particleVolume, float particleDensity, float environmentDensity, Vector3 flowfieldValues, Vector3& gravityDirection) {
+Vector3 getGravityForce(Vector3& position, float gravity, float particleMass, float particleVolume, float particleDensity, float environmentDensity, const Vector3& flowfieldValues, Vector3& gravityDirection) {
     // Gravity + Buoyancy
     float gravityForce = gravity * particleMass; // = gravityfieldValues.at(pos + dir);
     float boyancyForce = -environmentDensity * particleVolume; // B = - rho_fluid * V * g
@@ -69,13 +69,13 @@ Vector3 getParticleVelocity() {
 }
 
 //Vector3 getExternalForce(Vector3& position, float gravity, float particleMass, float particleVolume, float particleDensity, float environmentDensity, GridV3& flowfieldValues, Vector3& gravityDirection, float capacity, float maxCapacity) {
-Vector3 getExternalForce(Vector3& position, float gravity, float particleMass, float particleVolume, float particleDensity, float environmentDensity, Vector3 flowfieldValues, Vector3& gravityDirection, float capacity, float maxCapacity) {
+Vector3 getExternalForce(Vector3& position, float gravity, float particleMass, float particleVolume, float particleDensity, float environmentDensity, const Vector3& flowfieldValues, Vector3& gravityDirection, float capacity, float maxCapacity) {
     Vector3 gravityForce = getGravityForce(position, gravity, particleMass, particleVolume, particleDensity, environmentDensity, flowfieldValues, gravityDirection);
     Vector3 settlingForce = Vector3(); //getSettlingForce(particleDensity, environmentDensity, gravity, capacity, maxCapacity, gravityDirection);
     return gravityForce + settlingForce;
 }
 //void leapfrogVerlet(Vector3& position, Vector3& velocity, Vector3& acceleration, float dt, GridV3& flowfield, bool applyFlow) {
-void leapfrogVerlet(Vector3& position, Vector3& velocity, Vector3& acceleration, float dt, Vector3 flowfield, bool applyFlow) {
+void leapfrogVerlet(Vector3& position, Vector3& velocity, Vector3& acceleration, float dt, const Vector3& flowfield, bool applyFlow) {
     // Verlet : x_n+1 = 2 * x_n - x_n-1 + acc * dt^2
     Vector3 oldPos = (position - velocity * dt); // Yeah... it's more an implicit Euler integration...
 //    Vector3 usedVelocity = position - oldPos; // (Should be "position - oldPos;")
@@ -1112,7 +1112,7 @@ std::vector<std::vector<Vector3> > UnderwaterErosion::CreateMultipleTunnels(std:
     return allCoords;
 }
 
-std::vector<Vector3> UnderwaterErosion::CreateCrack(Vector3 start, Vector3 end, bool applyChanges)
+std::vector<Vector3> UnderwaterErosion::CreateCrack(const Vector3& start, const Vector3& end, bool applyChanges)
 {
     float rx = 3.f, ry = 3.f, rz = 3.f;
     Vector3 ratio(rx, ry, rz);

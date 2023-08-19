@@ -18,7 +18,7 @@ public:
     static std::vector<Vector3> cubesVertices;
     static std::vector<Vector3> cubesEdgesVertices;
 
-    static std::vector<Vector3> createTriangles(Vector3 minPos, Vector3 maxPos);
+    static std::vector<Vector3> createTriangles(const Vector3& minPos, const Vector3& maxPos);
     static std::vector<Vector3> createTriangles(AABBox box);
 };
 

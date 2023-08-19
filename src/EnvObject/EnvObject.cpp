@@ -95,7 +95,7 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         if (startsWith(token, "d2(")) {
             std::string object = token.substr(std::string("d2(").size());
             object = object.substr(0, object.size() - std::string(")").size());
-            operations.push_back({currentOperation, [=](Vector3 pos) {
+            operations.push_back({currentOperation, [=](const Vector3& pos) {
                 return EnvObject::getSqrDistanceTo(object, pos).first;
             }});
         }
@@ -104,13 +104,13 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
             objects = objects.substr(0, objects.size() - std::string(">").size());
             std::string object1 = objects.substr(0, objects.find(","));
             std::string object2 = objects.substr(objects.find(",") + 1);
-            operations.push_back({currentOperation, [=](Vector3 pos) {
+            operations.push_back({currentOperation, [=](const Vector3& pos) {
                 auto [vec1, obj1] = EnvObject::getVectorOf(object1, pos);
                 auto [vec2, obj2] = EnvObject::getVectorOf(object2, pos);
                 return vec1.dot(vec2);
             }});
         } else if (std::atof(token.c_str())) { // Is a number
-            operations.push_back({currentOperation, [=](Vector3 pos) {
+            operations.push_back({currentOperation, [=](const Vector3& pos) {
                 return std::atof(token.c_str());
             }});
         } else {
@@ -121,7 +121,7 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
 
     }
 
-    std::function<float (Vector3)> func = [=](Vector3 pos) -> float {
+    std::function<float (Vector3)> func = [=](const Vector3& pos) -> float {
         float score = 0.f;
         for (auto& [sign, function] : operations) {
             float funcRes = function(pos);

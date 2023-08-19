@@ -16,7 +16,7 @@ class FaultSlipInterface : public ActionInterface
 public:
     FaultSlipInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void remesh();
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
@@ -36,7 +36,7 @@ Q_SIGNALS:
 //    void faultSlipApplied();
 
 public Q_SLOTS:
-    void updateSlipVector(Vector3 newSlipVector = Vector3());
+    void updateSlipVector(const Vector3& newSlipVector = Vector3());
     void updatePoints();
     void computeFaultSlip();
     void setSideAffected(bool isRightSide);

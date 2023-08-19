@@ -23,14 +23,14 @@ ShapeCurve::ShapeCurve(BSpline path)
     }
 }
 
-ShapeCurve &ShapeCurve::translate(Vector3 translation)
+ShapeCurve &ShapeCurve::translate(const Vector3& translation)
 {
     for (auto& point : points)
         point += translation;
     return *this;
 }
 
-bool ShapeCurve::contains(Vector3 pos, bool useNativeShape)
+bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape)
 {
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
@@ -78,13 +78,13 @@ bool ShapeCurve::contains(Vector3 pos, bool useNativeShape)
     return (nb_intersections % 2) == 1;*/
 }
 
-float ShapeCurve::estimateDistanceFrom(Vector3 pos)
+float ShapeCurve::estimateDistanceFrom(const Vector3& pos)
 {
     float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
     return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
-float ShapeCurve::estimateSignedDistanceFrom(Vector3 pos, float epsilon)
+float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
 {
     return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
 }

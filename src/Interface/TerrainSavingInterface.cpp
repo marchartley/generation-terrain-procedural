@@ -7,7 +7,7 @@ TerrainSavingInterface::TerrainSavingInterface(QWidget *parent):
 
 }
 
-void TerrainSavingInterface::display(Vector3 camPos)
+void TerrainSavingInterface::display(const Vector3& camPos)
 {
     // Nothing to display
 }

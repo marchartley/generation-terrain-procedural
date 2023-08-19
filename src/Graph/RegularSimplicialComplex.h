@@ -10,13 +10,13 @@ public:
     RegularSimplicialComplex(int sizeX, int sizeY);
 
     std::shared_ptr<GraphNode<int>> getNode(int x, int y);
-    std::shared_ptr<GraphNode<int>> getNode(Vector3 pos);
+    std::shared_ptr<GraphNode<int>> getNode(const Vector3& pos);
 
     void display();
 
     int maxNodesValues();
 
-    bool checkConnection(Vector3 posA, Vector3 posB);
+    bool checkConnection(const Vector3& posA, const Vector3& posB);
     bool checkConnection(std::shared_ptr<GraphNode<int>> nodeA, std::shared_ptr<GraphNode<int>> nodeB);
     void removeUnavailableLinks();
 

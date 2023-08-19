@@ -6,7 +6,7 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
 
 }
 
-void MeshInstanceAmplificationInterface::display(Vector3 camPos)
+void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;

@@ -16,9 +16,9 @@ public:
     bool step();
 
     Vector3 getLowestEntropyCellIndex();
-    bool propagate(Vector3 from, bool forceNeighborsPropagation = false);
+    bool propagate(const Vector3& from, bool forceNeighborsPropagation = false);
 
-    static std::vector<GridI> createLabelsFromImage(GridI image, Vector3 tilesDim = Vector3(3, 3, 1));
+    static std::vector<GridI> createLabelsFromImage(GridI image, const Vector3& tilesDim = Vector3(3, 3, 1));
 
     Vector3 tilesDim;
     Vector3 tilesAnchor;

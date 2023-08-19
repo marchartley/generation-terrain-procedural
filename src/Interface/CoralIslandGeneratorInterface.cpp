@@ -9,7 +9,7 @@ CoralIslandGeneratorInterface::CoralIslandGeneratorInterface(QWidget *parent)
 
 }
 
-void CoralIslandGeneratorInterface::display(Vector3 camPos)
+void CoralIslandGeneratorInterface::display(const Vector3& camPos)
 {
     return ActionInterface::display(camPos);
 }
@@ -106,7 +106,7 @@ void CoralIslandGeneratorInterface::show()
     return ActionInterface::show();
 }
 
-void CoralIslandGeneratorInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
+void CoralIslandGeneratorInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
 {
     if (this->isVisible()) {
         this->voxelGrid->setVoxelValues(coralBoulderGen.volume);

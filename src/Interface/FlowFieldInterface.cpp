@@ -47,7 +47,7 @@ void FlowFieldInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, st
     }
 }
 
-void FlowFieldInterface::display(Vector3 camPos)
+void FlowFieldInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -59,7 +59,7 @@ void FlowFieldInterface::display(Vector3 camPos)
         this->recomputeFlowfield(10);
 }
 
-void FlowFieldInterface::displayPressureDensities(Vector3 camPos)
+void FlowFieldInterface::displayPressureDensities(const Vector3& camPos)
 {
     if (!this->displayingPressure)
         return;
@@ -149,7 +149,7 @@ void FlowFieldInterface::displayPressureDensities(Vector3 camPos)
 //    }
 }
 
-void FlowFieldInterface::displayFlows(Vector3 camPos)
+void FlowFieldInterface::displayFlows(const Vector3& camPos)
 {
     for (size_t i = 0; i < this->displayedFlowfields.size(); i++) {
         if (!this->displayedFlowfields[i])
@@ -164,7 +164,7 @@ void FlowFieldInterface::displayFlows(Vector3 camPos)
     }
 }
 
-void FlowFieldInterface::displaySumOfFlows(Vector3 camPos)
+void FlowFieldInterface::displaySumOfFlows(const Vector3& camPos)
 {
     if (!this->displayingSumOfFlows)
         return;

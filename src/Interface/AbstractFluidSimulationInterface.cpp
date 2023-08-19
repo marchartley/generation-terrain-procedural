@@ -29,7 +29,7 @@ void AbstractFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap>
     this->updateSimulationMeshes();
 }
 
-void AbstractFluidSimulationInterface::display(Vector3 camPos)
+void AbstractFluidSimulationInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;

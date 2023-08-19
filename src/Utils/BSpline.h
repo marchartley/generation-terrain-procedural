@@ -14,14 +14,14 @@ public:
 
     std::vector<Vector3> getPath(int numberOfPoints);
     Vector3 getPoint(float x);
-    Vector3 getPoint(float x, Vector3 a, Vector3 b);
+    Vector3 getPoint(float x, const Vector3& a, const Vector3& b);
     Vector3 getDerivative(float x);
     Vector3 getSecondDerivative(float x);
-    float estimateClosestTime(Vector3 pos, float epsilon = 1e-5);
-    Vector3 estimateClosestPos(Vector3 pos, float epsilon = 1e-3);
-    float estimateSqrDistanceFrom(Vector3 pos, float epsilon = 1e-3);
-    float estimateDistanceFrom(Vector3 pos, float epsilon = 1e-3);
-    float estimateSignedDistanceFrom(Vector3 pos, float epsilon = 1e-3);
+    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5);
+    Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3);
+    float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
+    float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
+    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
     float length();
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
@@ -54,7 +54,7 @@ public:
 
     BSpline computeConvexHull();
 
-    BSpline& translate(Vector3 translation);
+    BSpline& translate(const Vector3& translation);
 
     virtual BSpline& removeDuplicates();
 

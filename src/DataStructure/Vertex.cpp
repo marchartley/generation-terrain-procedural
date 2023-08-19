@@ -10,7 +10,7 @@ Vertex::Vertex(float x, float y, float z, float isosurface)
 {
 
 }
-Vertex::Vertex(Vector3 v, float isosurface)
+Vertex::Vertex(const Vector3& v, float isosurface)
     : Vector3(v), isosurface(isosurface) {
 
 }

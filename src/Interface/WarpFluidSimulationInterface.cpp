@@ -29,7 +29,7 @@ void WarpFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
     this->updateSimulationMesh();
 }
 
-void WarpFluidSimulationInterface::display(Vector3 camPos)
+void WarpFluidSimulationInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;

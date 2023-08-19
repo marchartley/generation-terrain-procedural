@@ -15,15 +15,15 @@ ExpressionParser::ExpressionParser() {
     unaryFloatOperators["pow2"] = [](float a) { return a * a; };
 
     // Default binary operators
-    binaryVectorOperators["+"] = [](Vector3 a, Vector3 b) { return a + b; };
-    binaryVectorOperators["-"] = [](Vector3 a, Vector3 b) { return a - b; };
-    binaryVectorOperators["*"] = [](Vector3 a, Vector3 b) { return a * b; };
-    binaryVectorOperators["/"] = [](Vector3 a, Vector3 b) { return a / b; };
+    binaryVectorOperators["+"] = [](const Vector3& a, const Vector3& b) { return a + b; };
+    binaryVectorOperators["-"] = [](const Vector3& a, const Vector3& b) { return a - b; };
+    binaryVectorOperators["*"] = [](const Vector3& a, const Vector3& b) { return a * b; };
+    binaryVectorOperators["/"] = [](const Vector3& a, const Vector3& b) { return a / b; };
 
     // Default unary operators
-    unaryVectorOperators["abs"] = [](Vector3 a) { return std::abs(a); };
-    unaryVectorOperators["norm2"] = [](Vector3 a) { return a.norm2(); };
-    unaryVectorOperators["norm"] = [](Vector3 a) { return a.norm(); };
+    unaryVectorOperators["abs"] = [](const Vector3& a) { return std::abs(a); };
+    unaryVectorOperators["norm2"] = [](const Vector3& a) { return a.norm2(); };
+    unaryVectorOperators["norm"] = [](const Vector3& a) { return a.norm(); };
 
     precedence = {
             {"+", 1},

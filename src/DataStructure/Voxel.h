@@ -49,7 +49,7 @@ public:
     Vector3 localPos() { return Vector3(getX(), getY(), getZ()); }
     Vector3 globalPos() { return Vector3(globalX(), globalY(), globalZ()); }
 
-    bool contains(Vector3 v);
+    bool contains(const Vector3& v);
     bool contains(float x, float y, float z);
 
     void addNeighbor(std::shared_ptr<Voxel> neighbor);

@@ -23,7 +23,7 @@ VoxelChunk::~VoxelChunk()
 {
 }
 
-void VoxelChunk::computeFlowfield(Vector3 sea_current)
+void VoxelChunk::computeFlowfield(const Vector3& sea_current)
 {
     computeDistanceField();
     GridV3 pressionGradient = this->pressureField.gradient();
@@ -162,7 +162,7 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
     }
 }
 
-Vector3 VoxelChunk::computeNormal(Vector3 pos)
+Vector3 VoxelChunk::computeNormal(const Vector3& pos)
 {
     return this->computeNormal(pos.x, pos.y, pos.z);
 }
@@ -439,7 +439,7 @@ void VoxelChunk::computeGroups()
     this->voxelGroups = labels;
 }
 
-void VoxelChunk::applyModification(GridF modifications, Vector3 anchor)
+void VoxelChunk::applyModification(GridF modifications, const Vector3& anchor)
 {
     modifications.raiseErrorOnBadCoord = false;
     // If there is a modification and we did some "undo's" before,
@@ -482,7 +482,7 @@ void VoxelChunk::display()
     this->mesh.display();
 }
 
-bool VoxelChunk::contains(Vector3 v) {
+bool VoxelChunk::contains(const Vector3& v) {
     return this->contains(v.x, v.y, v.z);
 }
 
@@ -500,7 +500,7 @@ float VoxelChunk::getVoxelValue(int x, int y, int z)
     return finalValue;
 }
 
-float VoxelChunk::getVoxelValue(Vector3 pos)
+float VoxelChunk::getVoxelValue(const Vector3& pos)
 {
     return this->getVoxelValue(pos.x, pos.y, pos.z);
 }

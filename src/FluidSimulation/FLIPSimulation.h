@@ -63,9 +63,9 @@ public:
     virtual ~FLIPSimulation() {}
     void init(float density, float width, float depth, float height, float spacing, float particleRadius, float maxParticles, float dt);
 
-    void integrateParticles(double dt, Vector3 gravity);
+    void integrateParticles(double dt, const Vector3& gravity);
     void pushParticlesApart(int numIters);
-//    void handleParticleCollisions(Vector3 obstaclePos, float obstacleRadius);
+//    void handleParticleCollisions(const Vector3& obstaclePos, float obstacleRadius);
     void updateParticleDensity();
     void transferVelocities(bool toGrid, float flipRatio);
     void solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift = true);

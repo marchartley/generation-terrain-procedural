@@ -45,7 +45,7 @@ float Heightmap::getMaxHeight()
     return this->heights.max(); // this->maxHeight; //this->heights.max();
 }
 
-bool Heightmap::checkIsInGround(Vector3 position)
+bool Heightmap::checkIsInGround(const Vector3& position)
 {
     return this->getHeight(position.xy()) >= position.z;
 }
@@ -211,7 +211,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
     heights.returned_value_on_outside = prevReturn;
 }
 
-void windCascade(Vector3 pos, GridF& ground, GridF& sand, float roughness, float settling, float dt) {
+void windCascade(const Vector3& pos, GridF& ground, GridF& sand, float roughness, float settling, float dt) {
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             if (x == 0 && y == 0) continue;
@@ -460,7 +460,7 @@ Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
     return *this;
 }
 
-GridF Heightmap::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF Heightmap::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
     VoxelGrid v;
     v.from2DGrid(*this);
@@ -569,51 +569,53 @@ void Heightmap::saveHeightmap(std::string heightmap_filename)
     }
 }
 
-Vector3 Heightmap::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    if (!minPos.isValid()) minPos = Vector3();
-    if (!maxPos.isValid()) maxPos = this->getDimensions();
+    AABBox myAABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
+//    if (!minPos.isValid()) minPos = Vector3();
+//    if (!maxPos.isValid()) maxPos = this->getDimensions();
 
     Vector3 currPos = origin;
 //    auto values = this->getVoxelValues();
 //    values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
             float isoval = this->getHeight(currPos.xy()) - currPos.z;
             if (isoval > 0.0) {
                 return currPos;
             }
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
     return Vector3(false);
 }
 
-Vector3 Heightmap::findSurfaceBetween(Vector3 start, Vector3 end)
+Vector3 Heightmap::findSurfaceBetween(const Vector3& start, const Vector3& end)
 {
 
 }
 
-Mesh Heightmap::getGeometry(Vector3 dimensions)
+Mesh Heightmap::getGeometry(const Vector3& dimensions)
 {
     Vector3 originalDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
-        dimensions = originalDimensions;
-    dimensions.z = 1;
+        finalDimensions = originalDimensions;
+    finalDimensions.z = 1;
 
     std::vector<Vector3> vertices;
-    vertices.resize(6 * (dimensions.x - 1) * (dimensions.y - 1) );
-    auto heights = this->getHeights().resize(dimensions);
+    vertices.resize(6 * (finalDimensions.x - 1) * (finalDimensions.y - 1) );
+    auto heights = this->getHeights().resize(finalDimensions);
 
     size_t i = 0;
-    for (int x = 0; x < dimensions.x - 1; x++) {
-        for (int y = 0; y < dimensions.y - 1; y++) {
+    for (int x = 0; x < finalDimensions.x - 1; x++) {
+        for (int y = 0; y < finalDimensions.y - 1; y++) {
             vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
             vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
             vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));
@@ -628,7 +630,7 @@ Mesh Heightmap::getGeometry(Vector3 dimensions)
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
-    m.scale(originalDimensions / dimensions);
+    m.scale(originalDimensions / finalDimensions);
     return m;
 }
 

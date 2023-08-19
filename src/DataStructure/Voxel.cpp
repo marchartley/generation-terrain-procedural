@@ -111,7 +111,7 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Voxel> v)
     return io;
 }
 
-bool Voxel::contains(Vector3 v) {
+bool Voxel::contains(const Vector3& v) {
     return this->contains(v.x, v.y, v.z);
 }
 

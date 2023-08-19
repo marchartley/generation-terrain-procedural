@@ -6,7 +6,7 @@ SpheroidalErosionInterface::SpheroidalErosionInterface(QWidget *parent)
 
 }
 
-void SpheroidalErosionInterface::display(Vector3 camPos)
+void SpheroidalErosionInterface::display(const Vector3& camPos)
 {
     return ActionInterface::display(camPos);
 }
@@ -94,7 +94,7 @@ void SpheroidalErosionInterface::show()
     return ActionInterface::show();
 }
 
-void SpheroidalErosionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
+void SpheroidalErosionInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
 {
     return ActionInterface::mouseClickedOnMapEvent(mousePosInMap, mouseInMap, event, model);
 }

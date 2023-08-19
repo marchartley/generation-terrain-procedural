@@ -13,7 +13,7 @@ class TerrainGenerationInterface : public ActionInterface
 public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz, bool noise2D = false, float noiseStrength = 1.f, float frequency = 1.f, float lacunarity = 2.f, float noise_shifting = 0.0);
@@ -36,7 +36,7 @@ public Q_SLOTS:
 
     void setWaterLevel(float newLevel);
 
-    void updateDisplayedView(Vector3 newVoxelGridOffset, float newVoxelGridScaling);
+    void updateDisplayedView(const Vector3& newVoxelGridOffset, float newVoxelGridScaling);
     void reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
 
     void afterTerrainUpdated();

@@ -33,7 +33,7 @@ class ControlPoint : public qglviewer::ManipulatedFrame
     Q_OBJECT
 public:
     ControlPoint();
-    ControlPoint(Vector3 pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
+    ControlPoint(const Vector3& pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
     ~ControlPoint();
 
 protected:
@@ -42,7 +42,7 @@ protected:
 
 public:
     void display();
-    void move(Vector3 newPos);
+    void move(const Vector3& newPos);
 
     Vector3 getPosition() const;
 
@@ -58,7 +58,7 @@ public:
     void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
     void setGrabberStateColor(GrabberState state, std::vector<float> color);
 
-    void setPosition(Vector3 newPosition);
+    void setPosition(const Vector3& newPosition);
     void setRadius(float newRadius);
     void setState(GrabberState newState);
 
@@ -93,12 +93,12 @@ protected:
 //    void updateStateDependingOnManipFrame();
     void checkIfGrabsMouse(int x, int y,const qglviewer::Camera* const cam);
 
-    Vector3 intersectionWithTranslationWidget(Vector3 rayOrigin, Vector3 rayDir);
-    Vector3 intersectionWithRotationWidget(Vector3 rayOrigin, Vector3 rayDir);
-    Vector3 intersectionWithScalingWidget(Vector3 rayOrigin, Vector3 rayDir);
+    Vector3 intersectionWithTranslationWidget(const Vector3& rayOrigin, const Vector3& rayDir);
+    Vector3 intersectionWithRotationWidget(const Vector3& rayOrigin, const Vector3& rayDir);
+    Vector3 intersectionWithScalingWidget(const Vector3& rayOrigin, const Vector3& rayDir);
 
-    ControlPointAction hoveredAction(Vector3 rayOrigin, Vector3 rayDir);
-    Axis hoveredAxis(Vector3 rayOrigin, Vector3 rayDir);
+    ControlPointAction hoveredAction(const Vector3& rayOrigin, const Vector3& rayDir);
+    Axis hoveredAxis(const Vector3& rayOrigin, const Vector3& rayDir);
 
     ControlPointAction currentAction = NO_ACTION;
     Axis currentAxis = NO_AXIS;
@@ -118,9 +118,9 @@ protected:
     std::vector<Vector3> translationHistory;
     std::vector<Vector3> rotationHistory;
 
-    Vector3 getIntersectionWithTranslationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
-    Vector3 getIntersectionWithRotationAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
-    Vector3 getIntersectionWithScalingAxis(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
+    Vector3 getIntersectionWithTranslationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis);
+    Vector3 getIntersectionWithRotationAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis);
+    Vector3 getIntersectionWithScalingAxis(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis);
 
 };
 */
@@ -130,7 +130,7 @@ class ControlPoint : public qglviewer::ManipulatedFrame
     Q_OBJECT
 public:
     ControlPoint();
-    ControlPoint(Vector3 pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
+    ControlPoint(const Vector3& pos, float radius = 1.f, GrabberState state = INACTIVE, bool useTheManipulatedFrame = true);
     ~ControlPoint();
 
     void setState(GrabberState newState);
@@ -156,7 +156,7 @@ private:
     void afterUpdate(std::function<void()> func);
 public:
     void updateSphere();
-    void move(Vector3 newPos);
+    void move(const Vector3& newPos);
     void display();
 
     void setGrabberStateColor(std::map<GrabberState, std::vector<float>> stateColorMap);
@@ -233,10 +233,10 @@ public:
     int debugID = -1;
 protected:
     std::vector<Vector3> computeCircle(Axis axis);
-    Vector3 getIntersectionWithPlane(Vector3 rayOrigin, Vector3 rayDir, Axis axis);
+    Vector3 getIntersectionWithPlane(const Vector3& rayOrigin, const Vector3& rayDir, Axis axis);
 
-    bool mouseOnCentralSphere(Vector3 rayOrigin, Vector3 rayDir);
-    bool mouseOnTranslationArrow(Vector3 rayOrigin, Vector3 rayDir);
+    bool mouseOnCentralSphere(const Vector3& rayOrigin, const Vector3& rayDir);
+    bool mouseOnTranslationArrow(const Vector3& rayOrigin, const Vector3& rayDir);
     std::pair<Axis, Vector3> mouseOnRotationCircle(const Vector3& rayOrigin, const Vector3& rayDir);
 
     bool stillOnInitialState = true;

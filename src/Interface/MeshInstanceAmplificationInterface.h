@@ -9,7 +9,7 @@ class MeshInstanceAmplificationInterface : public ActionInterface
 public:
     MeshInstanceAmplificationInterface(QWidget* parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void replay(nlohmann::json action); // Nothing to replay
     void reloadShaders();
 

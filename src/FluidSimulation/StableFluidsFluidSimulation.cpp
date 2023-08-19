@@ -27,7 +27,7 @@ void StableFluids::StableFluidsSimulation::step() {
 //    density.at(Vector3(x, y, z)) += amount;
 //}
 
-void StableFluids::StableFluidsSimulation::addVelocity(int x, int y, int z, Vector3 amount) {
+void StableFluids::StableFluidsSimulation::addVelocity(int x, int y, int z, const Vector3& amount) {
     velocity.at(Vector3(x, y, z)) += amount;
 }
 
@@ -217,7 +217,7 @@ void StableFluidsSimulation::addDensity(int x, int y, int z, float amount)
     this->density(x, y, z) += amount;
 }
 
-void StableFluidsSimulation::addVelocity(int x, int y, int z, Vector3 amount)
+void StableFluidsSimulation::addVelocity(int x, int y, int z, const Vector3& amount)
 {
     this->velocity(x, y, z) += amount;
 }

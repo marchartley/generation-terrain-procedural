@@ -15,7 +15,7 @@ class PrimitivePatchesInterface : public ActionInterface
 public:
     PrimitivePatchesInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void reloadShaders();
 
     void replay(nlohmann::json action);
@@ -33,11 +33,11 @@ public:
     ImplicitPatch* selectedPatch();
 
 public Q_SLOTS:
-    void mouseMovedOnMapEvent(Vector3 newPosition, TerrainModel *model);
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
-    void createPatchWithOperation(Vector3 pos);
+    void mouseMovedOnMapEvent(const Vector3& newPosition, TerrainModel *model);
+    void mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
+    void createPatchWithOperation(const Vector3& pos);
 
-    void setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition = Vector3());
+    void setSelectedShape(ImplicitPatch::PredefinedShapes newShape);
     void setCurrentOperation(ImplicitPatch::CompositionFunction newOperation);
     void setCurrentPositioning(ImplicitPatch::PositionalLabel positioning);
 
@@ -80,17 +80,17 @@ public Q_SLOTS:
 
     void loadTransformationRules();
 
-    void addParametricPoint(Vector3 point);
+    void addParametricPoint(const Vector3& point);
     void displayParametricCurve();
 
     void displayPatchesTree();
 
     void moveDebugBoxWithControlPoint();
-    void translatePatch(Vector3 translation);
-    void rotatePatch(Vector3 rotation);
+    void translatePatch(const Vector3& translation);
+    void rotatePatch(const Vector3& rotation);
 
 protected:
-    ImplicitPatch* createPatchFromParameters(Vector3 position, ImplicitPatch* replacedPatch = nullptr);
+    ImplicitPatch* createPatchFromParameters(const Vector3& position, ImplicitPatch* replacedPatch = nullptr);
     ImplicitPatch* createOperationPatchFromParameters(ImplicitPatch* composableA = nullptr, ImplicitPatch* composableB = nullptr, ImplicitBinaryOperator* replacedPatch = nullptr);
     ImplicitPatch* findPrimitiveById(int ID);
     ImplicitPatch* naiveApproachToGetParent(ImplicitPatch* child);
