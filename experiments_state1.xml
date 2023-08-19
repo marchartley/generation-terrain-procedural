@@ -1,22 +1,22 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.7.2">
   <State stereo="false">
-    <foregroundColor red="180" green="180" blue="180"/>
-    <backgroundColor red="127" green="127" blue="127"/>
+    <foregroundColor blue="180" green="180" red="180"/>
+    <backgroundColor blue="127" green="127" red="127"/>
   </State>
   <Display FPSIsDisplayed="false" axisIsDrawn="false" gridIsDrawn="false" cameraIsEdited="false"/>
-  <Geometry height="991" posX="-1" fullScreen="false" width="1920" posY="-9"/>
+  <Geometry posX="-1" fullScreen="false" width="1920" posY="-9" height="991"/>
   <Camera>
-    <Parameters zNearCoefficient="0.005" fieldOfView="0.785398" sceneRadius="500" orthoCoef="0" zClippingCoefficient="1.73205" Type="PERSPECTIVE">
-      <SceneCenter z="11" y="30" x="30"/>
+    <Parameters orthoCoef="0" fieldOfView="0.785398" zNearCoefficient="0.005" zClippingCoefficient="1.73205" Type="PERSPECTIVE" sceneRadius="500">
+      <SceneCenter x="50" y="50" z="25.5"/>
     </Parameters>
-    <Stereo IODist="0.062" focusDistance="1207.11" physScreenWidth="0.5"/>
+    <Stereo focusDistance="1207.11" physScreenWidth="0.5" IODist="0.062"/>
     <ManipulatedCameraFrame>
-      <position z="56.3983" y="-42.7106" x="126.632"/>
-      <orientation q3="-0.794163" q2="-0.281182" q1="-0.19629" q0="-0.501709"/>
-      <ManipulatedParameters spinSens="0.3" wheelSens="1" zoomSens="1" transSens="1" rotSens="1"/>
-      <ManipulatedCameraParameters flySpeed="5" zoomsOnPivotPoint="false" rotatesAroundUpVector="false">
-        <sceneUpVector z="0" y="1" x="0"/>
+      <position x="58.9575" y="68.8425" z="208.096"/>
+      <orientation q0="-2.56136e-18" q2="0.707107" q3="-0.707107" q1="2.56136e-18"/>
+      <ManipulatedParameters spinSens="0.3" zoomSens="1" transSens="1" rotSens="1" wheelSens="1"/>
+      <ManipulatedCameraParameters zoomsOnPivotPoint="false" rotatesAroundUpVector="false" flySpeed="5">
+        <sceneUpVector x="0" y="1" z="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>
   </Camera>

@@ -22,10 +22,20 @@
 #include <string>
 #include <set>
 
+#include "EnvObject/ExpressionParser.h"
+
 using namespace std;
 
 int main(int argc, char *argv[])
 {
+/*
+    ExpressionParser parser;
+    std::string expression;
+    std::cout << "Expression: ";
+    getline(std::cin, expression);
+    std::cout << parser.parse(expression)(Vector3(1, 1, 1)) << std::endl;
+    return 0;
+*/
     /*
     GridF values = GridF::random(100, 100, 50) - .8f;
     for (int x = 0; x < values.sizeX; x++) {

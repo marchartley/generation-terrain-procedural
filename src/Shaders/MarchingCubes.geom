@@ -114,6 +114,11 @@ vec3 getNormal(vec3 p) {
     float dx = clamp(cubeVal(x0) - cubeVal(x1), -1, 1);
     float dy = clamp(cubeVal(y0) - cubeVal(y1), -1, 1);
     float dz = clamp(cubeVal(z0) - cubeVal(z1), -1, 1);
+    /*
+    float dx = pow(clamp(cubeVal(x0) - cubeVal(x1), -1, 1), 5);
+    float dy = pow(clamp(cubeVal(y0) - cubeVal(y1), -1, 1), 5);
+    float dz = pow(clamp(cubeVal(z0) - cubeVal(z1), -1, 1), 5);
+    */
     return normalize(-vec3(dx, dy, dz));
 }
 

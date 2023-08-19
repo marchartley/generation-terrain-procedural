@@ -107,6 +107,7 @@ SOURCES += \
 #        src/FastWFC/propagator.cpp \
 #        src/FastWFC/wave.cpp \
 #        src/FastWFC/wfc.cpp \
+    src/EnvObject/ExpressionParser.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -255,6 +256,7 @@ HEADERS += \
 #    src/FastWFC/utils/array3D.hpp \
 #    src/FastWFC/wave.hpp \
 #    src/FastWFC/wfc.hpp \
+    src/EnvObject/ExpressionParser.h \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \

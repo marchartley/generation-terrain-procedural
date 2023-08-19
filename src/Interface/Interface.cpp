@@ -82,9 +82,10 @@ ViewerInterface::ViewerInterface() {
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/midCave");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
 
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
@@ -216,11 +217,12 @@ void ViewerInterface::setupUi()
         {nullptr,                       "wire_mode.png",                    "Display wireframe",                viewMenu,       [=]() { this->viewer->setViewerMode(WIRE_MODE); } },
         {nullptr,                       "fill_mode.png",                    "Display solid",                    viewMenu,       [=]() { this->viewer->setViewerMode(FILL_MODE); } },
         {smoothInterface,               "smooth_button.png",                "Smooth the terrain",               modelMenu,      [=]() { smoothInterface->applySmooth(); } },
-        {terrainGenerationInterface,    "",                                 "Use heightmap as reference",       modelMenu,      [=]() { terrainGenerationInterface->heightmapToAll(); } },
-        {terrainGenerationInterface,    "",                                 "Use voxels as reference",          modelMenu,      [=]() { terrainGenerationInterface->voxelsToAll(); } },
-        {terrainGenerationInterface,    "",                                 "Use layers as reference",          modelMenu,      [=]() { terrainGenerationInterface->layersToAll(); } },
-        {terrainGenerationInterface,    "",                                 "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
-        {terrainGenerationInterface,    "",                                 "Reload terrain from file",         modelMenu,      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); }},
+        {terrainGenerationInterface,    "heightmap_to_all_button.png",      "Use heightmap as reference",       modelMenu,      [=]() { terrainGenerationInterface->heightmapToAll(); } },
+        {terrainGenerationInterface,    "voxels_to_all_button.png",         "Use voxels as reference",          modelMenu,      [=]() { terrainGenerationInterface->voxelsToAll(); } },
+        {terrainGenerationInterface,    "layers_to_all_button.png",         "Use layers as reference",          modelMenu,      [=]() { terrainGenerationInterface->layersToAll(); } },
+        {terrainGenerationInterface,    "implicit_to_all_button.png",       "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
+        {terrainGenerationInterface,    "reset_button.png",                 "Reload terrain from file",         modelMenu,      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); } },
+        {terrainGenerationInterface,    "",                                 "Reinforce borders",                diggingMenu,    [=]() { terrainGenerationInterface->reinforceVoxels(); } }
     };
 
     for (auto& informations : interfacesToOpen) {

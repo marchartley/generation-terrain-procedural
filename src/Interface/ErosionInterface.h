@@ -47,6 +47,8 @@ public Q_SLOTS:
     void computePredefinedRocksLocations();
     void recomputeAboveVoxelRocksPositions(TerrainModel *terrain);
 
+    std::tuple<float, float, float> computeTerrainBoundaries(TerrainModel *terrain, BVHTree *boundariesTree);
+
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
     std::shared_ptr<UnderwaterErosion> erosion;
@@ -76,7 +78,7 @@ protected:
     float matterDensity = 500.f;
     float materialImpact = 1.f;
 
-    float airFlowfieldRotation = 0.f;
+    float airFlowfieldRotation = 270.f;
     float waterFlowfieldRotation = 90.f;
     float airForce = 0.f;
     float waterForce = 1.f;
@@ -88,13 +90,16 @@ protected:
     float erosionPowerValue = 1.f;
     float criticalShearStress = .8f;
 
+    bool continuousRotation = false;
+
     int numberOfIterations = 1;
 
     float initialCapacity = .0f;
 
     UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS;
 
-    bool displayTrajectories = true;
+    bool displayTrajectories = false;
+    bool displayBoundaries = false;
 
     std::string waterFlowImagePath = "";
     std::string airFlowImagePath = "";
@@ -111,6 +116,8 @@ protected:
 
     UnderwaterErosion erosionProcess;
     bool currentlyModifyingTerrain = false;
+
+    std::vector<std::pair<Vector3, float>> randomObstacles;
 };
 
 #endif // EROSIONINTERFACE_H

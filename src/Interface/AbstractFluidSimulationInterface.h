@@ -41,8 +41,8 @@ protected:
 
     FluidSimulation* _simulation;
 
-    bool displayBoundaries = true;
-    bool displayVectors = false;
+    bool displayBoundaries = false;
+    bool displayVectors = true;
     bool displayParticles = false;
     bool computeAtEachFrame = true;
 

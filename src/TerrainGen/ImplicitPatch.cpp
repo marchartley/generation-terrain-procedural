@@ -122,6 +122,17 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndT
     return {totalValue, materials};
 }
 
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(Vector3 pos)
+{
+    std::map<TerrainTypes, float> materials = this->getMaterials(pos);
+    float totalValue = 0.f;
+
+    for (const auto& [mat, val] : materials)
+        totalValue += val * (isIn(mat, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+
+    return {totalValue, {{SAND, totalValue}}};
+}
+
 Vector3 ImplicitPatch::getDimensions()
 {
     auto AABBox = this->getBBox();

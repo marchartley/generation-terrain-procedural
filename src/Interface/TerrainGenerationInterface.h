@@ -64,6 +64,8 @@ public Q_SLOTS:
     void openMapUI();
     void saveMapUI();
 
+    void reinforceVoxels();
+
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
