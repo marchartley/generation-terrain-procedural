@@ -41,7 +41,7 @@ public:
     static Quaternion squad(const Quaternion& q1, const Quaternion& q2, const Quaternion& a, const Quaternion& b, float t);
     Quaternion log() const;
     Quaternion exp() const;
-    void toAxisAngle(Vector3& axis, float& angle) const;
+    Vector3 toAxisAngle(float& angle) const;
     static Quaternion fromAxisAngle(const Vector3& axis, float angle);
 
     Matrix toRotationMatrix() const;

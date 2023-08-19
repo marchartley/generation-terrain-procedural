@@ -142,7 +142,7 @@ Vector3 Vector3::toEulerAngles()
                 );
 }
 
-Vector3 Vector3::eulerAnglesWith(Vector3 other)
+Vector3 Vector3::eulerAnglesWith(const Vector3& other)
 {
     return Vector3(false);
     /*Vector3 v1 = this->normalized();
@@ -268,15 +268,17 @@ Vector3 Vector3::ceil() const
     return v;
 }
 
-Vector3 Vector3::wrap(Vector3 p, Vector3 mini, Vector3 maxi)
+Vector3 Vector3::wrap(const Vector3& p, const Vector3& mini, const Vector3& maxi)
 {
-    p -= mini;
-    maxi -= mini;
-    Vector3 rounded = p.roundedDown();
-    Vector3 decimals = p - rounded;
-    Vector3 wrap = Vector3(int(rounded.x + maxi.x) % int(maxi.x),
-                           int(rounded.y + maxi.y) % int(maxi.y),
-                           int(rounded.z + maxi.z) % int(maxi.z)
+    Vector3 newP = p - mini;
+    Vector3 newMaxi = maxi - mini;
+//    p -= mini;
+//    maxi -= mini;
+    Vector3 rounded = newP.roundedDown();
+    Vector3 decimals = newP - rounded;
+    Vector3 wrap = Vector3(int(rounded.x + newMaxi.x) % int(newMaxi.x),
+                           int(rounded.y + newMaxi.y) % int(newMaxi.y),
+                           int(rounded.z + newMaxi.z) % int(newMaxi.z)
                            ) + decimals + mini;
     return wrap;
 }
@@ -307,19 +309,19 @@ Vector3 Vector3::random(float minNorm, float maxNorm)
     return Vector3::random() * random_gen::generate(minNorm, maxNorm);
 }
 
-Vector3 Vector3::random(Vector3 maxValues)
+Vector3 Vector3::random(const Vector3& maxValues)
 {
     return Vector3::random(Vector3(), maxValues);
 }
 
-Vector3 Vector3::random(Vector3 minValues, Vector3 maxValues)
+Vector3 Vector3::random(const Vector3& minValues, const Vector3& maxValues)
 {
     return Vector3(random_gen::generate(minValues.x, maxValues.x),
                    random_gen::generate(minValues.y, maxValues.y),
                    random_gen::generate(minValues.z, maxValues.z));
 }
 
-std::vector<float> Vector3::toArray(Vector3 v)
+std::vector<float> Vector3::toArray(const Vector3& v)
 {
     std::vector<float> arr;
     arr.insert(arr.end(), {v.x, v.y, v.z});
@@ -347,14 +349,14 @@ Vector3 Vector3::max()
                    std::numeric_limits<float>::max());
 }
 
-Vector3 Vector3::min(Vector3 a, Vector3 b)
+Vector3 Vector3::min(const Vector3& a, const Vector3& b)
 {
     if (!a.isValid()) return b;
     if (!b.isValid()) return a;
     return Vector3(std::min(a.x, b.x), std::min(a.y, b.y), std::min(a.z, b.z));
 }
 
-Vector3 Vector3::max(Vector3 a, Vector3 b)
+Vector3 Vector3::max(const Vector3& a, const Vector3& b)
 {
     if (!a.isValid()) return b;
     if (!b.isValid()) return a;
@@ -381,7 +383,7 @@ Vector3 Vector3::max(std::vector<Vector3> allVectors)
     return res;
 }
 
-std::vector<Vector3> Vector3::getAABBoxVertices(Vector3 mini, Vector3 maxi)
+std::vector<Vector3> Vector3::getAABBoxVertices(const Vector3& mini, const Vector3& maxi)
 {
     float minX = mini.x, maxX = maxi.x,
             minY = mini.y, maxY = maxi.y,
@@ -402,7 +404,7 @@ std::vector<Vector3> Vector3::getAABBoxVertices(Vector3 mini, Vector3 maxi)
 Vector3& Vector3::rotate(float angle_x, float angle_y, float angle_z) {
     return this->rotate(Vector3(angle_x, angle_y, angle_z));
 }
-Vector3& Vector3::rotate(Vector3 eulerAngles) {
+Vector3& Vector3::rotate(const Vector3& eulerAngles) {
     return this->applyTransform(eulerAngles.toRotationMatrix());
     /*Matrix newCoords = R.product(this->toMatrix());
     this->x = newCoords[0][0];
@@ -413,14 +415,14 @@ Vector3& Vector3::rotate(Vector3 eulerAngles) {
 Vector3 Vector3::rotated(float angle_x, float angle_y, float angle_z) {
     return this->rotated(Vector3(angle_x, angle_y, angle_z));
 }
-Vector3 Vector3::rotated(Vector3 eulerAngles) {
+Vector3 Vector3::rotated(const Vector3& eulerAngles) {
     Vector3 v = *this;
     return v.rotate(eulerAngles);
 }
 Vector3& Vector3::rotate(float angle, float dir_x, float dir_y, float dir_z) {
     return this->rotate(angle, Vector3(dir_x, dir_y, dir_z));
 }
-Vector3& Vector3::rotate(float angle, Vector3 direction) {
+Vector3& Vector3::rotate(float angle, const Vector3& direction) {
     float c = cos(angle), s = sin(angle);
     Vector3 v = direction.normalized(); // alias
     Matrix R (3, 3, std::vector<float>({
@@ -438,20 +440,20 @@ Vector3& Vector3::rotate(float angle, Vector3 direction) {
 Vector3 Vector3::rotated(float angle, float dir_x, float dir_y, float dir_z) {
     return this->rotated(angle, Vector3(dir_x, dir_y, dir_z));
 }
-Vector3 Vector3::rotated(float angle, Vector3 direction) {
+Vector3 Vector3::rotated(float angle, const Vector3& direction) {
     Vector3 v = *this;
     return v.rotate(angle, direction);
 }
 Vector3& Vector3::translate(float move_x, float move_y, float move_z) {
     return this->translate(Vector3(move_x, move_y, move_z));
 }
-Vector3& Vector3::translate(Vector3 move) {
+Vector3& Vector3::translate(const Vector3& move) {
     return (*this += move);
 }
 Vector3 Vector3::translated(float move_x, float move_y, float move_z) {
     return this->translated(Vector3(move_x, move_y, move_z));
 }
-Vector3 Vector3::translated(Vector3 move) {
+Vector3 Vector3::translated(const Vector3& move) {
     Vector3 v = *this;
     return v.translate(move);
 }
@@ -465,7 +467,7 @@ Vector3& Vector3::applyTransform(Matrix transformMatrix)
     return *this;
 }
 
-Vector3 &Vector3::changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
+Vector3 &Vector3::changeBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ)
 {
     Vector3 newVec = this->changedBasis(newX, newY, newZ);
     this->x = newVec.x;
@@ -474,14 +476,14 @@ Vector3 &Vector3::changeBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
     return *this;
 }
 
-Vector3 Vector3::changedBasis(Vector3 newX, Vector3 newY, Vector3 newZ)
+Vector3 Vector3::changedBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ)
 {
     Vector3 newVec;
     newVec += newX * this->x + newY * this->y + newZ * this->z;
     return newVec;
 }
 
-Vector3 Vector3::reflexion(Vector3 normal)
+Vector3 Vector3::reflexion(const Vector3& normal)
 {
     float dot = normal.dot(*this);
     Vector3 n2d = normal * 2.f * dot;
@@ -500,9 +502,10 @@ Vector3 Vector3::fromMatrix(Matrix mat)
 }
 
 
-Vector3 operator+(Vector3 a, Vector3 b) {
-    a += b;
-    return a;
+Vector3 operator+(const Vector3& a, const Vector3& b) {
+    Vector3 res = a;
+    res += b;
+    return res;
 }
 Vector3& Vector3::operator+=(const Vector3& o) {
     this->x += o.x;
@@ -510,9 +513,10 @@ Vector3& Vector3::operator+=(const Vector3& o) {
     this->z += o.z;
     return *this;
 }
-Vector3 operator-(Vector3 a, Vector3 b) {
-    a -= b;
-    return a;
+Vector3 operator-(const Vector3& a, const Vector3& b) {
+    Vector3 res = a;
+    res -= b;
+    return res;
 }
 Vector3& Vector3::operator-=(const Vector3& o) {
     this->x -= o.x;
@@ -525,32 +529,36 @@ float &Vector3::operator[](size_t i)
 {
     return ((float*)(this))[i];
 }
-//Vector3 operator*(Vector3 a, Vector3 b) {
+const float &Vector3::operator[](size_t i) const
+{
+    return ((float*)(this))[i];
+}
+//Vector3 operator*(const Vector3& a, const Vector3& b) {
 //    a *= b;
 //    return a;
 //}
-//Vector3 operator/(Vector3 a, Vector3 b) {
+//Vector3 operator/(const Vector3& a, const Vector3& b) {
 //    a /= b;
 //    return a;
 //}
-Vector3& Vector3::operator*=(Vector3 o) {
+Vector3& Vector3::operator*=(const Vector3& o) {
     this->x *= o.x;
     this->y *= o.y;
     this->z *= o.z;
     return *this;
 }
-//Vector3 Vector3::operator/(Vector3 o) {
+//Vector3 Vector3::operator/(const Vector3& o) {
 //    Vector3 v = *this;
 //    v /= o;
 //    return v;
 //}
-Vector3& Vector3::operator/=(Vector3 o) {
+Vector3& Vector3::operator/=(const Vector3& o) {
     this->x /= o.x;
     this->y /= o.y;
     this->z /= o.z;
     return *this;
 }/*
-Vector3 operator/(Vector3 a, Vector3 b) {
+Vector3 operator/(const Vector3& a, const Vector3& b) {
     a /= b;
     return a;
 }*/
@@ -606,70 +614,80 @@ Vector3& Vector3::operator-=(float o) {
     return *this;
 }*/
 
-Vector3 operator/(Vector3 a, Vector3 b) {
-    return a /= b;
+Vector3 operator/(const Vector3& a, const Vector3& b) {
+    Vector3 res = a;
+    res /= b;
+    return res;
 }
-Vector3 operator*(Vector3 a, Vector3 b) {
-    return a *= b;
+Vector3 operator*(const Vector3& a, const Vector3& b) {
+    Vector3 res = a;
+    res *= b;
+    return res;
 }
-//Vector3 operator+(float a, Vector3 b) {
+//Vector3 operator+(float a, const Vector3& b) {
 //    return b + a;
 //}
-//Vector3 operator-(float a, Vector3 b) {
+//Vector3 operator-(float a, const Vector3& b) {
 //    return b * -1.f + a;
 //}
-Vector3 operator*(float a, Vector3 b) {
-    return b *= a;
+Vector3 operator*(float a, const Vector3& b) {
+    Vector3 res = b;
+    res *= a;
+    return res;
 }
 
-Vector3 operator/(float a, Vector3 b) {
+Vector3 operator/(float a, const Vector3& b) {
     return Vector3(a / b.x, a / b.y, a / b.z);
 }
 
-//Vector3 operator+(Vector3 b, float a) {
+//Vector3 operator+(const Vector3& b, float a) {
 //    return b + a;
 //}
-//Vector3 operator-(Vector3 b, float a) {
+//Vector3 operator-(const Vector3& b, float a) {
 //    return b * -1.f + a;
 //}
-Vector3 operator*(Vector3 b, float a) {
-    return b *= a;
+Vector3 operator*(const Vector3& b, float a) {
+    Vector3 res = b;
+    res *= a;
+    return res;
 }
-Vector3 operator/(Vector3 b, float a) {
-    return b /= a;
+Vector3 operator/(const Vector3& b, float a) {
+    Vector3 res = b;
+    res /= a;
+    return res;
 }
 
-bool operator==(Vector3 a, Vector3 b)
+bool operator==(const Vector3& a, const Vector3& b)
 {
     float epsilon = 1e-8;
     return std::abs(a.x - b.x) < epsilon && std::abs(a.y - b.y) < epsilon && std::abs(a.z - b.z) < epsilon; //int(a.x * 1e8) == int(b.x * 1e8) && int(a.y * 1e8) == int(b.y * 1e8) && int(a.z * 1e8) == int(b.z * 1e8);
 }
 
-Vector3 operator-(Vector3 v) {
+Vector3 operator-(const Vector3& v) {
     return v * -1.f;
 }
 
-bool operator!=(Vector3 a, Vector3 b)
+bool operator!=(const Vector3& a, const Vector3& b)
 {
     return !(a == b);
 }
 
-bool operator<(Vector3 a, Vector3 b)
+bool operator<(const Vector3& a, const Vector3& b)
 {
     return a.norm2() < b.norm2();
 }
 
-bool operator<=(Vector3 a, Vector3 b)
+bool operator<=(const Vector3& a, const Vector3& b)
 {
     return !(a > b);
 }
 
-bool operator>(Vector3 a, Vector3 b)
+bool operator>(const Vector3& a, const Vector3& b)
 {
     return a.norm2() > b.norm2();
 }
 
-bool operator>=(Vector3 a, Vector3 b)
+bool operator>=(const Vector3& a, const Vector3& b)
 {
     return !(a < b);
 }
@@ -684,114 +702,49 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vector3> v) {
     return io;
 }
 
-Vector3 std::abs(Vector3 o) { return o.abs(); }
+Vector3 std::abs(const Vector3& o) { return o.abs(); }
 
-bool Vector3::isInBox(Vector3 pos, Vector3 minPos, Vector3 maxPos) {
+bool Vector3::isInBox(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos) {
     return (minPos.x <= pos.x && pos.x <= maxPos.x) && (minPos.y <= pos.y && pos.y <= maxPos.y) && (minPos.z <= pos.z && pos.z <= maxPos.z);
 //    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
 }
 
 // Inside : positive
 // Outside: negative
-float Vector3::signedManhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::signedManhattanDistanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension)
 {
-    // TODO : Need to be improved one day
-    pos -= minPos;
-    maxPos -= minPos;
+    Vector3 newPos = pos - minPos;
+    Vector3 newMax = maxPos - minPos;
 
     if (ignoreZdimension) {
-        pos = pos.xy();
-        maxPos = maxPos.xy();
+        newPos = newPos.xy();
+        newMax = newMax.xy();
     }
-    if (Vector3::isInBox(pos, Vector3(), maxPos)) {
+    if (Vector3::isInBox(newPos, Vector3(), newMax)) {
         if (ignoreZdimension)
-            return -std::min({pos.x, pos.y, maxPos.x - pos.x, maxPos.y - pos.y});
+            return -std::min({newPos.x, newPos.y, newMax.x - newPos.x, newMax.y - newPos.y});
         else
-            return -std::min({pos.x, pos.y, pos.z, maxPos.x - pos.x, maxPos.y - pos.y, maxPos.z - pos.z});
+            return -std::min({newPos.x, newPos.y, newPos.z, newMax.x - newPos.x, newMax.y - newPos.y, newMax.z - newPos.z});
     } else {
         if (ignoreZdimension)
-            return -std::min({pos.x, pos.y, maxPos.x - pos.x, maxPos.y - pos.y});
+            return -std::min({newPos.x, newPos.y, newMax.x - newPos.x, newMax.y - newPos.y});
         else
-            return -std::min({pos.x, pos.y, pos.z, maxPos.x - pos.x, maxPos.y - pos.y, maxPos.z - pos.z});
+            return -std::min({newPos.x, newPos.y, newPos.z, newMax.x - newPos.x, newMax.y - newPos.y, newMax.z - newPos.z});
     }
-    /*
-    Vector3 halfRectDim = (maxPos - minPos) * .5f;
-    pos = (pos - (minPos)).abs() - halfRectDim;
-
-    if (ignoreZdimension) {
-        pos = pos.xy();
-        halfRectDim = halfRectDim.xy();
-    }
-    Vector3 posMinHalf = pos;
-    float distOut = posMinHalf.norm();
-    float distIn = pos.norm();
-//    return Vector3::max(pos.abs(), Vector3()).norm();
-    return (halfRectDim - pos.abs()).maxComp();
-
-
-
-    pos -= minPos;
-    maxPos -= minPos;
-
-    Vector3 q = pos.abs() - maxPos; //abs(p) - b;
-    float maxQ = Vector3::max(q, Vector3()).maxComp();
-    float minQ = std::min(q.maxComp(), 0.f);
-    return maxQ + minQ; // length(max(q,0.0)) + min(max(q.x,max(q.y,q.z)),0.0);
-    */
-    /*
-    if (ignoreZdimension) {
-        pos = pos.xy();
-        maxPos = maxPos.xy();
-    }
-    Vector3 posMinusMax = pos - maxPos;
-
-    float res = 0.f;
-    if (Vector3::isInBox(pos, Vector3(), maxPos)) {
-        res = -std::max(-pos.minComp(), -((maxPos - pos).maxComp()));
-    } else {
-        res = std::min(pos.minComp(), -((pos - maxPos).maxComp()));
-    }
-    return res;*/
-
-//    Vector3 d = pos.abs() - maxPos;
-//    return Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f);
-
-
-//    return -(Vector3::max(d, Vector3(0, 0, 0)).norm() + std::min(d.maxComp(), 0.f));
-//    return Vector3::distanceToBoundaries(pos, minPos, maxPos, ignoreZdimension) * (Vector3::isInBox(pos, minPos, maxPos) ? 1.f : -1.f);
 }
 
-float Vector3::manhattanDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::manhattanDistanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension)
 {
     return std::abs(Vector3::signedManhattanDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
-//    float x = std::min(std::abs(pos.x), std::abs(maxPos.x - pos.x));
-//    float y = std::min(std::abs(pos.y), std::abs(maxPos.y - pos.y));
-//    float z = std::min(std::abs(pos.z), std::abs(maxPos.z - pos.z)) * (ignoreZdimension ? 0.f : 1.f);
-    //    return std::max({x, y, z});
 }
 
-float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::signedDistanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension)
 {
-    /*maxPos -= minPos;
-    pos -= minPos;
-    minPos = Vector3();
-    pos = ((pos - minPos) / (maxPos * .5f)) - (maxPos * .5f);
-    // (0, 0, 0) is the center of the box
-    // (1, 0, 0) is the right-center-center, (0, 1, 0) is the center-front-center and (0, 0, 1) is the center-center-top
-    pos = pos.abs();
-    if (pos.x <= 1.f && pos.y <= 1.f && pos.z <= 1.f) {
-        // Inside the box
-    } else {
-        // Outside the box
-        if (pos.x > 1.f && pos.y <= 1.f && pos.z <= 1.f) return pos.x - 1.f;
-        if (pos.x <= 1.f && pos.y > 1.f && pos.z <= 1.f) return pos.y - 1.f;
-        if (pos.x <= 1.f && pos.y <= 1.f && pos.z > 1.f) return pos.z - 1.f;
-        return (pos - Vector3(1, 1, 1)).norm2();
-    }*/
     Vector3 boxDim = maxPos - minPos;
     Vector3 halfDim = boxDim * .5f;
-    pos = pos - (minPos + halfDim); // ((maxPos - minPos) * .5f);
-    Vector3 q = pos.abs() - halfDim; // - ((maxPos - minPos) * .5f);
+//    pos = pos - (minPos + halfDim); // ((maxPos - minPos) * .5f);
+//    Vector3 q = pos.abs() - halfDim; // - ((maxPos - minPos) * .5f);
+    Vector3 q = (pos - (minPos + halfDim)).abs() - halfDim; // - ((maxPos - minPos) * .5f);
     if (ignoreZdimension)
         q.z = 0.f;
     float d = Vector3::max(q, Vector3(0, 0, 0)).norm() + std::min(q.maxComp(), 0.f);
@@ -799,7 +752,7 @@ float Vector3::signedDistanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 m
 
 }
 
-float Vector3::distanceToBoundaries(Vector3 pos, Vector3 minPos, Vector3 maxPos, bool ignoreZdimension)
+float Vector3::distanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension)
 {
     return std::abs(Vector3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 }
@@ -820,7 +773,7 @@ AABBox::AABBox()
 
 }
 
-AABBox::AABBox(Vector3 mini, Vector3 maxi) : mini(mini), maxi(maxi)
+AABBox::AABBox(const Vector3& mini, const Vector3& maxi) : mini(mini), maxi(maxi)
 {
 
 }
@@ -831,7 +784,7 @@ AABBox::AABBox(std::vector<Vector3> allPointsToContain)
 
 }
 
-Vector3 AABBox::normalize(Vector3 p)
+Vector3 AABBox::normalize(const Vector3& p)
 {
     auto mini = this->min();
     auto maxi = this->max();
@@ -853,7 +806,7 @@ AABBox& AABBox::expand(const std::vector<Vector3>& newPoints)
     return *this;
 }
 
-Vector3 AABBox::random(Vector3 mini, Vector3 maxi)
+Vector3 AABBox::random(const Vector3& mini, const Vector3& maxi)
 {
     return Vector3::random(mini, maxi);
 }

@@ -62,7 +62,7 @@ Vector3 BSpline::getPoint(float x)
     }
     return controls[0];
 }
-Vector3 BSpline::getPoint(float x, Vector3 a, Vector3 b)
+Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b)
 {
     return a * (1 - x) + b * x;
 }
@@ -82,7 +82,7 @@ Vector3 BSpline::getSecondDerivative(float x)
     return (getDerivative(nextTime) - getDerivative(previousTime)).normalized();
 }
 
-float BSpline::estimateClosestTime(Vector3 pos, float epsilon)
+float BSpline::estimateClosestTime(const Vector3& pos, float epsilon)
 {
     if (this->points.size() == 0) {
         return 0;
@@ -115,22 +115,22 @@ float BSpline::estimateClosestTime(Vector3 pos, float epsilon)
     return closestTime;
 }
 
-Vector3 BSpline::estimateClosestPos(Vector3 pos, float epsilon)
+Vector3 BSpline::estimateClosestPos(const Vector3& pos, float epsilon)
 {
     // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
     return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
 }
 
-float BSpline::estimateSqrDistanceFrom(Vector3 pos, float epsilon)
+float BSpline::estimateSqrDistanceFrom(const Vector3& pos, float epsilon)
 {
     return (this->estimateClosestPos(pos, epsilon) - pos).norm2();
 }
-float BSpline::estimateDistanceFrom(Vector3 pos, float epsilon)
+float BSpline::estimateDistanceFrom(const Vector3& pos, float epsilon)
 {
     return std::sqrt(this->estimateSqrDistanceFrom(pos, epsilon));
 }
 
-float BSpline::estimateSignedDistanceFrom(Vector3 pos, float epsilon)
+float BSpline::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
 {
     // Only available for 2D paths, otherwise there's no sense
     float t = this->estimateClosestTime(pos, epsilon);
@@ -219,7 +219,7 @@ BSpline& BSpline::close()
     return *this;
 }
 
-float CatmullNextT(Vector3 P0, Vector3 P1, float t_prev, float alpha)
+float CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
 {
     return std::pow((P0 - P1).norm2(), alpha) + t_prev;
 }
@@ -378,7 +378,7 @@ BSpline BSpline::computeConvexHull()
     return stack;
 }
 
-BSpline &BSpline::translate(Vector3 translation)
+BSpline &BSpline::translate(const Vector3& translation)
 {
     for (auto& point : points)
         point += translation;

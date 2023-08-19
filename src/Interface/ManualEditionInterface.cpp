@@ -11,7 +11,7 @@ ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterfac
     setAddingMode(addingMode);
 }
 
-void ManualEditionInterface::display(Vector3 camPos)
+void ManualEditionInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -74,7 +74,7 @@ void ManualEditionInterface::setAddingMode(bool newMode)
 //    this->grabber->state = (this->addingMode ? POSITIVE : NEGATIVE);
 }
 
-void ManualEditionInterface::setPosition(Vector3 newPosition)
+void ManualEditionInterface::setPosition(const Vector3& newPosition)
 {
     this->grabber->move(newPosition);
 }
@@ -101,7 +101,7 @@ void ManualEditionInterface::applyModification()
     Q_EMIT this->updated();
 }
 
-void ManualEditionInterface::mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel *model)
+void ManualEditionInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel *model)
 {
     this->setPosition(mouseWorldPosition);
     if (readyToModify) {
@@ -109,7 +109,7 @@ void ManualEditionInterface::mouseMovedOnMapEvent(Vector3 mouseWorldPosition, Te
     }
 }
 
-void ManualEditionInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
+void ManualEditionInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if (this->isVisible() && mouseInMap &&
             event->button() == Qt::MouseButton::LeftButton &&

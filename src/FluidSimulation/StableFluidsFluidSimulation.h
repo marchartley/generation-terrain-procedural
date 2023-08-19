@@ -23,7 +23,7 @@ public:
     GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     void step();
 //    void addDensity(int x, int y, int z, float amount);
-    void addVelocity(int x, int y, int z, Vector3 amount);
+    void addVelocity(int x, int y, int z, const Vector3& amount);
 
 //private:
     float diffusion = 0.f, viscosity = 0.1f;

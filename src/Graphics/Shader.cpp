@@ -176,7 +176,7 @@ void Shader::setFloat(std::string pname, float value)
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
-void Shader::setVector(std::string pname, Vector3 value)
+void Shader::setVector(std::string pname, const Vector3& value)
 {
     if (!this->use()) return;
     this->setVector(pname, (float*)value, 3);

@@ -80,7 +80,7 @@ class PositionalLight : public LightSource
 {
 public:
     PositionalLight();
-    PositionalLight(float ambiant[4], float diffuse[4], float specular[4], Vector3 pos);
+    PositionalLight(float ambiant[4], float diffuse[4], float specular[4], const Vector3& pos);
     virtual void update();
 
     Vector3 position;

@@ -7,18 +7,18 @@ Slider3D::Slider3D() : Slider3D(Vector3(), 1.f, 0.f, 0.f, 1.f, Slider3DOrientati
 
 }
 
-Slider3D::Slider3D(Vector3 positionMin, float length, float val, float minValue, float maxValue, Slider3DOrientation orientation)
+Slider3D::Slider3D(const Vector3& positionMin, float length, float val, float minValue, float maxValue, Slider3DOrientation orientation)
 {
     Vector3 positionMax = positionMin + Vector3((orientation & X ? 1 : 0), (orientation & Y ? 1 : 0), (orientation & Z ? 1 : 0)).normalized() * length;
     this->init(positionMin, positionMax, minValue, maxValue, val);
 }
 
-Slider3D::Slider3D(Vector3 positionMin, Vector3 positionMax, float val, float minValue, float maxValue)
+Slider3D::Slider3D(const Vector3& positionMin, const Vector3& positionMax, float val, float minValue, float maxValue)
 {
     this->init(positionMin, positionMax, minValue, maxValue, val);
 }
 
-void Slider3D::setPosition(Vector3 newPos)
+void Slider3D::setPosition(const Vector3& newPos)
 {
     Vector3 movement = newPos - this->minPos;
     this->minPos += movement;
@@ -28,7 +28,7 @@ void Slider3D::setPosition(Vector3 newPos)
     this->sliderMesh.fromArray({minPos, maxPos});
 }
 
-void Slider3D::setPositions(Vector3 newStart, Vector3 newEnd)
+void Slider3D::setPositions(const Vector3& newStart, const Vector3& newEnd)
 {
     float currentValue = this->getValue();
     this->minPos = newStart;
@@ -60,7 +60,7 @@ float Slider3D::setValue(float newValue)
     return newValue;
 }
 
-float Slider3D::setValue(Vector3 newPos)
+float Slider3D::setValue(const Vector3& newPos)
 {
     this->sliderControlPoint->move(newPos);
     return this->getValue();
@@ -77,7 +77,7 @@ float Slider3D::getValue()
     return Vector3::remap(this->sliderControlPoint->getPosition(), this->minPos, this->maxPos, this->minValue, this->maxValue);
 }
 
-void Slider3D::init(Vector3 positionMin, Vector3 positionMax, float minValue, float maxValue, float val)
+void Slider3D::init(const Vector3& positionMin, const Vector3& positionMax, float minValue, float maxValue, float val)
 {
     this->minPos = positionMin;
     this->maxPos = positionMax;
@@ -97,7 +97,7 @@ SliderConstraint::SliderConstraint()
 {
     this->constraint = new qglviewer::WorldConstraint();
 }
-SliderConstraint::SliderConstraint(Vector3 minPos, Vector3 maxPos)
+SliderConstraint::SliderConstraint(const Vector3& minPos, const Vector3& maxPos)
     : minPos(minPos), maxPos(maxPos)
 {
     this->constraint = new qglviewer::WorldConstraint();

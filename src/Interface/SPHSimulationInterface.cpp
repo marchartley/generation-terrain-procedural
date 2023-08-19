@@ -34,7 +34,7 @@ void SPHSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap
 //    this->connectionsMesh.useIndices = false;
 }
 
-void SPHSimulationInterface::display(Vector3 camPos)
+void SPHSimulationInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;

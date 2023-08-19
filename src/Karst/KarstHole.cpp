@@ -11,7 +11,7 @@ KarstHole::KarstHole(float width, float height, KarstHolePredefinedShapes starti
     this->height = height;
 }
 
-KarstHole::KarstHole(Vector3 start, Vector3 end, float width, float height,
+KarstHole::KarstHole(const Vector3& start, const Vector3& end, float width, float height,
                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
     : KarstHole(width, height, startingShape, endingShape)
 {

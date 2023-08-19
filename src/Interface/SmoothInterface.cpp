@@ -10,7 +10,7 @@ SmoothInterface::SmoothInterface(QWidget *parent) : ActionInterface("smooth", pa
     this->voxelGrid = voxelGrid;
 }*/
 
-void SmoothInterface::display(Vector3 camPos)
+void SmoothInterface::display(const Vector3& camPos)
 {
 
 }

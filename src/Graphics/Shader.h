@@ -37,7 +37,7 @@ public:
     void setBool(std::string pname, bool value);
     void setInt(std::string pname, int value);
     void setFloat(std::string pname, float value);
-    void setVector(std::string pname, Vector3 value);
+    void setVector(std::string pname, const Vector3& value);
     void setVector(std::string pname, glm::vec2 value);
 //    void setVector(std::string pname, glm::vec3 value);
     void setVector(std::string pname, glm::vec4 value);

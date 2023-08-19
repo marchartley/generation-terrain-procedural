@@ -18,7 +18,7 @@ TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", pa
     //    QObject::connect(flowFieldComputeButton, &QPushButton::pressed, this, [=](){ voxelGrid->computeFlowfield(); } );
 }*/
 
-void TunnelInterface::display(Vector3 camPos)
+void TunnelInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -63,7 +63,7 @@ void TunnelInterface::hide()
     CustomInteractiveObject::hide();
 }
 
-void TunnelInterface::mouseClickedOnMapEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
+void TunnelInterface::mouseClickedOnMapEvent(const Vector3& mousePosInWorld, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible() && mouseInMap && event->button() == Qt::MouseButton::LeftButton)
         this->addCurvesControlPoint(model->getTerrainPos(mousePosInWorld));
@@ -148,7 +148,7 @@ QLayout* TunnelInterface::createGUI()
 }
 
 
-void TunnelInterface::addCurvesControlPoint(Vector3 pos, bool justUpdatePath)
+void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdatePath)
 {
     if (!justUpdatePath)
     {

@@ -21,9 +21,9 @@ class KarstPathGenerationInterface : public ActionInterface
 public:
     KarstPathGenerationInterface(QWidget *parent = nullptr);
     ~KarstPathGenerationInterface();
-//    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, Vector3 AABBoxMinPos, Vector3 AABBoxMaxPos);
+//    KarstPathGenerationInterface(KarstPathsGeneration karstCreator, const Vector3& AABBoxMinPos, const Vector3& AABBoxMaxPos);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void replay(nlohmann::json action);
 
     std::unique_ptr<InteractiveVector> fractureVector;
@@ -47,7 +47,7 @@ Q_SIGNALS:
 //    void karstPathUpdated();
 
 public Q_SLOTS:
-    void updateFracture(Vector3 newFractureDir = Vector3());
+    void updateFracture(const Vector3& newFractureDir = Vector3());
     void updateWaterHeight(float newHeight = 0.f);
 
     void computeKarst();

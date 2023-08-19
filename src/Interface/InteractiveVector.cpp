@@ -7,12 +7,12 @@ InteractiveVector::InteractiveVector()
 {
 
 }
-InteractiveVector::InteractiveVector(Vector3 end)
+InteractiveVector::InteractiveVector(const Vector3& end)
     : InteractiveVector(Vector3(), end)
 {
 
 }
-InteractiveVector::InteractiveVector(Vector3 start, Vector3 end)
+InteractiveVector::InteractiveVector(const Vector3& start, const Vector3& end)
 {
     this->startingControlPoint = std::make_unique<ControlPoint>(start, 5.f);
     this->endingControlPoint = std::make_unique<ControlPoint>(end, 3.f);
@@ -40,13 +40,13 @@ void InteractiveVector::display()
     this->arrowMesh.display(GL_LINES, 3.f);
 }
 
-void InteractiveVector::setPosition(Vector3 start)
+void InteractiveVector::setPosition(const Vector3& start)
 {
     Vector3 movement = start - this->startingControlPoint->getPosition();
     this->setPositions(start, this->endingControlPoint->getPosition() + movement);
 }
 
-void InteractiveVector::setPositions(Vector3 start, Vector3 end)
+void InteractiveVector::setPositions(const Vector3& start, const Vector3& end)
 {
     this->startingControlPoint->move(start);
     this->endingControlPoint->move(end);

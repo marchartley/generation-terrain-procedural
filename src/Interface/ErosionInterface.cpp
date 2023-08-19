@@ -172,7 +172,7 @@ std::tuple<float, float, float> ErosionInterface::computeTerrainBoundaries(Terra
     return {sumGeometry, sumBVH, sumMeshingBoundaries};
 }
 
-void ErosionInterface::display(Vector3 camPos)
+void ErosionInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -885,13 +885,13 @@ std::function<Vector3 (Vector3)> ErosionInterface::computeFlowfieldFunction()
         for (auto& v : airFlow)
             v.normalize();
 
-        flowfieldFunction = [&](Vector3 pos) {
+        flowfieldFunction = [&](const Vector3& pos) {
             return (voxelsEnvironmentalDensities.at(pos) < 500 ? airFlow.at(pos.xy()) : waterFlow.at(pos.xy()));
         };
     } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLUID_SIMULATION) {
         auto fluidSim = voxelGrid->getFlowfield();
 
-        flowfieldFunction = [&](Vector3 pos) {
+        flowfieldFunction = [&](const Vector3& pos) {
             return fluidSim.at(pos);
         };
     } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::BASIC) {

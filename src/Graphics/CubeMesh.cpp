@@ -108,7 +108,7 @@ void CubeMesh::display(GLenum shape)
     }
 }
 
-std::vector<Vector3> CubeMesh::createTriangles(Vector3 minPos, Vector3 maxPos)
+std::vector<Vector3> CubeMesh::createTriangles(const Vector3& minPos, const Vector3& maxPos)
 {
     std::vector<Vector3> box = CubeMesh::cubesEdgesVertices;
     Vector3 dim = maxPos - minPos;

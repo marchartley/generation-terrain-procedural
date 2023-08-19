@@ -76,7 +76,7 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
     return *this;
 }
 
-KarstHoleProfile &KarstHoleProfile::translate(Vector3 translation, bool verbose)
+KarstHoleProfile &KarstHoleProfile::translate(const Vector3& translation, bool verbose)
 {
     if (verbose)
         std::cout << "Points are going to move " << translation << "\n";

@@ -619,14 +619,14 @@ bool Viewer::eventFilter(QObject* obj, QEvent* event)
     return QGLViewer::eventFilter(obj, event);
 }
 
-void Viewer::clipViewTemporarily(Vector3 direction, Vector3 center, bool active)
+void Viewer::clipViewTemporarily(const Vector3& direction, const Vector3& center, bool active)
 {
     if (direction.norm2() > 0) {
         Vector3 cameraDirection = this->camera()->viewDirection();
         if (cameraDirection.dot(direction) > 1e-2)
-            direction *= -1.f; // The clipping will happen from the camera point of view
-
-        this->clipPlaneDirection = direction;
+            this->clipPlaneDirection = -direction; // The clipping will happen from the camera point of view
+        else
+            this->clipPlaneDirection = direction;
         this->clipPlanePosition = center;
     }
     this->temporaryClipPlaneActivated = active;

@@ -110,9 +110,10 @@ Quaternion Quaternion::exp() const {
         return Quaternion(std::cos(a), s * x / a, s * y / a, s * z / a);
 }
 
-void Quaternion::toAxisAngle(Vector3 &axis, float &angle) const {
+Vector3 Quaternion::toAxisAngle(float &angle) const {
     angle = 2 * std::acos(w);
     float s = std::sqrt(1 - w*w);
+    Vector3 axis;
 
     if (s < 0.001) {
         axis.x = x;
@@ -123,6 +124,7 @@ void Quaternion::toAxisAngle(Vector3 &axis, float &angle) const {
         axis.y = y / s;
         axis.z = z / s;
     }
+    return axis;
 }
 
 Quaternion Quaternion::fromAxisAngle(const Vector3 &axis, float angle) {

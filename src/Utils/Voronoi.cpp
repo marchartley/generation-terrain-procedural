@@ -28,13 +28,13 @@ Voronoi::Voronoi() : Voronoi(std::vector<Vector3>({}))
 
 }
 
-Voronoi::Voronoi(int numberRandomPoints, Vector3 maxBoundarie)
+Voronoi::Voronoi(int numberRandomPoints, const Vector3& maxBoundarie)
     : Voronoi(numberRandomPoints, Vector3(), maxBoundarie)
 {
 
 }
 
-Voronoi::Voronoi(int numberRandomPoints, Vector3 minBoundarie, Vector3 maxBoundarie)
+Voronoi::Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vector3& maxBoundarie)
     : Voronoi(numberRandomPoints, ShapeCurve({
                                                  Vector3(minBoundarie.xy()),
                                                  Vector3(minBoundarie.x, maxBoundarie.y),
@@ -82,13 +82,13 @@ Voronoi::Voronoi(std::vector<Vector3> pointset)
                                      });
 }
 
-Voronoi::Voronoi(std::vector<Vector3> pointset, Vector3 maxBoundarie)
+Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie)
     : Voronoi(pointset, Vector3(0, 0, 0), maxBoundarie)
 {
 //    this->maxBoundarie = maxBoundarie;
 }
 
-Voronoi::Voronoi(std::vector<Vector3> pointset, Vector3 minBoundarie, Vector3 maxBoundarie)
+Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, const Vector3& maxBoundarie)
     : Voronoi(pointset, ShapeCurve({
                                        Vector3(minBoundarie.xy()),
                                        Vector3(minBoundarie.x, maxBoundarie.y),
@@ -121,7 +121,7 @@ struct boost::polygon::point_traits<Vector3> {
 struct Segment {
   Vector3 p0;
   Vector3 p1;
-  Segment(Vector3 p0, Vector3 p1) : p0(p0), p1(p1) {}
+  Segment(const Vector3& p0, const Vector3& p1) : p0(p0), p1(p1) {}
   Segment(int x1, int y1, int x2, int y2) : p0(x1, y1), p1(x2, y2) {}
 };
 template <>

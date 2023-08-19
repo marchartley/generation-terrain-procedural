@@ -88,7 +88,7 @@ Matrix3<float> Matrix3<Vector3>::divergence()
 }
 
 template<>
-Vector3 Matrix3<Vector3>::gradient(Vector3 position)
+Vector3 Matrix3<Vector3>::gradient(const Vector3& position)
 {
     this->raiseErrorOnBadCoord = false;
     Vector3 flooredPos = position.floor();

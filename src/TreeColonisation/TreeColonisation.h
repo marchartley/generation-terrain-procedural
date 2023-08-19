@@ -21,11 +21,11 @@ namespace TreeColonisationAlgo {
     {
     public:
         TreeColonisation();
-        TreeColonisation(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength = 1.f, float randomness = 0.f);
-        TreeColonisation(Graph<NODE_TYPE> graph, Vector3 startPos, float segmentLength = 1.f, float randomness = 0.f);
+        TreeColonisation(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength = 1.f, float randomness = 0.f);
+        TreeColonisation(Graph<NODE_TYPE> graph, const Vector3& startPos, float segmentLength = 1.f, float randomness = 0.f);
         ~TreeColonisation();
 
-        void init(std::vector<Vector3> nodes, Vector3 startPos, float segmentLength, float randomness);
+        void init(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength, float randomness);
         void reset(std::vector<Vector3> newKeypoints = std::vector<Vector3>());
 
         void process();
@@ -51,7 +51,7 @@ namespace TreeColonisationAlgo {
     class Segment : public std::enable_shared_from_this<Segment> {
     public:
         Segment();
-        Segment(std::shared_ptr<Segment> parent, Vector3 pos, Vector3 direction, float length);
+        Segment(std::shared_ptr<Segment> parent, const Vector3& pos, const Vector3& direction, float length);
 
         float distanceTo(std::vector<std::shared_ptr<Node>> nodes);
         float distanceTo(std::shared_ptr<Node> node);
@@ -73,7 +73,7 @@ namespace TreeColonisationAlgo {
     class Node {
     public:
         Node();
-        Node(Vector3 pos, NODE_TYPE type = ATTRACTOR);
+        Node(const Vector3& pos, NODE_TYPE type = ATTRACTOR);
 
         Vector3 pos;
         NODE_TYPE type;

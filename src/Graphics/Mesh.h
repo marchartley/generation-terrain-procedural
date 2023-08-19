@@ -24,10 +24,10 @@ public:
     Mesh& normalize();
     Mesh& scale(float factor);
     Mesh& scale(float factor_x, float factor_y, float factor_z);
-    Mesh& scale(Vector3 factor);
-    Mesh& translate(Vector3 translation);
+    Mesh& scale(const Vector3& factor);
+    Mesh& translate(const Vector3& translation);
     Mesh& translate(float translation_x, float translation_y, float translation_z);
-    Mesh& rotate(Vector3 rotation);
+    Mesh& rotate(const Vector3& rotation);
     Mesh& rotate(float rotation_x, float rotation_y, float rotation_Z);
 
     void clear();
@@ -40,8 +40,8 @@ public:
     void displayWithOutlines(std::vector<float> faceColor, GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
 
-    void displayAsScalarField(GridF field, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
-    void displayAsVectorField(GridV3 field, Vector3 finalDimensions = Vector3(false), float maxMaginitude = -1, bool normalize = false);
+    void displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
+    void displayAsVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMaginitude = -1, bool normalize = false);
 
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
     void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
@@ -52,10 +52,10 @@ public:
 
     void setShader(std::shared_ptr<Shader> shader);
 
-    void reorderVertices(Vector3 camPos);
-    void reorderLines(Vector3 camPos);
-    void reorderTriangles(Vector3 camPos);
-    void reorderAny(Vector3 camPos, int nbVertexToUse);
+    void reorderVertices(const Vector3& camPos);
+    void reorderLines(const Vector3& camPos);
+    void reorderTriangles(const Vector3& camPos);
+    void reorderAny(const Vector3& camPos, int nbVertexToUse);
 
     std::vector<std::vector<Vector3>> getTriangles(std::vector<int> indices = std::vector<int>()) const;
 
@@ -65,15 +65,15 @@ public:
 
     static Mesh applyMarchingCubes(const GridF &values);
 
-    GridI voxelize(Vector3 dimensions) const;
-    GridI voxelizeSurface(Vector3 dimensions) const;
+    GridI voxelize(const Vector3& dimensions) const;
+    GridI voxelizeSurface(const Vector3& dimensions) const;
 
     bool isWatertight();
 
 
-    static Mesh createVectorField(GridV3 field, Vector3 finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false);
+    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false);
 
-    static void displayScalarField(GridF field, Mesh& mesh, Vector3 cameraPosition, std::vector<float> isoValues = {0.5f});
+    static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
 
 
     unsigned int bufferID;

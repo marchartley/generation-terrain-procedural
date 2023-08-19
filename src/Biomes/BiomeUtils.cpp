@@ -105,7 +105,7 @@ Graph<int> subsetToFitMostBiomes(Graph<int> graph, std::vector<std::string> biom
     return returnedGraph;
 }
 
-std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, Vector3 biomePosition, ShapeCurve area) {
+std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, const Vector3& biomePosition, ShapeCurve area) {
     std::string biomeClass = json_content.at("class").get<std::string>();
     // Should be able to retrieve the parameters of the biome...
     std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));

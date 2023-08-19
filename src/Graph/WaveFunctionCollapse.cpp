@@ -83,7 +83,7 @@ std::set<int> convertToSet(std::vector<int> v)
 std::vector<int> convertToVector(std::set<int> s) {
     return std::vector<int>(s.begin(), s.end());
 }
-bool WaveFunctionCollapse::propagate(Vector3 from, bool forceNeighborsPropagation)
+bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPropagation)
 {
     if (!finalMap.checkCoord(from)) return true;
 
@@ -199,7 +199,7 @@ bool WaveFunctionCollapse::propagate(Vector3 from, bool forceNeighborsPropagatio
     }*/
 }
 
-std::vector<GridI > WaveFunctionCollapse::createLabelsFromImage(GridI image, Vector3 tilesDim)
+std::vector<GridI > WaveFunctionCollapse::createLabelsFromImage(GridI image, const Vector3& tilesDim)
 {
     std::vector<GridI > patterns;
     Vector3 halfDimLow = Vector3(1, 1, 0);

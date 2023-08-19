@@ -24,10 +24,10 @@ public:
     LayerBasedGrid();
     LayerBasedGrid(int nx, int ny, float nz = 1);
 
-    TerrainTypes getValue(Vector3 pos);
+    TerrainTypes getValue(const Vector3& pos);
     TerrainTypes getValue(float x, float y, float z);
 
-    void addLayer(Vector3 position, float height, TerrainTypes material);
+    void addLayer(const Vector3& position, float height, TerrainTypes material);
 
     void reorderLayers();
 
@@ -39,12 +39,12 @@ public:
 
     VoxelGrid toVoxelGrid();
     GridF voxelize(int fixedHeight = -1, float kernelSize = 1.f);
-    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
-    std::map<TerrainTypes, float> getKernel(Vector3 pos, float kernelSize);
-    std::pair<TerrainTypes, float> getMaterialAndHeight(Vector3 pos);
+    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    std::map<TerrainTypes, float> getKernel(const Vector3& pos, float kernelSize);
+    std::pair<TerrainTypes, float> getMaterialAndHeight(const Vector3& pos);
 
-    Vector3 getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
-    Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
+    Vector3 getFirstIntersectingStack(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
 
     std::pair<GridI, GridF> getMaterialAndHeightsGrid();
 
@@ -59,7 +59,7 @@ public:
 
     void add(ImplicitPatch* patch);
 
-    Mesh getGeometry(Vector3 dimensions = Vector3(false));
+    Mesh getGeometry(const Vector3& dimensions = Vector3(false));
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);
@@ -72,7 +72,7 @@ public:
 
     std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> transformationRules;
 
-    virtual bool checkIsInGround(Vector3 position);
+    virtual bool checkIsInGround(const Vector3& position);
 
     float getSizeX() { return this->layers.sizeX; }
     float getSizeY() { return this->layers.sizeY; }

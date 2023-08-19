@@ -12,12 +12,12 @@ TerrainModel::~TerrainModel()
 
 }
 
-float TerrainModel::getHeight(Vector3 pos)
+float TerrainModel::getHeight(const Vector3& pos)
 {
     return this->getHeight(pos.x, pos.y);
 }
 
-bool TerrainModel::contains(Vector3 v)
+bool TerrainModel::contains(const Vector3& v)
 {
     return Vector3::isInBox(v, Vector3(), this->getDimensions());
 }

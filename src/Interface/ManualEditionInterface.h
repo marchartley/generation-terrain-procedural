@@ -15,7 +15,7 @@ class ManualEditionInterface : public ActionInterface
 public:
     ManualEditionInterface(QWidget *parent = nullptr);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void replay(nlohmann::json action);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
@@ -29,11 +29,11 @@ public Q_SLOTS:
     void setStrength(float strength);
     void setAddingMode(bool newMode);
 
-    void setPosition(Vector3 newPosition);
+    void setPosition(const Vector3& newPosition);
     void applyModification();
 
-    void mouseMovedOnMapEvent(Vector3 mouseWorldPosition, TerrainModel* model);
-    void mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
+    void mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model);
+    void mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel *model);
 
 public:
     void mouseMoveEvent(QMouseEvent* event);

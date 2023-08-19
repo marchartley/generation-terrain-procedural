@@ -66,7 +66,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
     //    this->numParticles = 0;
 }
 
-void FLIPSimulation::integrateParticles(double dt, Vector3 gravity) {
+void FLIPSimulation::integrateParticles(double dt, const Vector3& gravity) {
     for (Particle& p : particles) {
         p.velocity += gravity * dt;
         p.position = Vector3::wrap(p.position + p.velocity * dt, Vector3(), this->dimensions);

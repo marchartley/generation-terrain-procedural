@@ -53,7 +53,7 @@ std::string biomeName(int ID);
 FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph<int> adjencyGraph);
 Graph<int> subsetToFitMostBiomes(Graph<int> graph, std::vector<std::string> biomesNames);
 
-std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, Vector3 biomePosition, ShapeCurve area);
+std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, const Vector3& biomePosition, ShapeCurve area);
 
 std::shared_ptr<BiomeInstance> generateBiome(Graph<int> biomeGraph);
 

@@ -11,7 +11,7 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("fault
 //    this->createGUI();
 }
 
-void FaultSlipInterface::display(Vector3 camPos)
+void FaultSlipInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -78,7 +78,7 @@ void FaultSlipInterface::replay(nlohmann::json action)
         }
     }
 }
-void FaultSlipInterface::updateSlipVector(Vector3 newSlipVector)
+void FaultSlipInterface::updateSlipVector(const Vector3& newSlipVector)
 {
     this->remesh();
 }

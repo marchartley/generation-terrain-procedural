@@ -9,7 +9,7 @@ BiomeInterface::BiomeInterface(QWidget* parent)
     createGUI();
 }
 
-void BiomeInterface::display(Vector3 camPos)
+void BiomeInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -34,18 +34,19 @@ void BiomeInterface::display(Vector3 camPos)
 }
 
 
-Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, Vector3 pos, Vector3 offset = Vector3(), float scaling = 1.f) {
+Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, const Vector3& offset = Vector3(), float scaling = 1.f) {
+    Vector3 finalPos = pos;
 //    pos.x = (pos.x - offset.x) * scaling; // clamp(pos.x / scaling - offset.x, 0.f, grid->getDimensions().x - 1);
 //    pos.y = (pos.y - offset.y) * scaling; // clamp(pos.y / scaling - offset.y, 0.f, grid->getDimensions().y - 1);
-    pos.z = std::max(pos.z, 0.f); // In case of small imprecision
-    while (grid->getVoxelValues().at(pos) > 0) {
-        pos += Vector3(0, 0, 1); // Move the position one voxel heigher
-        if (!grid->contains(pos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
-            pos.z = 0;
+    finalPos.z = std::max(finalPos.z, 0.f); // In case of small imprecision
+    while (grid->getVoxelValues().at(finalPos) > 0) {
+        finalPos += Vector3(0, 0, 1); // Move the position one voxel heigher
+        if (!grid->contains(finalPos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
+            finalPos.z = 0;
             break;
         }
     }
-    return pos;
+    return finalPos;
 }
 
 GridF archeTunnel(BSpline path, float size, float strength, bool addingMatter, std::shared_ptr<VoxelGrid> grid) {
@@ -95,12 +96,12 @@ GridF BiomeInterface::preparePatateCorail(std::shared_ptr<BiomeInstance> biome) 
     return archeTunnel(BSpline({patatePosition, patatePosition + Vector3(0, 0, 0.001f)}), radius, 2.f, true, voxelGrid);
 }
 
-Vector3 BiomeInterface::fromHeightmapPosToVoxels(Vector3 pos)
+Vector3 BiomeInterface::fromHeightmapPosToVoxels(const Vector3& pos)
 {
     return (pos - this->voxelGridOffsetStart) * this->voxelGridScaleFactor;
 }
 
-Vector3 BiomeInterface::fromVoxelsPosToHeightmap(Vector3 pos)
+Vector3 BiomeInterface::fromVoxelsPosToHeightmap(const Vector3& pos)
 {
     return (pos / this->voxelGridScaleFactor) + this->voxelGridOffsetStart;
 }
@@ -496,7 +497,7 @@ void BiomeInterface::mousePressEvent(QMouseEvent *event)
     ActionInterface::mousePressEvent(event);
 }
 
-void BiomeInterface::mouseDoubleClickOnMapEvent(Vector3 mousePosition, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
+void BiomeInterface::mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if(this->isVisible() && mouseInMap) {
         // Zoom on the area if left click, zoom out with right click
@@ -535,7 +536,7 @@ void BiomeInterface::mouseDoubleClickEvent(QMouseEvent *event)
     ActionInterface::mouseDoubleClickEvent(event);
 }
 */
-void BiomeInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
+void BiomeInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible()) {
         if (!mouseInMap) return;

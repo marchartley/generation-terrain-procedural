@@ -8,7 +8,7 @@ class GraphNode
 public:
     GraphNode();
     GraphNode(T value);
-    GraphNode(T value, Vector3 pos, int index = 0);
+    GraphNode(T value, const Vector3& pos, int index = 0);
 
     void addNeighbor(std::shared_ptr<GraphNode<T>> neighbor);
     void addNeighbor(std::shared_ptr<GraphNode<T>> neighbor, float distance);
@@ -40,7 +40,7 @@ GraphNode<T>::GraphNode(T value) : GraphNode(value, Vector3(), 0)
 
 }
 template<class T>
-GraphNode<T>::GraphNode(T value, Vector3 pos, int index)
+GraphNode<T>::GraphNode(T value, const Vector3& pos, int index)
     : value(value), pos(pos), index(index)
 {
 

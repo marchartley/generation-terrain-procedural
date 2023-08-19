@@ -123,7 +123,7 @@ public:
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
-    std::vector<Vector3> CreateCrack(Vector3 start, Vector3 end, bool applyChanges = true);
+    std::vector<Vector3> CreateCrack(const Vector3& start, const Vector3& end, bool applyChanges = true);
 
     // With a predefined tunnel :
     std::vector<Vector3> CreateTunnel(KarstHole& tunnel, bool addingMatter = false, bool applyChanges = true);

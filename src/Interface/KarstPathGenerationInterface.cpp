@@ -27,7 +27,7 @@ KarstPathGenerationInterface::~KarstPathGenerationInterface()
     waterHeightSlider.reset();
 }
 
-void KarstPathGenerationInterface::display(Vector3 camPos)
+void KarstPathGenerationInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -89,7 +89,7 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
     this->karstCreator = new KarstPathsGeneration(availableGrid, voxelGrid->getDimensions(), 20.f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
 }
 
-void KarstPathGenerationInterface::updateFracture(Vector3 newFractureDir)
+void KarstPathGenerationInterface::updateFracture(const Vector3& newFractureDir)
 {
     if (karstCreator->fracturesDirections.empty())
         this->karstCreator->addFractureDirection(FractureDirection(Vector3(0, 0, 0), 1.f));

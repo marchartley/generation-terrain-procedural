@@ -402,7 +402,7 @@ void Plotter::updateLabelsPositions()
 //    this->blockSignals(false);
 }
 
-void Plotter::selectData(Vector3 pos)
+void Plotter::selectData(const Vector3& pos)
 {
     float minDist = 0.05f;
     this->selectedScatterData.clear();

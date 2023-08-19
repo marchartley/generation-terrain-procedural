@@ -28,7 +28,7 @@ PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     hotreloadTimer->start();
 }
 
-void PrimitivePatchesInterface::display(Vector3 camPos)
+void PrimitivePatchesInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -356,7 +356,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
     /*
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, [=](Vector3 rotation){
+    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, [=](const Vector3& rotation){
         primitiveControlPoint->blockSignals(true);
         primitiveSelectionGui->blockSignals(true);
 //        QObject::blockSignals(true);
@@ -449,15 +449,15 @@ ImplicitPatch *PrimitivePatchesInterface::selectedPatch()
     }
 }
 
-void PrimitivePatchesInterface::mouseMovedOnMapEvent(Vector3 newPosition, TerrainModel* model)
+void PrimitivePatchesInterface::mouseMovedOnMapEvent(const Vector3& newPosition, TerrainModel* model)
 {
     if (this->isVisible()) {
         this->currentPos = newPosition;
-        this->setSelectedShape(this->currentShapeSelected, newPosition);
+        this->setSelectedShape(this->currentShapeSelected);
     }
 }
 
-void PrimitivePatchesInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
+void PrimitivePatchesInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
 {
     if (this->isVisible() && mouseInMap) {
 
@@ -472,7 +472,7 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(Vector3 mousePosInMap, bo
     }
 }
 
-void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
+void PrimitivePatchesInterface::createPatchWithOperation(const Vector3& pos)
 {
     ImplicitPatch* patch = this->createPatchFromParameters(pos - this->functionSize.xy() * .5f);
     ImplicitPatch* previousMain = this->selectedPatch();
@@ -523,9 +523,9 @@ void PrimitivePatchesInterface::createPatchWithOperation(Vector3 pos)
 
 }
 
-void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes newShape, Vector3 newPosition)
+void PrimitivePatchesInterface::setSelectedShape(ImplicitPatch::PredefinedShapes newShape)
 {
-    newPosition = this->currentPos;
+    Vector3 newPosition = this->currentPos;
     this->currentShapeSelected = newShape;
 
     auto vertices = CubeMesh::cubesVertices;
@@ -1488,7 +1488,7 @@ void PrimitivePatchesInterface::loadTransformationRules()
     this->layerGrid->transformationRules = rules;
 }
 
-void PrimitivePatchesInterface::addParametricPoint(Vector3 point)
+void PrimitivePatchesInterface::addParametricPoint(const Vector3& point)
 {
     this->parametricCurve.points.push_back(point);
     auto path = parametricCurve.getPath(100);
@@ -1588,7 +1588,7 @@ void PrimitivePatchesInterface::moveDebugBoxWithControlPoint()
     }
 }
 
-void PrimitivePatchesInterface::translatePatch(Vector3 translation)
+void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
 {
 //        QObject::blockSignals(true);
     // Get patch being manipulated
@@ -1635,7 +1635,7 @@ void PrimitivePatchesInterface::translatePatch(Vector3 translation)
     }
 }
 
-void PrimitivePatchesInterface::rotatePatch(Vector3 rotation)
+void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
 {
 //        QObject::blockSignals(true);
     // Get patch being manipulated
@@ -1677,8 +1677,9 @@ void PrimitivePatchesInterface::rotatePatch(Vector3 rotation)
     }
 }
 
-ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 position, ImplicitPatch *replacedPatch)
+ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(const Vector3& position, ImplicitPatch *replacedPatch)
 {
+    Vector3 finalPos = position;
 //    if (desiredPatchFromFile != nullptr) {
     if (this->currentShapeSelected == ImplicitPatch::ImplicitHeightmap) {
         ImplicitPatch* patch; // = desiredPatchFromFile;
@@ -1700,7 +1701,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         // Set the center of the patch at mouse position
         auto [BBoxMin, BBoxMax] = patch->getBBox();
 //        Vector3 center = (BBoxMin + BBoxMax) * .5f;
-        Vector3 translation = position;
+        Vector3 translation = finalPos;
         // Create a translation operation to move the new patch
         ImplicitTranslation* translate = new ImplicitTranslation;
         translate->translate(translation);
@@ -1712,23 +1713,23 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(Vector3 posi
         Vector3 funcSize = this->functionSize * layerGrid->scaling;
         if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
             auto AABBox = this->parametricCurve.AABBox();
-            position = std::get<0>(AABBox) - funcSize * .5f;
-            funcSize = (std::get<1>(AABBox) + funcSize * .5f) - position;
+            finalPos = std::get<0>(AABBox) - funcSize * .5f;
+            funcSize = (std::get<1>(AABBox) + funcSize * .5f) - finalPos;
         }
         BSpline translatedSpline = this->parametricCurve;
         for (auto& p : translatedSpline.points)
-            p -= position;
+            p -= finalPos;
         ImplicitPrimitive* primitive = (ImplicitPrimitive*) ImplicitPatch::createPredefinedShape(currentShapeSelected, funcSize, selectedSigma, translatedSpline);
-        primitive->position = position.xy();
+        primitive->position = finalPos.xy();
         primitive->setDimensions(funcSize);
         primitive->predefinedShape = this->currentShapeSelected;
         primitive->parametersProvided = {this->selectedSigma};
 
         primitive->material = this->selectedTerrainType;
         primitive->name = toCapitalize(stringFromPredefinedShape(currentShapeSelected));
-        if (this->currentPositioning == ImplicitPatch::PositionalLabel::FIXED_POS && position.z != 0.f) {
+        if (this->currentPositioning == ImplicitPatch::PositionalLabel::FIXED_POS && finalPos.z != 0.f) {
             ImplicitTranslation* translate = new ImplicitTranslation;
-            translate->translate(Vector3(0.f, 0.f, position.z));
+            translate->translate(Vector3(0.f, 0.f, finalPos.z));
             translate->addChild(primitive);
             // Return the translation operation
             translate->updateCache();

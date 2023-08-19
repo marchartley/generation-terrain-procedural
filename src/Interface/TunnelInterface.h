@@ -16,14 +16,14 @@ public:
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 
-    void display(Vector3 camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3(false));
     void replay(nlohmann::json action);
 
 
     QLayout* createGUI();
 
 Q_SIGNALS:
-    void needToClipView(Vector3 direction, Vector3 center, bool active);
+    void needToClipView(const Vector3& direction, const Vector3& center, bool active);
     void tunnelCreated(KarstHole& tunnel);
 
 public Q_SLOTS:
@@ -34,7 +34,7 @@ public Q_SLOTS:
     void setTunnelWidth(int newSize);
     void setTunnelHeight(int newSize);
     void setErosionStrength(float newStrength) { this->erosionStrength = newStrength;}
-    void addCurvesControlPoint(Vector3 pos, bool justUpdatePath = false);
+    void addCurvesControlPoint(const Vector3& pos, bool justUpdatePath = false);
 
     void updateStartingShape();
     void updateEndingShape();
@@ -43,7 +43,7 @@ public Q_SLOTS:
     void createTunnel(bool removingMatter = true);
     void createCrack(bool removingMatter = true);
 
-    void mouseClickedOnMapEvent(Vector3 mousePosInWorld, bool mouseInMap, QMouseEvent *event, TerrainModel *model);
+    void mouseClickedOnMapEvent(const Vector3& mousePosInWorld, bool mouseInMap, QMouseEvent *event, TerrainModel *model);
     void wheelEvent(QWheelEvent* event);
 
 public:

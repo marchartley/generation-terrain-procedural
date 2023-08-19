@@ -231,16 +231,16 @@ float normalizedGaussian(const Vector3& size, const Vector3& position, float sig
     return 0.f;
 }
 
-float normalDistribution(Vector3 size, Vector3 position, float sigma)
+float normalDistribution(const Vector3& size, const Vector3& position, float sigma)
 {
     float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
     float sqrSigma = 2 * sigma * sigma;
-    position -= (size * .5f);
-    float normal = std::exp(-position.norm2()/(sqrSigma)) * oneOverSqrt2Pi;
+//    position -= (size * .5f);
+    float normal = std::exp(-(position - size * .5f).norm2()/(sqrSigma)) * oneOverSqrt2Pi;
     return normal;
 }
 
-float normalizedNormalDistribution(Vector3 size, Vector3 position, float sigma)
+float normalizedNormalDistribution(const Vector3& size, const Vector3& position, float sigma)
 {
     float maxValue = normalDistribution(size, size * .5f, sigma);
     if (maxValue > 0.f)

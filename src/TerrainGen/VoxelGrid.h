@@ -51,8 +51,8 @@ public:
     void letGravityMakeSandFall(bool remesh = true);
     void letGravityMakeSandFallWithFlow(bool remesh = true);
     GridF shareSandWithNeighbors(); // Doesn't affect the grid directly, but changes are returned to be applied after
-    void applyModification(GridF modifications, Vector3 anchor = Vector3());
-    void add2DHeightModification(GridF heightmapModifier, float factor = 1.f, Vector3 anchor = Vector3());
+    void applyModification(GridF modifications, const Vector3& anchor = Vector3());
+    void add2DHeightModification(GridF heightmapModifier, float factor = 1.f, const Vector3& anchor = Vector3());
     bool undo();
     bool redo();
     size_t getCurrentHistoryIndex() const;
@@ -60,10 +60,10 @@ public:
     GridF getHeights();
     float getHeight(float x, float y);
 
-    bool contains(Vector3 v);
+    bool contains(const Vector3& v);
     bool contains(float x, float y, float z);
 
-    virtual bool checkIsInGround(Vector3 position);
+    virtual bool checkIsInGround(const Vector3& position);
 
     void limitVoxelValues(float limitedValue);
 
@@ -76,13 +76,13 @@ public:
 
     void computeVoxelGroups();
     GridF getVoxelValues();
-    GridF getVoxelized(Vector3 dimensions = Vector3(false), Vector3 scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
-    Mesh getGeometry(Vector3 dimensions = Vector3(false));
+    Mesh getGeometry(const Vector3& dimensions = Vector3(false));
 
-    float getVoxelValue(Vector3 pos);
+    float getVoxelValue(const Vector3& pos);
     float getVoxelValue(float x, float y, float z);
-    void setVoxelValue(Vector3 pos, float newVal);
+    void setVoxelValue(const Vector3& pos, float newVal);
     void setVoxelValue(float x, float y, float z, float newVal);
 
     void saveState();
@@ -90,8 +90,8 @@ public:
     void saveMap(std::string filename);
     void retrieveMap(std::string filename);
 
-    Vector3 getFirstIntersectingVoxel(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
-    Vector3 getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos = Vector3(false), Vector3 maxPos = Vector3(false));
+    Vector3 getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
 
     float getSizeX() { return _cachedVoxelValues.sizeX; }
     float getSizeY() { return _cachedVoxelValues.sizeY; }

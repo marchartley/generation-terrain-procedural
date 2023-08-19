@@ -11,7 +11,7 @@ GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity",
     this->voxelGrid = voxelGrid;
 }*/
 
-void GravityInterface::display(Vector3 camPos)
+void GravityInterface::display(const Vector3& camPos)
 {
 
 }

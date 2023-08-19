@@ -43,7 +43,7 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
     this->previousState = layers;
 }
 
-TerrainTypes LayerBasedGrid::getValue(Vector3 pos)
+TerrainTypes LayerBasedGrid::getValue(const Vector3& pos)
 {
     return getValue(pos.x, pos.y, pos.z);
 }
@@ -62,7 +62,7 @@ TerrainTypes LayerBasedGrid::getValue(float x, float y, float z)
     return (z < 0 ? TerrainTypes::DIRT : TerrainTypes::WATER);
 }
 
-void LayerBasedGrid::addLayer(Vector3 position, float height, TerrainTypes material)
+void LayerBasedGrid::addLayer(const Vector3& position, float height, TerrainTypes material)
 {
     auto layers = this->layers.at(position);
     auto newLayers = layers;
@@ -160,7 +160,7 @@ float LayerBasedGrid::getHeight(float x, float y)
     return currentHeight;
 }
 
-//float LayerBasedGrid::getHeight(Vector3 pos)
+//float LayerBasedGrid::getHeight(const Vector3& pos)
 //{
 //    return this->getHeight(pos.x, pos.y);
 //}
@@ -267,12 +267,12 @@ GridF LayerBasedGrid::voxelize(int fixedHeight, float kernelSize)
     return values;
 }
 
-GridF LayerBasedGrid::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF LayerBasedGrid::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
     return voxelize();
 }
 
-std::map<TerrainTypes, float> LayerBasedGrid::getKernel(Vector3 pos, float kernelSize)
+std::map<TerrainTypes, float> LayerBasedGrid::getKernel(const Vector3& pos, float kernelSize)
 {
     std::map<TerrainTypes, float> finalDensities;
     float halfK = kernelSize * .5f;
@@ -308,7 +308,7 @@ std::map<TerrainTypes, float> LayerBasedGrid::getKernel(Vector3 pos, float kerne
     return finalDensities;
 }
 
-std::pair<TerrainTypes, float> LayerBasedGrid::getMaterialAndHeight(Vector3 pos)
+std::pair<TerrainTypes, float> LayerBasedGrid::getMaterialAndHeight(const Vector3& pos)
 {
     if (!this->layers.checkCoord(pos.xy()))
         return {TerrainTypes::AIR, 0.f};
@@ -323,33 +323,34 @@ std::pair<TerrainTypes, float> LayerBasedGrid::getMaterialAndHeight(Vector3 pos)
     return {TerrainTypes::WATER, 0.f};
 }
 
-Vector3 LayerBasedGrid::getFirstIntersectingStack(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 LayerBasedGrid::getFirstIntersectingStack(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    if (!minPos.isValid()) minPos = Vector3();
-    if (!maxPos.isValid()) maxPos = this->getDimensions();
+    AABBox myAABBox = AABBox(Vector3::max(minPos, Vector3()), Vector3::max(maxPos, this->getDimensions()));
+//    if (!minPos.isValid()) minPos = Vector3();
+//    if (!maxPos.isValid()) maxPos = this->getDimensions();
 
     Vector3 currPos = origin;
 //    auto values = this->getVoxelValues();
 //    values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
             float isoval = LayerBasedGrid::densityFromMaterial(this->getMaterialAndHeight(currPos).first);
             if (isoval > 0.0) {
                 return currPos;
             }
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
     return Vector3(false);
 }
 
-Vector3 LayerBasedGrid::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 LayerBasedGrid::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
     return this->getFirstIntersectingStack(origin, dir, minPos, maxPos);
 }
@@ -726,23 +727,24 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     return;
 }
 
-Mesh LayerBasedGrid::getGeometry(Vector3 dimensions)
+Mesh LayerBasedGrid::getGeometry(const Vector3& dimensions)
 {
     std::vector<Vector3> vertices;
 
     Vector3 originalDimensions = Vector3(this->getSizeX(), this->getSizeY(), 1);
+    Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
-        dimensions = originalDimensions;
-    dimensions.z = 1; // Force the Z to 1
+        finalDimensions = originalDimensions;
+    finalDimensions.z = 1; // Force the Z to 1
 
-    auto copiedLayers = this->layers.resizeNearest(dimensions);
+    auto copiedLayers = this->layers.resizeNearest(finalDimensions);
 
 //    auto layersAndHeights = this->getMaterialAndHeightsGrid();
 //    auto layers = layersAndHeights.first;
 //    auto heights = layersAndHeights.second;
 
-    for (int x = 0; x < dimensions.x; x++) {
-        for (int y = 0; y < dimensions.y; y++) {
+    for (int x = 0; x < finalDimensions.x; x++) {
+        for (int y = 0; y < finalDimensions.y; y++) {
             auto layers = copiedLayers.at(x, y);
             float currentHeight = 0.f;
 
@@ -766,7 +768,7 @@ Mesh LayerBasedGrid::getGeometry(Vector3 dimensions)
     Mesh m;
     m.useIndices = false;
     m.fromArray(vertices);
-    m.scale(originalDimensions / dimensions);
+    m.scale(originalDimensions / finalDimensions);
     return m;
 }
 
@@ -803,7 +805,7 @@ float LayerBasedGrid::maxDensityFromMaterial(TerrainTypes material)
     return valMax;
 }
 
-bool LayerBasedGrid::checkIsInGround(Vector3 position)
+bool LayerBasedGrid::checkIsInGround(const Vector3& position)
 {
     return !(isIn(this->getValue(position), LayerBasedGrid::invisibleLayers));
 }

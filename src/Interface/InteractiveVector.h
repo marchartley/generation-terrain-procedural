@@ -11,21 +11,21 @@ class InteractiveVector : public CustomInteractiveObject
     Q_OBJECT
 public:
     InteractiveVector();
-    InteractiveVector(Vector3 end);
-    InteractiveVector(Vector3 start, Vector3 end);
+    InteractiveVector(const Vector3& end);
+    InteractiveVector(const Vector3& start, const Vector3& end);
 
     void display();
-    void setPosition(Vector3 start);
-    void setPositions(Vector3 start, Vector3 end);
+    void setPosition(const Vector3& start);
+    void setPositions(const Vector3& start, const Vector3& end);
 
 public Q_SLOTS:
     void hide();
     void show();
 
 Q_SIGNALS:
-    void modified(Vector3 newVector);
-    void startingModified(Vector3 newVector);
-    void endingModified(Vector3 newVector);
+    void modified(const Vector3& newVector);
+    void startingModified(const Vector3& newVector);
+    void endingModified(const Vector3& newVector);
 
 public:
     Vector3 getResultingVector() { return getEndingVector() - getStartingVector(); }

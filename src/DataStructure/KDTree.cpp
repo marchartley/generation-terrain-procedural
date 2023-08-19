@@ -41,7 +41,7 @@ KDNode* KDTree::build(std::vector<Particle> particles, int depth) {
     return node;
 }
 
-void KDTree::findNeighbors(std::vector<Particle> &particles, KDNode *node, Vector3 &position, float maxDistance, std::vector<size_t> &neighbors) {
+void KDTree::findNeighbors(std::vector<Particle> &particles, KDNode *node, const Vector3& position, float maxDistance, std::vector<size_t> &neighbors) {
     if (node == NULL) {
         return;
     }

@@ -24,7 +24,7 @@ public:
 
     KDNode* build(std::vector<Particle> particles, int depth);
 
-    void findNeighbors(std::vector<Particle>& particles, KDNode* node, Vector3& position, float maxDistance, std::vector<size_t>& neighbors);
+    void findNeighbors(std::vector<Particle>& particles, KDNode* node, const Vector3& position, float maxDistance, std::vector<size_t>& neighbors);
 };
 
 #endif // KDTREE_H

@@ -111,7 +111,7 @@ PositionalLight::PositionalLight()
 {
 
 }
-PositionalLight::PositionalLight(float ambiant[4], float diffuse[4], float specular[4], Vector3 pos)
+PositionalLight::PositionalLight(float ambiant[4], float diffuse[4], float specular[4], const Vector3& pos)
     : LightSource(ambiant, diffuse, specular), position(pos)
 {
 

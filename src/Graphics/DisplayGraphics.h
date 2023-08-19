@@ -51,7 +51,7 @@ public:
 
 Q_SIGNALS:
     void updated();
-    void clickedOnValue(Vector3 pos);
+    void clickedOnValue(const Vector3& pos);
 };
 
 class Chart : public QChart {
@@ -118,7 +118,7 @@ private:
 //    QValueAxis* m_axisY;
 public Q_SLOTS:
     void updateLabelsPositions();
-    void selectData(Vector3 pos);
+    void selectData(const Vector3& pos);
 };
 
 

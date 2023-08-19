@@ -137,7 +137,7 @@ nlohmann::json BiomeModel::toJson()
     return content;
 }
 
-std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shared_ptr<BiomeModel> model, Vector3 biomePosition, ShapeCurve area) {
+std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shared_ptr<BiomeModel> model, const Vector3& biomePosition, ShapeCurve area) {
     std::string biomeClass = model->modelName;
     // Should be able to retrieve the parameters of the biome...
     std::shared_ptr<BiomeInstance> instance = std::make_shared<BiomeInstance>(BiomeInstance::fromClass(biomeClass));
@@ -292,7 +292,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     }
     return instance;
 }
-std::shared_ptr<BiomeInstance> BiomeModel::createInstance(Vector3 initialPosition, ShapeCurve initialArea)
+std::shared_ptr<BiomeInstance> BiomeModel::createInstance(const Vector3& initialPosition, ShapeCurve initialArea)
 {
     std::shared_ptr<BiomeInstance> instance = recursivelyCreateBiomeInstanceFromModel(std::shared_ptr<BiomeModel>(this), initialPosition, initialArea);
     instance->completeIfNeeded();

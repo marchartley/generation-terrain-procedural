@@ -24,7 +24,7 @@ ImplicitPatch::ImplicitPatch()
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
 
-float ImplicitPatch::getMaxHeight(Vector3 pos)
+float ImplicitPatch::getMaxHeight(const Vector3& pos)
 {
     auto AABBox = this->getBBox();
     if (this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) == -1.f) {
@@ -52,7 +52,7 @@ float ImplicitPatch::getMaxHeight(Vector3 pos)
     return this->_cachedMaxHeight.at((pos - AABBox.min()).xy());
 }
 
-float ImplicitPatch::getMinHeight(Vector3 pos)
+float ImplicitPatch::getMinHeight(const Vector3& pos)
 {
     auto AABBox = this->getBBox();
     if (this->_cachedMinHeight.at((pos - AABBox.min()).xy()) == -1.f) {
@@ -81,23 +81,40 @@ float ImplicitPatch::getMaximalHeight(AABBox BBox)
     return this->getMaximalHeight(BBox.min(), BBox.max());
 }
 
-float ImplicitPatch::getMinimalHeight(Vector3 minBox, Vector3 maxBox)
+float ImplicitPatch::getMinimalHeight(const Vector3& minBox, const Vector3& maxBox)
 {
     auto BBox = this->getBBox();
-    if (!minBox.isValid()) minBox = BBox.min();
-    if (!maxBox.isValid()) maxBox = BBox.max();
+    if (minBox.isValid()) BBox.mini = minBox;
+    if (maxBox.isValid()) BBox.maxi = maxBox;
+//    if (!minBox.isValid()) minBox = BBox.min();
+//    if (!maxBox.isValid()) maxBox = BBox.max();
 
     float minHeight = 10000.f;
-    for (int x = minBox.x; x < maxBox.x; x++) {
-        for (int y = minBox.y; y < maxBox.y; y++) {
+    for (int x = BBox.min().x; x < BBox.max().x; x++) {
+        for (int y = BBox.min().y; y < BBox.max().y; y++) {
             minHeight = std::min(minHeight, this->getMinHeight(Vector3(x, y)));
         }
     }
     return minHeight;
 }
 
-float ImplicitPatch::getMaximalHeight(Vector3 minBox, Vector3 maxBox)
+float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxBox)
 {
+    auto BBox = this->getBBox();
+    if (minBox.isValid()) BBox.mini = minBox;
+    if (maxBox.isValid()) BBox.maxi = maxBox;
+//    if (!minBox.isValid()) minBox = BBox.min();
+//    if (!maxBox.isValid()) maxBox = BBox.max();
+
+    float maxHeight = -10000.f;
+    for (int x = BBox.min().x; x < BBox.max().x; x++) {
+        for (int y = BBox.min().y; y < BBox.max().y; y++) {
+            maxHeight = std::max(maxHeight, this->getMaxHeight(Vector3(x, y)));
+        }
+    }
+    return maxHeight;
+
+    /*
     auto BBox = this->getBBox();
     minBox = Vector3::max(minBox, BBox.min());
     maxBox = Vector3::min(maxBox, BBox.max());
@@ -109,9 +126,10 @@ float ImplicitPatch::getMaximalHeight(Vector3 minBox, Vector3 maxBox)
         }
     }
     return maxHeight;
+    */
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos)
 {
     std::map<TerrainTypes, float> materials = this->getMaterials(pos);
     float totalValue = 0.f;
@@ -122,7 +140,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndT
     return {totalValue, materials};
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos)
 {
     std::map<TerrainTypes, float> materials = this->getMaterials(pos);
     float totalValue = 0.f;
@@ -155,7 +173,7 @@ GridV3 ImplicitPatch::getNormals()
     return normals;
 }
 
-Vector3 ImplicitPatch::getNormal(Vector3 pos)
+Vector3 ImplicitPatch::getNormal(const Vector3& pos)
 {
     float delta = 1e-3; // Not too big, not too small...
 
@@ -224,7 +242,7 @@ void ImplicitPatch::updateCache()
     this->_cachedMinHeight.defaultValueOnBadCoord = 0.f;
 }
 
-bool ImplicitPatch::checkIsInGround(Vector3 position)
+bool ImplicitPatch::checkIsInGround(const Vector3& position)
 {
     auto eval = this->getMaterials(position);
     float groundValue = 0.f;
@@ -239,41 +257,43 @@ bool ImplicitPatch::checkIsInGround(Vector3 position)
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
 
-Mesh ImplicitPatch::getGeometry(Vector3 dimensions)
+Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
 {
-//    Vector3 originalDimensions
+    Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
-        dimensions = this->getDimensions();
+        finalDimensions = this->getDimensions();
 //    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
 //    layer.add(this);
     VoxelGrid voxels;
     voxels.fromImplicit(this);
 //    voxels.fromLayerBased(layer);
-    return voxels.getGeometry(dimensions);
+    return voxels.getGeometry(finalDimensions);
 }
 
-Vector3 ImplicitPatch::getIntersection(Vector3 origin, Vector3 dir, Vector3 minPos, Vector3 maxPos)
+Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
     auto myAABBox = this->getBBox();
-    if (!minPos.isValid())
-        minPos = myAABBox.min();
-    if (!maxPos.isValid())
-        maxPos = myAABBox.max();
+    myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
+    myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
+//    if (!minPos.isValid())
+//        minPos = myAABBox.min();
+//    if (!maxPos.isValid())
+//        maxPos = myAABBox.max();
 
     Vector3 currPos = origin;
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-        if (Vector3::isInBox(currPos, minPos, maxPos)) {
+        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
             if (this->checkIsInGround(currPos)) {
                 return currPos;
             }
         }
         currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, minPos, maxPos);
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, minPos, maxPos);
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
     return Vector3(false);
 
@@ -284,12 +304,12 @@ float ImplicitPatch::getHeight(float x, float y)
     return this->getHeight(Vector3(x, y, 0));
 }
 
-float ImplicitPatch::getHeight(Vector3 pos)
+float ImplicitPatch::getHeight(const Vector3& pos)
 {
     return this->getMaxHeight(pos);
 }
 
-bool ImplicitPatch::contains(Vector3 v)
+bool ImplicitPatch::contains(const Vector3& v)
 {
     auto BBox = this->getSupportBBox();
     return BBox.contains(v);
@@ -300,7 +320,7 @@ bool ImplicitPatch::contains(float x, float y, float z)
     return this->contains(Vector3(x, y, z));
 }
 
-Vector3 ImplicitPatch::getGlobalPositionOf(Vector3 posInsidePatch)
+Vector3 ImplicitPatch::getGlobalPositionOf(const Vector3& posInsidePatch)
 {
     Vector3 position = posInsidePatch + this->getBBox().min();
     ImplicitPatch* current = this;
@@ -314,7 +334,7 @@ Vector3 ImplicitPatch::getGlobalPositionOf(Vector3 posInsidePatch)
     return position;
 }
 
-Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
+Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
 {
     Vector3 position = globalPosition;
     std::vector<ImplicitPatch*> ancestry;
@@ -333,16 +353,18 @@ Vector3 ImplicitPatch::getLocalPositionOf(Vector3 globalPosition)
     return position - this->getBBox().min();
 }
 
-GridF ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
+GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
+    Vector3 finalDimensions = dimensions;
+    if (!dimensions.isValid())
+        finalDimensions = this->getBBox().max();
+
     if (_cached) {
-        return this->_cachedVoxelized;
+        return this->_cachedVoxelized.resize(finalDimensions);
     }
 
-    if (!dimensions.isValid())
-        dimensions = this->getBBox().max();
 
-    this->_cachedVoxelized = GridF(dimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
+    this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
     #pragma omp parallel for collapse(3)
     for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
@@ -399,10 +421,10 @@ GridF ImplicitPatch::getVoxelized(Vector3 dimensions, Vector3 scale)
 //    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
     _cached = true;
 //    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
-    return _cachedVoxelized;
+    return _cachedVoxelized.resize(finalDimensions);
 }
 
-ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
+ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve)
 {
     ImplicitPrimitive* primitive = new ImplicitPrimitive();
     primitive->predefinedShape = shape;
@@ -424,7 +446,7 @@ ImplicitPatch *ImplicitPatch::createIdentity()
     return primitive;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, Vector3 dimensions, float additionalParam, BSpline parametricCurve)
+std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve)
 {
     std::function<float(Vector3)> func;
     switch(shape) {
@@ -492,7 +514,7 @@ ImplicitPrimitive::ImplicitPrimitive()
     this->parametersProvided = {-1.f}; // Just to have an element at first
 }
 
-float ImplicitPrimitive::evaluate(Vector3 pos)
+float ImplicitPrimitive::evaluate(const Vector3& pos)
 {
     auto [minPos, maxPos] = this->getBBox();
     auto [minSupportPos, maxSupportPos] = this->getSupportBBox();
@@ -534,7 +556,7 @@ float ImplicitPrimitive::evaluate(Vector3 pos)
     return evaluation;
 }
 
-std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos)
 {
     return {{this->material, this->evaluate(pos)}};
 }
@@ -560,7 +582,7 @@ void ImplicitPrimitive::update()
             this->cachedHeightmap = Heightmap(this->heightmapFilename, this->dimensions.x, this->dimensions.y).heights;
         }
         if (this->cachedHeightmap.height() > 1) {
-            this->evalFunction = [=](Vector3 pos) -> float {
+            this->evalFunction = [=](const Vector3& pos) -> float {
                 return (this->getBBox().contains(pos) ? clamp(this->cachedHeightmap.interpolate(pos) + ImplicitPatch::isovalue, 0.f, 1.f) : 0.f);
             };
         } else {
@@ -568,7 +590,7 @@ void ImplicitPrimitive::update()
                 this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
             this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
     //        auto cacheCopy = cachedHeightmap;
-            this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
+            this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](const Vector3& pos) -> float {
     //            auto heightmap = cachedHeightmap;
                 auto valueAt = this->cachedHeightmap.interpolate(pos.xy());
                 return valueAt;
@@ -646,14 +668,14 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
     return patch;
 }
 
-void ImplicitPrimitive::setDimensions(Vector3 newDimensions)
+void ImplicitPrimitive::setDimensions(const Vector3& newDimensions)
 {
     this->dimensions = newDimensions;
 
     this->updateCache();
 }
 
-void ImplicitPrimitive::setSupportDimensions(Vector3 newSupportDimensions)
+void ImplicitPrimitive::setSupportDimensions(const Vector3& newSupportDimensions)
 {
     this->supportDimensions = newSupportDimensions;
 }
@@ -672,7 +694,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
     return copy;
 }
 
-ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, Vector3 dimensions, ImplicitPrimitive *prim)
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, const Vector3& dimensions, ImplicitPrimitive *prim)
 {
     std::string ext = toUpper(getExtension(filename));
     if (isIn(ext, std::set<std::string>{"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
@@ -717,7 +739,7 @@ ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(GridF heightmap, std::string
     else
         prim->setDimensions(heightmap.getDimensions().xy() + Vector3(0, 0, heightmap.max()));
     prim->position = Vector3(0, 0, 0);
-//    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](Vector3 pos) -> float {
+//    prim->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](const Vector3& pos) -> float {
 //        return heightmap.data[heightmap.getIndex(pos.xy())];
 //    });
 
@@ -741,7 +763,7 @@ ImplicitBinaryOperator::ImplicitBinaryOperator()
     this->composables = std::vector<ImplicitPatch*>(2);
 }
 
-float ImplicitBinaryOperator::evaluate(Vector3 pos)
+float ImplicitBinaryOperator::evaluate(const Vector3& pos)
 {
     // Get the function, depending on the chosen operator
     float evalA = this->evaluateA(pos);
@@ -768,7 +790,7 @@ float ImplicitBinaryOperator::evaluate(Vector3 pos)
     */
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos)
 {
     // Get materials on A, get materials on B
     // Take the operator final evaluation
@@ -917,39 +939,39 @@ float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
     return evaluation;
 }
 
-float ImplicitBinaryOperator::evaluateA(Vector3 pos)
+float ImplicitBinaryOperator::evaluateA(const Vector3& pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
 
     return this->composableA()->evaluate(evaluationPosA);
 }
 
-float ImplicitBinaryOperator::evaluateB(Vector3 pos)
+float ImplicitBinaryOperator::evaluateB(const Vector3& pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
 
     return this->composableB()->evaluate(evaluationPosB);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterials(evaluationPosA);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterials(evaluationPosB);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos)
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterialsAndTotalEvaluation(evaluationPosA);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(Vector3 pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos)
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterialsAndTotalEvaluation(evaluationPosB);
@@ -1108,35 +1130,36 @@ void ImplicitBinaryOperator::deleteAllChildren()
     this->composables.resize(2, nullptr);
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(Vector3 pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos)
 {
     return pos; // Nothing to do
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(Vector3 pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos)
 {
     // Get the correct evaluation position for the B composent
     float offsetB = 0.f;
+    Vector3 positionB = pos;
     if (this->positionalB == ABOVE) {
-        offsetB = this->composableA()->getMaxHeight(pos);
+        offsetB = this->composableA()->getMaxHeight(positionB);
     } else if (this->positionalB == INSIDE_TOP) {
-        offsetB = this->composableA()->getMaxHeight(pos) - this->composableB()->getDimensions().z;
+        offsetB = this->composableA()->getMaxHeight(positionB) - this->composableB()->getDimensions().z;
     } else if (this->positionalB == INSIDE_BOTTOM) {
-        offsetB = this->composableA()->getMinHeight(pos);
+        offsetB = this->composableA()->getMinHeight(positionB);
     } else if (this->positionalB == FIXED_POS) {
         offsetB = 0.f;
     } else if (this->positionalB == SMOOTH_ABOVE) {
         float heightB = this->composableB()->getDimensions().z;
-        float heightA = heightA = std::min(heightB, this->composableA()->getMaxHeight(pos));
+        float heightA = heightA = std::min(heightB, this->composableA()->getMaxHeight(positionB));
         float minHeightA = this->composableA()->getMinimalHeight(this->composableB()->getBBox());
         float heightInterp = interpolation::wyvill(heightA, minHeightA, (minHeightA + heightB));
 //        offsetB = (1.f - heightInterp / heightB) * heightB;
-        pos.z *= (heightInterp / heightB);
+        positionB.z *= (heightInterp / heightB);
     } else {
         std::cerr << "Wrong position label" << std::endl;
     }
-    pos.z -= offsetB;
-    return pos;
+    positionB.z -= offsetB;
+    return positionB;
 }
 
 ImplicitPatch *ImplicitBinaryOperator::copy() const
@@ -1172,12 +1195,12 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
 /*
-    this->wrapFunction = [=](Vector3 pos) {
+    this->wrapFunction = [=](const Vector3& pos) {
         for (int i = 0; i < this->transforms.size(); i++)
             pos = this->transforms[i].wrap(pos);
         return pos;
     };
-    this->unwrapFunction = [=](Vector3 pos) {
+    this->unwrapFunction = [=](const Vector3& pos) {
         for (int i = this->transforms.size() - 1; i >= 0; i--)
             pos = this->transforms[i].unwrap(pos);
         return pos;
@@ -1185,7 +1208,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
 */
-float ImplicitUnaryOperator::evaluate(Vector3 pos)
+float ImplicitUnaryOperator::evaluate(const Vector3& pos)
 {
 //    Vector3 evaluationPos = this->unwrapFunction(pos);
     Vector3 evaluationPos = inverseTransform(pos);
@@ -1206,7 +1229,7 @@ void ImplicitUnaryOperator::addTranslation(const Vector3 &translation) {
     addTransformation(translationTransform, inverseTranslationTransform);
 }
 
-void ImplicitUnaryOperator::addRotation(Vector3 rotationAngles) {
+void ImplicitUnaryOperator::addRotation(const Vector3& rotationAngles) {
     this->_rotation += rotationAngles;
     Matrix rotationMatrix = rotationAngles.toRotationMatrix();
     auto rotationTransform = [=](const Vector3& point) {
@@ -1256,21 +1279,23 @@ void ImplicitUnaryOperator::addDisplacementField(const GridV3 &displacementField
     addTransformation(displacementTransform, inverseDisplacementTransform);
 }
 
-Vector3 ImplicitUnaryOperator::applyTransform(Vector3 pos) const
+Vector3 ImplicitUnaryOperator::applyTransform(const Vector3& pos) const
 {
+    Vector3 finalPos = pos;
     for (int i = 0; i < transformations.size(); i++)
-        pos = transformations[i].first(pos);
-    return pos;
+        finalPos = transformations[i].first(finalPos);
+    return finalPos;
 }
 
-Vector3 ImplicitUnaryOperator::inverseTransform(Vector3 pos) const
+Vector3 ImplicitUnaryOperator::inverseTransform(const Vector3& pos) const
 {
+    Vector3 finalPos = pos;
     for (int i = transformations.size() - 1; i >= 0; i--)
-        pos = transformations[i].second(pos);
-    return pos;
+        finalPos = transformations[i].second(finalPos);
+    return finalPos;
 }
 
-std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos)
 {
     Vector3 evaluationPos = this->inverseTransform(pos);
     auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
@@ -1451,14 +1476,14 @@ ImplicitPatch *&ImplicitUnaryOperator::composableA()
     return this->composables[0];
 }
 
-void ImplicitUnaryOperator::translate(Vector3 translation)
+void ImplicitUnaryOperator::translate(const Vector3& translation)
 {
     return this->addTranslation(translation);
     /*this->_translation += translation;
     this->transforms.push_back(UnaryOpTranslate(translation));*/
 }
 
-void ImplicitUnaryOperator::rotate(Vector3 angles) //float angleX, float angleY, float angleZ)
+void ImplicitUnaryOperator::rotate(const Vector3& angles) //float angleX, float angleY, float angleZ)
 {
     return this->addRotation(angles); // Vector3(angleX, angleY, angleZ));
     /*
@@ -1470,7 +1495,7 @@ void ImplicitUnaryOperator::rotate(Vector3 angles) //float angleX, float angleY,
     */
 }
 
-void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
+void ImplicitUnaryOperator::scale(const Vector3& scaleFactor)
 {
     return this->addScaling(scaleFactor);
     /*
@@ -1484,7 +1509,7 @@ void ImplicitUnaryOperator::scale(Vector3 scaleFactor)
 void ImplicitUnaryOperator::addRandomNoise(float amplitude, float period, float offset)
 {
     this->_noise = Vector3(amplitude, period, offset);
-    this->noiseFunction = [=](Vector3 pos) -> float {
+    this->noiseFunction = [=](const Vector3& pos) -> float {
         FastNoiseLite noise;
         noise.SetFractalType(FastNoiseLite::FractalType_FBm);
         float noiseVal = noise.GetNoise(pos.x * period + offset, pos.y * period + offset, pos.z * period + offset) * 1.f;
@@ -1503,7 +1528,7 @@ void ImplicitUnaryOperator::addRandomWrap(float amplitude, float period, float o
 void ImplicitUnaryOperator::addWrapFunction(GridV3 func)
 {
 //    AABBox dims = this->getSupportBBox();
-    this->transforms.push_back(UnaryOpWrap([=](Vector3 pos) -> Vector3 {
+    this->transforms.push_back(UnaryOpWrap([=](const Vector3& pos) -> Vector3 {
         auto f = func;
         auto supportBBox = this->composableA()->getSupportBBox();
         Vector3 normalizedPos = supportBBox.normalize(pos);
@@ -1527,7 +1552,7 @@ void ImplicitUnaryOperator::spread(float factor)
 void ImplicitUnaryOperator::addWavelets()
 {
     this->transforms.push_back(UnaryOpWrap(
-                                   [](Vector3 pos) -> Vector3 {
+                                   [](const Vector3& pos) -> Vector3 {
                                    return Vector3(0, 0, .5f * std::cos(pos.x * 1.f));
                                }));
 }
@@ -1536,7 +1561,7 @@ void ImplicitUnaryOperator::addWavelets()
 
 std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height)
 {
-    std::function sphere = [width](Vector3 pos) {
+    std::function sphere = [width](const Vector3& pos) {
         Vector3 center = Vector3(width, width, width) * .5f;
         float sqrDist = (pos - center).norm2();
         float value = std::max(0.f, (sqrDist > width * width ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width)));
@@ -1547,7 +1572,7 @@ std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, 
 
 std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height)
 {
-    return [sigma, width, depth, height] (Vector3 pos) {
+    return [sigma, width, depth, height] (const Vector3& pos) {
         bool onlyUseVerticalDistance = (sigma > 10.f); // Hidden cheat code
         Vector3 minPos = Vector3(-width * 0.f, -depth * 0.f, -height * 0.f);
         Vector3 maxPos = Vector3(width * 1.f, depth * 1.f, height * 1.f);
@@ -1565,7 +1590,7 @@ std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, f
 
 std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, sigma, height](Vector3 pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, sigma, height](const Vector3& pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
 }
 
 std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height)
@@ -1573,7 +1598,7 @@ std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma
     Vector3 start = Vector3(width * .5f, depth * .5f, height * 0.f);
     Vector3 end = Vector3(width * .5f, depth * .5f, height * 1.f);
 //    float radius = sigma;
-    return [=] (Vector3 pos) {
+    return [=] (const Vector3& pos) {
         // Line on Z axis
         if (pos.z < start.z || end.z < pos.z)
             return 0.2f;
@@ -1606,7 +1631,7 @@ std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma
 std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height)
 {
     auto sphereFunction = ImplicitPatch::createSphereFunction(sigma, width, depth, height);
-    std::function rockFunction = [=] (Vector3 pos) {
+    std::function rockFunction = [=] (const Vector3& pos) {
         FastNoiseLite noise;
 //        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
         noise.SetFractalType(FastNoiseLite::FractalType_FBm);
@@ -1619,7 +1644,7 @@ std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, fl
 
 std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=](Vector3 pos) {
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=](const Vector3& pos) {
         Vector3 translatedPos = pos - (Vector3(width, depth, 0) * .5f);
         Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, depth, 1.f) * .5f);
 //        return normalizedPos.norm();
@@ -1640,7 +1665,7 @@ std::function<float (Vector3)> ImplicitPatch::createBasinFunction(float sigma, f
 
 std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height)
 {
-    std::function caveFunc = [=] (Vector3 pos) {
+    std::function caveFunc = [=] (const Vector3& pos) {
         Vector3 start = Vector3(width * .5f, depth * 1.f, height * 1.f);
         Vector3 p1 = Vector3(width * .5f, depth * .7f, height * .3f);
         Vector3 p2 = Vector3(width * .5f, depth * .4f, height * .2f);
@@ -1654,7 +1679,7 @@ std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, fl
 
 std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height)
 {
-    std::function archFunc = [=] (Vector3 pos) {
+    std::function archFunc = [=] (const Vector3& pos) {
         Vector3 start = Vector3(width * .5f, depth * 0.f, height * 0.f);
         Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
         Vector3 p2 = Vector3(width * .5f, depth * .7f, height * 1.f);
@@ -1668,7 +1693,7 @@ std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, fl
 
 std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma, float width, float depth, float height)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([sigma, width, depth, height](Vector3 pos) -> float {
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([sigma, width, depth, height](const Vector3& pos) -> float {
         FastNoiseLite noise;
     //    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
         noise.SetFractalType(FastNoiseLite::FractalType_FBm);
@@ -1682,7 +1707,7 @@ std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma,
 std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline _path)
 {
 //    Vector3 c = Vector3(0.6, 0.8); // std::sin(deg2rad(45.f)), std::cos(deg2rad(45.f)));
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (Vector3 pos) -> float {
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
         BSpline path = _path;
         float closestTime = path.estimateClosestTime(pos);
         Vector3 closestPoint = path.getPoint(closestTime);
@@ -1737,7 +1762,7 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     for (auto& p : polygon.points)
         p.z = 0.f;
     polygon.points.push_back(polygon.points.front());
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (Vector3 pos) -> float {
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (const Vector3& pos) -> float {
         ShapeCurve polygon(_polygon);
         return (polygon.contains(pos.xy(), false) ? height : 0.f);
     });
@@ -1745,7 +1770,7 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
 
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline _path)
 {
-    return [=] (Vector3 pos) -> float {
+    return [=] (const Vector3& pos) -> float {
         BSpline path = _path;
 //        float closestTime = path.estimateClosestTime(pos);
 //        Vector3 closestPoint = path.getPoint(closestTime);
@@ -1777,7 +1802,7 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
 
 std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (Vector3 pos) -> float {
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
         if(!Vector3::isInBox(pos, Vector3(), Vector3(width, depth, height)))
             return 0.f;
         float x = 2 * pos.x / width;
@@ -1796,7 +1821,7 @@ std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma
 
 std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (Vector3)> func)
 {
-    std::function _3Dfunction = [func](Vector3 pos) {
+    std::function _3Dfunction = [func](const Vector3& pos) {
         float height = func(pos);
         float inverse_isovalue = .5f - (pos.z / height); //height * .5f - pos.z;
         float isovalue = 1.f - std::abs(inverse_isovalue);
@@ -1821,7 +1846,7 @@ ImplicitCSG::ImplicitCSG()
 
 }
 
-float ImplicitCSG::evaluate(Vector3 pos)
+float ImplicitCSG::evaluate(const Vector3& pos)
 {
     float valA = this->evaluateA(pos);
     float valB = this->evaluateB(pos);
@@ -1841,7 +1866,7 @@ float ImplicitCSG::evaluate(Vector3 pos)
     return evaluation;
 }
 
-std::map<TerrainTypes, float> ImplicitCSG::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitCSG::getMaterials(const Vector3& pos)
 {
     auto matsA = this->getMaterialsA(pos);
     auto matsB = this->getMaterialsB(pos);
@@ -1862,18 +1887,18 @@ std::map<TerrainTypes, float> ImplicitCSG::getMaterials(Vector3 pos)
 }
 */
 
-UnaryOpTranslate::UnaryOpTranslate(Vector3 translation)
+UnaryOpTranslate::UnaryOpTranslate(const Vector3& translation)
     : UnaryOp()
 {
-    this->wrap = [=](Vector3 pos) {
+    this->wrap = [=](const Vector3& pos) {
         return pos + translation;
     };
-    this->unwrap = [=](Vector3 pos) {
+    this->unwrap = [=](const Vector3& pos) {
         return pos - translation;
     };
 }
 
-UnaryOpRotate::UnaryOpRotate(Vector3 rotationAngles, Vector3 center)
+UnaryOpRotate::UnaryOpRotate(const Vector3& rotationAngles, const Vector3& center)
     : UnaryOp()
 {
     float angleX = rotationAngles.x;
@@ -1918,35 +1943,35 @@ UnaryOpRotate::UnaryOpRotate(Vector3 rotationAngles, Vector3 center)
 
     //    std::function<Vector3(Vector3)> previousWrapFunction = this->wrapFunction;
     //    std::function<Vector3(Vector3)> previousUnwrapFunction = this->unwrapFunction;
-    this->wrap = [=](Vector3 pos) -> Vector3 {
+    this->wrap = [=](const Vector3& pos) -> Vector3 {
         // Exactly the rotation function, but with the matrix computed only once
         return center + (pos - center).applyTransform(R);
     };
-    this->unwrap = [=](Vector3 pos) -> Vector3 {
+    this->unwrap = [=](const Vector3& pos) -> Vector3 {
         // Exactly the rotation function, but with the matrix computed only once
         return center + (pos - center).applyTransform(_R);
     };
 }
 
-UnaryOpScale::UnaryOpScale(Vector3 scaling, Vector3 center)
+UnaryOpScale::UnaryOpScale(const Vector3& scaling, const Vector3& center)
     : UnaryOp()
 {
-    this->wrap = [=] (Vector3 pos) {
+    this->wrap = [=] (const Vector3& pos) {
         return center - (pos - center) * scaling;
     };
-    this->unwrap = [=] (Vector3 pos) {
+    this->unwrap = [=] (const Vector3& pos) {
         return center + (pos - center) / scaling;
     };
 }
 
-UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, Vector3 strength)
+UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, const Vector3& strength)
     : UnaryOp()
 {
-    this->wrap = [=] (Vector3 pos) {
+    this->wrap = [=] (const Vector3& pos) {
         FastNoiseLite _noise = noise;
         return pos + Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x * strength.y + strength.z, (float)pos.y * strength.y + strength.z, (float)pos.z * strength.y + strength.z) * strength.x;
     };
-    this->unwrap = [=] (Vector3 pos) {
+    this->unwrap = [=] (const Vector3& pos) {
         FastNoiseLite _noise = noise;
         return pos - Vector3(1.f, 1.f, 1.f) * _noise.GetNoise((float)pos.x * strength.y + strength.z, (float)pos.y * strength.y + strength.z, (float)pos.z * strength.y + strength.z) * strength.x;
     };
@@ -1954,11 +1979,11 @@ UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, Vector3 strength)
 
 UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
 {
-    this->wrap = [=] (Vector3 pos) {
+    this->wrap = [=] (const Vector3& pos) {
         Vector3 newPos = pos + func(pos);
         return newPos;
     };
-    this->unwrap = [=] (Vector3 pos) {
+    this->unwrap = [=] (const Vector3& pos) {
         return pos - func(pos);
     };
 }
@@ -1966,11 +1991,11 @@ UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
 UnaryOpWrap::UnaryOpWrap(GridV3 wrapper)
     : wrapper(wrapper)
 {
-    this->wrap = [=] (Vector3 pos) {
+    this->wrap = [=] (const Vector3& pos) {
         Vector3 newPos = pos + this->wrapper.at(pos);
         return newPos;
     };
-    this->unwrap = [=] (Vector3 pos) {
+    this->unwrap = [=] (const Vector3& pos) {
         return pos - this->wrapper.at(pos);
     };
 }
@@ -1980,7 +2005,7 @@ UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
 {
     Vector3 center = BBox.center();
     Vector3 dimensions = BBox.dimensions();
-    this->wrap = [=](Vector3 pos) -> Vector3 {
+    this->wrap = [=](const Vector3& pos) -> Vector3 {
         Vector3 p = pos;
         float relativeHeight = interpolation::linear(p.z, BBox.min().z, BBox.max().z);
         relativeHeight = interpolation::smooth(relativeHeight);
@@ -1991,7 +2016,7 @@ UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
         Vector3 displacement = toCenter.normalize() * dimensions * factor;
         return pos + displacement;
     };
-    this->unwrap = [=](Vector3 pos) -> Vector3 {
+    this->unwrap = [=](const Vector3& pos) -> Vector3 {
         Vector3 p = pos;
         float relativeHeight = interpolation::linear(p.z, BBox.min().z, BBox.max().z);
         relativeHeight = interpolation::smooth(relativeHeight);
@@ -2225,8 +2250,8 @@ std::string stringFromMaterial(TerrainTypes material)
 
 UnaryOp::UnaryOp()
 {
-    this->wrap = [=] (Vector3 pos) { return pos; };
-    this->unwrap = [=] (Vector3 pos) { return pos; };
+    this->wrap = [=] (const Vector3& pos) { return pos; };
+    this->unwrap = [=] (const Vector3& pos) { return pos; };
 }
 
 ImplicitNaryOperator::ImplicitNaryOperator()
@@ -2234,7 +2259,7 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 
 }
 
-float ImplicitNaryOperator::evaluate(Vector3 pos)
+float ImplicitNaryOperator::evaluate(const Vector3& pos)
 {
     float maxVal = 0.f;
     for (auto& compo : this->composables)
@@ -2242,7 +2267,7 @@ float ImplicitNaryOperator::evaluate(Vector3 pos)
     return maxVal;
 }
 
-std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(Vector3 pos)
+std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos)
 {
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
