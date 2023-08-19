@@ -61,7 +61,7 @@ public:
     bool useSAH = false;
     // This is very efficient for reducing construction time, but not for evaluation time.
     // Set it to true if the building time is more important than evaluation (< 500.000 eval/build)
-    bool useQuickSelect = true;
+    bool useQuickSelect = false;
 
     BVHMemoryPool* memoryPool;
     BVHNode* allocateNode();

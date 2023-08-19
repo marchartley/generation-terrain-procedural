@@ -29,5 +29,10 @@
         <file>src/assets/feature_primitive_button.png</file>
         <file>src/assets/save_geometry.png</file>
         <file>src/assets/snapshot.png</file>
+        <file>src/assets/reset_button.png.png</file>
+        <file>src/assets/heightmap_to_all_button.png</file>
+        <file>src/assets/implicit_to_all_button.png</file>
+        <file>src/assets/layers_to_all_button.png</file>
+        <file>src/assets/voxels_to_all_button.png</file>
     </qresource>
 </RCC>

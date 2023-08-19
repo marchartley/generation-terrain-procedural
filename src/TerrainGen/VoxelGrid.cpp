@@ -686,7 +686,7 @@ Mesh VoxelGrid::getGeometry(Vector3 dimensions)
     Vector3 originalDimensions = this->getDimensions();
     if (!dimensions.isValid())
         dimensions = originalDimensions;
-    auto values = this->getVoxelValues().resize(dimensions).meanSmooth(5, 5, 5);
+    auto values = this->getVoxelValues().resize(dimensions); //.meanSmooth(5, 5, 5);
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
             values.at(x, y, 0) = 1.f;
@@ -1100,13 +1100,21 @@ void VoxelGrid::retrieveMap(std::string filename)
     }
     int _x, _y, _z;
     int _chunkSize;
-    in >> _x >> _y >> _z >> _chunkSize;
-    int chunkSize = _chunkSize;
-    Vector3 finalSize = this->getDimensions();
-    this->_cachedVoxelValues = GridF(_x, _y, _z, 0.f);
-    initMap();
 
-    if (_chunkSize > 0) { // Compatibility with previous terrain saving system
+    std::string firstLine;
+    std::getline(in, firstLine);  // Read the entire first line
+
+    std::stringstream ss(firstLine);
+    ss >> _x >> _y >> _z;
+//    in >> _x >> _y >> _z >> _chunkSize;
+
+
+    Vector3 finalSize = Vector3(_x, _y, _z);
+    this->_cachedVoxelValues = GridF(_x, _y, _z, 0.f);
+
+    if (ss >> _chunkSize) { // Compatibility with previous terrain saving system
+        int chunkSize = _chunkSize;
+        initMap();
         float map_val;
         int iChunk = 0;
         for (int xChunk = 0; xChunk < std::ceil(this->getSizeX() / (float)chunkSize); xChunk++) {
@@ -1123,11 +1131,15 @@ void VoxelGrid::retrieveMap(std::string filename)
             }
         }
     } else {
+        initMap();
+
+        std::cout << "Retrieving..." << std::endl;
         for (size_t i = 0; i < _cachedVoxelValues.size(); i++)
             in >> _cachedVoxelValues[i];
+        std::cout << _cachedVoxelValues << std::endl;
     }
-    finalSize.z *= 2.f;
-    _cachedVoxelValues.resize(finalSize);
+//    finalSize.z *= 2.f;
+//    _cachedVoxelValues.resize(finalSize);
     this->fromCachedData();
 }
 

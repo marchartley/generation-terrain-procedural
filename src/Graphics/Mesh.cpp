@@ -915,6 +915,16 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
     float refined_isolevel = isolevel + 0.0001;
 
     Vector3 vertDecals[8] = {
+/*        Vector3(0.f, 0.f, 0.f),
+        Vector3(1.f, 0.f, 0.f),
+        Vector3(1.f, 1.f, 0.f),
+        Vector3(0.f, 1.f, 0.f),
+        Vector3(0.f, 0.f, 1.f),
+        Vector3(1.f, 0.f, 1.f),
+        Vector3(1.f, 1.f, 1.f),
+        Vector3(0.f, 1.f, 1.f)
+*/
+
         Vector3(-.5f, -.5f, -.5f),
         Vector3(0.5f, -.5f, -.5f),
         Vector3(0.5f, 0.5f, -.5f),
@@ -937,7 +947,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 
                 std::vector<float> cubeVals(8);
                 for (int i = 0; i < 8; i++)
-                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) && (voxPos + vertDecals[i]).minComp() > 0 ? values.at(voxPos + vertDecals[i]) : isolevel - 0.0001f;
+                    cubeVals[i] = values.checkCoord(voxPos + vertDecals[i]) && (voxPos + vertDecals[i]).minComp() > 0 ? values.at(voxPos + vertDecals[i]) : -100000.f;
 
                 int cubeindex = 0;
                 for (int i = 0; i < 8; i++)
@@ -975,7 +985,8 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
         }
     }
 
-    marched.scale((values.getDimensions() + Vector3(1, 1, 1)) / values.getDimensions()).translate(-Vector3(.5, .5, .5));
+    marched.scale(values.getDimensions() / values.getDimensions()); //.translate(-Vector3(.5, .5, .5));
+//    marched.scale((values.getDimensions() + Vector3(1, 1, 1)) / values.getDimensions()).translate(-Vector3(.5, .5, .5));
     return marched;
 }
 

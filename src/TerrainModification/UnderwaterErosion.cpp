@@ -692,7 +692,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         float capacity = maxCapacity * initialCapacity;
 
         float flowfieldInfluence = 1.0;
-        int steps = 100 * starting_distance; // An estimation of how many step we need
+        int steps = 500 / dt; // An estimation of how many step we need
         auto [initialPos, initialDir] = posAndDirs[i];
 
         ErosionParticle& particle = particles[i];
@@ -707,11 +707,13 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         Vector3 lastCollisionPoint(false);
         int lastBouncingTime = 10000;
         size_t intersectingTriangleIndex = -1;
+        std::vector<Vector3> lastCollisions;
         while (continueSimulation) {
             Vector3 nextPos = particle.pos + (particle.dir * dt);
             float environmentDensity = environmentalDensities.at(particle.pos);
             float particleVolume = .1f;
             float gravityCoefficient = particleVolume * gravity * (matterDensity - environmentDensity) * 0.01f;
+//            float gravityCoefficient = 0.f;
             Vector3 justFlow = flowfieldValues(particle.pos); // (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
             Vector3 justGravity = gravityDefault * gravityCoefficient;
 //            Vector3 justGravity = (gravityfieldValues.at(particle.pos) * gravityCoefficient); // (gravityfieldValues.at(nextPos) * gravityCoefficient); // .maxMagnitude(2.f);
@@ -727,7 +729,11 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             Vector3 collisionPoint;
             std::tie(collisionPoint, intersectingTriangleIndex) = collisionPointAndTriangleIndex;
             if (rolling || collisionPoint.isValid()) {
-                steps = std::min(steps, 500);
+//                steps = std::min(steps, 500);
+
+                if (steps < 0)
+                    continueSimulation = false;
+
                 bool justStartedRolling = false;
 
                 Vector3 normal;
@@ -740,6 +746,20 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 //                    particle.pos.z += .1f;
                 } else if (rolling && collisionPoint.isValid()) {
                     rolling = false;
+                    lastCollisions.push_back(collisionPoint);
+                    if (lastCollisions.size() > 5) {
+                        lastCollisions.erase(lastCollisions.begin());
+                        Vector3 mean;
+                        for (const auto& p : lastCollisions)
+                            mean += p;
+                        mean /= float(lastCollisions.size());
+                        float error = 0.f;
+                        for (const auto& p : lastCollisions)
+                            error += (p - mean).norm2();
+//                        if (error / float(lastCollisions.size()) < 1e-0)
+//                            continueSimulation = false;
+                    }
+
                 }
 
 
@@ -789,9 +809,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                         int maxCollisions = 2;
                         do {
                             maxCollisions --;
-                            if (maxCollisions <= 0) {
-                                steps = -1000;
-//                                std::cout << "Max collisions" << std::endl;
+                            if (maxCollisions <= 0 || !continueSimulation) {
+                                continueSimulation = false;
                                 break;
                             }
                             Vector3 bounce = particle.dir.reflexion(normal);
@@ -818,8 +837,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             particle.pos = particle.pos + (particle.dir * dt);
 //            particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
             particle.dir *= 0.99f;
-            if ((hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || steps < 0 || particle.dir.norm2() < 1e-4) {
-                if ((steps < 0 || particle.dir.norm2() < 1e-3) && depositFactor > 0.f && Vector3::isInBox(particle.pos/*.xy()*/, Vector3(), terrain->getDimensions()/*.xy() - Vector3(1, 1)*/)) {
+            if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation) {
+                if (/*(steps < 0 || particle.dir.norm2() < 1e-3) &&*/ depositFactor > 0.f && Vector3::isInBox(particle.pos/*.xy()*/, Vector3(), terrain->getDimensions()/*.xy() - Vector3(1, 1)*/)) {
                     Vector3 depositPosition;
                     totalOtherTime += timeIt([&]() {
                         depositPosition = particle.pos/*.xy() + Vector3(0, 0, terrain->getHeight(particle.pos))*/;
@@ -828,8 +847,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 }
                 continueSimulation = false;
             }
-            if (steps < 0)
-                continueSimulation = false;
+//            if (steps < 0)
+//                continueSimulation = false;
         }
         tunnels[i] = tunnel;
         nbPos[i] = tunnel.points.size();
@@ -883,7 +902,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
                 if (asVoxels) {
     //                std::cout << RockErosion(size, val).createPrecomputedAttackMask(size).sum() - val << " errors" << std::endl;
-                    RockErosion(size, val).computeErosionMatrix(submodifications[i], pos);
+                    RockErosion(size, val).computeErosionMatrix(submodifications[i], pos - Vector3(.5f, .5f, .5f));
                 } else if (asHeightmap) {
                     RockErosion(size, val).computeErosionMatrix2D(submodifications[i], pos);
     //                std::cout << val << " " << submodifications[i].sum() << std::endl;
@@ -906,7 +925,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
     if (densityMap.size() > 0) {
         for (size_t i = 0; i < modifications.size(); i++) {
-            modifications[i] = modifications[i] * ((1.f - materialImpact) + (1.f - densityMap[i]) * materialImpact);
+            modifications[i] = (modifications[i] > 0 ? modifications[i] : modifications[i] * ((1.f - materialImpact) + (1.f - densityMap[i]) * materialImpact));
         }
     }
 
@@ -919,6 +938,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 for (int z = 0; z < 2; z++)
                     modifications.at(x, y, z) = 0;
         asVoxels->applyModification(modifications * 0.5f);
+//        asVoxels->limitVoxelValues(1.f);
         asVoxels->saveState();
     } else if (asHeightmap) {
         asHeightmap->heights += modifications * 0.5f;

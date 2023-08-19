@@ -165,7 +165,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
     GridF values(nx, ny, nz);
 
     // Create and configure FastNoise object
-    if (frequency > 0.f) {
+    if (frequency > 0.01f) {
         FastNoiseLite noise;
         noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
         noise.SetFrequency(1.f / (float) (values.sizeX * frequency));
@@ -198,21 +198,26 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                 for (int y = 0; y < values.sizeY; y++) {
                     for (int z = 0; z < values.sizeZ; z++) {
                         values.at(x, y, z) = noise.GetNoise((float)x, (float)y, (float)z) * noiseStrength;
-                        if (z < this->waterLevel * values.sizeZ)
+                        if (z < this->waterLevel * values.sizeZ && (x > 5))
                             values.at(x, y, z) = std::abs(values.at(x, y, z));
+//                        else
+//                            values.at(x, y, z) = -std::abs(values.at(x, y, z));
                     }
                 }
             }
+            std::cout << values.min() << " -- " << values.max() << std::endl;
         }
     } else {
         for (int x = 0; x < values.sizeX; x++) {
             for (int y = 0; y < values.sizeY; y++) {
                 for (int z = 0; z < values.sizeZ; z++) {
-                    values.at(x, y, z) = (z < this->waterLevel * values.sizeZ ? 2.f : -2.f);
+                    values.at(x, y, z) = (z < this->waterLevel * values.sizeZ ? .1f : -.1f);
                 }
             }
         }
+        std::cout << "-> " << values.min() << " -- " << values.max() << std::endl;
     }
+    std::cout << frequency << std::endl;
 
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
@@ -1101,4 +1106,13 @@ void TerrainGenerationInterface::saveMapUI()
 {
     QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
     this->saveTerrain(q_filename.toStdString());
+}
+
+void TerrainGenerationInterface::reinforceVoxels()
+{
+    GridF distances = this->voxelGrid->getVoxelValues().binarize().toDistanceMap(false, false);
+
+    for (auto& v : distances)
+        v = std::max(1.f, v);
+    this->voxelGrid->setVoxelValues(voxelGrid->getVoxelValues() * distances);
 }

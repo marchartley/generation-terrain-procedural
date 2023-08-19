@@ -81,6 +81,7 @@ public:
     virtual float getMinimalHeight(Vector3 minBox = Vector3::min(), Vector3 maxBox = Vector3::max());
     virtual float getMaximalHeight(Vector3 minBox = Vector3::min(), Vector3 maxBox = Vector3::max());
     std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(Vector3 pos);
+    std::pair<float, std::map<TerrainTypes, float> > getBinaryMaterialsAndTotalEvaluation(Vector3 pos);
 
     virtual AABBox getSupportBBox() = 0;
     virtual AABBox getBBox() = 0;
