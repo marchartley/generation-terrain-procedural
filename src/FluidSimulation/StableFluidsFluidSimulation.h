@@ -52,7 +52,7 @@ public:
     StableFluidsSimulation();
     StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations);
 
-    void setObstacles(GridF new_obstacles);
+    void setObstacles(const GridF& new_obstacles);
     void addDensity(int x, int y, int z, float amount);
     void addVelocity(int x, int y, int z, const Vector3& amount);
     void setMaxSpeed(float speed);
@@ -91,7 +91,7 @@ public:
     GridF divergence;
     GridF pressure;
 
-    GridF obstacles;
+//    GridF obstacles;
 
     Vector3 meanVel;
 
@@ -121,13 +121,13 @@ public:
         for (int x = 1; x < this->sizeX - 1; x++) {
             for (int y = 1; y < this->sizeY - 1; y++) {
                 for (int z = 1; z < this->sizeZ - 1; z++) {
-                    if(this->obstacles(x, y, z) > .5) {
+                    if(this->obstacleGrid(x, y, z) > .5) {
                         bool freeCellFound = false;
                         for (int dx = -1; dx <= 1; dx++) {
                             for (int dy = -1; dy <= 1; dy++) {
                                 for (int dz = -1; dz <= 1; dz++) {
                                     if (dx != 0 || dy != 0 || dz != 0) {
-                                        if (obstacles(x + dx, y + dy, z + dz) < .5) {
+                                        if (obstacleGrid(x + dx, y + dy, z + dz) < .5) {
                                             tmpArray(x, y, z) = arr(x + dx, y + dy, z + dz) * (inverseOnBounds ? -1.0 : 1.0);
                                             freeCellFound = true;
                                         }

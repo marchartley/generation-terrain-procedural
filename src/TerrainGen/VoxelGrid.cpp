@@ -77,7 +77,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
 {
     this->setVoxelValues(implicitTerrain->getVoxelized(implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)));
-    this->smoothVoxels();
+//    this->smoothVoxels();
 }
 
 VoxelGrid* VoxelGrid::fromCachedData()

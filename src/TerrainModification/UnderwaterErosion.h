@@ -83,7 +83,8 @@ public:
                                                      DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
                                                      GridF densityMap = GridF(),
                                                      float initialCapacity = 0.f,
-                                                     FluidSimType fluidSimType = FluidSimType::LBM);
+                                                     FluidSimType fluidSimType = FluidSimType::LBM,
+                                                     bool wrapPositions = false);
 /*
     std::tuple<std::vector<BSpline>, int, int> ApplyOnAnyTerrain(TerrainModel* terrain,
                                                                  float& particleSimulationTime,

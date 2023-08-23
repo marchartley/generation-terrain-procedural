@@ -88,8 +88,23 @@ void TerrainGenerationInterface::voxelsToImplicit()
 void TerrainGenerationInterface::voxelsToAll()
 {
     voxelsToHeightmap();
-    voxelsToLayers();
+//    voxelsToLayers();
+    heightmapToLayers();
     voxelsToImplicit();
+/*
+    Vector3 center(100, 100);
+    for (int x = 0; x < 100; x++) {
+        for (int y = 0; y < 100; y++) {
+            Vector3 pos = Vector3(x, y, 0) - center.xy();
+            if (pos.norm() > 30)  continue;
+            float halfHeight = 200.f * std::sqrt(30.f*30.f - (pos.x*pos.x + pos.y*pos.y))/30.f;
+            float startZ = std::max(0.f, center.z - halfHeight);
+            float endZ = center.z + halfHeight;
+            layerGrid->transformLayer(x, y, startZ, endZ, SAND);
+        }
+    }
+    layersToHeightmap();
+*/
 }
 
 void TerrainGenerationInterface::layersToVoxels()
@@ -249,6 +264,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
 void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
 {
     this->createTerrainFromFile(this->lastLoadedMap, actionInterfaces);
+    this->setWaterLevel(this->waterLevel);
 }
 
 void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
@@ -318,8 +334,9 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         voxelGrid->retrieveMap(filename);
 //        voxelGrid->smoothVoxels();
 //        voxelGrid->smoothVoxels();
-        heightmap->fromVoxelGrid(*voxelGrid);
-        layerGrid->fromVoxelGrid(*voxelGrid);
+//        heightmap->fromVoxelGrid(*voxelGrid);
+//        layerGrid->fromVoxelGrid(*voxelGrid);
+        voxelsToAll();
 
     } /*else {
         // In any other case, consider that nothing has been done, cancel.
@@ -1070,7 +1087,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             std::cerr << "No implicit terrain to display" << std::endl;
         } else {
             GridF values;
-            std::cout << "evals: " << timeIt([&]() { values = implicitTerrain->getVoxelized(voxelGrid->getDimensions()); }) << "ms" << std::endl;
+            values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
 //            std::cout << values.sum() << std::endl;
             implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
             implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);

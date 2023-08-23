@@ -6,6 +6,7 @@ FlowFieldInterface::FlowFieldInterface(QWidget *parent)
 {
     _simulation = GlobalTerrainProperties::get()->simulations[STABLE]; // = dynamic_cast<StableFluidsSimulation*>(_simulation);
 //    *_simulation = StableFluidsSimulation();
+    this->nbComputationsPerFrame = 5;
 }
 
 

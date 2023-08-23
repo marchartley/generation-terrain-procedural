@@ -113,7 +113,7 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain)
             for (int z = 0; z < terrainSize.z; z++) {
                 Vector3 pos(x, y, z);
                 Vector3 gradient = normals.at(pos).normalized();
-                if (voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0) {
+                if (gradient.z > 0 && voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0) {
                     terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f, -gradient});
                 }
             }
@@ -353,7 +353,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             Vector3 geomSize = Vector3::min(terrainDims, Vector3(100, 100, 50));
             sumGeometry += timeIt([&]() {
                 if (applyOn == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN) {
-                    m = Mesh::applyMarchingCubes(layerGrid->voxelize().resize(geomSize));
+                    m = Mesh::applyMarchingCubes(layerGrid->voxelize().meanSmooth(3, 3, 3, true).resize(geomSize));
                 } else {
                     m = terrain->getGeometry(geomSize);
                 }
@@ -412,7 +412,8 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                                                                     densityUsed,
                                                                     densityField,
                                                                     initialCapacity,
-                                                                    selectedSimulationType
+                                                                    selectedSimulationType,
+                                                                    wrapParticles
                                                                     );
 
         totalPos += nbPos;
@@ -425,18 +426,23 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
                 auto points = lastRocksLaunched[i].points; // lastRocksLaunched[i].getPath(std::min(100, int(lastRocksLaunched[i].points.size())));
                 for (int j = 0; j < int(points.size()) - 1; j++) {
-    //                if ((points[j] - points[j+1]).norm2() < 20.f) {
+                    if ((points[j] - points[j+1]).norm2() < 20.f * 20.f) {
                         asOneVector.push_back(points[j]);
                         asOneVector.push_back(points[j + 1]);
-    //                }
+                    }
                 }
             }
             this->rocksPathSuccess.fromArray(asOneVector);
-            if (this->applyOn == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN) {
-            }
         });
         if (applyOn == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP) {
             voxelGrid->from2DGrid(*heightmap.get());
+        } else if (applyOn == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN) {
+            voxelGrid->fromImplicit(implicitTerrain.get());
+            implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())}; // Yeah, I can pass a 3D grid in this function
+//            implicitTerrain->_cached = false;
+        } else if (applyOn == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN) {
+            layerGrid->reorderLayers();
+            voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
         }
         Q_EMIT this->updated();
         this->computePredefinedRocksLocations();
@@ -982,11 +988,17 @@ QLayout *ErosionInterface::createGUI()
     QRadioButton* particleSizeMedium = new QRadioButton("Medium");
     QRadioButton* particleSizeBig = new QRadioButton("Big");
 
-    QRadioButton* continuousRotationFalse = new QRadioButton("Without rotation");
-    QRadioButton* continuousRotationTrue = new QRadioButton("With rotation");
+    QCheckBox* continuousRotationButton = new QCheckBox("Continuous rotation");
+    QCheckBox* wrapPositionsButton = new QCheckBox("Wrap position");
+//    QRadioButton* continuousRotationFalse = new QRadioButton("Without rotation");
+//    QRadioButton* continuousRotationTrue = new QRadioButton("With rotation");
 
     QComboBox* simulationTypeButton = new QComboBox;
-    simulationTypeButton->addItems({"MLB", "FLIP", "SPH", "Stable", "Warp"});
+    std::vector<FluidSimType> possibleSimTypes = {LBM, FLIP, SPH, STABLE, WARP};
+    for (size_t i = 0; i < possibleSimTypes.size(); i++) {
+        simulationTypeButton->addItem(QString::fromStdString(stringFromFluidSimType(possibleSimTypes[i])));
+    }
+//    simulationTypeButton->addItems({"MLB", "FLIP", "SPH", "Stable", "Warp"});
 //    simulationTypeButton->addItem("MLB", QVariant(FluidSimType::LBM));
 //    simulationTypeButton->addItem("FLIP", QVariant(FluidSimType::FLIP));
 //    simulationTypeButton->addItem("SPH", QVariant(FluidSimType::SPH));
@@ -1027,7 +1039,7 @@ QLayout *ErosionInterface::createGUI()
                                                          particleSizeSmall, particleSizeMedium, particleSizeBig
                                                      }),
                                                      createHorizontalGroup({
-                                                         continuousRotationFalse, continuousRotationTrue
+                                                         continuousRotationButton, wrapPositionsButton
                                                      })
                                                  }));
     erosionLayout->addWidget(createVerticalGroup({
@@ -1124,8 +1136,8 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(airDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 500.f; });
     QObject::connect(waterDensity, &QRadioButton::pressed, this, [=]() { this->matterDensity = 1662.f; });
 
-    QObject::connect(continuousRotationFalse, &QRadioButton::pressed, this, [=]() { this->continuousRotation = false; });
-    QObject::connect(continuousRotationTrue, &QRadioButton::pressed, this, [=]() { this->continuousRotation = true; });
+    QObject::connect(continuousRotationButton, &QCheckBox::toggled, this, [=](bool checked) { this->continuousRotation = checked; });
+    QObject::connect(wrapPositionsButton, &QCheckBox::toggled, this, [=](bool checked) { this->wrapParticles = checked; });
 
     QObject::connect(particleSizeSmall, &QRadioButton::pressed, this, [=]() { this->erosionSize = 4.f; });
     QObject::connect(particleSizeMedium, &QRadioButton::pressed, this, [=]() { this->erosionSize = 8.f; });
@@ -1160,8 +1172,8 @@ QLayout *ErosionInterface::createGUI()
     criticalShearStressSlider->setfValue(this->criticalShearStress);
     initialCapacitySlider->setfValue(this->initialCapacity);
 
-    continuousRotationFalse->setChecked(!this->continuousRotation);
-    continuousRotationTrue->setChecked(this->continuousRotation);
+    continuousRotationButton->setChecked(this->continuousRotation);
+    wrapPositionsButton->setChecked(this->wrapParticles);
 
     displayTrajectoriesButton->setChecked(this->displayTrajectories);
 
@@ -1190,7 +1202,11 @@ QLayout *ErosionInterface::createGUI()
     particleSizeMedium->setChecked(this->erosionSize >= 5.f && this->erosionSize < 10.f);
     particleSizeBig->setChecked(this->erosionSize >= 10.f);
 
-    simulationTypeButton->setCurrentIndex(0);
+//    simulationTypeButton->setCurrentIndex(0);
+    for (size_t i = 0; i < possibleSimTypes.size(); i++) {
+        if (this->selectedSimulationType == possibleSimTypes[i])
+            simulationTypeButton->setCurrentIndex(i);
+    }
 
     return erosionLayout;
 }

@@ -15,20 +15,6 @@ class UnaryOp;
 #include "Utils/json.h"
 #include "TerrainGen/TerrainModel.h"
 
-//class TerrainMaterial;
-
-
-/*
-class TerrainMaterial {
-public:
-    float density = 1.f;
-    float resistanceToWater;
-    float porosity;
-
-    Vector3 color;
-
-    operator float() const { return this->density; }
-};*/
 
 class ImplicitPatch : public TerrainModel { // abstract
 public:
@@ -242,6 +228,8 @@ public:
 
     bool contains(PredefinedShapes shape);
     virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+
+    virtual void simplify();
 
     void augment();
 

@@ -18,7 +18,7 @@ public:
     QLayout* createGUI();
 
 public Q_SLOTS:
-    void saveTerrainGeometry(std::string filename = "");
+    std::vector<std::string> saveTerrainGeometry(std::string filename = "");
     void quickSaveAt(std::string folderName, std::string filePrefix, bool heightmap, bool voxels, bool layers);
 
 public:

@@ -38,6 +38,7 @@ protected:
     Mesh vectorsMesh;
     Mesh particlesMesh;
     Mesh boundariesMesh;
+    Mesh otherMeshToDisplay;
 
     FluidSimulation* _simulation;
 

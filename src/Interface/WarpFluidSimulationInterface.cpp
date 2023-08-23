@@ -149,7 +149,7 @@ void WarpFluidSimulationInterface::computeFromTerrain(TerrainModel *terrain)
     }
     simulation->velocities = velocity;
 //    this->velocity = gradients + simulation.mainDirection;
-    std::cout << "Recomputed!" << std::endl;
+//    std::cout << "Recomputed!" << std::endl;
 }
 /*
 void WarpFluidSimulationInterface::show()
