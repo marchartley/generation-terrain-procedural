@@ -2,164 +2,28 @@
 	"implicitPatches": {
 		"composables": [
 			{
-				"blendingFactor": 1.0,
-				"composableA": {
-					"dimensions": {
-						"x": 100.0,
-						"y": 100.0,
-						"z": 40.0
-					},
-					"file": "saved_maps/heightmaps/flat (copy).png",
-					"material": "ROCK",
-					"position": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					}
-				},
-				"composableB": {
-					"composableA": {
-						"densityValue": 1.5,
-						"dimensions": {
-							"x": 69.76554870605469,
-							"y": 106.21222686767578,
-							"z": 12.543305397033691
-						},
-						"filename": "",
-						"index": 8,
-						"material": "ROCK",
-						"mirrored": false,
-						"name": "Mountainchain",
-						"optionalCurve": {
-							"closed": false,
-							"points": [
-								{
-									"x": 63.715545654296875,
-									"y": 6.050000190734863,
-									"z": 6.050000190734863
-								},
-								{
-									"x": 16.899314880371094,
-									"y": 39.95427322387695,
-									"z": 6.161015510559082
-								},
-								{
-									"x": 6.050000190734863,
-									"y": 72.65697479248047,
-									"z": 6.4933061599731445
-								},
-								{
-									"x": 13.339509010314941,
-									"y": 100.16222381591797,
-									"z": 6.400444984436035
-								}
-							]
-						},
-						"position": {
-							"x": 12.408690452575684,
-							"y": -3.500126838684082,
-							"z": 0.0
-						},
-						"shape": "MountainChain",
-						"sigmaValue": 16.200000762939453,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"type": "primitive"
-					},
-					"index": 7,
-					"mirrored": false,
-					"name": "Translation",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"spreadFactor": 0.0,
-					"translation": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 4.0
-					},
-					"type": "unary"
-				},
-				"index": 6,
-				"mirrored": false,
-				"name": "Blend",
-				"operator": "Blend",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"positionalB": "FIXED_POS",
-				"type": "compose",
-				"useIntersection": false
-			},
-			{
-				"densityValue": 1.5,
+				"densityValue": 0.75,
 				"dimensions": {
-					"x": 85.0,
+					"x": 100.0,
 					"y": 100.0,
-					"z": 20.0
+					"z": 33.0
 				},
 				"filename": "",
 				"index": 5,
-				"material": "ROCK",
+				"material": "DIRT",
 				"mirrored": false,
-				"name": "Polygon",
+				"name": "Heightmap",
 				"optionalCurve": {
 					"closed": false,
-					"points": [
-						{
-							"x": 100.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						{
-							"x": 75.99470520019531,
-							"y": 0.009999999776482582,
-							"z": 0.0
-						},
-						{
-							"x": 25.3701171875,
-							"y": 35.311038970947266,
-							"z": 0.0
-						},
-						{
-							"x": 10.0,
-							"y": 65.9408187866211,
-							"z": 0.0
-						},
-						{
-							"x": 14.410865783691406,
-							"y": 70.1137924194336,
-							"z": 0.0
-						},
-						{
-							"x": 24.184253692626953,
-							"y": 100.88260650634766,
-							"z": 0.0
-						},
-						{
-							"x": 100.24490356445313,
-							"y": 100.73367309570313,
-							"z": 0.0
-						},
-						{
-							"x": 100.24490356445313,
-							"y": 99.73367309570313,
-							"z": 0.0
-						}
-					]
+					"points": []
 				},
 				"position": {
 					"x": 0.0,
 					"y": 0.0,
 					"z": 0.0
 				},
-				"shape": "Polygon",
-				"sigmaValue": 5.0,
+				"shape": "Implicit_Heightmap",
+				"sigmaValue": -1.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
@@ -168,143 +32,153 @@
 				"type": "primitive"
 			},
 			{
-				"composableA": {
-					"densityValue": 0.3499999940395355,
-					"dimensions": {
-						"x": 100.0,
-						"y": 100.0,
-						"z": 30.0
-					},
-					"filename": "",
-					"index": 4,
-					"material": "SAND",
-					"mirrored": false,
-					"name": "Parametric_Tunnel",
-					"optionalCurve": {
-						"closed": true,
-						"points": [
+				"composables": [
+					{
+						"composables": [
 							{
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
+								"densityValue": -9.0,
+								"dimensions": {
+									"x": 16.776613235473633,
+									"y": 16.776613235473633,
+									"z": 16.776613235473633
+								},
+								"filename": "",
+								"index": 4,
+								"material": "AIR",
+								"mirrored": false,
+								"name": "Sphere",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"position": {
+									"x": 48.07804870605469,
+									"y": 25.171310424804688,
+									"z": 8.208765983581543
+								},
+								"shape": "Sphere",
+								"sigmaValue": 0.1398051232099533,
+								"supportDimensions": {
+									"x": 16.776613235473633,
+									"y": 16.776613235473633,
+									"z": 16.776613235473633
+								},
+								"type": "primitive"
 							},
 							{
-								"x": 100.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							{
-								"x": 100.0,
-								"y": 100.0,
-								"z": 0.0
-							},
-							{
-								"x": 0.0,
-								"y": 100.0,
-								"z": 0.0
+								"blendingFactor": 2.0,
+								"composableA": {
+									"densityValue": -9.0,
+									"dimensions": {
+										"x": 10.521595001220703,
+										"y": 10.521595001220703,
+										"z": 10.521595001220703
+									},
+									"filename": "",
+									"index": 3,
+									"material": "AIR",
+									"mirrored": false,
+									"name": "Sphere",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"position": {
+										"x": 52.57402801513672,
+										"y": 27.898454666137695,
+										"z": 11.44682502746582
+									},
+									"shape": "Sphere",
+									"sigmaValue": 0.08767995983362198,
+									"supportDimensions": {
+										"x": 10.521595001220703,
+										"y": 10.521595001220703,
+										"z": 10.521595001220703
+									},
+									"type": "primitive"
+								},
+								"composableB": {
+									"composableA": {
+										"densityValue": 1.5,
+										"dimensions": {
+											"x": 20.0,
+											"y": 20.0,
+											"z": 20.0
+										},
+										"filename": "",
+										"index": 7,
+										"material": "ROCK",
+										"mirrored": false,
+										"name": "Block",
+										"optionalCurve": {
+											"closed": false,
+											"points": []
+										},
+										"position": {
+											"x": 74.515625,
+											"y": 67.62964630126953,
+											"z": 0.0
+										},
+										"shape": "Block",
+										"sigmaValue": 5.0,
+										"supportDimensions": {
+											"x": 0.0,
+											"y": 0.0,
+											"z": 0.0
+										},
+										"type": "primitive"
+									},
+									"index": 8,
+									"mirrored": false,
+									"name": "Translation",
+									"optionalCurve": {
+										"closed": false,
+										"points": []
+									},
+									"spreadFactor": 0.0,
+									"translation": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 3.0578975677490234
+									},
+									"type": "unary"
+								},
+								"index": 9,
+								"mirrored": false,
+								"name": "Blend",
+								"operator": "Blend",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"positionalB": "FIXED_POS",
+								"type": "compose",
+								"useIntersection": false
 							}
-						]
-					},
-					"position": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"shape": "Parametric_Tunnel",
-					"sigmaValue": 15.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
-				"index": 3,
-				"mirrored": false,
-				"name": "Translation",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"spreadFactor": 0.0,
-				"translation": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 27.481163024902344
-				},
-				"type": "unary"
-			},
-			{
-				"composableA": {
-					"densityValue": -2.5,
-					"dimensions": {
-						"x": 60.0,
-						"y": 60.0,
-						"z": 10.0
-					},
-					"filename": "",
-					"index": 2,
-					"material": "WATER",
-					"mirrored": false,
-					"name": "Parametric_Tunnel",
-					"optionalCurve": {
-						"closed": false,
-						"points": [
-							{
-								"x": 20.0,
-								"y": 20.0,
-								"z": 0.0
-							},
-							{
-								"x": 50.0,
-								"y": 20.0,
-								"z": 0.0
-							},
-							{
-								"x": 50.0,
-								"y": 60.0,
-								"z": 0.0
-							},
-							{
-								"x": 80.0,
-								"y": 80.0,
-								"z": 0.0
-							}
-						]
-					},
-					"position": {
-						"x": 10.0,
-						"y": 10.0,
-						"z": 0.0
-					},
-					"shape": "Parametric_Tunnel",
-					"sigmaValue": 5.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
-				},
+						],
+						"index": 2,
+						"mirrored": false,
+						"name": "",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"type": "nary"
+					}
+				],
 				"index": 1,
 				"mirrored": false,
-				"name": "Translation",
+				"name": "",
 				"optionalCurve": {
 					"closed": false,
 					"points": []
 				},
-				"spreadFactor": 0.0,
-				"translation": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 15.43295669555664
-				},
-				"type": "unary"
+				"type": "nary"
 			}
 		],
 		"index": 0,
 		"mirrored": false,
-		"name": "Identity",
+		"name": "",
 		"optionalCurve": {
 			"closed": false,
 			"points": []

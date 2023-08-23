@@ -11,9 +11,6 @@ std::string ImplicitPatch::json_identifier = "implicitPatches";
 
 ImplicitPatch::ImplicitPatch()
 {
-    /*
-    ImplicitPatch::currentMaxIndex ++;
-    this->index = currentMaxIndex;*/
     this->setIndex();
 
     this->_cachedMaxHeight = GridF(1, 1, 1, 0.f);
@@ -113,31 +110,18 @@ float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxB
         }
     }
     return maxHeight;
-
-    /*
-    auto BBox = this->getBBox();
-    minBox = Vector3::max(minBox, BBox.min());
-    maxBox = Vector3::min(maxBox, BBox.max());
-
-    float maxHeight = -10000.f;
-    for (int x = minBox.x; x < maxBox.x; x++) {
-        for (int y = minBox.y; y < maxBox.y; y++) {
-            maxHeight = std::max(maxHeight, this->getMaxHeight(Vector3(x, y)));
-        }
-    }
-    return maxHeight;
-    */
 }
 
 std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos)
 {
-    std::map<TerrainTypes, float> materials = this->getMaterials(pos);
+    return this->getBinaryMaterialsAndTotalEvaluation(pos);
+    /*std::map<TerrainTypes, float> materials = this->getMaterials(pos);
     float totalValue = 0.f;
 
     for (const auto& [mat, val] : materials)
         totalValue += val;
 
-    return {totalValue, materials};
+    return {totalValue, materials};*/
 }
 
 std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos)
@@ -251,9 +235,6 @@ bool ImplicitPatch::checkIsInGround(const Vector3& position)
         groundValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? 0.f : val);
         outsideValue += (isIn(mat, LayerBasedGrid::invisibleLayers) ? val : 0.f);
     }
-//    std::cout << groundValue << " " << outsideValue << "\n";
-//    if (groundValue > 0)
-//        std::cout << groundValue << " " << outsideValue << std::endl;
     return groundValue > ImplicitPatch::isovalue && groundValue >= outsideValue;
 }
 
@@ -262,11 +243,8 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
     Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
         finalDimensions = this->getDimensions();
-//    LayerBasedGrid layer(dimensions.x, dimensions.y, 0.f);
-//    layer.add(this);
     VoxelGrid voxels;
     voxels.fromImplicit(this);
-//    voxels.fromLayerBased(layer);
     return voxels.getGeometry(finalDimensions);
 }
 
@@ -275,10 +253,6 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
     auto myAABBox = this->getBBox();
     myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
     myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
-//    if (!minPos.isValid())
-//        minPos = myAABBox.min();
-//    if (!maxPos.isValid())
-//        maxPos = myAABBox.max();
 
     Vector3 currPos = origin;
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
@@ -1561,10 +1535,10 @@ void ImplicitUnaryOperator::addWavelets()
 
 std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height)
 {
-    std::function sphere = [width](const Vector3& pos) {
+    std::function sphere = [width, sigma](const Vector3& pos) {
         Vector3 center = Vector3(width, width, width) * .5f;
         float sqrDist = (pos - center).norm2();
-        float value = std::max(0.f, (sqrDist > width * width ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width)));
+        float value = std::max(0.f, (sqrDist > (width * width * .25f) ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width*.5f)) * sigma);
         return value;
     };
     return sphere;
@@ -2379,6 +2353,22 @@ std::vector<ImplicitPatch *> ImplicitNaryOperator::findAll(PredefinedShapes shap
     for (auto& compo : this->composables)
         res = vectorMerge(res, compo->findAll(shape));
     return res;
+}
+
+void ImplicitNaryOperator::simplify()
+{
+    /*
+    while (this->composables.size() == 1) {
+        auto& previousChild = this->composables[0];
+        auto asNary = dynamic_cast<ImplicitNaryOperator*>(previousChild);
+        if (asNary == nullptr)
+            return;
+        this->composables.clear();
+        for (auto& subChild : asNary->composables) {
+            this->addChild(subChild);
+        }
+    }
+    */
 }
 
 void ImplicitNaryOperator::augment()

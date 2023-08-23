@@ -64,7 +64,7 @@ void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &tri
 }
 
 void FluidSimulation::setObstacles(const GridF &obstacle) {
-    this->obstacleGrid = obstacle.resize(dimensions).binarize(0.5);;
+    this->obstacleGrid = obstacle.resize(dimensions).binarize();
     this->obstacleGradient = obstacleGrid.gradient().normalized();
 }
 

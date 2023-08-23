@@ -1,4 +1,5 @@
 #include "AbstractFluidSimulationInterface.h"
+#include "Interface/InterfaceUtils.h"
 
 AbstractFluidSimulationInterface::AbstractFluidSimulationInterface(std::string actionTypeName, QWidget *parent) : ActionInterface(actionTypeName, parent)
 {
@@ -24,6 +25,8 @@ void AbstractFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap>
 //    this->boundariesMesh = Mesh(std::make_shared<Shader>(vMCShader, fMCShader, gMCShader));
     this->boundariesMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->boundariesMesh.useIndices = false;
+    this->otherMeshToDisplay = Mesh(std::make_shared<Shader>(vNoShader, fNoShader)); //(vMCShader, fMCShader, gMCShader));
+    this->otherMeshToDisplay.useIndices = false;
 
     this->updateBoundariesMesh();
     this->updateSimulationMeshes();
@@ -38,6 +41,7 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
         updateSimulationMeshes();
     }
 
+//    otherMeshToDisplay.displayWithOutlines(std::vector<float>{0.f, 1.f, 0.f, .4f}, GL_TRIANGLES);
     if (displayBoundaries) {
 
 //        Mesh::displayScalarField(voxelGrid->getVoxelValues(), boundariesMesh, camPos, {-.4f, 0.f, .4f});
@@ -70,12 +74,16 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     QCheckBox* displayVectorsButton = new QCheckBox("Display vectors");
     QCheckBox* autoComputeButton = new QCheckBox("Compute at each frame");
     QPushButton* computeButton = new QPushButton("Compute");
+    QPushButton* updateMeshButton = new QPushButton("Update terrain");
 
     layout->addWidget(displayBoundariesButton);
     layout->addWidget(displayParticlesButton);
     layout->addWidget(displayVectorsButton);
     layout->addWidget(autoComputeButton);
-    layout->addWidget(computeButton);
+    layout->addWidget(createHorizontalGroup({
+                                                computeButton,
+                                                updateMeshButton
+                                            }));
 
     displayBoundariesButton->setChecked(this->displayBoundaries);
     displayParticlesButton->setChecked(this->displayParticles);
@@ -87,6 +95,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->displayVectors = cheecked; });
     QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->computeAtEachFrame = cheecked; });
     QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
+    QObject::connect(updateMeshButton, &QPushButton::pressed, this, &AbstractFluidSimulationInterface::updateBoundariesMesh);
 
     return layout;
 }
@@ -132,13 +141,15 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     Vector3 finalDimensions = voxelGrid->getDimensions();
 
     GridF bigValues = voxelGrid->getVoxelValues();
-    GridF values = bigValues.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
+    GridF values = bigValues; //.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
     auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
         for (auto& p : tri) {
             p *= _simulation->dimensions / values.getDimensions();
         }
     }
+
+    otherMeshToDisplay.fromArray(flattenArray(Mesh::applyMarchingCubes(values.binarize()).getTriangles()));
 
     _simulation->setObstacles(triangles);
     _simulation->setObstacles(values.binarize());
@@ -161,6 +172,16 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
 void AbstractFluidSimulationInterface::computeSimulation(int nbSteps)
 {
     this->voxelGrid->computeFlowfield(LBM, nbSteps, this->implicitTerrain.get());
-//    for (int i = 0; i < nbSteps; i++)
-//        _simulation->step();
+    for (int x = 0; x < _simulation->dimensions.x; x++) {
+        for (int y = 0; y < _simulation->dimensions.y; y++) {
+            for (int z = 0; z < _simulation->dimensions.z; z++) {
+                if (x == 0) {
+                    _simulation->addVelocity(x, y, z, Vector3(1, 0, 0));
+                }
+            }
+        }
+    }
+    for (int i = 0; i < nbSteps; i++) {
+        _simulation->step();
+    }
 }

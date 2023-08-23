@@ -40,7 +40,7 @@ ViewerInterface::ViewerInterface() {
                     { "spaceColonization", spaceColonization},
                     { "karstPathGeneration", karstPathGeneration},
                     { "faultSlip", faultSlip},
-                    { "flowField", flowField},
+//                    { "flowField", flowField},
                     { "tunnelInterface", tunnelInterface},
                     { "manualEditionInterface", manualEditionInterface},
                     { "gravityInterface", gravityInterface},
@@ -53,10 +53,10 @@ ViewerInterface::ViewerInterface() {
                     { "terrainSavingInterface", savingInterface},
                     { "meshInstanceAmplificationInterface", meshInstanceAmplificationInterface},
                     { "primitivePatchInterface", patchesInterface},
-                    { "SPHSimulation", sphSimulationInterface },
-                    { "FLIPSimulation", flipSimulationInterface },
-                    { "WarpFluidSimulation", warpFluidSimulationInterface },
-                    { "LBMFluidSimulation", LbmFluidSimulationInterface },
+//                    { "SPHSimulation", sphSimulationInterface },
+//                    { "FLIPSimulation", flipSimulationInterface },
+//                    { "WarpFluidSimulation", warpFluidSimulationInterface },
+//                    { "LBMFluidSimulation", LbmFluidSimulationInterface },
                     { "coralIslandGeneratorInterface", coralIslandGeneratorInterface},
                     { "spheroidalErosionInterface", spheroidalErosionInterface}
                 });
@@ -83,7 +83,9 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
-        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
+//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
+        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
+
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
@@ -222,7 +224,8 @@ void ViewerInterface::setupUi()
         {terrainGenerationInterface,    "layers_to_all_button.png",         "Use layers as reference",          modelMenu,      [=]() { terrainGenerationInterface->layersToAll(); } },
         {terrainGenerationInterface,    "implicit_to_all_button.png",       "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
         {terrainGenerationInterface,    "reset_button.png",                 "Reload terrain from file",         modelMenu,      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); } },
-        {terrainGenerationInterface,    "",                                 "Reinforce borders",                diggingMenu,    [=]() { terrainGenerationInterface->reinforceVoxels(); } }
+        {terrainGenerationInterface,    "",                                 "Reinforce borders",                diggingMenu,    [=]() { terrainGenerationInterface->reinforceVoxels(); } },
+        {nullptr,    "",                                 "Erosion tests",                editMenu,    [=]() { this->erosionsTests(); } }
     };
 
     for (auto& informations : interfacesToOpen) {
@@ -442,17 +445,301 @@ void ViewerInterface::hideAllInteractiveParts()
     this->update();
 }
 
-//void ViewerInterface::openMapUI()
-//{
-//    QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
-//    terrainGenerationInterface->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
-//    viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
-////    this->terrainGenerationInterface->prepareShader(true);
-//}
 
-//void ViewerInterface::saveMapUI()
-//{
-//    QString q_filename = QFileDialog::getSaveFileName(this, QString("Enregistrer la carte"), QString::fromStdString(this->mapSavingFolder));
-//    terrainGenerationInterface->saveTerrain(q_filename.toStdString());
-//}
+std::map<std::string, float> generateRandomValuesFrom(std::map<std::string, std::vector<float>> variables, std::vector<std::string> unlockedVariables = {}, std::vector<std::string> lockedVariables = {}, float t = -1)
+{
+//    std::vector<int> indices;
+    /*
+    if (lockedVariables.empty() && unlockedVariables.size() > 0) {
+        for (const auto& var : variables)
+            if (!isIn(var.first, unlockedVariables)) lockedVariables.push_back(var.first);
+    }
+    else if (unlockedVariables.empty() && lockedVariables.size() > 0) {
+        for (const auto& var : variables)
+            if (!isIn(var.first, lockedVariables)) unlockedVariables.push_back(var.first);
+    }
+    else if (unlockedVariables.empty() && lockedVariables.empty()) {
+        for (const auto& var : variables)
+            unlockedVariables.push_back(var.first);
+    }
+    std::map<std::string, float> results;
+    for (const auto& [var, val] : variables) {
+        auto [mini, maxi, defaultVal] = val;
+        if (isIn(var, unlockedVariables)) {
+            if (t == -1) {
+                results[var] = random_gen::generate(mini, maxi); // Forget about the step
+            } else {
+                results[var] = interpolation::inv_linear(t, mini, maxi);
+            }
+        } else {
+            results[var] = defaultVal;
+        }
+    }
+    return results;
+    */
+    return {};
+}
 
+void ViewerInterface::erosionsTests()
+{
+    std::map<std::string, std::vector<float>> parameters = {
+        {"Strength", {0.1, 0.2, 0.5}},
+        {"Qtt", {320, 100, 1000}},
+        {"B.coef", {0.01, 0.1, 0.2, 1.0}},
+        {"B.ness", {1.0, 0.7, 0.3}},
+    };
+
+    srand(1);
+
+//    UnderwaterErosion::EROSION_APPLIED terrainType = this->applyOn; //UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP; // 0 = voxels, 1 = heightmap, 2 = implicit, ...
+//    if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS)
+//        viewer->setMapMode(MapMode::VOXEL_MODE);
+//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP)
+//        viewer->setMapMode(MapMode::GRID_MODE);
+//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN)
+//        viewer->setMapMode(MapMode::LAYER_MODE);
+//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN)
+//        viewer->setMapMode(MapMode::IMPLICIT_MODE);
+//    srand(43);
+
+//    TerrainGenerationInterface* terrainInterface = static_cast<TerrainGenerationInterface*>(this->viewer->interfaces["terrainGenerationInterface"].get());
+//    ErosionInterface* erosionInterface = static_cast<ErosionInterface*>(this->viewer->interfaces["erosionInterface"].get());
+
+    VoxelGrid initialVoxelGrid = *(terrainGenerationInterface->voxelGrid);
+//    Heightmap initialHeightmap = *heightmap;
+//    LayerBasedGrid initialLayerGrid = *layerGrid;
+
+//    this->viewer->restoreFromFile("experiments_state2.xml");
+//    this->viewer->setStateFileName("experiments_state2.xml");
+//    this->viewer->saveStateToFile();
+
+//    Vector3 cameraPosition = Vector3(this->viewer->camera()->position());
+//    Vector3 cameraDirection = Vector3(this->viewer->camera()->viewDirection());
+
+    std::map<std::string, std::vector<float>> varyingVariables =
+    {
+        // Name,            min, max, step
+        {"bouncingCoefficient",         {/*0.1, */0.2, 1.0} },
+        {"bounciness",                  {1.0, 0.7, 0.3} },
+        {"maxCapacityFactor",           {1.0, 0.1, 10.0} },
+        {"erosionFactor",               {0.5, 1.0, 5.0} },
+        {"depositFactor",               {0.5, 1.0, 5.0} },
+        {"matterDensity",               {500.0, 1662.0} },
+        {"airForce",                    {0.f, 0.1} },
+        {"waterForce",                  {/*0.f, */0.1} },
+        {"particleSize",                {8.0, 12.0/*, 4.0*/} },
+        {"astrength",                   {0.2, 0.5} },
+        {"nbParticles",                 {320} },
+        {"waterLevel",                  {0.0, 0.25} },
+        {"from",                        {0, 1} },
+        {"resistance",                  {0, 1} }
+    };
+
+    int nbTests = 1;
+    std::vector<std::string> params;
+    for (const auto& var : varyingVariables) {
+        params.push_back(var.first);
+        nbTests *= var.second.size();
+    }
+
+    std::vector<int> paramsCurrentIndices(varyingVariables.size());
+    paramsCurrentIndices[0] = -1;
+
+    std::string mainFolder = "";
+#ifdef linux
+    mainFolder = "/data/erosionsTests/";
+#else
+    mainFolder = "erosionsTests/";
+#endif
+    makedir(mainFolder);
+    // Create the general CSV
+    // Check if already exists
+    std::string CSVname = mainFolder + "allData.csv";
+    bool exists = checkPathExists(CSVname);
+    std::fstream mainCSVfile;
+    std::vector<std::map<std::string, float>> alreadyTestedParameters;
+    if (exists) {
+        mainCSVfile.open(CSVname, std::ios_base::in);
+        mainCSVfile.seekg(0);
+        mainCSVfile.seekp(0);
+        std::string header, lineContent;
+        std::vector<std::string> headerValues, sLineValues;
+        std::getline(mainCSVfile, header); // get header
+        headerValues = split(header, ";");
+        while (std::getline(mainCSVfile, lineContent)) {
+            sLineValues = split(lineContent, ";");
+            std::map<std::string, float> testedParameters;
+            for (size_t i = 0; i < sLineValues.size(); i++) {
+                float val;
+                try {
+                    val = std::stof(sLineValues[i]);
+                    testedParameters[headerValues[i]] = val;
+                } catch (std::exception e) {
+                    try {
+                        val = std::stof(replaceInString(sLineValues[i], ",", "."));
+                        testedParameters[headerValues[i]] = val;
+                    } catch (std::exception e2) {
+
+                    }
+                 }
+            }
+            alreadyTestedParameters.push_back(testedParameters);
+        }
+        mainCSVfile.close();
+        mainCSVfile.open(CSVname, std::ios_base::out | std::ios_base::app);
+
+    } else {
+        mainCSVfile.open(CSVname, std::ios_base::out | std::ios_base::app);
+        for (const auto& param : params)
+            mainCSVfile << param << ";";
+        mainCSVfile << "folder_name" << std::endl;
+        mainCSVfile.close();
+    }
+
+    std::vector<std::vector<std::string>> testedVariables = {
+//        { "particleSize" },
+//        { "strength" },
+//        { "erosionFactor" },
+//        { "criticalShearStress" },
+//        { "shearingStressConstantK" },
+//        { "nbParticles" },
+//        { "maxCapacityFactor" },
+//        { "matterDensity" },
+//        { "depositFactor" },
+//        { "waterLevel" },
+//        { "waterForce" },
+//        { "matterDensity" },
+    };
+
+    this->savingInterface->saveVoxels = true;
+    this->savingInterface->saveHeightmap = false;
+    this->savingInterface->saveLayers = false;
+
+    int filenameResultIndex = int(alreadyTestedParameters.size());
+
+    int stopAfterStep = -1; // Set to -1 for infinite tries
+    for (int iCombination = 0; iCombination < nbTests; iCombination++) {
+        mainCSVfile.open(CSVname, std::ios_base::out | std::ios_base::app);
+        bool theresARest = true;
+        int indexToIncrement = 0;
+//        while (theresARest) {
+//            theresARest = false;
+//            paramsCurrentIndices[indexToIncrement]++;
+//            if (paramsCurrentIndices[indexToIncrement] >= int(varyingVariables[params[indexToIncrement]].size())) {
+//                theresARest = true;
+//                paramsCurrentIndices[indexToIncrement] = 0;
+//                indexToIncrement++;
+//            }
+//            if (indexToIncrement >= int(params.size()))
+//                return;
+//        }
+        while (theresARest) {
+            if (paramsCurrentIndices[indexToIncrement] == int(varyingVariables[params[indexToIncrement]].size()) - 1) {
+                theresARest = true;
+                paramsCurrentIndices[indexToIncrement] = 0;
+                indexToIncrement++;
+            } else {
+                theresARest = false;
+                paramsCurrentIndices[indexToIncrement] = int(varyingVariables[params[indexToIncrement]].size()) - 1;
+                indexToIncrement++;
+            }
+        }
+
+        std::map<std::string, float> variables;
+        for (int i = 0; i < params.size(); i++) {
+            variables[params[i]] = varyingVariables[params[i]][paramsCurrentIndices[i]];
+        }
+//        std::cout << "Testing " << join(testedVariables[iCombination], " and ") << std::endl;
+//        for (int i = 0; i < stopAfterStep || stopAfterStep == -1; i++) {
+            // Initialize
+//            float t = (testedVariables[iCombination].size() == 1 ? float(i)/float(stopAfterStep - 1) : -1);
+//            auto variables = generateRandomValuesFrom(varyingVariables, testedVariables[iCombination], {}, t);
+            bool tested = false;
+            for (auto& x : alreadyTestedParameters) {
+                tested = true;
+                for (auto& [paramName, paramVal] : variables) {
+                    if (!startsWith(paramName, "cam") && replaceInString(std::to_string(variables[paramName]), ",", ".") != replaceInString(std::to_string(x[paramName]), ",", ".")) {
+                        tested = false;
+                    }
+                }
+                if (tested)
+                    break;
+            }
+            if (tested) {
+                continue;
+            }
+            alreadyTestedParameters.push_back(variables);
+
+            *terrainGenerationInterface->voxelGrid = initialVoxelGrid;
+
+            terrainGenerationInterface->setWaterLevel(variables["waterLevel"]);
+
+            std::cout << "Test " << filenameResultIndex << ": \n";
+            for (const auto& var : variables)
+                std::cout << "\t- \"" << var.first << "\" = " << var.second << "\n";
+            std::cout << std::flush;
+
+            /*
+
+        {"bouncingCoefficient",         {0.01, 0.1, 0.2, 1.0} },
+        {"bounciness",                  {1.0, 0.7, 0.3} },
+        {"maxCapacityFactor",           {1.0, 0.1, 3.0, 10.0} },
+        {"erosionFactor",               {0.5, 1.0, 5.0} },
+        {"depositFactor",               {0.5, 1.0, 5.0} },
+        {"matterDensity",               {500.0, 1662.0} },
+        {"airForce",                    {0.f, 0.03, 0.1, 1.0} },
+        {"waterForce",                  {0.f, 0.03, 0.1, 1.0} },
+        {"particleSize",                {4.0, 8.0, 12.0} },
+        {"strength",                    {0.01, 0.1, 0.3, 0.5} },
+        {"nbParticles",                 {320} },
+        {"waterLevel",                  {0.0, 0.25, 0.5} },
+        {"from",                        {0, 1} },
+        {"resistance",                  {0, 1} }
+             */
+            erosionInterface->bouncingCoefficient = variables["bouncingCoefficient"];
+            erosionInterface->bounciness = variables["bounciness"];
+            erosionInterface->maxCapacityFactor = variables["maxCapacityFactor"];
+            erosionInterface->erosionFactor = variables["erosionFactor"];
+            erosionInterface->depositFactor = variables["depositFactor"];
+            erosionInterface->matterDensity = variables["matterDensity"];
+            erosionInterface->airForce = variables["airForce"];
+            erosionInterface->waterForce = variables["waterForce"];
+            erosionInterface->erosionSize = variables["particleSize"];
+            erosionInterface->erosionStrength = variables["astrength"];
+            erosionInterface->erosionQtt = variables["nbParticles"];
+
+            ErosionInterface::PARTICLE_INITIAL_LOCATION loc;
+            if (variables["from"] == 0) {
+                loc = ErosionInterface::PARTICLE_INITIAL_LOCATION::JUST_ABOVE_VOXELS;
+            } else {
+                loc = ErosionInterface::PARTICLE_INITIAL_LOCATION::RANDOM;
+            }
+
+            UnderwaterErosion::DENSITY_TYPE densType;
+            if (variables["resistance"] == 0) {
+                densType = UnderwaterErosion::DENSITY_TYPE::NATIVE;
+            } else {
+                densType = UnderwaterErosion::DENSITY_TYPE::RANDOM_DENSITY;
+            }
+
+            erosionInterface->densityUsed = densType;
+            erosionInterface->numberOfIterations = 50;
+            erosionInterface->throwFrom(loc);
+
+//            this->savingInterface->mainFilename = "erosionsTests/param_";
+            std::string subFolderName = this->savingInterface->saveTerrainGeometry("erosionsTests/param_" + std::to_string(filenameResultIndex))[0];
+            filenameResultIndex++;
+
+            std::string parametersToCSV = "";
+            for (const auto& param : params)
+                parametersToCSV += std::to_string(variables[param]) + ";";
+            parametersToCSV += subFolderName;
+            mainCSVfile << parametersToCSV << std::endl;
+
+//        }
+            mainCSVfile.close();
+    }
+    mainCSVfile.close();
+
+    std::cout << "Unbelivable but true, it's finished!" << std::endl;
+}

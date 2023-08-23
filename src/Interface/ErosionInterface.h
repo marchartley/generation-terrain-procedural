@@ -54,15 +54,16 @@ public:
     std::shared_ptr<UnderwaterErosion> erosion;
     Viewer* viewer;
 
-protected:
+//protected:
+public:
     std::function<Vector3(Vector3)> computeFlowfieldFunction();
     Mesh rocksPathSuccess;
     Mesh rocksPathFailure;
     Mesh boundariesMesh;
 
     float erosionSize = 8.f;
-    float erosionStrength = .0; // .35f;
-    int erosionQtt = 1000;
+    float erosionStrength = .5; // .35f;
+    int erosionQtt = 1;
     float rockRandomness = .1f;
 
     int maxParticles = 1000;
@@ -91,6 +92,7 @@ protected:
     float criticalShearStress = .8f;
 
     bool continuousRotation = false;
+    bool wrapParticles = true;
 
     int numberOfIterations = 1;
 
@@ -105,7 +107,7 @@ protected:
     std::string airFlowImagePath = "";
     std::string densityFieldImagePath = "";
 
-    FluidSimType selectedSimulationType = LBM;
+    FluidSimType selectedSimulationType = STABLE;
 
     UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
     UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;

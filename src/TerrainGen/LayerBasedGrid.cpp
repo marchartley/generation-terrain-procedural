@@ -101,7 +101,9 @@ void LayerBasedGrid::reorderLayers()
             reorderingNeeded = false;
             for (int i = 0; i < int(stack.size() - 1); i++) {
 //                if (densA > 0.f && densB > 0.f) { // If it's AIR or WATER, don't do anything, I guess
-                if ((stack[i].first == TerrainTypes::SAND || stack[i + 1].first == TerrainTypes::SAND) && (isIn(stack[i].first, LayerBasedGrid::invisibleLayers) || isIn(stack[i+1].first, LayerBasedGrid::invisibleLayers))) {
+                if ((isIn(stack[i].first, std::vector<TerrainTypes>{TerrainTypes::SAND, TerrainTypes::DIRT}) ||
+                     isIn(stack[i+1].first, std::vector<TerrainTypes>{TerrainTypes::SAND, TerrainTypes::DIRT})) &&
+                        (isIn(stack[i].first, LayerBasedGrid::invisibleLayers) || isIn(stack[i+1].first, LayerBasedGrid::invisibleLayers))) {
                     float densA = LayerBasedGrid::densityFromMaterial(stack[i].first);
                     float densB = LayerBasedGrid::densityFromMaterial(stack[i + 1].first);
                     if (densA < densB) {
@@ -172,7 +174,7 @@ void LayerBasedGrid::from2DGrid(Heightmap grid)
     for (int x = 0; x < grid.getSizeX(); x++) {
         for (int y = 0; y < grid.getSizeY(); y++) {
             this->layers.at(x, y) = {
-                { TerrainTypes::DIRT, grid.getHeight(x, y) },
+                { TerrainTypes::SAND, grid.getHeight(x, y) },
                 { TerrainTypes::WATER, grid.getMaxHeight() - grid.getHeight(x, y) }
             };
         }
@@ -465,7 +467,7 @@ void LayerBasedGrid::cleanLayer(int x, int y, float minLayerHeight)
     while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
         stack.pop_back();
     for (size_t i = 0; i < stack.size(); i++) {
-        if (stack[i].second < minLayerHeight) {
+        if (stack[i].second <= minLayerHeight) {
             stack.erase(stack.begin() + i);
         }
     }
@@ -473,6 +475,8 @@ void LayerBasedGrid::cleanLayer(int x, int y, float minLayerHeight)
         if (stack[i].first == stack[i+1].first) {
             stack[i].second += stack[i+1].second;
             stack.erase(stack.begin() + i + 1);
+//            stack[i].second = 0;
+//            stack[i+1].second = 0;
         }
     }
 }
@@ -482,7 +486,9 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
     size_t nbStacks = layers.size();
     for (size_t iStack = 0; iStack < nbStacks; iStack++) {
         auto& stack = layers[iStack];
-        while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
+        Vector3 pos = layers.getCoordAsVector3(iStack);
+        cleanLayer(pos.x, pos.y, minLayerHeight);
+        /*while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
             stack.pop_back();
         for (size_t i = 0; i < stack.size(); i++) {
             if (stack[i].second < minLayerHeight) {
@@ -491,15 +497,16 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
         }
         for (int i = stack.size() - 2; i >= 0; i--) {
             if (stack[i].first == stack[i+1].first) {
-                stack[i].second += stack[i+1].second;
+//                stack[i].second += stack[i+1].second;
                 stack.erase(stack.begin() + i + 1);
             }
-        }
+        }*/
     }
 }
 
 LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float endZ, TerrainTypes material)
 {
+//    material = AIR;
     auto initialColumn = this->layers.at(x, y);
     auto zLevels = std::vector<std::pair<TerrainTypes, std::pair<float, float>>>();
     float currentHeight = 0.f;
@@ -515,18 +522,30 @@ LayerBasedGrid* LayerBasedGrid::transformLayer(int x, int y, float startZ, float
             // Under new layer
             float startUnder = startHeight;
             float endUnder = std::min(endHeight, startZ); // Min is not really useful since we checked that endHeight >= startZ.
-            zLevels.push_back({mat, {startUnder, endUnder}});
+            if (startUnder != endUnder)
+                zLevels.push_back({mat, {startUnder, endUnder}});
 
             // Inside new layer
             float startIn = endUnder;
             float endIn = std::min(endHeight, endZ);
-            zLevels.push_back({material, {startIn, endIn}});
+            if (startIn != endIn)
+                zLevels.push_back({material, {startIn, endIn}});
 
             // Above new layer
             float startAbove = endIn;
             float endAbove = endHeight;
-            zLevels.push_back({mat, {startAbove, endAbove}});
+            if (startAbove != endAbove)
+                zLevels.push_back({mat, {startAbove, endAbove}});
         }
+        currentHeight += height;
+        startZ = currentHeight;
+    }
+    if (currentHeight < endZ) {
+        if (currentHeight < startZ) {
+            zLevels.push_back({AIR, {currentHeight, startZ}});
+            currentHeight = startZ;
+        }
+        zLevels.push_back({material, {currentHeight, endZ}});
     }
     this->layers.at(x, y).resize(zLevels.size());
     for (size_t i = 0; i < zLevels.size(); i++) {

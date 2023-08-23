@@ -58,6 +58,8 @@ public Q_SLOTS:
 
     void hideAllInteractiveParts();
 
+    void erosionsTests();
+
 //    void openMapUI();
 //    void saveMapUI();
 

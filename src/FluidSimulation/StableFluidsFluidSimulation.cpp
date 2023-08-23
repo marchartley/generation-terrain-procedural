@@ -410,7 +410,7 @@ StableFluidsSimulation::StableFluidsSimulation()
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
     : FluidSimulation(sizeX, sizeY, sizeZ), sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
-    obstacles = GridF(dimensions);
+//    obstacles = GridF(dimensions);
     density_old = GridF(dimensions);
     density = GridF(dimensions);
 
@@ -423,11 +423,19 @@ StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, 
     maxSpeedSquared = maxSpeed * maxSpeed;
 }
 
-void StableFluidsSimulation::setObstacles(GridF new_obstacles)
+void StableFluidsSimulation::setObstacles(const GridF &new_obstacles)
 {
-    this->obstacles = new_obstacles.resize(dimensions);
+    /*this->obstacles = new_obstacles.resizeNearest(dimensions);
     for(size_t i = 0; i < this->obstacles.data.size(); i++) {
         if (this->obstacles[i] > 0.001) {
+            this->velocity[i] = Vector3();
+            this->velocity_old[i] = Vector3();
+        }
+    }*/
+
+    this->obstacleGrid = new_obstacles.resizeNearest(dimensions);
+    for(size_t i = 0; i < this->obstacleGrid.data.size(); i++) {
+        if (this->obstacleGrid[i] > 0.001) {
             this->velocity[i] = Vector3();
             this->velocity_old[i] = Vector3();
         }
@@ -455,6 +463,9 @@ GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int res
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
         _cachedVelocity = velocity;
+//        std::cout << "Recomputed : " << _cachedVelocity.min() << " " << _cachedVelocity.max() << std::endl;
+    } else {
+//        std::cout << "Not recomputed -> step " << currentStep << std::endl;
     }
     return _cachedVelocity.resize(rescaleX, rescaleY, rescaleZ);
 }
@@ -606,20 +617,29 @@ void StableFluidsSimulation::setVelocityBounds()
 {
     bool nullifyOnBounds = false;
     bool inverseOnBounds = true;
-    GridV3 boundariesGradient = this->obstacles.gradient() * (-1.f);
+    GridV3 boundariesGradient = this->obstacleGrid.gradient() * (-1.f);
 
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 origin(x, y, z);
                 if (velocity(x, y, z).norm2() > this->maxSpeedSquared) velocity(x, y, z).setMag(this->maxSpeed);
-                bool isGoingThroughObstable = (velocity.checkCoord(origin + velocity.at(origin) * 1.5f) ? obstacles.at(origin + velocity.at(origin) * 1.5f) > .01 : false);
+                bool isGoingThroughObstable = (obstacleGrid.at(origin) || obstacleGrid.at(origin + velocity(x, y, z).normalized()));
+
+//                = (velocity.checkCoord(origin + velocity.at(origin) * 1.5f) ? obstacles.at(origin + velocity.at(origin) * 1.5f) > .01 : false);
                 if (isGoingThroughObstable) {
                     if (inverseOnBounds) {
                         velocity.at(x, y, z) = boundariesGradient(x, y, z).normalized() * velocity.at(x, y, z).norm();
+//                        std::cout << "Inversing at " << origin << "\n";
                     } else if (nullifyOnBounds) {
                         velocity.at(x, y, z) *= 0.f;
+                        velocity_old.at(x, y, z) *= 0.f;
+//                        std::cout << "Nullify at " << origin << "\n";
+                    } else {
+//                        std::cout << "WTF?" << "\n";
                     }
+                } else {
+//                    std::cout << "No obstacle at " << origin << "\n";
                 }
             }
         }
