@@ -36,6 +36,9 @@ public:
 
     virtual std::set<size_t> getAllStoredTrianglesIndices() const;
 
+    bool checkIntersection(const Vector3& rayStart, const Vector3& rayEnd, std::set<size_t> ignoredTriangles = {}) const;
+    bool _checkIntersection(BVHNode* node, const Vector3& rayStart, const Vector3& rayEnd, std::set<size_t> ignoredTriangles = {}) const;
+
 //protected:
     BVHNode* buildBVH(int start, int end);
     virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3& rayStart, const Vector3& rayEnd, std::set<size_t> ignoredTriangles = {}) const;

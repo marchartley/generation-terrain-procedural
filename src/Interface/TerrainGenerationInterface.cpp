@@ -256,6 +256,9 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     std::string ext = toUpper(getExtension(filename));
 
     Vector3 terrainSize = Vector3(100, 100, 50); //Vector3(128, 128, 64);
+    if (this->voxelGrid)
+        terrainSize = voxelGrid->getDimensions();
+
     if (!this->heightmap)
         this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
     if (!this->voxelGrid)
@@ -296,10 +299,10 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     } else if (ext == "STL") {
         Mesh m;
         m.fromStl(filename);
-        if (m.isWatertight())
-            voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
-        else
-            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
+//        if (m.isWatertight())
+            voxelGrid->setVoxelValues((GridF(m.voxelize(voxelGrid->getDimensions())) - .5f).meanSmooth());
+//        else
+//            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
 //        voxelGrid->fromCachedData();
         heightmap->fromVoxelGrid(*voxelGrid);
         layerGrid->fromVoxelGrid(*voxelGrid);
@@ -338,16 +341,6 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     this->initialTerrainValues = this->voxelGrid->getVoxelValues();
 
-
-//    Mesh m;
-//    m.fromFBX("saved_maps/Geometry/cube_open.fbx").scale(100.f).translate(Vector3(50, 50, 25));
-////    m.fromFBX("C:/codes/Qt/Shared_folder_IRIT_Seafile/cartes_partagees/FBX/SM_SeaweedA.FBX").scale(100.f).translate(Vector3(50, 50, 25));
-//    std::cout << "Is watertight? " << m.isWatertight() << std::endl;
-//    m.fromFBX("saved_maps/Geometry/cube.fbx").scale(100.f).translate(Vector3(50, 50, 25));
-////    m.fromFBX("C:/codes/Qt/Shared_folder_IRIT_Seafile/cartes_partagees/FBX/SM_SeaweedA.FBX").scale(100.f).translate(Vector3(50, 50, 25));
-//    std::cout << "Is watertight? " << m.isWatertight() << std::endl;
-//    voxelGrid->_cachedVoxelValues = m.voxelizeSurface(voxelGrid->getDimensions());
-//    voxelGrid->fromCachedData();
     Q_EMIT this->updated();
 }
 
@@ -392,13 +385,13 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
     std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromVoxelGrid(*voxelGrid.get()); }) << "ms" << std::endl;
 }
 
-void TerrainGenerationInterface::saveTerrain(std::string filename)
+void TerrainGenerationInterface::saveTerrain(std::string filename, Vector3 dimensions)
 {
     std::string ext = toUpper(getExtension(filename));
     if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
         // To heightmap
         this->heightmap->fromVoxelGrid(*voxelGrid); // Just to be sure to have the last values
-        this->heightmap->saveHeightmap(filename);
+        this->heightmap->saveHeightmap(filename, dimensions);
     } else if (ext == "JSON") {
         // To JSON file containing the list of actions made on a map
         this->saveAllActions(filename);
@@ -671,9 +664,13 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
     implicitMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
-    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions()));
+
 
     this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
+
+    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions()));
+    heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions().x, voxelGrid->getVoxelValues().getDimensions().y, 1));
+
 
     GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
     std::vector<Vector3> positions(heightData.size());
@@ -919,6 +916,29 @@ void TerrainGenerationInterface::prepareShader(bool reload)
         std::cout << "Terrain shaders and assets ready." << std::endl;
 }
 
+GridF getVoxelChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
+    return voxels->getVoxelValues() - initial;
+}
+GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
+    auto diff = getVoxelChanges(voxels, initial);
+
+    GridF map(diff.sizeX, diff.sizeY);
+    for (int x = 0; x < diff.sizeX; x++) {
+        for (int y = 0; y < diff.sizeY; y++) {
+            float sum = 0;
+            for (int z = 0; z < diff.sizeZ; z++) {
+                sum += diff.at(x, y, z);
+            }
+            if (sum > 0) {
+                map.at(x, y) = std::max(sum, 0.f);
+            }
+            else {
+                map.at(x, y) = -std::max(-sum, 0.f);
+            }
+        }
+    }
+    return map;
+}
 
 
 void TerrainGenerationInterface::display(const Vector3& camPos)
@@ -994,6 +1014,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 positions[i] = heightData.getCoordAsVector3(i);
                 heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
             }
+            heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
             this->heightmapMesh.display(GL_POINTS);
@@ -1013,9 +1034,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 marchingCubeMesh.useIndices = false;
                 marchingCubeMesh.fromArray(points);
             }
-            GridF changes = values - initialTerrainValues;
             marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, changes + 2.f);
+            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
@@ -1114,4 +1134,70 @@ void TerrainGenerationInterface::reinforceVoxels()
     for (auto& v : distances)
         v = std::max(1.f, v);
     this->voxelGrid->setVoxelValues(voxelGrid->getVoxelValues() * distances);
+}
+
+void TerrainGenerationInterface::saveErosionDepositionTextureMasks(std::string savingFolder, std::string savingName)
+{
+    std::string terrainFilename = savingFolder + "/" + savingName + "_height.png";
+    std::string erosionFilename = savingFolder + "/" + savingName + "_erod.png";
+    std::string depositFilename = savingFolder + "/" + savingName + "_depo.png";
+
+    Vector3 dimensions = Vector3(256, 256, 1);
+
+    this->saveTerrain(terrainFilename, dimensions);
+    auto diff = getHeightmapChanges(voxelGrid, initialTerrainValues).resize(dimensions) / 2.f;
+
+
+    GridF erosionMap = diff;
+    GridF depositMap = diff;
+
+    for (size_t i = 0; i < diff.size(); i++) {
+        erosionMap[i] = std::min(-diff[i], 1.f);
+        depositMap[i] = std::min(diff[i], 1.f);
+    }
+
+    int width = erosionMap.sizeX;
+    int height = erosionMap.sizeY;
+    // To heightmap
+    std::vector<float> toFloatData(width*height);
+    std::vector<uint8_t> toIntData(width*height);
+
+    toFloatData = erosionMap.data;
+    for (size_t i = 0; i < erosionMap.size(); i++) {
+        toFloatData[i] = std::max(toFloatData[i], 0.f);
+        toIntData[i] = toFloatData[i] * 255;
+    }
+    stbi_write_png(erosionFilename.c_str(), width, height, 1, toIntData.data(), width * 1);
+
+    toFloatData = depositMap.data;
+    for (size_t i = 0; i < depositMap.size(); i++) {
+        toFloatData[i] = std::max(toFloatData[i], 0.f);
+        toIntData[i] = toFloatData[i] * 255;
+    }
+    stbi_write_png(depositFilename.c_str(), width, height, 1, toIntData.data(), width * 1);
+
+}
+
+void TerrainGenerationInterface::saveErosionDepositionTextureMasksOnMultiple()
+{
+    QFileDialog dialog(this);
+    dialog.setFileMode(QFileDialog::ExistingFiles);
+    QStringList fileNames;
+    if (dialog.exec()) {
+        fileNames = dialog.selectedFiles();
+        for (size_t i = 0; i < fileNames.size(); i++) {
+            QString& q_filename = fileNames[i];
+            std::string filename = q_filename.toStdString();
+
+            auto path = split(filename, "/");
+            std::string basename = split(path.back(), ".")[0];
+
+            path.pop_back();
+
+            std::string folder = join(path, "/") + "/heightmapsAndMasks/";
+            this->voxelGrid->setVoxelValues((GridF(Mesh().fromStl(filename).voxelize(voxelGrid->getDimensions())) - .5f).meanSmooth());
+            this->saveErosionDepositionTextureMasks(folder, basename);
+            std::cout << "Saved " << basename << " (" << (i+1) << "/" << fileNames.size() << ")" << std::endl;
+        }
+    }
 }

@@ -198,7 +198,7 @@ void ViewerInterface::setupUi()
         {warpFluidSimulationInterface,          "",                             "Warp fluid Simulation",                physicsMenu},
         {LbmFluidSimulationInterface,           "",                             "LBM fluid Simulation",                 physicsMenu},
         {coralIslandGeneratorInterface,         "",                             "Create coral island",                  diggingMenu},
-        {spheroidalErosionInterface,            "",                             "Spheroidal erosion (Beardall 2010",    physicsMenu}
+        {spheroidalErosionInterface,            "",                             "Spheroidal erosion (Beardall 2010)",   physicsMenu},
     };
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu* , std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -225,7 +225,8 @@ void ViewerInterface::setupUi()
         {terrainGenerationInterface,    "implicit_to_all_button.png",       "Use implicit as reference",        modelMenu,      [=]() { terrainGenerationInterface->implicitToAll(); } },
         {terrainGenerationInterface,    "reset_button.png",                 "Reload terrain from file",         modelMenu,      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); } },
         {terrainGenerationInterface,    "",                                 "Reinforce borders",                diggingMenu,    [=]() { terrainGenerationInterface->reinforceVoxels(); } },
-        {nullptr,    "",                                 "Erosion tests",                editMenu,    [=]() { this->erosionsTests(); } }
+        {nullptr,                       "",                                 "Erosion tests",                    editMenu,       [=]() { this->erosionsTests(); } },
+        {nullptr,                       "",                                 "Save depo/erod",                   modelMenu,      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }}
     };
 
     for (auto& informations : interfacesToOpen) {

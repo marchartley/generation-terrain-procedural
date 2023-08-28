@@ -402,3 +402,14 @@ std::string variantToStr(const DataVariant &var) {
     }
 }
 */
+
+std::vector<std::string> getAllFiles(std::string folderName)
+{
+    std::vector<std::string> filenames;
+    QDirIterator it(QString::fromStdString(folderName), QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QString dir = it.next();
+        filenames.push_back(dir.toStdString());
+    }
+    return filenames;
+}

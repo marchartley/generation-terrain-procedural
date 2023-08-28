@@ -538,32 +538,36 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     return *this;
 }
 
-void Heightmap::saveHeightmap(std::string heightmap_filename)
+void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions)
 {
+    if (!imageDimensions.isValid())
+        imageDimensions = this->heights.getDimensions();
+
     std::string ext = toUpper(getExtension(heightmap_filename));
-    int width = this->getSizeX();
-    int height = this->getSizeY();
+    int width = imageDimensions.x;
+    int height = imageDimensions.y;
+    auto resizedHeights = heights.resize(imageDimensions);
     // To heightmap
     std::vector<float> toFloatData(width*height);
     std::vector<uint8_t> toIntData(width*height);
 
 //    float newHeight = std::max(this->maxHeight, this->heights.max());
 
-    toFloatData = (this->heights/(this->getMaxHeight() * this->heightFactor)).data;
-    for (size_t i = 0; i < this->heights.size(); i++) {
+    toFloatData = (resizedHeights/100.f).data;
+    for (size_t i = 0; i < resizedHeights.size(); i++) {
         toFloatData[i] = std::max(toFloatData[i], 0.f);
-        toIntData[i] = toFloatData[i] * 255;
+        toIntData[i] = toFloatData[i] * 100.f; // * 255;
     }
     if (ext == "PNG")
-        stbi_write_png(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), this->getSizeX() * 1);
+        stbi_write_png(heightmap_filename.c_str(), width, height, 1, toIntData.data(), width * 1);
     else if (ext == "JPG")
-        stbi_write_jpg(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), 95);
+        stbi_write_jpg(heightmap_filename.c_str(), width, height, 1, toIntData.data(), 95);
     else if (ext == "BMP")
-        stbi_write_bmp(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+        stbi_write_bmp(heightmap_filename.c_str(), width, height, 1, toIntData.data());
     else if (ext == "TGA")
-        stbi_write_tga(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
+        stbi_write_tga(heightmap_filename.c_str(), width, height, 1, toIntData.data());
     else if (ext == "HDR")
-        stbi_write_hdr(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toFloatData.data());
+        stbi_write_hdr(heightmap_filename.c_str(), width, height, 1, toFloatData.data());
     else {
         std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
     }

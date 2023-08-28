@@ -95,6 +95,8 @@ uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
 
 uniform sampler3D dataFieldTex;
+uniform sampler3D dataChangesFieldTex;
+
 uniform float fogNear;
 uniform float fogFar;
 
@@ -389,6 +391,20 @@ void main(void)
         fragColor = vec4(0, 0, 0, 0.1);
         return;
     }
+
+    vec4 colorErod = vec4(158, 42, 43, 0) / 255.0;
+    vec4 colorNull = vec4(242, 184, 128, 0) / 255.0;
+    vec4 colorDepo = vec4(183, 195, 243, 0) / 255.0;
+
+    vec3 changeSize = vec3(textureSize(dataChangesFieldTex, 0));
+    vec3 evalPos = (changeSize.z > 1 ? ginitialVertPos / changeSize : vec3(ginitialVertPos.xy, 0.5) / changeSize);
+    float changeVal = texture(dataChangesFieldTex, evalPos).a - 2.0;
+
+    vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
+    col = mix(col, colorNull, 1.0 - abs(changeVal));
+    fragColor = vec4((col * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
+    fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
+    return;
 
     if (biomeColorValue < 1.0) {
         vec2 colorTextureOffset     = vec2(biomeColorValue, 0);

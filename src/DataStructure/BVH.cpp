@@ -58,6 +58,36 @@ std::set<size_t> BVHTree::getAllStoredTrianglesIndices() const
     return convertVectorToSet(indices);
 }
 
+bool BVHTree::checkIntersection(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+{
+    return this->_checkIntersection(root, rayStart, rayEnd, ignoredTriangles);
+}
+
+bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
+{
+    if (!node->box.intersects(rayStart, rayEnd).isValid()) {
+        return false;
+    }
+
+    if (!node->trianglesIndices.empty()) { // leaf node
+        for (const auto& triangleIndex : node->trianglesIndices) {
+            if (isIn(triangleIndex, ignoredTriangles)) continue;
+            auto& triangle = this->triangles[triangleIndex];
+            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], true);
+            if (intersectionPoint.isValid()) {
+                return true;
+            }
+        }
+    } else { // non-leaf node
+        if (_checkIntersection(node->left, rayStart, rayEnd, ignoredTriangles))
+            return true;
+        if (_checkIntersection(node->right, rayStart, rayEnd, ignoredTriangles))
+            return true;
+    }
+
+    return false;
+}
+
 float computeSurfaceArea(const AABBox& box) {
     Vector3 dims = box.dimensions();
     return 2.0f * (dims.x * dims.y + dims.x * dims.z + dims.y * dims.z);
