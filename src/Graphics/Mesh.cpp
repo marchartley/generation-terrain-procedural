@@ -997,7 +997,13 @@ GridI Mesh::voxelize(const Vector3& dimensions) const
     GridI res(dimensions);
 
     BVHTree tree;
-    tree.build(Triangle::vectorsToTriangles(this->getTriangles()));
+    auto triangles = this->getTriangles();
+    for (auto& tri : triangles) {
+        for (auto& p : tri) {
+            p = (p - myDims.mini) * Vector3(1.5, 1.5, 4.5) * dimensions;
+        }
+    }
+    tree.build(Triangle::vectorsToTriangles(triangles));
 
     int dimX = dimensions.x;
     int dimY = dimensions.y;
@@ -1007,9 +1013,10 @@ GridI Mesh::voxelize(const Vector3& dimensions) const
     for (int x = 0; x < dimX; x++) {
         for (int y = 0; y < dimY; y++) {
             for (int z = 0; z < dimZ; z++) {
-                Vector3 pos = Vector3(x, y, z)/(dimensions / myDims.dimensions()) + myDims.min();
-                Vector3 ray = Vector3(pos.x, pos.y + myDims.dimensions().y + 1, pos.z);
-                res.at(x, y, z) = (tree.getIntersection(pos, ray).isValid() ? 0 : 1); //(tree.query(pos, ray).size() % 2 == 0 ? 0 : 1);
+                Vector3 pos = Vector3(x, y, z); // /(dimensions / myDims.dimensions()) + myDims.min();
+                Vector3 ray = Vector3(pos.x, pos.y, pos.z + 100); // Vector3(pos.x, pos.y, pos.z + myDims.dimensions().z + 1);
+                res.at(x, y, z) = (tree.checkIntersection(pos, ray) ? 1 : 0);
+//                res.at(x, y, z) = (tree.getIntersection(pos, ray).isValid() ? 1 : 0);
             }
         }
     }

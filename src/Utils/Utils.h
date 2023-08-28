@@ -36,6 +36,8 @@ std::string getExtension(std::string file);
 std::string getFilename(std::string path);
 std::string simplify(std::string s);
 
+std::vector<std::string> getAllFiles(std::string folderName);
+
 float rad2deg(float rad);
 float deg2rad(float deg);
 

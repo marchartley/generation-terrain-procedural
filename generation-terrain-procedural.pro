@@ -40,6 +40,7 @@ unix {
     #INCLUDEPATH *= src/third-party/boost_1_79_0/boost
 #    LIBS *= -L/export/home/scharf/mhartley/codes/libQGLViewer-2.9.1/QGLViewer
     LIBS *= -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+    LIBS *= -lpng
 #    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
 #    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
 #    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
@@ -203,7 +204,25 @@ SOURCES += \
     src/Utils/Table.cpp \
         src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
-        src/main.cpp
+#    src/libpng/example.c \
+#    src/libpng/png.c \
+#    src/libpng/pngerror.c \
+#    src/libpng/pngget.c \
+#    src/libpng/pngmem.c \
+#    src/libpng/pngpread.c \
+#    src/libpng/pngread.c \
+#    src/libpng/pngrio.c \
+#    src/libpng/pngrtran.c \
+#    src/libpng/pngrutil.c \
+#    src/libpng/pngset.c \
+#    src/libpng/pngtest.c \
+#    src/libpng/pngtrans.c \
+#    src/libpng/pngwio.c \
+#    src/libpng/pngwrite.c \
+#    src/libpng/pngwtran.c \
+#    src/libpng/pngwutil.c \
+        src/main.cpp \
+#    src/pngpp/pngpptest.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
@@ -362,6 +381,29 @@ HEADERS += \
     src/Utils/stb_image_write.h \
     src/Utils/stb_image_resize.h \
     src/Utils/stl_reader.h \
+#    src/libpng/png.h \
+#    src/libpng/pngconf.h \
+#    src/libpng/pngdebug.h \
+#    src/libpng/pnginfo.h \
+#    src/libpng/pngpriv.h \
+#    src/libpng/pngstruct.h \
+#    src/pngpp/convert_color_space.hpp \
+#    src/pngpp/end_info.hpp \
+#    src/pngpp/error.hpp \
+#    src/pngpp/image.hpp \
+#    src/pngpp/info.hpp \
+#    src/pngpp/info_base.hpp \
+#    src/pngpp/io_base.hpp \
+#    src/pngpp/io_transform.hpp \
+#    src/pngpp/pixel_buffer.hpp \
+#    src/pngpp/pixel_traits.hpp \
+#    src/pngpp/png.hpp \
+#    src/pngpp/reader.hpp \
+#    src/pngpp/require_color_space.hpp \
+#    src/pngpp/rgb_pixel.hpp \
+#    src/pngpp/rgba_pixel.hpp \
+#    src/pngpp/types.hpp \
+#    src/pngpp/writer.hpp \
     src/sim-fluid-loganzartman/Box.hpp \
     src/sim-fluid-loganzartman/DebugLine.hpp \
     src/sim-fluid-loganzartman/Fluid.hpp \

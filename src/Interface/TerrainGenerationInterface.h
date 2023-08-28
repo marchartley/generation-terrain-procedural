@@ -20,7 +20,7 @@ public:
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void createTerrainFromImplicitPatches(nlohmann::json json_content);
-    void saveTerrain(std::string filename);
+    void saveTerrain(std::string filename, Vector3 dimensions = Vector3(false));
 
     void reloadShaders();
 
@@ -65,6 +65,10 @@ public Q_SLOTS:
     void saveMapUI();
 
     void reinforceVoxels();
+
+    void saveErosionDepositionTextureMasks(std::string savingFolder, std::string savingName);
+    void saveErosionDepositionTextureMasksOnMultiple();
+
 
 public:
     float minIsoLevel = -1000.0;
