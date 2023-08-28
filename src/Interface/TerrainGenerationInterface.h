@@ -110,6 +110,8 @@ protected:
     size_t voxelsPreviousHistoryIndex = -1;
     size_t layersPreviousHistoryIndex = -1;
 
+    GridF initialTerrainValues;
+
 public:
     Mesh waterLevelMesh;
     float waterLevel = 0.0f;

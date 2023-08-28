@@ -16,6 +16,7 @@ layout ( triangle_strip, max_vertices = 24 ) out;
 
 //Volume data field texture
 uniform sampler3D dataFieldTex;
+uniform sampler3D dataChangesFieldTex;
 //Edge table texture
 uniform isampler2D edgeTableTex;
 //Triangles table texture
@@ -111,9 +112,12 @@ vec3 getNormal(vec3 p) {
     vec3 y1 = clamp(p - vec3(0, 0.1, 0), minDims, maxDims);
     vec3 z0 = clamp(p + vec3(0, 0, 0.1), minDims, maxDims);
     vec3 z1 = clamp(p - vec3(0, 0, 0.1), minDims, maxDims);
-    float dx = clamp(cubeVal(x0) - cubeVal(x1), -1, 1);
-    float dy = clamp(cubeVal(y0) - cubeVal(y1), -1, 1);
-    float dz = clamp(cubeVal(z0) - cubeVal(z1), -1, 1);
+    float dx = cubeVal(x0) - cubeVal(x1) / length(x1 - x0);
+    float dy = cubeVal(y0) - cubeVal(y1) / length(y1 - y0);
+    float dz = cubeVal(z0) - cubeVal(z1) / length(z1 - z0);
+//    dx = clamp(dx, -1, 1);
+//    dy = clamp(dy, -1, 1);
+//    dz = clamp(dz, -1, 1);
     /*
     float dx = pow(clamp(cubeVal(x0) - cubeVal(x1), -1, 1), 5);
     float dy = pow(clamp(cubeVal(y0) - cubeVal(y1), -1, 1), 5);
@@ -172,11 +176,41 @@ int getCubeIndex(vec3 voxPos) {
     return cubeindex;
 }
 
+
+float getDensity(vec3 pos/*, float resolution*/) {
+    vec3 texSize = vec3(textureSize(dataFieldTex, 0));
+    vec3 offsets = vec3(0.0); // 0.5 / texSize;
+    float density = 0; // texture(dataFieldTex, pos).a;
+    float surrounding = 2.f;
+    for (float x = 0; x < surrounding + 1.0; x += 1.0) {
+        for (float y = 0; y < surrounding + 1.0; y += 1.0) {
+            for (float z = 0; z < surrounding + 1.0; z += 1.0) {
+                float divisor = 0.1; //float(int(surrounding*.5f));
+                vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) / texSize; // * (resolution / divisor);
+//                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
+                float val = texture(dataFieldTex, newPos - offsets).a;
+                density = max(density, val);
+            }
+        }
+    }
+    return (density - 0.5);
+}
+
 //Geometry Shader entry point
 void main(void) {
     vec4 position = vec4(initialVertPos[0], 1.0);
     vec3 voxPos = position.xyz;
-    vec3 center = vec3(textureSize(dataFieldTex, 0)) * 0.5;
+    vec3 dataSize = vec3(textureSize(dataFieldTex, 0));
+    vec3 center = dataSize * 0.5;
+
+    vec3 changeSize = vec3(textureSize(dataChangesFieldTex, 0));
+    float changeVal = texture(dataChangesFieldTex, voxPos / changeSize).a - 2.0;
+    if (changeVal < -.2)
+        gdensity = 10.0;
+    else if (changeVal > .2)
+        gdensity = 0.1999;
+    else
+        gdensity = 0.65; // getDensity(voxPos);
 
     if (!useMarchingCubes) {
         if (cubeVal(position.xyz) < isolevel)
