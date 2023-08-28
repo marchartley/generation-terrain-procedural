@@ -1,7 +1,5 @@
-#include "Utils/Table.h"
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
 
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
@@ -12,144 +10,41 @@
 #include <iostream>
 #include "Interface/Interface.h"
 
-#include "EnvObject/EnvObject.h"
-
-
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <random>
 #include <string>
-#include <set>
-
-#include "EnvObject/ExpressionParser.h"
 
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-/*
-    ExpressionParser parser;
-    std::string expression;
-    std::cout << "Expression: ";
-    getline(std::cin, expression);
-    std::cout << parser.parse(expression)(Vector3(1, 1, 1)) << std::endl;
+    std::vector<std::string> filenames;
+    QDirIterator it("erosionTests", QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        QString dir = it.next();
+        filenames.push_back(dir.toStdString());
+    }
+    size_t nbFiles = filenames.size();
+//    std::vector<Mesh> meshes(nbFiles);
+//#pragma omp parallel for
+    for (size_t i = 0; i < nbFiles; i++) {
+        std::string dir = filenames[i];
+        auto path = split(dir);
+        std::string previousName = path.back();
+        std::string basename = split(previousName, ".")[0] + ".obj";
+        path.erase(path.end());
+        path.push_back("asOBJ");
+        path.push_back(basename);
+        std::string newFilename = join(path, "/");
+
+        std::cout << dir << " --> " << newFilename << std::endl;
+//        std::ofstream file(newFilename);
+//        file << Mesh().fromStl(dir).toOBJ();
+//        file.close();
+    }
     return 0;
-*/
-    /*
-    GridF values = GridF::random(100, 100, 50) - .8f;
-    for (int x = 0; x < values.sizeX; x++) {
-        for (int y =0; y < values.sizeY; y++) {
-            for (int z = 0; z < values.sizeZ; z++) {
-                float h = float(z) / float(values.sizeZ);
-                values.at(x, y, z) -= h * .5f;
-            }
-        }
-    }
-//    BVHTree tree;
-    Mesh m = Mesh::applyMarchingCubes(values);
-    auto triangles = Triangle::vectorsToTriangles(m.getTriangles());
-
-    std::ofstream file;
-    file.open("TEST.stl");
-    file << m.toSTL();
-    file.close();
-
-    int intersectionCount;
-    int nbRays = 500000;
-    std::vector<Vector3> starts(nbRays), ends(nbRays);
-    for (int i = 0; i < nbRays; i++) {
-        starts[i] = Vector3::random(Vector3(), values.getDimensions());
-        ends[i] = Vector3::random(Vector3(), values.getDimensions());
-    }
-
-    std::vector<std::string> names;
-    std::vector<std::string> columns = {"nbTriangles", "parallel", "build", "eval", "total"};
-    std::vector<std::vector<float>> timings;
-    std::vector<float> timing;
-
-    float timeBuild, timeEval;
-
-    for (auto tris : {2, 4, 16, 64, 256, 1024}) {
-//    for (auto tris : {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048}) {
-        for (auto parallel : {false, true}) {
-            timing = {float(tris), float(parallel)};
-            names.push_back("SAH");
-            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", SAH     ... " << std::flush;
-            BVHTree tree1;
-            tree1.maxTrianglesPerLeaves = tris;
-            tree1.useParallel = parallel;
-            tree1.useSAH = true;
-            tree1.useQuickSelect = false;
-            timeBuild = timeIt([&]() {
-                tree1.build(triangles);
-            });
-            timeEval = timeIt([&]() {
-                intersectionCount = 0;
-                #pragma omp parallel for
-                for (int i = 0; i < nbRays; i++) {
-                    tree1.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
-//                    intersectionCount += int(tree1.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
-                }
-            });
-            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
-            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
-
-
-
-
-            names.push_back("Quick");
-            timing = {float(tris), float(parallel)};
-            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", Quick   ... " << std::flush;
-            BVHTree tree2;
-            tree2.maxTrianglesPerLeaves = tris;
-            tree2.useParallel = parallel;
-            tree2.useSAH = false;
-            tree2.useQuickSelect = true;
-            timeBuild = timeIt([&]() {
-                tree2.build(triangles);
-            });
-            timeEval = timeIt([&]() {
-                intersectionCount = 0;
-                #pragma omp parallel for
-                for (int i = 0; i < nbRays; i++) {
-                    tree2.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
-                //                    intersectionCount += int(tree2.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
-                }
-            });
-            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
-            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
-
-
-
-
-            names.push_back("Midpoint");
-            timing = {float(tris), float(parallel)};
-            std::cout << "Time for " << tris << " triangles per leaf, parallel = " << parallel << ", Midpoint... " << std::flush;
-            BVHTree tree3;
-            tree3.maxTrianglesPerLeaves = tris;
-            tree3.useParallel = parallel;
-            tree3.useSAH = false;
-            tree3.useQuickSelect = false;
-            timeBuild = timeIt([&]() {
-                tree3.build(triangles);
-            });
-            timeEval = timeIt([&]() {
-                intersectionCount = 0;
-                #pragma omp parallel for
-                for (int i = 0; i < nbRays; i++) {
-                    tree3.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]);
-                //                    intersectionCount += int(tree3.getAllIntersectionsAndTrianglesIndices(starts[i], ends[i]).size());
-                }
-            });
-            timings.push_back(vectorMerge(timing, {timeBuild, timeEval, timeBuild + timeEval}));
-            std::cout << intersectionCount << " intersections in " << showTime(timeBuild + timeEval) << std::endl;
-
-        }
-    }
-    Table results(timings, columns, names);
-    std::cout << results.sortBy("total").displayTable() << std::endl;
-    return 0;*/
 /*
     ImplicitPrimitive* primA = new ImplicitPrimitive;
     ImplicitPrimitive* primB = new ImplicitPrimitive;
@@ -208,7 +103,6 @@ int main(int argc, char *argv[])
     glFormat.setSampleBuffers(true);
     glFormat.setDefaultFormat(glFormat);
     glFormat.setSwapInterval(1);
-    glFormat.setAlpha(true);
     QGLWidget widget(glFormat);
     widget.makeCurrent();
 
@@ -221,14 +115,138 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
-    EnvObject::readFile("saved_maps/primitives.json");
-    EnvObject::sandDeposit = GridF(100, 100);
+/*
+    int isize = 64;
+    int jsize = 64;
+    int ksize = 64;
+    float dx = 0.125;
+    FluidSimulation fluidsim(isize, jsize, ksize, dx);
+
+    fluidsim.setSurfaceSubdivisionLevel(2);
+
+    float x, y, z;
+    fluidsim.getSimulationDimensions(&x, &y, &z);
+    fluidsim.addImplicitFluidPoint(x/2, y/2, z/2, 7.0);
+
+    fluidsim.addBodyForce(0.0, -25.0, 0.0);
+    fluidsim.initialize();
+
+    float timestep = 1.0 / 30.0;
+    for (;;) {
+        fluidsim.update(timestep);
+    }
+
+    return 0;*/
 
 
-    ViewerInterface vi;
-    vi.show();
 
-    return app.exec();
+    /*
+    std::cout << timeIt([]() {
+        Fluid fluid;
+        gfx::Program texture_copy_program;
+
+        fluid.init();
+        texture_copy_program.vertex({"screen_quad.vs.glsl"}).fragment({"texture_copy.fs.glsl"}).compile();
+
+    //    fluid.resize(40, 40, 40);
+
+        for (int i = 0; i < 100; i++) {
+            fluid.step();
+            fluid.ssbo_barrier();
+
+//            if (i % 100 != 0) continue;
+//            const auto particles = fluid.particle_ssbo.map_buffer_readonly<Particle>();
+            auto grid = fluid.grid_ssbo.map_buffer<GridCell>();
+
+            int count = 0;
+            for (int y = fluid.grid_dimensions.y-1; y >= 0; --y) {
+                for (int x = 0; x < fluid.grid_dimensions.x; ++x) {
+                    for (int z = 0; z < fluid.grid_dimensions.z; ++z) {
+                        const int i = fluid.get_grid_index({x, y, z});
+                        if (z == 5) std::cout << (grid[i].type == GRID_FLUID ? "O" : (grid[i].type == GRID_SOLID ? "#" : "."));
+                        count += (grid[i].type == 2 ? 1 : 0);
+                    }
+                }
+                std::cout << "/n";
+            }
+            std::cout << "/n" << count << "/n" << std::endl;
+        }
+    }) << "ms" << std::endl;
+
+    return 0;
+    */
+    /*Vector3 A = Vector3(1, 0, 0);
+    Vector3 B = Vector3(0.5, 1, 1).normalize();
+    Vector3 UP = Vector3(0, 0, 1); // A.cross(B);
+    Vector3 LEFT = UP.cross(A);
+
+    Vector3 C = Vector3(
+                    std::acos(B.y),
+                    std::acos(B.z),
+                    std::acos(B.x)
+                ) * (180.f / 3.141592f);
+
+    std::cout << C << std::endl;
+    return 0;*/
+/*
+    AABBox bbox(Vector3(0, 0, 0), Vector3(2, 2, 1));
+
+    Matrix3<float> M = Matrix3<float>({
+                                          {0, 1},
+                                          {1, 0}
+                                          });
+//    std::cout << M.displayValues() << std::endl;
+
+    Matrix3<float> m(10, 10);
+    Vector3 ratio = (M.getDimensions() - Vector3(1, 1, 0)) / (bbox.dimensions() - Vector3(1, 1, 0));
+    for (int _x = 0; _x < m.sizeX; _x++) {
+        for (int _y = 0; _y < m.sizeY; _y++) {
+            for (int _z = 0; _z < m.sizeZ; _z++) {
+                float x = _x, y = _y, z = _z;
+                Vector3 pos(x, y, z);
+                Vector3 query = bbox.normalize(pos); // * M.getDimensions(); //pos * ratio;
+                query.z = 0;
+                auto val = M.interpolate(query);
+                m.at(pos) = val;
+            }
+        }
+    }
+    std::cout << M.displayValues() << std::endl;
+    std::cout << m.displayValues() << std::endl;
+    return 0;*/
+
+/*
+    ShapeCurve A = ShapeCurve({
+                                  Vector3(0, 0.5, 0),
+                                  Vector3(0.5, 0, 0),
+                                  Vector3(1, 0.1, 0),
+                                  Vector3(0.9, 0.2, 0),
+                                  Vector3(0.5, 0.5, 0),
+                                  Vector3(0.9, 0.8, 0),
+                                  Vector3(1, 0.9, 0),
+                                  Vector3(0.5, 1, 0)
+                              });
+    ShapeCurve B = ShapeCurve({
+                                  Vector3(2, 0.5, 0),
+                                  Vector3(1.5, 0, 0),
+                                  Vector3(1, 0.1, 0),
+                                  Vector3(1.1, 0.2, 0),
+                                  Vector3(1.5, 0.5, 0),
+                                  Vector3(1.1, 0.8, 0),
+                                  Vector3(1, 0.9, 0),
+                                  Vector3(1.5, 1, 0)
+                              });
+    ShapeCurve AB = merge(A, B);
+
+    Plotter::init();
+    Plotter::getInstance()->addPlot(A.closedPath(), "A", Qt::blue);
+    Plotter::getInstance()->addPlot(B.closedPath(), "B", Qt::green);
+    Plotter::getInstance()->addPlot(AB.closedPath(), "AB", Qt::red);
+    Plotter::getInstance()->addScatter(AB.points, "");
+    std::cout << A << std::endl;
+    std::cout << B << std::endl;
+    std::cout << AB << std::endl;
+    return Plotter::getInstance()->exec();*/
 
 //    RegularSimplicialComplex grid(10, 10);
 //    grid.getNode(2, 3)->value = 0;
@@ -249,4 +267,9 @@ int main(int argc, char *argv[])
 //    dual.debug();
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
+
+    ViewerInterface vi;
+    vi.show();
+
+    return app.exec();
 }
