@@ -381,6 +381,8 @@ HEADERS += \
 
 DISTFILES += \
     src/Shaders/computeMC.comp \
+    src/Shaders/gouraud_120.frag \
+    src/Shaders/gouraud_120.vert \
     src/Shaders/layer_based.geom \
     src/Shaders/test_raymarching_voxels.frag \
     src/Shaders/test_raymarching_voxels.vert \

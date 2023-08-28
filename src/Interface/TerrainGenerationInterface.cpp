@@ -91,20 +91,6 @@ void TerrainGenerationInterface::voxelsToAll()
 //    voxelsToLayers();
     heightmapToLayers();
     voxelsToImplicit();
-/*
-    Vector3 center(100, 100);
-    for (int x = 0; x < 100; x++) {
-        for (int y = 0; y < 100; y++) {
-            Vector3 pos = Vector3(x, y, 0) - center.xy();
-            if (pos.norm() > 30)  continue;
-            float halfHeight = 200.f * std::sqrt(30.f*30.f - (pos.x*pos.x + pos.y*pos.y))/30.f;
-            float startZ = std::max(0.f, center.z - halfHeight);
-            float endZ = center.z + halfHeight;
-            layerGrid->transformLayer(x, y, startZ, endZ, SAND);
-        }
-    }
-    layersToHeightmap();
-*/
 }
 
 void TerrainGenerationInterface::layersToVoxels()
@@ -132,8 +118,6 @@ void TerrainGenerationInterface::layersToAll()
 void TerrainGenerationInterface::implicitToVoxels()
 {
     voxelGrid->fromImplicit(implicitTerrain.get());
-//    voxelGrid->_cachedVoxelValues = implicitTerrain->getVoxelized();
-//    voxelGrid->fromCachedData();
 }
 
 void TerrainGenerationInterface::implicitToLayers()
@@ -220,7 +204,6 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                     }
                 }
             }
-            std::cout << values.min() << " -- " << values.max() << std::endl;
         }
     } else {
         for (int x = 0; x < values.sizeX; x++) {
@@ -230,7 +213,6 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
                 }
             }
         }
-        std::cout << "-> " << values.min() << " -- " << values.max() << std::endl;
     }
     std::cout << frequency << std::endl;
 
@@ -247,6 +229,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
     voxelGrid->setVoxelValues(values);
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
+    this->initialTerrainValues = values;
 
     this->addTerrainAction(nlohmann::json({
                                               {"from_noise", true},
@@ -298,6 +281,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         if (!json_content.contains("actions")) {
             if (json_content.contains(ImplicitPatch::json_identifier)) {
                 this->createTerrainFromImplicitPatches(json_content);
+                this->initialTerrainValues = this->voxelGrid->getVoxelValues();
                 return;
             } else {
                 this->createTerrainFromBiomes(json_content);
@@ -351,6 +335,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
                                               {"from_noise", false}
                                           }));
     this->setWaterLevel(this->waterLevel);
+
+    this->initialTerrainValues = this->voxelGrid->getVoxelValues();
 
 
 //    Mesh m;
@@ -617,6 +603,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     marchingCubeMesh.shader->setInt("dataFieldTex", 0);
     marchingCubeMesh.shader->setInt("edgeTableTex", 1);
     marchingCubeMesh.shader->setInt("triTableTex", 2);
+    marchingCubeMesh.shader->setInt("dataChangesFieldTex", 3);
     marchingCubeMesh.shader->setFloat("isolevel", 0.f);
     marchingCubeMesh.shader->setVector("vertDecals[0]", Vector3(0.0, 0.0, 0.0));
     marchingCubeMesh.shader->setVector("vertDecals[1]", Vector3(1.0, 0.0, 0.0));
@@ -684,12 +671,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     GL_ALPHA_INTEGER_EXT, GL_INT, &(MarchingCubes::triangleTable));
     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
     implicitMesh.shader->setTexture3D("dataFieldTex", 0, voxelGrid->getVoxelValues() / 6.f + .5f);
-
-//    this->particlesMesh = Mesh(this->randomParticlesPositions,
-//                               std::make_shared<Shader>(vParticleShader, fParticleShader, gParticleShader),
-//                               true, GL_POINTS);
-//    particlesMesh.shader->setVector("color", std::vector<float>({1.f, 1.f, 1.f, .2f}));
-//    this->particlesMesh.shader->setFloat("maxTerrainHeight", voxelGrid->getSizeZ());
+    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions()));
 
     this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
 
@@ -728,10 +710,8 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-//            glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-//            GL_RED, GL_FLOAT, heightmap->heights.data.data());//heightData.data.data());
     glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-    GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+    GL_RGBA, GL_FLOAT, heightmapData);
     delete[] heightmapData;
 
 
@@ -928,10 +908,10 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     implicitMesh.shader->setInt("allBiomesDisplacementTextures", 7);
     layersMesh.shader->setInt("allBiomesDisplacementTextures", 7);
 
-    heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
-    marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
-    implicitMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
-    layersMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());//indexDisplacementTextureClass);
+    heightmapMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());
+    marchingCubeMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());
+    implicitMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());
+    layersMesh.shader->setInt("maxBiomesDisplacementTextures", colorTexturesIndex.size());
 
     updateDisplayedView(voxelGridOffset, voxelGridScaling);
 
@@ -1033,7 +1013,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 marchingCubeMesh.useIndices = false;
                 marchingCubeMesh.fromArray(points);
             }
+            GridF changes = values - initialTerrainValues;
             marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
+            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, changes + 2.f);
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
