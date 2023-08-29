@@ -1,6 +1,7 @@
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Utils/ShapeCurve.h"
+#include "DataStructure/Image.h"
 
 VoxelGrid::VoxelGrid(int nx, int ny, int nz, float noise_shifting)
 //    : /*blockSize(blockSize),*/ noise_shifting(noise_shifting)
@@ -1234,9 +1235,6 @@ void VoxelGrid::saveHeightmap(std::string heightmap_filename)
     std::string ext = toUpper(getExtension(heightmap_filename));
     int width = this->getSizeX();
     int height = this->getSizeY();
-    // To heightmap
-    std::vector<float> toFloatData(width*height);
-    std::vector<uint8_t> toIntData(width*height);
 
 //    float newHeight = std::max(this->maxHeight, this->heights.max());
 
@@ -1251,14 +1249,20 @@ void VoxelGrid::saveHeightmap(std::string heightmap_filename)
             }
         }
     }
+    Image(heights).writeToFile(heightmap_filename);
 
+    /*
+    // To heightmap
+    std::vector<float> toFloatData(width*height);
+    std::vector<uint8_t> toIntData(width*height);
     toFloatData = heights.data;
     for (size_t i = 0; i < heights.size(); i++) {
         toIntData[i] = toFloatData[i] * 255;
     }
-    if (ext == "PNG")
-        stbi_write_png(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), this->getSizeX() * 1);
-    else if (ext == "JPG")
+    if (ext == "PNG") {
+        Image(heights).writeToFile(heightmap_filename);
+//        stbi_write_png(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), this->getSizeX() * 1);
+    } else if (ext == "JPG")
         stbi_write_jpg(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data(), 95);
     else if (ext == "BMP")
         stbi_write_bmp(heightmap_filename.c_str(), this->getSizeX(), this->getSizeY(), 1, toIntData.data());
@@ -1269,4 +1273,5 @@ void VoxelGrid::saveHeightmap(std::string heightmap_filename)
     else {
         std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
     }
+    */
 }

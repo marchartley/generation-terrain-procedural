@@ -11,6 +11,7 @@
 //#include "Utils/stb_image.h"
 //#include "Utils/stb_image_write.h"
 #include "DataStructure/Matrix.h"
+#include "DataStructure/Image.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
 {
@@ -1155,27 +1156,8 @@ void TerrainGenerationInterface::saveErosionDepositionTextureMasks(std::string s
         erosionMap[i] = std::min(-diff[i], 1.f);
         depositMap[i] = std::min(diff[i], 1.f);
     }
-
-    int width = erosionMap.sizeX;
-    int height = erosionMap.sizeY;
-    // To heightmap
-    std::vector<float> toFloatData(width*height);
-    std::vector<uint8_t> toIntData(width*height);
-
-    toFloatData = erosionMap.data;
-    for (size_t i = 0; i < erosionMap.size(); i++) {
-        toFloatData[i] = std::max(toFloatData[i], 0.f);
-        toIntData[i] = toFloatData[i] * 255;
-    }
-    stbi_write_png(erosionFilename.c_str(), width, height, 1, toIntData.data(), width * 1);
-
-    toFloatData = depositMap.data;
-    for (size_t i = 0; i < depositMap.size(); i++) {
-        toFloatData[i] = std::max(toFloatData[i], 0.f);
-        toIntData[i] = toFloatData[i] * 255;
-    }
-    stbi_write_png(depositFilename.c_str(), width, height, 1, toIntData.data(), width * 1);
-
+    Image(erosionMap).writeToFile(erosionFilename);
+    Image(depositMap).writeToFile(depositFilename);
 }
 
 void TerrainGenerationInterface::saveErosionDepositionTextureMasksOnMultiple()
