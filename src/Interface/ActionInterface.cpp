@@ -12,8 +12,8 @@ ActionInterface::ActionInterface(std::string actionTypeName,
       mainActionDescription(mainActionDescription),
       mainActionButtonLogo(mainActionButtonLogo)
 {
-    actionType = simplify(actionType);
-    interfaceType = simplify(interfaceType);
+    this->actionType = simplify(actionType);
+    this->interfaceType = simplify(interfaceType);
 }
 
 //ActionInterface::~ActionInterface()

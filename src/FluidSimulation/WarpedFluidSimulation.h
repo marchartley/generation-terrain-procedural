@@ -19,6 +19,10 @@ public:
     Vector3 mainDirection = Vector3(1, 0, 0);
 
     GridV3 velocities;
+    void addObstacles(const GridF &obstacles);
+    void setObstacles(const GridF &obstacles);
+
+    void recomputeVelocities();
 };
 
 #endif // WARPEDFLUIDSIMULATION_H

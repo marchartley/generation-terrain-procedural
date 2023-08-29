@@ -18,7 +18,7 @@ GlobalTerrainProperties::GlobalTerrainProperties()
     this->simulations[FluidSimType::LBM] = new LBMFluidSimulation(false);
 //    this->simulations[FluidSimType::SHALLOW] = new ShallowWaterSimulation();
     this->simulations[FluidSimType::STABLE] = new StableFluidsSimulation(simulationSize.x, simulationSize.y, simulationSize.z, dt, diffusion, viscosity, fluidSolverIterations);
-    this->simulations[FluidSimType::WARP] = new WarpedFluidSimulation(simulationSize.x, simulationSize.y, simulationSize.z);
+    this->simulations[FluidSimType::WARP] = new WarpedFluidSimulation(100, 100, 100); //simulationSize.x, simulationSize.y, simulationSize.z);
     /*
     Vector3 simulationSize(1, 1, 1);
     this->simulations[FluidSimType::FLIP] = new FLIPSimulation(1000, simulationSize.x, simulationSize.y, simulationSize.z, 1, .2f, 20000, 1.f); // dt);

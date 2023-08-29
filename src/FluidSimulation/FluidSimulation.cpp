@@ -8,7 +8,7 @@ FluidSimulation::FluidSimulation()
 }
 
 FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ)
-    : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(GridI(sizeX, sizeY, sizeZ)), obstacleGradient(GridV3(sizeX, sizeY, sizeZ))
+    : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(GridF(sizeX, sizeY, sizeZ)), obstacleGradient(GridV3(sizeX, sizeY, sizeZ))
 {
 //    this->obstacleTrianglesOctree = nullptr;
 }

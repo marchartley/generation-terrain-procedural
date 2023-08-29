@@ -225,6 +225,7 @@ void SPHSimulation::handleCollisions() {
 
 std::vector<size_t> SPHSimulation::getNeighbors(Vector3& position, float maxDistance) {
     std::vector<size_t> neighborsIndices;
+    if (!this->tree) this->initialize();
     tree->findNeighbors(particles, tree->root, position, maxDistance * 2.f, neighborsIndices);
     return neighborsIndices;
 }
@@ -262,6 +263,8 @@ void SPHSimulation::relaxDensity() {
 
 
 void SPHSimulation::step() {
+    if (!this->tree)
+        this->initialize();
     currentStep++;
     float timeKDTree = timeIt([=]() { this->computeNeighbors(); });
     std::vector<Particle> previousState = particles;

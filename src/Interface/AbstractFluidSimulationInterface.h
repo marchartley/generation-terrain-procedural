@@ -43,11 +43,13 @@ protected:
     Mesh vectorsMesh;
     Mesh particlesMesh;
     Mesh boundariesMesh;
+    Mesh gridBoundaryMesh;
     Mesh otherMeshToDisplay;
 
     FluidSimulation* _simulation;
 
     bool displayBoundaries = false;
+    bool displayGridBoundaries = false;
     bool displayVectors = true;
     bool displayParticles = false;
     bool computeAtEachFrame = true;

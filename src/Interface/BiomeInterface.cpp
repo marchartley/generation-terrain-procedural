@@ -13,6 +13,8 @@ void BiomeInterface::display(const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
+    if (!this->rootBiome)
+        return;
     auto queue = std::vector<std::shared_ptr<BiomeInstance>>({this->rootBiome});
     while (!queue.empty()) {
         auto& current = queue.front();

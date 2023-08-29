@@ -1,7 +1,7 @@
 #include "FLIPSimulationInterface.h"
 
 FLIPSimulationInterface::FLIPSimulationInterface(QWidget *parent)
-    : AbstractFluidSimulationInterface("flipsimulation", "FLIP simulation", "physics", "FLIP Simulation", "", parent)
+    : AbstractFluidSimulationInterface("flipsimulation", "FLIP simulation", "physics", "FLIP Simulation", "flip_button.png", parent)
 {
     _simulation = GlobalTerrainProperties::get()->simulations[FLIP]; // = dynamic_cast<FLIPSimulation*>(_simulation);
 //    *_simulation = FLIPSimulation(1000, 20, 20, 1, 1, .2f, 20000, 0.1f);

@@ -4,7 +4,7 @@
 #include "Interface/RangeSlider.h"
 
 CoralIslandGeneratorInterface::CoralIslandGeneratorInterface(QWidget *parent)
-    : ActionInterface("coralisland", "Coral island generator", "digging", "Create coral island", "", parent)
+    : ActionInterface("coralisland", "Coral island generator", "digging", "Create coral island", "coral_generation_button.png", parent)
 {
 
 }

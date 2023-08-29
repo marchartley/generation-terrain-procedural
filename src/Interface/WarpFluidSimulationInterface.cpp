@@ -1,16 +1,33 @@
 #include "WarpFluidSimulationInterface.h"
 
 WarpFluidSimulationInterface::WarpFluidSimulationInterface(QWidget *parent)
-    : AbstractFluidSimulationInterface("warpfluidsimulation", "Warp Fluids simulation", "physics", "Warp fluid Simulation", "", parent)
+    : AbstractFluidSimulationInterface("warpfluidsimulation", "Warp Fluids simulation", "physics", "Warp fluid Simulation", "warp_button.png", parent)
 {
     _simulation = GlobalTerrainProperties::get()->simulations[WARP]; // = dynamic_cast<WarpedFluidSimulation*>(_simulation);
-//    _simulation = new WarpedFluidSimulation(20, 20, 1);
 }
 
 void WarpFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     AbstractFluidSimulationInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
     this->computeFromTerrain(voxelGrid.get());
+}
+
+void WarpFluidSimulationInterface::display(const Vector3& camPos)
+{
+    otherMeshToDisplay.displayShape = GL_LINES;
+    std::vector<Vector3> lines;
+    for (int x = 0; x < _simulation->obstacleGrid.sizeX; x++) {
+        for (int y = 0; y < _simulation->obstacleGrid.sizeY; y++) {
+            lines.push_back(Vector3(x, y));
+            lines.push_back(Vector3(x, y, _simulation->obstacleGrid(x, y)));
+        }
+    }
+    auto ratio = voxelGrid->getDimensions() / _simulation->obstacleGrid.getDimensions();
+    for (auto& p : lines)
+        p *= ratio;
+    otherMeshToDisplay.fromArray(lines);
+
+    AbstractFluidSimulationInterface::display(camPos);
 }
     /*
 
@@ -71,8 +88,8 @@ QLayout *WarpFluidSimulationInterface::createGUI()
     displayBoundariesButton->setChecked(this->displayBoundaries);
 //    autoComputeButton->setChecked(this->computeAtEachFrame);
 
-    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->displayBoundaries = cheecked; });
-//    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->computeAtEachFrame = cheecked; });
+    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayBoundaries = checked; });
+//    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; });
 
     return layout;
 }
@@ -118,6 +135,8 @@ void WarpFluidSimulationInterface::updateSimulationMesh()
 void WarpFluidSimulationInterface::computeFromTerrain(TerrainModel *terrain)
 {
     auto simulation = dynamic_cast<WarpedFluidSimulation*>(_simulation);
+    simulation->recomputeVelocities();
+    /*
     auto asVoxels = dynamic_cast<VoxelGrid*>(terrain);
     auto asHeightmap = dynamic_cast<Heightmap*>(terrain);
     auto asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
@@ -149,8 +168,8 @@ void WarpFluidSimulationInterface::computeFromTerrain(TerrainModel *terrain)
         }
     }
     simulation->velocities = velocity;
-//    this->velocity = gradients + simulation.mainDirection;
-//    std::cout << "Recomputed!" << std::endl;
+    */
+
 }
 /*
 void WarpFluidSimulationInterface::show()

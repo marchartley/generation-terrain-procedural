@@ -23,7 +23,10 @@ public Q_SLOTS:
     void hide();
     virtual void afterTerrainUpdated();
 
+    void instantiateObject();
+
 public:
+
 };
 
 
