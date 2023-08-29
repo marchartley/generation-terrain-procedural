@@ -1,6 +1,30 @@
 #include "Interface/Interface.h"
 #include "Interface/InterfaceUtils.h"
 
+#include "Interface/KarstPathGenerationInterface.h"
+#include "Interface/SpaceColonizationInterface.h"
+#include "Interface/FaultSlipInterface.h"
+#include "Interface/FlowFieldInterface.h"
+#include "Interface/TunnelInterface.h"
+#include "Interface/ManualEditionInterface.h"
+#include "Interface/GravityInterface.h"
+#include "Interface/UndoRedoInterface.h"
+#include "Interface/TerrainGenerationInterface.h"
+#include "Interface/ErosionInterface.h"
+#include "Interface/HeightmapErosionInterface.h"
+#include "Interface/BiomeInterface.h"
+#include "Interface/SmoothInterface.h"
+#include "Interface/PrimitivePatchesInterface.h"
+#include "Interface/TerrainSavingInterface.h"
+#include "Interface/MeshInstanceAmplificationInterface.h"
+#include "Interface/SPHSimulationInterface.h"
+#include "Interface/FLIPSimulationInterface.h"
+#include "Interface/WarpFluidSimulationInterface.h"
+#include "Interface/LBMFluidSimulationInterface.h"
+#include "Interface/CoralIslandGeneratorInterface.h"
+#include "Interface/SpheroidalErosionInterface.h"
+#include "Interface/EnvObjsInterface.h"
+
 ViewerInterface::ViewerInterface() {
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
@@ -33,7 +57,8 @@ ViewerInterface::ViewerInterface() {
         std::make_shared<WarpFluidSimulationInterface>(this),
         std::make_shared<LBMFluidSimulationInterface>(this),
         std::make_shared<CoralIslandGeneratorInterface>(this),
-        std::make_shared<SpheroidalErosionInterface>(this)
+        std::make_shared<SpheroidalErosionInterface>(this),
+        std::make_shared<EnvObjsInterface>(this)
     };
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>();
@@ -44,58 +69,6 @@ ViewerInterface::ViewerInterface() {
 
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
 
-    /*
-    this->erosionInterface->viewer = this->viewer;
-    this->karstPathGeneration = std::make_shared<KarstPathGenerationInterface>(this);
-    this->spaceColonization = std::make_shared<SpaceColonizationInterface>(this);
-    this->faultSlip = std::make_shared<FaultSlipInterface>(this);
-    this->flowField = std::make_shared<FlowFieldInterface>(this);
-    this->tunnelInterface = std::make_shared<TunnelInterface>(this);
-    this->manualEditionInterface = std::make_shared<ManualEditionInterface>(this);
-    this->gravityInterface = std::make_shared<GravityInterface>(this);
-    this->undoRedoInterface = std::make_shared<UndoRedoInterface>(this);
-    this->terrainGenerationInterface = std::make_shared<TerrainGenerationInterface>(this);
-    this->erosionInterface = std::make_shared<ErosionInterface>(this);
-    this->erosionInterface->viewer = this->viewer;
-    this->heightmapErosionInterface = std::make_shared<HeightmapErosionInterface>(this);
-    this->biomeInterface = std::make_shared<BiomeInterface>(this);
-    this->smoothInterface = std::make_shared<SmoothInterface>(this);
-    this->patchesInterface = std::make_shared<PrimitivePatchesInterface>(this);
-    this->savingInterface = std::make_shared<TerrainSavingInterface>(this);
-    this->meshInstanceAmplificationInterface = std::make_shared<MeshInstanceAmplificationInterface>(this);
-    this->sphSimulationInterface = std::make_shared<SPHSimulationInterface>(this);
-    this->flipSimulationInterface = std::make_shared<FLIPSimulationInterface>(this);
-    this->warpFluidSimulationInterface = std::make_shared<WarpFluidSimulationInterface>(this);
-    this->LbmFluidSimulationInterface = std::make_shared<LBMFluidSimulationInterface>(this);
-    this->coralIslandGeneratorInterface = std::make_shared<CoralIslandGeneratorInterface>(this);
-    this->spheroidalErosionInterface = std::make_shared<SpheroidalErosionInterface>(this);
-
-    this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>(
-                {
-                    { "spaceColonization", spaceColonization},
-                    { "karstPathGeneration", karstPathGeneration},
-                    { "faultSlip", faultSlip},
-//                    { "flowField", flowField},
-                    { "tunnelInterface", tunnelInterface},
-                    { "manualEditionInterface", manualEditionInterface},
-                    { "gravityInterface", gravityInterface},
-                    { "undoRedoInterface", undoRedoInterface},
-                    { "terrainGenerationInterface", terrainGenerationInterface},
-                    { "erosionInterface", erosionInterface},
-                    { "heightmapErosionInterface", heightmapErosionInterface},
-                    { "biomeInterface", biomeInterface},
-                    { "smoothInterface", smoothInterface},
-                    { "terrainSavingInterface", savingInterface},
-                    { "meshInstanceAmplificationInterface", meshInstanceAmplificationInterface},
-                    { "primitivePatchInterface", patchesInterface},
-//                    { "SPHSimulation", sphSimulationInterface },
-//                    { "FLIPSimulation", flipSimulationInterface },
-//                    { "WarpFluidSimulation", warpFluidSimulationInterface },
-//                    { "LBMFluidSimulation", LbmFluidSimulationInterface },
-                    { "coralIslandGeneratorInterface", coralIslandGeneratorInterface},
-                    { "spheroidalErosionInterface", spheroidalErosionInterface}
-                });
-    */
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
         actionInterface.second->hide();
@@ -117,7 +90,8 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/corridor.data");
 
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
@@ -197,12 +171,11 @@ void ViewerInterface::setupUi()
     this->addToolBar(Qt::ToolBarArea::TopToolBarArea, toolbar);
 
     QMenuBar* menu = new QMenuBar(this);
-    this->setMenuBar(menu);
 
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, QMenu*>> interfacesToOpen;
     std::map<std::string, QMenu*> menus;
     for (auto& [id, interface] : actionInterfaces) {
-        if (interface->interfaceType != "") continue;
+        if (interface->interfaceType == "") continue;
         if (menus.count(interface->interfaceType) == 0) {
             menus[interface->interfaceType] = new QMenu(QString::fromStdString(toCapitalize(interface->interfaceType)));
             menu->addMenu(menus[interface->interfaceType]);
@@ -217,9 +190,6 @@ void ViewerInterface::setupUi()
 //         Main interface     Button image                        Description                         Menu            Function to call
         {undoRedoInterface,             "undo_button.png",                  "Undo last action",                 "edit",       [=]() { undoRedoInterface->undo(); }},
         {undoRedoInterface,             "redo_button.png",                  "Redo last action",                 "edit",       [=]() { undoRedoInterface->redo(); }},
-        {terrainGenerationInterface,    "reload_button.png",                "Reload terrain",                   "file",       [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); }},
-//        {terrainGenerationInterface,    "open_button.png",                  "Open an existing map",             "file",       [=]() { terrainGenerationInterface->openMapUI(); }},
-//        {terrainGenerationInterface,    "save_button.png",                  "Save the current map",             "file",       [=]() { terrainGenerationInterface->saveMapUI(); }},
         {nullptr,                       "recording_button.png",             "Start / stop recording the screen","recording",  [=]() { this->viewer->startStopRecording(); }},
         {nullptr,                       "snapshot.png",                     "Take snapshot of screen",          "recording",  [=]() { this->viewer->screenshot(); }},
         {nullptr,                       "display-marching-cubes_button.png","Use the Marching Cubes algorithm", "view",       [=]() { this->viewer->setSmoothingAlgorithm(SmoothingAlgorithm::MARCHING_CUBES); } },
@@ -227,7 +197,7 @@ void ViewerInterface::setupUi()
         {nullptr,                       "heightmap_button.png",             "Display using heightmap structure","model",      [=]() { this->viewer->setMapMode(MapMode::GRID_MODE); } },
         {nullptr,                       "layerbased_button.png",            "Display using layered structure",  "model",      [=]() { this->viewer->setMapMode(MapMode::LAYER_MODE); } },
         {nullptr,                       "voxelgrid_button.png",             "Display using voxels structure",   "model",      [=]() { this->viewer->setMapMode(MapMode::VOXEL_MODE);} },
-        {nullptr,                       "implicit_button.png",              "Display using implicit structure", "model",      [=]() { this->viewer->setMapMode(MapMode::IMPLICIT_MODE);} },
+        {nullptr,                       "implicit_representation_button.png","Display using implicit structure", "model",      [=]() { this->viewer->setMapMode(MapMode::IMPLICIT_MODE);} },
         {nullptr,                       "no_display.png",                   "Hide map",                         "view",       [=]() { this->viewer->setViewerMode(NO_DISPLAY);} },
         {nullptr,                       "wire_mode.png",                    "Display wireframe",                "view",       [=]() { this->viewer->setViewerMode(WIRE_MODE); } },
         {nullptr,                       "fill_mode.png",                    "Display solid",                    "view",       [=]() { this->viewer->setViewerMode(FILL_MODE); } },
@@ -237,14 +207,16 @@ void ViewerInterface::setupUi()
         {terrainGenerationInterface,    "layers_to_all_button.png",         "Use layers as reference",          "model",      [=]() { terrainGenerationInterface->layersToAll(); } },
         {terrainGenerationInterface,    "implicit_to_all_button.png",       "Use implicit as reference",        "model",      [=]() { terrainGenerationInterface->implicitToAll(); } },
         {terrainGenerationInterface,    "reset_button.png",                 "Reload terrain from file",         "model",      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); } },
-        {terrainGenerationInterface,    "",                                 "Reinforce borders",                "digging",    [=]() { terrainGenerationInterface->reinforceVoxels(); } },
+        {terrainGenerationInterface,    "reinforce_borders_button.png",     "Reinforce borders",                "digging",    [=]() { terrainGenerationInterface->reinforceVoxels(); } },
         {nullptr,                       "",                                 "Erosion tests",                    "edit",       [=]() { this->erosionsTests(); } },
-        {nullptr,                       "",                                 "Save depo/erod",                   "model",      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }}
+        {nullptr,                       "save_erod_depo_button.png",        "Save depo/erod",                   "model",      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }}
     };
 
     for (auto& [action, logo, descr, menuName, function] : actionsToUse) {
-        if (menus.count(menuName) == 0)
+        if (menus.count(menuName) == 0) {
             menus[menuName] = new QMenu(QString::fromStdString(toCapitalize(menuName)));
+            menu->addMenu(menus[menuName]);
+        }
     }
 
     for (auto& informations : interfacesToOpen) {
@@ -272,6 +244,8 @@ void ViewerInterface::setupUi()
         toolbar->addActions(menu->actions());
         toolbar->addSeparator();
     }
+
+    this->setMenuBar(menu);
 
     QStatusBar* status = new QStatusBar(this);
     this->setStatusBar(status);

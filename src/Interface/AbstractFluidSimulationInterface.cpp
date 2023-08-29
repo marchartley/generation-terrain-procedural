@@ -26,6 +26,8 @@ void AbstractFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap>
 //    this->boundariesMesh = Mesh(std::make_shared<Shader>(vMCShader, fMCShader, gMCShader));
     this->boundariesMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->boundariesMesh.useIndices = false;
+    this->gridBoundaryMesh = Mesh(std::make_shared<Shader>(vMCShader, fMCShader, gMCShader));
+    this->gridBoundaryMesh.useIndices = false;
     this->otherMeshToDisplay = Mesh(std::make_shared<Shader>(vNoShader, fNoShader)); //(vMCShader, fMCShader, gMCShader));
     this->otherMeshToDisplay.useIndices = false;
 
@@ -44,10 +46,10 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
 
 //    otherMeshToDisplay.displayWithOutlines(std::vector<float>{0.f, 1.f, 0.f, .4f}, GL_TRIANGLES);
     if (displayBoundaries) {
-
-//        Mesh::displayScalarField(voxelGrid->getVoxelValues(), boundariesMesh, camPos, {-.4f, 0.f, .4f});
-
         boundariesMesh.displayWithOutlines(std::vector<float>{0.f, 1.f, 0.f, .4f}, GL_TRIANGLES);
+    }
+    if (displayGridBoundaries) {
+        Mesh::displayScalarField(this->_simulation->obstacleGrid, gridBoundaryMesh, camPos, {.01f, .2f, .5f, .7f, .99f});
     }
     if (displayParticles) {
         particlesMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .4f});
@@ -59,6 +61,8 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
 //        vectorsMesh.reorderLines(camPos);
         vectorsMesh.display(GL_LINES, 3);
     }
+
+    otherMeshToDisplay.display();
 }
 
 void AbstractFluidSimulationInterface::replay(nlohmann::json action)
@@ -71,6 +75,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     QVBoxLayout* layout = new QVBoxLayout();
 
     QCheckBox* displayBoundariesButton = new QCheckBox("Display boundaries");
+    QCheckBox* displayGridBoundariesButton = new QCheckBox("Display boundaries (grid)");
     QCheckBox* displayParticlesButton = new QCheckBox("Display particles");
     QCheckBox* displayVectorsButton = new QCheckBox("Display vectors");
     QCheckBox* autoComputeButton = new QCheckBox("Compute at each frame");
@@ -78,6 +83,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     QPushButton* updateMeshButton = new QPushButton("Update terrain");
 
     layout->addWidget(displayBoundariesButton);
+    layout->addWidget(displayGridBoundariesButton);
     layout->addWidget(displayParticlesButton);
     layout->addWidget(displayVectorsButton);
     layout->addWidget(autoComputeButton);
@@ -91,10 +97,11 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     displayVectorsButton->setChecked(this->displayVectors);
     autoComputeButton->setChecked(this->computeAtEachFrame);
 
-    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->displayBoundaries = cheecked; });
-    QObject::connect(displayParticlesButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->displayParticles = cheecked; });
-    QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->displayVectors = cheecked; });
-    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool cheecked) { this->computeAtEachFrame = cheecked; });
+    QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayBoundaries = checked; });
+    QObject::connect(displayGridBoundariesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayGridBoundaries = checked; });
+    QObject::connect(displayParticlesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayParticles = checked; });
+    QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayVectors = checked; });
+    QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; });
     QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
     QObject::connect(updateMeshButton, &QPushButton::pressed, this, &AbstractFluidSimulationInterface::updateBoundariesMesh);
 
@@ -109,11 +116,11 @@ void AbstractFluidSimulationInterface::updateVectorsMesh()
 
 void AbstractFluidSimulationInterface::updateSimulationMeshes()
 {
-    std::cout << timeIt([=]() {
+    /*std::cout << */timeIt([=]() {
         this->updateVectorsMesh();
         this->updateParticlesMesh();
 //        this->updateBoundariesMesh();
-    }) << "ms render" << std::endl;
+    }); /* << "ms render" << std::endl;*/
 }
 
 void AbstractFluidSimulationInterface::show()

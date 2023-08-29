@@ -26,6 +26,7 @@ public:
 */
     void computeFromTerrain(TerrainModel* terrain);
 
+    void display(const Vector3 &camPos);
 public Q_SLOTS:
 //    void show();
 //    void hide();

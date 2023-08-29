@@ -14,7 +14,7 @@
 #include "DataStructure/Image.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
-    : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_button.png", parent)
+    : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_generation_manager_button.png", parent)
 {
 //    this->createGUI();
 }

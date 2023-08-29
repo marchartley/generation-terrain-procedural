@@ -34,5 +34,17 @@
         <file>src/assets/implicit_to_all_button.png</file>
         <file>src/assets/layers_to_all_button.png</file>
         <file>src/assets/voxels_to_all_button.png</file>
+        <file>src/assets/coral_generation_button.png</file>
+        <file>src/assets/envobjs_button.png</file>
+        <file>src/assets/flip_button.png</file>
+        <file>src/assets/lbm_button.png</file>
+        <file>src/assets/sph_button.png</file>
+        <file>src/assets/spheroidal_erosion_button.png</file>
+        <file>src/assets/stable_button.png</file>
+        <file>src/assets/warp_button.png</file>
+        <file>src/assets/implicit_representation_button.png</file>
+        <file>src/assets/reinforce_borders_button.png</file>
+        <file>src/assets/save_erod_depo_button.png</file>
+        <file>src/assets/terrain_generation_manager_button.png</file>
     </qresource>
 </RCC>
