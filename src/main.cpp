@@ -10,6 +10,7 @@
 #include <qapplication.h>
 #include <iostream>
 #include "Interface/Interface.h"
+#include "EnvObject/EnvObject.h"
 
 #include <chrono>
 #include <fstream>
@@ -274,6 +275,8 @@ int main(int argc, char *argv[])
 //    dual.debug();
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
+
+    EnvObject::readFile("saved_maps/primitives.json");
 
     ViewerInterface vi;
     vi.show();
