@@ -1,7 +1,7 @@
 #include "MeshInstanceAmplificationInterface.h"
 
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
-    : ActionInterface("MeshInstanceAmplificationInterface", parent)
+    : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
 
 }

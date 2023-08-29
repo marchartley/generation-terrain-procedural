@@ -7,7 +7,7 @@
 #include "Utils/ShapeCurve.h"
 
 PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
-    : ActionInterface("PrimitivePatchesInterface", parent)
+    : ActionInterface("primitivepatches", "Implicit modeling", "model", "Feature primitives", "feature_primitive_button.png", parent)
 {
     previewMesh.cullFace = false;
 

@@ -4,7 +4,8 @@
 #include "Interface/InterfaceUtils.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 
-SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent) : ActionInterface("space_colonization", parent)
+SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent)
+    : ActionInterface("spacecolonization", "Karst generation by Space Colonization", "digging", "Create karsts using space colonization", "karst_button.png", parent)
 {
     this->startingPoint = std::make_unique<ControlPoint>();
 //    this->

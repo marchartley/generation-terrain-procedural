@@ -2,7 +2,7 @@
 #include "Interface/InterfaceUtils.h"
 
 TerrainSavingInterface::TerrainSavingInterface(QWidget *parent):
-    ActionInterface("TerrainSavingInterface", parent)
+    ActionInterface("terrainsaving", "Terrain geometry saving", "view", "Save the geometry", "save_geometry.png", parent)
 {
 
 }

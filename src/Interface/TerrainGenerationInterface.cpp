@@ -13,7 +13,8 @@
 #include "DataStructure/Matrix.h"
 #include "DataStructure/Image.h"
 
-TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent) : ActionInterface("terrain_gen", parent)
+TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
+    : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_button.png", parent)
 {
 //    this->createGUI();
 }

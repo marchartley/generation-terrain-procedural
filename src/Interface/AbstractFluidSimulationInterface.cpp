@@ -1,7 +1,8 @@
 #include "AbstractFluidSimulationInterface.h"
 #include "Interface/InterfaceUtils.h"
 
-AbstractFluidSimulationInterface::AbstractFluidSimulationInterface(std::string actionTypeName, QWidget *parent) : ActionInterface(actionTypeName, parent)
+AbstractFluidSimulationInterface::AbstractFluidSimulationInterface(std::string actionTypeName, std::string interfaceName, std::string interfaceType, std::string mainActionDescription, std::string mainActionButtonLogo, QWidget *parent)
+    : ActionInterface(actionTypeName, interfaceName, interfaceType, mainActionDescription, mainActionButtonLogo, parent)
 {
 }
 

@@ -1,8 +1,7 @@
 #include "FlowFieldInterface.h"
 
-
 FlowFieldInterface::FlowFieldInterface(QWidget *parent)
-    : AbstractFluidSimulationInterface("Stable Fluids", parent)
+    : AbstractFluidSimulationInterface("stablefluidssimulation", "Stable Fluids Simulation", "physics", "Stable fluids simulation", "flowfield_button.png", parent)
 {
     _simulation = GlobalTerrainProperties::get()->simulations[STABLE]; // = dynamic_cast<StableFluidsSimulation*>(_simulation);
 //    *_simulation = StableFluidsSimulation();

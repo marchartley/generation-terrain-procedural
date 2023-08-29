@@ -2,7 +2,8 @@
 
 #include <QKeyEvent>
 
-UndoRedoInterface::UndoRedoInterface(QWidget *parent) : ActionInterface("undo-redo", parent)
+UndoRedoInterface::UndoRedoInterface(QWidget *parent)
+    : ActionInterface("undoredo", "Undo/Redo", "", "", "", parent)
 {
 //    this->createGUI();
 }

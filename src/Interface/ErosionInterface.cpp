@@ -6,7 +6,7 @@
 #include <chrono>
 
 ErosionInterface::ErosionInterface(QWidget *parent)
-    : ActionInterface("rock-throwing", parent)
+    : ActionInterface("erosion", "Rock throwing", "physics", "Erosion on 3D terrain", "erosion.png", parent)
 {
 
 }

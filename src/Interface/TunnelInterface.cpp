@@ -4,7 +4,9 @@
 #include "Utils/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
-TunnelInterface::TunnelInterface(QWidget *parent) : ActionInterface("tunnel", parent), startingShape(KarstHolePredefinedShapes::TUBE), endingShape(KarstHolePredefinedShapes::TUBE)
+TunnelInterface::TunnelInterface(QWidget *parent)
+    : ActionInterface("tunnel", "Tunnel generation", "digging", "Tunnels creation", "tunnel_button.png", parent),
+      startingShape(KarstHolePredefinedShapes::TUBE), endingShape(KarstHolePredefinedShapes::TUBE)
 {
 
 }

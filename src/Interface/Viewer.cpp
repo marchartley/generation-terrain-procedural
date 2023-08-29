@@ -263,21 +263,21 @@ void Viewer::drawingProcess() {
     });
     current_frame ++;
 
-    if (this->interfaces.count("terrainGenerationInterface")) {
-        static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
-        interfacesTimings[this->interfaces["terrainGenerationInterface"]] = timeIt([&]() { this->interfaces["terrainGenerationInterface"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if (this->interfaces.count("terraingeneration")) {
+        static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
+        interfacesTimings[this->interfaces["terraingeneration"]] = timeIt([&]() { this->interfaces["terraingeneration"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     this->mainGrabber->display();
 
     for (auto& actionInterface : this->interfaces) {
-        if (actionInterface.first != "terrainGenerationInterface") {
+        if (actionInterface.first != "terraingeneration") {
             interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(this->camera()->position()); });
         }
     }
 
-    if (this->interfaces.count("terrainGenerationInterface")) {
-        interfacesTimings[this->interfaces["terrainGenerationInterface"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terrainGenerationInterface"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+    if (this->interfaces.count("terraingeneration")) {
+        interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
 
     if (this->isTakingScreenshots) {

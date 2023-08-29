@@ -2,8 +2,8 @@
 
 #include "Utils/Utils.h"
 
-
-FaultSlipInterface::FaultSlipInterface(QWidget *parent) : ActionInterface("faultSlip", parent)
+FaultSlipInterface::FaultSlipInterface(QWidget *parent)
+    : ActionInterface("faultslips", "Fault slips generation", "digging", "Fault slips random generation", "fault-slip_button.png", parent)
 {
     this->faultSlip = FaultSlip();
     this->firstSlipControlPoint = std::make_unique<ControlPoint>(Vector3(), 5.f);

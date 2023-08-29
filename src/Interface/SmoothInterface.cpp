@@ -1,14 +1,9 @@
 #include "SmoothInterface.h"
 
-SmoothInterface::SmoothInterface(QWidget *parent) : ActionInterface("smooth", parent)
+SmoothInterface::SmoothInterface(QWidget *parent)
+    : ActionInterface("smooth", "Smooth voxels", "", "", "", parent) // No menu
 {
-//    this->createGUI();
 }
-
-/*void SmoothInterface::affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid)
-{
-    this->voxelGrid = voxelGrid;
-}*/
 
 void SmoothInterface::display(const Vector3& camPos)
 {

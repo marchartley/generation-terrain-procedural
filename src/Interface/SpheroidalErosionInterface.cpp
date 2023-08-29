@@ -1,7 +1,7 @@
 #include "SpheroidalErosionInterface.h"
 
 SpheroidalErosionInterface::SpheroidalErosionInterface(QWidget *parent)
-    : ActionInterface("SpheroidalErosionInterface", parent)
+    : ActionInterface("spheroidalerosion", "Spheroidal Erosion (Beardall 2010)", "physics", "Spheroidal erosion (Beardall 2010)", "", parent)
 {
 
 }
