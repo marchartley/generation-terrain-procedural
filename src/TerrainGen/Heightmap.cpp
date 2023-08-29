@@ -6,6 +6,8 @@
 #include "Utils/Utils.h"
 #include "Utils/BSpline.h"
 
+#include "DataStructure/Image.h"
+
 
 Heightmap::Heightmap(int nx, int ny, float heightFactor) {
     // Create and configure FastNoise object
@@ -547,6 +549,8 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
     int width = imageDimensions.x;
     int height = imageDimensions.y;
     auto resizedHeights = heights.resize(imageDimensions);
+    Image(resizedHeights / 100.f).writeToFile(heightmap_filename);
+    /*
     // To heightmap
     std::vector<float> toFloatData(width*height);
     std::vector<uint8_t> toIntData(width*height);
@@ -558,9 +562,10 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
         toFloatData[i] = std::max(toFloatData[i], 0.f);
         toIntData[i] = toFloatData[i] * 100.f; // * 255;
     }
-    if (ext == "PNG")
-        stbi_write_png(heightmap_filename.c_str(), width, height, 1, toIntData.data(), width * 1);
-    else if (ext == "JPG")
+    if (ext == "PNG") {
+        Image(resizedHeights / 100.f).writeToFile(heightmap_filename);
+//        stbi_write_png(heightmap_filename.c_str(), width, height, 1, toIntData.data(), width * 1);
+    } else if (ext == "JPG")
         stbi_write_jpg(heightmap_filename.c_str(), width, height, 1, toIntData.data(), 95);
     else if (ext == "BMP")
         stbi_write_bmp(heightmap_filename.c_str(), width, height, 1, toIntData.data());
@@ -571,6 +576,7 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
     else {
         std::cerr << "Trying to save map without valid extension. Possible extensions :\n\t- png\n\t- jpg\n\t- tga\n\t- bmp\n\t- hdr" << std::endl;
     }
+    */
 }
 
 Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)

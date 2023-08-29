@@ -91,6 +91,7 @@ SOURCES += \
 #    src/Biomes/InstancesTree.cpp \
 #    src/Biomes/ModelsTree.cpp \
     src/DataStructure/BVH.cpp \
+    src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
@@ -248,6 +249,7 @@ HEADERS += \
     src/Biomes/InstancesTree.h \
     src/Biomes/ModelsTree.h \
     src/DataStructure/BVH.h \
+    src/DataStructure/Image.h \
     src/DataStructure/KDTree.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \

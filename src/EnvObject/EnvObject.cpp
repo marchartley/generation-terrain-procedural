@@ -410,6 +410,5 @@ ImplicitPatch* EnvArea::createImplicitPatch()
     ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + Vector3(0, 0, this->width * 2.f), this->width, translatedCurve);
     patch->position = box.min();
     patch->material = this->material;
-//    patch->name = ""
     return patch;
 }
