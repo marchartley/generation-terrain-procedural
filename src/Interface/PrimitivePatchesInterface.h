@@ -114,6 +114,8 @@ protected:
     Mesh previewMesh;
     Mesh patchAABBoxMesh;
 
+    bool constructionMode = false;
+
 //    ImplicitPatch* mainPatch;
     ImplicitPatch* desiredPatchFromFile = nullptr;
     std::string desiredPatchFilename = "";
