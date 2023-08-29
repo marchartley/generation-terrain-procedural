@@ -33,7 +33,7 @@ void PrimitivePatchesInterface::display(const Vector3& camPos)
     if (!this->isVisible())
         return;
 
-    if (previewMesh.shader != nullptr) {
+    if (constructionMode && previewMesh.shader != nullptr) {
         this->setSelectedShape(this->currentShapeSelected);
         previewMesh.shader->setVector("color", std::vector<float>({0.f, 0.4f, 0.8f, 0.5f}));
         previewMesh.display();
@@ -95,6 +95,8 @@ void PrimitivePatchesInterface::affectTerrains(std::shared_ptr<Heightmap> height
 QLayout *PrimitivePatchesInterface::createGUI()
 {
     QVBoxLayout* layout = new QVBoxLayout();
+
+    QCheckBox* constructionModeButton = new QCheckBox("Construction mode");
 
     QRadioButton* createSphereButton = new QRadioButton("Sphere");
     QRadioButton* createBlockButton = new QRadioButton("Block");
@@ -160,6 +162,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     primitiveSelectionGui = new HierarchicalListWidget(this);
 
+    layout->addWidget(constructionModeButton);
     layout->addWidget(createMultiColumnGroup({
                                                     createSphereButton,
                                                     createBlockButton,
@@ -216,6 +219,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
     layout->addWidget(createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}));
     layout->addWidget(enableHotreloadButton);
     layout->addWidget(patchesCounterLabel);
+
+    QObject::connect(constructionModeButton, &QCheckBox::toggled, this, [=](bool checked) { this->constructionMode = checked; });
 
     QObject::connect(createSphereButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Sphere); });
     QObject::connect(createBlockButton, &QRadioButton::toggled, this, [=](bool checked) { if (checked) this->setSelectedShape(ImplicitPatch::PredefinedShapes::Block); });
@@ -292,6 +297,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
         this->enableHotReloading = checked;
     });
     QObject::connect(createStructureButton, &QPushButton::pressed, this, &PrimitivePatchesInterface::structureAutoGeneration);
+
+    constructionModeButton->setChecked(this->constructionMode);
 
     createSphereButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Sphere);
     createBlockButton->setChecked(this->currentShapeSelected == ImplicitPatch::PredefinedShapes::Block);
@@ -412,7 +419,7 @@ void PrimitivePatchesInterface::hide()
 
 void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 {
-    if (e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
+    if (constructionMode && e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
         this->createPatchWithOperation(Vector3());
         this->parametricCurve.points.clear();
         this->parametricCurveMesh.clear();
@@ -461,14 +468,15 @@ void PrimitivePatchesInterface::mouseClickedOnMapEvent(const Vector3& mousePosIn
 {
     if (this->isVisible() && mouseInMap) {
 
-        if (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
+        if (constructionMode && this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel) {
             this->addParametricPoint(model->getTerrainPos(mousePosInMap));
             return;
         }
 
         if (this->primitiveControlPoint->grabsMouse())
             return; // Don't create patches if we try to displace another patch
-        this->createPatchWithOperation(model->getTerrainPos(mousePosInMap));
+        if (constructionMode)
+            this->createPatchWithOperation(model->getTerrainPos(mousePosInMap));
     }
 }
 
@@ -1773,6 +1781,10 @@ ImplicitPatch* PrimitivePatchesInterface::findPrimitiveById(int ID)
 
 ImplicitPatch* PrimitivePatchesInterface::naiveApproachToGetParent(ImplicitPatch* child)
 {
+    if (child->parent != nullptr)
+        return child->parent;
+
+    // Not sure if the rest is useful, it's an old code...
     std::vector<ImplicitPatch*> waitingPatches = {this->implicitTerrain.get()};
     std::set<ImplicitPatch*> visitedPatches;
     while (!waitingPatches.empty()) {
