@@ -3,7 +3,8 @@
 #include "Interface/InterfaceUtils.h"
 #include "TerrainModification/RockErosion.h"
 
-ManualEditionInterface::ManualEditionInterface(QWidget *parent) : ActionInterface("manualEdit", parent)
+ManualEditionInterface::ManualEditionInterface(QWidget *parent)
+    : ActionInterface("manualedit", "Manual edit", "digging", "Manual editing", "manual-edit_button.png", parent)
 {
     this->grabber = std::make_unique<ControlPoint>(Vector3(), this->manualEditionSize/2.f, NEUTRAL, false);
     this->grabber->setGrabberStateColor(POSITIVE, std::vector<float>({.1f, .9f, .1f, .2f}));

@@ -10,7 +10,12 @@ class AbstractFluidSimulationInterface : public ActionInterface
 {
     Q_OBJECT
 public:
-    AbstractFluidSimulationInterface(std::string actionTypeName, QWidget *parent = nullptr);
+    AbstractFluidSimulationInterface(std::string actionTypeName,
+                                     std::string interfaceName,
+                                     std::string interfaceType,
+                                     std::string mainActionDescription,
+                                     std::string mainActionButtonLogo,
+                                     QWidget* parent = nullptr);
 
     virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 

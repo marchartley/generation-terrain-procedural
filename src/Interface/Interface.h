@@ -70,6 +70,7 @@ public:
     QGridLayout* mainLayout;
     Viewer* viewer;
 
+    /*
     std::shared_ptr<KarstPathGenerationInterface> karstPathGeneration;
     std::shared_ptr<SpaceColonizationInterface> spaceColonization;
     std::shared_ptr<FaultSlipInterface> faultSlip;
@@ -92,6 +93,7 @@ public:
     std::shared_ptr<LBMFluidSimulationInterface> LbmFluidSimulationInterface;
     std::shared_ptr<CoralIslandGeneratorInterface> coralIslandGeneratorInterface;
     std::shared_ptr<SpheroidalErosionInterface> spheroidalErosionInterface;
+    */
 
     std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces;
 

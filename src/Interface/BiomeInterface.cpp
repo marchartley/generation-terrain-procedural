@@ -4,7 +4,7 @@
 #include "Utils/AdjencySolver.h"
 
 BiomeInterface::BiomeInterface(QWidget* parent)
-    : ActionInterface("biome-generation", parent)
+    : ActionInterface("biomes", "Biomes generation", "model", "Biotopes system", "biomes.png", parent)
 {
     createGUI();
 }

@@ -1,16 +1,24 @@
 #ifndef ACTIONINTERFACE_H
 #define ACTIONINTERFACE_H
 
+class ActionInterface;
+
 #include "Interface/CustomInteractiveObject.h"
 #include "TerrainModification/TerrainAction.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/Heightmap.h"
+#include "Interface/Viewer.h"
 
 class ActionInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
-    ActionInterface(std::string actionTypeName, QWidget* parent = nullptr);
+    ActionInterface(std::string actionTypeName,
+                    std::string interfaceName,
+                    std::string interfaceType,
+                    std::string mainActionDescription,
+                    std::string mainActionButtonLogo,
+                    QWidget* parent = nullptr);
 //    ~ActionInterface();
 
     virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
@@ -67,7 +75,14 @@ public:
     bool isConcerned(nlohmann::json& action) { return action.contains("type") && action.at("type").get<std::string>() == this->actionType; }
 
     virtual void replay(nlohmann::json action) = 0;
+
     std::string actionType;
+    std::string interfaceName;
+    std::string interfaceType;
+    std::string mainActionDescription;
+    std::string mainActionButtonLogo;
+
+
     std::string savingFilename;
     std::shared_ptr<std::fstream> savingFile;
     std::shared_ptr<std::vector<nlohmann::json>> jsonActionsHistory;
@@ -76,6 +91,8 @@ public:
     std::shared_ptr<Heightmap> heightmap;
     std::shared_ptr<LayerBasedGrid> layerGrid;
     std::shared_ptr<ImplicitNaryOperator> implicitTerrain = nullptr;
+
+    Viewer* viewer;
 
 Q_SIGNALS:
     void updated();

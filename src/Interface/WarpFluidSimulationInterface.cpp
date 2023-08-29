@@ -1,6 +1,7 @@
 #include "WarpFluidSimulationInterface.h"
 
-WarpFluidSimulationInterface::WarpFluidSimulationInterface(QWidget *parent) : AbstractFluidSimulationInterface("WarpFluidSimulation", parent)
+WarpFluidSimulationInterface::WarpFluidSimulationInterface(QWidget *parent)
+    : AbstractFluidSimulationInterface("warpfluidsimulation", "Warp Fluids simulation", "physics", "Warp fluid Simulation", "", parent)
 {
     _simulation = GlobalTerrainProperties::get()->simulations[WARP]; // = dynamic_cast<WarpedFluidSimulation*>(_simulation);
 //    _simulation = new WarpedFluidSimulation(20, 20, 1);

@@ -1,7 +1,8 @@
 #include "GravityInterface.h"
 #include "Interface/InterfaceUtils.h"
 
-GravityInterface::GravityInterface(QWidget *parent) : ActionInterface("gravity", parent)
+GravityInterface::GravityInterface(QWidget *parent)
+    : ActionInterface("gravity", "Gravity", "physics", "Gravity", "gravity_button.png", parent)
 {
 //    this->createGUI();
 }

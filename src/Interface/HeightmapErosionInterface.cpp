@@ -3,7 +3,7 @@
 #include "Interface/InterfaceUtils.h"
 
 HeightmapErosionInterface::HeightmapErosionInterface(QWidget *parent)
-    : ActionInterface("heightmap-erosion", parent)
+    : ActionInterface("heightmaperosion", "Erosion on heightmaps", "physics", "Erosion on heightmap", "heightmap-erosion.png", parent)
 {
     hydraulicMesh = Mesh({}, true, GL_LINES);
     hydraulicMesh.useIndices = false;
