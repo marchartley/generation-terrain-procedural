@@ -670,17 +670,18 @@ ImplicitPatch *ImplicitPrimitive::copy() const
 
 ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, const Vector3& dimensions, ImplicitPrimitive *prim)
 {
+    if (!checkPathExists(filename)) {
+        throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
+    }
     std::string ext = toUpper(getExtension(filename));
     if (isIn(ext, std::set<std::string>{"JPG", "PNG", "TGA", "BMP", "PSD", "GIF", "HDR", "PIC"})) {
         int imgW, imgH, nbChannels;
         unsigned char *data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
         if (data == NULL)
         {
-            std::cerr << "Error : Impossible to load " << filename << "\n";
-            std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-            std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-            exit (-1);
-            return nullptr;
+            throw std::runtime_error("Error : Impossible to load heightmap at " + filename + "\n" +
+                                    "Either file is not found, or type is incorrect. Available file types are : \n" +
+                                    "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
         }
         GridF map(imgW, imgH);
         for (int x = 0; x < imgW; x++) {

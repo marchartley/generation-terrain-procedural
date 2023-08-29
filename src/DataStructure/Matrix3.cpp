@@ -142,15 +142,17 @@ Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t siz
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
 {
+    if (!checkPathExists(filename)) {
+        throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
+    }
     int imgW, imgH, nbChannels;
     unsigned char *c_data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_rgb); // Load image, force 3 channel
     if (c_data == NULL)
     {
-        std::cerr << "Error : Impossible to load " << filename << "\n";
-        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-        exit (-1);
-        return Matrix3<Vector3>();
+
+        throw std::runtime_error("Error : Impossible to load RGB image at " + filename + "\n" +
+                                "Either file is not found, or type is incorrect. Available file types are : \n" +
+                                "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
     }
     float *data = new float[imgW * imgH * 3];
     for (int i = 0; i < imgW * imgH * 3; i++)
@@ -175,15 +177,17 @@ Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
 template<>
 Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
 {
+    if (!checkPathExists(filename)) {
+        throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
+    }
     int imgW, imgH, nbChannels;
     unsigned char *c_data = stbi_load(filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
     if (c_data == NULL)
     {
-        std::cerr << "Error : Impossible to load " << filename << "\n";
-        std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-        std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-        exit (-1);
-        return Matrix3<float>();
+
+        throw std::runtime_error("Error : Impossible to load BW image at " + filename + "\n" +
+                                "Either file is not found, or type is incorrect. Available file types are : \n" +
+                                "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
     }
     float *data = new float[imgW * imgH];
     for (int i = 0; i < imgW * imgH; i++)

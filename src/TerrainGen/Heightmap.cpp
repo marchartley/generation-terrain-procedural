@@ -471,6 +471,9 @@ GridF Heightmap::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 
 Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
 {
+    if (!checkPathExists(heightmap_filename)) {
+        throw std::runtime_error("Error: Impossible to load '" + heightmap_filename + "', file not found");
+    }
     float *data = nullptr;
     int imgW = 0, imgH = 0, nbChannels;
     if (endsWith(heightmap_filename, "pgm")) {
@@ -495,11 +498,9 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
         unsigned char *c_data = stbi_load(heightmap_filename.c_str(), &imgW, &imgH, &nbChannels, STBI_grey); // Load image, force 1 channel
         if (c_data == NULL)
         {
-            std::cerr << "Error : Impossible to load " << heightmap_filename << "\n";
-            std::cerr << "Either file is not found, or type is incorrect. Available file types are : \n";
-            std::cerr << "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC";
-            exit (-1);
-            return *this;
+            throw std::runtime_error("Error : Impossible to load heightmap at " + heightmap_filename + "\n" +
+                                    "Either file is not found, or type is incorrect. Available file types are : \n" +
+                                    "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
         }
         data = new float[imgW * imgH];
         for (int i = 0; i < imgW * imgH; i++)

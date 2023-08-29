@@ -1645,6 +1645,7 @@ void PrimitivePatchesInterface::translatePatch(const Vector3& translation)
 
 void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
 {
+    std::cout << "Rotation applied : " << rotation << std::endl;
 //        QObject::blockSignals(true);
     // Get patch being manipulated
     if (this->selectedPatch() != nullptr) {
@@ -1658,25 +1659,33 @@ void PrimitivePatchesInterface::rotatePatch(const Vector3& rotation)
         }
 
         if (manipulatedAsUnary != nullptr) { // We are updating an unary operator
+            std::cout << "We'll rotate " << manipulatedAsUnary->toString() << std::endl;
             manipulatedAsUnary->rotate(rotation); // Just update it
         } else { // Otherwise, create a new Unary operator
-            ImplicitRotation* translate = new ImplicitRotation;
-            translate->addChild(this->selectedPatch());
-            translate->rotate(rotation);
+            std::cout << "We'll create a new operator" << std::endl;
+            ImplicitRotation* rotate = new ImplicitRotation;
+            rotate->rotate(rotation);
             if (this->selectedPatch() == this->implicitTerrain.get()) {
                 this->implicitTerrain->deleteAllChildren();
-                this->implicitTerrain->addChild(translate);
+                this->implicitTerrain->addChild(rotate);
             } else {
                 ImplicitNaryOperator* parentAsNaryOperator = dynamic_cast<ImplicitNaryOperator*>(this->naiveApproachToGetParent(this->selectedPatch()));
                 if (parentAsNaryOperator) {
-                    for (auto& c : parentAsNaryOperator->composables)
-                        if (this->selectedPatch() == c)
-                            c = translate;
+                    for (size_t i = 0; i < parentAsNaryOperator->composables.size(); i++) {
+                        auto& c = parentAsNaryOperator->composables[i];
+                        if (this->selectedPatch() == c) {
+                            parentAsNaryOperator->addChild(rotate, i);
+                            std::cout << "Rotation inserted in position " << i << std::endl;
+                        }
+                    }
                 }
             }
-            this->storedPatches.push_back(translate);
+            rotate->addChild(this->selectedPatch());
+
+
+            this->storedPatches.push_back(rotate);
             this->updatePrimitiveList();
-            this->primitiveSelectionGui->setCurrentItem(translate->index);
+            this->primitiveSelectionGui->setCurrentItem(rotate->index);
         }
         this->updateMapWithCurrentPatch();
 

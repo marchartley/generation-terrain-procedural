@@ -370,7 +370,7 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
     std::cout << "Load implicit: " << timeIt([&]() {
         *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
     }) << "ms" << std::endl;
-
+/*
     EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
     reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)});
 
@@ -379,7 +379,7 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
 
     this->implicitTerrain->addChild(reef->createImplicitPatch());
     this->implicitTerrain->addChild(passe->createImplicitPatch());
-
+*/
     std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
     std::cout << "To voxels: " << timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
 //    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;

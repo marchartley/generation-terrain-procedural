@@ -10,7 +10,7 @@
 							"y": 100.0,
 							"z": 40.0
 						},
-						"file": "saved_maps/heightmaps/new_one_slope.png",
+						"file": "saved_maps/heightmaps/map1.png",
 						"material": "ROCK",
 						"position": {
 							"x": 0.0,
@@ -18,39 +18,14 @@
 							"z": 0.0
 						}
 					},
-					"distortion": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
 					"index": 9,
 					"mirrored": false,
 					"name": "",
-					"noise": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
 					"optionalCurve": {
 						"closed": false,
 						"points": []
 					},
-					"rotation": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"scale": {
-						"x": 1.0,
-						"y": 1.0,
-						"z": 1.0
-					},
 					"spreadFactor": 0.0,
-					"translation": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
 					"type": "unary"
 				},
 				"composableB": {
@@ -68,7 +43,7 @@
 							"index": 8,
 							"material": "WATER",
 							"mirrored": false,
-							"name": "",
+							"name": "None",
 							"optionalCurve": {
 								"closed": false,
 								"points": []
@@ -159,38 +134,18 @@
 								},
 								"type": "primitive"
 							},
-							"distortion": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
 							"index": 6,
 							"mirrored": false,
 							"name": "",
-							"noise": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
 							"optionalCurve": {
 								"closed": false,
 								"points": []
-							},
-							"rotation": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"scale": {
-								"x": 1.0,
-								"y": 1.0,
-								"z": 1.0
 							},
 							"spreadFactor": 0.0,
 							"translation": {
 								"x": 0.0,
 								"y": 0.0,
-								"z": 0.6694555282592773
+								"z": -10.383392333984375
 							},
 							"type": "unary"
 						},
@@ -278,38 +233,18 @@
 							},
 							"type": "primitive"
 						},
-						"distortion": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
 						"index": 3,
 						"mirrored": false,
 						"name": "",
-						"noise": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
 						"optionalCurve": {
 							"closed": false,
 							"points": []
-						},
-						"rotation": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"scale": {
-							"x": 1.0,
-							"y": 1.0,
-							"z": 1.0
 						},
 						"spreadFactor": 0.0,
 						"translation": {
 							"x": 0.0,
 							"y": 0.0,
-							"z": 9.37695598602295
+							"z": -1.8088665008544922
 						},
 						"type": "unary"
 					},
