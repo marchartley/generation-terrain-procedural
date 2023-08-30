@@ -71,7 +71,7 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
     std::cout << new_dir << " against " << path.getFrenetDirection(t) << "\n";
     std::cout << up << " against " << path.getFrenetNormal(t) << std::endl;*/
     for (Vector3& point : this->vertices.points)
-        point.changeBasis(path.getFrenetBinormal(t), path.getFrenetDirection(t), path.getFrenetNormal(t));
+        point.changeBasis(path.getFrenetNormal(t), path.getFrenetDirection(t), path.getFrenetBinormal(t));
 //        point.changeBasis(right, new_dir, up);
     return *this;
 }
@@ -139,28 +139,28 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
         interpolation.setSize(this->scaling.x, this->scaling.y);
         //return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
         if (previousAcceptedTime > -1.f && nextAcceptedTime > -1.f) {
-            float binormalRotation = 0.f;
-            Vector3 prevBinormal = path.getFrenetBinormal(previousAcceptedTime);
-            Vector3 nextBinormal = path.getFrenetBinormal(nextAcceptedTime);
+            float normalRotation = 0.f;
+//            Vector3 prevBinormal = path.getFrenetBinormal(previousAcceptedTime);
+//            Vector3 nextBinormal = path.getFrenetBinormal(nextAcceptedTime);
             Vector3 prevDir = path.getFrenetDirection(previousAcceptedTime);
             Vector3 nextDir = path.getFrenetDirection(nextAcceptedTime);
             Vector3 prevNorm = path.getFrenetNormal(previousAcceptedTime);
             Vector3 nextNorm = path.getFrenetNormal(nextAcceptedTime);
             Vector3 rotator = nextDir.cross(prevDir);
-            binormalRotation = std::acos(prevDir.dot(nextDir));
+            normalRotation = std::acos(prevDir.dot(nextDir));
 //            binormalRotation = std::acos(nextNorm.dot(prevBinormal));
-            binormalRotation *= interpolation::linear(t, previousAcceptedTime, nextAcceptedTime);
-            std::cout << "t-1 = " << previousAcceptedTime << " t+1 = " << nextAcceptedTime << " -> dot = " << prevBinormal.dot(nextBinormal) << "\n";
-            std::cout << "-> normal dot : " << prevNorm.dot(nextNorm) << std::endl;
+            normalRotation *= interpolation::linear(t, previousAcceptedTime, nextAcceptedTime);
+//            std::cout << "t-1 = " << previousAcceptedTime << " t+1 = " << nextAcceptedTime << " -> dot = " << prevBinormal.dot(nextBinormal) << "\n";
+//            std::cout << "-> normal dot : " << prevNorm.dot(nextNorm) << std::endl;
             // Get the same as the previous timestamp
 //            interpolation.rotateTowardVector(path, previousAcceptedTime);
             // Increase the rotation to fit the interpolation
             for (auto& point : interpolation.vertices.points) {
-                if (prevBinormal.dot(nextBinormal) < 0){
+                if (prevNorm.dot(nextNorm) < 0){
                     point.rotate(3.141592, 0, 0);
                 }
 
-                point.rotate(binormalRotation, rotator);
+                point.rotate(normalRotation, rotator);
 //                point.rotate(0, 0, binormalRotation);
             }
         }

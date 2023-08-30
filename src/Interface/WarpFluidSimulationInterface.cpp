@@ -13,7 +13,7 @@ void WarpFluidSimulationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
 }
 
 void WarpFluidSimulationInterface::display(const Vector3& camPos)
-{
+{/*
     otherMeshToDisplay.displayShape = GL_LINES;
     std::vector<Vector3> lines;
     for (int x = 0; x < _simulation->obstacleGrid.sizeX; x++) {
@@ -25,7 +25,7 @@ void WarpFluidSimulationInterface::display(const Vector3& camPos)
     auto ratio = voxelGrid->getDimensions() / _simulation->obstacleGrid.getDimensions();
     for (auto& p : lines)
         p *= ratio;
-    otherMeshToDisplay.fromArray(lines);
+    otherMeshToDisplay.fromArray(lines);*/
 
     AbstractFluidSimulationInterface::display(camPos);
 }

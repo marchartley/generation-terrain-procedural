@@ -28,7 +28,7 @@ BSpline::BSpline(std::vector<BSpline> subsplines)
     }
 }
 
-std::vector<Vector3> BSpline::getPath(int numberOfPoints)
+std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
 {
     /// I'm really not sure this is the best solution, but an easy fix :
     /// forcing user to have at least 2 points
@@ -43,7 +43,7 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints)
     return path;
 }
 
-Vector3 BSpline::getPoint(float x)
+Vector3 BSpline::getPoint(float x) const
 {
     if (points.size() > 2)
         return this->getCatmullPoint(x);
@@ -62,12 +62,12 @@ Vector3 BSpline::getPoint(float x)
     }
     return controls[0];
 }
-Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b)
+Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
 {
     return a * (1 - x) + b * x;
 }
 
-Vector3 BSpline::getDerivative(float x)
+Vector3 BSpline::getDerivative(float x) const
 {
     float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
@@ -75,14 +75,14 @@ Vector3 BSpline::getDerivative(float x)
     return (getPoint(nextTime) - getPoint(previousTime)).normalized();
 }
 
-Vector3 BSpline::getSecondDerivative(float x)
+Vector3 BSpline::getSecondDerivative(float x) const
 {
     float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
     return (getDerivative(nextTime) - getDerivative(previousTime)).normalized();
 }
 
-float BSpline::estimateClosestTime(const Vector3& pos, float epsilon)
+float BSpline::estimateClosestTime(const Vector3& pos, float epsilon) const
 {
     if (this->points.size() == 0) {
         return 0;
@@ -115,22 +115,22 @@ float BSpline::estimateClosestTime(const Vector3& pos, float epsilon)
     return closestTime;
 }
 
-Vector3 BSpline::estimateClosestPos(const Vector3& pos, float epsilon)
+Vector3 BSpline::estimateClosestPos(const Vector3& pos, float epsilon) const
 {
     // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
     return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
 }
 
-float BSpline::estimateSqrDistanceFrom(const Vector3& pos, float epsilon)
+float BSpline::estimateSqrDistanceFrom(const Vector3& pos, float epsilon) const
 {
     return (this->estimateClosestPos(pos, epsilon) - pos).norm2();
 }
-float BSpline::estimateDistanceFrom(const Vector3& pos, float epsilon)
+float BSpline::estimateDistanceFrom(const Vector3& pos, float epsilon) const
 {
     return std::sqrt(this->estimateSqrDistanceFrom(pos, epsilon));
 }
 
-float BSpline::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
+float BSpline::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
 {
     // Only available for 2D paths, otherwise there's no sense
     float t = this->estimateClosestTime(pos, epsilon);
@@ -141,7 +141,7 @@ float BSpline::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
     return dist * sign;
 }
 
-float BSpline::length()
+float BSpline::length() const
 {
     float length = 0;
     if (this->points.empty()) return length;
@@ -151,17 +151,17 @@ float BSpline::length()
     return length;
 }
 
-Vector3 BSpline::getFrenetDirection(float x)
+std::tuple<Vector3, Vector3, Vector3> BSpline::getFrenetFrame(float x) const
+{
+    return {getFrenetDirection(x), getFrenetNormal(x), getFrenetBinormal(x)};
+}
+
+Vector3 BSpline::getFrenetDirection(float x) const
 {
     return getDirection(x);
 }
 
-Vector3 BSpline::getFrenetNormal(float x)
-{
-    return this->getFrenetDirection(x).cross(this->getFrenetBinormal(x)).normalize();
-}
-
-Vector3 BSpline::getFrenetBinormal(float x)
+Vector3 BSpline::getFrenetNormal(float x) const
 {
     Vector3 new_dir = this->getFrenetDirection(x);
     Vector3 forward(0, 1, 0);
@@ -174,32 +174,37 @@ Vector3 BSpline::getFrenetBinormal(float x)
     return right.normalize();
 }
 
-Vector3 BSpline::getCenterCircle(float x)
+Vector3 BSpline::getFrenetBinormal(float x) const
+{
+    return this->getFrenetDirection(x).cross(this->getFrenetNormal(x)).normalize();
+}
+
+Vector3 BSpline::getCenterCircle(float x) const
 {
     return this->getPoint(x) + this->getNormal(x) * (1 / this->getCurvature(x));
 }
 
-Vector3 BSpline::getDirection(float x)
+Vector3 BSpline::getDirection(float x) const
 {
     return this->getDerivative(x).normalize();
 }
 
-Vector3 BSpline::getNormal(float x)
+Vector3 BSpline::getNormal(float x) const
 {
     return this->getSecondDerivative(x).normalize();
 }
 
-Vector3 BSpline::getBinormal(float x)
+Vector3 BSpline::getBinormal(float x) const
 {
     return this->getDirection(x).cross(this->getNormal(x)).normalize();
 }
 
-float BSpline::getCurvature(float x)
+float BSpline::getCurvature(float x) const
 {
     return (getDerivative(x).cross(getSecondDerivative(x))).norm() / (std::pow(getDerivative(x).norm(), 3));
 }
 
-Vector3 BSpline::center()
+Vector3 BSpline::center() const
 {
     if (this->points.empty()) return Vector3();
 
@@ -229,7 +234,7 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
     return ((x - prev_min) / (prev_max - prev_min)) * (new_max - new_min) + new_min;
 }
 
-Vector3 BSpline::getCatmullPoint(float x)
+Vector3 BSpline::getCatmullPoint(float x) const
 {
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
@@ -311,7 +316,7 @@ BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
     return returningSpline;
 }
 
-std::tuple<Vector3, Vector3> BSpline::AABBox()
+std::tuple<Vector3, Vector3> BSpline::AABBox() const
 {
     if (this->points.empty()) return std::make_tuple(Vector3(), Vector3());
     if (this->points.size() == 1) return std::make_tuple(points[0], points[0]);
@@ -331,14 +336,14 @@ std::tuple<Vector3, Vector3> BSpline::AABBox()
     return std::make_tuple(minVec, maxVec);
 }
 
-Vector3 BSpline::containingBoxSize()
+Vector3 BSpline::containingBoxSize() const
 {
     Vector3 minBox, maxBox;
     std::tie(minBox, maxBox) = this->AABBox();
     return (maxBox - minBox);
 }
 
-BSpline BSpline::computeConvexHull()
+BSpline BSpline::computeConvexHull() const
 {
     if (this->points.empty()) return BSpline();
     // Graham scan's algorithm
