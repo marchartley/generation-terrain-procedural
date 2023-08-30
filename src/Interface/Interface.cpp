@@ -91,7 +91,8 @@ ViewerInterface::ViewerInterface() {
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/corridor.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/corridor.data");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/Coral_basis.json");
 
 
 //        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");

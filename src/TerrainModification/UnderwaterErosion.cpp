@@ -556,7 +556,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
 
 
-std::tuple<std::vector<BSpline>, int, int>
+std::tuple<std::vector<BSpline>, int, int, std::vector<std::pair<float, Vector3>>>
 UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          TerrainModel* terrain,
                          SpacePartitioning& boundariesTree,
@@ -593,7 +593,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          GridF densityMap,
                          float initialCapacity,
                          FluidSimType fluidSimType,
-                         bool wrapPositions)
+                         bool wrapPositions, bool applyTheErosion)
 {
 
     VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
@@ -867,6 +867,16 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     }
     auto endParticleTime = std::chrono::system_clock::now();
 
+    if (!applyTheErosion) {
+        auto flatAllErosions = flattenArray(allErosions);
+        int positions = 0;
+        for (auto nb : nbPos)
+            positions += nb;
+        int erosions = flatAllErosions.size();
+        return {tunnels, positions, erosions, flatAllErosions};
+    }
+
+
     std::vector<ImplicitNaryOperator*> allNary(allErosions.size());
     if (asImplicit) {
         for (size_t i = 0; i < allNary.size(); i++) {
@@ -948,7 +958,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                     sphere->supportDimensions = sphere->dimensions;
                     sphere->position = pos - sphere->dimensions * .5f;
                     allNary[i]->composables.push_back(sphere);
-                    std::cout << "Val: " << val << "\n";
                 }
             }
         }
@@ -1004,7 +1013,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
     particleSimulationTime = std::chrono::duration_cast<std::chrono::milliseconds>(endParticleTime - startTime).count();
     terrainModifTime = std::chrono::duration_cast<std::chrono::milliseconds>(endModificationTime - endParticleTime).count();
-    return {tunnels, positions, erosions};
+    return {tunnels, positions, erosions, flattenArray(allErosions)};
 }
 
 

@@ -50,7 +50,7 @@ public:
 
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
-    std::tuple<std::vector<BSpline>, int, int> Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
+    std::tuple<std::vector<BSpline>, int, int, std::vector<std::pair<float, Vector3> > > Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
                                                     float& particleSimulationTime, float& terrainModifTime,
                                                     Vector3 startingPoint = Vector3(false),
                                                     Vector3 originalDirection = Vector3(false),
@@ -84,7 +84,8 @@ public:
                                                      GridF densityMap = GridF(),
                                                      float initialCapacity = 0.f,
                                                      FluidSimType fluidSimType = FluidSimType::LBM,
-                                                     bool wrapPositions = false);
+                                                     bool wrapPositions = false,
+                                                     bool applyTheErosion = false);
 /*
     std::tuple<std::vector<BSpline>, int, int> ApplyOnAnyTerrain(TerrainModel* terrain,
                                                                  float& particleSimulationTime,

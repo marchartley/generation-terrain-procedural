@@ -71,7 +71,7 @@ public:
     bool isWatertight();
 
 
-    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false);
+    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false, bool displayArrow = false);
 
     static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
 

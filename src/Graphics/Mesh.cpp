@@ -1086,7 +1086,7 @@ bool Mesh::isWatertight()
 
 }
 
-Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize)
+Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize, bool displayArrow)
 {
     if (maxMaginitude > 0.f) {
         for (auto& v : field)
@@ -1095,12 +1095,25 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
     if (normalize) {
         field.normalize();
     }
+
+    Vector3 offsetToCenter(.5f, .5f, .5f);
     std::vector<Vector3> normals;
     for (int x = 0; x < field.sizeX; x++) {
         for (int y = 0; y < field.sizeY; y++) {
             for (int z = 0; z < field.sizeZ; z++) {
-                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
-                normals.push_back(Vector3(x, y, z) + field.at(x, y, z) + Vector3(.5f, .5f, .5f));
+                Vector3 pos(x, y, z);
+                Vector3 value = field.at(x, y, z);
+                normals.push_back(pos + offsetToCenter);
+                normals.push_back(pos + offsetToCenter + value);
+
+                if (displayArrow) {
+                    // Arrow part
+                    Vector3 cross = value.cross(Vector3(0, 0, 1)).setMag(value.norm() * .2f);
+                    normals.push_back(pos + offsetToCenter + value * .8f - cross);
+                    normals.push_back(pos + offsetToCenter + value);
+                    normals.push_back(pos + offsetToCenter + value);
+                    normals.push_back(pos + offsetToCenter + value * .8f + cross);
+                }
             }
         }
     }
