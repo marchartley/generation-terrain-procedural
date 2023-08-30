@@ -12,47 +12,48 @@ public:
     BSpline(std::vector<Vector3> points);
     BSpline(std::vector<BSpline> subsplines);
 
-    std::vector<Vector3> getPath(int numberOfPoints);
-    Vector3 getPoint(float x);
-    Vector3 getPoint(float x, const Vector3& a, const Vector3& b);
-    Vector3 getDerivative(float x);
-    Vector3 getSecondDerivative(float x);
-    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5);
-    Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3);
-    float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
-    float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
-    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
-    float length();
+    std::vector<Vector3> getPath(int numberOfPoints) const;
+    Vector3 getPoint(float x) const;
+    Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
+    Vector3 getDerivative(float x) const;
+    Vector3 getSecondDerivative(float x) const;
+    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5) const;
+    Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3) const;
+    float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
+    float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
+    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
+    float length() const;
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
 
     operator bool() const { return (this->points.size() > 0); };
 
-    Vector3 getFrenetDirection(float x);
-    Vector3 getFrenetNormal(float x);
-    Vector3 getFrenetBinormal(float x);
+    std::tuple<Vector3, Vector3, Vector3> getFrenetFrame(float x) const;
+    Vector3 getFrenetDirection(float x) const;
+    Vector3 getFrenetNormal(float x) const;
+    Vector3 getFrenetBinormal(float x) const;
 
-    Vector3 getCenterCircle(float x);
-    Vector3 getDirection(float x);
-    Vector3 getNormal(float x);
-    Vector3 getBinormal(float x);
-    float getCurvature(float x);
+    Vector3 getCenterCircle(float x) const;
+    Vector3 getDirection(float x) const;
+    Vector3 getNormal(float x) const;
+    Vector3 getBinormal(float x) const;
+    float getCurvature(float x) const;
 
-    Vector3 center();
+    Vector3 center() const;
 
     BSpline& close();
 
-    Vector3 getCatmullPoint(float x);
+    Vector3 getCatmullPoint(float x) const;
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
-    std::tuple<Vector3, Vector3> AABBox();
-    Vector3 containingBoxSize();
+    std::tuple<Vector3, Vector3> AABBox() const;
+    Vector3 containingBoxSize() const;
 
 //    BSpline& grow(float increase);
 //    BSpline& shrink(float decrease);
 
-    BSpline computeConvexHull();
+    BSpline computeConvexHull() const;
 
     BSpline& translate(const Vector3& translation);
 

@@ -62,7 +62,7 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
         vectorsMesh.display(GL_LINES, 3);
     }
 
-    otherMeshToDisplay.display();
+//    otherMeshToDisplay.display();
 }
 
 void AbstractFluidSimulationInterface::replay(nlohmann::json action)

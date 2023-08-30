@@ -5,7 +5,7 @@
     "rule": "d2(Reef) - <current.vel,Reef.normal>",
     "flow": {
       "direction": 1.0,
-      "normal": 0.0,
+      "normal": 0.1,
       "binormal": 0.0
     },
     "sand": 0.2,
