@@ -4,6 +4,8 @@
 #include <QWidget>
 #include "Interface/ActionInterface.h"
 
+#include "EnvObject/EnvObject.h"
+
 class EnvObjsInterface : public ActionInterface
 {
     Q_OBJECT
@@ -18,6 +20,8 @@ public:
 
     QLayout* createGUI();
 
+    std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
+
 public Q_SLOTS:
     void show();
     void hide();
@@ -25,8 +29,21 @@ public Q_SLOTS:
 
     void instantiateObject();
 
-public:
+    void recomputeErosionValues();
 
+public:
+    Mesh velocitiesMesh;
+    Mesh highErosionsMesh;
+    Mesh highDepositionMesh;
+
+    bool displayVelocities = true;
+    bool displayHighErosions = true;
+    bool displaySediments = false;
+    bool displayHighCurrents = false;
+
+
+    GridF erosionGrid;
+    GridV3 velocitiesGrid;
 };
 
 
