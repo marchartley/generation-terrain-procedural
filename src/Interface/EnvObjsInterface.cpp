@@ -28,22 +28,6 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->highDepositionMesh.useIndices = false;
 
     recomputeErosionValues();
-
-//    EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
-//    GridV3 flow = GlobalTerrainProperties::get()->simulations[WARP]->getVelocities(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1));
-    GridV3 flow = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->velocities;
-    EnvObject::flowfield = flow;
-
-//    passe->curve = BSpline({Vector3(10, 50, 10), Vector3(50, 10, 10), Vector3(100, 50, 10)});
-//    passe->width = 30.f;
-//    passe->applyFlowModifcation();
-
-    GridV3 vels(100, 100, 3);
-    for (int x = 0; x < 100; x++)
-        for (int y = 0; y < 100; y++)
-            for (int z = 0; z < 3; z++)
-                vels(x, y, z) = EnvObject::flowfield(x, y);
-    velocitiesMesh = Mesh::createVectorField(/*vels.resize(Vector3(20, 20, 3))*/ flow, voxelGrid->getDimensions(), &velocitiesMesh, -1, false, true);
 }
 
 void EnvObjsInterface::display(const Vector3 &camPos)
@@ -240,16 +224,38 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
     for (const auto& path : lastRocksLaunched) {
         for (int i = 1; i < int(path.points.size()) - 1; i++) {
             auto& pos = path.points[i];
-            auto velocity = (path.points[i + 1] - path.points[i - 1]); // .normalize();
+            auto& pPrev = path.points[i - 1];
+            auto& pNext = path.points[i + 1];
+            auto velocity = (pNext - pPrev).normalize();
             if (velocity.norm2() > 50 * 50) continue; // When a particle is wraped from one side to the other of the terrain
             velocities(pos) += velocity * .5f;
             evaluationAmounts(pos) ++;
+            velocities(pPrev) += velocity * .5f;
+            evaluationAmounts(pPrev) ++;
+            velocities(pNext) += velocity * .5f;
+            evaluationAmounts(pNext) ++;
         }
     }
     for (size_t i = 0; i < velocities.size(); i++) {
         if (evaluationAmounts[i] == 0) continue;
         velocities[i] /= evaluationAmounts[i];
     }
+
+    //    EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
+    //    GridV3 flow = GlobalTerrainProperties::get()->simulations[WARP]->getVelocities(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1));
+        GridV3 flow = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->velocities;
+        EnvObject::flowfield = flow;
+
+    //    passe->curve = BSpline({Vector3(10, 50, 10), Vector3(50, 10, 10), Vector3(100, 50, 10)});
+    //    passe->width = 30.f;
+    //    passe->applyFlowModifcation();
+
+        GridV3 vels(100, 100, 3);
+        for (int x = 0; x < 100; x++)
+            for (int y = 0; y < 100; y++)
+                for (int z = 0; z < 3; z++)
+                    vels(x, y, z) = EnvObject::flowfield(x, y);
+        velocitiesMesh = Mesh::createVectorField(/*vels.resize(Vector3(20, 20, 3))*/ flow, voxelGrid->getDimensions(), &velocitiesMesh, -1, false, true);
 
     return {erosionsAmount, velocities};
 }
@@ -310,7 +316,7 @@ void EnvObjsInterface::recomputeErosionValues()
         velocitiesGrid = velocities;
     }
     float iso = .01f;
-    velocitiesMesh = Mesh::createVectorField(velocitiesGrid.resize(Vector3(20, 20, 3)), voxelGrid->getDimensions(), &velocitiesMesh);
+    velocitiesMesh = Mesh::createVectorField(velocitiesGrid.resize(.2f /*Vector3(20, 20, 3)*/), voxelGrid->getDimensions(), &velocitiesMesh);
     highErosionsMesh.fromArray(flattenArray(Mesh::applyMarchingCubes((-erosionGrid) - iso).getTriangles()));
     highDepositionMesh.fromArray(flattenArray(Mesh::applyMarchingCubes(erosionGrid - iso).getTriangles()));
 }

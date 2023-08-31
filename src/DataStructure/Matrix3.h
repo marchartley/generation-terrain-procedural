@@ -39,6 +39,12 @@ enum RETURN_VALUE_ON_OUTSIDE {
     REPEAT_VALUE = 3
 };
 
+enum NORMALIZE_METHOD {
+    NORMALIZE_MINMAX,
+    NORMALIZE_Z_SCORE,
+    NORMALIZE_SOFTMAX
+};
+
 // Warning : don't use bool type...
 // This class is based on a std::vector, which has specifications on bools
 // the [] operator won't work ... Use int or short int instead
@@ -132,6 +138,9 @@ public:
 
     Matrix3<T>& normalize();
     Matrix3<T> normalized() const;
+
+    Matrix3<T>& normalizeUsing(NORMALIZE_METHOD normalizeMethod = NORMALIZE_MINMAX);
+    Matrix3<T> normalizedUsing(NORMALIZE_METHOD normalizeMethod = NORMALIZE_MINMAX) const;
 
     Matrix3<T> transposeXY();
 
@@ -849,6 +858,31 @@ template<class T>
 Matrix3<T> Matrix3<T>::normalized() const {
     Matrix3 mat = *this;
     return mat.normalize();
+}
+
+template<class T>
+Matrix3<T>& Matrix3<T>::normalizeUsing(NORMALIZE_METHOD normalizeMethod) {
+    if (this->data.empty()) return *this;
+    if (normalizeMethod == NORMALIZE_MINMAX) {
+        this->normalize();
+    } else if (normalizeMethod == NORMALIZE_Z_SCORE) {
+        auto [mu, sigma] = stats::getMuSigma(this->data);
+        if (sigma == T()) return *this;
+        *this = (*this - mu) / sigma;
+    } else if (normalizeMethod == NORMALIZE_SOFTMAX) {
+        Matrix3<T> exponentialSelf = *this;
+        for (auto& val : exponentialSelf)
+            val = std::exp(val);
+        T exponentialSum = exponentialSelf.sum();
+        if (exponentialSum == T()) return *this;
+        *this = exponentialSelf / exponentialSum;
+    }
+    return *this;
+}
+template<class T>
+Matrix3<T> Matrix3<T>::normalizedUsing(NORMALIZE_METHOD normalizeMethod) const {
+    Matrix3 mat = *this;
+    return mat.normalizeUsing(normalizeMethod);
 }
 
 template<class T>
