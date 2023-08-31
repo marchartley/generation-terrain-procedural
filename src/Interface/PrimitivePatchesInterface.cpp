@@ -1734,7 +1734,7 @@ ImplicitPatch* PrimitivePatchesInterface::createPatchFromParameters(const Vector
             funcSize = (std::get<1>(AABBox) + funcSize * .5f) - finalPos;
         }
         BSpline translatedSpline = this->parametricCurve;
-        for (auto& p : translatedSpline.points)
+        for (auto& p : translatedSpline)
             p -= finalPos;
         ImplicitPrimitive* primitive = (ImplicitPrimitive*) ImplicitPatch::createPredefinedShape(currentShapeSelected, funcSize, selectedSigma, translatedSpline);
         primitive->position = finalPos.xy();

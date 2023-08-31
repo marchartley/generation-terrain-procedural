@@ -2,6 +2,7 @@
 
 #include "Interface/InterfaceUtils.h"
 #include "Interface/TerrainGenerationInterface.h"
+#include "EnvObject/EnvObject.h"
 
 #include <chrono>
 
@@ -273,6 +274,8 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::BASIC) {
 
             } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLUID_SIMULATION) {
+
+            } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
 
             }
 
@@ -766,7 +769,7 @@ void ErosionInterface::testManyManyErosionParameters()
                     auto endMesh = std::chrono::system_clock::now();
 //                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
 //                    for (const auto& path : lastRocksLaunched) {
-//                        for (const auto& p : path.points) {
+//                        for (const auto& p : path) {
 //                            particleFile << p.x << " " << p.y << " " << p.z << " ";
 //                        }
 //                        particleFile << std::endl;
@@ -900,6 +903,12 @@ std::function<Vector3 (Vector3)> ErosionInterface::computeFlowfieldFunction()
         flowfieldFunction = [&](const Vector3& pos) {
             return fluidSim.at(pos);
         };
+    } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
+        auto fluidSim = EnvObject::flowfield.resize(voxelGrid->getDimensions());
+
+        flowfieldFunction = [&](const Vector3& pos) {
+            return fluidSim.at(pos);
+        };
     } else if (this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::BASIC) {
         flowfieldFunction = nullptr;
     }
@@ -967,6 +976,7 @@ QLayout *ErosionInterface::createGUI()
     QRadioButton* useBasicFlowfield = new QRadioButton("Basic flowfield");
     QRadioButton* useImageFlowfield = new QRadioButton("Flowfield from image");
     QRadioButton* useSimulatedFlowfield = new QRadioButton("Simulation");
+    QRadioButton* useEnvObjFlowfield = new QRadioButton("Env objects");
     QLabel* labWater = new QLabel;
     QLabel* labAir = new QLabel;
     QPushButton* browseWaterFlow = new QPushButton("...");
@@ -1060,6 +1070,7 @@ QLayout *ErosionInterface::createGUI()
                                                      createVerticalGroup({
                                                          useBasicFlowfield,
                                                          useImageFlowfield,
+                                                         useEnvObjFlowfield,
                                                          labWater, browseWaterFlow,
                                                          labAir, browseAirFlow,
                                                          /*createHorizontalGroup({*/useSimulatedFlowfield, simulationTypeButton/*})*/
@@ -1121,6 +1132,7 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(useBasicFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC; });
     QObject::connect(useImageFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_IMAGE; });
     QObject::connect(useSimulatedFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::FLUID_SIMULATION; });
+    QObject::connect(useEnvObjFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS; });
 
     QObject::connect(browseWaterFlow, &QPushButton::pressed, this, [=]() { this->browseWaterFlowFromFile(); labWater->setText("Water: " + QString::fromStdString(getFilename(this->waterFlowImagePath)));});
     QObject::connect(browseAirFlow, &QPushButton::pressed, this, [=]() { this->browseAirFlowFromFile(); labAir->setText("Air: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
@@ -1188,6 +1200,7 @@ QLayout *ErosionInterface::createGUI()
     useBasicFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::BASIC);
     useImageFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_IMAGE);
     useSimulatedFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLUID_SIMULATION);
+    useEnvObjFlowfield->setChecked(this->flowfieldUsed == UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS);
 
     useRandomDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::RANDOM_DENSITY);
     useLayeredDensity->setChecked(this->densityUsed == UnderwaterErosion::DENSITY_TYPE::LAYERED_DENSITY);

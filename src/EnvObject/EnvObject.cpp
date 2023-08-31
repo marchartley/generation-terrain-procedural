@@ -2,23 +2,32 @@
 
 #include <fstream>
 
-GridV3 EnvObject::flowfield;
+GridV3 initFlow();
+
+GridV3 EnvObject::flowfield = initFlow();
 GridV3 EnvObject::terrainNormals;
 GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
+float EnvObject::flowImpactFactor = .5f;
 
-void init() {
+GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
         EnvObject::flowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
         EnvObject::flowfield.raiseErrorOnBadCoord = false;
         EnvObject::flowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     }
+    return EnvObject::flowfield;
 }
 
 EnvObject::EnvObject()
 {
-    init();
+    initFlow();
+}
+
+EnvObject::~EnvObject()
+{
+
 }
 
 void EnvObject::readFile(std::string filename)
@@ -182,9 +191,16 @@ EnvObject *EnvObject::instantiate(std::string objectName)
     return object;
 }
 
+void EnvObject::removeAllObjects()
+{
+    for (auto& object : EnvObject::instantiatedObjects) {
+        delete object;
+    }
+    EnvObject::instantiatedObjects.clear();
+}
+
 void EnvObject::applyEffects()
 {
-    EnvObject::flowfield.reset();
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applyFlowModifcation();
     }
@@ -288,7 +304,7 @@ void EnvCurve::applySandDeposit()
 {
     AABBox box = AABBox(this->curve.points);
     BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve.points)
+    for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
@@ -307,7 +323,7 @@ void EnvCurve::applyFlowModifcation()
     Vector3 halfWidth = objectWidth * .5f;
     AABBox box = AABBox(this->curve.points);
     BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve.points)
+    for (auto& p : translatedCurve)
         p = p - box.min() + halfWidth;
     GridV3 flow = GridV3(box.dimensions() + objectWidth + Vector3(0, 0, 1));
 
@@ -318,9 +334,6 @@ void EnvCurve::applyFlowModifcation()
             float gauss = normalizedGaussian(width * .5f, sqrDist);
             Vector3 impact = this->flowEffect * gauss;
             auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
-//            Vector3 curveDirection = translatedCurve.getDirection(closestTime);
-//            Vector3 curveNormal = translatedCurve.getNormal(closestTime);
-//            Vector3 curveBinormal = translatedCurve.getBinormal(closestTime);
             if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
                 if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(normal) > 0)
                     normal *= -1.f;
@@ -386,7 +399,7 @@ void EnvArea::applySandDeposit()
 {
     AABBox box = AABBox(this->area.points);
     ShapeCurve translatedCurve = this->area;
-    for (auto& p : translatedCurve.points)
+    for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
@@ -402,18 +415,56 @@ void EnvArea::applySandDeposit()
 
 void EnvArea::applyFlowModifcation()
 {
-    AABBox box = AABBox(this->area.points);
-    BSpline translatedCurve = this->area;
-    for (auto& p : translatedCurve.points)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridV3 flow = GridV3(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+    Vector3 objectWidth = Vector3(width, width, 0);
+    Vector3 halfWidth = objectWidth * .5f;
+    ShapeCurve translatedCurve = this->area;
+    for (auto& p : translatedCurve)
+        p.z = 0;
+    AABBox box = AABBox(translatedCurve.points);
+    box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
-//    for (int x = 0; x < flow.sizeX; x++) {
-//        for (int y = 0; y < flow.sizeY; y++) {
-//            flow.at(x, y, 0) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0))) * translatedCurve.getDirection(translatedCurve.estimateClosestTime(Vector3(x, y, 0)));
-//        }
-//    }
-    EnvObject::flowfield.add(flow, box.min());
+
+    GridV3 flow(EnvObject::flowfield.getDimensions());
+    GridF dist(flow.getDimensions());
+    for (int x = 0; x < flow.sizeX; x++) {
+        for (int y = 0; y < flow.sizeY; y++) {
+            Vector3 pos(x, y);
+            dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, false) ? 1.f : 0.f);
+        }
+    }
+    dist = dist.toDistanceMap(true, false);
+    GridV3 grad = dist.meanSmooth().gradient() * -1.f;
+    for (auto& v : grad)
+        v.normalize();
+
+    for (int x = 0; x < flow.sizeX; x++) {
+        for (int y = 0; y < flow.sizeY; y++) {
+            Vector3 pos(x, y, 0);
+            if (!box.contains(pos) || !translatedCurve.contains(pos))
+                continue;
+
+            float closestTime = translatedCurve.estimateClosestTime(pos);
+            Vector3 closestPos = translatedCurve.getPoint(closestTime);
+
+            float distanceToBorder = (pos - closestPos).norm();
+            float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
+            Vector3 previousFlow = EnvObject::flowfield(pos);
+            // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
+//            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
+            // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
+            Vector3 direction = grad(pos);
+            Vector3 binormal = Vector3(0, 0, 1);
+            Vector3 normal = direction.cross(binormal); // Direction and binormal are normalized.
+            Vector3 impact = this->flowEffect * distFactor;
+            // Ignore the normal for now, I can't find any logic with it...
+//            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
+//                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
+//                    normal *= -1.f;
+//            }
+            flow.at(x, y, 0) = impact.changedBasis(direction, normal, binormal); // + impact * previousFlow;
+        }
+    }
+    EnvObject::flowfield = flow * (1.f - EnvObject::flowImpactFactor) + EnvObject::flowfield * EnvObject::flowImpactFactor;
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch()

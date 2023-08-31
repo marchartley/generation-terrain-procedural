@@ -373,7 +373,7 @@ std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
 
             e = e->next;
         }
-//        if (areaShape.points.size() > 0 && areaShape.points)
+//        if (areaShape.points.size() > 0 && areaShape)
         areas[site->index] = areaShape;
     }
 

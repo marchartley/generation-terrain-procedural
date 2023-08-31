@@ -79,7 +79,7 @@ void WarpedFluidSimulation::recomputeVelocities()
 
         for (int x = 0; x < grad.sizeX; x++) {
             for (int y = 0; y < grad.sizeY; y++) {
-                if (x == 0 || y == 0 || x == grad.sizeX - 1 || y == grad.sizeY - 1) {
+                if (x <= radius || y <= radius || x >= grad.sizeX - radius || y >= grad.sizeY - radius) {
                     grad(x, y) = grad(x + radius, y + radius);
                 }
             }

@@ -46,7 +46,7 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
 
 KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
 {
-    for (Vector3& point : this->vertices.points)
+    for (Vector3& point : this->vertices)
         point.rotate(-3.141592/2.f, 0, 0);
 /*
     Vector3 new_dir = path.getDirection(t);
@@ -70,7 +70,7 @@ KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
     std::cout << right << " against " << path.getFrenetBinormal(t) << "\n";
     std::cout << new_dir << " against " << path.getFrenetDirection(t) << "\n";
     std::cout << up << " against " << path.getFrenetNormal(t) << std::endl;*/
-    for (Vector3& point : this->vertices.points)
+    for (Vector3& point : this->vertices)
         point.changeBasis(path.getFrenetNormal(t), path.getFrenetDirection(t), path.getFrenetBinormal(t));
 //        point.changeBasis(right, new_dir, up);
     return *this;
@@ -80,7 +80,7 @@ KarstHoleProfile &KarstHoleProfile::translate(const Vector3& translation, bool v
 {
     if (verbose)
         std::cout << "Points are going to move " << translation << "\n";
-    for (Vector3& point : this->vertices.points) {
+    for (Vector3& point : this->vertices) {
         if (verbose)
             std::cout << " -> " << point << " -> ";
         point.translate(translation);
@@ -95,14 +95,14 @@ KarstHoleProfile &KarstHoleProfile::translate(const Vector3& translation, bool v
 KarstHoleProfile &KarstHoleProfile::scale(float scale_factor, bool verbose)
 {
     Vector3 mean;
-    for (const Vector3& point : this->vertices.points)
+    for (const Vector3& point : this->vertices)
         mean += point;
     if (verbose)
         std::cout << "For scale, mean = " << mean << "/" << (float)this->vertices.points.size() << " = ";
     mean /= (float)this->vertices.points.size();
     if (verbose)
         std::cout << mean << "\nPoints are going towards mean.\n";
-    for (Vector3& point : this->vertices.points) {
+    for (Vector3& point : this->vertices) {
         if (verbose)
             std::cout << " -> point " << point << " moves toward " << (mean - point) << "*" << scale_factor;
         point += (mean - point) * scale_factor;
@@ -155,7 +155,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
             // Get the same as the previous timestamp
 //            interpolation.rotateTowardVector(path, previousAcceptedTime);
             // Increase the rotation to fit the interpolation
-            for (auto& point : interpolation.vertices.points) {
+            for (auto& point : interpolation.vertices) {
                 if (prevNorm.dot(nextNorm) < 0){
                     point.rotate(3.141592, 0, 0);
                 }
@@ -250,7 +250,7 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
     /*
     Vector3 minVec(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0);
     Vector3 maxVec(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), 1);
-    for (const Vector3& point : this->vertices.points) {
+    for (const Vector3& point : this->vertices) {
         minVec.x = std::min(minVec.x, point.x);
         minVec.y = std::min(minVec.y, point.y);
         maxVec.x = std::max(maxVec.x, point.x);
@@ -259,7 +259,7 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
     Vector3 scaling = Vector3(sizeX, sizeY, 1) / (maxVec - minVec);*/
     Vector3 previousScaling = this->scaling;
     scaling = Vector3(sizeX, sizeY, 1.f); // Dunno what to do...
-    for (Vector3& point : this->vertices.points)
+    for (Vector3& point : this->vertices)
         point *= (scaling / previousScaling);
     return *this;
 }

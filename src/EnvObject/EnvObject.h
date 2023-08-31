@@ -17,6 +17,7 @@ class EnvObject
 {
 public:
     EnvObject();
+    virtual ~EnvObject();
 
     static void readFile(std::string filename);
 
@@ -47,6 +48,8 @@ public:
     static GridV3 terrainNormals;
     static GridF sandDeposit;
 
+    static float flowImpactFactor;
+
     static std::map<std::string, EnvObject*> availableObjects;
     static std::vector<EnvObject*> instantiatedObjects;
 
@@ -55,6 +58,7 @@ public:
     static std::pair<Vector3, EnvObject*> getVectorOf(std::string objectName, const Vector3& position);
 
     static EnvObject* instantiate(std::string objectName);
+    static void removeAllObjects();
     virtual ImplicitPatch* createImplicitPatch() = 0;
 
     static void applyEffects();

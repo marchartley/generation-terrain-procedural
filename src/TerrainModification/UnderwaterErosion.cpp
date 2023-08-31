@@ -6,7 +6,7 @@
 #include "Karst/KarstHole.h"
 #include "Utils/Utils.h"
 #include "Graph/Matrix3Graph.h"
-
+#include "EnvObject/EnvObject.h"
 
 UnderwaterErosion::UnderwaterErosion()
 {
@@ -661,6 +661,10 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         flowfieldValues = GridV3(voxelGrid->getFlowfield(fluidSimType).resize(terrainSize) * airForce).meanSmooth();
         for (auto& v : flowfieldValues)
             v = v.xy();
+    } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
+        flowfieldValues = EnvObject::flowfield.resize(terrainSize).meanSmooth();
+        for (auto& v : flowfieldValues)
+            v = v.xy();
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -1030,7 +1034,7 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(int numberPoints, bool addi
                                                      KarstHolePredefinedShapes startingShape, KarstHolePredefinedShapes endingShape)
 {
     BSpline curve = BSpline(numberPoints); // Random curve
-    for (Vector3& coord : curve.points)
+    for (Vector3& coord : curve)
         coord = ((coord + Vector3(1.0, 1.0, 1.0)) / 2.0) * voxelGrid->getDimensions(); //Vector3(grid->sizeX, grid->sizeY, grid->sizeZ);
     return CreateTunnel(curve, addingMatter, true, applyChanges, startingShape, endingShape);
 }

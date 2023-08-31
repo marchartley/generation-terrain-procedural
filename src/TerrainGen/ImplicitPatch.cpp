@@ -1734,7 +1734,7 @@ std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float 
 std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path)
 {
     ShapeCurve polygon = path;
-    for (auto& p : polygon.points)
+    for (auto& p : polygon)
         p.z = 0.f;
     polygon.points.push_back(polygon.points.front());
     return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (const Vector3& pos) -> float {

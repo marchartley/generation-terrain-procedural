@@ -22,6 +22,8 @@ public:
 
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
+    void createEnvObjectsFromImplicitTerrain();
+
 public Q_SLOTS:
     void show();
     void hide();
@@ -30,6 +32,8 @@ public Q_SLOTS:
     void instantiateObject();
 
     void recomputeErosionValues();
+
+    void updateEnvironmentFromEnvObjects();
 
 public:
     Mesh velocitiesMesh;

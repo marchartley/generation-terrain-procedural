@@ -198,7 +198,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             out << "Never seen..." << std::endl;
         }
         out << "Area was\n";
-        for (auto& p : current->area.points)
+        for (auto& p : current->area)
             out << "- " << p << std::endl;
 //        current->instanceID = biomeID;
 //        biomeID++;
@@ -566,7 +566,7 @@ void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex,
         std::vector<Vector3> upperPoints, lowerPoints;
         float maxHeight = std::numeric_limits<float>::min(),
                 minHeight = std::numeric_limits<float>::max();
-        for (auto& point : biomeArea.points) {
+        for (auto& point : biomeArea) {
             Vector3 surfacePoint = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(point));
             upperPoints.push_back(surfacePoint);
             lowerPoints.push_back(surfacePoint);
