@@ -119,7 +119,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
         if (asPrimitive && asPrimitive->material == WATER) {
             BSpline curve = asPrimitive->optionalCurve;
-            for (auto& p : curve.points) {
+            for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
@@ -147,7 +147,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(reefPatch);
         if (asPrimitive) {
             BSpline curve = asPrimitive->optionalCurve;
-            for (auto& p : curve.points) {
+            for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
@@ -174,7 +174,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
         if (asPrimitive /* && asPrimitive->material == WATER*/) {
             ShapeCurve curve = asPrimitive->optionalCurve;
-            for (auto& p : curve.points) {
+            for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }

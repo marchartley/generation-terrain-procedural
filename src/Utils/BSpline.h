@@ -66,6 +66,17 @@ public:
 
     std::vector<Vector3> points;
     bool closed = false;
+
+
+    auto begin() const { return points.begin(); }
+    auto end() const { return points.end(); }
+    auto begin() { return points.begin(); }
+    auto end() { return points.end(); }
+    std::size_t size() const { return end() - begin(); }
+    bool empty() const { return begin() == end(); }
+
+    Vector3& operator[](size_t i);
+    const Vector3& operator[](size_t i) const;
 };
 
 

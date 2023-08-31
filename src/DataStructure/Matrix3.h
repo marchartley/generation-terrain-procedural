@@ -511,6 +511,9 @@ T &Matrix3<T>::at(const Vector3& pos)
 template<class T>
 T &Matrix3<T>::at(int i, int j, int k)
 {
+    if (this->empty()) {
+        throw std::out_of_range("Grid is empty : " + this->toString());
+    }
     if (checkCoord(i, j, k)) {
         int index = getIndex(i, j, k);
         return this->data[index];
@@ -969,7 +972,9 @@ template<class T>
 Matrix3<Vector3> Matrix3<T>::gradient() {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     bool oldError = this->raiseErrorOnBadCoord;
+    RETURN_VALUE_ON_OUTSIDE oldReturn = this->returned_value_on_outside;
     this->raiseErrorOnBadCoord = false;
+    this->returned_value_on_outside = MIRROR_VALUE;
     #pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
@@ -981,10 +986,13 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
         }
     }
     this->raiseErrorOnBadCoord = oldError;
+    this->returned_value_on_outside = oldReturn;
     return returningGrid;
 }
 template<class T>
-Matrix3<Vector3> Matrix3<T>::grad() {return this->gradient(); }
+Matrix3<Vector3> Matrix3<T>::grad() {
+    return this->gradient();
+}
 
 template<class T>
 Matrix3<T> Matrix3<T>::laplacian()
@@ -1734,7 +1742,7 @@ Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const
     float z = pos.z;
     x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
     y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
-    z = int(x < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
     return Vector3(x, y, z);
 }
 

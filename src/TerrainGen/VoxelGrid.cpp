@@ -140,7 +140,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(tunnelPatch);
         if (asPrimitive && asPrimitive->material == WATER) {
             BSpline curve = asPrimitive->optionalCurve;
-            for (auto& p : curve.points) {
+            for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }
@@ -167,7 +167,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
         auto asPrimitive = dynamic_cast<ImplicitPrimitive*>(lagoonPatch);
         if (asPrimitive) {
             ShapeCurve curve = asPrimitive->optionalCurve;
-            for (auto& p : curve.points) {
+            for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
                 p /= this->fluidSimRescale; // Rescale the curves to fit the simulation process
             }

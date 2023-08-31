@@ -410,6 +410,15 @@ std::string BSpline::toString() const
     return out.str();
 }
 
+Vector3 &BSpline::operator[](size_t i)
+{
+    return this->points[i];
+}
+const Vector3 &BSpline::operator[](size_t i) const
+{
+    return this->points[i];
+}
+
 std::ostream& operator<<(std::ostream& io, const BSpline& s) {
     io << s.toString();
     return io;
@@ -423,7 +432,7 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
 
 nlohmann::json bspline_to_json(const BSpline& spline) {
     std::vector<nlohmann::json> points;
-    for (const auto& p : spline.points) {
+    for (const auto& p : spline) {
         points.push_back(vec3_to_json(p));
     }
     return nlohmann::json({

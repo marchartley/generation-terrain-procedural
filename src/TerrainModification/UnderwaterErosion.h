@@ -44,7 +44,7 @@ public:
     UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount);
 
 
-    enum FLOWFIELD_TYPE { FLUID_SIMULATION, FLOWFIELD_IMAGE, BASIC };
+    enum FLOWFIELD_TYPE { FLUID_SIMULATION, FLOWFIELD_IMAGE, BASIC, FLOWFIELD_ENVOBJECTS };
     enum DENSITY_TYPE { NATIVE, DENSITY_IMAGE, UNUSED, RANDOM_DENSITY, LAYERED_DENSITY};
     enum EROSION_APPLIED { DENSITY_VOXELS, HEIGHTMAP, IMPLICIT_TERRAIN, LAYER_TERRAIN, BINARY_VOXELS};
 
@@ -85,43 +85,8 @@ public:
                                                      float initialCapacity = 0.f,
                                                      FluidSimType fluidSimType = FluidSimType::LBM,
                                                      bool wrapPositions = false,
-                                                     bool applyTheErosion = false);
-/*
-    std::tuple<std::vector<BSpline>, int, int> ApplyOnAnyTerrain(TerrainModel* terrain,
-                                                                 float& particleSimulationTime,
-                                                                 float& terrainModifTime,
-                                                                 Vector3 startingPoint = Vector3(false),
-                                                                 Vector3 originalDirection = Vector3(false),
-                                                                 float randomnessFactor = 0.05,
-                                                                 bool fallFromSky = false,
-                                                                 float gravity = 1.f,
-                                                                 float bouncingCoefficient = .5f,
-                                                                 float bounciness = .5f,
-                                                                 float minSpeed = .1f,
-                                                                 float maxSpeed = 1.f,
-                                                                 float maxCapacityFactor = 1.f,
-                                                                 float erosion = 1.f,
-                                                                 float deposit = 1.f,
-                                                                 float matterDensity = 1000.f,
-                                                                 float materialImpact = 0.f,
-                                                                 float airFlowfieldRotation = 0.f,
-                                                                 float waterFlowfieldRotation = 0.f,
-                                                                 float airForce = 0.f, // 1.f,
-                                                                 float waterForce = 0.f, //1.f,
-                                                                 float dt = .1f,
-                                                                 float shearingStressConstantK = 1.f,
-                                                                 float shearingRatePower = .5f,
-                                                                 float erosionPowerValue = 1.f, // From Wojtan
-                                                                 float criticalShearValue = 10.f,
-                                                                 std::vector<std::pair<Vector3, Vector3>> posAndDirs = {},
-             //                                                     std::function<Vector3(Vector3)> flowfieldFunction = nullptr
-                                                                  FLOWFIELD_TYPE flowType = BASIC,
-                                                                  GridV3 waterFlow = GridV3(),
-                                                                  GridV3 airFlow = GridV3(),
-                                                                 DENSITY_TYPE densityUsed = DENSITY_TYPE::UNUSED,
-                                                                 GridF densityMap = GridF(),
-                                                                 float initialCapacity = 0.f);
-*/
+                                                     bool applyTheErosion = true);
+
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<std::vector<Vector3>> CreateMultipleTunnels(std::vector<BSpline> paths, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
