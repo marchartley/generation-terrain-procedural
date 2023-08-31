@@ -176,53 +176,23 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
     return out.str();
 }
 
+namespace stats {
+template<class T>
+std::pair<T, T> getMuSigma(const std::vector<T>& data)
+{
+    T mu;
+    T sum;
+    T sigma;
 
-/*
-template<typename... Ts>
-struct TableRow {
-    std::tuple<Ts...> data;
-    TableRow(Ts... values) : data(values...) {}
-};
+    for (const auto& val : data)
+        sum += val;
+    mu = sum / float(data.size());
 
-using DataVariant = std::variant<std::string, float>;
+    for (const auto& val : data)
+        sigma += std::pow((mu - val), 2);
 
-template<typename... Ts>
-std::vector<DataVariant> rowToVector(const TableRow<Ts...>& row) {
-    return {static_cast<DataVariant>(std::get<Ts>(row.data))...};
+    return {mu, std::pow(sigma, .5f)};
+}
 }
 
-std::string variantToStr(const DataVariant& var);
-
-struct Table {
-    std::vector<std::vector<std::variant<std::string, float>>> rows;
-
-    // Convert from std::vector<std::vector<float>>
-    Table(const std::vector<std::vector<float>>& data) {
-        for (const auto& row : data) {
-            std::vector<std::variant<std::string, float>> convertedRow;
-            for (const auto& val : row) {
-                convertedRow.push_back(val);
-            }
-            rows.push_back(convertedRow);
-        }
-    }
-
-    // Convert from TableRow
-    template<typename... Ts>
-    Table(const std::vector<TableRow<Ts...>>& tableRows) {
-        for (const auto& row : tableRows) {
-            std::vector<std::variant<std::string, float>> convertedRow =
-                { std::get<Ts>(row.data)... };
-            rows.push_back(convertedRow);
-        }
-    }
-};
-
-std::string displayTable(const Table& table,
-                         const std::vector<std::string>& colNames,
-                         const std::vector<std::string>& rowNames);
-std::string toCSV(const Table& table,
-                  const std::vector<std::string>& colNames,
-                  const std::vector<std::string>& rowNames);
-*/
 #endif // UTILS_H

@@ -66,19 +66,7 @@ void WarpedFluidSimulation::recomputeVelocities()
     velocities = GridV3(width, height);
 
     Vector3 wind = mainDirection;
-
-//    int rad1 = 3;
-//    int rad2 = 5;
     GridF augmentedObstacles = obstacleGrid * 1.f;
-//    GridF obstacle1 = augmentedObstacles.meanSmooth(rad1, rad1, 1, false);
-//    GridF obstacle2 = augmentedObstacles.meanSmooth(rad2, rad2, 1, false);
-//    GridV3 grad1 = -obstacle1.gradient();
-//    GridV3 grad2 = -obstacle2.gradient();
-
-//    for (auto& v : grad1)
-//        v.normalize();
-//    for (auto& v : grad2)
-//        v.normalize();
 
     std::vector<int> gaussRadii = {3, 5};
     std::vector<float> warpCoefs = {.8f, .2f};
@@ -108,22 +96,6 @@ void WarpedFluidSimulation::recomputeVelocities()
             for (size_t i = 0; i < gradients.size(); i++) {
                 auto& gradient1 = gradients[i](x, y);
                 float al1 = gradient1.length();
-/*
-                Vector3 orthGrad1;
-
-                float v11 = 1.f;
-                if (gradient1 == Vector3(0.f))
-                    orthGrad1 = Vector3(0.f);
-                else
-                {
-                    if(gradient1.y == 0.f)
-                        orthGrad1 = Vector3(v11, 0.f).normalize() * al1;
-                    else
-                    {
-                        float v21 = (-gradient1.x / gradient1.y);
-                        orthGrad1 = Vector3(v11, v21).normalize() * al1;
-                    }
-                }*/
                 Vector3 orthGrad1 = (Vector3(0, 0, 1).cross(gradient1)).normalized();
                 if (vP.dot(orthGrad1) <= 0)
                 {
