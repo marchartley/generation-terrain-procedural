@@ -380,7 +380,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
         if (continuousRotation)
             airFlowfieldRotation += 45.f / 2.f;
 
-        std::vector<std::pair<float, Vector3>> allErosions; // Useless
+        std::vector<std::vector<std::pair<float, Vector3>>> allErosions; // Useless
         std::tie(lastRocksLaunched, nbPos, nbErosions, allErosions) = erod.Apply(this->applyOn,
                                                                     terrain,
                                                                     boundariesTree,

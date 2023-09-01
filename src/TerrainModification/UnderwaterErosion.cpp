@@ -556,7 +556,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
 
 
-std::tuple<std::vector<BSpline>, int, int, std::vector<std::pair<float, Vector3>>>
+std::tuple<std::vector<BSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3>>>>
 UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          TerrainModel* terrain,
                          SpacePartitioning& boundariesTree,
@@ -877,7 +877,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         for (auto nb : nbPos)
             positions += nb;
         int erosions = flatAllErosions.size();
-        return {tunnels, positions, erosions, flatAllErosions};
+        return {tunnels, positions, erosions, allErosions};
     }
 
 
@@ -1017,7 +1017,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
     particleSimulationTime = std::chrono::duration_cast<std::chrono::milliseconds>(endParticleTime - startTime).count();
     terrainModifTime = std::chrono::duration_cast<std::chrono::milliseconds>(endModificationTime - endParticleTime).count();
-    return {tunnels, positions, erosions, flattenArray(allErosions)};
+    return {tunnels, positions, erosions, allErosions};
 }
 
 

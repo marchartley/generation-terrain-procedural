@@ -3,10 +3,10 @@
 #include "Utils/Skeletonize.h"
 
 template<>
-Matrix3<Vector3> Matrix3<Vector3>::curl() {
+Matrix3<Vector3> Matrix3<Vector3>::curl() const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&] (int x, int y, int z) {
-        Vector3& vec = this->at(x, y, z);
+        const Vector3& vec = this->at(x, y, z);
         returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
     });
     /*#pragma omp parallel for collapse(3)
@@ -21,12 +21,12 @@ Matrix3<Vector3> Matrix3<Vector3>::curl() {
     return returningGrid;
 }
 template<>
-Matrix3<Vector3> Matrix3<Vector3>::rot() {
+Matrix3<Vector3> Matrix3<Vector3>::rot() const {
     return this->curl();
 }
 
 template<>
-Matrix3<int> Matrix3<int>::skeletonize()
+Matrix3<int> Matrix3<int>::skeletonize() const
 {
     Matrix3<int> self = ((Matrix3<float>)*this).binarize(0.5f);
     Matrix3<int> initial = *this;
@@ -76,14 +76,15 @@ Matrix3<int> Matrix3<int>::skeletonize()
 }
 
 template<>
-Matrix3<float> Matrix3<Vector3>::divergence()
+Matrix3<float> Matrix3<Vector3>::divergence() const
 {
-    this->raiseErrorOnBadCoord = false;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
     Matrix3<float> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&] (int x, int y, int z) {
-        returningGrid.at(x, y, z) = ((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x +
-                                     (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y +
-                                     (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z) * .5f;
+        returningGrid.at(x, y, z) = ((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x +
+                                     (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y +
+                                     (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z) * .5f;
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -97,38 +98,40 @@ Matrix3<float> Matrix3<Vector3>::divergence()
             }
         }
     }*/
-    this->raiseErrorOnBadCoord = true;
+//    this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 
 template<>
-Vector3 Matrix3<Vector3>::gradient(const Vector3& position)
+Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
 {
-    this->raiseErrorOnBadCoord = false;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
     Vector3 flooredPos = position.floor();
     Vector3 offset = position - flooredPos;
     return Vector3(
-                at(flooredPos + Vector3(1, 0, 0)).x * (1 - offset.x) + at(flooredPos).x * offset.x,
-                at(flooredPos + Vector3(0, 1, 0)).y * (1 - offset.y) + at(flooredPos).y * offset.y,
-                at(flooredPos + Vector3(0, 0, 1)).z * (1 - offset.z) + at(flooredPos).z * offset.z
+                self.at(flooredPos + Vector3(1, 0, 0)).x * (1 - offset.x) + self.at(flooredPos).x * offset.x,
+                self.at(flooredPos + Vector3(0, 1, 0)).y * (1 - offset.y) + self.at(flooredPos).y * offset.y,
+                self.at(flooredPos + Vector3(0, 0, 1)).z * (1 - offset.z) + self.at(flooredPos).z * offset.z
                 );
 }
 
 template<>
-Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ)
+Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const
 {
     return gradient(Vector3(posX, posY, posZ));
 }
 
 template<>
-Matrix3<Vector3> Matrix3<Vector3>::gradient()
+Matrix3<Vector3> Matrix3<Vector3>::gradient() const
 {
-    this->raiseErrorOnBadCoord = false;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&] (int x, int y, int z) {
-        returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x * .5f,
-                                            (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y * .5f,
-                                            (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z * .5f);
+        returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x * .5f,
+                                            (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y * .5f,
+                                            (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z * .5f);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -144,7 +147,7 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient()
             }
         }
     }*/
-    this->raiseErrorOnBadCoord = true;
+//    this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 
