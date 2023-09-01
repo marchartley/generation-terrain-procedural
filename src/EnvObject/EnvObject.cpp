@@ -9,7 +9,7 @@ GridV3 EnvObject::terrainNormals;
 GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
-float EnvObject::flowImpactFactor = .5f;
+float EnvObject::flowImpactFactor = .1f;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
@@ -201,9 +201,17 @@ void EnvObject::removeAllObjects()
 
 void EnvObject::applyEffects()
 {
+    GridV3 totalNewFlow(EnvObject::flowfield.getDimensions());
+    GridF totalOccupancy(EnvObject::flowfield.getDimensions());
     for (auto& object : EnvObject::instantiatedObjects) {
-        object->applyFlowModifcation();
+        const auto [flow, occupancy] = object->computeFlowModification();
+        totalNewFlow += flow;
+        totalOccupancy += occupancy;
     }
+    for (size_t i = 0; i < totalNewFlow.size(); i++)
+        totalNewFlow[i] = (totalOccupancy[i] != 0.f ? totalNewFlow[i] / totalOccupancy[i] : totalNewFlow[i]);
+    EnvObject::flowfield = EnvObject::flowfield * (1.f - EnvObject::flowImpactFactor) + totalNewFlow * EnvObject::flowImpactFactor;
+
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
@@ -245,12 +253,22 @@ void EnvPoint::applySandDeposit()
 
 }
 
-void EnvPoint::applyFlowModifcation()
+std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
 //    GridV3 flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
     GridF gauss = GridF::gaussian(radius, radius, 1, radius * .5f).normalize();
-    GridV3 flow = GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss;
-    EnvObject::flowfield.add(flow, this->position - Vector3(radius, radius));
+    GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
+    GridF occupancy(flow.getDimensions());
+    for (int x = 0; x < occupancy.sizeX; x++) {
+        for (int y = 0; y < occupancy.sizeY; y++) {
+            for (int z = 0; z < occupancy.sizeZ; z++) {
+                Vector3 pos(x, y, z);
+                occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
+            }
+        }
+    }
+
+    return {flow, occupancy};
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch()
@@ -317,31 +335,39 @@ void EnvCurve::applySandDeposit()
     EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
 }
 
-void EnvCurve::applyFlowModifcation()
+std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
     Vector3 halfWidth = objectWidth * .5f;
-    AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = this->curve;
+    ShapeCurve translatedCurve = this->curve;
     for (auto& p : translatedCurve)
-        p = p - box.min() + halfWidth;
-    GridV3 flow = GridV3(box.dimensions() + objectWidth + Vector3(0, 0, 1));
+        p.z = 0;
+    AABBox box = AABBox(translatedCurve.points);
+    box.expand({box.min() - halfWidth, box.max() + halfWidth});
+
+
+    GridV3 flow(EnvObject::flowfield.getDimensions());
+    GridF occupancy(flow.getDimensions());
 
     for (int x = 0; x < flow.sizeX; x++) {
         for (int y = 0; y < flow.sizeY; y++) {
-            float closestTime = translatedCurve.estimateClosestTime(Vector3(x, y, 0));
-            float sqrDist = (translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).norm2();
+            Vector3 pos(x, y, 0);
+            float closestTime = translatedCurve.estimateClosestTime(pos);
+            Vector3 closestPos = translatedCurve.getPoint(closestTime);
+            float sqrDist = (closestPos - pos).norm2();
+            if (sqrDist > (width * .5f) * (width * .5f)) continue;
             float gauss = normalizedGaussian(width * .5f, sqrDist);
             Vector3 impact = this->flowEffect * gauss;
             auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
             if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(normal) > 0)
+                if ((translatedCurve.getPoint(closestTime) - pos).dot(normal) > 0)
                     normal *= -1.f;
             }
-            flow.at(x, y, 0) = impact.changedBasis(direction, normal, binormal);
+            flow(pos) = impact.changedBasis(direction, normal, binormal);
+            occupancy(pos) = 1.f;
         }
     }
-    EnvObject::flowfield.add(flow, box.min().xy() - halfWidth);
+    return {flow, occupancy};
 }
 
 ImplicitPatch* EnvCurve::createImplicitPatch()
@@ -413,7 +439,7 @@ void EnvArea::applySandDeposit()
     //EnvObject::sandDeposit.add(sand, box.min());
 }
 
-void EnvArea::applyFlowModifcation()
+std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
     Vector3 halfWidth = objectWidth * .5f;
@@ -425,6 +451,8 @@ void EnvArea::applyFlowModifcation()
 
 
     GridV3 flow(EnvObject::flowfield.getDimensions());
+    GridF occupancy(EnvObject::flowfield.getDimensions());
+
     GridF dist(flow.getDimensions());
     for (int x = 0; x < flow.sizeX; x++) {
         for (int y = 0; y < flow.sizeY; y++) {
@@ -461,10 +489,11 @@ void EnvArea::applyFlowModifcation()
 //                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
 //                    normal *= -1.f;
 //            }
-            flow.at(x, y, 0) = impact.changedBasis(direction, normal, binormal); // + impact * previousFlow;
+            flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
+            occupancy.at(pos) = 1.f;
         }
     }
-    EnvObject::flowfield = flow * (1.f - EnvObject::flowImpactFactor) + EnvObject::flowfield * EnvObject::flowImpactFactor;
+    return {flow, occupancy};
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch()

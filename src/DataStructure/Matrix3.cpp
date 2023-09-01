@@ -5,7 +5,11 @@
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl() {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    #pragma omp parallel for collapse(3)
+    iterateParallel([&] (int x, int y, int z) {
+        Vector3& vec = this->at(x, y, z);
+        returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
+    });
+    /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
@@ -13,11 +17,13 @@ Matrix3<Vector3> Matrix3<Vector3>::curl() {
                 returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
             }
         }
-    }
+    }*/
     return returningGrid;
 }
 template<>
-Matrix3<Vector3> Matrix3<Vector3>::rot() { return this->curl(); }
+Matrix3<Vector3> Matrix3<Vector3>::rot() {
+    return this->curl();
+}
 
 template<>
 Matrix3<int> Matrix3<int>::skeletonize()
@@ -30,8 +36,11 @@ Matrix3<int> Matrix3<int>::skeletonize()
 
     // allocate the input image
     unsigned char* data = (unsigned char*)malloc(sizeof(unsigned char)*skel->W*skel->H); //new uchar(self.sizeX * self.sizeY);
-    for (size_t i = 0; i < self.size(); i++)
+    self.iterateParallel([&] (size_t i) {
         data[i] = (unsigned char)(self[i]);
+    });
+    /*for (size_t i = 0; i < self.size(); i++)
+        data[i] = (unsigned char)(self[i]);*/
     skel->im = data;
 
     skel->thinning_zs(); // perform raster thinning
@@ -71,7 +80,12 @@ Matrix3<float> Matrix3<Vector3>::divergence()
 {
     this->raiseErrorOnBadCoord = false;
     Matrix3<float> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    #pragma omp parallel for collapse(3)
+    iterateParallel([&] (int x, int y, int z) {
+        returningGrid.at(x, y, z) = ((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x +
+                                     (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y +
+                                     (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z) * .5f;
+    });
+    /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
@@ -82,7 +96,7 @@ Matrix3<float> Matrix3<Vector3>::divergence()
                                              (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z) * .5f;
             }
         }
-    }
+    }*/
     this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
@@ -111,7 +125,12 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient()
 {
     this->raiseErrorOnBadCoord = false;
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    #pragma omp parallel for collapse(3)
+    iterateParallel([&] (int x, int y, int z) {
+        returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x * .5f,
+                                            (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y * .5f,
+                                            (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z * .5f);
+    });
+    /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
@@ -124,7 +143,7 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient()
                                                     (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z * .5f);
             }
         }
-    }
+    }*/
     this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
@@ -134,8 +153,11 @@ template<>
 Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
 {
     Matrix3<Vector3> mat(sizeX, sizeY, sizeZ);
-    for (Vector3& val : mat.data)
-        val = Vector3::random();
+    mat.iterateParallel([&] (size_t i) {
+        mat[i] = Vector3::random();
+    });
+    /*for (Vector3& val : mat)
+        val = Vector3::random();*/
     return mat;
 }
 
@@ -160,14 +182,20 @@ Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
     stbi_image_free(c_data);
 
     Matrix3<Vector3> map(imgW, imgH);
-    for (int x = 0; x < imgW; x++) {
+    map.iterateParallel([&] (int x, int y, int _z) {
+        int index = x + y * imgW;
+        map(x, y) = Vector3(data[3 * index + 0],
+                data[3 * index + 1],
+                data[3 * index + 1]) / 255.f;
+    });
+    /*for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
             int index = x + y * imgW;
             map.at(x, y) = Vector3(data[3 * index + 0],
                     data[3 * index + 1],
                     data[3 * index + 1]) / 255.f;
         }
-    }
+    }*/
     if (data != nullptr)
         delete[] data;//stbi_image_free(data);
 
@@ -195,12 +223,16 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
     stbi_image_free(c_data);
 
     Matrix3<float> map(imgW, imgH);
-    for (int x = 0; x < imgW; x++) {
+    map.iterateParallel([&] (int x, int y, int _z) {
+        int index = x + y * imgW;
+        map(x, y) = data[index] / 255.f;
+    });
+    /*for (int x = 0; x < imgW; x++) {
         for (int y = 0; y < imgH; y++) {
             int index = x + y * imgW;
             map.at(x, y) = data[index] / 255.f;
         }
-    }
+    }*/
     if (data != nullptr)
         delete[] data;//stbi_image_free(data);
 
@@ -209,14 +241,18 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
 //template<class T>
 Matrix3<float> operator-(const float a, Matrix3<float> b) {
     Matrix3<float> res = b;
-    for (size_t i = 0; i < res.size(); i++)
+    res.iterateParallel([&] (size_t i) {
         res[i] = a - res[i];
+    });
+    /*for (size_t i = 0; i < res.size(); i++)
+        res[i] = a - res[i];*/
     return res;
 }
 //template<class T>
 Matrix3<float> operator+(const float a, Matrix3<float> b) {
-    Matrix3<float> res = b;
+    return b + a;
+    /*Matrix3<float> res = b;
     for (size_t i = 0; i < res.size(); i++)
         res[i] = a + res[i];
-    return res;
+    return res;*/
 }

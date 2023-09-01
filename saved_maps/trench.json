@@ -18,7 +18,7 @@
 							"z": 0.0
 						}
 					},
-					"index": 16,
+					"index": 9,
 					"mirrored": false,
 					"name": "",
 					"optionalCurve": {
@@ -40,7 +40,7 @@
 								"z": 0.0
 							},
 							"filename": "",
-							"index": 15,
+							"index": 8,
 							"material": "WATER",
 							"mirrored": false,
 							"name": "None",
@@ -71,7 +71,7 @@
 									"z": 20.0
 								},
 								"filename": "",
-								"index": 14,
+								"index": 7,
 								"material": "ROCK",
 								"mirrored": false,
 								"name": "Polygon",
@@ -134,7 +134,7 @@
 								},
 								"type": "primitive"
 							},
-							"index": 13,
+							"index": 6,
 							"mirrored": false,
 							"name": "",
 							"optionalCurve": {
@@ -149,7 +149,7 @@
 							},
 							"type": "unary"
 						},
-						"index": 12,
+						"index": 5,
 						"mirrored": false,
 						"name": "Blend",
 						"operator": "Blend",
@@ -170,7 +170,7 @@
 								"z": 20.0
 							},
 							"filename": "",
-							"index": 11,
+							"index": 4,
 							"material": "ROCK",
 							"mirrored": false,
 							"name": "Mountainchain",
@@ -233,7 +233,7 @@
 							},
 							"type": "primitive"
 						},
-						"index": 10,
+						"index": 3,
 						"mirrored": false,
 						"name": "",
 						"optionalCurve": {
@@ -248,7 +248,7 @@
 						},
 						"type": "unary"
 					},
-					"index": 9,
+					"index": 2,
 					"mirrored": false,
 					"name": "Blend",
 					"operator": "Blend",
@@ -260,7 +260,7 @@
 					"type": "compose",
 					"useIntersection": false
 				},
-				"index": 8,
+				"index": 1,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",
@@ -271,291 +271,6 @@
 				"positionalB": "FIXED_POS",
 				"type": "compose",
 				"useIntersection": false
-			},
-			{
-				"densityValue": -2.5,
-				"dimensions": {
-					"x": 49.01569366455078,
-					"y": 11.982646942138672,
-					"z": 11.500028610229492
-				},
-				"filename": "",
-				"index": 7,
-				"material": "WATER",
-				"mirrored": false,
-				"name": "Pass (autogen)",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 0.0,
-							"y": 0.0,
-							"z": 6.800025939941406
-						},
-						{
-							"x": 10.489459991455078,
-							"y": 0.921783447265625,
-							"z": 0.0
-						},
-						{
-							"x": 15.367450714111328,
-							"y": 7.982646942138672,
-							"z": 7.500028610229492
-						},
-						{
-							"x": 27.53431510925293,
-							"y": 3.5138168334960938,
-							"z": 0.0
-						},
-						{
-							"x": 37.47991180419922,
-							"y": 1.7351112365722656,
-							"z": 0.0
-						},
-						{
-							"x": 45.01569366455078,
-							"y": 2.969951629638672,
-							"z": 0.0
-						}
-					]
-				},
-				"position": {
-					"x": 14.931650161743164,
-					"y": 46.123313903808594,
-					"z": 9.60003662109375
-				},
-				"shape": "Parametric_Tunnel",
-				"sigmaValue": 4.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"composables": [
-					{
-						"densityValue": -2.5,
-						"dimensions": {
-							"x": 13.80799388885498,
-							"y": 15.031554222106934,
-							"z": 12.964712142944336
-						},
-						"filename": "",
-						"index": 6,
-						"material": "WATER",
-						"mirrored": false,
-						"name": "Parametric_Tunnel",
-						"optionalCurve": {
-							"closed": false,
-							"points": [
-								{
-									"x": 0.0,
-									"y": 0.0,
-									"z": 0.0
-								},
-								{
-									"x": 1.3663787841796875,
-									"y": 2.823352813720703,
-									"z": 0.19999980926513672
-								},
-								{
-									"x": 4.155815124511719,
-									"y": 3.1553306579589844,
-									"z": 4.300009250640869
-								},
-								{
-									"x": 5.591178894042969,
-									"y": 5.767650604248047,
-									"z": 7.300020694732666
-								},
-								{
-									"x": 5.788780212402344,
-									"y": 7.253780364990234,
-									"z": 7.2000203132629395
-								},
-								{
-									"x": 8.143302917480469,
-									"y": 9.366863250732422,
-									"z": 4.500010013580322
-								}
-							]
-						},
-						"position": {
-							"x": 59.91407775878906,
-							"y": 47.61923599243164,
-							"z": 6.5000319480896
-						},
-						"shape": "Parametric_Tunnel",
-						"sigmaValue": 1.6994073390960693,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"type": "primitive"
-					},
-					{
-						"densityValue": -2.5,
-						"dimensions": {
-							"x": 13.488489151000977,
-							"y": 13.468255996704102,
-							"z": 14.564718246459961
-						},
-						"filename": "",
-						"index": 5,
-						"material": "WATER",
-						"mirrored": false,
-						"name": "Parametric_Tunnel",
-						"optionalCurve": {
-							"closed": false,
-							"points": [
-								{
-									"x": 0.0,
-									"y": 7.803565979003906,
-									"z": 0.0
-								},
-								{
-									"x": 0.19432830810546875,
-									"y": 6.482837677001953,
-									"z": 0.4999995231628418
-								},
-								{
-									"x": 1.9861602783203125,
-									"y": 3.7456817626953125,
-									"z": 7.9000244140625
-								},
-								{
-									"x": 4.4120330810546875,
-									"y": 2.5187911987304688,
-									"z": 8.900028228759766
-								},
-								{
-									"x": 6.574623107910156,
-									"y": 3.5079002380371094,
-									"z": 8.000024795532227
-								},
-								{
-									"x": 7.823799133300781,
-									"y": 0.0,
-									"z": 2.8000049591064453
-								}
-							]
-						},
-						"position": {
-							"x": 61.9261474609375,
-							"y": 40.96006774902344,
-							"z": 6.800031661987305
-						},
-						"shape": "Parametric_Tunnel",
-						"sigmaValue": 1.6994071006774902,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"type": "primitive"
-					}
-				],
-				"index": 4,
-				"mirrored": false,
-				"name": "Delta (autogen)",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"type": "nary"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 30.0,
-					"y": 30.0,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 3,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "Motu (autogen)",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"position": {
-					"x": 6.464466094970703,
-					"y": 25.535533905029297,
-					"z": 7.0
-				},
-				"shape": "Dune",
-				"sigmaValue": 0.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 30.0,
-					"y": 30.0,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 2,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "Motu (autogen)",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"position": {
-					"x": 3.464466094970703,
-					"y": 46.5355339050293,
-					"z": 0.0
-				},
-				"shape": "Dune",
-				"sigmaValue": 0.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 30.0,
-					"y": 30.0,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 1,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "Motu (autogen)",
-				"optionalCurve": {
-					"closed": false,
-					"points": []
-				},
-				"position": {
-					"x": 13.464466094970703,
-					"y": 28.535533905029297,
-					"z": 7.0
-				},
-				"shape": "Dune",
-				"sigmaValue": 0.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
 			}
 		],
 		"index": 0,

@@ -38,7 +38,7 @@ public:
 
 
     virtual void applySandDeposit() = 0;
-    virtual void applyFlowModifcation() = 0;
+    virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
 
 
     static std::function<float(Vector3)> parseFittingFunction(std::string formula);
@@ -77,7 +77,7 @@ public:
     virtual Vector3 getVector(const Vector3& position, std::string complement = "");
     virtual EnvPoint* clone();
     virtual void applySandDeposit();
-    virtual void applyFlowModifcation();
+    virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch();
 };
 
@@ -95,7 +95,7 @@ public:
     virtual Vector3 getVector(const Vector3& position, std::string complement = "");
     virtual EnvCurve* clone();
     virtual void applySandDeposit();
-    virtual void applyFlowModifcation();
+    virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch();
 };
 
@@ -112,7 +112,7 @@ public:
     virtual Vector3 getVector(const Vector3& position, std::string complement = "");
     virtual EnvArea* clone();
     virtual void applySandDeposit();
-    virtual void applyFlowModifcation();
+    virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch();
 };
 

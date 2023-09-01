@@ -22,6 +22,44 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    /*
+    Vector3 dims(1000, 1000, 1);
+    GridF mask = GridF::random(dims);
+    GridF grid = GridF::random(dims);
+    GridF res(dims);
+    GridF res2(dims);
+
+    float timeParallel = timeIt([&]() {
+        for (int iter = 0; iter < 1000; iter++) {
+            FastNoiseLite noise(iter);
+            res = GridF::fbmNoise1D(noise, dims.x, dims.y, dims.z);
+//#pragma omp parallel for
+//            for (size_t i = 0; i < grid.size(); i++) {
+//                res[i] = mask[i] + grid[i];
+//            }
+//            grid.convolution(mask);
+//            grid.iterateParallel([&](float x, float y, float z) {
+//                grid(x, y, z) = x + y + z;
+//            });
+        }
+    });
+    float timeSeq = timeIt([&]() {
+        for (int iter = 0; iter < 1000; iter++) {
+//            res2 = mask + grid;
+//            for (size_t i = 0; i < grid.size(); i++) {
+//                res[i] = mask[i] + grid[i];
+//            }
+//            grid.convolutionSlow(mask);
+//            grid.iterate([&](float x, float y, float z) {
+//                grid(x, y, z) = x + y + z;
+//            });
+        }
+    });
+//    std::cout << grid.displayAsPlot() << std::endl;
+    std::cout << "Parallel: " << showTime(timeParallel) << "\nSequential: " << showTime(timeSeq) << std::endl;
+    std::cout << "Check: " << (res == res2 ? "OK" : "Not OK!!!") << std::endl;
+    return 0;
+    */
     /*std::string initialPath = "erosionsTests";
     std::string destFolder = "asOBJ";
     std::string finalPath = initialPath + "/" + destFolder;
