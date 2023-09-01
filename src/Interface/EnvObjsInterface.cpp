@@ -28,7 +28,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->highDepositionMesh.useIndices = false;
 
     createEnvObjectsFromImplicitTerrain();
-    recomputeErosionValues();
+//    recomputeErosionValues();
 }
 
 void EnvObjsInterface::display(const Vector3 &camPos)
@@ -128,7 +128,7 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
     boundariesTree.build(Triangle::vectorsToTriangles(triangles));
 
 
-    std::vector<std::pair<float, Vector3>> allErosions;
+    std::vector<std::vector<std::pair<float, Vector3>>> allErosions;
     std::vector<BSpline> lastRocksLaunched;
 
     float erosionSize = 8.f;
@@ -215,10 +215,18 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
                                                                 );
 
     GridF erosionsAmount(terrainDims);
-    float size = erosionSize;
-    for (auto& [val, pos] : allErosions) {
-        RockErosion(size, val).computeErosionMatrix(erosionsAmount, pos - Vector3(.5f, .5f, .5f));
-    }
+    std::cout << "Just for the erosion part: " << showTime(timeIt([&]() {
+        float size = erosionSize;
+        std::vector<GridF> suberosions(allErosions.size(), erosionsAmount);
+        #pragma omp parallel for
+        for (size_t i = 0; i < suberosions.size(); i++) {
+            for (auto& [val, pos] : allErosions[i]) {
+                RockErosion(size, val).computeErosionMatrix(suberosions[i], pos - Vector3(.5f, .5f, .5f));
+            }
+        }
+        for (auto& sub : suberosions)
+            erosionsAmount += sub;
+    })) << std::endl;
 
     GridV3 velocities(terrainDims);
     GridF evaluationAmounts(terrainDims);

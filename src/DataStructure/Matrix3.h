@@ -125,7 +125,7 @@ public:
     Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
     template<typename U>
-    Matrix3<T> convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD);
+    Matrix3<T> convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS border = ZERO_PAD) const;
 
     T min() const;
     T max() const;
@@ -139,7 +139,7 @@ public:
     static Matrix3<T> min(const Matrix3<T>& m1, const Matrix3<T>& m2);
 
     Matrix3<T> abs() const;
-    T sum();
+    T sum() const;
 
     Matrix3<T> rounded(int precision = 0) const;
 
@@ -151,47 +151,47 @@ public:
 
     Matrix3<T> transposeXY();
 
-    Matrix3<Vector3> gradient();
-    Matrix3<Vector3> grad();
-    Matrix3<float> divergence();
-    Matrix3<float> div();
-    Matrix3<T> curl();
-    Matrix3<T> rot();
-    Matrix3<T> laplacian();
-    Vector3 gradient(const Vector3& position);
-    Vector3 gradient(float posX, float posY, float posZ = 0);
+    Matrix3<Vector3> gradient() const;
+    Matrix3<Vector3> grad() const;
+    Matrix3<float> divergence() const;
+    Matrix3<float> div() const;
+    Matrix3<T> curl() const;
+    Matrix3<T> rot() const;
+    Matrix3<T> laplacian() const;
+    Vector3 gradient(const Vector3& position) const;
+    Vector3 gradient(float posX, float posY, float posZ = 0) const;
 
-    Matrix3<int> skeletonize();
-    Matrix3<T> dilate(float t = 1.f);
-    Matrix3<T> erode(float t = 1.f);
+    Matrix3<int> skeletonize() const;
+    Matrix3<T> dilate(float t = 1.f) const;
+    Matrix3<T> erode(float t = 1.f) const;
 
-    T trace();
+    T trace() const;
 
-    Matrix3<T> wrapWith(const Matrix3<Vector3>& wrapper);
-    Matrix3<T> wrapWith(const BSpline& original, const BSpline& wrapperCurve);
+    Matrix3<T> wrapWith(const Matrix3<Vector3>& wrapper) const;
+    Matrix3<T> wrapWith(const BSpline& original, const BSpline& wrapperCurve) const;
 
-    Matrix3<T> wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper);
-    Matrix3<T> wrapWithoutInterpolation(const BSpline& original, const BSpline& wrapperCurve);
+    Matrix3<T> wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper) const;
+    Matrix3<T> wrapWithoutInterpolation(const BSpline& original, const BSpline& wrapperCurve) const;
 
     static Matrix3<float> fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, const Vector3& offset = Vector3());
-    Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma);
-    Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOfZ = 3, bool ignoreBorders = false);
+    Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma) const;
+    Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOfZ = 3, bool ignoreBorders = false) const;
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
 
     void clear() { this->sizeX = 0; this->sizeY = 0; this->sizeZ = 0; return this->data.clear(); }
     void reset(T newVal = T()) { for (auto& val : data) val = newVal; }
 
-    Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
-    Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false);
+    Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
+    Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> isosurface(T isovalue = T()) const;
 
     template<typename U>
-    operator Matrix3<U>() {
+    operator Matrix3<U>() const {
         Matrix3<U> returned(this->getDimensions());
         for (size_t i = 0; i < this->size(); i++)
             returned[i] = (U)((*this)[i]);
@@ -224,7 +224,7 @@ public:
     template<typename U>
     Matrix3<T>& operator-=(U o);
     template<typename U>
-    bool operator==(Matrix3<U> o);
+    bool operator==(Matrix3<U> o) const;
 
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
 
@@ -251,8 +251,8 @@ public:
 
     Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
-    std::string displayValues();
-    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X", std::string separator = "");
+    std::string displayValues() const;
+    std::string displayAsPlot(T min = 0.f, T max = 0.f, std::vector<std::string> patterns = {}, std::map<T, std::string> specialCharactersAtValue = {}, T specialCharEpsilon = 1e-5, std::string charForError = "X", std::string separator = "") const;
 };
 
 template<class T> template<class Func>
@@ -313,7 +313,7 @@ Matrix3<float> operator-(const float a, Matrix3<float> b);
 Matrix3<float> operator+(const float a, Matrix3<float> b);
 #include <sstream>
 template<class T>
-std::string Matrix3<T>::displayValues()
+std::string Matrix3<T>::displayValues() const
 {
     std::stringstream out;
     for (int z = 0; z < this->sizeZ; z++) {
@@ -329,7 +329,7 @@ std::string Matrix3<T>::displayValues()
 }
 
 template<class T>
-std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError, std::string separator)
+std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> patterns, std::map<T, std::string> specialCharactersAtValue, T specialCharEpsilon, std::string charForError, std::string separator) const
 {
     if (patterns.empty())
         patterns = {".", "-", "=", "#"};
@@ -722,16 +722,17 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, float x, float y, float z) {
 }
 
 template<class T>
-Vector3 Matrix3<T>::gradient(const Vector3& position)
+Vector3 Matrix3<T>::gradient(const Vector3& position) const
 {
-    this->raiseErrorOnBadCoord = false;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
     Vector3 flooredPos = position.floor();
 //    Vector3 offset = position - flooredPos;
 
     return Vector3(
-                (at(flooredPos + Vector3(1, 0, 0)) - at(flooredPos)), // * offset.x,
-                (at(flooredPos + Vector3(0, 1, 0)) - at(flooredPos)), // * offset.y,
-                (at(flooredPos + Vector3(0, 0, 1)) - at(flooredPos)) // * offset.z
+                (self.at(flooredPos + Vector3(1, 0, 0)) - self.at(flooredPos)), // * offset.x,
+                (self.at(flooredPos + Vector3(0, 1, 0)) - self.at(flooredPos)), // * offset.y,
+                (self.at(flooredPos + Vector3(0, 0, 1)) - self.at(flooredPos)) // * offset.z
                 );
     /*
     float NWB = at(flooredPos + Vector3(0, 0, 0));
@@ -754,13 +755,13 @@ Vector3 Matrix3<T>::gradient(const Vector3& position)
 }
 
 template<class T>
-Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ)
+Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ) const
 {
     return gradient(Vector3(posX, posY, posZ));
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::dilate(float t)
+Matrix3<T> Matrix3<T>::dilate(float t) const
 {
     Matrix3<T> res = *this;
     while (t > 0.f) {
@@ -801,7 +802,7 @@ Matrix3<T> Matrix3<T>::dilate(float t)
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::erode(float t)
+Matrix3<T> Matrix3<T>::erode(float t) const
 {
     Matrix3<T> res = *this;
     while (t > 0.f) {
@@ -842,7 +843,7 @@ Matrix3<T> Matrix3<T>::erode(float t)
 }
 
 template<class T>
-T Matrix3<T>::trace()
+T Matrix3<T>::trace() const
 {
     if (sizeZ != 1)
         throw std::domain_error("Cannot compute the trace of the matrix : Matrix should be 2D (sizeZ = 1) but here sizeZ = " + std::to_string(this->sizeZ));
@@ -903,10 +904,10 @@ Matrix3<T> Matrix3<T>::abs() const
 }
 
 template <class T>
-T Matrix3<T>::sum()
+T Matrix3<T>::sum() const
 {
     T sum = T();
-    for (T& val : this->data)
+    for (const auto& val : this->data)
         sum += val;
     return sum;
 }
@@ -1012,7 +1013,7 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) {
+Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) const {
     Matrix3<float> laplacian = Matrix3<float>(3 + sizeOnX/2 +1, 3 + sizeOnY/2 +1, 3 + sizeOnZ/2 +1, 0.f);
     laplacian.at(sizeOnX/2 + 1, sizeOnY/2 + 1, sizeOnZ/2 + 1) = 1.f;
     laplacian = laplacian.laplacian();
@@ -1020,7 +1021,7 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
     return this->convolution(laplacian.convolution(gaussian));
 }
 template<class T>
-Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOfZ, bool ignoreBorders) {
+Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOfZ, bool ignoreBorders) const {
     Matrix3<float> meanMatrix(sizeOnX, sizeOnY, sizeOfZ, 1.f);
     return this->convolution(meanMatrix, (ignoreBorders ? CONVOLUTION_BORDERS::IGNORED : CONVOLUTION_BORDERS::ZERO_PAD));
 }
@@ -1058,16 +1059,17 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
     return returningGrid;
 }*/
 template<class T>
-Matrix3<Vector3> Matrix3<T>::gradient() {
+Matrix3<Vector3> Matrix3<T>::gradient() const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
+    auto self = *this;
     bool oldError = this->raiseErrorOnBadCoord;
     RETURN_VALUE_ON_OUTSIDE oldReturn = this->returned_value_on_outside;
-    this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = MIRROR_VALUE;
+    self.raiseErrorOnBadCoord = false;
+    self.returned_value_on_outside = MIRROR_VALUE;
     iterateParallel([&](int x, int y, int z) {
-        returningGrid.at(x, y, z) = Vector3((at(x + 1, y, z) - at(x - 1, y, z)) * .5f,
-                                            (at(x, y + 1, z) - at(x, y - 1, z)) * .5f,
-                                            (at(x, y, z + 1) - at(x, y, z - 1)) * .5f);
+        returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)) * .5f,
+                                            (self.at(x, y + 1, z) - self.at(x, y - 1, z)) * .5f,
+                                            (self.at(x, y, z + 1) - self.at(x, y, z - 1)) * .5f);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -1079,17 +1081,17 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
             }
         }
     }*/
-    this->raiseErrorOnBadCoord = oldError;
-    this->returned_value_on_outside = oldReturn;
+//    this->raiseErrorOnBadCoord = oldError;
+//    this->returned_value_on_outside = oldReturn;
     return returningGrid;
 }
 template<class T>
-Matrix3<Vector3> Matrix3<T>::grad() {
+Matrix3<Vector3> Matrix3<T>::grad() const {
     return this->gradient();
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::laplacian()
+Matrix3<T> Matrix3<T>::laplacian() const
 {
     Matrix3 returningGrid = *this;
     this->raiseErrorOnBadCoord = false;
@@ -1125,7 +1127,7 @@ Matrix3<T> Matrix3<T>::laplacian()
 }
 
 template<typename T>
-Matrix3<int> Matrix3<T>::binarize(T limitValue, bool greaterValuesAreSetToOne, bool useAlsoTheEqualSign)
+Matrix3<int> Matrix3<T>::binarize(T limitValue, bool greaterValuesAreSetToOne, bool useAlsoTheEqualSign) const
 {
     Matrix3<int> bin(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&](size_t i){
@@ -1162,7 +1164,7 @@ Matrix3<int> Matrix3<T>::binarize(T limitValue, bool greaterValuesAreSetToOne, b
 }
 
 template<class T>
-Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne, bool useAlsoTheEqualSign)
+Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne, bool useAlsoTheEqualSign) const
 {
     Matrix3<int> bin(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&](size_t i){
@@ -1417,7 +1419,7 @@ Matrix3<T> operator/(Matrix3<T> a, U o) {
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator/=(U o) {
     iterateParallel([&](size_t i) {
-        data[i] /= o.data[i];
+        data[i] /= o;
     });
     /*
     for (size_t i = 0; i < data.size(); i++) {
@@ -1458,7 +1460,7 @@ Matrix3<T>& Matrix3<T>::operator-=(U o) {
     return *this;
 }
 template<typename T> template<typename U>
-bool Matrix3<T>::operator==(Matrix3<U> o) {
+bool Matrix3<T>::operator==(Matrix3<U> o) const {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         return false;
     for (size_t i = 0; i < this->data.size(); i++)
@@ -1791,13 +1793,13 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperL
 template<typename T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int front, bool useInterpolation)
 {
-    iterateParallel([&](int x, int y, int z) {
+    /*iterateParallel([&](int x, int y, int z) {
        int oldX = x - left;
        int oldY = y - up;
        int oldZ = z - front;
        if (!checkCoord(x, y, z) || !matrixToAdd.checkCoord(oldX, oldY, oldZ)) return;
        this->at(x, y, z) += matrixToAdd(oldX, oldY, oldZ);
-    });/*
+    });*/
     for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
@@ -1805,7 +1807,7 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int
                 this->at(x, y, z) += val;
             }
         }
-    }*/
+    }
     return *this;
 }
 
@@ -2022,13 +2024,13 @@ Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
 }
 
 template<class T> template<class U>
-Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders)
+Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders) const
 {
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
-    this->raiseErrorOnBadCoord = false;
+//    this->raiseErrorOnBadCoord = false;
 
     // Pre-calculate normalisation value
-    T normalisationValue = convMatrix.sum();
+    U normalisationValue = convMatrix.sum();
 
     // Choose border handling method once before loop
     auto handleBorder = [&](Vector3& pos) {
@@ -2045,6 +2047,12 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
         return true;
     };
 
+    auto getVal = [&](const Vector3& pos) {
+        if (borders == CONVOLUTION_BORDERS::ZERO_PAD && !result.checkCoord(pos))
+            return T();
+        return this->at(pos);
+    };
+
     iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
         convMatrix.iterate([&](int dx, int dy, int dz) {
@@ -2054,11 +2062,11 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
             Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
 
             if (handleBorder(cellValuePosition)) {
-                neighboringSum += this->at(cellValuePosition) * convMatrix.at(dx, dy, dz);
+                neighboringSum += getVal(cellValuePosition) * convMatrix.at(dx, dy, dz);
             }
         });
         result.at(x, y, z) = neighboringSum;
-        if (normalisationValue != T())
+        if (normalisationValue != U())
             result.at(x, y, z) /= normalisationValue;
     });
     /*#pragma omp parallel for collapse(3)
@@ -2087,7 +2095,7 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
             }
         }
     }*/
-    this->raiseErrorOnBadCoord = true;
+//    this->raiseErrorOnBadCoord = true;
     return result;
 }
 
@@ -2129,21 +2137,22 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::wrapWith(const Matrix3<Vector3>& wrapper)
+Matrix3<T> Matrix3<T>::wrapWith(const Matrix3<Vector3>& wrapper) const
 {
     // Wrap definition : f(wrap(p)) = f(p + wrap vec)
     // But f(p) != f(p - wrap vec), in the definition. I think it should create
     // better results because we can fetch outside values (with mirror for ex)
     // But that's not the current definition.
     Matrix3<T> result(getDimensions());
-    this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
+    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
     Matrix3<float> unit(result.getDimensions(), 1.f);
     Matrix3<float> unit_ctrl = unit;
     iterate([&](const Vector3& pos) {
         const Vector3& wrap = wrapper.at(pos);
-        result.addValueAt(this->at(pos), pos + wrap);
+        result.addValueAt(self.at(pos), pos + wrap);
         unit_ctrl.addValueAt(1.f, pos + wrap);
     });
     /*for (int x = 0; x < sizeX; x++) {
@@ -2168,7 +2177,7 @@ Matrix3<T> Matrix3<T>::wrapWith(const Matrix3<Vector3>& wrapper)
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWith(const BSpline& original, const BSpline& wrapperCurve)
+Matrix3<T> Matrix3<T>::wrapWith(const BSpline& original, const BSpline& wrapperCurve) const
 {
     // For now, start from a straight line on the X-axis
 //    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
@@ -2255,14 +2264,15 @@ Matrix3<T> Matrix3<T>::wrapWith(const BSpline& original, const BSpline& wrapperC
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper)
+Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper) const
 {
     Matrix3<T> result = *this; //(getDimensions());
-    this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
+    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     result.raiseErrorOnBadCoord = false;
     iterateParallel([&](const Vector3& pos) {
-        result.at(pos + wrapper(pos)) = this->at(pos);
+        result.at(pos + wrapper(pos)) = self.at(pos);
     });
     /*for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
@@ -2277,13 +2287,13 @@ Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper)
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const BSpline &original, const BSpline &wrapperCurve)
+Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const BSpline &original, const BSpline &wrapperCurve) const
 {
-    bool previousRaise = this->raiseErrorOnBadCoord;
-    T previousDefault  = this->returned_value_on_outside;
-
-    this->raiseErrorOnBadCoord = false;
-    this->returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+//    bool previousRaise = this->raiseErrorOnBadCoord;
+//    T previousDefault  = this->returned_value_on_outside;
+    auto self = *this;
+    self.raiseErrorOnBadCoord = false;
+    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
     Matrix3<Vector3> indices(this->getDimensions());
     for (size_t i = 0; i < this->size(); i++)
@@ -2293,11 +2303,11 @@ Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const BSpline &original, const B
 
     Matrix3<T> values(this->getDimensions());
     for (size_t i = 0; i < this->size(); i++) {
-        values[i] = this->at(indices[i]);
+        values[i] = self.at(indices[i]);
     }
 
-    this->raiseErrorOnBadCoord = previousRaise;
-    this->returned_value_on_outside = previousDefault;
+//    this->raiseErrorOnBadCoord = previousRaise;
+//    this->returned_value_on_outside = previousDefault;
 
     return values;
 }

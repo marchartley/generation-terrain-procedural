@@ -9,7 +9,7 @@ GridV3 EnvObject::terrainNormals;
 GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
-float EnvObject::flowImpactFactor = .1f;
+float EnvObject::flowImpactFactor = .99f;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
@@ -208,8 +208,9 @@ void EnvObject::applyEffects()
         totalNewFlow += flow;
         totalOccupancy += occupancy;
     }
-    for (size_t i = 0; i < totalNewFlow.size(); i++)
+    totalNewFlow.iterateParallel([&] (size_t i) {
         totalNewFlow[i] = (totalOccupancy[i] != 0.f ? totalNewFlow[i] / totalOccupancy[i] : totalNewFlow[i]);
+    });
     EnvObject::flowfield = EnvObject::flowfield * (1.f - EnvObject::flowImpactFactor) + totalNewFlow * EnvObject::flowImpactFactor;
 
     for (auto& object : EnvObject::instantiatedObjects) {
@@ -259,15 +260,9 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
     GridF gauss = GridF::gaussian(radius, radius, 1, radius * .5f).normalize();
     GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
     GridF occupancy(flow.getDimensions());
-    for (int x = 0; x < occupancy.sizeX; x++) {
-        for (int y = 0; y < occupancy.sizeY; y++) {
-            for (int z = 0; z < occupancy.sizeZ; z++) {
-                Vector3 pos(x, y, z);
-                occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
-            }
-        }
-    }
-
+    occupancy.iterateParallel([&] (const Vector3& pos) {
+        occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
+    });
     return {flow, occupancy};
 }
 
@@ -326,12 +321,10 @@ void EnvCurve::applySandDeposit()
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-    for (int x = 0; x < sand.sizeX; x++) {
-        for (int y = 0; y < sand.sizeY; y++) {
-            sand.at(x, y, 0) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
-        }
-    }
-    sand *= this->sandEffect;
+    sand.iterateParallel([&] (const Vector3& pos) {
+        sand.at(pos) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
+    });
+//    sand *= this->sandEffect;
     EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
 }
 
@@ -349,24 +342,21 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     GridV3 flow(EnvObject::flowfield.getDimensions());
     GridF occupancy(flow.getDimensions());
 
-    for (int x = 0; x < flow.sizeX; x++) {
-        for (int y = 0; y < flow.sizeY; y++) {
-            Vector3 pos(x, y, 0);
-            float closestTime = translatedCurve.estimateClosestTime(pos);
-            Vector3 closestPos = translatedCurve.getPoint(closestTime);
-            float sqrDist = (closestPos - pos).norm2();
-            if (sqrDist > (width * .5f) * (width * .5f)) continue;
-            float gauss = normalizedGaussian(width * .5f, sqrDist);
-            Vector3 impact = this->flowEffect * gauss;
-            auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
-            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-                if ((translatedCurve.getPoint(closestTime) - pos).dot(normal) > 0)
-                    normal *= -1.f;
-            }
-            flow(pos) = impact.changedBasis(direction, normal, binormal);
-            occupancy(pos) = 1.f;
+    flow.iterateParallel([&] (const Vector3& pos) {
+        float closestTime = translatedCurve.estimateClosestTime(pos);
+        Vector3 closestPos = translatedCurve.getPoint(closestTime);
+        float sqrDist = (closestPos - pos).norm2();
+        if (sqrDist > (width * .5f) * (width * .5f)) return;
+        float gauss = normalizedGaussian(width * .5f, sqrDist);
+        Vector3 impact = this->flowEffect * gauss;
+        auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
+        if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
+            if ((translatedCurve.getPoint(closestTime) - pos).dot(normal) > 0)
+                normal *= -1.f;
         }
-    }
+        flow(pos) = impact.changedBasis(direction, normal, binormal);
+        occupancy(pos) = 1.f;
+    });
     return {flow, occupancy};
 }
 
@@ -429,13 +419,11 @@ void EnvArea::applySandDeposit()
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-    for (int x = 0; x < sand.sizeX; x++) {
-        for (int y = 0; y < sand.sizeY; y++) {
-            bool inside = translatedCurve.contains(Vector3(x, y, 0));
-            sand.at(x, y, 0) = (inside ? 1.f : 0.f); //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
-        }
-    }
-    sand *= this->sandEffect;
+    sand.iterateParallel([&] (const Vector3& pos) {
+        bool inside = translatedCurve.contains(pos);
+        sand(pos) = (inside ? 1.f : 0.f) * sandEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+    });
+//    sand *= this->sandEffect;
     //EnvObject::sandDeposit.add(sand, box.min());
 }
 
@@ -454,45 +442,39 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     GridF occupancy(EnvObject::flowfield.getDimensions());
 
     GridF dist(flow.getDimensions());
-    for (int x = 0; x < flow.sizeX; x++) {
-        for (int y = 0; y < flow.sizeY; y++) {
-            Vector3 pos(x, y);
-            dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, false) ? 1.f : 0.f);
-        }
-    }
+    flow.iterateParallel([&] (const Vector3& pos) {
+        dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, false) ? 1.f : 0.f);
+    });
     dist = dist.toDistanceMap(true, false);
     GridV3 grad = dist.meanSmooth().gradient() * -1.f;
     for (auto& v : grad)
         v.normalize();
 
-    for (int x = 0; x < flow.sizeX; x++) {
-        for (int y = 0; y < flow.sizeY; y++) {
-            Vector3 pos(x, y, 0);
-            if (!box.contains(pos) || !translatedCurve.contains(pos))
-                continue;
+    flow.iterateParallel([&] (const Vector3& pos) {
+        if (!box.contains(pos) || !translatedCurve.contains(pos))
+            return;
 
-            float closestTime = translatedCurve.estimateClosestTime(pos);
-            Vector3 closestPos = translatedCurve.getPoint(closestTime);
+        float closestTime = translatedCurve.estimateClosestTime(pos);
+        Vector3 closestPos = translatedCurve.getPoint(closestTime);
 
-            float distanceToBorder = (pos - closestPos).norm();
-            float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
-            Vector3 previousFlow = EnvObject::flowfield(pos);
-            // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
+        float distanceToBorder = (pos - closestPos).norm();
+        float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
+        Vector3 previousFlow = EnvObject::flowfield(pos);
+        // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
 //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
-            // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
-            Vector3 direction = grad(pos);
-            Vector3 binormal = Vector3(0, 0, 1);
-            Vector3 normal = direction.cross(binormal); // Direction and binormal are normalized.
-            Vector3 impact = this->flowEffect * distFactor;
-            // Ignore the normal for now, I can't find any logic with it...
+        // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
+        Vector3 direction = grad(pos);
+        Vector3 binormal = Vector3(0, 0, 1);
+        Vector3 normal = direction.cross(binormal); // Direction and binormal are normalized.
+        Vector3 impact = this->flowEffect * distFactor;
+        // Ignore the normal for now, I can't find any logic with it...
 //            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
 //                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
 //                    normal *= -1.f;
 //            }
-            flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
-            occupancy.at(pos) = 1.f;
-        }
-    }
+        flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
+        occupancy.at(pos) = 1.f;
+    });
     return {flow, occupancy};
 }
 

@@ -4,129 +4,59 @@
 			{
 				"blendingFactor": 2.0,
 				"composableA": {
-					"composableA": {
-						"dimensions": {
-							"x": 100.0,
-							"y": 100.0,
-							"z": 40.0
-						},
-						"file": "saved_maps/heightmaps/map1.png",
-						"material": "ROCK",
-						"position": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						}
-					},
-					"index": 9,
-					"mirrored": false,
-					"name": "",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"spreadFactor": 0.0,
-					"type": "unary"
-				},
-				"composableB": {
 					"blendingFactor": 2.0,
 					"composableA": {
-						"blendingFactor": 2.0,
 						"composableA": {
-							"densityValue": -2.5,
 							"dimensions": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
+								"x": 100.0,
+								"y": 100.0,
+								"z": 40.0
 							},
-							"filename": "",
-							"index": 8,
-							"material": "WATER",
-							"mirrored": false,
-							"name": "None",
-							"optionalCurve": {
-								"closed": false,
-								"points": []
-							},
+							"file": "saved_maps/heightmaps/map1.png",
+							"material": "ROCK",
 							"position": {
 								"x": 0.0,
 								"y": 0.0,
 								"z": 0.0
-							},
-							"shape": "None",
-							"sigmaValue": 0.0,
-							"supportDimensions": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"type": "primitive"
+							}
 						},
-						"composableB": {
+						"index": 9,
+						"mirrored": false,
+						"name": "",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"spreadFactor": 0.0,
+						"type": "unary"
+					},
+					"composableB": {
+						"blendingFactor": 2.0,
+						"composableA": {
+							"blendingFactor": 2.0,
 							"composableA": {
-								"densityValue": 1.5,
+								"densityValue": -2.5,
 								"dimensions": {
-									"x": 80.10379028320313,
-									"y": 81.30314636230469,
-									"z": 20.0
-								},
-								"filename": "",
-								"index": 7,
-								"material": "ROCK",
-								"mirrored": false,
-								"name": "Polygon",
-								"optionalCurve": {
-									"closed": false,
-									"points": [
-										{
-											"x": 69.82759857177734,
-											"y": 26.252201080322266,
-											"z": 10.0
-										},
-										{
-											"x": 59.186134338378906,
-											"y": 12.064590454101563,
-											"z": 10.0
-										},
-										{
-											"x": 25.50084686279297,
-											"y": 10.0,
-											"z": 10.0
-										},
-										{
-											"x": 10.0,
-											"y": 27.122684478759766,
-											"z": 10.0
-										},
-										{
-											"x": 15.816879272460938,
-											"y": 61.37553787231445,
-											"z": 10.0
-										},
-										{
-											"x": 38.45435333251953,
-											"y": 71.30314636230469,
-											"z": 10.0
-										},
-										{
-											"x": 66.82897186279297,
-											"y": 57.42438888549805,
-											"z": 10.0
-										},
-										{
-											"x": 70.10379028320313,
-											"y": 30.28744888305664,
-											"z": 10.0
-										}
-									]
-								},
-								"position": {
-									"x": 8.760665893554688,
-									"y": 12.845623016357422,
+									"x": 0.0,
+									"y": 0.0,
 									"z": 0.0
 								},
-								"shape": "Polygon",
-								"sigmaValue": 5.0,
+								"filename": "",
+								"index": 8,
+								"material": "WATER",
+								"mirrored": false,
+								"name": "None",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"position": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"shape": "None",
+								"sigmaValue": 0.0,
 								"supportDimensions": {
 									"x": 0.0,
 									"y": 0.0,
@@ -134,7 +64,178 @@
 								},
 								"type": "primitive"
 							},
-							"index": 6,
+							"composableB": {
+								"composableA": {
+									"densityValue": 1.5,
+									"dimensions": {
+										"x": 80.10379028320313,
+										"y": 81.30314636230469,
+										"z": 20.0
+									},
+									"filename": "",
+									"index": 7,
+									"material": "WATER",
+									"mirrored": false,
+									"name": "Lagoon Test",
+									"optionalCurve": {
+										"closed": false,
+										"points": [
+											{
+												"x": 69.82759857177734,
+												"y": 26.252201080322266,
+												"z": 10.0
+											},
+											{
+												"x": 59.186134338378906,
+												"y": 12.064590454101563,
+												"z": 10.0
+											},
+											{
+												"x": 25.50084686279297,
+												"y": 10.0,
+												"z": 10.0
+											},
+											{
+												"x": 10.0,
+												"y": 27.122684478759766,
+												"z": 10.0
+											},
+											{
+												"x": 15.816879272460938,
+												"y": 61.37553787231445,
+												"z": 10.0
+											},
+											{
+												"x": 38.45435333251953,
+												"y": 71.30314636230469,
+												"z": 10.0
+											},
+											{
+												"x": 66.82897186279297,
+												"y": 57.42438888549805,
+												"z": 10.0
+											},
+											{
+												"x": 70.10379028320313,
+												"y": 30.28744888305664,
+												"z": 10.0
+											}
+										]
+									},
+									"position": {
+										"x": 8.760665893554688,
+										"y": 12.845623016357422,
+										"z": 0.0
+									},
+									"shape": "Polygon",
+									"sigmaValue": 5.0,
+									"supportDimensions": {
+										"x": 0.0,
+										"y": 0.0,
+										"z": 0.0
+									},
+									"type": "primitive"
+								},
+								"index": 6,
+								"mirrored": false,
+								"name": "",
+								"optionalCurve": {
+									"closed": false,
+									"points": []
+								},
+								"spreadFactor": 0.0,
+								"translation": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": -10.383392333984375
+								},
+								"type": "unary"
+							},
+							"index": 5,
+							"mirrored": false,
+							"name": "Blend",
+							"operator": "Blend",
+							"optionalCurve": {
+								"closed": false,
+								"points": []
+							},
+							"positionalB": "FIXED_POS",
+							"type": "compose",
+							"useIntersection": false
+						},
+						"composableB": {
+							"composableA": {
+								"densityValue": 1.5,
+								"dimensions": {
+									"x": 85.16650390625,
+									"y": 87.30136108398438,
+									"z": 20.0
+								},
+								"filename": "",
+								"index": 4,
+								"material": "ROCK",
+								"mirrored": false,
+								"name": "Coral reef Test",
+								"optionalCurve": {
+									"closed": false,
+									"points": [
+										{
+											"x": 63.64041519165039,
+											"y": 12.33316421508789,
+											"z": 10.0
+										},
+										{
+											"x": 27.998668670654297,
+											"y": 10.0,
+											"z": 10.0
+										},
+										{
+											"x": 10.0,
+											"y": 29.748218536376953,
+											"z": 10.0
+										},
+										{
+											"x": 16.18423080444336,
+											"y": 65.72138977050781,
+											"z": 10.0
+										},
+										{
+											"x": 41.205135345458984,
+											"y": 77.30136108398438,
+											"z": 10.0
+										},
+										{
+											"x": 71.6168212890625,
+											"y": 63.069889068603516,
+											"z": 10.0
+										},
+										{
+											"x": 75.16650390625,
+											"y": 29.180194854736328,
+											"z": 10.0
+										},
+										{
+											"x": 64.52812194824219,
+											"y": 12.037458419799805,
+											"z": 10.0
+										}
+									]
+								},
+								"position": {
+									"x": 5.389972686767578,
+									"y": 10.97024154663086,
+									"z": 0.0
+								},
+								"shape": "MountainChain",
+								"sigmaValue": 20.0,
+								"supportDimensions": {
+									"x": 0.0,
+									"y": 0.0,
+									"z": 0.0
+								},
+								"type": "primitive"
+							},
+							"index": 3,
 							"mirrored": false,
 							"name": "",
 							"optionalCurve": {
@@ -145,11 +246,11 @@
 							"translation": {
 								"x": 0.0,
 								"y": 0.0,
-								"z": -10.383392333984375
+								"z": -1.8088665008544922
 							},
 							"type": "unary"
 						},
-						"index": 5,
+						"index": 2,
 						"mirrored": false,
 						"name": "Blend",
 						"operator": "Blend",
@@ -161,94 +262,7 @@
 						"type": "compose",
 						"useIntersection": false
 					},
-					"composableB": {
-						"composableA": {
-							"densityValue": 1.5,
-							"dimensions": {
-								"x": 85.16650390625,
-								"y": 87.30136108398438,
-								"z": 20.0
-							},
-							"filename": "",
-							"index": 4,
-							"material": "ROCK",
-							"mirrored": false,
-							"name": "Mountainchain",
-							"optionalCurve": {
-								"closed": false,
-								"points": [
-									{
-										"x": 63.64041519165039,
-										"y": 12.33316421508789,
-										"z": 10.0
-									},
-									{
-										"x": 27.998668670654297,
-										"y": 10.0,
-										"z": 10.0
-									},
-									{
-										"x": 10.0,
-										"y": 29.748218536376953,
-										"z": 10.0
-									},
-									{
-										"x": 16.18423080444336,
-										"y": 65.72138977050781,
-										"z": 10.0
-									},
-									{
-										"x": 41.205135345458984,
-										"y": 77.30136108398438,
-										"z": 10.0
-									},
-									{
-										"x": 71.6168212890625,
-										"y": 63.069889068603516,
-										"z": 10.0
-									},
-									{
-										"x": 75.16650390625,
-										"y": 29.180194854736328,
-										"z": 10.0
-									},
-									{
-										"x": 64.52812194824219,
-										"y": 12.037458419799805,
-										"z": 10.0
-									}
-								]
-							},
-							"position": {
-								"x": 5.389972686767578,
-								"y": 10.97024154663086,
-								"z": 0.0
-							},
-							"shape": "MountainChain",
-							"sigmaValue": 20.0,
-							"supportDimensions": {
-								"x": 0.0,
-								"y": 0.0,
-								"z": 0.0
-							},
-							"type": "primitive"
-						},
-						"index": 3,
-						"mirrored": false,
-						"name": "",
-						"optionalCurve": {
-							"closed": false,
-							"points": []
-						},
-						"spreadFactor": 0.0,
-						"translation": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": -1.8088665008544922
-						},
-						"type": "unary"
-					},
-					"index": 2,
+					"index": 1,
 					"mirrored": false,
 					"name": "Blend",
 					"operator": "Blend",
@@ -260,7 +274,79 @@
 					"type": "compose",
 					"useIntersection": false
 				},
-				"index": 1,
+				"composableB": {
+					"composableA": {
+						"densityValue": -2.5,
+						"dimensions": {
+							"x": 30.683198928833008,
+							"y": 38.84532165527344,
+							"z": 14.820358276367188
+						},
+						"filename": "",
+						"index": 12,
+						"material": "WATER",
+						"mirrored": false,
+						"name": "Passe Test",
+						"optionalCurve": {
+							"closed": false,
+							"points": [
+								{
+									"x": 4.700000762939453,
+									"y": 4.700000286102295,
+									"z": 4.700000286102295
+								},
+								{
+									"x": 4.364946365356445,
+									"y": 40.006977081298828,
+									"z": 10.120357513427734
+								},
+								{
+									"x": 14.738142013549805,
+									"y": 25.220500946044922,
+									"z": 8.988370895385742
+								},
+								{
+									"x": 13.687311172485352,
+									"y": 33.90056228637695,
+									"z": 7.934749126434326
+								},
+								{
+									"x": 25.983198165893555,
+									"y": 34.145320892333984,
+									"z": 8.023260116577148
+								}
+							]
+						},
+						"position": {
+							"x": 13.745477676391602,
+							"y": 6.007221698760986,
+							"z": 0.0
+						},
+						"shape": "Parametric_Tunnel",
+						"sigmaValue": 9.40000057220459,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"index": 13,
+					"mirrored": false,
+					"name": "Translation",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"spreadFactor": 0.0,
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": -0.3071475028991699
+					},
+					"type": "unary"
+				},
+				"index": 14,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",
