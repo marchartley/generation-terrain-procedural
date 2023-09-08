@@ -406,6 +406,7 @@ ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, 
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
     primitive->dimensions = dimensions;
+    std::cout << dimensions << std::endl;
 
     return primitive;
 }
@@ -1679,11 +1680,14 @@ std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma,
     //float noiseValue = (noise.GetNoise(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
 }
 
-std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline _path)
+std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path)
 {
 //    Vector3 c = Vector3(0.6, 0.8); // std::sin(deg2rad(45.f)), std::cos(deg2rad(45.f)));
     return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
-        BSpline path = _path;
+//        BSpline path = _path;
+        if (pos.x == 7 && pos.y == 33) {
+            int a = 0;
+        }
         float closestTime = path.estimateClosestTime(pos);
         Vector3 closestPoint = path.getPoint(closestTime);
         Vector3 vertical(0, 0, 1);
@@ -1743,10 +1747,9 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     });
 }
 
-std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline _path)
+std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path)
 {
     return [=] (const Vector3& pos) -> float {
-        BSpline path = _path;
 //        float closestTime = path.estimateClosestTime(pos);
 //        Vector3 closestPoint = path.getPoint(closestTime);
         float epsilon = 1e-1;
@@ -2298,10 +2301,10 @@ void ImplicitNaryOperator::update()
 
 std::string ImplicitNaryOperator::toString()
 {
-    std::string compoNames;
+    std::vector<std::string> compoNames;
     for (auto& compo : this->composables)
-        compoNames += compo->name + ", ";
-    return this->name + ": N-operation between " + compoNames;
+        compoNames.push_back(compo->name);
+    return this->name + ": N-operation between " + join(compoNames, ",");
 }
 
 nlohmann::json ImplicitNaryOperator::toJson()

@@ -3,6 +3,8 @@
 #include "Interface/InterfaceUtils.h"
 #include "Interface/RangeSlider.h"
 
+#include "DataStructure/Image.h"
+
 CoralIslandGeneratorInterface::CoralIslandGeneratorInterface(QWidget *parent)
     : ActionInterface("coralisland", "Coral island generator", "digging", "Create coral island", "coral_generation_button.png", parent)
 {
@@ -61,6 +63,8 @@ QLayout *CoralIslandGeneratorInterface::createGUI()
     FancySlider* horizontalScaleSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
     FancySlider* alphaSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, .01f);
 
+    QPushButton* fromGanButton = new QPushButton("From GAN");
+
     layout->addWidget(createMultipleSliderGroup({
                                                     {"Subsidence", subsidenceSlider},
                                                     {"Coral", coralLevelsSlider},
@@ -70,6 +74,8 @@ QLayout *CoralIslandGeneratorInterface::createGUI()
                                                 }));
 
     layout->addWidget(applyButton);
+    layout->addWidget(fromGanButton);
+
 
     subsidenceSlider->setfValue(subsidence);
     coralLevelsSlider->setMinValue(coralLevelMin);
@@ -85,6 +91,8 @@ QLayout *CoralIslandGeneratorInterface::createGUI()
     QObject::connect(verticalScaleSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setVScale);
     QObject::connect(horizontalScaleSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setHScale);
     QObject::connect(alphaSlider, &FancySlider::floatValueChanged, this, &CoralIslandGeneratorInterface::setAlpha);
+
+    QObject::connect(fromGanButton, &QPushButton::pressed, this, &CoralIslandGeneratorInterface::fromGanUI);
 
     return layout;
 }
@@ -108,11 +116,11 @@ void CoralIslandGeneratorInterface::show()
 
 void CoralIslandGeneratorInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
 {
-    if (this->isVisible()) {
-        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
-        coralBoulderGen.step();
-        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
-    }
+//    if (this->isVisible()) {
+//        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
+//        coralBoulderGen.step();
+//        this->voxelGrid->setVoxelValues(coralBoulderGen.volume);
+//    }
     return ActionInterface::mouseClickedOnMapEvent(mousePosInMap, mouseInMap, event, model);
 }
 
@@ -168,7 +176,31 @@ void CoralIslandGeneratorInterface::updateCoral()
     }
 }
 
+void CoralIslandGeneratorInterface::fromGanUI()
+{
+    std::string path = "Python_tests/test_island_heightmapfeatures/";
+    QString q_filename= QString::fromStdString(path + "69.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
+    if (!q_filename.isEmpty()) {
+        std::string file = q_filename.toStdString();
+        GridV3 img = Image::readFromFile(file).colorImage;
+
+        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img);
+        implicitTerrain->deleteAllChildren();
+        for (auto& obj : envObjects)
+            implicitTerrain->addChild(obj->createImplicitPatch());
+        implicitTerrain->_cached = false;
+        voxelGrid->fromImplicit(implicitTerrain.get());
+    }
+}
+
 void CoralIslandGeneratorInterface::afterTerrainUpdated()
 {
     this->startingHeightmap = *this->heightmap;
+}
+
+void CoralIslandGeneratorInterface::afterWaterLevelChanged()
+{
+    if (this->isVisible()) {
+        this->updateCoral();
+    }
 }

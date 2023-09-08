@@ -50,11 +50,7 @@ QLayout *TerrainSavingInterface::createGUI()
     });
 
     QObject::connect(fileSelectionButton, &QPushButton::pressed, this, [this, selectedFilenameLabel]() {
-        #ifdef linux
-            std::string path = "saved_maps/Geometry/";
-        #else
-            std::string path = "saved_maps/Geometry/";
-        #endif
+        std::string path = "saved_maps/Geometry/";
         QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
         if (!fileSelection.isEmpty()) {
             this->mainFilename = fileSelection.toStdString();

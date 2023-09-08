@@ -24,6 +24,8 @@ public:
     float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
     float length() const;
 
+    BSpline& resamplePoints(int newNbPoints = -1);
+
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
 
     operator bool() const { return (this->points.size() > 0); };

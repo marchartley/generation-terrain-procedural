@@ -68,6 +68,7 @@ ViewerInterface::ViewerInterface() {
     }
 
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
+    std::shared_ptr<CoralIslandGeneratorInterface> coralGenerationInterface = std::static_pointer_cast<CoralIslandGeneratorInterface>(actionInterfaces["coralisland"]);
 
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -76,34 +77,35 @@ ViewerInterface::ViewerInterface() {
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
-//        this->terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
+//        terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat (copy).png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat (copy).png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/CubeTunnel.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/one_slope_noisy_reinforced.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/corridor.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/Coral_basis.json");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/Coral_basis.json");
 
 
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
-//        this->terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 //        terrainGenerationInterface->createTerrainFromNoise(30, 30, 30, true);
 
-//        this->terrainGenerationInterface->prepareShader();
+//        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
         this->viewer->heightmap = terrainGenerationInterface->heightmap;
         this->viewer->layerGrid = terrainGenerationInterface->layerGrid;
@@ -136,6 +138,10 @@ ViewerInterface::ViewerInterface() {
             biomeInterface->biomeModel = BiomeModel::fromJson(terrainGenerationInterface->biomeGenerationModelData);
             biomeInterface->generateBiomes();
         }
+
+
+//        coralGenerationInterface->fromGanUI();
+
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
         QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
