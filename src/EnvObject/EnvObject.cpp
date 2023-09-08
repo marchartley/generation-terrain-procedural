@@ -9,13 +9,16 @@ GridV3 EnvObject::terrainNormals;
 GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
-float EnvObject::flowImpactFactor = .99f;
+float EnvObject::flowImpactFactor = .8f;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
         EnvObject::flowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
         EnvObject::flowfield.raiseErrorOnBadCoord = false;
         EnvObject::flowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+        EnvObject::sandDeposit = GridF(EnvObject::flowfield.getDimensions());
+        EnvObject::sandDeposit.raiseErrorOnBadCoord = false;
+        EnvObject::sandDeposit.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     }
     return EnvObject::flowfield;
 }
@@ -89,6 +92,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->fittingFunction = EnvObject::parseFittingFunction(content["rule"]);
     obj->material = material;
     obj->implicitShape = shape;
+    obj->inputDimensions = dimensions;
     return obj;
 }
 
@@ -216,7 +220,7 @@ void EnvObject::applyEffects()
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
-    EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield * 3.f);
+    EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield.meanSmooth(3, 3, 1) * 10.f);
 }
 
 EnvPoint::EnvPoint()
@@ -271,6 +275,7 @@ ImplicitPatch* EnvPoint::createImplicitPatch()
     ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius), 0);
     patch->position = this->position;
     patch->material = this->material;
+    patch->name = this->name;
     return patch;
 }
 
@@ -322,10 +327,11 @@ void EnvCurve::applySandDeposit()
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
     sand.iterateParallel([&] (const Vector3& pos) {
-        sand.at(pos) = gaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
+        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
     });
+//    std::cout << "Deposition of " << sand.sum() << " (" << sand.min() << " -- " << sand.max() << ") at " << box.min() << " for " << sand << std::endl;
 //    sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min() /*- sand.getDimensions() * .5f*/);
+    EnvObject::sandDeposit.add(sand, box.min().xy() - Vector3(width, width));
 }
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
@@ -364,10 +370,12 @@ ImplicitPatch* EnvCurve::createImplicitPatch()
 {
     BSpline translatedCurve = this->curve;
     AABBox box(this->curve.points);
-    translatedCurve.translate(box.min());
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + Vector3(0, 0, this->width*2.f), this->width, translatedCurve);
+    Vector3 offset(this->width, this->width, this->width);
+    translatedCurve.translate(-(box.min() - offset * .5f));
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
     patch->position = box.min();
     patch->material = this->material;
+    patch->name = this->name;
     return patch;
 }
 
@@ -424,7 +432,7 @@ void EnvArea::applySandDeposit()
         sand(pos) = (inside ? 1.f : 0.f) * sandEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
     });
 //    sand *= this->sandEffect;
-    //EnvObject::sandDeposit.add(sand, box.min());
+    EnvObject::sandDeposit.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
 }
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
@@ -450,30 +458,40 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     for (auto& v : grad)
         v.normalize();
 
-    flow.iterateParallel([&] (const Vector3& pos) {
+    float timePrepare = 0.f;
+    float timeApply = 0.f;
+
+    flow.iterate([&] (const Vector3& pos) {
         if (!box.contains(pos) || !translatedCurve.contains(pos))
             return;
 
-        float closestTime = translatedCurve.estimateClosestTime(pos);
-        Vector3 closestPos = translatedCurve.getPoint(closestTime);
+        Vector3 impact, direction, normal, binormal;
 
-        float distanceToBorder = (pos - closestPos).norm();
-        float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
-        Vector3 previousFlow = EnvObject::flowfield(pos);
-        // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
-//            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
-        // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
-        Vector3 direction = grad(pos);
-        Vector3 binormal = Vector3(0, 0, 1);
-        Vector3 normal = direction.cross(binormal); // Direction and binormal are normalized.
-        Vector3 impact = this->flowEffect * distFactor;
-        // Ignore the normal for now, I can't find any logic with it...
-//            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-//                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
-//                    normal *= -1.f;
-//            }
-        flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
-        occupancy.at(pos) = 1.f;
+        timePrepare += timeIt([&]() {
+            float closestTime = translatedCurve.estimateClosestTime(pos);
+            Vector3 closestPos = translatedCurve.getPoint(closestTime);
+
+            float distanceToBorder = (pos - closestPos).norm();
+            float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
+            Vector3 previousFlow = EnvObject::flowfield(pos);
+            // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
+    //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
+            // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
+            direction = grad(pos);
+            binormal = Vector3(0, 0, 1);
+            normal = direction.cross(binormal); // Direction and binormal are normalized.
+            impact = this->flowEffect * distFactor;
+            // Ignore the normal for now, I can't find any logic with it...
+    //            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
+    //                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
+    //                    normal *= -1.f;
+    //            }
+        });
+        timeApply += timeIt([&]() {
+            flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
+            occupancy.at(pos) = 1.f;
+        });
+//        std::cout << "Prepare: " <<showTime(timePrepare) << " Apply: " << showTime(timeApply) << std::endl;
     });
     return {flow, occupancy};
 }
@@ -482,9 +500,11 @@ ImplicitPatch* EnvArea::createImplicitPatch()
 {
     BSpline translatedCurve = this->area;
     AABBox box(this->area.points);
-    translatedCurve.translate(box.min());
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + Vector3(0, 0, this->width * 2.f), this->width, translatedCurve);
+    Vector3 offset(this->width, this->width, this->width);
+    translatedCurve.translate(-(box.min() - offset * .5f));
+    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
     patch->position = box.min();
     patch->material = this->material;
+    patch->name = this->name;
     return patch;
 }

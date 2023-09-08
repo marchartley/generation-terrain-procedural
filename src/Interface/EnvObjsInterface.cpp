@@ -230,25 +230,27 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
 
     GridV3 velocities(terrainDims);
     GridF evaluationAmounts(terrainDims);
-    for (const auto& path : lastRocksLaunched) {
-        for (int i = 1; i < int(path.points.size()) - 1; i++) {
-            auto& pos = path.points[i];
-            auto& pPrev = path.points[i - 1];
-            auto& pNext = path.points[i + 1];
-            auto velocity = (pNext - pPrev).normalize();
-            if (velocity.norm2() > 50 * 50) continue; // When a particle is wraped from one side to the other of the terrain
-            velocities(pos) += velocity * .5f;
-            evaluationAmounts(pos) ++;
-            velocities(pPrev) += velocity * .5f;
-            evaluationAmounts(pPrev) ++;
-            velocities(pNext) += velocity * .5f;
-            evaluationAmounts(pNext) ++;
+    std::cout << "Flow evaluation: " << showTime(timeIt([&]() {
+        for (const auto& path : lastRocksLaunched) {
+            for (int i = 1; i < int(path.points.size()) - 1; i++) {
+                auto& pos = path.points[i];
+                auto& pPrev = path.points[i - 1];
+                auto& pNext = path.points[i + 1];
+                auto velocity = (pNext - pPrev).normalize();
+                if (velocity.norm2() > 50 * 50) continue; // When a particle is wraped from one side to the other of the terrain
+                velocities(pos) += velocity * .5f;
+                evaluationAmounts(pos) ++;
+                velocities(pPrev) += velocity * .5f;
+                evaluationAmounts(pPrev) ++;
+                velocities(pNext) += velocity * .5f;
+                evaluationAmounts(pNext) ++;
+            }
         }
-    }
-    for (size_t i = 0; i < velocities.size(); i++) {
-        if (evaluationAmounts[i] == 0) continue;
-        velocities[i] /= evaluationAmounts[i];
-    }
+        for (size_t i = 0; i < velocities.size(); i++) {
+            if (evaluationAmounts[i] == 0) continue;
+            velocities[i] /= evaluationAmounts[i];
+        }
+    })) << std::endl;
     return {erosionsAmount, velocities};
 }
 
@@ -365,5 +367,6 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects()
     // Get original flowfield, do not accumulate effects (for now).
     EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
     EnvObject::applyEffects();
-    Mesh::createVectorField(EnvObject::flowfield, voxelGrid->getDimensions(), &velocitiesMesh, -1, false, true);
+//    Mesh::createVectorField(EnvObject::flowfield, voxelGrid->getDimensions(), &velocitiesMesh, -1, false, true);
+//    std::cout << EnvObject::sandDeposit << " -> " << EnvObject::sandDeposit.min() << " -- " << EnvObject::sandDeposit.max() << std::endl;
 }

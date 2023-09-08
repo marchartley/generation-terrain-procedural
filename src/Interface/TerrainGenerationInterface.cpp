@@ -1016,7 +1016,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 positions[i] = heightData.getCoordAsVector3(i);
                 heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
             }
-            heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
+            if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions())
+                heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
             heightmapMesh.fromArray(positions);
             heightmapMesh.update();
             this->heightmapMesh.display(GL_POINTS);
@@ -1037,7 +1038,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 marchingCubeMesh.fromArray(points);
             }
             marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
+//            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
+            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
+
             marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);

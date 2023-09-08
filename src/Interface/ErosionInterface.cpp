@@ -48,7 +48,7 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 void ErosionInterface::computePredefinedRocksLocations()
 {
     if (this->voxelGrid == nullptr) return;
-    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS};
+    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
     Vector3 dimensions = voxelGrid->getDimensions();
     for (auto& loc : locs) {
@@ -62,13 +62,11 @@ void ErosionInterface::computePredefinedRocksLocations()
                     position = Vector3::random(Vector3(-30, -30), dimensions.xy() + Vector3(30, 30)) + Vector3(0, 0, dimensions.z);
                     direction = Vector3(0, 0, -1);
                 } else if (loc == RIVER) {
-//                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 30), Vector3(0, voxelGrid->getSizeY()*.6, 40));
                     position = Vector3(15, 50, 50) + Vector3::random(3.f).xy();
-                    direction = Vector3(0, 0, 0); //(Vector3(1, 0, 0) + Vector3::random(1.f));
+                    direction = Vector3(0, 0, 0);
                 } else if (loc == RIVER2) {
-//                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, voxelGrid->getSizeY() * .4, 30), Vector3(0, voxelGrid->getSizeY()*.6, 40));
                     position = Vector3(15, 50, 100) + Vector3::random(25.f).xy();
-                    direction = Vector3(0, 0, 0); //(Vector3(1, 0, 0) + Vector3::random(1.f));
+                    direction = Vector3(0, 0, 0);
                 } else if (loc == UNDERWATER) {
                     position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, dimensions.y * .4, dimensions.z * .2f), Vector3(0, dimensions.y *.6, dimensions.z * .5f));
                     direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
@@ -86,6 +84,15 @@ void ErosionInterface::computePredefinedRocksLocations()
                 } else if (loc == EVERYWHERE) {
                     position = Vector3::random(Vector3(), dimensions);
                     direction = Vector3();
+                } else if (loc == VOLCANO) {
+                    position = Vector3(55, 45, 100) + Vector3::random(8.f).xy();
+                    direction = Vector3(0, 0, 0);
+                } else if (loc == VOLCANO2) {
+                    position = Vector3(50, 50, 100) + Vector3::random(15.f).xy();
+                    direction = Vector3(0, 0, 0);
+                } else if (loc == VOLCANO3) {
+                    position = Vector3(60, 45, 100) + Vector3::random(8.f).xy();
+                    direction = Vector3(0, 0, 0);
                 }
                 poses[i][j] = {position, direction};
             }
@@ -964,6 +971,9 @@ QLayout *ErosionInterface::createGUI()
     QPushButton* confirmFromRiverButton = new QPushButton("River");
     QPushButton* confirmFromRiver2Button = new QPushButton("River2");
     QPushButton* confirmFromSideButton = new QPushButton("SideX");
+    QPushButton* confirmFromVolcanoButton = new QPushButton("Volcano");
+    QPushButton* confirmFromVolcano2Button = new QPushButton("Volcano2");
+    QPushButton* confirmFromVolcano3Button = new QPushButton("Volcano3");
 
     QCheckBox* displayTrajectoriesButton = new QCheckBox("Display path");
     QCheckBox* displayBoundariesButton = new QCheckBox("Display walls");
@@ -1059,6 +1069,10 @@ QLayout *ErosionInterface::createGUI()
                                                      confirmFromRiver2Button,
                                                      confirmFromRandom,
                                                      confirmFromSideButton,
+                                                     confirmFromVolcanoButton,
+                                                     confirmFromVolcano2Button,
+                                                     confirmFromVolcano3Button,
+
                                                      displayTrajectoriesButton,
                                                      displayBoundariesButton,
                                                      createVerticalGroup({
@@ -1120,6 +1134,9 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(confirmFromRiverButton, &QPushButton::pressed, this, [&](){ this->throwFrom(RIVER); });
     QObject::connect(confirmFromRiver2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(RIVER2); });
     QObject::connect(confirmFromSideButton, &QPushButton::pressed, this, [&](){ this->throwFrom(FROM_X); });
+    QObject::connect(confirmFromVolcanoButton, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO); });
+    QObject::connect(confirmFromVolcano2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO2); });
+    QObject::connect(confirmFromVolcano3Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO3); });
 
     QObject::connect(displayTrajectoriesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayTrajectories = checked; });
     QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayBoundaries = checked; });

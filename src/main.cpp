@@ -22,6 +22,55 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    /*BSpline spline({
+                       Vector3(0, 10, 0),
+                       Vector3(1, 10, 0),
+                       Vector3(100, 1, 0),
+                       Vector3(100, 50, 0),
+                       Vector3(0, 100, 0),
+                       Vector3(0, 0, 0),
+                   });
+//    spline.resamplePoints();
+    GridI grid(105, 105, 1, 0);
+    grid.iterateParallel([&](const Vector3& pos) {
+        if (spline.estimateDistanceFrom(pos) < 4.f) grid(pos) = 1;
+    });
+
+    std::cout << grid.displayAsPlot() << "\n" << spline << std::endl;
+    return 0;*/
+
+
+    /*
+    GridI grid({
+                   {0, 1, 1, 0, 0, 0, 0, 0, 0},
+                   {0, 1, 1, 0, 0, 0, 0, 0, 0},
+                   {0, 1, 1, 0, 0, 1, 0, 0, 0},
+                   {0, 0, 1, 1, 1, 1, 0, 0, 0},
+                   {0, 0, 1, 1, 1, 1, 1, 0, 0},
+                   {0, 0, 1, 1, 1, 1, 1, 1, 0},
+                   {0, 0, 1, 1, 1, 1, 1, 1, 0},
+                   {0, 0, 0, 1, 1, 1, 1, 1, 0},
+                   {0, 0, 0, 0, 1, 1, 1, 0, 0},
+                   {0, 0, 0, 0, 0, 0, 0, 0, 0}
+               });
+
+    std::vector<ShapeCurve> contours = grid.findContoursAsCurves();
+    grid = GridI(grid.getDimensions() * Vector3(2.f, 2.f, 1.f));
+    for (size_t iCurve = 0; iCurve < contours.size(); iCurve++) {
+        auto& contour = contours[iCurve];
+        contour = contour.simplifyByRamerDouglasPeucker(.2f);
+        for (size_t i = 0; i < contour.size(); i++) {
+            grid(contour[i] * 2.f) = iCurve + 1;
+        }
+    }
+    std::cout << grid.displayValues() << std::endl;
+
+    for (size_t iCurve = 0; iCurve < contours.size(); iCurve++) {
+        auto& contour = contours[iCurve].scale(2.f);
+        std::cout << contour << std::endl;
+    }
+    return 0;
+    */
     /*
     Vector3 dims(1000, 1000, 1);
     GridF mask = GridF::random(dims);

@@ -1,6 +1,7 @@
 #include "DataStructure/Matrix3.h"
 //#include "Utils/stb_image.h"
 #include "Utils/Skeletonize.h"
+#include <queue>
 
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl() const {
@@ -73,6 +74,269 @@ Matrix3<int> Matrix3<int>::skeletonize() const
     skel->destroy_rects();
     delete skel;
     return self;
+}
+
+template<>
+std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
+{
+    Matrix3<int> initial = ((Matrix3<float>)*this).binarize(0.5f);
+    skeleton_tracer_t* skel = new skeleton_tracer_t();
+    skel->W = this->sizeX; // width of image
+    skel->H = this->sizeY; // height of image
+
+    // allocate the input image
+    unsigned char* data = (unsigned char*)malloc(sizeof(unsigned char)*skel->W*skel->H); //new uchar(self.sizeX * self.sizeY);
+    iterateParallel([&] (size_t i) {
+        data[i] = (unsigned char)(initial(i));
+    });
+    /*for (size_t i = 0; i < self.size(); i++)
+        data[i] = (unsigned char)(self[i]);*/
+    skel->im = data;
+
+    skel->thinning_zs(); // perform raster thinning
+
+    // run the algorithm
+    skeleton_tracer_t::polyline_t* p = (skeleton_tracer_t::polyline_t*)skel->trace_skeleton(0, 0, skel->W, skel->H, 0);
+
+
+    std::vector<BSpline> splines;
+    skeleton_tracer_t::polyline_t* it = p; //iterator
+    while(it){
+      skeleton_tracer_t::point_t* jt = it->head;
+      BSpline spline;
+      while(jt){
+          ;
+          spline.points.push_back(Vector3(jt->x, jt->y));
+          jt = jt->next;
+      }
+      it = it->next;
+      splines.push_back(spline);
+    }
+    free(skel->im);
+    skel->destroy_polylines(p);
+    skel->destroy_rects();
+    delete skel;
+//    return splines;
+
+    // Try at best to merge the curves
+    float limitDistance = 20.f;
+    float sqrLim = limitDistance * limitDistance;
+    bool atLeastOneMerging = true;
+    while (atLeastOneMerging) {
+        atLeastOneMerging = false;
+        std::vector<BSpline> merged;
+        for (int i = int(splines.size()) - 1; i >= 0; i--) {
+            auto& spline = splines[i];
+            bool isMerged = false;
+            for (auto& merge : merged) {
+                // Try back to front, front to back, back to back and front to front
+                auto frontSpline = spline.points.front();
+                auto backSpline = spline.points.back();
+                auto frontMerge = merge.points.front();
+                auto backMerge = merge.points.back();
+                // back to front:
+                if ((frontMerge - backSpline).norm2() < sqrLim) {
+                    merge.points.insert(merge.points.begin(), spline.points.begin(), spline.points.end());
+                    isMerged = true;
+                    break;
+                }
+                // front to back:
+                else if ((backMerge - frontSpline).norm2() < sqrLim) {
+                    merge.points.insert(merge.points.end(), spline.points.begin(), spline.points.end());
+                    isMerged = true;
+                    break;
+                }
+                // back to back:
+                else if ((backMerge - backSpline).norm2() < sqrLim) {
+                    std::reverse(spline.points.begin(), spline.points.end());
+                    merge.points.insert(merge.points.end(), spline.points.begin(), spline.points.end());
+                    isMerged = true;
+                    break;
+                }
+                // front to front:
+                else if ((frontMerge - frontSpline).norm2() < sqrLim) {
+                    std::reverse(spline.points.begin(), spline.points.end());
+                    merge.points.insert(merge.points.begin(), spline.points.begin(), spline.points.end());
+                    isMerged = true;
+                    break;
+                }
+            }
+            if (!isMerged)
+                merged.push_back(spline);
+            else
+                atLeastOneMerging = true;
+        }
+        splines = merged;
+    }
+    return splines;
+}
+
+template<>
+Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
+{
+    int currentLabel = 1;
+    GridI labelMap = (getDimensions());  // Initialize labelMap with zeros
+    std::vector<std::vector<int>> equivalences;
+
+//    iterateParallel([&] (size_t i) {
+//        labelMap[i] = (this->at(i) == 0 ? 0 : i + 1);
+//    });
+
+    auto findForegroundNeighbors = [&](int x, int y, int z) {
+        std::vector<int> neighbors;
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    if (use4Connect && !(dx == 0 || dy == 0 || dz == 0)) continue;
+                    int _x = x + dx, _y = y + dy, _z = z + dz;
+                    if (checkCoord(_x, _y, _z) && this->at(_x, _y, _z) != 0 && labelMap.at(_x, _y, _z) != 0)
+                        neighbors.push_back(labelMap(_x, _y, _z));
+                }
+            }
+        }
+        return neighbors;
+    };
+
+    auto recordEquivalence = [&](const std::vector<int>& neighbors, int minNeighborLabel) {
+        std::vector<int> newEquivalenceGroup;
+        newEquivalenceGroup.push_back(minNeighborLabel);
+
+        for (int neighborLabel : neighbors) {
+            if (neighborLabel != minNeighborLabel) {
+                newEquivalenceGroup.push_back(neighborLabel);
+            }
+        }
+
+        // Check if any of the labels in the new group already appear in existing groups.
+        for (auto& existingGroup : equivalences) {
+            bool found = false;
+            for (int label : newEquivalenceGroup) {
+                if (std::find(existingGroup.begin(), existingGroup.end(), label) != existingGroup.end()) {
+                    found = true;
+                    break;
+                }
+            }
+
+            // If a label from the new group appears in an existing group, merge the groups.
+            if (found) {
+                existingGroup.insert(existingGroup.end(), newEquivalenceGroup.begin(), newEquivalenceGroup.end());
+                // Remove duplicates and sort.
+                std::sort(existingGroup.begin(), existingGroup.end());
+                auto last = std::unique(existingGroup.begin(), existingGroup.end());
+                existingGroup.erase(last, existingGroup.end());
+                return;
+            }
+        }
+
+        // If the new group doesn't overlap with any existing groups, add it as a new group.
+        equivalences.push_back(newEquivalenceGroup);
+    };
+
+    auto findRootLabel = [&](int label) {
+        // Iterate through each equivalence group
+        for (const auto& group : equivalences) {
+            // Check if the label is in the current group
+            if (std::find(group.begin(), group.end(), label) != group.end()) {
+                // Return the smallest label in the group
+                return *std::min_element(group.begin(), group.end());
+            }
+        }
+        // If the label does not appear in any equivalence group, it's its own root
+        return label;
+    };
+
+    // First pass
+    iterate([&] (int i, int j, int k) {
+        if (this->at(i, j, k) != 0) {  // Assuming foreground is represented by non-zero values
+            std::vector<int> neighbors = findForegroundNeighbors(i, j, k);
+            if (neighbors.empty()) {
+                labelMap(i, j, k) = currentLabel++;
+            } else {
+                int minNeighborLabel = *std::min_element(neighbors.begin(), neighbors.end());
+                labelMap(i, j, k) = minNeighborLabel;
+                recordEquivalence(neighbors, minNeighborLabel);
+            }
+        }
+    });
+
+    // Reduce labels values
+    std::map<int, int> rootToNewLabel;
+    int newLabel = 1;
+    for (const auto& group : equivalences) {
+        int rootLabel = *std::min_element(group.begin(), group.end());
+        if (rootToNewLabel.find(rootLabel) == rootToNewLabel.end()) {
+            rootToNewLabel[rootLabel] = newLabel++;
+        }
+    }
+
+    // Second pass
+    labelMap.iterateParallel([&] (size_t i) {
+        if (labelMap[i] != 0) {
+            int rootLabel = findRootLabel(labelMap[i]);
+            labelMap[i] = rootToNewLabel[rootLabel];
+        }
+    });
+
+    return labelMap;
+}
+
+template<>
+Matrix3<int> Matrix3<int>::findContour(bool use2D) const
+{
+//    return this->dilate(true) - *this;
+    return *this - this->erode(use2D);
+}
+
+template<>
+std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
+{
+    std::vector<ShapeCurve> curves;
+    auto grid = this->resize(sizeX * 2.f, sizeY * 2.f, RESIZE_MODE::MAX_VAL).findContour(true);
+    grid.raiseErrorOnBadCoord = false;
+
+    while (grid.max() != 0) {
+        std::vector<Vector3> contour;
+        // Find the starting point (the first 1 encountered in the grid)
+        Vector3 start(false);
+
+        grid.iterate([&] (size_t i) {
+            if (!start.isValid() && grid[i] == 1) {
+                start = grid.getCoordAsVector3(i);
+                return;
+            }
+        });
+
+        // If no point was found, return the empty contour
+        if (!start.isValid()) return curves;
+
+        // Start from the initial point and do a simple DFS to find the contour
+        std::vector<Vector3> q;
+        q.push_back(start);
+        grid(start) = 0;  // Mark as visited
+
+        while (!q.empty()) {
+            Vector3 current = q.back();
+            q.pop_back();
+            // Add to contour
+            contour.push_back(current);
+
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (!(dx == 0 || dy == 0)) continue;
+                    Vector3 nextPos(current.x + dx, current.y + dy);
+                    if (grid(nextPos)) {
+                        q.push_back(nextPos);
+                        grid(nextPos) = 0;
+                    }
+                }
+            }
+        }
+
+        for (auto& p : contour)
+            p *= .5f;
+        curves.push_back(BSpline(contour)/*.resamplePoints().simplifyByRamerDouglasPeucker(5.f).resamplePoints()*/);
+    }
+    return curves;
 }
 
 template<>

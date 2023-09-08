@@ -79,3 +79,80 @@ GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float wate
 //= np.maximum(np.maximum(insideCorals, outsideCorals) * clamp((1-subsidence)**0.5 + .8, 0, 1), heights * subsidence)
     return finalMap * downscale;
 }
+
+std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3& img)
+{
+    std::map<std::tuple<int, int, int>, std::string> colorToFeature = {
+        {{255,   0,   0}, "abyss"},
+        {{  0,   0, 255}, "reef"},
+        {{  0, 255, 255}, "lagoon"},
+        {{  0, 255,   0}, "beach"},
+        {{255, 255,   0}, "island"}
+    };
+    std::map<std::string, GridI> featureAreas;
+    for (auto& [_, name] : colorToFeature)
+        featureAreas[name] = GridI(img.getDimensions());
+
+    for (size_t i = 0; i < img.size(); i++) {
+        const auto& pix = img[i];
+        featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
+    }
+
+    auto reefs = ((Matrix3<int>)featureAreas["reef"]).skeletonizeToBSplines();
+    for (auto& curve : reefs) {
+        curve = curve.resamplePoints().simplifyByRamerDouglasPeucker(5.f);
+        for (auto& p : curve)
+            p *= .5f;
+    }
+
+    for (auto& [name, area] : featureAreas) {
+        area = area.fillHoles(true);
+    }
+
+    std::vector<EnvObject*> objects;
+    for (auto& reef : reefs) {
+        if (reef.length() < 30) continue;
+        EnvCurve* envReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+        envReef->curve = reef;
+        objects.push_back(envReef);
+    }
+    /*
+    auto reefContours = featureAreas["reef"].findContoursAsCurves();
+    for (auto& curve : reefContours) {
+        EnvCurve* frontReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("frontreef"));
+        frontReef->curve = curve;
+        objects.push_back(frontReef);
+    }
+    */
+    auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
+    for (auto& curve : lagoonContours) {
+        for (auto& p : curve)
+            p *= .5f;
+        ShapeCurve simplifiedCurve = curve.simplifyByRamerDouglasPeucker(5.f);
+        simplifiedCurve.resamplePoints(simplifiedCurve.size() * 4);
+        if (simplifiedCurve.computeArea() < 5.f) continue;
+        EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
+        lagoon->area = simplifiedCurve;
+        objects.push_back(lagoon);
+//        Plotter::getInstance()->addPlot(curve.points);
+//        Plotter::getInstance()->addPlot(simplifiedCurve.points, "", Qt::red);
+    }
+//    Plotter::getInstance()->exec();
+    /*
+    for (auto curve : featureAreas["island"].findContoursAsCurves()) {
+        for (auto& p : curve)
+            p *= .5f;
+        EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
+        island->area = curve;
+        objects.push_back(island);
+    }
+
+    for (auto curve : featureAreas["beach"].findContoursAsCurves()) {
+        for (auto& p : curve)
+            p *= .5f;
+        EnvArea* beach = dynamic_cast<EnvArea*>(EnvObject::instantiate("beach"));
+        beach->area = curve;
+        objects.push_back(beach);
+    }*/
+    return objects;
+}

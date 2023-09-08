@@ -45,7 +45,10 @@ public Q_SLOTS:
 
     void updateCoral();
 
+    void fromGanUI();
+
     void afterTerrainUpdated();
+    void afterWaterLevelChanged();
 
 public:
     float subsidence = 0.f;

@@ -102,6 +102,9 @@ public Q_SLOTS:
     virtual void afterTerrainUpdated() {
 
     }
+    virtual void afterWaterLevelChanged() {
+
+    }
     virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model) {
 
     }

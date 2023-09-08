@@ -338,6 +338,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 //            direction = Quaternion::AxisAngle(normal, rotationAngle).toVector3() * direction;
             Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
             direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
+//            direction.x += 1.f;
         }
     } while (isParallel);
 
@@ -353,57 +354,57 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 
     // If the number of intersections is odd, the point is inside the polygon.
     return (nb_intersections % 2) == 1;
+}
 
 
 
 
-    /*
-    std::vector<Vector3> polygon;
-    for (auto& p : _polygon)
-        if (polygon.empty() || (p - polygon.back()).norm2() > 0.01)
-            polygon.push_back(p);
+/*
+std::vector<Vector3> polygon;
+for (auto& p : _polygon)
+    if (polygon.empty() || (p - polygon.back()).norm2() > 0.01)
+        polygon.push_back(p);
 
-    if (polygon.size() < 2) return false;
+if (polygon.size() < 2) return false;
 
-    size_t firstIndex = 0, secondIndex = 1;
+size_t firstIndex = 0, secondIndex = 1;
 
-    Vector3 firstVertex = polygon[firstIndex];
-    Vector3 secondVertex = polygon[secondIndex];
-    Vector3 center;
-    float polygonLength = 0;
-    for (size_t i = 0; i < polygon.size(); i++) {
-        center += polygon[i];
+Vector3 firstVertex = polygon[firstIndex];
+Vector3 secondVertex = polygon[secondIndex];
+Vector3 center;
+float polygonLength = 0;
+for (size_t i = 0; i < polygon.size(); i++) {
+    center += polygon[i];
 //        if (i > 0)
 //            polygonLength += (polygon[i] - polygon[i - 1]).norm();
-        polygonLength = std::max(polygonLength, (point - polygon[i]).norm());
-    }
-    polygonLength = std::sqrt(polygonLength) + 1.f;
-    center /= (float)polygon.size();
-    // First, lets find a good plane to define our shape
-    while (std::abs((firstVertex - center).normalized().dot((secondVertex - center).normalized())) < (1 - 1e-3)) {
-        secondIndex ++;
-        if (secondIndex >= polygon.size()) {
-            secondIndex = 0;
-            firstIndex++;
-            if (firstIndex >= polygon.size()) return false;
-            firstVertex = polygon[firstIndex];
-        }
-        secondVertex = polygon[secondIndex];
-    }
-    // At this point, we can check if the "pos" is in the same plane as the shape
-
-    Vector3 ray = center + (firstVertex - center).normalized() * polygonLength; // Same, should be outside the shape
-    polygon.push_back(polygon[0]);
-    // Check the intersection of the ray with all the segments of the shape
-    int nb_intersections = 0;
-    for (size_t i = 0; i < polygon.size() - 1; i++) {
-        if (Collision::intersectionBetweenTwoSegments(point, ray, polygon[i], polygon[i+1]).isValid())
-            nb_intersections++;
-    }
-    // If there's a odd number of intersections, the point is inside
-    return (nb_intersections % 2) == 1;
-    */
+    polygonLength = std::max(polygonLength, (point - polygon[i]).norm());
 }
+polygonLength = std::sqrt(polygonLength) + 1.f;
+center /= (float)polygon.size();
+// First, lets find a good plane to define our shape
+while (std::abs((firstVertex - center).normalized().dot((secondVertex - center).normalized())) < (1 - 1e-3)) {
+    secondIndex ++;
+    if (secondIndex >= polygon.size()) {
+        secondIndex = 0;
+        firstIndex++;
+        if (firstIndex >= polygon.size()) return false;
+        firstVertex = polygon[firstIndex];
+    }
+    secondVertex = polygon[secondIndex];
+}
+// At this point, we can check if the "pos" is in the same plane as the shape
+
+Vector3 ray = center + (firstVertex - center).normalized() * polygonLength; // Same, should be outside the shape
+polygon.push_back(polygon[0]);
+// Check the intersection of the ray with all the segments of the shape
+int nb_intersections = 0;
+for (size_t i = 0; i < polygon.size() - 1; i++) {
+    if (Collision::intersectionBetweenTwoSegments(point, ray, polygon[i], polygon[i+1]).isValid())
+        nb_intersections++;
+}
+// If there's a odd number of intersections, the point is inside
+return (nb_intersections % 2) == 1;
+*/
 
 Vector3 Collision::projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd)
 {

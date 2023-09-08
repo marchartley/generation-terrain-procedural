@@ -10,6 +10,7 @@
 #include <iomanip>
 #include "DataStructure/Vector3.h"
 #include "Utils/BSpline.h"
+#include "Utils/ShapeCurve.h"
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
@@ -162,8 +163,13 @@ public:
     Vector3 gradient(float posX, float posY, float posZ = 0) const;
 
     Matrix3<int> skeletonize() const;
-    Matrix3<T> dilate(float t = 1.f) const;
-    Matrix3<T> erode(float t = 1.f) const;
+    std::vector<BSpline> skeletonizeToBSplines() const;
+    Matrix3<T> dilate(bool use2D = false, float t = 1.f) const;
+    Matrix3<T> erode(bool use2D = false, float t = 1.f) const;
+    Matrix3<int> computeConnectedComponents(bool use4Connect = false) const;
+    Matrix3<int> fillHoles(bool ignoreZlayer = true) const;
+    Matrix3<int> findContour(bool use2D = false) const;
+    std::vector<ShapeCurve> findContoursAsCurves() const; // 2D specific
 
     T trace() const;
 
@@ -761,7 +767,7 @@ Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ) const
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::dilate(float t) const
+Matrix3<T> Matrix3<T>::dilate(bool use2D, float t) const
 {
     Matrix3<T> res = *this;
     while (t > 0.f) {
@@ -774,6 +780,7 @@ Matrix3<T> Matrix3<T>::dilate(float t) const
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
+                        if (use2D && dz != 0) continue;
                         maxVal = std::max(maxVal, copy.at(x + dx, y + dy, z + dz));
                     }
                 }
@@ -802,7 +809,7 @@ Matrix3<T> Matrix3<T>::dilate(float t) const
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::erode(float t) const
+Matrix3<T> Matrix3<T>::erode(bool use2D, float t) const
 {
     Matrix3<T> res = *this;
     while (t > 0.f) {
@@ -815,6 +822,7 @@ Matrix3<T> Matrix3<T>::erode(float t) const
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
+                        if (use2D && dz != 0) continue;
                         minVal = std::min(minVal, copy.at(x + dx, y + dy, z + dz));
                     }
                 }
@@ -841,6 +849,38 @@ Matrix3<T> Matrix3<T>::erode(float t) const
     }
     return res;
 }
+
+
+template<class T>
+Matrix3<int> Matrix3<T>::fillHoles(bool ignoreZlayer) const
+{
+    if (ignoreZlayer) {
+        Matrix3<int> components(getDimensions() + Vector3(2, 2), 1);
+        components.paste((1.f - *this), Vector3(1, 1));
+        for (auto& c : components)
+            c = clamp(c, 0, 1);
+        components = ((Matrix3<int>)(components)).computeConnectedComponents(true);
+        auto outsideValue = components[0];
+
+        components.iterateParallel([&] (size_t i) {
+            components[i] = (components[i] == outsideValue ? 0 : 1);
+        });
+        return components.subset(1, components.sizeX - 1, 1, components.sizeY - 1);
+    } else {
+        Matrix3<int> components(getDimensions() + Vector3(2, 2, 2), 1);
+        components.paste((1.f - *this), Vector3(1, 1, 1));
+        for (auto& c : components)
+            c = clamp(c, 0, 1);
+        components = ((Matrix3<int>)(components)).computeConnectedComponents(true);
+        auto outsideValue = components[0];
+
+        components.iterateParallel([&] (size_t i) {
+            components[i] = (components[i] == outsideValue ? 0 : 1);
+        });
+        return components.subset(1, components.sizeX - 1, 1, components.sizeY - 1, 1, 2);
+    }
+}
+
 
 template<class T>
 T Matrix3<T>::trace() const
@@ -1721,10 +1761,10 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
 {
     if (endZ == -1) endZ = this->sizeZ;
     Matrix3<T> croppedMatrix(std::max(endX - startX, 0), std::max(endY - startY, 0), std::max(endZ - startZ, 0));
-    croppedMatrix.iterateParallel([&](int x, int y, int z) {
-        int oldX = x - startX;
-        int oldY = y - startY;
-        int oldZ = z - startZ;
+    croppedMatrix.iterate([&](int x, int y, int z) {
+        int oldX = x + startX;
+        int oldY = y + startY;
+        int oldZ = z + startZ;
         if (0 > oldX || oldX >= this->sizeX || 0 > oldY || oldY >= this->sizeY || 0 > oldZ || oldZ >= this->sizeZ) return;
         croppedMatrix(x, y, z) = this->at(oldX, oldY, oldZ);
     });
@@ -1772,7 +1812,7 @@ template<typename T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, bool useInterpolation)
 {
     if (useInterpolation) {
-        iterate([&](const Vector3& pos) {
+        matrixToAdd.iterate([&](const Vector3& pos) {
             this->addValueAt(matrixToAdd(pos), upperLeftFrontCorner + pos);
         });
         /*for (int x = 0; x < matrixToAdd.sizeX; x++) {
@@ -1793,13 +1833,13 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperL
 template<typename T>
 Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int front, bool useInterpolation)
 {
-    /*iterateParallel([&](int x, int y, int z) {
-       int oldX = x - left;
-       int oldY = y - up;
-       int oldZ = z - front;
-       if (!checkCoord(x, y, z) || !matrixToAdd.checkCoord(oldX, oldY, oldZ)) return;
-       this->at(x, y, z) += matrixToAdd(oldX, oldY, oldZ);
-    });*/
+    matrixToAdd.iterateParallel([&](int x, int y, int z) {
+       int oldX = x + left;
+       int oldY = y + up;
+       int oldZ = z + front;
+       if (!checkCoord(oldX, oldY, oldZ) || !matrixToAdd.checkCoord(x, y, z)) return;
+       this->at(oldX, oldY, oldZ) += matrixToAdd(x, y, z);
+    });/*
     for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
@@ -1807,7 +1847,7 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int
                 this->at(x, y, z) += val;
             }
         }
-    }
+    }*/
     return *this;
 }
 
@@ -1828,12 +1868,12 @@ Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3& upperL
 template<typename T>
 Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, int left, int up, int front)
 {
-    iterateParallel([&](int x, int y, int z) {
-       int oldX = x - left;
-       int oldY = y - up;
-       int oldZ = z - front;
-       if (!checkCoord(x, y, z) || !otherMatrix.checkCoord(oldX, oldY, oldZ)) return;
-       this->at(x, y, z) = std::max(this->at(x, y, z), otherMatrix(oldX, oldY, oldZ));
+    otherMatrix.iterateParallel([&](int x, int y, int z) {
+       int oldX = x + left;
+       int oldY = y + up;
+       int oldZ = z + front;
+       if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
+       this->at(oldX, oldY, oldZ) = std::max(this->at(oldX, oldY, oldZ), otherMatrix(x, y, z));
     });/*
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
@@ -1853,12 +1893,12 @@ Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3& upperL
 template<typename T>
 Matrix3<T>& Matrix3<T>::min(const Matrix3<T> &otherMatrix, int left, int up, int front)
 {
-    iterateParallel([&](int x, int y, int z) {
-       int oldX = x - left;
-       int oldY = y - up;
-       int oldZ = z - front;
-       if (!checkCoord(x, y, z) || !otherMatrix.checkCoord(oldX, oldY, oldZ)) return;
-       this->at(x, y, z) = std::min(this->at(x, y, z), otherMatrix(oldX, oldY, oldZ));
+    otherMatrix.iterateParallel([&](int x, int y, int z) {
+       int oldX = x + left;
+       int oldY = y + up;
+       int oldZ = z + front;
+       if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
+       this->at(oldX, oldY, oldZ) = std::min(this->at(oldX, oldY, oldZ), otherMatrix(x, y, z));
     });/*
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {

@@ -95,7 +95,7 @@ float BSpline::estimateClosestTime(const Vector3& pos, float epsilon) const
     }
     float closestTime = 0;
     float minDistance = std::numeric_limits<float>::max();
-    int numberOfChecks = int(this->points.size());
+    int numberOfChecks = int(this->points.size() * 2.f);
     float precisionFactor = 1.f / numberOfChecks;
     float precision = precisionFactor;
     float searchRangeMin = 0.f;
@@ -149,6 +149,41 @@ float BSpline::length() const
         length += (this->points[i] - this->points[i + 1]).norm();
     }
     return length;
+}
+
+BSpline& BSpline::resamplePoints(int newNbPoints)
+{
+    if (newNbPoints == -1)
+        newNbPoints = this->points.size();
+
+    std::vector<Vector3> newPoints; //(newNbPoints);
+
+    float totalLength = this->length();
+    float currentDistance = 0.f;
+    int currentPointIndex = 0;
+    Vector3 currentPos = points[currentPointIndex];
+    float nextObjectiveDistance = totalLength / float(newNbPoints - 1);
+
+    newPoints.push_back(this->points.front());
+
+    while (int(newPoints.size()) < newNbPoints - 1) {
+        auto& p1 = points[currentPointIndex + 1];
+
+        float edgeDist = (p1 - currentPos).norm();
+        if (currentDistance + edgeDist > nextObjectiveDistance) {
+            float t = (nextObjectiveDistance - currentDistance) / edgeDist;
+            newPoints.push_back(lerp(t, currentPos, p1));
+//            currentDistance += t * edgeDist;
+            currentDistance = 0;
+            currentPos = newPoints.back();
+        } else {
+            currentDistance += edgeDist;
+            currentPointIndex ++;
+        }
+    }
+    newPoints.push_back(this->points.back());
+    this->points = newPoints;
+    return *this;
 }
 
 std::tuple<Vector3, Vector3, Vector3> BSpline::getFrenetFrame(float x) const

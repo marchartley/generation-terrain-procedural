@@ -28,6 +28,7 @@ public:
     std::function<float(Vector3)> fittingFunction;
     Vector3 flowEffect;
     float sandEffect;
+    Vector3 inputDimensions;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
