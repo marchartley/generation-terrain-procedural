@@ -251,7 +251,7 @@ void Viewer::drawingProcess() {
         if (this->usingSpotlight) {
             shader->setVector("light.position", this->camera()->position());
         } else {
-            shader->setVector("light.position", (this->light.position + Vector3(this->camera()->position())) / 2.f);
+            shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
         }
         shader->setBool("display_light_source", true);
         shader->setVector("min_vertice_positions", minVoxelsShown());
@@ -260,6 +260,21 @@ void Viewer::drawingProcess() {
         shader->setFloat("fogNear", this->fogNear);
         shader->setFloat("fogFar", this->fogFar);
         shader->setBool("wireframeMode", !displayFill);
+
+
+        Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
+        shader->setPositionalLight("lights[0]", this->light);
+        shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200));
+        shader->setPositionalLight("lights[1]", this->light);
+        shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0));
+        shader->setPositionalLight("lights[2]", this->light);
+        shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200));
+        shader->setPositionalLight("lights[3]", this->light);
+        shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100));
+        shader->setPositionalLight("lights[4]", this->light);
+        shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200));
+        shader->setPositionalLight("lights[5]", this->light);
+        shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10));
     });
     current_frame ++;
 

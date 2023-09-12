@@ -87,7 +87,9 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano.png");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/labyrinthe.data");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/Pipes/map_2023-08-19__10-23-28-voxels.stl");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_original.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/coral_base.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/cube.data");
@@ -192,6 +194,7 @@ void ViewerInterface::setupUi()
     auto undoRedoInterface = std::static_pointer_cast<UndoRedoInterface>(actionInterfaces["undoredo"]);
     auto smoothInterface = std::static_pointer_cast<SmoothInterface>(actionInterfaces["smooth"]);
     auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
+    auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces["erosion"]);
 
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, std::string, std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -216,7 +219,9 @@ void ViewerInterface::setupUi()
         {terrainGenerationInterface,    "reset_button.png",                 "Reload terrain from file",         "model",      [=]() { terrainGenerationInterface->reloadTerrain(this->actionInterfaces); } },
         {terrainGenerationInterface,    "reinforce_borders_button.png",     "Reinforce borders",                "digging",    [=]() { terrainGenerationInterface->reinforceVoxels(); } },
         {nullptr,                       "",                                 "Erosion tests",                    "edit",       [=]() { this->erosionsTests(); } },
-        {nullptr,                       "save_erod_depo_button.png",        "Save depo/erod",                   "model",      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }}
+        {nullptr,                       "save_erod_depo_button.png",        "Save depo/erod",                   "model",      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }},
+        {erosionInterface,              "",                                 "Erosion Coast Paris 2019",         "digging",    [=]() { erosionInterface->ErosionParis2019SeaErosion(); }},
+        {erosionInterface,              "",                                 "Erosion Perco Paris 2019",         "digging",    [=]() { erosionInterface->ErosionParis2019InvasionPercolation(); }}
     };
 
     for (auto& [action, logo, descr, menuName, function] : actionsToUse) {
@@ -321,10 +326,17 @@ void ViewerInterface::setupUi()
         else { terrainGenerationInterface->minIsoLevel = -1000.f; terrainGenerationInterface->maxIsoLevel = 1000.f; }
         this->viewer->update();
     });
-    FancySlider* waterLevelSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 1.f, 0.01f);
+    FancySlider* waterLevelSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 1.f, 0.0001f);
     QObject::connect(waterLevelSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setWaterLevel);
 
     mainLayout->addWidget(viewer, 1, 0);
+
+    FancySlider* ambiantOcclusionSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 1.f, 0.01f);
+    QObject::connect(ambiantOcclusionSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setAmbiantOcclusion);
+    FancySlider* heightFactorSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 2.f, 0.01f);
+    heightFactorSlider->setfValue(1.f);
+    QObject::connect(heightFactorSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setHeightFactor);
+
 
     QPushButton* reloadShadersButton = new QPushButton("Recharger tous les shaders");
     QVBoxLayout* displayOptionLayout = new QVBoxLayout();
@@ -338,15 +350,23 @@ void ViewerInterface::setupUi()
 
         displayOptionLayout->addWidget(createHorizontalGroup({viewerSetupExperimental, viewerSetupExperimental_save}));
     }
+
+    QCheckBox* displayAsComparisonTerrainButton = new QCheckBox("Comparison terrain");
+    QObject::connect(displayAsComparisonTerrainButton, &QCheckBox::toggled, terrainGenerationInterface.get(), &TerrainGenerationInterface::changeDisplayToComparativeMode);
+    displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
+
     displayOptionLayout->addItem(displayModeLayout);
     displayOptionLayout->addWidget(createVerticalGroup({
                                                            createHorizontalGroup({
                                                                createMultipleSliderGroupWithCheckbox({
                                                                    {"Density", isolevelSelectionSlider, isolevelSelectionActivation}
                                                                }),
-                                                               createSliderGroup("Water", waterLevelSlider)
+                                                               createSliderGroup("Water", waterLevelSlider),
+                                                               createSliderGroup("AO", ambiantOcclusionSlider),
+                                                               createSliderGroup("Height", heightFactorSlider)
                                                            }),
-                                                           reloadShadersButton
+                                                           reloadShadersButton,
+                                                           displayAsComparisonTerrainButton
                                                  }));
     QGroupBox* displayOptionBox = new QGroupBox();
     displayOptionBox->setLayout(displayOptionLayout);

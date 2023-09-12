@@ -7,6 +7,7 @@
 #include "Utils/Utils.h"
 #include "Graph/Matrix3Graph.h"
 #include "EnvObject/EnvObject.h"
+#include "Utils/Curve1D.h"
 
 UnderwaterErosion::UnderwaterErosion()
 {
@@ -593,7 +594,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          GridF densityMap,
                          float initialCapacity,
                          FluidSimType fluidSimType,
-                         bool wrapPositions, bool applyTheErosion)
+                         bool wrapPositions,
+                         bool applyTheErosion,
+                         int maxCollisions)
 {
 
     VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
@@ -700,6 +703,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
         float flowfieldInfluence = 1.0;
         int steps = 500 / dt; // An estimation of how many step we need
+        int maxBounces = (maxCollisions < 0 ? 10000 : maxCollisions);
         auto [initialPos, initialDir] = posAndDirs[i];
 
         ErosionParticle& particle = particles[i];
@@ -737,8 +741,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             std::tie(collisionPoint, intersectingTriangleIndex) = collisionPointAndTriangleIndex;
             if (rolling || collisionPoint.isValid()) {
 //                steps = std::min(steps, 500);
+                maxBounces --;
 
-                if (steps < 0)
+                if (steps < 0 || maxBounces <= 0)
                     continueSimulation = false;
 
                 bool justStartedRolling = false;
@@ -800,6 +805,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 float amountToErode = erosionFactor * std::pow(std::max(0.f, shear)/* - criticalShearValue)*/, erosionPowerValue); // std::pow(std::max(0.f, shear - criticalShearStress), erosionPowerValue)  * (1.f - resistanceValue * materialImpact);
 //                if (rolling)
 //                    amountToErode = 0.f;
+                if (maxCollisions != -1) {
+                    amountToErode *= 1000000.f;
+                }
                 amountToErode = std::min(amountToErode, particle.maxCapacity - particle.capacity);
 
 
@@ -850,7 +858,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             if (wrapPositions)
                 particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
             particle.dir *= 0.99f;
-            if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation) {
+            if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
                 if (/*(steps < 0 || particle.dir.norm2() < 1e-3) &&*/ depositFactor > 0.f && Vector3::isInBox(particle.pos/*.xy()*/, Vector3(), terrain->getDimensions()/*.xy() - Vector3(1, 1)*/)) {
                     Vector3 depositPosition;
                     totalOtherTime += timeIt([&]() {
@@ -1236,5 +1244,67 @@ std::vector<Vector3> UnderwaterErosion::CreateTunnel(KarstHole &tunnel, bool add
 //    if (applyChanges)
 //        grid->remeshAll();
     return coords;
+}
+
+void UnderwaterErosion::ParisSeaErosion()
+{
+    Curve1D resistanceCurve = Curve1D(BSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).getPath(20));
+    for (auto& p : resistanceCurve)
+        p.y = random_gen::generate(0.f, 1.f);
+
+    float waterLevel = voxelGrid->storedWaterLevel;
+    float previousWater = clamp(waterLevel - 0.1f, 0.f, 1.f);
+    float nextWater = clamp(waterLevel + 0.1f, 0.f, 1.f);
+    Curve1D seaErosionCurve = Curve1D({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)});
+//    std::cout << "Water level: " << waterLevel << std::endl;
+//    std::cout << seaErosionCurve.display1DPlot(200, 20) << std::endl;
+//    std::cout << resistanceCurve.display1DPlot(200, 20) << std::endl;
+
+    GridF surface = voxelGrid->getVoxelValues().binarize().isosurface();
+    std::vector<Vector3> possiblePositions;
+    possiblePositions.reserve(surface.sum());
+    surface.iterate([&](Vector3 pos) {
+        if (surface(pos) > 0.5) possiblePositions.push_back(pos);
+    });
+    std::vector<std::pair<Vector3, float>> erosionPositionsAndEnergy;
+    size_t nbSamples = 400;
+
+    float beta = 10.f;
+    float mini = std::numeric_limits<float>::max(), maxi = std::numeric_limits<float>::min();
+    float maxZ;
+    for (size_t i = 0; i < possiblePositions.size(); i++) {
+        auto& p = possiblePositions[i];
+        float z = p.z / voxelGrid->getSizeZ();
+        float resistance = resistanceCurve.get(z);
+        float erosion = seaErosionCurve.get(z);
+        float energy = erosion * (1.f - resistance) * (1.f - beta) + erosion * beta;
+
+
+        mini = std::min(mini, energy);
+        if (maxi < energy) maxZ = z;
+        maxi = std::max(maxi, energy);
+        if (energy > beta * .5f) {
+            erosionPositionsAndEnergy.push_back({p, energy});
+        }
+    }
+//    std::cout << "\nMin: " << mini << " , max: " << maxi << " at z = " << maxZ << " , " << erosionPositionsAndEnergy.size() << " voxels affected out of " << possiblePositions.size() << " voxels on surface." << std::endl;
+
+    std::shuffle(erosionPositionsAndEnergy.begin(), erosionPositionsAndEnergy.end(), random_gen::random_generator);
+    erosionPositionsAndEnergy.resize(std::min(erosionPositionsAndEnergy.size(), nbSamples));
+
+    std::cout << "Erosion time: " << showTime(timeIt([&]() {
+        GridF modifs(voxelGrid->getDimensions());
+        int radius = 3;
+        for (auto& [p, energy] : erosionPositionsAndEnergy) {
+            RockErosion erosion(radius * 2 + 1, energy);
+            erosion.computeErosionMatrix(modifs, p);
+        }
+        voxelGrid->applyModification(modifs);
+    })) << std::endl;
+}
+
+void UnderwaterErosion::ParisInvasionPercolation()
+{
+
 }
 

@@ -35,6 +35,7 @@ public Q_SLOTS:
     void prepareShader(bool reload = false);
 
     void setWaterLevel(float newLevel);
+    void setAmbiantOcclusion(float newValue);
 
     void updateDisplayedView(const Vector3& newVoxelGridOffset, float newVoxelGridScaling);
     void reloadTerrain(std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
@@ -68,6 +69,9 @@ public Q_SLOTS:
 
     void saveErosionDepositionTextureMasks(std::string savingFolder, std::string savingName);
     void saveErosionDepositionTextureMasksOnMultiple();
+
+    void changeDisplayToComparativeMode(bool toComparative);
+    void setHeightFactor(float newHeightFactor);
 
 
 public:
@@ -119,6 +123,9 @@ protected:
 public:
     Mesh waterLevelMesh;
     float waterLevel = 0.0f;
+    float ambiantOcclusionFactor = 1.f;
+    bool displayAsComparativeMode = false;
+    float heightFactor = 1.f;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

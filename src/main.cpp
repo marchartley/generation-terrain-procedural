@@ -11,6 +11,7 @@
 #include <iostream>
 #include "Interface/Interface.h"
 #include "EnvObject/EnvObject.h"
+#include "FluidSimulation/OpenFoamParser.h"
 
 #include <chrono>
 #include <fstream>

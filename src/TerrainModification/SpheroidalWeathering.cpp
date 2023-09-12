@@ -102,7 +102,7 @@ void SpheroidalWeathering::applyErosion()
 void SpheroidalWeathering::_erode(GridF &voxels, const Vector3 &pos)
 {
     if (voxels.at(pos) <= .75f) { // Is colluvium
-//        voxels.at(pos) = 0.f;
+        voxels.at(pos) = 0.f;
     } else { // Is rock
         voxels.at(pos) = .5f;
 
@@ -112,7 +112,7 @@ void SpheroidalWeathering::_erode(GridF &voxels, const Vector3 &pos)
 
 void SpheroidalWeathering::_deposition(GridF &voxels)
 {
-    float talusHeight = 3; // std::atan(deg2rad(30));
+    float talusHeight = 1; // std::atan(deg2rad(30));
 
 //    GridF _voxels = voxels;
 

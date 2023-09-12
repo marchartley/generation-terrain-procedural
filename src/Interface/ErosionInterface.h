@@ -25,7 +25,7 @@ public:
 
     QLayout* createGUI();
 
-    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
+    enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, FROM_BIG_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
 public Q_SLOTS:
     void show();
@@ -48,6 +48,9 @@ public Q_SLOTS:
     void recomputeAboveVoxelRocksPositions(TerrainModel *terrain);
 
     std::tuple<float, float, float> computeTerrainBoundaries(TerrainModel *terrain, BVHTree *boundariesTree);
+
+    void ErosionParis2019SeaErosion();
+    void ErosionParis2019InvasionPercolation();
 
 public:
 //    std::shared_ptr<VoxelGrid> voxelGrid;
@@ -95,6 +98,8 @@ public:
     bool wrapParticles = true;
 
     int numberOfIterations = 1;
+
+    int particleMaxCollisions = -1; // -1 for infinity
 
     float initialCapacity = .0f;
 

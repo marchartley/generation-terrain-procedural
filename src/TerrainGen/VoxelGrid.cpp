@@ -1217,7 +1217,7 @@ std::string VoxelGrid::toShortString()
 void VoxelGrid::smoothVoxels()
 {
     GridF voxelValues = this->getVoxelValues();
-    this->applyModification(voxelValues.meanSmooth(3, 3, 3) - voxelValues);
+    this->applyModification(voxelValues.meanSmooth(3, 3, 3, true) - voxelValues);
 }
 
 GridV3 VoxelGrid::getNormals()

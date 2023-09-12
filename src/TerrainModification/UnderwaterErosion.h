@@ -85,7 +85,8 @@ public:
                                                      float initialCapacity = 0.f,
                                                      FluidSimType fluidSimType = FluidSimType::LBM,
                                                      bool wrapPositions = false,
-                                                     bool applyTheErosion = true);
+                                                     bool applyTheErosion = true,
+                                                     int maxCollisions = -1);
 
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
@@ -94,6 +95,9 @@ public:
 
     // With a predefined tunnel :
     std::vector<Vector3> CreateTunnel(KarstHole& tunnel, bool addingMatter = false, bool applyChanges = true);
+
+    void ParisSeaErosion();
+    void ParisInvasionPercolation();
 
 
 //    std::shared_ptr<VoxelGrid> grid;

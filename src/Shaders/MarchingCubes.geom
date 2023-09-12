@@ -47,6 +47,8 @@ uniform vec3 rotation = vec3(0.0, 0.0, 0.0);
 
 uniform bool useMarchingCubes;
 
+uniform float heightFactor = 0.1;
+
 //Vertices position for fragment shader
 in vec3 initialVertPos[];
 in vec3 realNormal[];
@@ -55,6 +57,7 @@ out vec3 ginitialVertPos;
 out vec3 grealNormal;
 out vec4 gcolor;
 out float gdensity;
+out float gambiantOcclusion;
 //out vec4 gPosition;
 
 uniform int voxels_displayed_on_borders = 1;
@@ -87,10 +90,10 @@ vec3 cubePos(vec3 voxelPos, int i){
 //Get vertex i value within current marching cube
 float cubeVal(vec3 pos){
     vec3 texSize = textureSize(dataFieldTex, 0);
-    if (pos.x == 0 || pos.y == 0 || pos.z == 0) return -1;
-    if (pos.x < min_vertice_positions.x || max_vertice_positions.x < pos.x ||
-        pos.y < min_vertice_positions.y || max_vertice_positions.y < pos.y ||
-        pos.z < min_vertice_positions.z || max_vertice_positions.z < pos.z) return -1;
+    if (pos.x <= 0 || pos.y <= 0 || pos.z <= 0) return -1;
+    if (pos.x <= min_vertice_positions.x || max_vertice_positions.x <= pos.x ||
+        pos.y <= min_vertice_positions.y || max_vertice_positions.y <= pos.y ||
+        pos.z <= min_vertice_positions.z || max_vertice_positions.z <= pos.z) return -.1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
     float val = texture(dataFieldTex, pos/texSize).a;
 //    if (pos.z <= 1)
@@ -103,18 +106,38 @@ float cubeVal(vec3 voxelPos, int i){
     return cubeVal(cubePos(voxelPos, i));
 }
 
+float __cubeVal(vec3 pos) {
+    return cubeVal(pos + .5);
+}
 vec3 getNormal(vec3 p) {
+    if (p.x <= 1.0) return vec3(-1, 0, 0);
+    else if (p.y <= 1.0) return vec3(0, -1, 0);
+    else if (p.z <= 1.0) return vec3(0, 0, -1);
+
+    else if (p.x >= max_vertice_positions.x - 1.0) return vec3(1, 0, 0);
+    else if (p.y >= max_vertice_positions.y - 1.0) return vec3(0, 1, 0);
+    else if (p.z >= max_vertice_positions.z - 1.0) return vec3(0, 0, 1);
+
+    float resolution = 0.5;
     vec3 maxDims = min(textureSize(dataFieldTex, 0), max_vertice_positions);
     vec3 minDims = max(vec3(0.0), min_vertice_positions);
-    vec3 x0 = clamp(p + vec3(0.1, 0, 0), minDims, maxDims);
-    vec3 x1 = clamp(p - vec3(0.1, 0, 0), minDims, maxDims);
-    vec3 y0 = clamp(p + vec3(0, 0.1, 0), minDims, maxDims);
-    vec3 y1 = clamp(p - vec3(0, 0.1, 0), minDims, maxDims);
-    vec3 z0 = clamp(p + vec3(0, 0, 0.1), minDims, maxDims);
-    vec3 z1 = clamp(p - vec3(0, 0, 0.1), minDims, maxDims);
-    float dx = cubeVal(x0) - cubeVal(x1) / length(x1 - x0);
-    float dy = cubeVal(y0) - cubeVal(y1) / length(y1 - y0);
-    float dz = cubeVal(z0) - cubeVal(z1) / length(z1 - z0);
+    vec3 x0 = clamp(p + vec3(resolution, 0, 0), minDims, maxDims);
+    vec3 x1 = clamp(p - vec3(resolution, 0, 0), minDims, maxDims);
+    vec3 y0 = clamp(p + vec3(0, resolution, 0), minDims, maxDims);
+    vec3 y1 = clamp(p - vec3(0, resolution, 0), minDims, maxDims);
+    vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
+    vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
+
+//    vec3 x0 = p + vec3(resolution, 0, 0);
+//    vec3 x1 = p - vec3(resolution, 0, 0);
+//    vec3 y0 = p + vec3(0, resolution, 0);
+//    vec3 y1 = p - vec3(0, resolution, 0);
+//    vec3 z0 = p + vec3(0, 0, resolution);
+//    vec3 z1 = p - vec3(0, 0, resolution);
+
+    float dx = __cubeVal(x0) - __cubeVal(x1) / length(x1 - x0);
+    float dy = __cubeVal(y0) - __cubeVal(y1) / length(y1 - y0);
+    float dz = __cubeVal(z0) - __cubeVal(z1) / length(z1 - z0);
 //    dx = clamp(dx, -1, 1);
 //    dy = clamp(dy, -1, 1);
 //    dz = clamp(dz, -1, 1);
@@ -123,6 +146,7 @@ vec3 getNormal(vec3 p) {
     float dy = pow(clamp(cubeVal(y0) - cubeVal(y1), -1, 1), 5);
     float dz = pow(clamp(cubeVal(z0) - cubeVal(z1), -1, 1), 5);
     */
+//    return normalize(
     return normalize(-vec3(dx, dy, dz));
 }
 
@@ -186,7 +210,7 @@ float getDensity(vec3 pos/*, float resolution*/) {
         for (float y = 0; y < surrounding + 1.0; y += 1.0) {
             for (float z = 0; z < surrounding + 1.0; z += 1.0) {
                 float divisor = 0.1; //float(int(surrounding*.5f));
-                vec3 newPos = pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) / texSize; // * (resolution / divisor);
+                vec3 newPos = (pos + vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f)) / texSize; // * (resolution / divisor);
 //                vec3 newPos = pos + vec3(resolution * (x/surrounding - surrounding * .5f), resolution * (y/surrounding - surrounding * .5f), resolution * (z/surrounding - surrounding * .5f));
                 float val = texture(dataFieldTex, newPos - offsets).a;
                 density = max(density, val);
@@ -194,6 +218,35 @@ float getDensity(vec3 pos/*, float resolution*/) {
         }
     }
     return (density - 0.5);
+}
+
+bool checkPos(vec3 pos, vec3 boxSize) {
+//    pos -= min_vertice_positions;
+//    boxSize -= min_vertice_positions;
+//    boxSize = clamp(boxSize, vec3(0, 0, 0), max_vertice_positions);
+    return min_vertice_positions.x + 1 <= pos.x && pos.x + 1 <= max_vertice_positions.x &&
+            min_vertice_positions.y + 1 <= pos.y && pos.y + 1 <= max_vertice_positions.y &&
+            min_vertice_positions.z + 1 <= pos.z && pos.z + 1 <= max_vertice_positions.z;
+}
+
+float getAmbiantOcclusion(vec3 pos, vec3 normal) {
+    vec3 texSize = vec3(textureSize(dataFieldTex, 0));
+    vec3 offsets = vec3(0.0);
+    float occlusion = 0.0;
+    float total = 0.f;
+    float surrounding = 5.f;
+    for (float x = 0; x < surrounding + 1.0; x += 1.0) {
+        for (float y = 0; y < surrounding + 1.0; y += 1.0) {
+            for (float z = 0; z < surrounding + 1.0; z += 1.0) {
+                vec3 off = vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * 1.0 + .5;
+                vec3 newPos = (pos + off) / texSize;
+                if (dot(off, normal) < 0) continue;
+                occlusion += (texture(dataFieldTex, newPos - offsets).a > 0.5 && checkPos(newPos * texSize, texSize) ? 1.0 : 0.0);
+                total += 1.0;
+            }
+        }
+    }
+    return  1.0 - occlusion / total;
 }
 
 //Geometry Shader entry point
@@ -230,6 +283,7 @@ void main(void) {
         // Front
         grealNormal = vec3(0, -1, 0);
         if (nFront) {
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
 //            gdensity =
@@ -248,6 +302,7 @@ void main(void) {
         // Right
         grealNormal = vec3(1, 0, 0);
         if (nRight) {
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(1, 0, 1), center).xyz;
             EmitVertex();
@@ -265,6 +320,7 @@ void main(void) {
         // Back
         grealNormal = vec3(0, 1, 0);
         if (nBack) {
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1), center);
             ginitialVertPos = getPosition(position, vec3(1, 1, 1), center).xyz;
             EmitVertex();
@@ -280,8 +336,9 @@ void main(void) {
             EndPrimitive();
         }
         // Left
-        grealNormal = vec3(-1, 0, 0);
         if (nLeft) {
+            grealNormal = vec3(-1, 0, 0);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 1, 1), center).xyz;
             EmitVertex();
@@ -298,8 +355,9 @@ void main(void) {
         }
 
         // Bottom
-        grealNormal = vec3(0, 0, -1);
         if (nBottom) {
+            grealNormal = vec3(0, 0, -1);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 0), center).xyz;
             EmitVertex();
@@ -316,8 +374,9 @@ void main(void) {
         }
 
         // Top
+        grealNormal = vec3(0, 0, -1);
         if (nTop) {
-            grealNormal = vec3(0, 0, 1);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
             EmitVertex();
@@ -369,21 +428,27 @@ void main(void) {
         while(true){
             if(triTableValue(cubeindex, i) != -1){
                 position= vec4(vertlist[triTableValue(cubeindex, i)], 1);
-                gl_Position = proj_matrix * mv_matrix * position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                position.z *= heightFactor;
+                gl_Position = proj_matrix * mv_matrix * position;
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+1)], 1);
-                gl_Position = proj_matrix * mv_matrix * position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                position.z *= heightFactor;
+                gl_Position = proj_matrix * mv_matrix * position;
                 EmitVertex();
 
                 position= vec4(vertlist[triTableValue(cubeindex, i+2)], 1);
-                gl_Position = proj_matrix * mv_matrix *  position; // getPosition(position, vec3(0), center);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                position.z *= heightFactor;
+                gl_Position = proj_matrix * mv_matrix *  position;
                 EmitVertex();
                 EndPrimitive();
             }else{

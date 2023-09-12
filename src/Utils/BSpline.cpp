@@ -449,6 +449,41 @@ Vector3 &BSpline::operator[](size_t i)
 {
     return this->points[i];
 }
+
+std::string BSpline::display1DPlot(int sizeX, int sizeY) const
+{
+    std::ostringstream oss;
+    BSpline translated = *this;
+    std::vector<Vector3> roundedPositions(translated.size());
+    auto [mini, maxi] = AABBox();
+    for (auto& p : translated) {
+        p = (p - mini) / (maxi - mini); // between (0, 0) and (1, 1)
+        p.y = 1.f - p.y;
+        p *= Vector3(sizeX, sizeY);
+        roundedPositions.push_back(p.roundedDown());
+    }
+
+    for (int y = 0; y < sizeY; y++) {
+        if (y == 0) oss << std::fixed << std::setprecision(2) << maxi.y << "|";
+        else if (y == sizeY - 1) oss << std::fixed << std::setprecision(2) << mini.y << "|";
+        else oss << "    |";
+        for (int x = 0; x < sizeX; x++) {
+            Vector3 pos(x, y);
+            if (isIn(pos, roundedPositions)) {
+                oss << "X";
+            } else {
+                float dist = translated.estimateSqrDistanceFrom(pos);
+                oss << (dist < 2 * 2 ? "#" : (dist < 4 * 4 ? "+" : "-"));
+            }
+        }
+        oss << std::endl;
+    }
+    oss << std::fixed << std::setprecision(2) << "   " << mini.x;
+    for (int x = 0; x < sizeX - 4; x++) oss << " ";
+    oss << std::fixed << std::setprecision(2) << maxi.x;
+
+    return oss.str();
+}
 const Vector3 &BSpline::operator[](size_t i) const
 {
     return this->points[i];
