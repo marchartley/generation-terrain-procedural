@@ -26,6 +26,12 @@ void TerrainGenerationInterface::setWaterLevel(float newLevel)
     Q_EMIT updated();
 }
 
+void TerrainGenerationInterface::setAmbiantOcclusion(float newValue)
+{
+    this->ambiantOcclusionFactor = newValue;
+    Q_EMIT updated();
+}
+
 void TerrainGenerationInterface::updateDisplayedView(const Vector3& newVoxelGridOffset, float newVoxelGridScaling)
 {
     this->voxelGridOffset = newVoxelGridOffset;
@@ -302,7 +308,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         Mesh m;
         m.fromStl(filename);
 //        if (m.isWatertight())
-            voxelGrid->setVoxelValues((GridF(m.voxelize(voxelGrid->getDimensions())) - .5f).meanSmooth());
+            voxelGrid->setVoxelValues((GridF(m.voxelize(voxelGrid->getDimensions())) - .5f)/*.meanSmooth()*/);
 //        else
 //            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
 //        voxelGrid->fromCachedData();
@@ -958,8 +964,6 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
 
     GridF heights = heightmap->getHeights();
     float maxHeight = heights.max();
-    this->heightmapMesh.shader->setFloat("maxHeight", maxHeight);
-    this->heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
     float *heightmapData = new float[heights.size() * 4];
     GridV3 gradients = heights.gradient();
     int maxColorTextureIndex = 0;
@@ -1016,6 +1020,11 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 positions[i] = heightData.getCoordAsVector3(i);
                 heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
             }
+            heightmapMesh.shader->setFloat("maxHeight", maxHeight);
+            heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+            heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+            heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+            heightmapMesh.shader->setFloat("heightFactor", heightFactor);
             if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions())
                 heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
             heightmapMesh.fromArray(positions);
@@ -1045,6 +1054,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+            marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+            marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+            marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
             marchingCubeMesh.display( GL_POINTS );
             if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
                 marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
@@ -1071,6 +1083,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             layersMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             layersMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+            layersMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+            layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+            layersMesh.shader->setFloat("heightFactor", heightFactor);
 
             //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
                 this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
@@ -1101,6 +1116,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
             implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
             implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+            implicitMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+            implicitMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+            implicitMesh.shader->setFloat("heightFactor", heightFactor);
             implicitMesh.display( GL_POINTS );
             if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
                 implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
@@ -1186,4 +1204,16 @@ void TerrainGenerationInterface::saveErosionDepositionTextureMasksOnMultiple()
             std::cout << "Saved " << basename << " (" << (i+1) << "/" << fileNames.size() << ")" << std::endl;
         }
     }
+}
+
+void TerrainGenerationInterface::changeDisplayToComparativeMode(bool toComparative)
+{
+    this->displayAsComparativeMode = toComparative;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::setHeightFactor(float newHeightFactor)
+{
+    this->heightFactor = newHeightFactor;
+    Q_EMIT updated();
 }

@@ -194,7 +194,7 @@ public:
 
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
-    Matrix3<int> isosurface(T isovalue = T()) const;
+    Matrix3<int> isosurface(T isovalue = T(), bool ignoreZtopBorder = false, bool ignoreBorders = true) const;
 
     template<typename U>
     operator Matrix3<U>() const {
@@ -1242,7 +1242,7 @@ Matrix3<int> Matrix3<T>::binarizeBetween(T minValue, T maxValue, bool insideValu
 }
 
 template<class T>
-Matrix3<int> Matrix3<T>::isosurface(T isovalue) const
+Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool ignoreBorders) const
 {
     Matrix3<int> surface = Matrix3<int>(this->getDimensions());
     Matrix3<T> copy = *this;
@@ -1252,6 +1252,7 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue) const
 
     iterateParallel([&](int x, int y, int z) {
         if (!this->at(x, y, z)) return;
+        if (ignoreBorders && (x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || (ignoreZtopBorder && z == sizeZ - 1))) return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
             for (int dy = -1; dy <= 1 && !isSurface; dy++) {

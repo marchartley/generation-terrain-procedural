@@ -1,4 +1,5 @@
 #include "FluidSimulation/StableFluidsFluidSimulation.h"
+#include "FluidSimulation/OpenFoamParser.h"
 
 /*
 StableFluids::StableFluidsSimulation::StableFluidsSimulation() {}
@@ -462,6 +463,8 @@ GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int res
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
+        this->velocity = OpenFoamParser::parseSimulation("/media/simulateurrsm/AD13-3ABF/OF_3D_Sim_Map_Marc/postRun")/*.resize(sizeX, sizeY, sizeZ)*/;
+        std::cout << velocity.sum() << std::endl;
         _cachedVelocity = velocity;
 //        std::cout << "Recomputed : " << _cachedVelocity.min() << " " << _cachedVelocity.max() << std::endl;
     } else {

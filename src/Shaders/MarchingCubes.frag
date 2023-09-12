@@ -109,12 +109,15 @@ uniform float waterRelativeHeight = 0.0;
 uniform vec3 subterrainOffset = vec3(0, 0, 0);
 uniform float subterrainScale = 1.0;
 
+uniform float ambiantOcclusionFactor = 0.0;
+
 out vec4 fragColor;
 
 in vec3 grealNormal;
 in vec3 ginitialVertPos;
 in vec4 gcolor;
 in float gdensity;
+in float gambiantOcclusion;
 
 struct PositionalLight {
     vec4 ambiant;
@@ -131,7 +134,9 @@ struct Material {
 };
 
 uniform vec4 globalAmbiant;
-uniform PositionalLight light;
+//uniform PositionalLight light;
+const int nbLights = 6;
+uniform PositionalLight lights[nbLights];
 uniform bool isSpotlight;
 uniform Material ground_material;
 uniform Material grass_material;
@@ -151,6 +156,8 @@ uniform sampler2D allBiomesColorTextures;
 uniform int maxBiomesColorTextures;
 uniform sampler2D allBiomesNormalTextures;
 uniform int maxBiomesNormalTextures;
+
+uniform bool displayAsComparisonTerrain = false;
 
 //vec4 sandColor = vec4(.761, .698, .502, 1.0);
 //vec4 mudColor = vec4(.430, .320, .250, 1.0);
@@ -271,20 +278,20 @@ void main(void)
     if (wireframeMode && !gl_FrontFacing)
         discard;
 
+
+    if (displayingIgnoredVoxels) {
+        fragColor = vec4(0, 0, 0, 0.1);
+        return;
+    }
+
     Material material = ground_material;
     vec3 position = ginitialVertPos.xyz;
-//    varyingColor = vec4(1.0, 1.0, 1.0, 1.0);
-    vec3 light_position = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
     vec3 varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 varyingLightDir = light_position - varyingVertPos;
-    vec3 varyingNormal = vec4(transpose(inverse(mv_matrix)) * vec4(grealNormal, 1.0)).xyz;
-    vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
+    vec3 varyingNormal = normalize(grealNormal.xyz);
     vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 N = normalize(varyingNormal /*+ fbm3ToVec3(ginitialVertPos)*0.5*/);
-    vec3 L = normalize(varyingLightDir);
+    vec3 N = normalize(varyingNormal);
     vec3 V = normalize(-varyingVertPos);
-    vec3 R = reflect(-L, N);
-    vec3 H = normalize(varyingHalfH);
+    vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
     vec3 realFragmentPosition = (ginitialVertPos.xyz / vec3(subterrainScale, subterrainScale, 1.0)) + subterrainOffset;
     vec3 dataTexSize = textureSize(dataFieldTex, 0);
@@ -303,9 +310,10 @@ void main(void)
     biomeColorValue = realBiomeColorValue; //biomeColorValue = float(getDensityIndex(realFragmentPosition + fbm3ToVec3(realFragmentPosition), dataTexSize, depth)) / maxBiomesColorTextures;
     biomeNormalValue = biomeColorValue;
 //    fragColor = vec4((ginitialVertPos.xy/texSize).x, 0.0, (ginitialVertPos.xy/texSize).y, 1.0);
-    float scale = 10.0;
-    vec3 blending = getTriPlanarBlend(grealNormal);
-    if (biomeNormalValue < 1.0) {
+
+    if (!displayAsComparisonTerrain && biomeNormalValue < 1.0) {
+        float scale = 10.0;
+        vec3 blending = getTriPlanarBlend(varyingNormal);
 
         vec3 Nx = vec3(1, 0, 0);
         vec3 Ny = vec3(0, 1, 0);
@@ -330,67 +338,20 @@ void main(void)
         vec3 normalMap = (TBNx * xaxis * blending.x + TBNy * yaxis * blending.y + TBNz * zaxis * blending.z);
         N = vec4(transpose(inverse(mv_matrix)) * vec4(normalMap, 1.0)).xyz + N; // = normalize(N + normalMap * sign(N));
     }
-    float cosTheta = dot(L, N);
-    float cosPhi = dot(H, N);
 
-    float upValue = 1.0; // clamp(dot(normalize(grealNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);
+    float upValue = 1.0; // clamp(dot(normalize(varyingNormal), normalize(vec3(0.0, 0.0, 1.0) /*+ fbm3ToVec3(ginitialVertPos) * 0.5*/)), 0.0, 1.0);
     vec4 material_ambiant = (ground_material.ambiant * (1 - upValue) + grass_material.ambiant * upValue) * .8;
     vec4 material_diffuse = (ground_material.diffuse * (1 - upValue) + grass_material.diffuse * upValue) * .8;
     vec4 material_specular = (ground_material.specular * (1 - upValue) + grass_material.specular * upValue) * 1.;
     float material_shininness = ground_material.shininness * (1 - upValue) + grass_material.shininness * upValue;
 
-    vec4 ambiant = ((globalAmbiant * material_ambiant) + (light.ambiant * material_ambiant));
-    vec4 diffuse = light.diffuse * material_diffuse * max(cosTheta, 0.0);
-    vec4 specular = light.specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 32.0);
-
-    vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
-
-    vec3 cam_pos = vec4(mv_matrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    vec3 light_pos = vec4(mv_matrix * vec4(light.position, 1.0)).xyz;
-    float dist_source = length(light.position - ginitialVertPos) / 50.0;
     float dist_cam = length(cam_pos - vertEyeSpacePos) / 50.0;
-//    float albedo = 3.14;
     float albedo = 1.0;
-
-    vec4 attenuation_coef = vec4(vec3(0.000245, 0.0027, 0.0020) * depth, 1.0);
-    vec4 absorbtion_coef = vec4(vec3(0.210, 0.075, 0.095), 1.0);
-//    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
-//    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005) * depth, 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
-    vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
-    vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
 
     float fogStart = fogNear;
     float fogEnd = fogFar;
     float dist = length(vertEyeSpacePos) / 100000;
     float fogFactor = 1.0; // depth < 0.0 ? clamp(((1 - (depth / 10.0)) * (fogEnd - dist) / (fogEnd - fogStart)), 0.0, 1.0) : 0.0;
-
-    float lumin = 1.0;
-    if (isSpotlight && false) {
-        float cone_angle = radians(20.0);
-        float cone_cos_angle = cos(cone_angle);
-        float epsilon = radians(10.0);
-
-        lumin = clamp(1 - (acos(dot(normalize(varyingLightDir), vec3(0.0, 0.0, 1.0))) - (cone_angle + epsilon))/(epsilon), 0.0, 1.0);
-    }
-    if (!gl_FrontFacing)
-        lumin *= 0.6;
-    fragColor = vec4(mix(fogColor, material_color, fogFactor).xyz * lumin, 1.0) * gcolor;
-
-//    fragColor = material_color * gcolor;
-//    if (depth > 0)
-//        fragColor *= vec4(0.8, 1.0, 0.9, 1.0);
-//    fragColor = vec4(texture(dataFieldTex, (realFragmentPosition + vec3(-1, -1, -1)) / dataTexSize, 0).a,
-//                     texture(dataFieldTex, (realFragmentPosition + vec3(0, 0, 0)) / dataTexSize, 0).a,
-//                     texture(dataFieldTex, (realFragmentPosition + vec3(1, 1, 1)) / dataTexSize, 0).a,
-//                     1.0);
-//    return;
-//    fragColor *= getDensityColor(realFragmentPosition, dataTexSize);
-//    fragColor *= (depth < 0.0 ? vec4(0.5, 0.8, 0.9, 1.0) : vec4(1.0, 1.0, 1.0, 1.0));
-
-    if (displayingIgnoredVoxels) {
-        fragColor = vec4(0, 0, 0, 0.1);
-        return;
-    }
 
     vec4 colorErod = vec4(158, 42, 43, 0) / 255.0;
     vec4 colorNull = vec4(242, 184, 128, 0) / 255.0;
@@ -402,10 +363,50 @@ void main(void)
 
     vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
     col = mix(col, colorNull, 1.0 - abs(changeVal));
-    fragColor = vec4((col * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
-    fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
-    return;
 
+    for (int iLight = 0; iLight < nbLights; iLight++) {
+
+        vec3 light_position = vec4(mv_matrix * vec4(lights[iLight].position, 1.0)).xyz;
+        vec3 varyingLightDir = light_position - varyingVertPos;
+        vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
+        vec3 L = normalize(varyingLightDir);
+        vec3 R = reflect(-L, N);
+        vec3 H = normalize(varyingHalfH);
+        float cosTheta = dot(L, N);
+        float cosPhi = dot(H, N);
+
+        float lumin = 1.0;
+        if (isSpotlight) {
+            float cone_angle = radians(20.0);
+            float cone_cos_angle = cos(cone_angle);
+            float epsilon = radians(10.0);
+
+            lumin = clamp(1 - (acos(dot(normalize(varyingLightDir), vec3(0.0, 0.0, 1.0))) - (cone_angle + epsilon))/(epsilon), 0.0, 1.0);
+        }
+        if (!gl_FrontFacing)
+            lumin *= 0.6;
+
+        vec4 ambiant = ((globalAmbiant * material_ambiant) + (lights[iLight].ambiant * material_ambiant));
+        vec4 diffuse = lights[iLight].diffuse * material_diffuse * max(cosTheta, 0.0);
+        vec4 specular = lights[iLight].specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 32.0);
+        vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
+        vec3 light_pos = vec4(mv_matrix * vec4(lights[iLight].position, 1.0)).xyz;
+        float dist_source = length(lights[iLight].position - ginitialVertPos) / 50.0;
+        /*
+          // Underwater light attenuation part
+        vec4 attenuation_coef = vec4(vec3(0.000245, 0.0027, 0.0020) * depth, 1.0);
+        vec4 absorbtion_coef = vec4(vec3(0.210, 0.075, 0.095), 1.0);
+    //    vec4 attenuation_coef = vec4(vec3(0.245, 0.027, 0.020) * depth, 1.0);
+    //    vec4 absorbtion_coef = vec4(vec3(0.210, 0.0075, 0.0005) * depth, 1.0); // Source : http://web.pdx.edu/~sytsmam/limno/Limno09.7.Light.pdf
+        vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
+        vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
+        */
+        fragColor += vec4((col * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
+    }
+    fragColor /= float(nbLights);
+    fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
+
+    /*
     if (biomeColorValue < 1.0) {
         vec2 colorTextureOffset     = vec2(biomeColorValue, 0);
         vec2 realColorTextureOffset = vec2(realBiomeColorValue, 0);
@@ -425,4 +426,11 @@ void main(void)
 //        fragColor = vec4(fragColor.xyz * waterRelativeHeight, 1.0);
         fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
     }
+    */
+    fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);
+
+    if (displayAsComparisonTerrain) {
+        fragColor *= vec4(1.1, 1.0, 1.0, 1.0);
+    }
+    return;
 }

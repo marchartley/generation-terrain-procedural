@@ -48,7 +48,7 @@ void ErosionInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 void ErosionInterface::computePredefinedRocksLocations()
 {
     if (this->voxelGrid == nullptr) return;
-    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
+    std::vector<PARTICLE_INITIAL_LOCATION> locs = {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, FROM_BIG_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
     Vector3 dimensions = voxelGrid->getDimensions();
     for (auto& loc : locs) {
@@ -72,6 +72,9 @@ void ErosionInterface::computePredefinedRocksLocations()
                     direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
                 } else if (loc == FROM_X) {
                     position = Vector3::random(Vector3(0, 20, 20), Vector3(0, dimensions.y - 20, dimensions.z - 20)) - Vector3(1, 0, 0);
+                    direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z));
+                } else if (loc == FROM_BIG_X) {
+                    position = Vector3::random(Vector3(0, 0, 20), Vector3(0, dimensions.y, dimensions.z - 20)) - Vector3(1, 0, 0);
                     direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z));
                 } else if (loc == CENTER_TOP) {
                     position = Vector3::random(Vector3(voxelGrid->getSizeX() * .45f, voxelGrid->getSizeY() * .45f, voxelGrid->getSizeZ() + 2.f), Vector3(voxelGrid->getSizeX() * .55f, voxelGrid->getSizeY()*.55f, voxelGrid->getSizeZ() + 2.f));
@@ -178,6 +181,24 @@ std::tuple<float, float, float> ErosionInterface::computeTerrainBoundaries(Terra
 
     std::cout << "Boundaries have " << triangles.size() << " triangles." << std::endl;
     return {sumGeometry, sumBVH, sumMeshingBoundaries};
+}
+
+void ErosionInterface::ErosionParis2019SeaErosion()
+{
+    UnderwaterErosion erod(voxelGrid.get(), 0, 0, 0);
+    float time = timeIt([&]() {
+        erod.ParisSeaErosion();
+    });
+    std::cout << "Erosion using Paris 2019 (Sea erosion): " << showTime(time) << std::endl;
+}
+
+void ErosionInterface::ErosionParis2019InvasionPercolation()
+{
+    UnderwaterErosion erod(voxelGrid.get(), 0, 0, 0);
+    float time = timeIt([&]() {
+        erod.ParisInvasionPercolation();
+    });
+    std::cout << "Erosion using Paris 2019 (Invasion percolation): " << showTime(time) << std::endl;
 }
 
 void ErosionInterface::display(const Vector3& camPos)
@@ -423,7 +444,9 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                                                                     densityField,
                                                                     initialCapacity,
                                                                     selectedSimulationType,
-                                                                    wrapParticles
+                                                                    wrapParticles,
+                                                                    true,
+                                                                    particleMaxCollisions
                                                                     );
 
         totalPos += nbPos;
@@ -971,6 +994,7 @@ QLayout *ErosionInterface::createGUI()
     QPushButton* confirmFromRiverButton = new QPushButton("River");
     QPushButton* confirmFromRiver2Button = new QPushButton("River2");
     QPushButton* confirmFromSideButton = new QPushButton("SideX");
+    QPushButton* confirmFromBigSideButton = new QPushButton("AllSideX");
     QPushButton* confirmFromVolcanoButton = new QPushButton("Volcano");
     QPushButton* confirmFromVolcano2Button = new QPushButton("Volcano2");
     QPushButton* confirmFromVolcano3Button = new QPushButton("Volcano3");
@@ -1025,6 +1049,10 @@ QLayout *ErosionInterface::createGUI()
 //    simulationTypeButton->addItem("Stable", QVariant(FluidSimType::STABLE));
 //    simulationTypeButton->addItem("Warp", QVariant(FluidSimType::WARP));
 
+    QRadioButton* noLimitCollisionButton = new QRadioButton("No limit");
+    QRadioButton* singleCollisionButton = new QRadioButton("1 collision");
+    QRadioButton* twoCollisionButton = new QRadioButton("2 collisions");
+
     erosionLayout->addWidget(createVerticalGroup({
                                                      createMultipleSliderGroup({
 //                                                           {"Taille", rockSizeSlider},
@@ -1060,6 +1088,9 @@ QLayout *ErosionInterface::createGUI()
                                                      }),
                                                      createHorizontalGroup({
                                                          continuousRotationButton, wrapPositionsButton
+                                                     }),
+                                                     createHorizontalGroup({
+                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton
                                                      })
                                                  }));
     erosionLayout->addWidget(createVerticalGroup({
@@ -1069,6 +1100,7 @@ QLayout *ErosionInterface::createGUI()
                                                      confirmFromRiver2Button,
                                                      confirmFromRandom,
                                                      confirmFromSideButton,
+                                                     confirmFromBigSideButton,
                                                      confirmFromVolcanoButton,
                                                      confirmFromVolcano2Button,
                                                      confirmFromVolcano3Button,
@@ -1134,6 +1166,7 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(confirmFromRiverButton, &QPushButton::pressed, this, [&](){ this->throwFrom(RIVER); });
     QObject::connect(confirmFromRiver2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(RIVER2); });
     QObject::connect(confirmFromSideButton, &QPushButton::pressed, this, [&](){ this->throwFrom(FROM_X); });
+    QObject::connect(confirmFromBigSideButton, &QPushButton::pressed, this, [&](){ this->throwFrom(FROM_BIG_X); });
     QObject::connect(confirmFromVolcanoButton, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO); });
     QObject::connect(confirmFromVolcano2Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO2); });
     QObject::connect(confirmFromVolcano3Button, &QPushButton::pressed, this, [&](){ this->throwFrom(VOLCANO3); });
@@ -1175,6 +1208,10 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(simulationTypeButton, &QComboBox::currentTextChanged, this, [=](QString text) { this->selectedSimulationType = FluidSimTypeFromString(text.toStdString()); });
 //    QObject::connect(simulationTypeButton, &QComboBox::currentIndexChanged, this, [=](int index) { this->selectedSimulationType = simulationTypeButton->item; });
 
+    QObject::connect(noLimitCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = -1; });
+    QObject::connect(singleCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 1; });
+    QObject::connect(twoCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 2; });
+
     rockSizeSlider->setfValue(this->erosionSize);
     rockStrengthSlider->setfValue(this->erosionStrength);
     rockQttSlider->setfValue(this->erosionQtt);
@@ -1205,6 +1242,10 @@ QLayout *ErosionInterface::createGUI()
     wrapPositionsButton->setChecked(this->wrapParticles);
 
     displayTrajectoriesButton->setChecked(this->displayTrajectories);
+
+    noLimitCollisionButton->setChecked(this->particleMaxCollisions == -1);
+    singleCollisionButton->setChecked(this->particleMaxCollisions == 1);
+    twoCollisionButton->setChecked(this->particleMaxCollisions == 2);
 
     applyOnVoxels->setChecked(this->applyOn == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS);
     applyOnHeightmap->setChecked(this->applyOn == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP);

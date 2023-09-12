@@ -79,6 +79,8 @@ public:
 
     Vector3& operator[](size_t i);
     const Vector3& operator[](size_t i) const;
+
+    std::string display1DPlot(int sizeX, int sizeY) const;
 };
 
 

@@ -52,7 +52,7 @@ protected:
     bool displayGridBoundaries = false;
     bool displayVectors = true;
     bool displayParticles = false;
-    bool computeAtEachFrame = true;
+    bool computeAtEachFrame = false;
 
     int nbComputationsPerFrame = 1;
 };

@@ -113,6 +113,7 @@ SOURCES += \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
+    src/FluidSimulation/OpenFoamParser.cpp \
     src/FluidSimulation/SPHSimulation.cpp \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
@@ -198,6 +199,7 @@ SOURCES += \
         src/Utils/BSpline.cpp \
         src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
+    src/Utils/Curve1D.cpp \
         src/Utils/Globals.cpp \
     src/Utils/PbmReader.cpp \
         src/Utils/RewritableFile.cpp \
@@ -282,6 +284,7 @@ HEADERS += \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \
+    src/FluidSimulation/OpenFoamParser.h \
     src/FluidSimulation/SPHSimulation.h \
     src/FluidSimulation/ShallowWaterSimulation.h \
     src/FluidSimulation/StableFluidsFluidSimulation.h \
@@ -366,6 +369,7 @@ HEADERS += \
     src/Utils/BSpline.h \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \
+    src/Utils/Curve1D.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
