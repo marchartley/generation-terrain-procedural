@@ -46,7 +46,7 @@ uniform vec3 scale = vec3(1.0);
 uniform vec3 rotation = vec3(0.0, 0.0, 0.0);
 
 uniform bool useMarchingCubes;
-
+uniform float ambiantOcclusionFactor = 0.0;
 uniform float heightFactor = 0.1;
 
 //Vertices position for fragment shader
@@ -110,11 +110,11 @@ float __cubeVal(vec3 pos) {
     return cubeVal(pos + .5);
 }
 vec3 getNormal(vec3 p) {
-    if (p.x <= 1.0) return vec3(-1, 0, 0);
-    else if (p.y <= 1.0) return vec3(0, -1, 0);
-    else if (p.z <= 1.0) return vec3(0, 0, -1);
+//    if (p.x <= 1.0) return vec3(-1, 0, 0);
+//    else if (p.y <= 1.0) return vec3(0, -1, 0);
+//    else if (p.z <= 1.0) return vec3(0, 0, -1);
 
-    else if (p.x >= max_vertice_positions.x - 1.0) return vec3(1, 0, 0);
+    /*else */if (p.x >= max_vertice_positions.x - 1.0) return vec3(1, 0, 0);
     else if (p.y >= max_vertice_positions.y - 1.0) return vec3(0, 1, 0);
     else if (p.z >= max_vertice_positions.z - 1.0) return vec3(0, 0, 1);
 
@@ -128,25 +128,9 @@ vec3 getNormal(vec3 p) {
     vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
     vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
 
-//    vec3 x0 = p + vec3(resolution, 0, 0);
-//    vec3 x1 = p - vec3(resolution, 0, 0);
-//    vec3 y0 = p + vec3(0, resolution, 0);
-//    vec3 y1 = p - vec3(0, resolution, 0);
-//    vec3 z0 = p + vec3(0, 0, resolution);
-//    vec3 z1 = p - vec3(0, 0, resolution);
-
     float dx = __cubeVal(x0) - __cubeVal(x1) / length(x1 - x0);
     float dy = __cubeVal(y0) - __cubeVal(y1) / length(y1 - y0);
     float dz = __cubeVal(z0) - __cubeVal(z1) / length(z1 - z0);
-//    dx = clamp(dx, -1, 1);
-//    dy = clamp(dy, -1, 1);
-//    dz = clamp(dz, -1, 1);
-    /*
-    float dx = pow(clamp(cubeVal(x0) - cubeVal(x1), -1, 1), 5);
-    float dy = pow(clamp(cubeVal(y0) - cubeVal(y1), -1, 1), 5);
-    float dz = pow(clamp(cubeVal(z0) - cubeVal(z1), -1, 1), 5);
-    */
-//    return normalize(
     return normalize(-vec3(dx, dy, dz));
 }
 
@@ -230,11 +214,12 @@ bool checkPos(vec3 pos, vec3 boxSize) {
 }
 
 float getAmbiantOcclusion(vec3 pos, vec3 normal) {
+    if (ambiantOcclusionFactor == 0.0) return 0.0;
     vec3 texSize = vec3(textureSize(dataFieldTex, 0));
     vec3 offsets = vec3(0.0);
     float occlusion = 0.0;
     float total = 0.f;
-    float surrounding = 5.f;
+    float surrounding = 6.f;
     for (float x = 0; x < surrounding + 1.0; x += 1.0) {
         for (float y = 0; y < surrounding + 1.0; y += 1.0) {
             for (float z = 0; z < surrounding + 1.0; z += 1.0) {

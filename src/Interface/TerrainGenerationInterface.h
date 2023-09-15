@@ -124,7 +124,7 @@ public:
     Mesh waterLevelMesh;
     float waterLevel = 0.0f;
     float ambiantOcclusionFactor = 1.f;
-    bool displayAsComparativeMode = false;
+    bool displayAsComparativeMode = true;
     float heightFactor = 1.f;
 };
 

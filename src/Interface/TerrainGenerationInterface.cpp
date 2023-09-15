@@ -156,12 +156,12 @@ void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _s
 void TerrainGenerationInterface::displayWaterLevel()
 {
     waterLevelMesh.fromArray({
-                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
-                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ()),
-                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ())
+                                Vector3(1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
+                                 Vector3(voxelGrid->getSizeX()-1.f, 1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
+                                Vector3(voxelGrid->getSizeX()-1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor),
+                                Vector3(1.f, voxelGrid->getSizeY()-1.f, waterLevel * voxelGrid->getSizeZ() * heightFactor)
                              });
     waterLevelMesh.display();
 }
@@ -307,8 +307,17 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     } else if (ext == "STL") {
         Mesh m;
         m.fromStl(filename);
+        FastNoiseLite noise;
+        GridF newVoxelValues = (GridF(m.voxelize(voxelGrid->getDimensions())) - .5f);
+        for (int x = 0; x < newVoxelValues.sizeX; x++) {
+            for (int y = 0; y < newVoxelValues.sizeY; y++) {
+                float noiseVal = abs(noise.GetNoise((float) x, (float) y));
+                newVoxelValues(x, y, 0) = noiseVal;
+                newVoxelValues(x, y, 1) = noiseVal + .2f;
+            }
+        }
 //        if (m.isWatertight())
-            voxelGrid->setVoxelValues((GridF(m.voxelize(voxelGrid->getDimensions())) - .5f)/*.meanSmooth()*/);
+            voxelGrid->setVoxelValues(newVoxelValues);
 //        else
 //            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
 //        voxelGrid->fromCachedData();

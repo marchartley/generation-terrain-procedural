@@ -50,13 +50,6 @@ std::vector<Vector3> parseOpenFoamPointsFile(const std::string& content) {
     std::istringstream iss(content);
     std::string line;
 
-    // Search for the start of the internalField data
-    while (std::getline(iss, line)) {
-        if (line.find("524944") != std::string::npos) {
-            break;
-        }
-    }
-
     // Skip next lines until we find the starting parenthesis
     while (std::getline(iss, line)) {
         if (line.find("(") != std::string::npos) {
@@ -98,13 +91,6 @@ std::vector<Face> parseOpenFoamFacesFile(const std::string& content) {
     std::vector<Face> faces;
     std::istringstream iss(content);
     std::string line;
-
-    // Search for the start of the internalField data
-    while (std::getline(iss, line)) {
-        if (line.find("1327992") != std::string::npos) {
-            break;
-        }
-    }
 
     // Skip next lines until we find the starting parenthesis
     while (std::getline(iss, line)) {
@@ -155,13 +141,6 @@ std::map<int, Cell> parseOpenFoamCellsFile(const std::string& content) {
     std::map<int, Cell> cells;
     std::istringstream iss(content);
     std::string line;
-
-    // Search for the start of the internalField data
-    while (std::getline(iss, line)) {
-        if (line.find("1327992") != std::string::npos) {
-            break;
-        }
-    }
 
     // Skip next lines until we find the starting parenthesis
     while (std::getline(iss, line)) {
@@ -242,18 +221,24 @@ void linkUandCells(std::vector<Vector3>& U, std::map<int, Cell>& cells) {
 GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std::vector<Vector3>& points, const AABBox& meshBoundaries) {
 
     AABBox limits(points);
+    Vector3 boundaryDimensions = meshBoundaries.dimensions();
+    boundaryDimensions = boundaryDimensions.xzy();
+    std::cout << "All points in range: " << limits << "\nUseful in range " << meshBoundaries << std::endl;
     auto transfo = [&](const Vector3& point) {
-        Vector3 newPos = (point - meshBoundaries.mini); //((point - limits.mini) / (limits.maxi - limits.mini)) * Vector3(dimX, dimY, dimZ);
-        newPos.y = meshBoundaries.dimensions().y - newPos.y;
-        return newPos;
+        Vector3 newPos = (point - meshBoundaries.mini);
+//        newPos.y = meshBoundaries.dimensions().y - newPos.y;
+//        Vector3 newPos = ((point - limits.mini) / (limits.maxi - limits.mini)) * meshBoundaries.dimensions();
+        return Vector3(newPos.x, boundaryDimensions.y - newPos.z, newPos.y);
     };
-    GridV3 velocities(meshBoundaries.dimensions()); //(dimX, dimY, dimZ);
+    GridV3 velocities(boundaryDimensions); //(dimX, dimY, dimZ);
     std::cout << "Velocity is of size " << velocities.getDimensions() << std::endl;
 
     for (auto& [idx, cell] : cells) {
         Vector3 midPoint = cell.getMidpoint(faces, points);
         Vector3 gridPos = transfo(midPoint);
-        velocities.at(gridPos) += cell.velocity;
+        Vector3 cellVelocity(cell.velocity.x, -cell.velocity.z, cell.velocity.y);
+        velocities.addValueAt(cellVelocity, gridPos);
+//        velocities.at(gridPos) += cell.velocity;
     }
     return velocities;
 }

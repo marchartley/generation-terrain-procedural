@@ -122,7 +122,7 @@ void SpheroidalWeathering::_deposition(GridF &voxels)
                 if (voxels.at(x, y, z) < .25f || .75f < voxels.at(x, y, z)) continue;
                 float slope = 1000;
                 Vector3 newPosition(x, y, z);
-                while(slope > talusHeight) {
+                while(slope > talusHeight && voxels.checkCoord(newPosition)) {
                     Vector3 bestDirection;
                     for (int dx = -1; dx <= 1; dx++) {
                         for (int dy = -1; dy <= 1; dy++) {

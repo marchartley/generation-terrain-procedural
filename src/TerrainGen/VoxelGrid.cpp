@@ -1239,6 +1239,7 @@ void VoxelGrid::saveHeightmap(std::string heightmap_filename)
 //    float newHeight = std::max(this->maxHeight, this->heights.max());
 
     GridF heights(width, height);
+    #pragma omp parallel for collapse(2)
     for (int x = 0; x < heights.sizeX; x++) {
         for (int y = 0; y < heights.sizeY; y++) {
             for (int z = this->getSizeZ() - 1; z >= 0; z--) {

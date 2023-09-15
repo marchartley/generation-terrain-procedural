@@ -215,6 +215,7 @@ float getDensity(vec3 pos, float resolution) {
     }
 }
 int getDensityIndex(vec3 pos, vec3 terrainSize, float depth) {
+    if (displayAsComparisonTerrain) return 2;
 //    return 1;
     float density = getDensity((pos /*- vec3(1)*/) / (terrainSize /*+ vec3(1)*/), 0.0); // 0.1 / terrainSize.x); //1.0 / terrainSize.x);
     float power = 1.0;
@@ -368,6 +369,9 @@ void main(void)
 
         vec3 light_position = vec4(mv_matrix * vec4(lights[iLight].position, 1.0)).xyz;
         vec3 varyingLightDir = light_position - varyingVertPos;
+        if (displayAsComparisonTerrain) {
+//            varyingLightDir = varyingLightDir.yxz;
+        }
         vec3 varyingHalfH = (varyingLightDir - varyingVertPos).xyz;
         vec3 L = normalize(varyingLightDir);
         vec3 R = reflect(-L, N);
@@ -405,6 +409,7 @@ void main(void)
     }
     fragColor /= float(nbLights);
     fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
+//    fragColor = vec4(vec3(abs(varyingNormal)), 1);
 
     /*
     if (biomeColorValue < 1.0) {
@@ -430,7 +435,7 @@ void main(void)
     fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);
 
     if (displayAsComparisonTerrain) {
-        fragColor *= vec4(1.1, 1.0, 1.0, 1.0);
+        fragColor *= vec4(1.1, 1.1, 1.1, 1.0);
     }
     return;
 }
