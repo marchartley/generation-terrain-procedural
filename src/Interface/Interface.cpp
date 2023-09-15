@@ -328,13 +328,16 @@ void ViewerInterface::setupUi()
     });
     FancySlider* waterLevelSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 1.f, 0.0001f);
     QObject::connect(waterLevelSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setWaterLevel);
+    waterLevelSlider->setfValue(terrainGenerationInterface->waterLevel);
 
     mainLayout->addWidget(viewer, 1, 0);
 
     FancySlider* ambiantOcclusionSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 1.f, 0.01f);
     QObject::connect(ambiantOcclusionSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setAmbiantOcclusion);
+    ambiantOcclusionSlider->setfValue(terrainGenerationInterface->ambiantOcclusionFactor);
+
     FancySlider* heightFactorSlider = new FancySlider(Qt::Orientation::Vertical, 0.f, 2.f, 0.01f);
-    heightFactorSlider->setfValue(1.f);
+    heightFactorSlider->setfValue(terrainGenerationInterface->heightFactor);
     QObject::connect(heightFactorSlider, &FancySlider::floatValueChanged, terrainGenerationInterface.get(), &TerrainGenerationInterface::setHeightFactor);
 
 

@@ -283,7 +283,9 @@ void Viewer::drawingProcess() {
         interfacesTimings[this->interfaces["terraingeneration"]] = timeIt([&]() { this->interfaces["terraingeneration"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    this->mainGrabber->display();
+    if (mouseDown) {
+        this->mainGrabber->display();
+    }
 
     for (auto& actionInterface : this->interfaces) {
         if (actionInterface.first != "terraingeneration") {
@@ -406,6 +408,7 @@ void Viewer::screenshot()
 void Viewer::mousePressEvent(QMouseEvent *e)
 {
     QGLViewer::mousePressEvent(e);
+    this->mouseDown = true;
     checkMouseOnVoxel();
     Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
     Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
@@ -422,6 +425,12 @@ void Viewer::mousePressEvent(QMouseEvent *e)
         }
     }
     Q_EMIT this->mouseClickOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
+}
+
+void Viewer::mouseReleaseEvent(QMouseEvent *e)
+{
+    QGLViewer::mouseReleaseEvent(e);
+    this->mouseDown = false;
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)

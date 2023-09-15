@@ -95,6 +95,7 @@ public:
     bool eventFilter(QObject* obj, QEvent* event);
 
     void mousePressEvent(QMouseEvent* e);
+    void mouseReleaseEvent(QMouseEvent* e);
     void keyPressEvent(QKeyEvent *e);
     void keyReleaseEvent(QKeyEvent* e);
 
@@ -108,6 +109,8 @@ public:
     ViewerMode viewerMode;
     MapMode mapMode;
     SmoothingAlgorithm algorithm = MARCHING_CUBES;
+
+    bool mouseDown = false;
 
 //private:
     std::shared_ptr<Heightmap> heightmap;
