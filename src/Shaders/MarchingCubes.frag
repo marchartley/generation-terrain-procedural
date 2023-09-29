@@ -288,7 +288,7 @@ void main(void)
     Material material = ground_material;
     vec3 position = ginitialVertPos.xyz;
     vec3 varyingVertPos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
-    vec3 varyingNormal = normalize(grealNormal.xyz);
+    vec3 varyingNormal = normalize(grealNormal);
     vec3 vertEyeSpacePos = vec4(mv_matrix * vec4(position, 1.0)).xyz;
     vec3 N = normalize(varyingNormal);
     vec3 V = normalize(-varyingVertPos);
@@ -361,6 +361,7 @@ void main(void)
     vec3 changeSize = vec3(textureSize(dataChangesFieldTex, 0));
     vec3 evalPos = (changeSize.z > 1 ? ginitialVertPos / changeSize : vec3(ginitialVertPos.xy, 0.5) / changeSize);
     float changeVal = texture(dataChangesFieldTex, evalPos).a - 2.0;
+    changeVal = 0.0;
 
     vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
     col = mix(col, colorNull, 1.0 - abs(changeVal));
@@ -405,7 +406,7 @@ void main(void)
         vec4 water_light_attenuation = exp(-attenuation_coef * dist_cam)*(albedo/3.1415)*cosTheta*(1-absorbtion_coef)*exp(-attenuation_coef*dist_source);
         vec4 fogColor = vec4((vec4(water_light_attenuation.xyz, 1.0) * material_color).xyz, 1.0);
         */
-        fragColor += vec4((col * (ambiant + diffuse + specular)).xyz * 3.0, 1.0);
+        fragColor += vec4((col * 3.0 * (ambiant + diffuse + specular)).xyz, 1.0);
     }
     fragColor /= float(nbLights);
     fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
@@ -435,7 +436,8 @@ void main(void)
     fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);
 
     if (displayAsComparisonTerrain) {
-        fragColor *= vec4(1.1, 1.1, 1.1, 1.0);
+        fragColor.rgb = fragColor.brg;
     }
+//    fragColor.xyz = vec3(length(varyingNormal));
     return;
 }

@@ -22,12 +22,15 @@ uniform vec3 max_vertice_positions;
 uniform bool useMarchingCubes;
 
 uniform int voxels_displayed_on_borders = 5;
+uniform float ambiantOcclusionFactor = 0.0;
+uniform float heightFactor = 0.1;
 
 in vec3 initialVertPos[];
 
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
 out float gdensity;
+out float gambiantOcclusion;
 
 float getDensityPerMaterial(int material)
 {
@@ -83,9 +86,23 @@ vec4 getPosition(vec4 position, vec3 _offset)
 {
     float distToLimits = (voxels_displayed_on_borders > 1 ? min(mincomp(abs(position.xy - min_vertice_positions.xy)), mincomp(abs(position.xy + vec2(1.0) - max_vertice_positions.xy))) : 2.0);
     float factor = clamp(distToLimits / float(voxels_displayed_on_borders), 0.0, 2.0);
-    vec3 off = _offset * vec3(factor, factor, 2.0) * .5 - vec3(.5, .5, 0.0);
+    vec3 off = _offset * vec3(factor, factor, 2.0 * heightFactor) * .5 - vec3(.5, .5, 0.0);
     return position + vec4(.5, .5, .0, .0) + vec4(off, 0.0);
 //    return clamp(position + vec4(.5, .5, .0, .0) + vec4(off, 0.0), vec4(min_vertice_positions, 1.0), vec4(max_vertice_positions, 1.0));
+}
+float getAmbiantOcclusion(vec3 pos) {
+    int radius = 5;
+    float occlusion = 0.0;
+    float total = 0.0;
+
+    for (int dx = -radius; dx < radius+1; dx++) {
+        for (int dy = -radius; dy < radius+1; dy++) {
+            vec2 off = vec2(dx, dy);
+            occlusion += (getHeight(pos.xyz) + length(off) + 1.0 < getHeight(vec3(pos.xy - off, pos.z)) ? 1.0 : 0.0);
+            total += 1.0;
+        }
+    }
+    return clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total), 0.0, 1.0);
 }
 
 //Geometry Shader entry point
@@ -122,10 +139,12 @@ void main(void) {
 
         float minHeight = clamp(startHeight, min_vertice_positions.z, max_vertice_positions.z);
         float maxHeight = clamp(endHeight, min_vertice_positions.z, max_vertice_positions.z);
+        vec4 pos;
 
         // Front
-        grealNormal = vec3(0, -1, 0);
+        gambiantOcclusion = getAmbiantOcclusion(texture_position.xyz);
         if (nFront) {
+            grealNormal = vec3(0, -1, 0);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, maxHeight));
             ginitialVertPos = getPosition(position, vec3(0, 0, maxHeight)).xyz;
             EmitVertex();
@@ -141,8 +160,8 @@ void main(void) {
             EndPrimitive();
         }
         // Right
-        grealNormal = vec3(1, 0, 0);
         if (nRight) {
+            grealNormal = vec3(1, 0, 0);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, maxHeight));
             ginitialVertPos = getPosition(position, vec3(1, 0, maxHeight)).xyz;
             EmitVertex();
@@ -158,8 +177,8 @@ void main(void) {
             EndPrimitive();
         }
         // Right
-        grealNormal = vec3(0, 1, 0);
         if (nBack) {
+            grealNormal = vec3(0, 1, 0);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, maxHeight));
             ginitialVertPos = getPosition(position, vec3(1, 1, maxHeight)).xyz;
             EmitVertex();
@@ -175,8 +194,8 @@ void main(void) {
             EndPrimitive();
         }
         // Back
-        grealNormal = vec3(-1, 0, 0);
         if (nLeft) {
+            grealNormal = vec3(-1, 0, 0);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, maxHeight));
             ginitialVertPos = getPosition(position, vec3(0, 1, maxHeight)).xyz;
             EmitVertex();
@@ -193,8 +212,8 @@ void main(void) {
         }
 
         // Bottom
-        grealNormal = vec3(0, 0, -1);
         if (nBottom) {
+            grealNormal = vec3(0, 0, -1);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, minHeight));
             ginitialVertPos = getPosition(position, vec3(0, 0, minHeight)).xyz;
             EmitVertex();
@@ -212,8 +231,8 @@ void main(void) {
 
         // Top
 
-        grealNormal = vec3(0, 0, 1);
         if (nTop) {
+            grealNormal = vec3(0, 0, 1);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, maxHeight));
             ginitialVertPos = getPosition(position, vec3(0, 0, maxHeight)).xyz;
             EmitVertex();

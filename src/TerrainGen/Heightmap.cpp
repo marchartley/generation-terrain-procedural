@@ -512,7 +512,6 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     if (ny == -1)
         ny = imgH;
 
-//    float max = 0;
 
     GridF map(imgW, imgH);
     for (int x = 0; x < imgW; x++) {
@@ -520,24 +519,14 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
             int index = (imgW - (x + 1)) + y * imgW;
             float value = data[index];
             map.at(x, y) = value;
-//            max = std::max(max, value);
         }
     }
     if (data != nullptr)
-        delete[] data;//stbi_image_free(data);
+        delete[] data;
 
-    map = map.meanSmooth(3, 3, 1, true);
-    map = map.resize(nx, ny, 1) / 255.f;
-//    for (auto& h : map)
-//        h = std::pow(h, 2.f);
+    map = (map / map.max()).resize(nx, ny, 1);
     map *= heightFactor;
     this->heights = map;
-//    if (heightFactor == -1) {
-//        maxHeight = max;
-//    } else {
-//        map *= (maxHeight / max);
-//    }
-//    this->heights = map;
     return *this;
 }
 

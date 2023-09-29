@@ -90,6 +90,9 @@ public:
     virtual void init();
     virtual void draw();
 
+    void saveScreenshotPNG(std::string filename);
+    void copyLastScreenshotTo(std::string filename);
+
     TerrainModel* getCurrentTerrainModel();
 
     bool eventFilter(QObject* obj, QEvent* event);
@@ -173,6 +176,12 @@ public:
     Mesh raymarchingQuad;
 
     GLuint fbo, texture;
+
+    int currentWidth = -1;
+    int currentHeight = -1;
+    GLubyte* buffer;
+    GLubyte* resized;
+    GLubyte* flipped;
 };
 
 
