@@ -22,6 +22,11 @@ Python_tests/sketch-to-terrain/world_map/*
 
 doc/
 
+*.stl
+saved_maps/onlyVoxels/
+saved_maps/onlyVoxels/*
+
+
 src/third-party/
 */.idea/
 __pycache__/
