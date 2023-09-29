@@ -17,6 +17,8 @@ uniform mat4 norm_matrix;
 
 uniform vec3 min_vertice_positions;
 uniform vec3 max_vertice_positions;
+uniform float ambiantOcclusionFactor = 0.0;
+uniform float heightFactor = 0.1;
 //Vertices position for fragment shader
 in vec3 initialVertPos[];
 in vec3 realNormal[];
@@ -24,6 +26,7 @@ in vec3 realNormal[];
 out vec3 ginitialVertPos;
 out vec3 grealNormal;
 out vec4 gcolor;
+out float gambiantOcclusion;
 
 
 float getHeight(vec2 pos) {
@@ -61,6 +64,30 @@ vec3 getNormal(vec2 pos) {
     normal = cross(e1, e2) + cross(e2, e3) + cross(e3, e5) + cross(e5, e8) + cross(e8, e7) + cross(e7, e6) + cross(e6, e4) + cross(e4, e1);
     return normalize(normal);
 }
+float getAmbiantOcclusion(vec3 pos) {
+    int nX = 20;
+    int nY = 20;
+    float fnX = float(nX);
+    float fnY = float(nY);
+    float pi = 3.141592;
+
+    float occlusion = 0.0;
+    float total = 0.0;
+    for (int _r = 1; _r < 10; _r++) {
+        for (int i = 0; i < nX; i++) {
+            for (int j = 0; j < nY; j++) {
+                float theta = (i / (fnX)) * 2.0 * pi;
+                float phi = (j / (fnY - 1)) * pi - (pi * 0.5);
+                float r = _r;
+
+                vec3 ray = vec3(cos(theta) * cos(phi) * r, sin(theta) * cos(phi) * r, sin(phi) * r);
+                occlusion += (pos.z + ray.z < getHeight((pos + ray).xy) ? 1.0 : 0.0);
+                total += 1;
+            }
+        }
+    }
+    return clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total) + 0.5, 0.0, 1.0);
+}
 
 void sendInfoVertex(vec4 vecPos) {
     float displacementStrength = 1.0;
@@ -68,6 +95,7 @@ void sendInfoVertex(vec4 vecPos) {
     grealNormal = getNormal(vecPos.xy);
     gcolor = vec4(texture(heightmapFieldTex, vecPos.xy/texSize).rgb, 1.0);
     vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
+    vecPos.z *= heightFactor;
     ginitialVertPos = vecPos.xyz;
     gl_Position = proj_matrix * mv_matrix * vecPos;
     EmitVertex();
@@ -93,6 +121,7 @@ void subdivision(vec2 vecPos) {
 }
 //Geometry Shader entry point
 void main(void) {
+    gambiantOcclusion = 1.0;
     float displacementStrength = 1.0;
     vec2 texSize = textureSize(heightmapFieldTex, 0);
 
@@ -112,30 +141,38 @@ void main(void) {
 //    grealNormal = normalize(cross(v1.xyz - v2.xyz, v3.xyz - v1.xyz)); //realNormal[0];
 
     grealNormal = getNormal(v1.xy);
+    gambiantOcclusion = getAmbiantOcclusion(v1.xyz);
     v1 += vec4(grealNormal * getDisplacementLength(v1.xy) * displacementStrength, 0.0);
     ginitialVertPos = v1.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v1.xy/texSize).rgb, 1.0);
+    v1.z *= heightFactor;
     gl_Position = proj_matrix * mv_matrix * v1;
     EmitVertex();
 
     grealNormal = getNormal(v2.xy);
+    gambiantOcclusion = getAmbiantOcclusion(v2.xyz);
     v2 += vec4(grealNormal * getDisplacementLength(v2.xy) * displacementStrength, 0.0);
     ginitialVertPos = v2.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v2.xy/texSize).rgb, 1.0);
+    v2.z *= heightFactor;
     gl_Position = proj_matrix * mv_matrix * v2;
     EmitVertex();
 
     grealNormal = getNormal(v3.xy);
+    gambiantOcclusion = getAmbiantOcclusion(v3.xyz);
     v3 += vec4(grealNormal * getDisplacementLength(v3.xy) * displacementStrength, 0.0);
     ginitialVertPos = v3.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v3.xy/texSize).rgb, 1.0);
+    v3.z *= heightFactor;
     gl_Position = proj_matrix * mv_matrix * v3;
     EmitVertex();
 
     grealNormal = getNormal(v4.xy);
+    gambiantOcclusion = getAmbiantOcclusion(v4.xyz);
     v4 += vec4(grealNormal * getDisplacementLength(v4.xy) * displacementStrength, 0.0);
     ginitialVertPos = v4.xyz;
     gcolor = vec4(texture(heightmapFieldTex, v4.xy/texSize).rgb, 1.0);
+    v4.z *= heightFactor;
     gl_Position = proj_matrix * mv_matrix * v4;
     EmitVertex();
     EndPrimitive();

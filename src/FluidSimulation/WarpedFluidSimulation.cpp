@@ -69,8 +69,8 @@ void WarpedFluidSimulation::recomputeVelocities()
     GridF augmentedObstacles = obstacleGrid * 1.f;
 
     std::vector<int> gaussRadii = {3, 5};
-    std::vector<float> warpCoefs = {.8f, .2f};
-    std::vector<float> deviationCoefs = {30.f, 5.f};
+    std::vector<float> warpCoefs = {.8f, 1.2f};
+    std::vector<float> deviationCoefs = {300.f, 50.f};
     std::vector<GridV3> gradients(gaussRadii.size());
     for (size_t i = 0; i < gradients.size(); i++) {
         auto& grad = gradients[i];

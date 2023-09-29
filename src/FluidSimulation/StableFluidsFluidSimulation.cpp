@@ -463,7 +463,7 @@ GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int res
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        std::string pathToOpenFoamSimulation = "/media/simulateurrsm/4BF7-9F63/OF_Sim_Marcos";
+        std::string pathToOpenFoamSimulation = "/data/OF_Sim_Marcos";
         if (checkPathExists(pathToOpenFoamSimulation)) {
             this->velocity = OpenFoamParser::parseSimulation(pathToOpenFoamSimulation)/*.resize(sizeX, sizeY, sizeZ)*/;
         }

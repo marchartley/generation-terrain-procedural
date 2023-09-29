@@ -308,16 +308,22 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         Mesh m;
         m.fromStl(filename);
         FastNoiseLite noise;
-        GridF newVoxelValues = (GridF(m.voxelize(voxelGrid->getDimensions())) - .5f);
-        for (int x = 0; x < newVoxelValues.sizeX; x++) {
-            for (int y = 0; y < newVoxelValues.sizeY; y++) {
-                float noiseVal = abs(noise.GetNoise((float) x, (float) y));
-                newVoxelValues(x, y, 0) = noiseVal;
-                newVoxelValues(x, y, 1) = noiseVal + .2f;
-            }
-        }
+        GridF newVoxelValues = (GridF(m.voxelize(voxelGrid->getDimensions() * 2.f)) - .5f).resize(voxelGrid->getDimensions());
+//        for (int x = 0; x < newVoxelValues.sizeX; x++) {
+//            for (int y = 0; y < newVoxelValues.sizeY; y++) {
+//                for (int z = 0; z < 13; z++) {
+//                    float noiseVal = abs(noise.GetNoise((float) x, (float) y));
+//                    //newVoxelValues(x, y, z) = noiseVal;
+//                    newVoxelValues(x, y, z) = noiseVal + .2f;
+//                }
+//            }
+//        }
+        GridF swapXY(newVoxelValues.getDimensions().yxz());
+        swapXY.iterateParallel([&](int x, int y, int z) {
+            swapXY(x, y, z) = newVoxelValues(y, x, z);
+        });
 //        if (m.isWatertight())
-            voxelGrid->setVoxelValues(newVoxelValues);
+            voxelGrid->setVoxelValues(swapXY.flip(false, true)); //(newVoxelValues);
 //        else
 //            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
 //        voxelGrid->fromCachedData();

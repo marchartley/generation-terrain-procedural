@@ -595,19 +595,25 @@ bool VoxelGrid::checkIsInGround(const Vector3& position)
 //    return this->getVoxelValue(position) > 0.f;
 }
 
-void VoxelGrid::limitVoxelValues(float limitedValue)
+void VoxelGrid::limitVoxelValues(float limitedValue, bool increaseHeightIfNeeded)
 {
     auto values = this->getVoxelValues();
-    for (int z = 0; z < values.sizeZ - 1; z++) {
-        #pragma omp parallel for collapse(2)
-        for (int x = 0; x < values.sizeX; x++) {
-            for (int y = 0; y < values.sizeY; y++) {
-                if (values.at(x, y, z) > limitedValue) {
-                    values.at(x, y, z + 1) += values.at(x, y, z) - limitedValue;
-                    values.at(x, y, z) = limitedValue;
+    if (increaseHeightIfNeeded) {
+        for (int z = 0; z < values.sizeZ - 1; z++) {
+            #pragma omp parallel for collapse(2)
+            for (int x = 0; x < values.sizeX; x++) {
+                for (int y = 0; y < values.sizeY; y++) {
+                    if (values.at(x, y, z) > limitedValue) {
+                        values.at(x, y, z + 1) += values.at(x, y, z) - limitedValue;
+                        values.at(x, y, z) = limitedValue;
+                    }
                 }
             }
         }
+    } else {
+        values.iterateParallel([&](size_t i) {
+            values[i] = std::min(values[i], limitedValue);
+        });
     }
     this->applyModification(values - this->getVoxelValues()); // Add the difference with initial values
 }

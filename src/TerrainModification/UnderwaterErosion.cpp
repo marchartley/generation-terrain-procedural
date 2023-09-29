@@ -155,407 +155,6 @@ void initializeParticle(ErosionParticle& particle, Vector3& position, Vector3& v
     particle.volume = .74 * M_PI * particle.radius * particle.radius;
     particle.mass = particle.density * particle.volume;
 }
-/*
-std::tuple<std::vector<BSpline>, int, int>
-UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
-                         TerrainModel* terrain,
-                         SpacePartitioning& boundariesTree,
-                         float &particleSimulationTime, float &terrainModifTime,
-                         Vector3 startingPoint,
-                         Vector3 originalDirection,
-                         float randomnessFactor,
-                         bool fallFromSky,
-                         float gravity,
-                         float bouncingCoefficient,
-                         float bounciness,
-                         float minSpeed,
-                         float maxSpeed,
-                         float maxCapacityFactor,
-                         float erosion,
-                         float deposit,
-                         float matterDensity,
-                         float materialImpact,
-                         float airFlowfieldRotation,
-                         float waterFlowfieldRotation,
-                         float airForce,
-                         float waterForce,
-                         float dt,
-                         float shearingStressConstantK,
-                         float shearingRatePower,
-                         float erosionPowerValue,
-                         float criticalShearValue,
-                         std::vector<std::pair<Vector3, Vector3> > posAndDirs,
-//                         std::function<Vector3(Vector3)> flowfieldFunction)
-                         FLOWFIELD_TYPE flowType,
-                         GridV3 waterFlow,
-                         GridV3 airFlow,
-                         DENSITY_TYPE densityUsed,
-                         GridF densityMap,
-                         float initialCapacity,
-                         FluidSimType fluidSimType)
-{
-
-    VoxelGrid* asVoxels = dynamic_cast<VoxelGrid*>(terrain);
-    Heightmap* asHeightmap = dynamic_cast<Heightmap*>(terrain);
-    ImplicitPatch* asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
-    LayerBasedGrid* asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
-
-    Vector3 terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
-    float starting_distance = pow(terrainSize.maxComp()/2.f, 2);
-    starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
-    starting_distance *= 2.0; // Leave a little bit of gap
-
-    if (densityMap.size() > 0) {
-        densityMap.raiseErrorOnBadCoord = false;
-        densityMap.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    }
-    // Hydraulic erosion parameters
-    float strengthValue = this->maxRockStrength;
-    float maxCapacity = 1.f * strengthValue * maxCapacityFactor;
-    float erosionFactor = .01f * strengthValue * erosion;
-    float depositFactor = .01f * strengthValue * deposit;
-
-    float particleSize = this->maxRockSize;
-    float radius = particleSize * .5f;
-
-    GridF initialMapValues;
-    if (asVoxels) {
-        initialMapValues = asVoxels->getVoxelValues();
-    } else if (asHeightmap) {
-        initialMapValues = asHeightmap->getHeights();
-    } else if (asImplicit) {
-        asImplicit->_cached = false;
-        initialMapValues = asImplicit->getVoxelized(terrainSize);
-    } else if (asLayers) {
-        initialMapValues = asLayers->voxelize(terrainSize.z, 3.f);
-    }
-
-    initialMapValues.raiseErrorOnBadCoord = false;
-    initialMapValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    // Use normals from initial map, it shouldn't change too much...
-    GridV3 normals = initialMapValues.gradient(); //initialMapValues.binarize().toDistanceMap().gradient();
-    normals.raiseErrorOnBadCoord = false;
-    normals.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    if (asHeightmap) {
-        normals = asHeightmap->getNormals();
-//        normals += GridV3::random(normals.sizeX, normals.sizeY, normals.sizeZ) * .1f;
-//        normals = -normals + Vector3(0, 0, 1); // Add the Z-component for heightmaps
-    }
-
-    for (auto& n : normals)
-        n.normalize();
-
-    GridF modifications(initialMapValues.getDimensions());
-
-    GridV3 gravityfieldValues = GridV3(terrainSize, Vector3(0, 0, -gravity));
-    gravityfieldValues.raiseErrorOnBadCoord = false;
-    gravityfieldValues.defaultValueOnBadCoord = Vector3(0, 0, -gravity);
-
-    GridF environmentalDensities = voxelGrid->getEnvironmentalDensities(); // Here also
-    GridV3 flowfieldValues = GridV3(environmentalDensities.getDimensions());
-    if (flowType == FLOWFIELD_TYPE::BASIC) {
-        Vector3 airDir = Vector3(0, airForce, 0).rotate(0, 0, (airFlowfieldRotation / 180) * PI);
-        Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
-        for (size_t i = 0; i < flowfieldValues.size(); i++) {
-//            if (flowfieldValues.getCoordAsVector3(i).x > flowfieldValues.sizeX / 2) continue;
-            if (environmentalDensities.at(i) < 100) { // In the air
-                flowfieldValues.at(i) = airDir;
-            } else { // In water
-                flowfieldValues.at(i) = waterDir;
-            }
-        }
-    } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_IMAGE) {
-        airFlow = airFlow.resize(terrainSize.x, terrainSize.y, 1) * airForce * 10.f;
-        waterFlow = waterFlow.resize(terrainSize.x, terrainSize.y, 1) * waterForce * 10.f;
-        for (size_t i = 0; i < flowfieldValues.size(); i++) {
-            if (environmentalDensities.at(i) < 100) { // In the air
-                flowfieldValues.at(i) = airFlow.at(flowfieldValues.getCoordAsVector3(i).xy());
-            } else { // In water
-                flowfieldValues.at(i) = waterFlow.at(flowfieldValues.getCoordAsVector3(i).xy());
-            }
-        }
-    } else if (flowType == FLOWFIELD_TYPE::FLUID_SIMULATION) {
-        flowfieldValues = voxelGrid->getFlowfield(fluidSimType).resize(terrainSize) * airForce;
-    }
-    flowfieldValues.raiseErrorOnBadCoord = false;
-    flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    std::vector<BSpline> tunnels(rockAmount);
-    std::vector<GridF> submodifications(rockAmount, GridF(modifications.getDimensions()));
-    std::vector<int> nbPos(rockAmount), nbErosions(rockAmount);
-    std::vector<std::vector<std::pair<float, Vector3>>> allErosions(rockAmount);
-
-    // Cache computations of the erosion matrix
-    RockErosion::createPrecomputedAttackMask(particleSize);
-    RockErosion::createPrecomputedAttackMask(particleSize * 2);
-    RockErosion::createPrecomputedAttackMask2D(particleSize);
-    RockErosion::createPrecomputedAttackMask2D(particleSize * 2);
-
-    std::vector<ErosionParticle> particles(this->rockAmount);
-    Matrix3<EnvironmentProperty> environmentProperties(environmentalDensities.getDimensions());
-    Matrix3<MaterialProperty> materialProperties(environmentalDensities.getDimensions());
-    for (size_t i = 0; i < environmentProperties.size(); i++) {
-        Vector3 coord = environmentProperties.getCoordAsVector3(i);
-        EnvironmentProperty& env = environmentProperties[i];
-        env.density = environmentalDensities[i];
-        env.gravity = Vector3(0, 0, -gravity);
-        env.flowfield = flowfieldValues[i];
-        env.viscosity = 1.f;
-
-        MaterialProperty& mat = materialProperties[i];
-        mat.normal = normals.at(i);
-        mat.density = (terrain->checkIsInGround(coord) ? 1.f : 0.f);
-        mat.criticalShearStress = 0.f;
-
-        if (densityUsed == DENSITY_TYPE::DENSITY_IMAGE)
-            mat.resistance = densityMap.at(coord) * materialImpact;
-        else if (densityUsed == DENSITY_TYPE::RANDOM_DENSITY)
-            mat.resistance = densityMap.at(coord) * materialImpact;
-    }
-    environmentProperties.raiseErrorOnBadCoord = false;
-    environmentProperties.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-    materialProperties.raiseErrorOnBadCoord = false;
-    materialProperties.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    auto startTime = std::chrono::system_clock::now();
-    float totalCollisionTime = 0.f;
-    float totalOtherTime = 0.f;
-
-    #pragma omp parallel for
-    for (int i = 0; i < this->rockAmount; i++)
-    {
-        std::vector<std::pair<float, Vector3>> erosionValuesAndPositions;
-
-        BSpline tunnel;
-        float capacity = maxCapacity * initialCapacity;
-
-        float flowfieldInfluence = 1.0;
-        int steps = 100 * starting_distance; // An estimation of how many step we need
-        auto [pos, dir] = posAndDirs[i];
-//        pos = Vector3(36, 56, 50);
-
-        ErosionParticle& particle = particles[i];
-        initializeParticle(particle, pos, dir, .5f, matterDensity, capacity, maxCapacity);
-
-        if (terrain->checkIsInGround(particle.pos))
-            continue;
-
-//        ErosionParticle backupParticle;
-        bool continueSimulation = true;
-        bool hasBeenAtLeastOnceInside = false;
-        Vector3 lastCollisionPoint(false);
-        while (continueSimulation) {
-            Vector3 nextPos = particle.pos + (particle.dir * dt);
-            float environmentDensity = environmentalDensities.at(nextPos);
-            // TODO !!!!
-            // Gravity + Buoyancy
-            float particleMass = 1.f, particleVolume = .1f;
-            float gravityForce = gravity * particleMass;
-            float boyancyForce = -environmentDensity * particleVolume; // B = - rho_fluid * V * g
-            float gravityCoefficient = particleVolume * gravity * (matterDensity - environmentDensity) * 0.01f;
-            Vector3 justFlow = flowfieldValues.at(particle.pos); // (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
-            Vector3 justGravity = (gravityfieldValues.at(particle.pos) * gravityCoefficient); // (gravityfieldValues.at(nextPos) * gravityCoefficient); // .maxMagnitude(2.f);
-            Vector3 flowfield = justFlow + justGravity;
-            particle.dir += flowfield * flowfieldInfluence * dt;
-            if (Vector3::isInBox(nextPos.xy(), -terrainSize.xy(), terrainSize.xy()))
-                hasBeenAtLeastOnceInside = true;
-            auto collisionPointAndTriangleIndex = boundariesTree.getIntersectionAndTriangleIndex(particle.pos, particle.pos + particle.dir);
-            Vector3 collisionPoint;
-            size_t intersectingTriangleIndex;
-            std::tie(collisionPoint, intersectingTriangleIndex) = collisionPointAndTriangleIndex;
-            if (collisionPoint.isValid()) {
-                if ((collisionPoint - lastCollisionPoint).norm2() < 1e-3) {
-                    steps = -1000;
-                }
-                Vector3 normal = boundariesTree.triangles[intersectingTriangleIndex].normal;
-
-                // Using SPH formula
-                // Erosion part
-                float l = particleSize * 0.001f;
-                float vRel = particle.dir.norm() * (1.f - std::abs(particle.dir.normalized().dot(normal))); // velocity relative to the surface
-                float theta = vRel / l;
-                float shear = shearingStressConstantK * std::pow(theta, shearingRatePower);
-                float amountToErode = erosionFactor * std::pow(std::max(0.f, shear), erosionPowerValue); // std::pow(std::max(0.f, shear - criticalShearStress), erosionPowerValue)  * (1.f - resistanceValue * materialImpact);
-                amountToErode = std::min(amountToErode, particle.maxCapacity - particle.capacity);
-
-//                    // Deposition part
-                float densitiesRatio = 1.f; //1000.f / matterDensity; // The ground should have a density, I'll assume the value 1000 for now
-                float u = (2.f / 9.f) * particle.radius * particle.radius * (matterDensity - environmentDensity) * gravity * (1.f - (particle.capacity / particle.maxCapacity));
-                float amountToDeposit = std::min(particle.capacity, depositFactor * (densitiesRatio * capacity * (particle.capacity / particle.maxCapacity))); //maxCapacity));
-//                    float amountToDeposit = std::min(particle.capacity, depositFactor * u);
-
-                if (amountToErode - amountToDeposit != 0) {
-                    particle.capacity += (amountToErode - amountToDeposit);
-                    erosionValuesAndPositions.push_back({amountToErode - amountToDeposit, nextPos});
-                }
-
-                totalCollisionTime += timeIt([&]() {
-                    // Continue the rock tracing
-                    int maxCollisions = 20;
-                    do {
-                        maxCollisions --;
-                        if (maxCollisions <= 0) {
-                            steps = -1000;
-                            break;
-                        }
-    //                        Vector3 previousDir = particle.dir;
-                        Vector3 bounce = particle.dir.reflexion(normal);
-    //                        Vector3 initialBounce = bounce;
-                        bounce -= normal * bounce.dot(normal) * (1.f - bounciness);
-                        particle.dir = bounce * bouncingCoefficient;
-
-                        particle.pos = collisionPoint;
-                        lastCollisionPoint = collisionPoint;
-                        std::tie(collisionPoint, intersectingTriangleIndex) = boundariesTree.getIntersectionAndTriangleIndex(particle.pos, particle.pos + particle.dir, intersectingTriangleIndex);
-                    } while (collisionPoint.isValid());
-                });
-            }
-            steps --;
-            tunnel.points.push_back(particle.pos);
-
-            particle.pos = particle.pos + (particle.dir); //.clamped(0.f, 1.f);
-//            particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
-            particle.dir *= 0.99f;
-            if ((hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || steps < 0 || particle.dir.norm2() < 1e-4) {
-                if ((steps < 0 || particle.dir.norm2() < 1e-3) && depositFactor > 0.f && Vector3::isInBox(particle.pos.xy(), Vector3(), terrain->getDimensions().xy() - Vector3(1, 1))) {
-                    Vector3 depositPosition;
-                    totalOtherTime += timeIt([&]() {
-                        depositPosition = particle.pos.xy() + Vector3(0, 0, terrain->getHeight(particle.pos));
-                    });
-                    erosionValuesAndPositions.push_back({-particle.capacity, depositPosition});
-                }
-                continueSimulation = false;
-            }
-            if (steps < 0)
-                continueSimulation = false;
-        }
-        tunnels[i] = tunnel;
-        nbPos[i] = tunnel.points.size();
-        nbErosions[i] = erosionValuesAndPositions.size();
-
-        allErosions[i] = erosionValuesAndPositions;
-    }
-    auto endParticleTime = std::chrono::system_clock::now();
-
-    std::vector<ImplicitNaryOperator*> allNary(allErosions.size());
-    if (asImplicit) {
-        for (size_t i = 0; i < allNary.size(); i++) {
-            allNary[i] = new ImplicitNaryOperator;
-        }
-    }
-
-//    float summary = 0.f;
-    if (asLayers) {
-        for (size_t i = 0; i < allErosions.size(); i++) {
-            const auto& erosionValuesAndPositions = allErosions[i];
-            for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-                auto [val, pos] = erosionValuesAndPositions[iRock];
-                int size = particleSize;
-                val *= 100.f;
-                for (int x = -particleSize; x < particleSize; x++) {
-                    for (int y = -particleSize; y < particleSize; y++) {
-        //                        for (int z = -particleSize; z < particleSize; z++) {
-                        if (x*x + y*y < particleSize * particleSize) {
-                            float halfHeight = val * std::sqrt(particleSize*particleSize - (x*x + y*y));
-                            asLayers->transformLayer(pos.x + x, pos.y + y, pos.z - halfHeight, pos.z + halfHeight, (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT));
-                        }
-        //                        }
-                    }
-                }
-            }
-        }
-    } else {
-        #pragma omp parallel for
-        for (size_t i = 0; i < allErosions.size(); i++) {
-            const auto& erosionValuesAndPositions = allErosions[i];
-            for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
-                auto [val, pos] = erosionValuesAndPositions[iRock];
-//                val = (val < 0 ? -1 : 1);
-                int size = particleSize;
-                val *= 100.f;
-                if (iRock == erosionValuesAndPositions.size() - 1) {
-    //                size *= 2.f;
-    //                val *= .5f;
-                }
-    //            summary += val;
-
-                if (asVoxels) {
-    //                std::cout << RockErosion(size, val).createPrecomputedAttackMask(size).sum() - val << " errors" << std::endl;
-                    RockErosion(size, val).computeErosionMatrix(submodifications[i], pos);
-                } else if (asHeightmap) {
-                    RockErosion(size, val).computeErosionMatrix2D(submodifications[i], pos);
-    //                std::cout << val << " " << submodifications[i].sum() << std::endl;
-                } else if (asImplicit) {
-                    if (val <= 0.f) continue; // Fits the paper Paris et al. Terrain Amplification with Implicit 3D Features (2019)
-                    float dimensions = size * val * 5.f;
-                    auto sphere = dynamic_cast<ImplicitPrimitive*>(ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(dimensions, dimensions, dimensions), val));
-                    sphere->material = (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT);
-                    sphere->dimensions = Vector3(dimensions, dimensions, dimensions);
-                    sphere->supportDimensions = sphere->dimensions;
-                    sphere->position = pos - sphere->dimensions * .5f;
-                    allNary[i]->composables.push_back(sphere);
-                }
-            }
-        }
-    }
-
-    for (const auto& sub : submodifications)
-        modifications += sub;
-
-    if (densityMap.size() > 0) {
-        for (size_t i = 0; i < modifications.size(); i++) {
-            modifications[i] = modifications[i] * ((1.f - materialImpact) + (1.f - densityMap[i]) * materialImpact);
-        }
-    }
-
-    std::cout << "Total erosion : " << modifications.sum() << std::endl;
-    std::cout << "Collisions cost " << showTime(totalCollisionTime) << std::endl;
-    std::cout << "Other cost " << showTime(totalOtherTime) << std::endl;
-    if (asVoxels) {
-        for (int x = 0; x < modifications.sizeX; x++)
-            for (int y = 0; y < modifications.sizeY; y++)
-                for (int z = 0; z < 2; z++)
-                    modifications.at(x, y, z) = 0;
-        asVoxels->applyModification(modifications * 0.5f);
-        asVoxels->saveState();
-    } else if (asHeightmap) {
-        asHeightmap->heights += modifications * 0.5f;
-//        std::cout << summary << " " << modifications.sum() << std::endl;
-    } else if (asImplicit) {
-        ImplicitNaryOperator* totalErosion = new ImplicitNaryOperator;
-        for (auto& op : allNary)
-            totalErosion->composables.push_back(op);
-//        totalErosion->composables.push_back(implicitTerrain->copy());
-//        delete implicitTerrain;
-//        implicitTerrain->~ImplicitPatch();
-//        implicitTerrain = new (implicitTerrain) ImplicitNaryOperator;
-        dynamic_cast<ImplicitNaryOperator*>(implicitTerrain)->composables.push_back(totalErosion);
-        implicitTerrain->_cached = false;
-    } else if (asLayers) {
-        // ...
-    }
-
-    int positions = 0, erosions = 0;
-    for (int i = 0; i < rockAmount; i++) {
-        positions += nbPos[i];
-        erosions += nbErosions[i];
-    }
-    auto endModificationTime = std::chrono::system_clock::now();
-
-    particleSimulationTime = std::chrono::duration_cast<std::chrono::milliseconds>(endParticleTime - startTime).count();
-    terrainModifTime = std::chrono::duration_cast<std::chrono::milliseconds>(endModificationTime - endParticleTime).count();
-    return {tunnels, positions, erosions};
-}
-*/
-
-
-
-
-
-
-
 
 std::tuple<std::vector<BSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3>>>>
 UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
@@ -702,7 +301,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         float capacity = maxCapacity * initialCapacity;
 
         float flowfieldInfluence = 1.0;
-        int steps = 500 / dt; // An estimation of how many step we need
+        int maxSteps = 500 / dt; // An estimation of how many step we need
+        int steps = maxSteps;
         int maxBounces = (maxCollisions < 0 ? 10000 : maxCollisions);
         auto [initialPos, initialDir] = posAndDirs[i];
 
@@ -719,6 +319,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         int lastBouncingTime = 10000;
         size_t intersectingTriangleIndex = -1;
         std::vector<Vector3> lastCollisions;
+        std::tuple<int, int> firstLastCollisionIndices = {-1, -1};
         while (continueSimulation) {
             Vector3 nextPos = particle.pos + (particle.dir * dt);
             float environmentDensity = environmentalDensities.at(particle.pos);
@@ -741,6 +342,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             std::tie(collisionPoint, intersectingTriangleIndex) = collisionPointAndTriangleIndex;
             if (rolling || collisionPoint.isValid()) {
 //                steps = std::min(steps, 500);
+                if (std::get<0>(firstLastCollisionIndices) < 0) std::get<0>(firstLastCollisionIndices) = steps;
+                std::get<1>(firstLastCollisionIndices) = steps;
+
                 maxBounces --;
 
                 if (steps < 0 || maxBounces <= 0)
@@ -852,6 +456,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             }
             lastBouncingTime ++;
             steps --;
+
             tunnel.points.push_back(particle.pos);
 
             particle.pos = particle.pos + (particle.dir * dt);
@@ -859,19 +464,28 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
             particle.dir *= 0.99f;
             if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
-                if (/*(steps < 0 || particle.dir.norm2() < 1e-3) &&*/ depositFactor > 0.f && Vector3::isInBox(particle.pos/*.xy()*/, Vector3(), terrain->getDimensions()/*.xy() - Vector3(1, 1)*/)) {
-                    Vector3 depositPosition;
-                    totalOtherTime += timeIt([&]() {
-                        depositPosition = particle.pos/*.xy() + Vector3(0, 0, terrain->getHeight(particle.pos))*/;
-                    });
-                    erosionValuesAndPositions.push_back({-particle.capacity, depositPosition});
+                if (depositFactor > 0.f && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
+                    Vector3 depositPosition = particle.pos;
+                    erosionValuesAndPositions.push_back({-particle.capacity * .5f, depositPosition});
                 }
                 continueSimulation = false;
             }
 //            if (steps < 0)
 //                continueSimulation = false;
         }
-        tunnels[i] = tunnel;
+        if (std::get<0>(firstLastCollisionIndices) != std::get<1>(firstLastCollisionIndices)) {
+            size_t startIndex = maxSteps - std::get<0>(firstLastCollisionIndices);
+            size_t endIndex = maxSteps - std::get<1>(firstLastCollisionIndices);
+            if (rolling) { // Here we often have errors...
+                while (!Vector3::isInBox(tunnel[endIndex], Vector3(), terrainSize)) {
+                    endIndex--;
+                }
+            }
+            tunnels[i] = std::vector<Vector3>(tunnel.begin() + startIndex, tunnel.begin() + endIndex/* - 1*/);
+            if ((tunnels[i].points.front() - tunnels[i].points.back()).norm2() < particleSize * particleSize) {
+                erosionValuesAndPositions.clear();
+            }
+        }
         nbPos[i] = tunnel.points.size();
         nbErosions[i] = erosionValuesAndPositions.size();
 
@@ -994,7 +608,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 for (int z = 0; z < 2; z++)
                     modifications.at(x, y, z) = 0;
         asVoxels->applyModification(modifications * 0.5f);
-//        asVoxels->limitVoxelValues(1.f);
+        asVoxels->limitVoxelValues(2.f, false);
         asVoxels->saveState();
     } else if (asHeightmap) {
         asHeightmap->heights += modifications * 0.5f;

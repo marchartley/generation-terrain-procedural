@@ -61,6 +61,7 @@ out float gambiantOcclusion;
 //out vec4 gPosition;
 
 uniform int voxels_displayed_on_borders = 1;
+uniform float waterRelativeHeight = 0.0;
 
 vec4 rotate(vec4 pos, vec3 rot, vec3 center) {
     return pos;
@@ -95,6 +96,10 @@ float cubeVal(vec3 pos){
         pos.y <= min_vertice_positions.y || max_vertice_positions.y <= pos.y ||
         pos.z <= min_vertice_positions.z || max_vertice_positions.z <= pos.z) return -.1;
     if (pos.x >= texSize.x || pos.y >= texSize.y || pos.z >= texSize.z) return -1;
+
+    // TEMP FIX
+//    if (pos.z <= texSize.z * waterRelativeHeight) return 1.0;
+
     float val = texture(dataFieldTex, pos/texSize).a;
 //    if (pos.z <= 1)
 //        val = 1.0;
@@ -110,28 +115,38 @@ float __cubeVal(vec3 pos) {
     return cubeVal(pos + .5);
 }
 vec3 getNormal(vec3 p) {
-//    if (p.x <= 1.0) return vec3(-1, 0, 0);
-//    else if (p.y <= 1.0) return vec3(0, -1, 0);
-//    else if (p.z <= 1.0) return vec3(0, 0, -1);
+    if (p.x <= 1.0) return vec3(-1, 0, 0);
+    else if (p.y <= 1.0) return vec3(0, -1, 0);
+    else if (p.z <= 1.0) return vec3(0, 0, -1);
 
-    /*else */if (p.x >= max_vertice_positions.x - 1.0) return vec3(1, 0, 0);
+    else if (p.x >= max_vertice_positions.x - 1.0) return vec3(1, 0, 0);
     else if (p.y >= max_vertice_positions.y - 1.0) return vec3(0, 1, 0);
     else if (p.z >= max_vertice_positions.z - 1.0) return vec3(0, 0, 1);
 
-    float resolution = 0.5;
     vec3 maxDims = min(textureSize(dataFieldTex, 0), max_vertice_positions);
     vec3 minDims = max(vec3(0.0), min_vertice_positions);
-    vec3 x0 = clamp(p + vec3(resolution, 0, 0), minDims, maxDims);
-    vec3 x1 = clamp(p - vec3(resolution, 0, 0), minDims, maxDims);
-    vec3 y0 = clamp(p + vec3(0, resolution, 0), minDims, maxDims);
-    vec3 y1 = clamp(p - vec3(0, resolution, 0), minDims, maxDims);
-    vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
-    vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
 
-    float dx = __cubeVal(x0) - __cubeVal(x1) / length(x1 - x0);
-    float dy = __cubeVal(y0) - __cubeVal(y1) / length(y1 - y0);
-    float dz = __cubeVal(z0) - __cubeVal(z1) / length(z1 - z0);
-    return normalize(-vec3(dx, dy, dz));
+    const int nbResolutions = 2;
+    float resolutions[nbResolutions] = {/*0.5,*/ 1.0, 2.0};
+    vec3 normal = vec3(0, 0, 0);
+    for (int i = 0; i < nbResolutions; i++) {
+        float resolution = resolutions[i];
+        vec3 x0 = clamp(p + vec3(resolution, 0, 0), minDims, maxDims);
+        vec3 x1 = clamp(p - vec3(resolution, 0, 0), minDims, maxDims);
+        vec3 y0 = clamp(p + vec3(0, resolution, 0), minDims, maxDims);
+        vec3 y1 = clamp(p - vec3(0, resolution, 0), minDims, maxDims);
+        vec3 z0 = clamp(p + vec3(0, 0, resolution), minDims, maxDims);
+        vec3 z1 = clamp(p - vec3(0, 0, resolution), minDims, maxDims);
+
+        float dx = (length(x1 - x0) != 0 ? __cubeVal(x0) - __cubeVal(x1) / length(x1 - x0) : 0.0);
+        float dy = (length(y1 - y0) != 0 ? __cubeVal(y0) - __cubeVal(y1) / length(y1 - y0) : 0.0);
+        float dz = (length(z1 - z0) != 0 ? __cubeVal(z0) - __cubeVal(z1) / length(z1 - z0) : 0.0);
+        normal += normalize(-vec3(dx, dy, dz));
+    }
+    normal /= float(nbResolutions);
+//    if (length(normal) < 0.5) normal = vec3(0, 0, 1);
+    return normal;
+//    return normalize(-vec3(dx, dy, dz));
 }
 
 //Get triangle table value
@@ -204,7 +219,7 @@ float getDensity(vec3 pos/*, float resolution*/) {
     return (density - 0.5);
 }
 
-bool checkPos(vec3 pos, vec3 boxSize) {
+bool checkPos(vec3 pos) {
 //    pos -= min_vertice_positions;
 //    boxSize -= min_vertice_positions;
 //    boxSize = clamp(boxSize, vec3(0, 0, 0), max_vertice_positions);
@@ -214,19 +229,20 @@ bool checkPos(vec3 pos, vec3 boxSize) {
 }
 
 float getAmbiantOcclusion(vec3 pos, vec3 normal) {
-    if (ambiantOcclusionFactor == 0.0) return 0.0;
+    if (ambiantOcclusionFactor == 0.0) return 1.0;
     vec3 texSize = vec3(textureSize(dataFieldTex, 0));
     vec3 offsets = vec3(0.0);
     float occlusion = 0.0;
     float total = 0.f;
     float surrounding = 6.f;
+    if (!checkPos(pos - vec3(surrounding * .5, surrounding * .5, 0)) || !checkPos(pos + vec3(surrounding * .5, surrounding * .5, 0))) return 1.0;
     for (float x = 0; x < surrounding + 1.0; x += 1.0) {
         for (float y = 0; y < surrounding + 1.0; y += 1.0) {
             for (float z = 0; z < surrounding + 1.0; z += 1.0) {
                 vec3 off = vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * 1.0 + .5;
                 vec3 newPos = (pos + off) / texSize;
                 if (dot(off, normal) < 0) continue;
-                occlusion += (texture(dataFieldTex, newPos - offsets).a > 0.5 && checkPos(newPos * texSize, texSize) ? 1.0 : 0.0);
+                occlusion += (texture(dataFieldTex, newPos - offsets).a > 0.5 && checkPos(newPos * texSize) ? 1.0 : 0.0);
                 total += 1.0;
             }
         }

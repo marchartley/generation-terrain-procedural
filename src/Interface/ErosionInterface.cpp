@@ -115,21 +115,29 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain)
     Vector3 terrainSize = terrain->getDimensions();
 //    GridV3 normals = terrain->getNormals();
     Vector3 down = Vector3(0, 0, -1);
-    for (int x = 0; x < terrainSize.x; x++) {
-        for (int y = 0; y < terrainSize.y; y++) {
-//            Vector3 pos = Vector3(x, y) + Vector3::random().xy();
-//            pos.z = terrain->getHeight(pos) + 10.f;
-//            if (random_gen::generate() <= std::pow(pos.z / terrainSize.z, 2.f))
-//                terrainSurfaceAndNormalInversed.push_back({pos, down});
-            for (int z = 0; z < terrainSize.z; z++) {
-                Vector3 pos(x, y, z);
-                Vector3 gradient = normals.at(pos).normalized();
-                if (gradient.z > 0 && voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0) {
-                    terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f, -gradient});
+    while (terrainSurfaceAndNormalInversed.size() < maxParticles) {
+        for (int x = 0; x < terrainSize.x; x++) {
+            for (int y = 0; y < terrainSize.y; y++) {
+    //            Vector3 pos = Vector3(x, y) + Vector3::random().xy();
+    //            pos.z = terrain->getHeight(pos) + 10.f;
+    //            if (random_gen::generate() <= std::pow(pos.z / terrainSize.z, 2.f))
+    //                terrainSurfaceAndNormalInversed.push_back({pos, down});
+                for (int z = 0; z < terrainSize.z; z++) {
+                    Vector3 pos(x + .5f, y + .5f, z + .5f);
+                    Vector3 gradient = (z == terrainSize.z - 1 ? Vector3(0, 0, 1) : normals.at(pos).normalized());
+                    if (gradient.z > 0 && (!voxels.checkCoord(pos + gradient * 2.f) || (voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0))) {
+                        terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f + Vector3::random(0.5f), -gradient + Vector3::random(0.2f)});
+                    }
                 }
             }
         }
     }
+//    for (int x = 0; x < terrainSize.x; x++) {
+//        for (int y = 0; y < terrainSize.y; y++) {
+//            std::cout << int(normals(x, y, terrainSize.z - 1).z * 10) * .1f  << " ";
+//        }
+//        std::cout << std::endl;
+//    }
     initialPositionsAndDirections[JUST_ABOVE_VOXELS] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20); //, std::vector<std::pair<Vector3, Vector3>>(maxParticles));
     auto& poses = initialPositionsAndDirections[JUST_ABOVE_VOXELS];
     for (size_t i = 0; i < poses.size(); i++) {
@@ -265,6 +273,8 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 
     TerrainModel *terrain = nullptr;
     BVHTree boundariesTree;
+    boundariesTree.useParallel = true;
+
     GridF densityField;
     GridV3 waterFlowfield = GridV3();
     GridV3 airFlowfield = GridV3();
@@ -1052,6 +1062,7 @@ QLayout *ErosionInterface::createGUI()
     QRadioButton* noLimitCollisionButton = new QRadioButton("No limit");
     QRadioButton* singleCollisionButton = new QRadioButton("1 collision");
     QRadioButton* twoCollisionButton = new QRadioButton("2 collisions");
+    QRadioButton* tenCollisionButton = new QRadioButton("10 collisions");
 
     erosionLayout->addWidget(createVerticalGroup({
                                                      createMultipleSliderGroup({
@@ -1090,7 +1101,7 @@ QLayout *ErosionInterface::createGUI()
                                                          continuousRotationButton, wrapPositionsButton
                                                      }),
                                                      createHorizontalGroup({
-                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton
+                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton
                                                      })
                                                  }));
     erosionLayout->addWidget(createVerticalGroup({
@@ -1211,6 +1222,7 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(noLimitCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = -1; });
     QObject::connect(singleCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 1; });
     QObject::connect(twoCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 2; });
+    QObject::connect(tenCollisionButton, &QRadioButton::toggled, this, [&](bool checked) { this->particleMaxCollisions = 10; });
 
     rockSizeSlider->setfValue(this->erosionSize);
     rockStrengthSlider->setfValue(this->erosionStrength);
@@ -1246,6 +1258,7 @@ QLayout *ErosionInterface::createGUI()
     noLimitCollisionButton->setChecked(this->particleMaxCollisions == -1);
     singleCollisionButton->setChecked(this->particleMaxCollisions == 1);
     twoCollisionButton->setChecked(this->particleMaxCollisions == 2);
+    tenCollisionButton->setChecked(this->particleMaxCollisions == 10);
 
     applyOnVoxels->setChecked(this->applyOn == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS);
     applyOnHeightmap->setChecked(this->applyOn == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP);

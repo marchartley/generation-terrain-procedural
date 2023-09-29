@@ -864,46 +864,6 @@ std::string Mesh::toSTL()
     file << "endsolid" << " " << objName << "\n";
     this->useIndices = wasUsingIndices;
     return file.str();
-    /*char head[80];
-    std::strncpy(head,header_info.c_str(),sizeof(head)-1);
-    char attribute[2] = "0";
-    unsigned long nTriLong = triangles.size() ;
-
-//    std::ofstream myfile;
-    char* myText = new char[80 + 4 + 50 * nTriLong]; // Head = 80 + number facets = 4 + 50 per triangle
-
-
-    myfile.open((Filename + "-out.stl").c_str(),  std::ios::out | std::ios::binary);
-    myfile.write(head,sizeof(head));
-    myfile.write((char*)&nTriLong,4);
-
-    //write down every triangle
-    for (std::vector<tri>::iterator it = triangles.begin(); it!=triangles.end(); it++){
-        //normal vector coordinates
-
-        myfile.write((char*)&it->m_n.m_x, 4);
-        myfile.write((char*)&it->m_n.m_y, 4);
-        myfile.write((char*)&it->m_n.m_z, 4);
-
-        //p1 coordinates
-        myfile.write((char*)&it->m_p1.m_x, 4);
-        myfile.write((char*)&it->m_p1.m_y, 4);
-        myfile.write((char*)&it->m_p1.m_z, 4);
-
-        //p2 coordinates
-        myfile.write((char*)&it->m_p2.m_x, 4);
-        myfile.write((char*)&it->m_p2.m_y, 4);
-        myfile.write((char*)&it->m_p2.m_z, 4);
-
-        //p3 coordinates
-        myfile.write((char*)&it->m_p3.m_x, 4);
-        myfile.write((char*)&it->m_p3.m_y, 4);
-        myfile.write((char*)&it->m_p3.m_z, 4);
-
-        myfile.write(attribute,2);
-    }
-
-    myfile.close();*/
 }
 
 Mesh Mesh::applyMarchingCubes(const GridF& values)

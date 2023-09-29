@@ -150,6 +150,59 @@ void Viewer::draw() {
     this->window()->setWindowTitle("Simulation - " + QString::number(this->currentFPS()) + "FPS");
 }
 
+void Viewer::saveScreenshotPNG(std::string filename)
+{
+    int w = this->camera()->screenWidth();
+    int h = this->camera()->screenHeight();
+    int nbComp = 4;
+    int size = w * h * nbComp;
+    int newWidth = w * .5f;
+    int newHeight = h * .5f;
+
+    if (w != currentWidth || h != currentHeight) {
+        if (currentWidth != -1 && currentHeight != -1){
+            delete[] buffer;
+            delete[] resized;
+            delete[] flipped;
+        }
+        currentWidth = w;
+        currentHeight = h;
+        buffer = new GLubyte[size];
+        resized = new GLubyte[newWidth * newHeight * nbComp];
+        flipped = new GLubyte[newWidth * newHeight * nbComp];
+    }
+
+    GlobalsGL::f()->glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    GlobalsGL::f()->glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
+
+    stbir_resize_uint8(buffer, w, h, 0, resized, newWidth, newHeight, 0, nbComp);
+
+    // Flip the image vertically
+    for (int y = 0; y < newHeight; y++) {
+        for (int x = 0; x < newWidth; x++) {
+            // Calculate the original and target positions
+            int originalIndex = (y * newWidth + x) * nbComp;
+            int targetIndex = ((newHeight - 1 - y) * newWidth + x) * nbComp;
+
+            // Copy the pixel data
+            for (int c = 0; c < nbComp; c++) {
+                flipped[targetIndex + c] = resized[originalIndex + c];
+            }
+        }
+    }
+    stbi_write_png(filename.c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
+}
+
+void Viewer::copyLastScreenshotTo(std::string filename)
+{
+    std::ifstream  src(".tmp/screenshots/screen.png", std::ios::binary);
+    std::ofstream  dst(filename,   std::ios::binary);
+
+    dst << src.rdbuf();
+    src.close();
+    dst.close();
+}
+
 TerrainModel *Viewer::getCurrentTerrainModel()
 {
     if (this->mapMode == VOXEL_MODE) {
@@ -164,9 +217,6 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
-
-    int w = this->camera()->screenWidth();
-    int h = this->camera()->screenHeight();
     /*GLuint depthBuffer; // Depth buffer for the FBO
 
     if (fbo == 0) {
@@ -210,7 +260,8 @@ void Viewer::drawingProcess() {
     this->checkMouseOnVoxel();
 
     this->frame_num ++;
-    glClear(GL_DEPTH_BUFFER_BIT);
+//    glClear(GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     bool displayFill = this->viewerMode != ViewerMode::WIRE_MODE;
     if (!displayFill) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -297,55 +348,21 @@ void Viewer::drawingProcess() {
         interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
 
-    if (this->isTakingScreenshots) {
-#ifdef linux
-        mode_t prevMode = umask(0011);
-#endif
-        if(this->screenshotIndex == 0 && voxelGrid)
-        {
-            std::ofstream outfile;
-            outfile.open(this->screenshotFolder + "grid_data.json", std::ios_base::trunc);
-            outfile << voxelGrid->toString();
-            outfile.close();
+    if (this->window()->isActiveWindow()) {
+        if (makedir(".tmp/screenshots")) {
+            this->saveScreenshotPNG(".tmp/screenshots/screen.png");
         }
-        int nbComp = 4;
-        int size = w * h * nbComp;
-        GLubyte* buffer = new GLubyte[size];
-        GlobalsGL::f()->glPixelStorei(GL_PACK_ALIGNMENT, 1);
-        GlobalsGL::f()->glReadPixels(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, buffer);
-
-        int newWidth = w * .5f;
-        int newHeight = h * .5f;
-        GLubyte* resized = new GLubyte[newWidth * newHeight * nbComp];
-        stbir_resize_uint8(buffer, w, h, 0, resized, newWidth, newHeight, 0, nbComp);
-        GLubyte* flipped = new GLubyte[newWidth * newHeight * nbComp];
-
-        // Flip the image vertically
-        for (int y = 0; y < newHeight; y++) {
-            for (int x = 0; x < newWidth; x++) {
-                // Calculate the original and target positions
-                int originalIndex = (y * newWidth + x) * nbComp;
-                int targetIndex = ((newHeight - 1 - y) * newWidth + x) * nbComp;
-
-                // Copy the pixel data
-                for (int c = 0; c < nbComp; c++) {
-                    flipped[targetIndex + c] = resized[originalIndex + c];
-                }
-            }
+        if (this->isTakingScreenshots) {
+    //        if(this->screenshotIndex == 0 && voxelGrid)
+    //        {
+    //            std::ofstream outfile;
+    //            outfile.open(this->screenshotFolder + "grid_data.json", std::ios_base::trunc);
+    //            outfile << voxelGrid->toString();
+    //            outfile.close();
+    //        }
+            this->copyLastScreenshotTo(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
+    //        this->saveScreenshotPNG(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
         }
-        stbi_write_png((this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png").c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
-//        stbi_write_jpg((this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg").c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
-        delete[] buffer;
-        delete[] resized;
-        delete[] flipped;
-
-
-//        this->saveSnapshot(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
-//        this->window()->grab().save(QString::fromStdString(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".jpg"));
-#ifdef linux
-        chmod((this->screenshotFolder + std::to_string(this->screenshotIndex) + ".jpg").c_str(), 0666);
-        umask(prevMode);
-#endif
     }
 
 
@@ -358,7 +375,7 @@ void Viewer::drawingProcess() {
             std::cout << "\t" << interf->actionType << " : " << time << "ms" << std::endl;
         }
     }
-    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the FBO for subsequent rendering
+//    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the FBO for subsequent rendering
 }
 
 void Viewer::reloadAllShaders()
@@ -395,7 +412,8 @@ void Viewer::screenshot()
     tm *gmtm = std::gmtime(&now);
     char s_time[80];
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
-    this->saveSnapshot(QString::fromStdString(this->main_screenshotFolder + "shots/" + s_time + ".png"));
+    this->copyLastScreenshotTo(this->main_screenshotFolder + "shots/" + s_time + ".png");
+//    this->saveSnapshot(QString::fromStdString(this->main_screenshotFolder + "shots/" + s_time + ".png"));
     if (this->mapMode == MapMode::GRID_MODE) {
         this->heightmap->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap.png");
     } else if (this->mapMode == MapMode::VOXEL_MODE) {

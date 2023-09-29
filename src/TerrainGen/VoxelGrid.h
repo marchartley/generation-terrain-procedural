@@ -65,7 +65,7 @@ public:
 
     virtual bool checkIsInGround(const Vector3& position);
 
-    void limitVoxelValues(float limitedValue);
+    void limitVoxelValues(float limitedValue, bool increaseHeightIfNeeded = true);
 
     std::string toString();
     std::string toShortString();
