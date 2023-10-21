@@ -11,6 +11,7 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ)
     : dimensions(sizeX, sizeY, sizeZ), obstacleGrid(GridF(sizeX, sizeY, sizeZ)), obstacleGradient(GridV3(sizeX, sizeY, sizeZ))
 {
 //    this->obstacleTrianglesOctree = nullptr;
+    this->obstacleTriangleTree.useParallel = true;
 }
 
 GridV3 FluidSimulation::getVelocities(const Vector3& dimensions)

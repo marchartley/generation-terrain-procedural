@@ -345,6 +345,9 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
         for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
             for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
                 Vector3 pos = Vector3(x, y, z) * scale;
+//                if (pos == Vector3(52, 52, 5)) {
+//                    int a = 0;
+//                }
                 std::vector<Vector3> evaluationPoses = {
                     pos + Vector3(0, 0, 0)/*,
                     pos + Vector3(0, 0, 1),
@@ -1737,12 +1740,12 @@ std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float 
 
 std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path)
 {
-    ShapeCurve polygon = path;
-    for (auto& p : polygon)
-        p.z = 0.f;
-    polygon.points.push_back(polygon.points.front());
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=, _polygon=polygon] (const Vector3& pos) -> float {
-        ShapeCurve polygon(_polygon);
+//    ShapeCurve polygon = path;
+//    for (auto& p : polygon)
+//        p.z = 0.f;
+//    polygon.points.push_back(polygon.points.front());
+    ShapeCurve polygon(path.points);
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
         return (polygon.contains(pos.xy(), false) ? height : 0.f);
     });
 }

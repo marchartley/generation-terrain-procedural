@@ -185,11 +185,43 @@ void LayerBasedGrid::from2DGrid(Heightmap grid)
 
 void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
 {
-    return; // TODO: Remove this return very soon
+    int sizeX = voxelGrid.getSizeX();
+    int sizeY = voxelGrid.getSizeY();
+    this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(sizeX, sizeY, 1);
+    GridF voxelValues = voxelGrid.getVoxelValues();
+#pragma omp parallel for collapse(2)
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            float prevVoxelValue = -1;  // Assume a voxel value of 0 at z = -1 for simplicity
+            for (int z = 0; z < voxelGrid.getSizeZ(); z++) {
+                float currentVoxelValue = voxelValues(x, y, z);
+                TerrainTypes material = currentVoxelValue < 0 ? TerrainTypes::AIR : TerrainTypes::BEDROCK; //LayerBasedGrid::materialFromDensity(voxelValue);
+                float height = 1.f;
+                if ((prevVoxelValue < 0 && currentVoxelValue >= 0) || (prevVoxelValue >= 0 && currentVoxelValue < 0)) {
+                    height = 1.0f - std::abs(prevVoxelValue) / (std::abs(prevVoxelValue) + std::abs(currentVoxelValue));
+                }
+                layers.at(x, y).push_back({material, height});
+                prevVoxelValue = currentVoxelValue;
+                /*
+                if (this->layers.at(x, y).empty()) {
+                    this->layers.at(x, y).push_back({material, 1.f});
+                } else {
+                    if (this->layers.at(x, y).back().first == material)
+                        this->layers.at(x, y).back().second += 1.f;
+                    else
+                        this->layers.at(x, y).push_back({material, 1.f});
+                }*/
+            }
+        }
+    }
+    cleanLayers();
+
+    /*return; // TODO: Remove this return very soon
     this->layers = Matrix3<std::vector<std::pair<TerrainTypes, float>>>(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1);
     GridF voxelValues = voxelGrid.getVoxelValues();
     for (int x = 0; x < voxelGrid.getSizeX(); x++) {
         for (int y = 0; y < voxelGrid.getSizeY(); y++) {
+
             for (int z = 0; z < voxelGrid.getSizeZ(); z++) {
                 float voxelValue = voxelValues.at(x, y, z);
                 TerrainTypes material = LayerBasedGrid::materialFromDensity(voxelValue);
@@ -203,7 +235,7 @@ void LayerBasedGrid::fromVoxelGrid(VoxelGrid& voxelGrid)
                 }
             }
         }
-    }
+    }*/
 }
 
 void LayerBasedGrid::fromImplicit(ImplicitPatch *implicitTerrain)
@@ -680,6 +712,9 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
+//            if (x == 50 && y == 50) {
+//                int a = 0;
+//            }
             while ( z < maxZ) {
                 nbEvaluations++;
                 auto [totalValue, initialDensityAndProportion] = patch->getMaterialsAndTotalEvaluation((Vector3(x, y, z) + this->translation) * this->scaling); //patch->getDensityAtPosition(Vector3(x, y, z));

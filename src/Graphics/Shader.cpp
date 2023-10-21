@@ -182,6 +182,12 @@ void Shader::setVector(std::string pname, const Vector3& value)
     this->setVector(pname, (float*)value, 3);
 }
 
+void Shader::setVector(std::string pname, const Vector4 &value)
+{
+    if (!this->use()) return;
+    this->setVector(pname, (float*)value, 4);
+}
+
 void Shader::setVector(std::string pname, glm::vec2 value)
 {
     if (!this->use()) return;
@@ -194,11 +200,11 @@ void Shader::setVector(std::string pname, glm::vec2 value)
 //    GlobalsGL::f()->glUniform3fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 //}
 
-void Shader::setVector(std::string pname, glm::vec4 value)
+/*void Shader::setVector(std::string pname, glm::vec4 value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
-}
+}*/
 void Shader::setVector(std::string pname, float value[], int n)
 {
     if (!this->use()) return;
@@ -220,9 +226,9 @@ void Shader::setVector(std::string pname, float value[], int n)
 }
 void Shader::setLightSource(std::string pname, LightSource &value)
 {
-    this->setVector((pname + ".ambiant").c_str(), value.ambiant, 4);
-    this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
-    this->setVector((pname + ".specular").c_str(), value.specular, 4);
+    this->setVector((pname + ".ambiant").c_str(), value.ambiant);
+    this->setVector((pname + ".diffuse").c_str(), value.diffuse);
+    this->setVector((pname + ".specular").c_str(), value.specular);
 }
 
 void Shader::addLightSource(std::string pname, LightSource &value)
@@ -246,9 +252,9 @@ void Shader::setPositionalLight(std::string pname, PositionalLight &value)
 
 void Shader::setMaterial(std::string pname, Material &value)
 {
-    this->setVector((pname + ".ambiant").c_str(), value.ambiant, 4);
-    this->setVector((pname + ".diffuse").c_str(), value.diffuse, 4);
-    this->setVector((pname + ".specular").c_str(), value.specular, 4);
+    this->setVector((pname + ".ambiant").c_str(), value.ambiant);
+    this->setVector((pname + ".diffuse").c_str(), value.diffuse);
+    this->setVector((pname + ".specular").c_str(), value.specular);
     this->setFloat((pname + ".shininness").c_str(), value.shininess);
 }
 

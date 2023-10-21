@@ -107,9 +107,24 @@ void SpaceColonizationInterface::keyPressEvent(QKeyEvent *event)
 void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch)
 {
     ActionInterface::affectTerrains(heightmap, voxelGrid, layerGrid, implicitPatch);
-//    this->voxelGrid = voxelGrid;
+    Vector3 startPos(0, 0, 0);
+    this->startingPoint = std::make_unique<ControlPoint>(startPos, 5.f);
+    QObject::connect(this->startingPoint.get(), &ControlPoint::pointModified, this, &SpaceColonizationInterface::computeKarst);
+
+    this->visitingCamera = new VisitingCamera();
+
+    initSpaceColonizer();
+}
+
+void SpaceColonizationInterface::afterTerrainUpdated()
+{
+//    initSpaceColonizer();
+}
+
+void SpaceColonizationInterface::initSpaceColonizer()
+{
     GridF voxels = voxelGrid->getVoxelValues();
-    GridI availableGrid(voxelGrid->getDimensions(), 0.f); //(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ, 0);
+    GridI availableGrid(voxelGrid->getDimensions(), 0.f);
     for (int x = 0; x < availableGrid.sizeX; x++) {
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
@@ -120,44 +135,35 @@ void SpaceColonizationInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
             }
         }
     }
-    FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 20.f);
+    FastPoissonGraph<TreeColonisationAlgo::NODE_TYPE> poissonGraph(availableGrid, 5.f);
     int nb_special_nodes = std::min(8, int(poissonGraph.nodes.size()));
     std::vector<Vector3> keyPoints;
     for (int i = 0; i < nb_special_nodes; i++) {
         keyPoints.push_back(poissonGraph.nodes[i * poissonGraph.nodes.size() / (float)nb_special_nodes]->pos);
     }
-    Vector3 startPos(0, 0, 0);
-//    startPos = Vector3(10, 10, 0); // TO REMOVE
-//    for (auto& pt : keyPoints)
-//        pt.z = 80; // TO REMOVE
-    this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, startPos, 10.f);
+    if (this->colonizer)
+        delete this->colonizer;
+    this->colonizer = new TreeColonisationAlgo::TreeColonisation(keyPoints, this->startingPoint->getPosition(), 10.f);
     this->colonizer->nodeMinDistance = 1.f; // this->voxelGrid->blockSize;
-    this->colonizer->nodeMaxDistance = 20.f; // this->voxelGrid->getChunkSize() * 5; // this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
+    this->colonizer->nodeMaxDistance = 200.f; // this->voxelGrid->getChunkSize() * 5; // this->voxelGrid->blockSize * this->voxelGrid->chunkSize * 5;
 
+    this->controlPoints.clear();
     for (size_t i = 0; i < keyPoints.size(); i++) {
         this->controlPoints.push_back(std::make_unique<ControlPoint>(keyPoints[i], 5.f));
         this->controlPoints.back()->allowAllAxisTranslation(true);
-        QObject::connect(this->controlPoints.back().get(), &ControlPoint::modified,
+        QObject::connect(this->controlPoints.back().get(), &ControlPoint::pointModified,
                          this, &SpaceColonizationInterface::computeKarst);
     }
-    this->startingPoint = std::make_unique<ControlPoint>(startPos, 5.f);
-    QObject::connect(this->startingPoint.get(), &ControlPoint::modified, this, &SpaceColonizationInterface::computeKarst);
-
-    this->visitingCamera = new VisitingCamera();
 }
 
-void SpaceColonizationInterface::initSpaceColonizer()
+void SpaceColonizationInterface::computeKarst()
 {
     std::vector<Vector3> newNodes;
     for (auto& ctrl : this->controlPoints)
         newNodes.push_back(ctrl->getPosition());
     this->colonizer->startPosition = this->startingPoint->getPosition();
     this->colonizer->reset(newNodes);
-}
 
-void SpaceColonizationInterface::computeKarst()
-{
-    this->initSpaceColonizer();
     this->colonizer->process();
     this->updateKarstPath();
 }

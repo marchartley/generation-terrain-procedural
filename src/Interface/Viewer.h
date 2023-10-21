@@ -85,6 +85,8 @@ public Q_SLOTS:
 
     void screenshot();
 
+    void resetScreenshotFolderName();
+
 //protected:
 public:
     virtual void init();
@@ -153,7 +155,7 @@ public:
 
     unsigned int frame_num = 0;
 
-    ControlPoint *mainGrabber;
+    std::unique_ptr<ControlPoint> mainGrabber;
 
     bool displayParticles = false;
     float fogNear = 5.f; //1000.f;
@@ -171,9 +173,9 @@ public:
     Vector3 clipPlanePosition;
     Vector3 clipPlaneDirection;
 
-    std::shared_ptr<Shader> raymarchingShader;
-    ShaderUBO sceneUBO;
-    Mesh raymarchingQuad;
+//    std::shared_ptr<Shader> raymarchingShader;
+//    ShaderUBO sceneUBO;
+//    Mesh raymarchingQuad;
 
     GLuint fbo, texture;
 

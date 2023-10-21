@@ -167,7 +167,7 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
             newCtrl->allowAllAxisTranslation(true);
             newCtrl->displayOnTop = true;
             newCtrl->debugID = 1;
-            QObject::connect(newCtrl.get(), &ControlPoint::modified,
+            QObject::connect(newCtrl.get(), &ControlPoint::pointModified,
                              this, [&](){
                 this->addCurvesControlPoint(Vector3(), true);
             });
@@ -184,7 +184,7 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
                         control->getPosition(),
                         true
                         );
-            QObject::connect(control.get(), &ControlPoint::released,
+            QObject::connect(control.get(), &ControlPoint::pointReleased,
                              this, [&]() -> void { Q_EMIT this->needToClipView(Vector3(), Vector3(), false); });
         }
     }

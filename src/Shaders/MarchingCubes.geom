@@ -47,7 +47,7 @@ uniform vec3 rotation = vec3(0.0, 0.0, 0.0);
 
 uniform bool useMarchingCubes;
 uniform float ambiantOcclusionFactor = 0.0;
-uniform float heightFactor = 0.1;
+uniform float heightFactor = 1.0;
 
 //Vertices position for fragment shader
 in vec3 initialVertPos[];

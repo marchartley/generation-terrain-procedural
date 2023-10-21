@@ -12,6 +12,7 @@ class Shader;
 #include "Graphics/ShaderElement.h"
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Matrix.h"
+#include "DataStructure/Vector4.h"
 #include <glm/glm.hpp>
 #include <string>
 
@@ -38,9 +39,10 @@ public:
     void setInt(std::string pname, int value);
     void setFloat(std::string pname, float value);
     void setVector(std::string pname, const Vector3& value);
+    void setVector(std::string pname, const Vector4& value);
     void setVector(std::string pname, glm::vec2 value);
 //    void setVector(std::string pname, glm::vec3 value);
-    void setVector(std::string pname, glm::vec4 value);
+//    void setVector(std::string pname, glm::vec4 value);
     void setVector(std::string pname, float* value, int n);
     void setLightSource(std::string pname, LightSource& value);
     void addLightSource(std::string pname, LightSource& value);

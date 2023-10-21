@@ -19,6 +19,7 @@ class rt_light_point;
 class rt_scene;
 
 #include "DataStructure/Vector3.h"
+#include "DataStructure/Vector4.h"
 #include "Graphics/Shader.h"
 #include <glm/glm.hpp>
 
@@ -61,26 +62,27 @@ class ColoredElement : public ShaderElement
 {
 public:
     ColoredElement();
-    ColoredElement(float ambiant[4], float diffuse[4], float specular[4]);
+    ColoredElement(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular);
+    ~ColoredElement();
     virtual void update();
 
-    float ambiant[4];
-    float diffuse[4];
-    float specular[4];
+    Vector4 ambiant;
+    Vector4 diffuse;
+    Vector4 specular;
 };
 
 class LightSource : public ColoredElement
 {
 public:
     LightSource();
-    LightSource(float ambiant[4], float diffuse[4], float specular[4]);
+    LightSource(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular);
     virtual void update();
 };
 class PositionalLight : public LightSource
 {
 public:
     PositionalLight();
-    PositionalLight(float ambiant[4], float diffuse[4], float specular[4], const Vector3& pos);
+    PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos);
     virtual void update();
 
     Vector3 position;
@@ -90,7 +92,7 @@ class Material : public ColoredElement
 {
 public:
     Material();
-    Material(float ambiant[4], float diffuse[4], float specular[4], float shininess);
+    Material(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, float shininess);
     virtual void update();
 
     float shininess;

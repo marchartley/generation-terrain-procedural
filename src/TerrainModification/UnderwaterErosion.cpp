@@ -412,6 +412,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 if (maxCollisions != -1) {
                     amountToErode *= 1000000.f;
                 }
+//                std::cout << theta << " " << shear << " " << amountToErode << " " << particle.maxCapacity << " " << particle.capacity << std::endl;
                 amountToErode = std::min(amountToErode, particle.maxCapacity - particle.capacity);
 
 
@@ -466,7 +467,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
                 if (depositFactor > 0.f && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
                     Vector3 depositPosition = particle.pos;
-                    erosionValuesAndPositions.push_back({-particle.capacity * .5f, depositPosition});
+                    erosionValuesAndPositions.push_back({-particle.capacity/* * .5f*/, depositPosition});
                 }
                 continueSimulation = false;
             }
@@ -519,6 +520,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             for (size_t iRock = 0; iRock < erosionValuesAndPositions.size(); iRock++) {
                 bool lastRock = iRock == erosionValuesAndPositions.size() - 1;
                 auto [val, pos] = erosionValuesAndPositions[iRock];
+                if (std::abs(val) < 1e-4) continue;
+//                val /= 200.f;
                 std::cout << val << " * " << std::sqrt(particleSize*particleSize - 0)/particleSize << " = " << std::abs(val) * std::sqrt(particleSize*particleSize - 0)/particleSize << std::endl;
                 /*if (!lastRock && previousPos.isValid() && (previousPos - pos).norm2() < 2.f){
                     continue;
@@ -530,12 +533,12 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 val *= 1.f;
                 float max = std::abs(val) * std::sqrt(particleSize*particleSize)/particleSize;
                 float radius = max;
-                float radiusXY = max * 100.f;
+                float radiusXY = max/* * 100.f*/;
                 for (int x = -radiusXY; x < radiusXY; x++) {
                     for (int y = -radiusXY; y < radiusXY; y++) {
                         if (x*x + y*y < radiusXY * radiusXY) {
 //                            float halfHeight = std::abs(val) * std::sqrt(particleSize*particleSize - (x*x + y*y))/particleSize;
-                            float halfHeight = std::sqrt(radius*radius - (x*x + y*y))/radius;
+                            float halfHeight = .5f * std::sqrt(radius*radius - (x*x + y*y))/radius;
                             float startZ = std::max(0.f, pos.z - halfHeight);
                             float endZ = pos.z + halfHeight;
                             asLayers->transformLayer(pos.x + x, pos.y + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
@@ -588,7 +591,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             }
         }
     }
-    std::cout << std::endl;
+//    std::cout << std::endl;
 
     for (const auto& sub : submodifications)
         modifications += sub;
@@ -599,9 +602,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         }
     }
 
-    std::cout << "Total erosion : " << modifications.sum() << std::endl;
-    std::cout << "Collisions cost " << showTime(totalCollisionTime) << std::endl;
-    std::cout << "Other cost " << showTime(totalOtherTime) << std::endl;
+//    std::cout << "Total erosion : " << modifications.sum() << std::endl;
+//    std::cout << "Collisions cost " << showTime(totalCollisionTime) << std::endl;
+//    std::cout << "Other cost " << showTime(totalOtherTime) << std::endl;
     if (asVoxels) {
         for (int x = 0; x < modifications.sizeX; x++)
             for (int y = 0; y < modifications.sizeY; y++)

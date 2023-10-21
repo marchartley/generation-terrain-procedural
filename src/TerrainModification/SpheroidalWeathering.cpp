@@ -20,8 +20,9 @@ void SpheroidalWeathering::applyErosion()
 
     if (decimation.size() == 0) {
         voxels = voxelGrid->getVoxelValues().binarize();
-        decimation = GridF(voxels.getDimensions(), 1.f);
+//        decimation = GridF(voxels.getDimensions(), 1.f);
     }
+//    voxels= voxelGrid->getVoxelValues().binarize();
 
     GridF airPercents = GridF(voxels.getDimensions());
     GridF layerDurability = GridF(voxels.getDimensions());

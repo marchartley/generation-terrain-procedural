@@ -68,8 +68,8 @@ QLayout *CoralIslandGeneratorInterface::createGUI()
     layout->addWidget(createMultipleSliderGroup({
                                                     {"Subsidence", subsidenceSlider},
                                                     {"Coral", coralLevelsSlider},
-                                                    {"Vertical", verticalScaleSlider},
-                                                    {"Horizontal", horizontalScaleSlider},
+//                                                    {"Vertical", verticalScaleSlider},
+//                                                    {"Horizontal", horizontalScaleSlider},
                                                     {"Alpha", alphaSlider}
                                                 }));
 
@@ -171,7 +171,7 @@ void CoralIslandGeneratorInterface::updateCoral()
 {
     if (this->heightmap) {
         float waterLevel = voxelGrid->storedWaterLevel;
-        this->heightmap->heights = CoralIslandGenerator::generate(this->startingHeightmap.heights, 1.f - subsidence, waterLevel, coralLevelMin/* * waterLevel*/, coralLevelMax/* * waterLevel*/, vScale, hScale, alpha);
+        this->heightmap->heights = CoralIslandGenerator::generate(this->startingHeightmap.heights, 1.f - subsidence, waterLevel, coralLevelMin * waterLevel, coralLevelMax * waterLevel, vScale, hScale, alpha);
         Q_EMIT updated();
     }
 }

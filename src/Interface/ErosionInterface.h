@@ -31,6 +31,13 @@ public Q_SLOTS:
     void show();
     void hide();
 
+    void thermalErosionProcess();
+    void hydraulicErosionProcess();
+    void gobelinsErosionProcess();
+    void desertErosionProcess();
+    void coastalErosionProcess();
+    void fluidSimErosionProcess();
+
     void throwFromCam();
     void throwFromSky();
     void throwFromSide();
@@ -46,6 +53,7 @@ public Q_SLOTS:
 
     void computePredefinedRocksLocations();
     void recomputeAboveVoxelRocksPositions(TerrainModel *terrain);
+    void recomputeRainingPositions(TerrainModel *terrain);
 
     std::tuple<float, float, float> computeTerrainBoundaries(TerrainModel *terrain, BVHTree *boundariesTree);
 
@@ -66,13 +74,13 @@ public:
 
     float erosionSize = 8.f;
     float erosionStrength = .5; // .35f;
-    int erosionQtt = 1;
+    int erosionQtt = 1000;
     float rockRandomness = .1f;
 
     int maxParticles = 1000;
 
     float gravity = .981f;
-    float bouncingCoefficient = 0.15f; // 1.f;
+    float bouncingCoefficient = 0.15f; //0.15f; // 1.f;
     float bounciness = 1.f;
     float minSpeed = .1f;
     float maxSpeed = 5.f;
@@ -82,9 +90,9 @@ public:
     float matterDensity = 500.f;
     float materialImpact = 1.f;
 
-    float airFlowfieldRotation = 270.f;
+    float airFlowfieldRotation = 0.f; // 270.f;
     float waterFlowfieldRotation = 90.f;
-    float airForce = 0.f;
+    float airForce = 0.0f;
     float waterForce = 1.f;
 
     float dt = 1.f;
@@ -95,11 +103,11 @@ public:
     float criticalShearStress = .8f;
 
     bool continuousRotation = false;
-    bool wrapParticles = true;
+    bool wrapParticles = false;
 
-    int numberOfIterations = 1;
+    int numberOfIterations = 200;
 
-    int particleMaxCollisions = -1; // -1 for infinity
+    int particleMaxCollisions = 3; // 10; // -1 for infinity
 
     float initialCapacity = .0f;
 

@@ -72,12 +72,12 @@ void ShaderUBO::affectShader(std::shared_ptr<Shader> shader)
 
 ColoredElement::ColoredElement()
 {
-    float defaultAmbiant[4] = {.8, .8, .8, 1.0};
-    float defaultDiffuse[4] = {.5, .5, .5, 1.0};
-    float defaultSpecular[4] = {.5, .5, .5, 1.0};
+    Vector4 defaultAmbiant = {.8, .8, .8, 1.0};
+    Vector4 defaultDiffuse = {.5, .5, .5, 1.0};
+    Vector4 defaultSpecular = {.5, .5, .5, 1.0};
     ColoredElement(defaultAmbiant, defaultDiffuse, defaultSpecular);
 }
-ColoredElement::ColoredElement(float ambiant[4], float diffuse[4], float specular[4])
+ColoredElement::ColoredElement(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular)
 {
     for (int i = 0; i < 4; i++)
     {
@@ -87,17 +87,21 @@ ColoredElement::ColoredElement(float ambiant[4], float diffuse[4], float specula
     }
 }
 
+ColoredElement::~ColoredElement()
+{
+}
+
 void ColoredElement::update()
 {
-    this->shader->setVector((name + ".ambiant").c_str(), ambiant, 4);
-    this->shader->setVector((name + ".diffuse").c_str(), diffuse, 4);
-    this->shader->setVector((name + ".specular").c_str(), specular, 4);
+    this->shader->setVector((name + ".ambiant").c_str(), ambiant);
+    this->shader->setVector((name + ".diffuse").c_str(), diffuse);
+    this->shader->setVector((name + ".specular").c_str(), specular);
 }
 LightSource::LightSource()
 {
 
 }
-LightSource::LightSource(float ambiant[4], float diffuse[4], float specular[4])
+LightSource::LightSource(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular)
     : ColoredElement(ambiant, diffuse, specular)
 {
 
@@ -111,7 +115,7 @@ PositionalLight::PositionalLight()
 {
 
 }
-PositionalLight::PositionalLight(float ambiant[4], float diffuse[4], float specular[4], const Vector3& pos)
+PositionalLight::PositionalLight(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, const Vector3& pos)
     : LightSource(ambiant, diffuse, specular), position(pos)
 {
 
@@ -126,7 +130,7 @@ Material::Material()
 {
 
 }
-Material::Material(float ambiant[4], float diffuse[4], float specular[4], float shininess)
+Material::Material(const Vector4& ambiant, const Vector4& diffuse, const Vector4& specular, float shininess)
     : ColoredElement(ambiant, diffuse, specular), shininess(shininess)
 {
 

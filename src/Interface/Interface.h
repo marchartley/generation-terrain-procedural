@@ -91,6 +91,8 @@ public:
 
 //    std::string mapSavingFolder = "saved_maps/";
     std::shared_ptr<std::vector<nlohmann::json>> actionsOnMap;
+
+    float randomValue = 10.f;
 };
 
 #endif // INTERFACE_H

@@ -359,7 +359,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
     this->primitiveControlPoint->allowAllAxisTranslation(true);
     this->primitiveControlPoint->hide();
 
-    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::modified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
+    QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::pointModified, this, &PrimitivePatchesInterface::moveDebugBoxWithControlPoint);
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::translationApplied, this, &PrimitivePatchesInterface::translatePatch);
     QObject::connect(this->primitiveControlPoint.get(), &ControlPoint::rotationApplied, this, &PrimitivePatchesInterface::rotatePatch);
     /*
@@ -597,10 +597,12 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
     this->layerGrid->reset();
 //    this->implicitTerrain->cleanCache();
     this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
-    voxelGrid->fromImplicit(implicitTerrain.get());
+    //voxelGrid->fromImplicit(implicitTerrain.get());
 //    voxelGrid->smoothVoxels();
 //    voxelGrid->fromCachedData();
-    heightmap->fromImplicit(implicitTerrain.get());
+    //heightmap->fromImplicit(implicitTerrain.get());
+    voxelGrid->fromLayerBased(*layerGrid);
+    heightmap->fromLayerGrid(*layerGrid);
     this->savePatchesAsFile(this->mainFilename);
 
     Q_EMIT this->terrainUpdated();

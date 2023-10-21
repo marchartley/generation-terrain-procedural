@@ -103,6 +103,7 @@ SOURCES += \
     src/DataStructure/Tree.cpp \
     src/DataStructure/Triangle.cpp \
         src/DataStructure/Vector3.cpp \
+    src/DataStructure/Vector4.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
     src/EnvObject/EnvObject.cpp \
@@ -141,6 +142,7 @@ SOURCES += \
     src/Interface/AbstractFluidSimulationInterface.cpp \
         src/Interface/ActionInterface.cpp \
     src/Interface/BiomeInterface.cpp \
+    src/Interface/CommonInterface.cpp \
         src/Interface/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
         src/Interface/CustomInteractiveObject.cpp \
@@ -264,6 +266,7 @@ HEADERS += \
     src/DataStructure/Tree.h \
     src/DataStructure/Triangle.h \
     src/DataStructure/Vector3.h \
+    src/DataStructure/Vector4.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
     src/EnvObject/EnvObject.h \
@@ -312,6 +315,7 @@ HEADERS += \
     src/Interface/AbstractFluidSimulationInterface.h \
     src/Interface/ActionInterface.h \
     src/Interface/BiomeInterface.h \
+    src/Interface/CommonInterface.h \
     src/Interface/ControlPoint.h \
     src/Interface/CoralIslandGeneratorInterface.h \
     src/Interface/CustomInteractiveObject.h \
