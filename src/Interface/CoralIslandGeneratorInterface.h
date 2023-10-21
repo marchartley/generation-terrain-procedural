@@ -52,13 +52,13 @@ public Q_SLOTS:
 
 public:
     float subsidence = 0.f;
-    float waterLevel = 1.f;
-    float coralLevelMin = 0.7f;
-    float coralLevelMax = 0.9f;
+//    float waterLevel = 1.f;
+    float coralLevelMin = 0.89f;
+    float coralLevelMax = 0.99f;
 
     float vScale = 1.f;
     float hScale = .01f;
-    float alpha = .1f;
+    float alpha = .48f;
 
 
     CoralIslandGenerator coralGen;

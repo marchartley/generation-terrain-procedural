@@ -10,8 +10,8 @@ public:
     ShapeCurve(std::vector<Vector3> points);
     ShapeCurve(BSpline path);
 
-    bool contains(const Vector3& pos, bool useNativeShape = true);
-    float estimateDistanceFrom(const Vector3& pos);
+    bool contains(const Vector3& pos, bool useNativeShape = true) const;
+    float estimateDistanceFrom(const Vector3& pos) const;
     float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
     float computeArea();
     float computeSignedArea();
@@ -27,7 +27,7 @@ public:
 
     ShapeCurve& removeDuplicates();
 
-    std::vector<Vector3> closedPath();
+    std::vector<Vector3> closedPath() const;
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 

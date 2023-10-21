@@ -141,8 +141,8 @@ public:
 //    void setPosition (const qglviewer::Vec &position);
 
 Q_SIGNALS:
-    void modified();
-    void released();
+    void pointModified();
+    void pointReleased();
 
     void translationApplied(Vector3);
     void rotationApplied(Vector3);
@@ -181,8 +181,8 @@ public:
     std::vector<Vector3> positionsHistory;
     Vector3 prevPosition;
     GrabberState state;
-    bool useManipFrame;
-    bool currentlyManipulated;
+    bool useManipFrame = false;
+    bool currentlyManipulated = false;
 
     Vector3 initialPosition;
     Vector3 initialRotation;
@@ -197,11 +197,11 @@ public:
     Mesh rotationMeshes;
     Mesh rotationHelperSphere;
 
-    float arrowSize;
-    float circleRadius;
+    float arrowSize = 1.f;
+    float circleRadius = 1.f;
 
     void setRadius(float newRadius) { this->radius = newRadius; }
-    float radius;
+    float radius = 1.f;
     float minSphereRadius = -1;
     float maxSphereRadius = -1;
 
@@ -228,7 +228,7 @@ public:
 
     bool displayOnTop = true;
 
-    qglviewer::WorldConstraint* default_constraint;
+    qglviewer::WorldConstraint* default_constraint = nullptr;
     qglviewer::Constraint* custom_constraint = nullptr;
     int debugID = -1;
 protected:

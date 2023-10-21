@@ -58,10 +58,11 @@ void ErosionInterface::computePredefinedRocksLocations()
             for (size_t j = 0; j < poses[i].size(); j++) {
                 Vector3 position;
                 Vector3 direction;
-                if (loc == SKY) {
-                    position = Vector3::random(Vector3(-30, -30), dimensions.xy() + Vector3(30, 30)) + Vector3(0, 0, dimensions.z);
-                    direction = Vector3(0, 0, -1);
-                } else if (loc == RIVER) {
+                /*if (loc == SKY) {
+                    position = Vector3::random(Vector3(-30, -30), dimensions.xy() + Vector3(30, 30)) + Vector3(0, 0, dimensions.z + 5.f);
+//                    position = Vector3::random(Vector3(15, 15, 0), Vector3(85, 85, 0)) + Vector3(0, 0, dimensions.z + 5.f);
+                    direction = Vector3(0, 0, -1) + Vector3::random(0.1f);
+                } else */if (loc == RIVER) {
                     position = Vector3(15, 50, 50) + Vector3::random(3.f).xy();
                     direction = Vector3(0, 0, 0);
                 } else if (loc == RIVER2) {
@@ -110,20 +111,14 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain)
     voxels.raiseErrorOnBadCoord = false;
     voxels.defaultValueOnBadCoord = -1;
     auto normals = -voxels.gradient();
-//    auto terrainSurface = Mesh().applyMarchingCubes(voxels).vertexArray;
     std::vector<std::pair<Vector3, Vector3>> terrainSurfaceAndNormalInversed;
     Vector3 terrainSize = terrain->getDimensions();
-//    GridV3 normals = terrain->getNormals();
     Vector3 down = Vector3(0, 0, -1);
     while (terrainSurfaceAndNormalInversed.size() < maxParticles) {
         for (int x = 0; x < terrainSize.x; x++) {
             for (int y = 0; y < terrainSize.y; y++) {
-    //            Vector3 pos = Vector3(x, y) + Vector3::random().xy();
-    //            pos.z = terrain->getHeight(pos) + 10.f;
-    //            if (random_gen::generate() <= std::pow(pos.z / terrainSize.z, 2.f))
-    //                terrainSurfaceAndNormalInversed.push_back({pos, down});
                 for (int z = 0; z < terrainSize.z; z++) {
-                    Vector3 pos(x + .5f, y + .5f, z + .5f);
+                    Vector3 pos(x + .5f, y + .5f, z + 1.5f);
                     Vector3 gradient = (z == terrainSize.z - 1 ? Vector3(0, 0, 1) : normals.at(pos).normalized());
                     if (gradient.z > 0 && (!voxels.checkCoord(pos + gradient * 2.f) || (voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0))) {
                         terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f + Vector3::random(0.5f), -gradient + Vector3::random(0.2f)});
@@ -132,29 +127,39 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain)
             }
         }
     }
-//    for (int x = 0; x < terrainSize.x; x++) {
-//        for (int y = 0; y < terrainSize.y; y++) {
-//            std::cout << int(normals(x, y, terrainSize.z - 1).z * 10) * .1f  << " ";
-//        }
-//        std::cout << std::endl;
-//    }
     initialPositionsAndDirections[JUST_ABOVE_VOXELS] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20); //, std::vector<std::pair<Vector3, Vector3>>(maxParticles));
     auto& poses = initialPositionsAndDirections[JUST_ABOVE_VOXELS];
     for (size_t i = 0; i < poses.size(); i++) {
         std::shuffle(terrainSurfaceAndNormalInversed.begin(), terrainSurfaceAndNormalInversed.end(), random_gen::random_generator);
         poses[i] = std::vector<std::pair<Vector3, Vector3>>(terrainSurfaceAndNormalInversed.begin(), terrainSurfaceAndNormalInversed.begin() + maxParticles);
-        /*
-        for (size_t j = 0; j < poses[i].size(); j++) {
-            Vector3 position;
-            Vector3 direction;
-            if (terrainSurface.empty()) // No voxel at all
-                break;
-            position = terrainSurface[int(random_gen::generate(terrainSurface.size()))] + Vector3(0, 0, 1) + Vector3::random(1.f).xy();
-            direction = Vector3(0, 0, 0);
+    }
+}
 
-            poses[i][j] = {position, direction};
+void ErosionInterface::recomputeRainingPositions(TerrainModel *terrain)
+{
+    auto voxels = voxelGrid->getVoxelValues();
+    voxels.raiseErrorOnBadCoord = false;
+    voxels.defaultValueOnBadCoord = -1;
+    std::vector<std::pair<Vector3, Vector3>> possiblePositions;
+    Vector3 initialSpeed = Vector3(0, 0, 0);
+    Vector3 terrainSize = terrain->getDimensions();
+    while (possiblePositions.size() < maxParticles) {
+        for (int x = 10; x < terrainSize.x - 10; x++) {
+            for (int y = 10; y < terrainSize.y - 10; y++) {
+                float height = terrain->getHeight(x, y);
+                float relativeHeight = height / terrainSize.z;
+                int nbDrops = std::min(1, int((relativeHeight * relativeHeight) * 10.f));
+                for (int i = 0; i < nbDrops; i++) {
+                    possiblePositions.push_back({Vector3(x, y, height + 10.f) + Vector3::random(), initialSpeed});
+                }
+            }
         }
-        */
+    }
+    initialPositionsAndDirections[SKY] = std::vector<std::vector<std::pair<Vector3, Vector3>>>(20); //, std::vector<std::pair<Vector3, Vector3>>(maxParticles));
+    auto& poses = initialPositionsAndDirections[SKY];
+    for (size_t i = 0; i < poses.size(); i++) {
+        std::shuffle(possiblePositions.begin(), possiblePositions.end(), random_gen::random_generator);
+        poses[i] = std::vector<std::pair<Vector3, Vector3>>(possiblePositions.begin(), possiblePositions.begin() + maxParticles);
     }
 }
 
@@ -187,7 +192,7 @@ std::tuple<float, float, float> ErosionInterface::computeTerrainBoundaries(Terra
         boundariesMesh.fromArray(flattenArray(triangles));
     });
 
-    std::cout << "Boundaries have " << triangles.size() << " triangles." << std::endl;
+//    std::cout << "Boundaries have " << triangles.size() << " triangles." << std::endl;
     return {sumGeometry, sumBVH, sumMeshingBoundaries};
 }
 
@@ -299,6 +304,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 terrain = implicitTerrain.get();
             } else if (applyOn == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN) {
                 terrain = layerGrid.get();
+//                terrain = voxelGrid.get();
             }
 
     //        auto flowfieldFunction = this->computeFlowfieldFunction();
@@ -361,7 +367,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 for (int x = 0; x < densityField.sizeX; x++) {
                     for (int y = 0; y < densityField.sizeY; y++) {
                         for (int z = 0; z < densityField.sizeZ; z++) {
-                            float noiseVal = noise.GetNoise((float) z * 5.f, x*y/100.f);
+                            float noiseVal = noise.GetNoise((float) z * 1.f, x*y/100.f);
                             noiseVal = (noiseVal + 1.f) * .5f;
                             densityField.at(x, y, z) = (noiseVal * (maxDurability - minDurability)) + minDurability;
                             if (z > densityField.sizeZ * .8) {
@@ -380,12 +386,14 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 densityField = GridF::fromImageBW(this->densityFieldImagePath).resize(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f).flip(true, false, false);
             }
 
-            if (location == JUST_ABOVE_VOXELS)
+            if (location == JUST_ABOVE_VOXELS) {
                 recomputeAboveVoxelRocksPositions(terrain);
-            if (location == RIVER) {
+            } else if (location == RIVER) {
                 for(auto& [p, d]  : initialPositionsAndDirections[location][iteration % (initialPositionsAndDirections[location].size())]) {
                     p.z = 100; //terrain->getHeight(p.xy()) + 1.f;
                 }
+            } else if (location == SKY) {
+                recomputeRainingPositions(terrain);
             }
 
             Vector3 terrainDims = terrain->getDimensions();
@@ -485,7 +493,8 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 //            implicitTerrain->_cached = false;
         } else if (applyOn == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN) {
             layerGrid->reorderLayers();
-            voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
+//            voxelGrid->fromLayerBased(*layerGrid, voxelGrid->getSizeZ());
+//            layerGrid->fromVoxelGrid(*voxelGrid);
         }
         Q_EMIT this->updated();
         this->computePredefinedRocksLocations();
@@ -968,6 +977,30 @@ QLayout *ErosionInterface::createGUI()
 {
     this->erosionLayout = new QHBoxLayout();
 
+    QPushButton* thermalButton = new QPushButton("Thermal");
+    QPushButton* hydraulicButton = new QPushButton("Hydraulic");
+    QPushButton* gobelinsButton = new QPushButton("Gobelins");
+    QPushButton* desertButton = new QPushButton("Desert");
+    QPushButton* coastalButton = new QPushButton("Coastal");
+    QPushButton* fluidButton = new QPushButton("Simu fluid");
+
+/*
+    erosionLayout->addWidget(createVerticalGroup({
+                                                     thermalButton,
+                                                     hydraulicButton,
+                                                     gobelinsButton,
+                                                     desertButton,
+//                                                     coastalButton,
+//                                                     fluidButton
+                                                 }));*/
+
+    QObject::connect(thermalButton, &QPushButton::pressed, this, &ErosionInterface::thermalErosionProcess);
+    QObject::connect(hydraulicButton, &QPushButton::pressed, this, &ErosionInterface::hydraulicErosionProcess);
+    QObject::connect(gobelinsButton, &QPushButton::pressed, this, &ErosionInterface::gobelinsErosionProcess);
+    QObject::connect(desertButton, &QPushButton::pressed, this, &ErosionInterface::desertErosionProcess);
+    QObject::connect(coastalButton, &QPushButton::pressed, this, &ErosionInterface::coastalErosionProcess);
+    QObject::connect(fluidButton, &QPushButton::pressed, this, &ErosionInterface::fluidSimErosionProcess);
+
     FancySlider* rockSizeSlider = new FancySlider(Qt::Horizontal, 0.f, 100.f);
     FancySlider* rockStrengthSlider = new FancySlider(Qt::Horizontal, 0.f, .5f, .01f);
     FancySlider* rockQttSlider = new FancySlider(Qt::Horizontal, 1.f, maxParticles);
@@ -1009,8 +1042,8 @@ QLayout *ErosionInterface::createGUI()
     QPushButton* confirmFromVolcano2Button = new QPushButton("Volcano2");
     QPushButton* confirmFromVolcano3Button = new QPushButton("Volcano3");
 
-    QCheckBox* displayTrajectoriesButton = new QCheckBox("Display path");
     QCheckBox* displayBoundariesButton = new QCheckBox("Display walls");
+    QCheckBox* displayTrajectoriesButton = new QCheckBox("Display path");
 
     QRadioButton* applyOnVoxels = new QRadioButton("on voxels");
     QRadioButton* applyOnHeightmap = new QRadioButton("on heightmap");
@@ -1059,11 +1092,98 @@ QLayout *ErosionInterface::createGUI()
 //    simulationTypeButton->addItem("Stable", QVariant(FluidSimType::STABLE));
 //    simulationTypeButton->addItem("Warp", QVariant(FluidSimType::WARP));
 
-    QRadioButton* noLimitCollisionButton = new QRadioButton("No limit");
-    QRadioButton* singleCollisionButton = new QRadioButton("1 collision");
-    QRadioButton* twoCollisionButton = new QRadioButton("2 collisions");
-    QRadioButton* tenCollisionButton = new QRadioButton("10 collisions");
+    QRadioButton* noLimitCollisionButton = new QRadioButton("No");
+    QRadioButton* singleCollisionButton = new QRadioButton("1");
+    QRadioButton* twoCollisionButton = new QRadioButton("2");
+    QRadioButton* tenCollisionButton = new QRadioButton("10");
 
+
+//    erosionLayout->addWidget(createVerticalGroup({displayTrajectoriesButton}));
+
+    erosionLayout->addWidget(createVerticalGroup({
+                                                     thermalButton,
+                                                     hydraulicButton,
+                                                     gobelinsButton,
+                                                     desertButton,
+                                                     createMultipleSliderGroup({
+//                                                           {"Taille", rockSizeSlider},
+                                                           {"Strength", rockStrengthSlider},
+                                                           {"Quantity", rockQttSlider},
+//                                                           {"gravity", gravitySlider},
+                                                           {"bouncing Coefficient", bouncingCoefficientSlider},
+                                                           {"bounciness", bouncinessSlider},
+//                                                           {"minSpeed", minSpeedSlider},
+//                                                           {"maxSpeed", maxSpeedSlider},
+                                                           {"max Capacity Factor", maxCapacityFactorSlider},
+                                                           {"erosion Factor", erosionFactorSlider},
+                                                           {"deposit Factor", depositFactorSlider},
+//                                                           {"matter Density", matterDensitySlider},
+//                                                           {"material Impact", materialImpactSlider},
+                                                           {"air Rotation", airFlowfieldRotationSlider},
+                                                           {"water Rotation", waterFlowfieldRotationSlider},
+                                                           {"air Force", airForceSlider},
+                                                           {"water Force", waterForceSlider},
+                                                           {"nb iterations", iterationSlider},
+//                                                           {"dt", dtSlider},
+//                                                           {"ShearConstantK", shearingStressConstantKSlider},
+//                                                           {"ShearRatePower", shearingRatePowerSlider},
+//                                                           {"ErosionPower", erosionPowerValueSlider},
+//                                                           {"Critical shear stress", criticalShearStressSlider},
+                                                           {"Initial capacity", initialCapacitySlider},
+                                                       }),
+                                                     createHorizontalGroup({
+                                                         airDensity, waterDensity
+                                                     }),
+                                                     createHorizontalGroup({
+                                                         particleSizeSmall, particleSizeMedium, particleSizeBig
+                                                     }),
+                                                     createHorizontalGroup({
+                                                         continuousRotationButton, wrapPositionsButton
+                                                     }),
+                                                     createHorizontalGroup({
+                                                         noLimitCollisionButton, singleCollisionButton, twoCollisionButton, tenCollisionButton
+                                                     })
+                                                 }));
+    erosionLayout->addWidget(createVerticalGroup({
+                                                     confirmFromSurface,
+                                                     confirmFromSkyButton,
+                                                     confirmFromRiverButton,
+                                                     confirmFromRiver2Button,
+                                                     confirmFromRandom,
+                                                     confirmFromSideButton,
+                                                     confirmFromBigSideButton,
+                                                     confirmFromVolcanoButton,
+                                                     confirmFromVolcano2Button,
+                                                     confirmFromVolcano3Button,
+
+                                                     displayTrajectoriesButton,
+                                                     displayBoundariesButton,
+                                                     createVerticalGroup({
+                                                         applyOnHeightmap,
+                                                         applyOnVoxels,
+                                                         applyOnImplicit,
+                                                         applyOnLayers
+                                                     }),
+                                                     createVerticalGroup({
+                                                         useBasicFlowfield,
+                                                         useImageFlowfield,
+                                                         useEnvObjFlowfield,
+                                                         labWater, browseWaterFlow,
+                                                         labAir, browseAirFlow,
+                                                         useSimulatedFlowfield, simulationTypeButton
+                                                     }),
+//                                                     lotsOfTestsButton,
+                                                     createVerticalGroup({
+                                                         useImageDensity,
+                                                         useLayeredDensity,
+                                                         labDensityField,
+                                                         densityFieldFileChooser,
+                                                         useNativeDensity,
+                                                         useRandomDensity
+                                                     })
+                                                 }));
+
+    /*
     erosionLayout->addWidget(createVerticalGroup({
                                                      createMultipleSliderGroup({
 //                                                           {"Taille", rockSizeSlider},
@@ -1130,7 +1250,7 @@ QLayout *ErosionInterface::createGUI()
                                                          useEnvObjFlowfield,
                                                          labWater, browseWaterFlow,
                                                          labAir, browseAirFlow,
-                                                         /*createHorizontalGroup({*/useSimulatedFlowfield, simulationTypeButton/*})*/
+                                                         useSimulatedFlowfield, simulationTypeButton
                                                      }),
 //                                                     lotsOfTestsButton,
                                                      createVerticalGroup({
@@ -1142,6 +1262,7 @@ QLayout *ErosionInterface::createGUI()
                                                          useRandomDensity
                                                      })
                                                  }));
+                                                     */
 
     QObject::connect(rockSizeSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionSize = newVal; });
     QObject::connect(rockStrengthSlider, &FancySlider::floatValueChanged, this, [&](float newVal) { this->erosionStrength = newVal; });
@@ -1309,4 +1430,144 @@ void ErosionInterface::hide()
     this->rocksPathSuccess.hide();
     this->rocksPathFailure.hide();
     ActionInterface::hide();
+}
+
+/*
+
+    float erosionSize = 8.f;
+    float erosionStrength = .5; // .35f;
+    int erosionQtt = 1000;
+    float rockRandomness = .1f;
+
+    int maxParticles = 1000;
+
+    float gravity = .981f;
+    float bouncingCoefficient = 0.15f; //0.15f; // 1.f;
+    float bounciness = 1.f;
+    float minSpeed = .1f;
+    float maxSpeed = 5.f;
+    float maxCapacityFactor = 1.f;
+    float erosionFactor = 1.f;
+    float depositFactor = 1.f;
+    float matterDensity = 500.f;
+    float materialImpact = 1.f;
+*/
+void ErosionInterface::thermalErosionProcess()
+{
+    erosionStrength = 0.06;
+    bouncingCoefficient = 0.01;
+    bounciness = 0.58;
+    erosionFactor = 5.f;
+    depositFactor = 5.f;
+    numberOfIterations = 80;
+    particleMaxCollisions = -1;
+    erosionSize = 12.f;
+    matterDensity = 1662.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+}
+
+void ErosionInterface::hydraulicErosionProcess()
+{
+    erosionStrength = 0.5;
+    bouncingCoefficient = 0.8;
+    bounciness = 0.58;
+    erosionFactor = 1.f;
+    depositFactor = 1.f;
+    numberOfIterations = 60;
+    particleMaxCollisions = -1;
+    erosionSize = 3.f;
+    matterDensity = 1662.f;
+    densityUsed = UnderwaterErosion::NATIVE;
+    throwFrom(JUST_ABOVE_VOXELS);
+}
+
+void ErosionInterface::gobelinsErosionProcess()
+{
+    erosionStrength = 0.5;
+    bouncingCoefficient = 0.2;
+    bounciness = 1.;
+    erosionFactor = 1.f;
+    depositFactor = 1.f;
+    numberOfIterations = 10;
+    particleMaxCollisions = 10;
+    matterDensity = 500.f;
+    continuousRotation = true;
+    densityUsed = UnderwaterErosion::LAYERED_DENSITY;
+    erosionSize = 12.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    depositFactor = 0.f;
+    erosionSize = 8.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    erosionSize = 3.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+}
+
+void ErosionInterface::desertErosionProcess()
+{
+    erosionStrength = 0.06;
+    bouncingCoefficient = 0.7;
+    bounciness = 0.6;
+    erosionFactor = 1.f;
+    depositFactor = 1.f;
+    numberOfIterations = 20;
+    particleMaxCollisions = -1;
+    matterDensity = 500.f;
+    airForce = 0.45;
+    airFlowfieldRotation = 0.f;
+    erosionSize = 12.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = -45.f;
+    erosionSize = 12.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = 45.f;
+    erosionSize = 12.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+
+    airFlowfieldRotation = 0.f;
+    erosionSize = 8.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = -45.f;
+    erosionSize = 8.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = 45.f;
+    erosionSize = 8.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+
+    airFlowfieldRotation = 0.f;
+    erosionSize = 3.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = -45.f;
+    erosionSize = 3.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+    airFlowfieldRotation = 45.f;
+    erosionSize = 3.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+}
+
+void ErosionInterface::coastalErosionProcess()
+{
+    erosionStrength = 0.06;
+    bouncingCoefficient = 0.01;
+    bounciness = 0.58;
+    erosionFactor = 5.f;
+    depositFactor = 5.f;
+    numberOfIterations = 80;
+    particleMaxCollisions = -1;
+    erosionSize = 12.f;
+    matterDensity = 1662.f;
+    throwFrom(JUST_ABOVE_VOXELS);
+}
+
+void ErosionInterface::fluidSimErosionProcess()
+{
+    erosionStrength = 0.06;
+    bouncingCoefficient = 0.01;
+    bounciness = 0.58;
+    erosionFactor = 5.f;
+    depositFactor = 5.f;
+    numberOfIterations = 80;
+    particleMaxCollisions = -1;
+    erosionSize = 12.f;
+    matterDensity = 1662.f;
+    throwFrom(JUST_ABOVE_VOXELS);
 }

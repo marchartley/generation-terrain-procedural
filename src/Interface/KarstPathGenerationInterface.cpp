@@ -14,7 +14,7 @@ KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent)
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
                                                                       });
-    QObject::connect(this->sourceControlPoint.get(), &ControlPoint::modified, this, &KarstPathGenerationInterface::computeKarst);
+    QObject::connect(this->sourceControlPoint.get(), &ControlPoint::pointModified, this, &KarstPathGenerationInterface::computeKarst);
     QObject::connect(this->fractureVector.get(), &InteractiveVector::modified, this, &KarstPathGenerationInterface::updateFracture);
     QObject::connect(this->waterHeightSlider.get(), &Slider3D::valueChanged, this, &KarstPathGenerationInterface::updateWaterHeight);
 }

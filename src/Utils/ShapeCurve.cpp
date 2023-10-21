@@ -30,7 +30,7 @@ ShapeCurve &ShapeCurve::translate(const Vector3& translation)
     return *this;
 }
 
-bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape)
+bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
 {
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
@@ -78,7 +78,7 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape)
     return (nb_intersections % 2) == 1;*/
 }
 
-float ShapeCurve::estimateDistanceFrom(const Vector3& pos)
+float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
 {
     float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
     return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
@@ -467,7 +467,7 @@ ShapeCurve &ShapeCurve::removeDuplicates()
     return *this;
 }
 
-std::vector<Vector3> ShapeCurve::closedPath()
+std::vector<Vector3> ShapeCurve::closedPath() const
 {
     std::vector<Vector3> res = this->points;
     if (!this->points.empty())

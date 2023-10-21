@@ -201,12 +201,7 @@ public:
 protected:
     bool valid = true;
 
-    };
-
-/*class Vector3Hash
-{
-
-};*/
+};
 
 template <class T>
 inline void hash_combine(std::size_t& seed, T const& v)

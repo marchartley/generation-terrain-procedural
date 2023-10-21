@@ -57,6 +57,8 @@ FastPoissonGraph<T>::FastPoissonGraph(Matrix3<U> &available_space_matrix, float 
 template<class T> template<class U>
 void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float radius, int max_tries)
 {
+    if (_available_space_matrix.getDimensions().minComp() <= radius)
+        radius = _available_space_matrix.getDimensions().minComp();
     this->poissonRadius = radius;
     // Fllowing Bridson, R. (2007). Fast Poisson disk sampling in arbitrary dimensions. SIGGRAPH sketches, 10(1).
     // Step 0 : Create a n-dim grid with cells of size r/sqrt(n) => here n = 3
@@ -66,8 +68,9 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     int prevSizeZ = _available_space_matrix.sizeZ;
     Matrix3<U> available_space_matrix = _available_space_matrix.resize(std::floor(prevSizeX / cellWidth),
                                                                        std::floor(prevSizeY / cellWidth),
-                                                                       std::floor(prevSizeZ / cellWidth),
-                                                                       RESIZE_MODE::MIN_VAL);
+                                                                       std::floor(prevSizeZ / cellWidth)/*,
+                                                                       RESIZE_MODE::MIN_VAL*/);
+//    available_space_matrix = available_space_matrix.rounded();
     available_space_matrix.raiseErrorOnBadCoord = false;
 
     radius = 1.0;

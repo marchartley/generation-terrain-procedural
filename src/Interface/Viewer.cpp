@@ -13,6 +13,8 @@
 #include <QTemporaryDir>
 #include "Graphics/RayMarching.h"
 
+// ffmpeg -f image2 -i %d.png  -c:v libx264 -vf "pad=ceil(iw/2)*2:ceil(ih/2)*2" -preset ultrafast -qp 0 out.mp4
+
 #ifdef linux
     #include "sys/stat.h"
 #endif
@@ -79,35 +81,34 @@ void Viewer::init() {
 
     std::string pathToShaders = "src/Shaders/";
 
-    std::string vShader_voxels = pathToShaders + "voxels.vert";
-    std::string fShader_voxels = pathToShaders + "voxels.frag";
+//    std::string vShader_voxels = pathToShaders + "voxels.vert";
+//    std::string fShader_voxels = pathToShaders + "voxels.frag";
     std::string vNoShader = pathToShaders + "no_shader.vert";
     std::string fNoShader = pathToShaders + "no_shader.frag";
 
-    std::string vRayMarch = pathToShaders + "test_raymarching_voxels.vert";
-    std::string fRayMarch = pathToShaders + "test_raymarching_voxels.frag";
-    this->raymarchingShader = std::make_shared<Shader>(vRayMarch, fRayMarch);
-    this->raymarchingShader->compileShadersFromSource({
-
-                                                      });
-    this->raymarchingQuad = Mesh({Vector3(-1.0f, -1.0f, 0.f),
-                                  Vector3(1.0f, -1.0f, 0.f),
-                                  Vector3(1.0f,  1.0f, 0.f),
-                                 Vector3(-1.0f, -1.0f, 0.f),
-                                 Vector3( 1.0f,  1.0f, 0.f),
-                                 Vector3(-1.0f,  1.0f)}, raymarchingShader);
+//    std::string vRayMarch = pathToShaders + "test_raymarching_voxels.vert";
+//    std::string fRayMarch = pathToShaders + "test_raymarching_voxels.frag";
+//    this->raymarchingShader = std::make_shared<Shader>(vRayMarch, fRayMarch);
+//    this->raymarchingShader->compileShadersFromSource({
+//                                                      });
+//    this->raymarchingQuad = Mesh({Vector3(-1.0f, -1.0f, 0.f),
+//                                  Vector3(1.0f, -1.0f, 0.f),
+//                                  Vector3(1.0f,  1.0f, 0.f),
+//                                 Vector3(-1.0f, -1.0f, 0.f),
+//                                 Vector3( 1.0f,  1.0f, 0.f),
+//                                 Vector3(-1.0f,  1.0f)}, raymarchingShader);
 
     glEnable              ( GL_DEBUG_OUTPUT );
 //    GlobalsGL::f()->glDebugMessageCallback( GlobalsGL::MessageCallback, 0 ); // TODO : Add back
 
     Shader::default_shader = std::make_shared<Shader>(vNoShader, fNoShader);
-    this->mainGrabber = new ControlPoint(Vector3(), 1.f, ACTIVE, false);
+    this->mainGrabber = std::make_unique<ControlPoint>(Vector3(), 1.f, ACTIVE, false);
 
 
     this->light = PositionalLight(
-                new float[4]{.5, .5, .5, 1.},
-                new float[4]{.2, .2, .2, 1.},
-                new float[4]{.5, .5, .5, 1.},
+                {.5, .5, .5, 1.},
+                {.2, .2, .2, 1.},
+                {.5, .5, .5, 1.},
                 Vector3(0.0, 0.0, -100.0)
                 );
 
@@ -119,15 +120,9 @@ void Viewer::init() {
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
 
 
-
-#ifdef _WIN32
     this->main_screenshotFolder = "screenshots/";
     this->screenshotFolder = main_screenshotFolder;
     this->mapSavingFolder = "saved_maps/";
-#elif linux
-    this->screenshotFolder = "screenshots/";
-    this->mapSavingFolder = "saved_maps/";
-#endif
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
         exit(-1);
@@ -258,6 +253,7 @@ void Viewer::drawingProcess() {
 //    std::chrono::milliseconds test;
     // Update the mouse position in the grid
     this->checkMouseOnVoxel();
+    float mouseCheckTiming = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - allProcessStart).count();
 
     this->frame_num ++;
 //    glClear(GL_DEPTH_BUFFER_BIT);
@@ -276,19 +272,19 @@ void Viewer::drawingProcess() {
 
     this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
     Material ground_material(
-                    new float[4] {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
-                    new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
-                    new float[4] {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
+                    { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
+                    {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
                     1.f // 51.2f
                     );
     Material grass_material(
-                    new float[4] { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
-                    new float[4] {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
-                    new float[4] {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                    { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
+                    {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
+                    {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
                     1.f // 51.2f
                     );
 //    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
-    float globalAmbiant[4] = {.10, .10, .10, 1.0};
+    Vector4 globalAmbiant = {.10, .10, .10, 1.0};
 
     Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
         shader->setMatrix("proj_matrix", pMatrix);
@@ -296,7 +292,7 @@ void Viewer::drawingProcess() {
         shader->setPositionalLight("light", this->light);
         shader->setMaterial("ground_material", ground_material);
         shader->setMaterial("grass_material", grass_material);
-        shader->setVector("globalAmbiant", globalAmbiant, 4);
+        shader->setVector("globalAmbiant", globalAmbiant);
         shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
         shader->setBool("isSpotlight", this->usingSpotlight);
         if (this->usingSpotlight) {
@@ -348,32 +344,25 @@ void Viewer::drawingProcess() {
         interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
     }
 
-    if (this->window()->isActiveWindow()) {
+    auto startScreenSaving = std::chrono::system_clock::now();
+    if (this->isTakingScreenshots) {
         if (makedir(".tmp/screenshots")) {
             this->saveScreenshotPNG(".tmp/screenshots/screen.png");
         }
-        if (this->isTakingScreenshots) {
-    //        if(this->screenshotIndex == 0 && voxelGrid)
-    //        {
-    //            std::ofstream outfile;
-    //            outfile.open(this->screenshotFolder + "grid_data.json", std::ios_base::trunc);
-    //            outfile << voxelGrid->toString();
-    //            outfile.close();
-    //        }
-            this->copyLastScreenshotTo(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
-    //        this->saveScreenshotPNG(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
-        }
+        this->copyLastScreenshotTo(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
     }
-
+    float screenSavingTiming = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startScreenSaving).count();
 
     auto allProcessEnd = std::chrono::system_clock::now();
 
     bool displayTiming = false;
     if (displayTiming) {
-        std::cout << "Total time/frame : " << std::chrono::duration_cast<std::chrono::milliseconds>(allProcessEnd - allProcessStart).count() << "ms" << std::endl;
+        std::cout << "Total time/frame : " << showTime(std::chrono::duration_cast<std::chrono::milliseconds>(allProcessEnd - allProcessStart).count()) << std::endl;
         for (auto& [interf, time] : interfacesTimings) {
-            std::cout << "\t" << interf->actionType << " : " << time << "ms" << std::endl;
+            std::cout << "\t" << interf->actionType << " : " << showTime(time) << std::endl;
         }
+        std::cout << "\tMouse check : " << showTime(mouseCheckTiming) << std::endl;
+        std::cout << "\tScreen saving : " << showTime(screenSavingTiming) << std::endl;
     }
 //    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the FBO for subsequent rendering
 }
@@ -419,7 +408,17 @@ void Viewer::screenshot()
     } else if (this->mapMode == MapMode::VOXEL_MODE) {
         this->voxelGrid->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap_from_voxels.png");
     }
-//    dynamic_cast<TerrainSavingInterface*>(this->interfaces["terrainSavingInterface"].get())->quickSaveAt(this->main_screenshotFolder + "shots", s_time, true, true, false);
+    //    dynamic_cast<TerrainSavingInterface*>(this->interfaces["terrainSavingInterface"].get())->quickSaveAt(this->main_screenshotFolder + "shots", s_time, true, true, false);
+}
+
+void Viewer::resetScreenshotFolderName()
+{
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+    this->screenshotFolder = "screenshots/" + std::string(s_time) + "/";
+    makedir(this->main_screenshotFolder);
 }
 
 
@@ -610,7 +609,8 @@ bool Viewer::startRecording(std::string folderUsed)
 bool Viewer::stopRecording()
 {
     std::string command = "ffmpeg -f image2 -i ";
-    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
+//    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
+    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
     if (this->screenshotIndex > 0) {
         int result = std::system(command.c_str());
         if (result != 0) {

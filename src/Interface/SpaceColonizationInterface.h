@@ -34,7 +34,7 @@ public:
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
-//    std::shared_ptr<VoxelGrid> voxelGrid;
+    void afterTerrainUpdated();
 
     std::unique_ptr<ControlPoint> startingPoint;
     std::vector<std::unique_ptr<ControlPoint>> controlPoints;

@@ -1,21 +1,21 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.7.2">
   <State stereo="false">
-    <foregroundColor blue="180" green="180" red="180"/>
-    <backgroundColor blue="127" green="127" red="127"/>
+    <foregroundColor blue="180" red="180" green="180"/>
+    <backgroundColor blue="127" red="127" green="127"/>
   </State>
-  <Display axisIsDrawn="false" FPSIsDisplayed="false" cameraIsEdited="false" gridIsDrawn="false"/>
-  <Geometry height="961" posX="0" posY="27" fullScreen="false" width="1920"/>
+  <Display axisIsDrawn="false" cameraIsEdited="false" gridIsDrawn="false" FPSIsDisplayed="false"/>
+  <Geometry fullScreen="false" posX="0" posY="27" height="961" width="1920"/>
   <Camera>
-    <Parameters fieldOfView="0.785398" orthoCoef="2.50536e-249" Type="PERSPECTIVE" zNearCoefficient="0.005" sceneRadius="500" zClippingCoefficient="1.73205">
+    <Parameters sceneRadius="500" zNearCoefficient="0.005" zClippingCoefficient="1.73205" orthoCoef="0" fieldOfView="0.785398" Type="PERSPECTIVE">
       <SceneCenter y="50" x="50" z="25"/>
     </Parameters>
-    <Stereo focusDistance="1207.11" IODist="0.062" physScreenWidth="0.5"/>
+    <Stereo physScreenWidth="0.5" focusDistance="1207.11" IODist="0.062"/>
     <ManipulatedCameraFrame>
-      <position y="-68.8908" x="39.9134" z="76.2735"/>
-      <orientation q0="-0.52501" q2="0.00317385" q1="0.0178365" q3="-0.850903"/>
-      <ManipulatedParameters zoomSens="1" transSens="1" rotSens="1" spinSens="0.3" wheelSens="1"/>
-      <ManipulatedCameraParameters zoomsOnPivotPoint="false" rotatesAroundUpVector="false" flySpeed="5">
+      <position y="109.939" x="-41.8774" z="153.446"/>
+      <orientation q2="-0.843704" q1="-0.275992" q0="0.178128" q3="0.424573"/>
+      <ManipulatedParameters rotSens="1" wheelSens="1" spinSens="0.3" zoomSens="1" transSens="1"/>
+      <ManipulatedCameraParameters flySpeed="5" rotatesAroundUpVector="false" zoomsOnPivotPoint="false">
         <sceneUpVector y="1" x="0" z="0"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>

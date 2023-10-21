@@ -19,6 +19,7 @@ public:
     Slider3D();
     Slider3D(const Vector3& positionMin, float length, float val = 0.f, float minValue = 0.f, float maxValue = 1.f, Slider3DOrientation orientation = X);
     Slider3D(const Vector3& positionMin, const Vector3& positionMax, float val = 0.f, float minValue = 0.f, float maxValue = 1.f);
+    ~Slider3D();
 
     void setPosition(const Vector3& newPos);
     void setPositions(const Vector3& newStart, const Vector3& newEnd);
@@ -46,12 +47,12 @@ public:
     Vector3 minPos;
     Vector3 maxPos;
 
-    ControlPoint *sliderControlPoint;
+    std::unique_ptr<ControlPoint> sliderControlPoint;
     Mesh sliderMesh;
 
     void init(const Vector3& positionMin, const Vector3& positionMax, float minValue = 0.f, float maxValue = 1.f, float val = 0.f);
 
-    SliderConstraint* constraint;
+    SliderConstraint* constraint = nullptr;
 };
 
 
@@ -60,12 +61,13 @@ class SliderConstraint : public qglviewer::Constraint
 public:
     SliderConstraint();
     SliderConstraint(const Vector3& minPos, const Vector3& maxPos);
+    ~SliderConstraint();
 
     virtual void constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr);
     virtual void constrainRotation(qglviewer::Quaternion& q, qglviewer::Frame* const fr);
 
 //private:
-    qglviewer::AxisPlaneConstraint* constraint;
+    qglviewer::AxisPlaneConstraint* constraint = nullptr;
 
     Vector3 minPos;
     Vector3 maxPos;

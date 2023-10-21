@@ -2064,9 +2064,98 @@ Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
     return result;
 }
 
+template<class T, class U>
+Matrix3<T> convolutionIgnoredBorders(const Matrix3<T>& initial, const Matrix3<U>& convMatrix)
+{
+    Matrix3<T> result(initial.sizeX, initial.sizeY, initial.sizeZ);
+//    this->raiseErrorOnBadCoord = false;
+
+    // Pre-calculate normalisation value
+    U normalisationValue = convMatrix.sum();
+
+    convMatrix.iterate([&](int dx, int dy, int dz) {
+        int dt_x = dx - (convMatrix.sizeX / 2);
+        int dt_y = dy - (convMatrix.sizeY / 2);
+        int dt_z = dz - (convMatrix.sizeZ / 2);
+        U convVal = convMatrix.at(dx, dy, dz);
+        initial.iterateParallel([&](int x, int y, int z) {
+            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
+            if (!result.checkCoord(cellValuePosition)) return;
+            result.at(x, y, z) += initial.at(cellValuePosition) * convVal;
+        });
+    });
+    if (normalisationValue != U()) {
+        result.iterateParallel([&](size_t i) {
+            result[i] /= normalisationValue;
+        });
+    }
+//    initial.iterateParallel([&](int x, int y, int z) {
+//        T neighboringSum = T();
+//        convMatrix.iterate([&](int dx, int dy, int dz) {
+//            int dt_x = dx - (convMatrix.sizeX / 2);
+//            int dt_y = dy - (convMatrix.sizeY / 2);
+//            int dt_z = dz - (convMatrix.sizeZ / 2);
+//            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
+//            if (!result.checkCoord(cellValuePosition)) return;
+//            neighboringSum += initial.at(cellValuePosition) * convMatrix.at(dx, dy, dz);
+//        });
+//        result.at(x, y, z) = neighboringSum;
+//        if (normalisationValue != U())
+//            result.at(x, y, z) /= normalisationValue;
+//    });
+    return result;
+}
+//template<class T, class U>
+//Matrix3<T> convolution(const Matrix3<T>& initial, const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders)
+//{
+//    Matrix3<T> result(initial.sizeX, initial.sizeY, initial.sizeZ);
+////    this->raiseErrorOnBadCoord = false;
+
+//    // Pre-calculate normalisation value
+//    U normalisationValue = convMatrix.sum();
+
+//    // Choose border handling method once before loop
+//    auto handleBorder = [&](Vector3& pos) {
+//        if (borders == CONVOLUTION_BORDERS::IGNORED && !result.checkCoord(pos))
+//            return false;
+//        if (borders == CONVOLUTION_BORDERS::MIRROR && !result.checkCoord(pos))
+//            pos = initial.getMirrorPosition(pos);
+//        else if (borders == CONVOLUTION_BORDERS::REPEAT && !result.checkCoord(pos))
+//            pos = initial.getRepeatPosition(pos);
+//        else if (borders == CONVOLUTION_BORDERS::WRAPPING && !result.checkCoord(pos))
+//            pos = initial.getWrappedPosition(pos);
+//        return true;
+//    };
+
+//    auto getVal = [&](const Vector3& pos) {
+//        if (borders == CONVOLUTION_BORDERS::ZERO_PAD && !result.checkCoord(pos))
+//            return T();
+//        return initial.at(pos);
+//    };
+
+//    iterateParallel([&](int x, int y, int z) {
+//        T neighboringSum = T();
+//        convMatrix.iterate([&](int dx, int dy, int dz) {
+//            int dt_x = dx - (convMatrix.sizeX / 2);
+//            int dt_y = dy - (convMatrix.sizeY / 2);
+//            int dt_z = dz - (convMatrix.sizeZ / 2);
+//            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
+
+//            if (handleBorder(cellValuePosition)) {
+//                neighboringSum += getVal(cellValuePosition) * convMatrix.at(dx, dy, dz);
+//            }
+//        });
+//        result.at(x, y, z) = neighboringSum;
+//        if (normalisationValue != U())
+//            result.at(x, y, z) /= normalisationValue;
+//    });
+//    return result;
+//}
+
 template<class T> template<class U>
 Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BORDERS borders) const
 {
+    //return convolutionIgnoredBorders(*this, convMatrix);
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
 //    this->raiseErrorOnBadCoord = false;
 
@@ -2083,8 +2172,6 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
             pos = getRepeatPosition(pos);
         else if (borders == CONVOLUTION_BORDERS::WRAPPING && !result.checkCoord(pos))
             pos = this->getWrappedPosition(pos);
-//        else if (borders == CONVOLUTION_BORDERS::COPY && !result.checkCoord(pos))
-//            pos = Vector3(x, y, z);
         return true;
     };
 
@@ -2093,7 +2180,22 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
             return T();
         return this->at(pos);
     };
-
+    /*
+    convMatrix.iterate([&](int dx, int dy, int dz) {
+        int dt_x = dx - (convMatrix.sizeX / 2);
+        int dt_y = dy - (convMatrix.sizeY / 2);
+        int dt_z = dz - (convMatrix.sizeZ / 2);
+        auto convVal = convMatrix(dx, dy, dz);
+        iterateParallel([&](int x, int y, int z) {
+            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
+//            if (handleBorder(cellValuePosition)) {
+                result.at(x, y, z) += (handleBorder(cellValuePosition) ? getVal(cellValuePosition) * convVal : T());
+//            }
+        });
+    });
+    if (normalisationValue != U())
+        result /= normalisationValue;
+    */
     iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
         convMatrix.iterate([&](int dx, int dy, int dz) {
@@ -2102,41 +2204,14 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
             int dt_z = dz - (convMatrix.sizeZ / 2);
             Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
 
-            if (handleBorder(cellValuePosition)) {
-                neighboringSum += getVal(cellValuePosition) * convMatrix.at(dx, dy, dz);
-            }
+//            if (handleBorder(cellValuePosition)) {
+                neighboringSum += (handleBorder(cellValuePosition) ? getVal(cellValuePosition) * convMatrix.at(dx, dy, dz) : T());
+//            }
         });
         result.at(x, y, z) = neighboringSum;
         if (normalisationValue != U())
             result.at(x, y, z) /= normalisationValue;
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < result.sizeX; x++) {
-        for (int y = 0; y < result.sizeY; y++) {
-            for (int z = 0; z < result.sizeZ; z++) {
-                T neighboringSum = T();
-                for (int dx = 0; dx < convMatrix.sizeX; dx++) {
-                    for (int dy = 0; dy < convMatrix.sizeY; dy++) {
-                        for (int dz = 0; dz < convMatrix.sizeZ; dz++) {
-                            int dt_x = dx - (convMatrix.sizeX / 2);
-                            int dt_y = dy - (convMatrix.sizeY / 2);
-                            int dt_z = dz - (convMatrix.sizeZ / 2);
-                            Vector3 cellValuePosition(x + dt_x, y + dt_y, z + dt_z);
-
-                            if (handleBorder(cellValuePosition)) {
-                                T cellValue = this->at(cellValuePosition);
-                                neighboringSum += cellValue * convMatrix.at(dx, dy, dz);
-                            }
-                        }
-                    }
-                }
-                result.at(x, y, z) = neighboringSum;
-                if (normalisationValue != T())
-                    result.at(x, y, z) /= normalisationValue;
-            }
-        }
-    }*/
-//    this->raiseErrorOnBadCoord = true;
     return result;
 }
 

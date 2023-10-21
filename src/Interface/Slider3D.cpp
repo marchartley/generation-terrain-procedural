@@ -18,6 +18,12 @@ Slider3D::Slider3D(const Vector3& positionMin, const Vector3& positionMax, float
     this->init(positionMin, positionMax, minValue, maxValue, val);
 }
 
+Slider3D::~Slider3D()
+{
+    if (this->constraint)
+        delete this->constraint;
+}
+
 void Slider3D::setPosition(const Vector3& newPos)
 {
     Vector3 movement = newPos - this->minPos;
@@ -83,13 +89,13 @@ void Slider3D::init(const Vector3& positionMin, const Vector3& positionMax, floa
     this->maxPos = positionMax;
     this->minValue = minValue;
     this->maxValue = maxValue;
-    this->sliderControlPoint = new ControlPoint(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
+    this->sliderControlPoint = std::make_unique<ControlPoint>(remap(val, minValue, maxValue, minPos, maxPos), 5.f);
     this->constraint = new SliderConstraint(positionMin, positionMax);
     this->sliderControlPoint->custom_constraint = constraint;
     this->sliderMesh.fromArray({minPos, maxPos});
 //    this->sliderMesh.shareShader(this->sliderControlPoint->mesh);
 
-    QObject::connect(this->sliderControlPoint, &ControlPoint::modified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
+    QObject::connect(this->sliderControlPoint.get(), &ControlPoint::pointModified, this, [=]() { Q_EMIT this->valueChanged(this->getValue()); });
 }
 
 
@@ -105,6 +111,12 @@ SliderConstraint::SliderConstraint(const Vector3& minPos, const Vector3& maxPos)
     this->constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FORBIDDEN);
     Vector3 dir = maxPos - minPos;
     this->constraint->setTranslationConstraintDirection(qglviewer::Vec(dir.x, dir.y, dir.z));
+}
+
+SliderConstraint::~SliderConstraint()
+{
+    if (this->constraint)
+        delete this->constraint;
 }
 
 void SliderConstraint::constrainTranslation(qglviewer::Vec& t, qglviewer::Frame* const fr) {

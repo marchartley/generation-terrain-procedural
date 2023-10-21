@@ -72,7 +72,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 {
     this->setVoxelValues(layerBased.voxelize(fixedHeight == -1 ? layerBased.getSizeZ() * 2.f : fixedHeight));
-//    this->smoothVoxels();
+    this->smoothVoxels();
 }
 
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
@@ -606,6 +606,9 @@ void VoxelGrid::limitVoxelValues(float limitedValue, bool increaseHeightIfNeeded
                     if (values.at(x, y, z) > limitedValue) {
                         values.at(x, y, z + 1) += values.at(x, y, z) - limitedValue;
                         values.at(x, y, z) = limitedValue;
+                    }
+                    else if (values.at(x, y, z) < -limitedValue) {
+                        values.at(x, y, z) = -limitedValue;
                     }
                 }
             }
@@ -1148,6 +1151,17 @@ void VoxelGrid::retrieveMap(std::string filename)
     }
 //    finalSize.z *= 2.f;
 //    _cachedVoxelValues.resize(finalSize);
+//    GridF temp = GridF(_cachedVoxelValues.getDimensions() + Vector3(0, 0, 20));
+//    _cachedVoxelValues = temp.paste(_cachedVoxelValues);
+    /*_cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
+        if (z > 30 && _cachedVoxelValues(x, y, z)) {
+            _cachedVoxelValues(x, y, z) -= .5f;
+        }
+    });*/
+    _cachedVoxelValues.iterateParallel([&](size_t i) {
+        if (_cachedVoxelValues[i] < -1.f)
+            _cachedVoxelValues[i] = -1.f;
+    });
     this->fromCachedData();
 }
 

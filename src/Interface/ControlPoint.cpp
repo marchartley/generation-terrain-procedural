@@ -330,6 +330,7 @@ ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state,
     this->stillOnInitialState = false; // true;
     this->prevPosition = pos;
     this->GrabberStateColor = ControlPoint::default_GrabberStateColor;
+    this->currentlyManipulated = false;
     if (!useManipFrame) {
         this->removeFromMouseGrabberPool();
     } else if (!this->isInMouseGrabberPool()) {
@@ -341,7 +342,7 @@ ControlPoint::ControlPoint(const Vector3& pos, float radius, GrabberState state,
     this->translationMeshes.show();
 
     QObject::connect(this, &qglviewer::ManipulatedFrame::modified, this, [=](){
-        Q_EMIT ControlPoint::modified();
+        Q_EMIT ControlPoint::pointModified();
         if ((this->prevPosition - this->getPosition()).norm2() > 1.0) {
             this->prevPosition = this->getPosition();
 //        if (this->positionsHistory.empty() || this->positionsHistory.back() != this->prevPosition) {
@@ -474,7 +475,7 @@ void ControlPoint::updateSphere()
         }
     }
     if (this->useManipFrame && (this->isManipulated() == false && this->currentlyManipulated == true)) {
-        Q_EMIT this->released();
+        Q_EMIT this->pointReleased();
         Vector3 translation = this->getPosition() - initialPosition;
         Vector3 rotation = this->getRotation();
         if (translation.norm2() > 0) {

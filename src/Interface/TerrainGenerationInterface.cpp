@@ -96,8 +96,8 @@ void TerrainGenerationInterface::voxelsToImplicit()
 void TerrainGenerationInterface::voxelsToAll()
 {
     voxelsToHeightmap();
-//    voxelsToLayers();
-    heightmapToLayers();
+    voxelsToLayers();
+//    heightmapToLayers();
     voxelsToImplicit();
 }
 
@@ -263,7 +263,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
-    Vector3 terrainSize = Vector3(100, 100, 50); //Vector3(128, 128, 64);
+//    Vector3 terrainSize = Vector3(300, 300, 50); //Vector3(128, 128, 64);
+    Vector3 terrainSize = Vector3(10, 10, 10); //Vector3(128, 128, 64);
     if (this->voxelGrid)
         terrainSize = voxelGrid->getDimensions();
 
@@ -402,10 +403,18 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
     this->implicitTerrain->addChild(reef->createImplicitPatch());
     this->implicitTerrain->addChild(passe->createImplicitPatch());
 */
-    std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+/*
+    std::cout << "To layers   : " << timeIt([&](){ this->layerGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+    std::cout << "To voxels   : " << timeIt([&](){ this->voxelGrid->fromLayerBased(*layerGrid); }) << "ms" << std::endl;
+    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromLayerGrid(*layerGrid); }) << "ms" << std::endl;
+    */
+//    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+
     std::cout << "To voxels: " << timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
+    std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromVoxelGrid(*voxelGrid); }) << "ms" << std::endl;
 //    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
     std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromVoxelGrid(*voxelGrid.get()); }) << "ms" << std::endl;
+
 }
 
 void TerrainGenerationInterface::saveTerrain(std::string filename, Vector3 dimensions)
@@ -1051,7 +1060,14 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
         if (this->voxelGrid == nullptr) {
             std::cerr << "No voxel grid to display" << std::endl;
         } else {
-            GridF values = voxelGrid->getVoxelValues();
+            GridF values = voxelGrid->getVoxelValues().meanSmooth(2, 2, 2, true);//.meanSmooth(3, 3, 3, true);
+            for (int x = 0; x < values.sizeX; x++) {
+                for (int y = 0; y < values.sizeY; y++) {
+                    for (int z = 0; z < 2; z++) {
+                        values(x, y, z) = std::max(std::abs(values(x, y, z)), .0f);
+                    }
+                }
+            }
             if (marchingCubeMesh.vertexArray.size() != values.size()) {
                 std::vector<Vector3> points(values.size());
                 for (size_t i = 0; i < points.size(); i++) {
