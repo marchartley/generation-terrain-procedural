@@ -13,7 +13,8 @@
 #include <random>
 //#include <QOpenGLContext>
 // #include <glad/glad.h>
-#include <QOpenGLFunctions_4_5_Core>
+#include <QOpenGLFunctions_4_5_Compatibility>
+//#include <QOpenGLFunctions_4_6_Compatibility>
 #include <QtWidgets>
 //#include <QOpenGLFunctions>
 #include <fstream>
@@ -66,10 +67,13 @@ public:
     static QOpenGLContext *_context;
     static QOpenGLContext *context();
     static QOpenGLFunctions* _f;
-    static QOpenGLFunctions_4_5_Core *f(); // Alias for ef()
+//    static QOpenGLFunctions_4_6_Compatibility *f(); // Alias for ef()
+    static QOpenGLFunctions_4_5_Compatibility *f(); // Alias for ef()
     static QOpenGLExtraFunctions* _ef;
-    static QOpenGLFunctions_4_5_Core* f45();
-    static QOpenGLFunctions_4_5_Core* _ef45;
+    static QOpenGLFunctions_4_5_Compatibility* f45();
+    static QOpenGLFunctions_4_5_Compatibility* _ef45;
+//    static QOpenGLFunctions_4_6_Compatibility* f46();
+//    static QOpenGLFunctions_4_6_Compatibility* _ef46;
     static QOpenGLExtraFunctions *ef();
     static GLuint _renderingProgram;
     static GLuint renderingProgram();

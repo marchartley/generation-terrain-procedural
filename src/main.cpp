@@ -2,6 +2,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 
+#undef interface
+
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
 //#include "sim-fluid-loganzartman/Game.hpp"
@@ -195,7 +197,7 @@ int main(int argc, char *argv[])
 
     QGLFormat glFormat;
     glFormat.setVersion(4, 5);
-    glFormat.setProfile(QGLFormat::CoreProfile);
+    glFormat.setProfile(QGLFormat::CompatibilityProfile);
     glFormat.setSampleBuffers(true);
     glFormat.setDefaultFormat(glFormat);
     glFormat.setSwapInterval(1);

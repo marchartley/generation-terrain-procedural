@@ -59,17 +59,22 @@ win32 {
     INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0"
 #    INCLUDEPATH *= "C:\Program Files\Python39\include"
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include"
-    INCLUDEPATH *= "C:\Qt\libQGLViewer-2.7.2"
+    INCLUDEPATH *= "D:\code\Qt\libQGLViewer-2.7.2"
     INCLUDEPATH *= "src\third-party\glad\include"
     INCLUDEPATH *= "src\third-party\glfw\include"
     INCLUDEPATH *= "src\third-party\glm"
+    INCLUDEPATH *= "src\third-party\boost_1_66_0"
     INCLUDEPATH *= "src\third-party"
+
+    INCLUDEPATH *= "C:\Users\Marc\Downloads\libpng-1.2.37-lib\include"
 #    INCLUDEPATH *= C:\codes\CPP\eigen
 #    INCLUDEPATH *= "C:/Program Files/OpenVDB/include"
     # INCLUDEPATH *= C:\Programs_installations\vcpkg\installed\x64-windows\include
 #    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib"
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib"
     LIBS *= -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer"
+
+    LIBS *= -L"C:\Users\Marc\Downloads\libpng-1.2.37-lib\lib\libpng.lib"
 
     LIBS *= -lQGLViewer2 -lOpengl32
 #    LIBS *= -LC:\Programs_installations\vcpkg\installed\x64-windows\lib -ltbb -ltbbmalloc -LC:\Programs_installations\vcpkg\installed\x64-windows\debug\bin -ltbb_debug

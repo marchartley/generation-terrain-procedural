@@ -54,6 +54,7 @@ Viewer::~Viewer()
 }
 
 void Viewer::init() {
+    QGLViewer::init();
     restoreStateFromFile();
     setSceneRadius(500.0);
     glEnable(GL_LIGHT0);
@@ -137,7 +138,7 @@ void Viewer::init() {
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
-    QGLViewer::init();
+//    QGLViewer::init();
 }
 
 void Viewer::draw() {
