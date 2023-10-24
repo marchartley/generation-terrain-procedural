@@ -273,6 +273,7 @@ void ViewerInterface::setupUi()
     QDockWidget* displayOptionWidget = new QDockWidget("Affichage", this);
     displayOptionWidget->setFeatures(QDockWidget::DockWidgetFloatable);
     this->addDockWidget(Qt::DockWidgetArea::RightDockWidgetArea, displayOptionWidget);
+//    return;
 
     this->viewer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
@@ -349,8 +350,8 @@ void ViewerInterface::setupUi()
     }
 
     CheckboxElement* displayAsComparisonTerrainButton = new CheckboxElement("Comparison terrain");
-    displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});//&TerrainGenerationInterface::changeDisplayToComparativeMode, terrainGenerationInterface);
     displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
+    displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});//&TerrainGenerationInterface::changeDisplayToComparativeMode, terrainGenerationInterface);
 
     SliderElement* waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
     waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });

@@ -12,7 +12,8 @@ FastNoiseLite random_gen::perlinNoise;
 QOpenGLContext* GlobalsGL::_context;
 QOpenGLFunctions* GlobalsGL::_f;
 QOpenGLExtraFunctions* GlobalsGL::_ef;
-QOpenGLFunctions_4_5_Core* GlobalsGL::_ef45;
+QOpenGLFunctions_4_5_Compatibility* GlobalsGL::_ef45;
+//QOpenGLFunctions_4_6_Compatibility* GlobalsGL::_ef46;
 GLuint GlobalsGL::_renderingProgram;
 GLuint GlobalsGL::vao[numVAOs];
 GLuint GlobalsGL::vbo[numVBOs];
@@ -24,24 +25,42 @@ QOpenGLContext* GlobalsGL::context() {
         GlobalsGL::_context = QOpenGLContext::currentContext();
     return GlobalsGL::_context;
 }
-QOpenGLFunctions_4_5_Core* GlobalsGL::f() {
+QOpenGLFunctions_4_5_Compatibility* GlobalsGL::f() {
     return f45();
-//    return GlobalsGL::ef();
 }
+/*QOpenGLFunctions_4_6_Compatibility* GlobalsGL::f() {
+    return f46();
+}*/
 
-QOpenGLFunctions_4_5_Core *GlobalsGL::f45()
+QOpenGLFunctions_4_5_Compatibility *GlobalsGL::f45()
 {
     if (GlobalsGL::_ef45 == nullptr) {
-        _ef45 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_5_Core>();
-        if(!_ef45) {
+        _ef45 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_5_Compatibility>();
+        if (_ef45) {
+            _ef45->initializeOpenGLFunctions();
+        } else {
             std::cerr << "No access to GL 4.5 functions" << std::endl;
         }
-        _ef45->initializeOpenGLFunctions();
-//        _ef45->glInvalidateFramebuffer()
+//        std::cout << _ef45->initializeOpenGLFunctions() << std::endl;
+//        _ef45->glInvalidateFramebuffer();
 //        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
     }
     return GlobalsGL::_ef45;
 }
+/*
+QOpenGLFunctions_4_6_Compatibility *GlobalsGL::f46()
+{
+    if (GlobalsGL::_ef46 == nullptr) {
+        _ef46 = GlobalsGL::context()->versionFunctions<QOpenGLFunctions_4_6_Compatibility>();
+        if(!_ef46) {
+            std::cerr << "No access to GL 4.6 functions" << std::endl;
+        }
+        std::cout << _ef46->initializeOpenGLFunctions() << std::endl;
+//        _ef45->glInvalidateFramebuffer();
+//        GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
+    }
+    return GlobalsGL::_ef46;
+}*/
 QOpenGLExtraFunctions* GlobalsGL::ef() {
     if (GlobalsGL::_ef == nullptr) {
         GlobalsGL::_ef = GlobalsGL::context()->extraFunctions();
