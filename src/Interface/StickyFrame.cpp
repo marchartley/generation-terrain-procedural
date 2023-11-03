@@ -59,7 +59,8 @@ void StickyFrame::clearContent()
 
 StickyFrame* StickyFrame::setContent(QLayout* contentLayout)
 {
-    qDeleteAll(content->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
+//    qDeleteAll(content->findChildren<QWidget *>(QString(), Qt::FindDirectChildrenOnly));
+    clearContent();
     delete content->layout();
     content->setSizePolicy(QSizePolicy::Policy::Expanding, QSizePolicy::Policy::Expanding);
     content->setLayout(contentLayout);

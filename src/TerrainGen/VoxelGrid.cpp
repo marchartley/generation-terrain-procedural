@@ -77,7 +77,8 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
 {
-    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
+//    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
+    this->setVoxelValues(implicitTerrain->getVoxelized(this->getDimensions()).meanSmooth(3, 3, 3, true));
 //    this->smoothVoxels();
 }
 
@@ -567,7 +568,7 @@ size_t VoxelGrid::getCurrentHistoryIndex() const
     //    return this->chunks.front()->currentHistoryIndex;
 }
 
-GridF VoxelGrid::getHeights()
+GridF VoxelGrid::getHeights() const
 {
     return _cachedMaxHeights;
 }

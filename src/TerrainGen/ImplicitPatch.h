@@ -57,25 +57,25 @@ public:
         None
     };
 
-    virtual float evaluate(const Vector3& pos) = 0;
+    virtual float evaluate(const Vector3& pos) const = 0;
 //    virtual std::map<TerrainMaterial, float> getMaterials(const Vector3& pos) = 0;
-    virtual std::map<TerrainTypes, float> getMaterials(const Vector3& pos) = 0;
+    virtual std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const = 0;
     virtual float getMaxHeight(const Vector3& pos);
     virtual float getMinHeight(const Vector3& pos);
     virtual float getMinimalHeight(AABBox BBox);
     virtual float getMaximalHeight(AABBox BBox);
     virtual float getMinimalHeight(const Vector3 &minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
     virtual float getMaximalHeight(const Vector3& minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
-    std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float> > getBinaryMaterialsAndTotalEvaluation(const Vector3& pos);
+    std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float> > getBinaryMaterialsAndTotalEvaluation(const Vector3& pos) const;
 
-    virtual AABBox getSupportBBox() = 0;
-    virtual AABBox getBBox() = 0;
-    Vector3 getDimensions();
-    Vector3 getSupportDimensions();
+    virtual AABBox getSupportBBox() const = 0;
+    virtual AABBox getBBox() const = 0;
+    Vector3 getDimensions() const;
+    Vector3 getSupportDimensions() const;
 
     virtual GridV3 getNormals();
-    Vector3 getNormal(const Vector3& pos);
+    Vector3 getNormal(const Vector3& pos) const;
 
     void setIndex(int newIndex = -1);
 
@@ -119,9 +119,9 @@ public:
 
 //    virtual size_t getCurrentHistoryIndex() const;
 
-    virtual float getSizeX() { return this->getBBox().max().x; }
-    virtual float getSizeY() { return this->getBBox().max().y; }
-    virtual float getSizeZ() { return this->getBBox().max().z; }
+    virtual float getSizeX() const { return this->getBBox().max().x; }
+    virtual float getSizeY() const { return this->getBBox().max().y; }
+    virtual float getSizeZ() const { return this->getBBox().max().z; }
 
     GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
@@ -179,11 +179,11 @@ class ImplicitPrimitive : public ImplicitPatch {
 public:
     ImplicitPrimitive();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -217,10 +217,10 @@ class ImplicitNaryOperator : public ImplicitPatch {
 public:
     ImplicitNaryOperator();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -247,23 +247,23 @@ class ImplicitBinaryOperator : public ImplicitNaryOperator {
 public:
     ImplicitBinaryOperator();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
-    float evaluateFromAandB(float evalA, float evalB);
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
+    float evaluateFromAandB(float evalA, float evalB) const;
 
-    float evaluateA(const Vector3& pos);
-    float evaluateB(const Vector3& pos);
+    float evaluateA(const Vector3& pos) const;
+    float evaluateB(const Vector3& pos) const;
 
-    std::map<TerrainTypes, float> getMaterialsA(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterialsB(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(const Vector3& pos);
+    std::map<TerrainTypes, float> getMaterialsA(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterialsB(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(const Vector3& pos) const;
 
     bool contains(PredefinedShapes shape);
     virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -274,8 +274,8 @@ public:
     void swapAB();
 
 
-    Vector3 getEvaluationPositionForComposableA(const Vector3& pos);
-    Vector3 getEvaluationPositionForComposableB(const Vector3& pos);
+    Vector3 getEvaluationPositionForComposableA(const Vector3& pos) const;
+    Vector3 getEvaluationPositionForComposableB(const Vector3& pos) const;
 
     virtual ImplicitPatch* copy() const;
     virtual void addChild(ImplicitPatch* newChild, int index);
@@ -283,8 +283,8 @@ public:
 
 //    ImplicitPatch* composableA = nullptr;
 //    ImplicitPatch* composableB = nullptr;
-    ImplicitPatch*& composableA();
-    ImplicitPatch*& composableB();
+    ImplicitPatch* composableA() const;
+    ImplicitPatch* composableB() const;
 
     CompositionFunction composeFunction;
     PositionalLabel positionalB;
@@ -305,7 +305,7 @@ public:
         transformations.emplace_back(std::move(transform), std::move(inverse));
     }
 
-    float evaluate(const Vector3& point);
+    float evaluate(const Vector3& point) const;
 
     void addTranslation(const Vector3& translation);
 
@@ -319,10 +319,10 @@ public:
     Vector3 inverseTransform(const Vector3& pos) const;
 
 
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     std::string toString();
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
@@ -339,7 +339,7 @@ public:
     virtual void addChild(ImplicitPatch* newChild, int index = 0);
     virtual void deleteAllChildren();
 
-    ImplicitPatch*& composableA();
+    ImplicitPatch* composableA() const;
 
     void translate(const Vector3& translation);
     void rotate(const Vector3& angles); //float angleX, float angleY, float angleZ);

@@ -2,7 +2,7 @@
   {
     "name": "Passe",
     "type": "curve",
-    "rule": "d2(Reef) - <current.vel,Reef.normal>",
+    "rule": "d2(Reef - pos)^8 - <current.dir dot Reef.normal> * current.vel",
     "flow": {
       "direction": 1.0,
       "normal": 0.1,
@@ -20,7 +20,7 @@
   {
     "name": "Reef",
     "type": "curve",
-    "rule": "d2(Island.center)",
+    "rule": "(d(Lagoon - pos))^3",
     "flow": {
       "direction": 0.1,
       "normal": 0.1,
@@ -29,7 +29,7 @@
     "sand": 0.1,
     "dimensions": {
       "x": 10,
-      "y": 0,
+      "y": 30,
       "z": 0
     },
     "geometry": "MountainChain",
@@ -38,7 +38,7 @@
   {
     "name": "FrontReef",
     "type": "curve",
-    "rule": "d2(Island.center)",
+    "rule": "d2(Reef - pos)",
     "flow": {
       "direction": 0.0,
       "normal": 0.5,
@@ -51,12 +51,12 @@
       "z": 0
     },
     "geometry": "ParametricTunnel",
-    "material": "Water"
+    "material": "Coral"
   },
   {
     "name": "Lagoon",
     "type": "area",
-    "rule": "",
+    "rule": "d2(Island.center - pos)^8",
     "flow": {
       "direction": 1.0,
       "normal": 0.0,
@@ -64,9 +64,9 @@
     },
     "sand": 0.1,
     "dimensions": {
-      "x": 10,
+      "x": 50,
       "y": 0,
-      "z": 0
+      "z": 5
     },
     "geometry": "Polygon",
     "material": "sand"
@@ -92,7 +92,7 @@
   {
     "name": "Beach",
     "type": "area",
-    "rule": "",
+    "rule": "d(Island - pos)^5",
     "flow": {
       "direction": 0.1,
       "normal": 0.0,
@@ -110,7 +110,7 @@
   {
     "name": "Boulder",
     "type": "point",
-    "rule": "d2(Reef) - 5 - current.vel",
+    "rule": "(d2(Reef - pos)) - 5 - current.vel",
     "flow": 0.0,
     "sand": 0.4,
     "dimensions": {
@@ -124,7 +124,7 @@
   {
     "name": "Delta",
     "type": "curve",
-    "rule": "d2(Passe.end)",
+    "rule": "d2(Passe.end - pos)^8",
     "flow": {
       "direction": 0.8,
       "normal": 0.8,

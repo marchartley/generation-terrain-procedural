@@ -13,6 +13,7 @@
 #include <iostream>
 #include "Interface/Interface.h"
 #include "EnvObject/EnvObject.h"
+#include "EnvObject/ExpressionParser.h"
 #include "FluidSimulation/OpenFoamParser.h"
 
 #include <chrono>
@@ -25,6 +26,42 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+//    ExpressionParser parser;
+//    std::string formula = "d2(Reef) - <current.vel dot Reef.normal>";
+
+//    bool check = parser.validate(formula);
+
+//    std::cout << check << std::endl;
+
+//    return 0;
+
+    /*ExpressionParser parser;
+//    auto myFunction = parser.parse("32 + d(p cross q)", {{"p", Vector3()}, {"q", Vector3()}});
+    Vector3 testP, testQ;
+    bool check1 = parser.validate("32 + d(p cross q)", {{"p", testP}, {"q", testQ}});
+    bool check2 = parser.validate("32 + d(p cross q)", {{"p", testP}});
+    bool check3 = parser.validate("32 + d(p cross q)>", {{"p", testP}, {"q", testQ}});
+    bool check4 = parser.validate("32 + d(<p cross q)", {{"p", testP}, {"q", testQ}});
+
+    testP = Vector3(1, 10, 0);
+    testQ = Vector3(10, 0, 0);
+
+    std::cout << check1 << " => " << (check1 ? std::to_string(parser.parse("32 + d(p cross q)", {{"p", testP}, {"q", testQ}})({{"p", testP}, {"q", testQ}})) : "Not passed") << std::endl;
+    std::cout << check2 << " => " << (check2 ? std::to_string(parser.parse("32 + d(p cross q)", {{"p", testP}})({{"p", testQ}, {"q", testP}})) : "Not passed") << std::endl;
+    std::cout << check3 << " => " << (check3 ? std::to_string(parser.parse("32 + d(p cross q)>", {{"p", testP}, {"q", testQ}})({{"p", testP}, {"q", testQ}})) : "Not passed") << std::endl;
+    std::cout << check4 << " => " << (check4 ? std::to_string(parser.parse("32 + d(<p cross q)", {{"p", testP}, {"q", testQ}})({{"p", testP}, {"q", testQ}})) : "Not passed") << std::endl;
+    return 0;*/
+    /*while (true) {
+        std::string formula;
+        std::string vecAsString;
+        std::cout << "f(x) = " << std::flush;
+        getline(std::cin, formula);
+        std::cout << "p = " << std::flush;
+        getline(std::cin, vecAsString);
+        std::vector<std::string> splitted = split(vecAsString, " ");
+        Vector3 p(std::stof(splitted[0]), std::stof(splitted[1]), std::stof(splitted[2]));
+        std::cout << "f(" << p << ") = " << parser.parse(formula, {{"p", p}})(p) << std::endl;
+    }*/
     /*BSpline spline({
                        Vector3(0, 10, 0),
                        Vector3(1, 10, 0),
@@ -366,7 +403,38 @@ int main(int argc, char *argv[])
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
 
-    EnvObject::readFile("saved_maps/primitives.json");
+//    EnvObject::readFile("saved_maps/primitives.json");
+
+    /*
+    GridV3 grid(100, 100, 1);
+    BSpline curve({
+                      Vector3(0, 0, 0),
+                      Vector3(100, 100, 0),
+                      Vector3(0, 100, 0),
+                      Vector3(100, 0, 0)
+                  });
+    for (int intensity = 0; intensity < 10; intensity++) {
+        for (auto& p : curve)
+            p += Vector3::random(intensity * 10.f).xy();
+        std::cout << curve.toString() << std::endl;
+        grid.reset();
+        for (float factor : {1.f, 2.f, 10.f, 50.f, 100.f}) {
+            std::cout << "Subdivision x" << factor << " : " << showTime(timeIt([&]() {
+                grid.iterateParallel([&](const Vector3& pos) {
+                    auto closestTime = curve.estimateClosestTime(pos, 1e-5, factor);
+                    float dist = (pos - curve.getPoint(closestTime)).norm2();
+                    grid(pos).x = std::max(grid(pos).x, 1.f - std::clamp(dist * .5f , 0.f, 1.f));
+                });
+            })) << std::endl;
+            auto points = curve.getPath(500);
+            for (const auto& p : points) {
+                grid(p).y = 1;
+            }
+            Plotter::get()->addImage(grid);
+            Plotter::get()->exec();
+        }
+    }
+    return 0;*/
 
     ViewerInterface vi;
     vi.show();

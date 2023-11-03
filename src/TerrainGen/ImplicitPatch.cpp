@@ -112,7 +112,7 @@ float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxB
     return maxHeight;
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos) const
 {
     return this->getBinaryMaterialsAndTotalEvaluation(pos);
     /*std::map<TerrainTypes, float> materials = this->getMaterials(pos);
@@ -124,7 +124,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndT
     return {totalValue, materials};*/
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos) const
 {
     std::map<TerrainTypes, float> materials = this->getMaterials(pos);
     float totalValue = 0.f;
@@ -135,13 +135,13 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     return {totalValue, {{SAND, totalValue}}};
 }
 
-Vector3 ImplicitPatch::getDimensions()
+Vector3 ImplicitPatch::getDimensions() const
 {
     auto AABBox = this->getBBox();
     return AABBox.dimensions();
 }
 
-Vector3 ImplicitPatch::getSupportDimensions()
+Vector3 ImplicitPatch::getSupportDimensions() const
 {
     auto AABBox = this->getSupportBBox();
     return AABBox.dimensions();
@@ -157,7 +157,7 @@ GridV3 ImplicitPatch::getNormals()
     return normals;
 }
 
-Vector3 ImplicitPatch::getNormal(const Vector3& pos)
+Vector3 ImplicitPatch::getNormal(const Vector3& pos) const
 {
     float delta = 1e-3; // Not too big, not too small...
 
@@ -409,7 +409,7 @@ ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, 
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
     primitive->dimensions = dimensions;
-    std::cout << dimensions << std::endl;
+//    std::cout << dimensions << std::endl;
 
     return primitive;
 }
@@ -492,7 +492,7 @@ ImplicitPrimitive::ImplicitPrimitive()
     this->parametersProvided = {-1.f}; // Just to have an element at first
 }
 
-float ImplicitPrimitive::evaluate(const Vector3& pos)
+float ImplicitPrimitive::evaluate(const Vector3& pos) const
 {
     auto [minPos, maxPos] = this->getBBox();
     auto [minSupportPos, maxSupportPos] = this->getSupportBBox();
@@ -534,12 +534,12 @@ float ImplicitPrimitive::evaluate(const Vector3& pos)
     return evaluation;
 }
 
-std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos) const
 {
     return {{this->material, this->evaluate(pos)}};
 }
 
-AABBox ImplicitPrimitive::getSupportBBox()
+AABBox ImplicitPrimitive::getSupportBBox() const
 {
     Vector3 margin = (this->supportDimensions - this->dimensions) * .5f;
     if (!this->supportDimensions.isValid() || this->supportDimensions == Vector3())
@@ -547,7 +547,7 @@ AABBox ImplicitPrimitive::getSupportBBox()
     return {this->position - margin, this->position + this->dimensions + margin};
 }
 
-AABBox ImplicitPrimitive::getBBox()
+AABBox ImplicitPrimitive::getBBox() const
 {
     return {this->position, this->position + this->dimensions};
 }
@@ -742,7 +742,7 @@ ImplicitBinaryOperator::ImplicitBinaryOperator()
     this->composables = std::vector<ImplicitPatch*>(2);
 }
 
-float ImplicitBinaryOperator::evaluate(const Vector3& pos)
+float ImplicitBinaryOperator::evaluate(const Vector3& pos) const
 {
     // Get the function, depending on the chosen operator
     float evalA = this->evaluateA(pos);
@@ -769,7 +769,7 @@ float ImplicitBinaryOperator::evaluate(const Vector3& pos)
     */
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos) const
 {
     // Get materials on A, get materials on B
     // Take the operator final evaluation
@@ -899,7 +899,7 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
     return result;
 }
 
-float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
+float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB) const
 {
     if (this->withIntersectionOnB && evalA < ImplicitPatch::isovalue) {
         return evalA; // TODO: Check if we need to use "isovalue" in the condition
@@ -918,39 +918,39 @@ float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
     return evaluation;
 }
 
-float ImplicitBinaryOperator::evaluateA(const Vector3& pos)
+float ImplicitBinaryOperator::evaluateA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
 
     return this->composableA()->evaluate(evaluationPosA);
 }
 
-float ImplicitBinaryOperator::evaluateB(const Vector3& pos)
+float ImplicitBinaryOperator::evaluateB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
 
     return this->composableB()->evaluate(evaluationPosB);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterials(evaluationPosA);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterials(evaluationPosB);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterialsAndTotalEvaluation(evaluationPosA);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterialsAndTotalEvaluation(evaluationPosB);
@@ -966,7 +966,7 @@ std::vector<ImplicitPatch *> ImplicitBinaryOperator::findAll(PredefinedShapes sh
     return vectorMerge(this->composableA()->findAll(shape), this->composableB()->findAll(shape));
 }
 
-AABBox ImplicitBinaryOperator::getSupportBBox()
+AABBox ImplicitBinaryOperator::getSupportBBox() const
 {
     auto AABBoxA = this->composableA()->getSupportBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -993,7 +993,7 @@ AABBox ImplicitBinaryOperator::getSupportBBox()
     return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
-AABBox ImplicitBinaryOperator::getBBox()
+AABBox ImplicitBinaryOperator::getBBox() const
 {
     auto AABBoxA = this->composableA()->getBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -1095,7 +1095,10 @@ void ImplicitBinaryOperator::updateCache()
 void ImplicitBinaryOperator::swapAB()
 {
     if (this->composableB() != nullptr) {
-        std::swap(this->composableA(), this->composableB());
+        auto tmp = this->composableA();
+        this->composables[0] = this->composableB();
+        this->composables[1] = tmp;
+        //std::swap(this->composableA(), this->composableB());
         this->composableA()->updateCache();
         this->composableB()->updateCache();
     }
@@ -1109,12 +1112,12 @@ void ImplicitBinaryOperator::deleteAllChildren()
     this->composables.resize(2, nullptr);
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos) const
 {
     return pos; // Nothing to do
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos) const
 {
     // Get the correct evaluation position for the B composent
     float offsetB = 0.f;
@@ -1155,11 +1158,11 @@ void ImplicitBinaryOperator::addChild(ImplicitPatch *newChild, int index)
     ImplicitNaryOperator::addChild(newChild, index);
 }
 
-ImplicitPatch*& ImplicitBinaryOperator::composableA()
+ImplicitPatch *ImplicitBinaryOperator::composableA() const
 {
     return this->composables[0];
 }
-ImplicitPatch*& ImplicitBinaryOperator::composableB()
+ImplicitPatch* ImplicitBinaryOperator::composableB() const
 {
     return this->composables[1];
 }
@@ -1187,7 +1190,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
 */
-float ImplicitUnaryOperator::evaluate(const Vector3& pos)
+float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
 {
 //    Vector3 evaluationPos = this->unwrapFunction(pos);
     Vector3 evaluationPos = inverseTransform(pos);
@@ -1274,7 +1277,7 @@ Vector3 ImplicitUnaryOperator::inverseTransform(const Vector3& pos) const
     return finalPos;
 }
 
-std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos) const
 {
     Vector3 evaluationPos = this->inverseTransform(pos);
     auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
@@ -1286,7 +1289,7 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3&
     }
     return materials;
 }
-AABBox ImplicitUnaryOperator::getSupportBBox() {
+AABBox ImplicitUnaryOperator::getSupportBBox() const {
     auto AABBox = this->composableA()->getSupportBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
@@ -1297,7 +1300,7 @@ AABBox ImplicitUnaryOperator::getSupportBBox() {
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }
 
-AABBox ImplicitUnaryOperator::getBBox()
+AABBox ImplicitUnaryOperator::getBBox() const
 {
     auto AABBox = this->composableA()->getBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
@@ -1450,7 +1453,7 @@ void ImplicitUnaryOperator::deleteAllChildren()
     this->composables.resize(1, nullptr);
 }
 
-ImplicitPatch *&ImplicitUnaryOperator::composableA()
+ImplicitPatch* ImplicitUnaryOperator::composableA() const
 {
     return this->composables[0];
 }
@@ -1746,7 +1749,7 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
 //    polygon.points.push_back(polygon.points.front());
     ShapeCurve polygon(path.points);
     return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
-        return (polygon.contains(pos.xy(), false) ? height : 0.f);
+        return (polygon.containsXY(pos.xy(), false) ? height : 0.f);
     });
 }
 
@@ -2240,7 +2243,7 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 
 }
 
-float ImplicitNaryOperator::evaluate(const Vector3& pos)
+float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 {
     float maxVal = 0.f;
     for (auto& compo : this->composables)
@@ -2248,7 +2251,7 @@ float ImplicitNaryOperator::evaluate(const Vector3& pos)
     return maxVal;
 }
 
-std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos) const
 {
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
@@ -2275,7 +2278,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
     return bestReturn;*/
 }
 
-AABBox ImplicitNaryOperator::getSupportBBox()
+AABBox ImplicitNaryOperator::getSupportBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
@@ -2286,7 +2289,7 @@ AABBox ImplicitNaryOperator::getSupportBBox()
     return {minPos, maxPos};
 }
 
-AABBox ImplicitNaryOperator::getBBox()
+AABBox ImplicitNaryOperator::getBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {

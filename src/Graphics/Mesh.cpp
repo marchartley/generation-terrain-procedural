@@ -1048,6 +1048,22 @@ bool Mesh::isWatertight()
 
 }
 
+std::vector<Vector3> Mesh::getPointsForArrow(const Vector3 &from, const Vector3 &to)
+{
+    Vector3 direction = to - from;
+    std::vector<Vector3> points;
+
+    points.push_back(from);
+    points.push_back(to);
+
+    Vector3 cross = direction.cross(direction.isAlmostVertical() ? Vector3(0, 1, 0) : Vector3(0, 0, 1)).setMag(direction.norm() * .2f);
+    points.push_back(from + direction * .8f - cross);
+    points.push_back(to);
+    points.push_back(to);
+    points.push_back(from + direction * .8f + cross);
+    return points;
+}
+
 Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize, bool displayArrow)
 {
     if (maxMaginitude > 0.f) {
@@ -1065,16 +1081,12 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
             for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 Vector3 value = field.at(x, y, z);
-                normals.push_back(pos + offsetToCenter);
-                normals.push_back(pos + offsetToCenter + value);
-
                 if (displayArrow) {
-                    // Arrow part
-                    Vector3 cross = value.cross(Vector3(0, 0, 1)).setMag(value.norm() * .2f);
-                    normals.push_back(pos + offsetToCenter + value * .8f - cross);
+                    auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
+                    normals.insert(normals.end(), arrowPoints.begin(), arrowPoints.end());
+                } else {
+                    normals.push_back(pos + offsetToCenter);
                     normals.push_back(pos + offsetToCenter + value);
-                    normals.push_back(pos + offsetToCenter + value);
-                    normals.push_back(pos + offsetToCenter + value * .8f + cross);
                 }
             }
         }

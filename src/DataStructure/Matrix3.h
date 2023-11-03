@@ -96,6 +96,8 @@ public:
     void iterateReverse(Func function) const;
     template<class Func>
     void iterateParallel(Func function) const;
+    template<class Func>
+    void iterateRandomly(Func function) const;
 
     T interpolate(const Vector3& coord, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE) const;
     T interpolate(float x, float y, float z = 0, RETURN_VALUE_ON_OUTSIDE padding = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE) const;
@@ -208,6 +210,7 @@ public:
     static Matrix3<T> random(const Vector3& dimensions);
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
     static Matrix3<T> identity(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
+    static Matrix3<T> perlin(const Vector3& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
 
     static Matrix3<Vector3> fromImageRGB(std::string filename);
     static Matrix3<float> fromImageBW(std::string filename);
@@ -300,6 +303,28 @@ void Matrix3<T>::iterateParallel(Func function) const
 {
     #pragma omp parallel for
     for (size_t i = 0; i < this->size(); i++) {
+        if constexpr (std::is_invocable_v<Func, Vector3>) {
+            Vector3 pos = this->getCoordAsVector3(i);
+            function(pos);
+        } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
+            Vector3 pos = this->getCoordAsVector3(i);
+            function(pos.x, pos.y, pos.z);
+        } else if constexpr (std::is_invocable_v<Func, int>) {
+            function(i);
+        } else {
+            function();
+        }
+    }
+}
+template<class T> template<class Func>
+void Matrix3<T>::iterateRandomly(Func function) const
+{
+    std::vector<size_t> iter(this->size());
+    for (size_t i = 0; i < iter.size(); i++)
+        iter[i] = i;
+    std::shuffle(iter.begin(), iter.end(), random_gen::random_generator);
+    for (size_t j = 0; j < iter.size(); j++) {
+        size_t i = iter[j];
         if constexpr (std::is_invocable_v<Func, Vector3>) {
             Vector3 pos = this->getCoordAsVector3(i);
             function(pos);
@@ -732,6 +757,7 @@ Vector3 Matrix3<T>::gradient(const Vector3& position) const
 {
     auto self = *this;
     self.raiseErrorOnBadCoord = false;
+    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     Vector3 flooredPos = position.floor();
 //    Vector3 offset = position - flooredPos;
 
@@ -1359,6 +1385,17 @@ Matrix3<T> Matrix3<T>::identity(size_t sizeX, size_t sizeY, size_t sizeZ)
             mat.at(i, i, i) = 1;
     }
     return mat;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::perlin(const Vector3 &dimensions, const Vector3& scale, int seed)
+{
+    Matrix3<T> result(dimensions);
+
+    result.iterateParallel([&](float x, float y, float z) {
+        result(x, y, z) = random_gen::generate_perlin(x * scale.x + seed, y * scale.y + seed, z * scale.z + seed);
+    });
+    return result;
 }
 
 template<typename T>

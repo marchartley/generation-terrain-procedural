@@ -35,10 +35,10 @@ public:
 
     virtual size_t getCurrentHistoryIndex() const;
 
-    virtual float getSizeX() = 0;
-    virtual float getSizeY() = 0;
-    virtual float getSizeZ() = 0;
-    virtual Vector3 getDimensions() { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
+    virtual float getSizeX() const = 0;
+    virtual float getSizeY() const = 0;
+    virtual float getSizeZ() const = 0;
+    virtual Vector3 getDimensions() const { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
 
     Vector3 getTerrainPos(const Vector3& pos) { return (pos * scaling) - translation; }
     Vector3 getWorldPos(const Vector3& pos) { return (pos + translation) / scaling; }
