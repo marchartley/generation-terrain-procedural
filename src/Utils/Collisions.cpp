@@ -292,7 +292,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 
     if (_polygon.size() < 3) return false; // A polygon must have at least 3 vertices.
 
-    if (!AABBox(_polygon).contains(point))
+    if (!AABBox(_polygon).containsXY(point.xy()))
         return false;
 
     // Calculate the centroid of the polygon.

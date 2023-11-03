@@ -1,4 +1,5 @@
 #include "EnvObject.h"
+#include "ExpressionParser.h"
 
 #include <fstream>
 
@@ -10,6 +11,10 @@ GridF EnvObject::sandDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
 float EnvObject::flowImpactFactor = .8f;
+int EnvObject::currentMaxID = -1;
+
+std::map<std::string, GridV3> EnvObject::allVectorProperties;
+std::map<std::string, GridF> EnvObject::allScalarProperties;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
@@ -55,6 +60,11 @@ void EnvObject::readFile(std::string filename)
             throw std::domain_error("Unrecognized type for Environmental Object defined as " + nlohmann::to_string(obj));
         }
     }
+
+    for (auto& [name, obj] : EnvObject::availableObjects) {
+        obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction);
+    }
+//    precomputeTerrainProperties(Heightmap());
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)
@@ -82,6 +92,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     } else if (objType == "area") {
         auto asArea = new EnvArea;
         asArea->width = dimensions.x;
+        asArea->height = dimensions.z;
         obj = asArea;
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     }
@@ -89,7 +100,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->name = toLower(objName);
     obj->flowEffect = flowEffect;
     obj->sandEffect = sandEffect;
-    obj->fittingFunction = EnvObject::parseFittingFunction(content["rule"]);
+    obj->s_FittingFunction = content["rule"];
+//    obj->fittingFunction = EnvObject::parseFittingFunction(content["rule"]);
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
@@ -98,6 +110,47 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
 
 std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula)
 {
+    if (formula == "")
+        formula = "0.0";
+
+    std::map<std::string, Variable> variables;
+    for (auto& [name, obj] : EnvObject::availableObjects) {
+        variables[name] = Vector3();
+        variables[name + ".center"] = Vector3();
+        variables[name + ".start"] = Vector3();
+        variables[name + ".end"] = Vector3();
+        variables[name + ".normal"] = Vector3();
+        variables[name + ".dir"] = Vector3();
+    }
+
+    variables["current.center"] = Vector3();
+    variables["current.start"] = Vector3();
+    variables["current.end"] = Vector3();
+    variables["current.normal"] = Vector3();
+    variables["current.dir"] = Vector3();
+    variables["current.vel"] = float();
+
+    ExpressionParser parser;
+    variables["pos"] = Vector3();
+    parser.validate(formula, variables);
+    std::set<std::string> neededVariables = parser.extractAllVariables(formula);
+    auto _func = parser.parse(formula, variables);
+    return [&, _func, neededVariables](Vector3 pos) -> float {
+        std::map<std::string, Variable> vars;
+        for (auto& [prop, map] : EnvObject::allVectorProperties) {
+            vars[prop] = map(pos);
+            if (neededVariables.count(prop) && !map(pos).isValid())
+                return std::numeric_limits<float>::max();
+        }
+        for (auto& [prop, map] : EnvObject::allScalarProperties) {
+            vars[prop] = map(pos);
+        }
+        vars["pos"] = pos;
+        float score = _func(vars);
+        return score;
+    };
+
+/*
     std::vector<std::string> tokens = split(toLower(formula), " ");
 
     std::vector<std::pair<std::string, std::function<float (Vector3)>>> operations;
@@ -117,11 +170,13 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         else if (startsWith(token, "<")) {
             std::string objects = token.substr(std::string("<").size());
             objects = objects.substr(0, objects.size() - std::string(">").size());
-            std::string object1 = objects.substr(0, objects.find(","));
-            std::string object2 = objects.substr(objects.find(",") + 1);
+            std::string object1 = objects.substr(0, objects.find("dot"));
+            std::string object2 = objects.substr(objects.find("dot") + 1);
             operations.push_back({currentOperation, [=](const Vector3& pos) {
                 auto [vec1, obj1] = EnvObject::getVectorOf(object1, pos);
                 auto [vec2, obj2] = EnvObject::getVectorOf(object2, pos);
+                if (obj1 == nullptr || obj2 == nullptr)
+                    return 10000000.f;
                 return vec1.dot(vec2);
             }});
         } else if (std::atof(token.c_str())) { // Is a number
@@ -149,9 +204,10 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
             else if (sign == "*")
                 score *= funcRes;
         }
-        return score;
+        return (score >= 0 ? score : 100000.f);
     };
     return func;
+    */
 }
 
 std::pair<std::string, std::string> EnvObject::extractNameAndComplement(std::string variable)
@@ -185,12 +241,15 @@ std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(std::string objectName, c
         return {EnvObject::flowfield.at(position), nullptr};
     }
     auto object = EnvObject::getSqrDistanceTo(objectName, position).second;
+    if (object == nullptr) return {Vector3::invalid(), nullptr};
     return {object->getVector(position, complement), object};
 }
 
 EnvObject *EnvObject::instantiate(std::string objectName)
 {
+    EnvObject::currentMaxID++;
     auto object = EnvObject::availableObjects[objectName]->clone();
+    object->ID = EnvObject::currentMaxID;
     EnvObject::instantiatedObjects.push_back(object);
     return object;
 }
@@ -223,6 +282,49 @@ void EnvObject::applyEffects()
     EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield.meanSmooth(3, 3, 1) * 10.f);
 }
 
+float EnvObject::evaluate(const Vector3 &position)
+{
+    return this->fittingFunction(position);
+}
+
+void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
+{
+    Vector3 terrainDimensions = Vector3(heightmap.getDimensions().x, heightmap.getDimensions().y, 1);
+    GridF initialScalarPropertyMap(terrainDimensions, 0.f);
+    GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid());
+
+    // Initialize the maps
+    for (auto& [name, obj] : EnvObject::availableObjects) {
+        EnvObject::allVectorProperties[name] = initialVectorPropertyMap;
+        EnvObject::allVectorProperties[name + ".center"] = initialVectorPropertyMap;
+        EnvObject::allVectorProperties[name + ".start"] = initialVectorPropertyMap;
+        EnvObject::allVectorProperties[name + ".end"] = initialVectorPropertyMap;
+        EnvObject::allVectorProperties[name + ".normal"] = initialVectorPropertyMap;
+        EnvObject::allVectorProperties[name + ".dir"] = initialVectorPropertyMap;
+    }
+    EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
+    EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
+
+
+    // Evaluate at each point
+    initialScalarPropertyMap.iterateParallel([&](const Vector3& pos) {
+        for (auto& [name, obj] : EnvObject::availableObjects) {
+            auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
+            if (object == nullptr) continue;
+
+            EnvObject::allVectorProperties[name](pos) = object->getProperty(pos, "default");
+            EnvObject::allVectorProperties[name + ".center"](pos) = object->getProperty(pos, "center");
+            EnvObject::allVectorProperties[name + ".start"](pos) = object->getProperty(pos, "start");
+            EnvObject::allVectorProperties[name + ".end"](pos) = object->getProperty(pos, "end");
+            EnvObject::allVectorProperties[name + ".normal"](pos) = object->getNormal(pos);
+            EnvObject::allVectorProperties[name + ".dir"](pos) = object->getDirection(pos);
+        }
+        Vector3 waterFlow = EnvObject::flowfield(pos);
+        EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
+        EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
+    });
+}
+
 EnvPoint::EnvPoint()
     : EnvObject()
 {
@@ -242,6 +344,28 @@ float EnvPoint::getSqrDistance(const Vector3 &position, std::string complement)
 Vector3 EnvPoint::getVector(const Vector3 &position, std::string complement)
 {
     return Vector3();
+}
+
+Vector3 EnvPoint::getNormal(const Vector3 &position)
+{
+    return (position - this->position).normalized();
+}
+
+Vector3 EnvPoint::getDirection(const Vector3 &position)
+{
+    return Vector3(false);
+}
+
+Vector3 EnvPoint::getProperty(const Vector3& position, std::string prop) const
+{
+    if (prop == "center") {
+        return this->position;
+    } else if (prop == "start") {
+        return this->position;
+    } else if (prop == "end") {
+        return this->position;
+    }
+    return this->position; // Default
 }
 
 EnvPoint *EnvPoint::clone()
@@ -279,6 +403,12 @@ ImplicitPatch* EnvPoint::createImplicitPatch()
     return patch;
 }
 
+EnvObject &EnvPoint::translate(const Vector3 &translation)
+{
+    this->position += translation;
+    return *this;
+}
+
 EnvCurve::EnvCurve()
     : EnvObject()
 {
@@ -296,6 +426,8 @@ float EnvCurve::getSqrDistance(const Vector3 &position, std::string complement)
         return (position - this->curve.points.front()).norm2();
     else if (complement == "end")
         return (position - this->curve.points.back()).norm2();
+    else if (complement == "center")
+        return (position - this->curve.center()).norm2();
     else
         return (position - this->curve.estimateClosestPos(position)).norm2();
 }
@@ -309,6 +441,28 @@ Vector3 EnvCurve::getVector(const Vector3 &position, std::string complement)
     else if (complement == "binormal")
         return this->curve.getBinormal(curve.estimateClosestTime(position));
     return Vector3();
+}
+
+Vector3 EnvCurve::getNormal(const Vector3 &position)
+{
+    return this->curve.getNormal(this->curve.estimateClosestTime(position));
+}
+
+Vector3 EnvCurve::getDirection(const Vector3 &position)
+{
+    return this->curve.getDirection(this->curve.estimateClosestTime(position));
+}
+
+Vector3 EnvCurve::getProperty(const Vector3& position, std::string prop) const
+{
+    if (prop == "center") {
+        return this->curve.center();
+    } else if (prop == "start") {
+        return this->curve.points.front();
+    } else if (prop == "end") {
+        return this->curve.points.back();
+    }
+    return this->curve.estimateClosestPos(position); // Default
 }
 
 EnvCurve *EnvCurve::clone()
@@ -373,10 +527,16 @@ ImplicitPatch* EnvCurve::createImplicitPatch()
     Vector3 offset(this->width, this->width, this->width);
     translatedCurve.translate(-(box.min() - offset * .5f));
     ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
-    patch->position = box.min();
+    patch->position = box.min() - offset.xy() * .5f;
     patch->material = this->material;
     patch->name = this->name;
     return patch;
+}
+
+EnvObject &EnvCurve::translate(const Vector3 &translation)
+{
+    this->curve.translate(translation);
+    return *this;
 }
 
 EnvArea::EnvArea()
@@ -396,6 +556,10 @@ float EnvArea::getSqrDistance(const Vector3 &position, std::string complement)
         return (position - this->area.center()).norm2();
     else if (complement == "border") // Just keep the absolute value
         return this->area.estimateSqrDistanceFrom(position);
+    else if (complement == "start") // Yeah, that doesn't make sense...
+        return 0.f;
+    else if (complement == "end") // Yeah, that doesn't make sense...
+        return 0.f;
 
     float dist = this->area.estimateSignedDistanceFrom(position);
     return (dist * dist) * (dist > 0 ? 1.f : -1.f); // Keep the sign
@@ -410,6 +574,28 @@ Vector3 EnvArea::getVector(const Vector3 &position, std::string complement)
     else if (complement == "binormal")
         return this->area.getBinormal(area.estimateClosestTime(position));
     return Vector3();
+}
+
+Vector3 EnvArea::getNormal(const Vector3 &position)
+{
+    return this->area.getNormal(this->area.estimateClosestTime(position));
+}
+
+Vector3 EnvArea::getDirection(const Vector3 &position)
+{
+    return Vector3::invalid();
+}
+
+Vector3 EnvArea::getProperty(const Vector3& position, std::string prop) const
+{
+    if (prop == "center") {
+        return this->area.center();
+    } else if (prop == "start") {
+        return Vector3::invalid();
+    } else if (prop == "end") {
+        return Vector3::invalid();
+    }
+    return this->area.estimateClosestPos(position); // Default
 }
 
 EnvArea *EnvArea::clone()
@@ -500,11 +686,18 @@ ImplicitPatch* EnvArea::createImplicitPatch()
 {
     BSpline translatedCurve = this->area;
     AABBox box(this->area.points);
-    Vector3 offset(this->width, this->width, this->width);
+    Vector3 offset(this->width, this->width, this->height);
     translatedCurve.translate(-(box.min() - offset * .5f));
     ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
-    patch->position = box.min();
+    patch->position = box.min() - offset.xy() * .5f;
+//    patch->position = box.center();
     patch->material = this->material;
     patch->name = this->name;
     return patch;
+}
+
+EnvObject &EnvArea::translate(const Vector3 &translation)
+{
+    this->area.translate(translation);
+    return *this;
 }

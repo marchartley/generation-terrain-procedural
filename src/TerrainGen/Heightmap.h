@@ -18,15 +18,15 @@ public:
     Heightmap(int nx, int ny, float heightFactor);
     Heightmap(std::string heightmap_filename, int nx = 30, int ny = 30, float heightFactor = 10);
 
-    GridF getHeights() { return this->heights; }
+    GridF getHeights() const { return this->heights; }
     float getHeight(float x, float y) { return this->heights.interpolate(x, y); }
     float getHeight(const Vector3& pos) { return this->getHeight(pos.x, pos.y); }
 
-    float getMaxHeight();
-    float getHeightFactor() { return this->heightFactor; }
-    float getSizeX() { return this->heights.sizeX; }
-    float getSizeY() { return this->heights.sizeY; }
-    float getSizeZ() { return this->getMaxHeight(); }
+    float getMaxHeight() const;
+    float getHeightFactor() const { return this->heightFactor; }
+    float getSizeX() const { return this->heights.sizeX; }
+    float getSizeY() const { return this->heights.sizeY; }
+    float getSizeZ() const { return this->getMaxHeight(); }
 
     virtual bool checkIsInGround(const Vector3& position);
 

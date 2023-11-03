@@ -42,7 +42,7 @@ Heightmap::Heightmap() : Heightmap(10, 10, 5.0) {
 
 }
 
-float Heightmap::getMaxHeight()
+float Heightmap::getMaxHeight() const
 {
     return this->heights.max(); // this->maxHeight; //this->heights.max();
 }
@@ -418,10 +418,13 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     GridF voxels = voxelGrid.getVoxelValues();
+    int sizeX = voxelGrid.getSizeX();
+    int sizeY = voxelGrid.getSizeY();
 
-    this->heights = GridF(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
-    for (int x = 0; x < voxelGrid.getSizeX(); x++) {
-        for (int y = 0; y < voxelGrid.getSizeY(); y++) {
+    this->heights = GridF(sizeX, sizeY, 1, 0.f);
+    #pragma omp parallel for collapse(2)
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
                 if (voxels.at(x, y, z) > 0.f) {
 //                    float current = voxels.at(x, y, z); // Is > 0.f

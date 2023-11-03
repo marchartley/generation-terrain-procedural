@@ -9,6 +9,7 @@
 #include <variant>
 #include <cmath>
 #include <memory>
+#include <set>
 
 
 struct TokenList;
@@ -19,6 +20,7 @@ struct TokenList : public std::vector<Token> {
 };
 
 using Variable = std::variant<float, Vector3>;
+using VariableMap = std::map<std::string, Variable>;
 
 using UnaryFloat = std::function<Variable(float)>;
 using BinaryFloat = std::function<Variable(float, float)>;
@@ -33,9 +35,11 @@ class ExpressionParser {
 public:
     ExpressionParser();
 
-    std::function<float(const Vector3&)> parse(const std::string& expression);
+    std::function<float(const VariableMap&)> parse(const std::string& expression, const VariableMap &variables = {});
 
-    void validate(const std::string& expression);
+    bool validate(const std::string& expression, const VariableMap &variables = {}, bool raiseErrors = true);
+
+    std::set<std::string> extractAllVariables(const std::string& expression);
 
     // Maps for user-defined operators
     std::map<std::string, std::function<float(float)>> userUnaryOperators;
@@ -44,9 +48,9 @@ public:
 protected:
     std::vector<std::string> tokenizeExpression(const std::string& expression);
 
-    Token groupTokensHierarchically(const std::vector<std::string>& tokens);
+    Token groupTokensHierarchically(const std::vector<std::string>& tokens, const VariableMap &variables = {});
 
-    std::function<Variable(const Vector3&)> generateLambda(const Token &token);
+    std::function<Variable(const VariableMap&)> generateLambda(const Token &token, const VariableMap& variables = {});
 
     std::vector<std::vector<std::string>> extractObjectPropertyPatterns(const std::vector<std::string>& tokens);
 
@@ -61,22 +65,22 @@ protected:
 };
 
 template <typename T, typename U>
-std::function<Variable(const Vector3&)> getBinaryOperation(const std::string& tokenStr,
-                                                   const std::function<Variable(const Vector3&)>& leftLambda,
-                                                   const std::function<Variable(const Vector3&)>& rightLambda,
+std::function<Variable(const VariableMap&)> getBinaryOperation(const std::string& tokenStr,
+                                                   const std::function<Variable(const VariableMap&)>& leftLambda,
+                                                   const std::function<Variable(const VariableMap&)>& rightLambda,
                                                    const std::map<std::string, std::function<Variable(T, U)>>& operationsMap) {
     auto operationFunc = operationsMap.at(tokenStr);
-    return [=](const Vector3& p) -> Variable {
-        return operationFunc(std::get<T>(leftLambda(p)), std::get<U>(rightLambda(p)));
+    return [=](const VariableMap& variables) -> Variable {
+        return operationFunc(std::get<T>(leftLambda(variables)), std::get<U>(rightLambda(variables)));
     };
 }
 template <typename T, typename U>
-std::function<Variable(const Vector3&)> getUnaryOperation(const std::string& tokenStr,
-                                                   const std::function<Variable(const Vector3&)>& lambda,
+std::function<Variable(const VariableMap&)> getUnaryOperation(const std::string& tokenStr,
+                                                   const std::function<Variable(const VariableMap&)>& lambda,
                                                    const std::map<std::string, std::function<Variable(U)>>& operationsMap) {
     auto operationFunc = operationsMap.at(tokenStr);
-    return [=](const Vector3& p) -> Variable {
-        return operationFunc(std::get<U>(lambda(p)));
+    return [=](const VariableMap& variables) -> Variable {
+        return operationFunc(std::get<U>(lambda(variables)));
     };
 }
 

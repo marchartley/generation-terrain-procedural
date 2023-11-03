@@ -73,6 +73,7 @@ private: // Singleton
 
 public:
     static Plotter* getInstance();
+    static Plotter* get() { return Plotter::getInstance(); }
     static Plotter* init(ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     void addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);

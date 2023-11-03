@@ -131,7 +131,7 @@ protected:
     void updateFunctionSize();
 
 
-    HierarchicalListWidget* primitiveSelectionGui;
+    HierarchicalListWidget* primitiveSelectionGui = nullptr;
     void updatePrimitiveList();
     void cleanPatch(ImplicitPatch* patch);
 

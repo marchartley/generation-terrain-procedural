@@ -17,7 +17,7 @@ public:
     Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
     Vector3 getDerivative(float x) const;
     Vector3 getSecondDerivative(float x) const;
-    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5) const;
+    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5, float nbChecksFactor = 4.f, float earlyExitThreshold = 1e-3) const;
     Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3) const;
     float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
     float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;

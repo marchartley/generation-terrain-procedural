@@ -249,6 +249,7 @@ void Viewer::drawingProcess() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 */
 
+    this->setSceneCenter(voxelGrid->getDimensions() / 2.f);
     auto allProcessStart = std::chrono::system_clock::now();
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
 //    std::chrono::milliseconds test;

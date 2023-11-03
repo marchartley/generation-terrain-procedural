@@ -232,6 +232,7 @@ public:
     Vector3 max() const { return this->maxi; }
     Vector3 dimensions() const { return max() - min(); }
     bool contains(const Vector3& position) const { return Vector3::isInBox(position, min(), max()); }
+    bool containsXY(const Vector3& position) const { return Vector3::isInBox(position.xy(), min().xy(), max().xy()); }
     Vector3 center() const { return (this->min() + this->max()) * .5f; }
     Vector3 normalize(const Vector3& p);
 

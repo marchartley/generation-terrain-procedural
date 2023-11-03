@@ -5,6 +5,7 @@
 #include "Interface/ActionInterface.h"
 
 #include "EnvObject/EnvObject.h"
+#include "Interface/HierarchicalListWidget.h"
 
 class EnvObjsInterface : public ActionInterface
 {
@@ -23,6 +24,7 @@ public:
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
     void createEnvObjectsFromImplicitTerrain();
+    void setDefinitionFile(std::string filename);
 
 public Q_SLOTS:
     void show();
@@ -30,15 +32,28 @@ public Q_SLOTS:
     virtual void afterTerrainUpdated();
 
     void instantiateObject();
+    void instantiateSpecific(std::string objectName);
 
     void recomputeErosionValues();
 
     void updateEnvironmentFromEnvObjects();
 
+    void displayProbas(std::string objectName);
+    void displaSedimentsDistrib();
+
+    void updateObjectsList();
+
+    void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
+
+    void hotReloadFile();
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
     Mesh highDepositionMesh;
+    Mesh objectsMesh;
+
+    HierarchicalListWidget* objectsListWidget = nullptr;
 
     bool displayVelocities = true;
     bool displayHighErosions = true;
@@ -48,6 +63,9 @@ public:
 
     GridF erosionGrid;
     GridV3 velocitiesGrid;
+
+    std::string primitiveDefinitionFile;
+    QDateTime lastTimeFileHasBeenModified;
 };
 
 

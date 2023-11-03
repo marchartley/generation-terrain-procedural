@@ -125,7 +125,7 @@ void LayerBasedGrid::reorderLayers()
     this->cleanLayers();
 }
 
-float LayerBasedGrid::getSizeZ()
+float LayerBasedGrid::getSizeZ() const
 {
     if (this->layers.empty()) return 0;
     float maxHeight = 0.f;
