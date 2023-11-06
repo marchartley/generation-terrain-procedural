@@ -4,52 +4,6 @@
 			{
 				"blendingFactor": 2.0,
 				"composableA": {
-					"composableA": {
-						"densityValue": 1.5,
-						"dimensions": {
-							"x": 16.700000762939453,
-							"y": 19.5,
-							"z": 20.0
-						},
-						"filename": "",
-						"index": 39,
-						"material": "ROCK",
-						"mirrored": false,
-						"name": "Noise2d",
-						"optionalCurve": {
-							"closed": false,
-							"points": []
-						},
-						"position": {
-							"x": 12.014846801757813,
-							"y": 18.68286895751953,
-							"z": 0.0
-						},
-						"shape": "Noise2D",
-						"sigmaValue": 5.0,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"type": "primitive"
-					},
-					"index": 38,
-					"mirrored": false,
-					"name": "Translation",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"spreadFactor": 0.0,
-					"translation": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.024115383625030518
-					},
-					"type": "unary"
-				},
-				"composableB": {
 					"densityValue": 0.75,
 					"dimensions": {
 						"x": 100.0,
@@ -57,7 +11,7 @@
 						"z": 50.0
 					},
 					"filename": "",
-					"index": 37,
+					"index": 3,
 					"material": "DIRT",
 					"mirrored": false,
 					"name": "Heightmap",
@@ -79,7 +33,53 @@
 					},
 					"type": "primitive"
 				},
-				"index": 36,
+				"composableB": {
+					"composableA": {
+						"densityValue": 1.5,
+						"dimensions": {
+							"x": 2.6000001430511475,
+							"y": 3.0,
+							"z": 2.6000001430511475
+						},
+						"filename": "",
+						"index": 5,
+						"material": "ROCK",
+						"mirrored": false,
+						"name": "Block",
+						"optionalCurve": {
+							"closed": false,
+							"points": []
+						},
+						"position": {
+							"x": 6.173578262329102,
+							"y": 38.71122741699219,
+							"z": 0.0
+						},
+						"shape": "Block",
+						"sigmaValue": 5.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
+					},
+					"index": 6,
+					"mirrored": false,
+					"name": "Translation",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"spreadFactor": 0.0,
+					"translation": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.8584862947463989
+					},
+					"type": "unary"
+				},
+				"index": 7,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",
@@ -89,17 +89,17 @@
 				},
 				"positionalB": "FIXED_POS",
 				"type": "compose",
-				"useIntersection": true
+				"useIntersection": false
 			},
 			{
 				"densityValue": 1.5,
 				"dimensions": {
-					"x": 56.18034362792969,
-					"y": 58.042259216308594,
-					"z": 40.0
+					"x": 60.0,
+					"y": 60.0,
+					"z": 3.0
 				},
 				"filename": "",
-				"index": 35,
+				"index": 2,
 				"material": "ROCK",
 				"mirrored": false,
 				"name": "island",
@@ -107,39 +107,54 @@
 					"closed": true,
 					"points": [
 						{
-							"x": 46.18034362792969,
-							"y": 29.021129608154297,
-							"z": 20.0
+							"x": 50.0,
+							"y": 30.0,
+							"z": 18.0
 						},
 						{
-							"x": 32.360679626464844,
-							"y": 48.042259216308594,
-							"z": 20.0
+							"x": 44.14213562011719,
+							"y": 44.14213562011719,
+							"z": 18.0
+						},
+						{
+							"x": 30.0,
+							"y": 50.0,
+							"z": 18.0
+						},
+						{
+							"x": 15.857864379882813,
+							"y": 44.14213562011719,
+							"z": 18.0
 						},
 						{
 							"x": 10.0,
-							"y": 40.776832580566406,
-							"z": 20.0
+							"y": 29.999998092651367,
+							"z": 18.0
 						},
 						{
-							"x": 10.000001907348633,
-							"y": 17.265422821044922,
-							"z": 20.0
+							"x": 15.857863426208496,
+							"y": 15.857866287231445,
+							"z": 18.0
 						},
 						{
-							"x": 32.360687255859375,
+							"x": 30.0,
 							"y": 10.0,
-							"z": 20.0
+							"z": 18.0
+						},
+						{
+							"x": 44.14213180541992,
+							"y": 15.85786247253418,
+							"z": 18.0
 						}
 					]
 				},
 				"position": {
-					"x": 7.28050422668457,
-					"y": 10.646476745605469,
+					"x": -6.539154052734375,
+					"y": -0.3323936462402344,
 					"z": 0.0
 				},
 				"shape": "Mountain",
-				"sigmaValue": 20.0,
+				"sigmaValue": 2.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
@@ -148,1407 +163,69 @@
 				"type": "primitive"
 			},
 			{
-				"densityValue": 0.3499999940395355,
+				"densityValue": 1.5,
 				"dimensions": {
-					"x": 140.4508514404297,
-					"y": 145.10565185546875,
-					"z": 5.0
+					"x": 60.0,
+					"y": 60.0,
+					"z": 3.0
 				},
 				"filename": "",
-				"index": 34,
-				"material": "SAND",
+				"index": 1,
+				"material": "ROCK",
 				"mirrored": false,
-				"name": "lagoon",
+				"name": "island",
 				"optionalCurve": {
 					"closed": true,
 					"points": [
 						{
-							"x": 115.45085144042969,
-							"y": 72.55282592773438,
-							"z": 2.5
+							"x": 50.0,
+							"y": 30.0,
+							"z": 15.0
 						},
 						{
-							"x": 80.90170288085938,
-							"y": 120.10565185546875,
-							"z": 2.5
+							"x": 44.14213562011719,
+							"y": 44.14213562011719,
+							"z": 15.0
 						},
 						{
-							"x": 25.0,
-							"y": 101.94208526611328,
-							"z": 2.5
+							"x": 30.0,
+							"y": 50.0,
+							"z": 15.0
 						},
 						{
-							"x": 25.000003814697266,
-							"y": 43.16355895996094,
-							"z": 2.5
+							"x": 15.857864379882813,
+							"y": 44.14213562011719,
+							"z": 15.0
 						},
 						{
-							"x": 80.90170288085938,
-							"y": 25.0,
-							"z": 2.5
+							"x": 10.0,
+							"y": 30.0,
+							"z": 15.0
+						},
+						{
+							"x": 15.857864379882813,
+							"y": 15.857864379882813,
+							"z": 15.0
+						},
+						{
+							"x": 30.0,
+							"y": 10.0,
+							"z": 15.0
+						},
+						{
+							"x": 44.14213562011719,
+							"y": 15.857864379882813,
+							"z": 15.0
 						}
 					]
 				},
 				"position": {
-					"x": -15.450851440429688,
-					"y": -17.552825927734375,
+					"x": 43.0,
+					"y": 50.0,
 					"z": 0.0
 				},
-				"shape": "Polygon",
-				"sigmaValue": 50.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 23.193153381347656,
-					"y": 25.03131866455078,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 33,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 18.193153381347656,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 20.03131866455078,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 68.10513305664063,
-					"y": 77.24217224121094,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 19.257408142089844,
-					"y": 27.728519439697266,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 32,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 22.728519439697266,
-							"z": 5.0
-						},
-						{
-							"x": 14.257408142089844,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 62.685646057128906,
-					"y": 29.703609466552734,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 26.598979949951172,
-					"y": 21.156787872314453,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 31,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 21.598979949951172,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 16.156787872314453,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": -12.449234008789063,
-					"y": 2.2108030319213867,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 14.662248611450195,
-					"y": 29.44899559020996,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 30,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 9.662248611450195,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 24.44899559020996,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 0.5033137798309326,
-					"y": 13.137750625610352,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 12.800895690917969,
-					"y": 29.802906036376953,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 29,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 7.800895690917969,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 24.802906036376953,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 93.89933013916016,
-					"y": 31.049274444580078,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 23.340267181396484,
-					"y": 24.900917053222656,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 28,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 18.340267181396484,
-							"y": 19.900917053222656,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 23.994800567626953,
-					"y": 6.824312210083008,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 27.418720245361328,
-					"y": 19.82793426513672,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 27,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 22.418720245361328,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 14.827934265136719,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 41.93595886230469,
-					"y": 90.54301452636719,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 25.156410217285156,
-					"y": 23.04925537109375,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 26,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 20.156410217285156,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 18.04925537109375,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 61.6326904296875,
-					"y": 91.73768615722656,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 19.429405212402344,
-					"y": 27.637638092041016,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 25,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 14.429405212402344,
-							"y": 22.637638092041016,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 71.64264678955078,
-					"y": -2.409409523010254,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 29.830148696899414,
-					"y": 12.60101318359375,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 24,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 24.830148696899414,
-							"y": 7.60101318359375,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 22.042463302612305,
-					"y": 73.34974670410156,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 30.0,
-					"y": 10.0,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 23,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 25.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 15.0,
-					"y": 79.0,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 13.278312683105469,
-					"y": 29.729488372802734,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 22,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 8.278312683105469,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 24.729488372802734,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 81.54126739501953,
-					"y": 29.067626953125,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 24.03191375732422,
-					"y": 24.251508712768555,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 21,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 19.03191375732422,
-							"y": 19.251508712768555,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 54.47606658935547,
-					"y": 2.311368942260742,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 23.09466552734375,
-					"y": 25.117202758789063,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 20,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 20.117202758789063,
-							"z": 5.0
-						},
-						{
-							"x": 18.09466552734375,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 51.72633361816406,
-					"y": 46.6620979309082,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 29.17938232421875,
-					"y": 15.670219421386719,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 19,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 24.17938232421875,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 10.670219421386719,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 28.615463256835938,
-					"y": 83.58244323730469,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 28.10000991821289,
-					"y": 18.508209228515625,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 18,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 23.10000991821289,
-							"y": 13.508209228515625,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 20.474998474121094,
-					"y": 74.8729476928711,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 10.0,
-					"y": 30.0,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 17,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 25.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 68.0,
-					"y": 34.0,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 23.400299072265625,
-					"y": 24.84695053100586,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 16,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 19.84695053100586,
-							"z": 5.0
-						},
-						{
-							"x": 18.400299072265625,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 49.649925231933594,
-					"y": 47.86478805541992,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 17.174163818359375,
-					"y": 28.668994903564453,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 15,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 12.174163818359375,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 23.668994903564453,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 66.61937713623047,
-					"y": 44.3327522277832,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 29.94439697265625,
-					"y": 11.490318298339844,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 14,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 24.94439697265625,
-							"y": 6.490318298339844,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 10.041701316833496,
-					"y": 85.88226318359375,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 29.76926040649414,
-					"y": 13.029243469238281,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 13,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 24.76926040649414,
-							"y": 8.029243469238281,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 2.1730546951293945,
-					"y": 82.72806549072266,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 19.579345703125,
-					"y": 27.556659698486328,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 12,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 14.579345703125,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 22.556659698486328,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 55.81549072265625,
-					"y": 55.610836029052734,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 24.46398162841797,
-					"y": 23.812793731689453,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 11,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 19.46398162841797,
-							"y": 18.812793731689453,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 59.152015686035156,
-					"y": 8.64040470123291,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 17.338401794433594,
-					"y": 28.605051040649414,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 10,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 12.338401794433594,
-							"y": 23.605051040649414,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 73.16539764404297,
-					"y": 1.3487377166748047,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 15.302207946777344,
-					"y": 29.28436279296875,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 9,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 10.302207946777344,
-							"y": 24.28436279296875,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 73.67444610595703,
-					"y": 7.1789093017578125,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 22.314769744873047,
-					"y": 25.759014129638672,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 8,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 20.759014129638672,
-							"z": 5.0
-						},
-						{
-							"x": 17.314769744873047,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 51.92130661010742,
-					"y": 41.18074035644531,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 18.044994354248047,
-					"y": 28.31060218811035,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 7,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 23.31060218811035,
-							"z": 5.0
-						},
-						{
-							"x": 13.044994354248047,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 61.98875045776367,
-					"y": 24.26704978942871,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 25.352691650390625,
-					"y": 22.817752838134766,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 6,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 17.817752838134766,
-							"z": 5.0
-						},
-						{
-							"x": 20.352691650390625,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 41.161827087402344,
-					"y": 55.38668441772461,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 29.88871192932129,
-					"y": 12.10693359375,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 5,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 24.88871192932129,
-							"y": 7.10693359375,
-							"z": 5.0
-						},
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 7.083465576171875,
-					"y": 84.4197998046875,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 14.1826171875,
-					"y": 29.557754516601563,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 4,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 9.1826171875,
-							"y": 24.557754516601563,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 76.954345703125,
-					"y": 13.11056137084961,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": 0.3499999940395355,
-				"dimensions": {
-					"x": 27.364276885986328,
-					"y": 19.923805236816406,
-					"z": 10.0
-				},
-				"filename": "",
-				"index": 3,
-				"material": "SAND",
-				"mirrored": false,
-				"name": "reef",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 5.0,
-							"y": 5.0,
-							"z": 5.0
-						},
-						{
-							"x": 22.364276885986328,
-							"y": 14.923805236816406,
-							"z": 5.0
-						}
-					]
-				},
-				"position": {
-					"x": 8.658930778503418,
-					"y": 69.51905059814453,
-					"z": 0.0
-				},
-				"shape": "MountainChain",
-				"sigmaValue": 10.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": -2.5,
-				"dimensions": {
-					"x": 25.0,
-					"y": 5.0,
-					"z": 5.0
-				},
-				"filename": "",
-				"index": 2,
-				"material": "WATER",
-				"mirrored": false,
-				"name": "passe",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 2.5,
-							"y": 2.5,
-							"z": 2.5
-						},
-						{
-							"x": 22.5,
-							"y": 2.5,
-							"z": 2.5
-						}
-					]
-				},
-				"position": {
-					"x": 14.0,
-					"y": 82.0,
-					"z": 0.0
-				},
-				"shape": "Parametric_Tunnel",
-				"sigmaValue": 5.0,
-				"supportDimensions": {
-					"x": 0.0,
-					"y": 0.0,
-					"z": 0.0
-				},
-				"type": "primitive"
-			},
-			{
-				"densityValue": -2.5,
-				"dimensions": {
-					"x": 4.07843017578125,
-					"y": 23.999847412109375,
-					"z": 4.0
-				},
-				"filename": "",
-				"index": 1,
-				"material": "WATER",
-				"mirrored": false,
-				"name": "delta",
-				"optionalCurve": {
-					"closed": false,
-					"points": [
-						{
-							"x": 2.0,
-							"y": 2.0,
-							"z": 2.0
-						},
-						{
-							"x": 2.07843017578125,
-							"y": 21.999847412109375,
-							"z": 2.0
-						}
-					]
-				},
-				"position": {
-					"x": 33.98039245605469,
-					"y": 76.00003814697266,
-					"z": 0.0
-				},
-				"shape": "Parametric_Tunnel",
-				"sigmaValue": 4.0,
+				"shape": "Mountain",
+				"sigmaValue": 2.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,

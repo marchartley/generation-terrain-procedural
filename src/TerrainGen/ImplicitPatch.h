@@ -103,7 +103,7 @@ public:
 
     virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3(false), const Vector3 &maxPos = Vector3(false));
 
-    virtual std::string toShortString() { return ""; };
+    virtual std::string toShortString() { return ""; }
 
     virtual float getHeight(float x, float y);
     virtual float getHeight(const Vector3& pos);

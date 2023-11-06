@@ -20,7 +20,8 @@
   {
     "name": "Reef",
     "type": "curve",
-    "rule": "(d(Lagoon - pos))^3",
+    "rule": "d2(Lagoon - pos)^4",
+    "rulez": "d2(Island - pos)^3",
     "flow": {
       "direction": 0.1,
       "normal": 0.1,
@@ -74,7 +75,7 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "",
+    "rule": "d2(Island.center - pos)",
     "flow": {
       "direction": 0.5,
       "normal": 0.2,
@@ -84,7 +85,7 @@
     "dimensions": {
       "x": 20,
       "y": 0,
-      "z": 40
+      "z": 30
     },
     "geometry": "Mountain",
     "material": "Rock"
@@ -138,5 +139,19 @@
     "sand": 0.8,
     "geometry": "ParametricTunnel",
     "material": "water"
+  },
+  {
+    "name": "Tree",
+    "type": "point",
+    "rule": "200 * d2(Island - pos) + 500 * d2(Island.center - pos)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 4.0,
+      "y": 0.0,
+      "z": 5.0
+    },
+    "sand": 0.0,
+    "geometry": "Sphere",
+    "material": "dirt"
   }
 ]
