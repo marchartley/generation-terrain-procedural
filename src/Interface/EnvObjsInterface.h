@@ -66,6 +66,8 @@ public:
 
     std::string primitiveDefinitionFile;
     QDateTime lastTimeFileHasBeenModified;
+
+    std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
 };
 
 

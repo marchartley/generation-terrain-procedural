@@ -31,8 +31,8 @@ public:
     Mesh& rotate(float rotation_x, float rotation_y, float rotation_Z);
 
     void clear();
-    Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);
-    Mesh merge(std::vector<std::shared_ptr<Mesh>> others);
+    Mesh merge(const Mesh &other, bool recomputeIndices = true);
+    Mesh merge(std::vector<Mesh> others);
 
     void update();
     void pushToBuffer();

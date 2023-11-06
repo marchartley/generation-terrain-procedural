@@ -34,6 +34,7 @@ public:
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
+    float growingState = .1f;
 
     virtual float getSqrDistance(const Vector3& position, std::string complement = "") = 0;
     virtual Vector3 getVector(const Vector3& position, std::string complement = "") = 0;
@@ -47,7 +48,7 @@ public:
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
 
 
-    static std::function<float(Vector3)> parseFittingFunction(std::string formula);
+    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject);
 
 
     static GridV3 flowfield;
@@ -65,9 +66,10 @@ public:
 
     static EnvObject* instantiate(std::string objectName);
     static void removeAllObjects();
-    virtual ImplicitPatch* createImplicitPatch() = 0;
+    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr) = 0;
 
     static void applyEffects();
+    static void beImpactedByEvents();
 
     float evaluate(const Vector3& position);
 
@@ -97,7 +99,7 @@ public:
     virtual EnvPoint* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch();
+    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
 
     virtual EnvObject& translate(const Vector3& translation);
 };
@@ -120,7 +122,7 @@ public:
     virtual EnvCurve* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch();
+    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
 
     virtual EnvObject& translate(const Vector3& translation);
 };
@@ -143,7 +145,7 @@ public:
     virtual EnvArea* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch();
+    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
 
     virtual EnvObject& translate(const Vector3& translation);
 };

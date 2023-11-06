@@ -62,7 +62,7 @@ void EnvObject::readFile(std::string filename)
     }
 
     for (auto& [name, obj] : EnvObject::availableObjects) {
-        obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction);
+        obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name);
     }
 //    precomputeTerrainProperties(Heightmap());
 }
@@ -108,7 +108,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     return obj;
 }
 
-std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula)
+std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject)
 {
     if (formula == "")
         formula = "0.0";
@@ -135,12 +135,19 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     parser.validate(formula, variables);
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
     auto _func = parser.parse(formula, variables);
-    return [&, _func, neededVariables](Vector3 pos) -> float {
+    return [&, _func, neededVariables, currentObject](Vector3 pos) -> float {
         std::map<std::string, Variable> vars;
         for (auto& [prop, map] : EnvObject::allVectorProperties) {
-            vars[prop] = map(pos);
-            if (neededVariables.count(prop) && !map(pos).isValid())
-                return std::numeric_limits<float>::max();
+            if (neededVariables.count(prop) && !map(pos).isValid()) { // A variable is needed but there are no value attributed (eg : object not instantiated yet)
+                if (prop == currentObject || startsWith(prop, currentObject + ".")) {
+                    std::cout << prop << " -> " << currentObject << std::endl;
+                    vars[prop] = pos;
+                } else {
+                    return std::numeric_limits<float>::max(); // Return max value
+                }
+            } else {
+                vars[prop] = map(pos);
+            }
         }
         for (auto& [prop, map] : EnvObject::allScalarProperties) {
             vars[prop] = map(pos);
@@ -282,6 +289,14 @@ void EnvObject::applyEffects()
     EnvObject::sandDeposit = EnvObject::sandDeposit.wrapWith(EnvObject::flowfield.meanSmooth(3, 3, 1) * 10.f);
 }
 
+void EnvObject::beImpactedByEvents()
+{
+    // TODO!!!
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        obj->growingState = std::min(obj->growingState + .2f, 1.f);
+    }
+}
+
 float EnvObject::evaluate(const Vector3 &position)
 {
     return this->fittingFunction(position);
@@ -394,9 +409,17 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
     return {flow, occupancy};
 }
 
-ImplicitPatch* EnvPoint::createImplicitPatch()
+ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitive)
 {
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius), 0);
+
+    ImplicitPrimitive* patch;
+    if (previousPrimitive != nullptr) {
+        patch = previousPrimitive;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0);
+    } else {
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0);
+    }
+
     patch->position = this->position;
     patch->material = this->material;
     patch->name = this->name;
@@ -520,13 +543,20 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     return {flow, occupancy};
 }
 
-ImplicitPatch* EnvCurve::createImplicitPatch()
+ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitive)
 {
     BSpline translatedCurve = this->curve;
     AABBox box(this->curve.points);
     Vector3 offset(this->width, this->width, this->width);
     translatedCurve.translate(-(box.min() - offset * .5f));
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
+
+    ImplicitPrimitive* patch;
+    if (previousPrimitive != nullptr) {
+        patch = previousPrimitive;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+    } else {
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+    }
     patch->position = box.min() - offset.xy() * .5f;
     patch->material = this->material;
     patch->name = this->name;
@@ -682,13 +712,19 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     return {flow, occupancy};
 }
 
-ImplicitPatch* EnvArea::createImplicitPatch()
+ImplicitPatch* EnvArea::createImplicitPatch(ImplicitPrimitive* previousPrimitive)
 {
     BSpline translatedCurve = this->area;
     AABBox box(this->area.points);
-    Vector3 offset(this->width, this->width, this->height);
+    Vector3 offset(this->width, this->width, this->height * growingState);
     translatedCurve.translate(-(box.min() - offset * .5f));
-    ImplicitPrimitive* patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width, translatedCurve);
+    ImplicitPrimitive* patch;
+    if (previousPrimitive != nullptr) {
+        patch = previousPrimitive;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+    } else {
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+    }
     patch->position = box.min() - offset.xy() * .5f;
 //    patch->position = box.center();
     patch->material = this->material;

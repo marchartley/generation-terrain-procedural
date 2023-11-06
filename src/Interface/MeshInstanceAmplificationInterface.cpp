@@ -1,5 +1,9 @@
 #include "MeshInstanceAmplificationInterface.h"
 
+
+#include "EnvObject/EnvObject.h"
+#include "Interface/CommonInterface.h"
+
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
@@ -34,73 +38,19 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
                 possibleCorals[iCoral].display();
             }
         }
-        /*
-    //                marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
+    }
 
-            values.raiseErrorOnBadCoord = false;
-            values.defaultValueOnBadCoord = -1.f;
-            for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-                int iRock;
-                Vector3 pos;
-                float size;
-                std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
-                // Must be on ground, and have water somewhere around
-                if (values.at(pos) > 0) {
-                    bool isOnBorder = false;
-                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                    isOnBorder = true;
-                                }
-                    if (isOnBorder) {
-                        possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-                        possibleRocks[iRock].shader->setFloat("sizeFactor", size);
-                        possibleRocks[iRock].display();
-                    }
-                }
-            }
-            GridV3 gradientTerrain = values.gradient();
-            gradientTerrain.raiseErrorOnBadCoord = false;
-            gradientTerrain.defaultValueOnBadCoord = Vector3(0, 0, -1);
-            for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
-                int iCoral;
-                Vector3 pos;
-                float size;
-                std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
-                // Must be on ground, and have water somewhere around
-                if (values.at(pos) > 0) {
-                    bool isOnBorder = false;
-                    for (int dx = -1; dx <= 1 && !isOnBorder; dx++)
-                        for (int dy = -1; dy <= 1 && !isOnBorder; dy++)
-                            for (int dz = -1; dz <= 1 && !isOnBorder; dz++)
-                                if (values.at(pos + Vector3(dx, dy, dz)) < 0) {
-                                    isOnBorder = true;
-                                }
-                    if (isOnBorder) {
-                        Vector3 up = -gradientTerrain.at(pos).normalize();
-                        Vector3 fwd = (up == Vector3(0, 1, 0) ? Vector3(1, 0, 0) : up.cross(Vector3(0, 1, 0)));
-                        Vector3 right = up.cross(fwd);/*
-                        std::vector<std::vector<float>> rotationMatrix({
-                                                  {fwd.x, right.x, up.x, 0},
-                                                  {fwd.y, right.y, up.y, 0},
-                                                  {fwd.z, right.z, up.z, 0},
-                                                  {0, 0, 0, 1}
-                                              });*/ /*
-                        std::vector<std::vector<float>> rotationMatrix({
-                                                  {fwd.x, fwd.y, fwd.z, 0},
-                                                  {right.x, right.y, right.z, 0},
-                                                  {up.x, up.y, up.z, 0},
-                                                  {0, 0, 0, 1}
-                                              });
-                        possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
-                        possibleCorals[iCoral].shader->setMatrix("instanceRotation", (std::vector<std::vector<float>>)rotationMatrix);
-                        possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
-                        possibleCorals[iCoral].display();
-                    }
-                }
-            }
-        }*/
+    for (auto& meshType : meshesOptions) {
+        if (!meshType.displayed) continue;
+        for (size_t i = 0; i < meshType.indicesAndPositionsAndSizes.size(); i++) {
+            int iMesh;
+            Vector3 pos;
+            float size;
+            std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
+            meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", pos);
+            meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);
+            meshType.possibleMeshes[iMesh].displayWithOutlines(meshType.color);
+        }
     }
 }
 
@@ -117,6 +67,8 @@ void MeshInstanceAmplificationInterface::reloadShaders()
 
     std::string vRockShader = pathToShaders + "rockShader.vert";
     std::string fRockShader = pathToShaders + "rockShader.frag";
+    std::string vTreeShader = pathToShaders + "meshInstancesShader.vert";
+    std::string fTreeShader = pathToShaders + "meshInstancesShader.frag";
 
     if (verbose)
         std::cout << "Loading 3D models... " << std::flush;
@@ -127,7 +79,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
 
     auto startTime = std::chrono::system_clock::now();
 
-    QDirIterator itCorals("src/assets/models/corals/", QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator itCorals("src/assets/models/coral/", QDir::Files, QDirIterator::Subdirectories);
     std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
     while (itCorals.hasNext()) {
         QString dir = itCorals.next();
@@ -145,7 +97,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         possibleCorals[i] = Mesh(coralsShader).fromStl(dir.toStdString()).normalize().rotate(deg2rad(180), 0, 0);
     }
 
-    QDirIterator itRocks("src/assets/models/rocks/", QDir::Files, QDirIterator::Subdirectories);
+    QDirIterator itRocks("src/assets/models/rock/", QDir::Files, QDirIterator::Subdirectories);
     std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
     while (itRocks.hasNext()) {
         QString dir = itRocks.next();
@@ -160,6 +112,42 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         // Normalize it and move it upward so the anchor is on the ground
         possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();
     }
+
+    meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
+    meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
+    meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
+    meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
+
+    for (auto& meshType : meshesOptions) {
+        QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
+        std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
+        std::vector<QString> paths;
+        while (it.hasNext()) {
+            QString dir = it.next();
+            paths.push_back(dir);
+        }
+        size_t nbElements = paths.size();
+        if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
+        meshType.possibleMeshes = std::vector<Mesh>(nbElements);
+#pragma omp parallel for
+        for (size_t i = 0; i < nbElements; i++) {
+            QString& dir = paths[i];
+            // Normalize it and move it upward so the anchor is on the ground
+            meshType.possibleMeshes[i] = Mesh(shader);
+
+            if (dir.endsWith("fbx", Qt::CaseInsensitive)) {
+                meshType.possibleMeshes[i].fromFBX(dir.toStdString());
+            } else if (dir.endsWith("stl", Qt::CaseInsensitive)) {
+                meshType.possibleMeshes[i].fromStl(dir.toStdString()).scale(Vector3(1.f, 1.f, -1.f));
+            } else {
+                std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
+            }
+
+            meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, -.5f) + meshType.requiredTranslation);
+            meshType.possibleMeshes[i].cullFace = false;
+        }
+    }
+
     auto endTime = std::chrono::system_clock::now();
     if (verbose)
         std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms" << std::endl;
@@ -172,8 +160,19 @@ QLayout* MeshInstanceAmplificationInterface::createGUI()
     QCheckBox* displayCoralsCheckbox = new QCheckBox("Display corals");
     QCheckBox* displayRocksCheckbox = new QCheckBox("Display rocks");
 
-    layout->addWidget(displayCoralsCheckbox);
-    layout->addWidget(displayRocksCheckbox);
+    for (auto& meshType : meshesOptions) {
+        CheckboxElement* displayElement = new CheckboxElement("Display " + meshType.name);
+        displayElement->setChecked(meshType.displayed);
+        displayElement->setOnChecked([&](bool check) { this->setDisplayingType(meshType, check); });
+        layout->addWidget(displayElement->get());
+    }
+
+//    layout->addWidget(displayCoralsCheckbox);
+//    layout->addWidget(displayRocksCheckbox);
+
+    ButtonElement* recomputePositionsButton = new ButtonElement("Recompute positions");
+    recomputePositionsButton->setOnClick([&]() { this->afterTerrainUpdated(); }); // Should be modified in the future
+    layout->addWidget(recomputePositionsButton->get());
 
     displayCoralsCheckbox->setChecked(this->displayCorals);
     displayRocksCheckbox->setChecked(this->displayRocks);
@@ -250,6 +249,30 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     return extendedPositions;
 }
 
+std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPositionsFor(std::string type)
+{
+    std::vector<std::pair<Vector3, float>> positionsAndGrowthFactor;
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (toUpper(obj->name) != toUpper(type)) continue;
+        float growthFactor = obj->growingState;
+        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+            positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x, asPoint->position.y, heightmap->getHeight(asPoint->position)), growthFactor});
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+            auto path = asCurve->curve.getPath(60);
+            for (auto p : path) {
+                p = p + Vector3::random(asCurve->width * .5f);
+                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
+            }
+        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+            auto randomPoints = asArea->area.randomPointsInside(60);
+            for (auto p : randomPoints) {
+                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
+            }
+        }
+    }
+    return positionsAndGrowthFactor;
+}
+
 void MeshInstanceAmplificationInterface::setCoralsDisplayed(bool display)
 {
     this->displayCorals = display;
@@ -260,9 +283,15 @@ void MeshInstanceAmplificationInterface::setRocksDisplayed(bool display)
     this->displayRocks = display;
 }
 
+void MeshInstanceAmplificationInterface::setDisplayingType(InstantiationMeshOption& options, bool display)
+{
+    options.displayed = display;
+}
+
 void MeshInstanceAmplificationInterface::afterTerrainUpdated()
 {
     this->regenerateRocksPositions();
+    this->regenerateAllTypePositions();
 }
 
 void MeshInstanceAmplificationInterface::regenerateRocksPositions()
@@ -290,5 +319,24 @@ void MeshInstanceAmplificationInterface::regenerateRocksPositions()
                                               // Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
                                               random_gen::generate(5.f, 15.f)
                                                      );
+    }
+}
+
+void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
+{
+    for (auto& meshType : meshesOptions) {
+        auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name) : std::vector<std::pair<Vector3, float>>());
+        std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
+
+        meshType.indicesAndPositionsAndSizes = std::vector<std::tuple<int, Vector3, float>>(std::min(meshType.numberDisplayed, int(availablePositions.size())));
+        for (size_t i = 0; i < meshType.indicesAndPositionsAndSizes.size(); i++) {
+            meshType.indicesAndPositionsAndSizes[i] = std::make_tuple<int, Vector3, float>(
+                                                  int(random_gen::generate(0, meshType.possibleMeshes.size())),
+                                                  Vector3(availablePositions[i].first),
+                                                    //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
+                                                  random_gen::generate(meshType.minMaxSizes.first, meshType.minMaxSizes.second) * availablePositions[i].second
+                                                         );
+        }
+//        std::cout << meshType.name << ": " << availablePositions.size() << " pos available, " << meshType.indicesAndPositionsAndSizes.size() << " instanciated." << std::endl;
     }
 }

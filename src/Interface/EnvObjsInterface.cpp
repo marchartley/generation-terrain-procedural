@@ -107,16 +107,17 @@ QLayout *EnvObjsInterface::createGUI()
 
     layout->addWidget(instantiateButton);
 
-    std::vector<ButtonElement*> probaButtons;
+    std::vector<QWidget*> probaButtons;
     for (auto& [name, obj] : EnvObject::availableObjects) {
         ButtonElement* showButton = new ButtonElement("Show " + obj->name);
         ButtonElement* forceButton = new ButtonElement("Force");
         showButton->setOnClick([&](){ this->displayProbas(name); });
         forceButton->setOnClick([&](){ this->instantiateSpecific(name); });
-//        probaButtons.push_back(showButton);
-        layout->addWidget(createHorizontalGroupUI({showButton, forceButton})->get());
+        probaButtons.push_back(showButton->get());
+        probaButtons.push_back(forceButton->get());
+//        layout->addWidget(createHorizontalGroupUI({showButton, forceButton})->get());
     }
-//    layout->addWidget(createVerticalGroupUI(probaButtons));
+    layout->addWidget(createMultiColumnGroup(probaButtons));
     layout->addWidget(objectsListWidget);
     layout->addWidget(recomputeErosionButton);
 
@@ -306,6 +307,7 @@ void EnvObjsInterface::instantiateObject()
             Vector3 bestPos = bestPositionForInstantiation(name, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
             auto implicit = newObject->createImplicitPatch();
+            this->implicitPatchesFromObjects[newObject] = implicit;
             implicitTerrain->addChild(implicit);
             implicitTerrain->updateCache();
             implicitTerrain->update();
@@ -338,6 +340,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
             Vector3 bestPos = bestPositionForInstantiation(objectName, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
             auto implicit = newObject->createImplicitPatch();
+            this->implicitPatchesFromObjects[newObject] = implicit;
             implicitTerrain->addChild(implicit);
             implicitTerrain->updateCache();
             implicitTerrain->update();
@@ -376,6 +379,17 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects()
     // Get original flowfield, do not accumulate effects (for now).
     EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
     EnvObject::applyEffects();
+    EnvObject::beImpactedByEvents();
+
+    for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
+        auto newImplicit = obj->createImplicitPatch(dynamic_cast<ImplicitPrimitive*>(implicit));
+//        newImplicit->name += "__new";
+//        implicit->dimensions = newImplicit->dimensions;
+    }
+    implicitTerrain->updateCache();
+    implicitTerrain->update();
+    voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+    heightmap->fromVoxelGrid(*voxelGrid.get());
 //    Mesh::createVectorField(EnvObject::flowfield, voxelGrid->getDimensions(), &velocitiesMesh, -1, false, true);
     //    std::cout << EnvObject::sandDeposit << " -> " << EnvObject::sandDeposit.min() << " -- " << EnvObject::sandDeposit.max() << std::endl;
 }

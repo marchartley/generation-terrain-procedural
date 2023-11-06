@@ -48,19 +48,19 @@ void Mesh::clear()
     this->needToUpdateNormals = true;
     this->needToUpdateTextures = true;
 }
-Mesh Mesh::merge(std::shared_ptr<Mesh> other, bool recomputeIndices)
+Mesh Mesh::merge(const Mesh& other, bool recomputeIndices)
 {
-    this->vertexArray.insert(this->vertexArray.end(), other->vertexArray.begin(), other->vertexArray.end());
-    this->colorsArray.insert(this->colorsArray.end(), other->colorsArray.begin(), other->colorsArray.end());
+    this->vertexArray.insert(this->vertexArray.end(), other.vertexArray.begin(), other.vertexArray.end());
+    this->colorsArray.insert(this->colorsArray.end(), other.colorsArray.begin(), other.colorsArray.end());
 
     if (recomputeIndices) {
         this->fromArray(this->vertexArray);
     }
     return *this;
 }
-Mesh Mesh::merge(std::vector<std::shared_ptr<Mesh>> others)
+Mesh Mesh::merge(std::vector<Mesh> others)
 {
-    for (std::vector<std::shared_ptr<Mesh>>::iterator it = others.begin(); it != others.end(); it++)
+    for (std::vector<Mesh>::iterator it = others.begin(); it != others.end(); it++)
         merge(*it, false);
 
     this->fromArray(this->vertexArray);
