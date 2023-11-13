@@ -23,11 +23,11 @@
     "rule": "d2(Lagoon - pos)^4",
     "rulez": "d2(Island - pos)^3",
     "flow": {
-      "direction": 0.1,
+      "direction": 1.1,
       "normal": 0.1,
-      "binormal": 0.1
+      "binormal": 0.0
     },
-    "sand": 0.1,
+    "sand": 0.4,
     "dimensions": {
       "x": 10,
       "y": 30,
@@ -59,7 +59,7 @@
     "type": "area",
     "rule": "d2(Island.center - pos)^8",
     "flow": {
-      "direction": 1.0,
+      "direction": 0.2,
       "normal": 0.0,
       "binormal": 0.0
     },
@@ -77,11 +77,11 @@
     "type": "area",
     "rule": "d2(Island.center - pos)",
     "flow": {
-      "direction": 0.5,
+      "direction": 1.0,
       "normal": 0.2,
       "binormal": 0.0
     },
-    "sand": 0.4,
+    "sand": 0.0,
     "dimensions": {
       "x": 20,
       "y": 0,
@@ -89,6 +89,20 @@
     },
     "geometry": "Mountain",
     "material": "Rock"
+  },
+  {
+    "name": "Coral",
+    "type": "point",
+    "rule": "(1 - Lagoon.inside) * (d(Lagoon - pos) + d(Island - pos))",
+    "flow": 0.1,
+    "sand": 0.8,
+    "dimensions": {
+      "x": 20,
+      "y": 0,
+      "z": 0
+    },
+    "geometry": "Sphere",
+    "material": "Coral"
   },
   {
     "name": "Beach",
@@ -153,5 +167,19 @@
     "sand": 0.0,
     "geometry": "Sphere",
     "material": "dirt"
+  },
+  {
+    "name": "Motu",
+    "type": "point",
+    "rule": "d(Reef.start) * 1000 + (sand * 10000)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 15.0
+    },
+    "sand": 0.0,
+    "geometry": "Dune",
+    "material": "Sand"
   }
 ]

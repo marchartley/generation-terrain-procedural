@@ -84,7 +84,7 @@ bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
     if (useNativeShape) {
         pointsUsed = this->points;
     } else {
-        pointsUsed = this->getPath(10);
+        pointsUsed = this->getPath(20);
     }
     for (auto& p :  pointsUsed)
         p = p.xy();

@@ -117,6 +117,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
     meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
     meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
+    meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
 
     for (auto& meshType : meshesOptions) {
         QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
@@ -143,7 +144,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
                 std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
             }
 
-            meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, -.5f) + meshType.requiredTranslation);
+            meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f)) + meshType.requiredTranslation);
             meshType.possibleMeshes[i].cullFace = false;
         }
     }
@@ -332,7 +333,7 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
         for (size_t i = 0; i < meshType.indicesAndPositionsAndSizes.size(); i++) {
             meshType.indicesAndPositionsAndSizes[i] = std::make_tuple<int, Vector3, float>(
                                                   int(random_gen::generate(0, meshType.possibleMeshes.size())),
-                                                  Vector3(availablePositions[i].first),
+                                                  Vector3(availablePositions[i].first) * (meshType.name == "island" ? Vector3(1, 1, 0) : Vector3(1, 1, 1)),
                                                     //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
                                                   random_gen::generate(meshType.minMaxSizes.first, meshType.minMaxSizes.second) * availablePositions[i].second
                                                          );

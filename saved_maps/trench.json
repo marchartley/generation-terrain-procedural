@@ -2,159 +2,28 @@
 	"implicitPatches": {
 		"composables": [
 			{
-				"blendingFactor": 2.0,
-				"composableA": {
-					"densityValue": 0.75,
-					"dimensions": {
-						"x": 100.0,
-						"y": 100.0,
-						"z": 50.0
-					},
-					"filename": "",
-					"index": 3,
-					"material": "DIRT",
-					"mirrored": false,
-					"name": "Heightmap",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"position": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"shape": "Implicit_Heightmap",
-					"sigmaValue": -1.0,
-					"supportDimensions": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.0
-					},
-					"type": "primitive"
+				"densityValue": 0.75,
+				"dimensions": {
+					"x": 100.0,
+					"y": 100.0,
+					"z": 50.0
 				},
-				"composableB": {
-					"composableA": {
-						"densityValue": 1.5,
-						"dimensions": {
-							"x": 2.6000001430511475,
-							"y": 3.0,
-							"z": 2.6000001430511475
-						},
-						"filename": "",
-						"index": 5,
-						"material": "ROCK",
-						"mirrored": false,
-						"name": "Block",
-						"optionalCurve": {
-							"closed": false,
-							"points": []
-						},
-						"position": {
-							"x": 6.173578262329102,
-							"y": 38.71122741699219,
-							"z": 0.0
-						},
-						"shape": "Block",
-						"sigmaValue": 5.0,
-						"supportDimensions": {
-							"x": 0.0,
-							"y": 0.0,
-							"z": 0.0
-						},
-						"type": "primitive"
-					},
-					"index": 6,
-					"mirrored": false,
-					"name": "Translation",
-					"optionalCurve": {
-						"closed": false,
-						"points": []
-					},
-					"spreadFactor": 0.0,
-					"translation": {
-						"x": 0.0,
-						"y": 0.0,
-						"z": 0.8584862947463989
-					},
-					"type": "unary"
-				},
-				"index": 7,
+				"filename": "",
+				"index": 26,
+				"material": "DIRT",
 				"mirrored": false,
-				"name": "Blend",
-				"operator": "Blend",
+				"name": "Heightmap",
 				"optionalCurve": {
 					"closed": false,
 					"points": []
 				},
-				"positionalB": "FIXED_POS",
-				"type": "compose",
-				"useIntersection": false
-			},
-			{
-				"densityValue": 1.5,
-				"dimensions": {
-					"x": 60.0,
-					"y": 60.0,
-					"z": 3.0
-				},
-				"filename": "",
-				"index": 2,
-				"material": "ROCK",
-				"mirrored": false,
-				"name": "island",
-				"optionalCurve": {
-					"closed": true,
-					"points": [
-						{
-							"x": 50.0,
-							"y": 30.0,
-							"z": 18.0
-						},
-						{
-							"x": 44.14213562011719,
-							"y": 44.14213562011719,
-							"z": 18.0
-						},
-						{
-							"x": 30.0,
-							"y": 50.0,
-							"z": 18.0
-						},
-						{
-							"x": 15.857864379882813,
-							"y": 44.14213562011719,
-							"z": 18.0
-						},
-						{
-							"x": 10.0,
-							"y": 29.999998092651367,
-							"z": 18.0
-						},
-						{
-							"x": 15.857863426208496,
-							"y": 15.857866287231445,
-							"z": 18.0
-						},
-						{
-							"x": 30.0,
-							"y": 10.0,
-							"z": 18.0
-						},
-						{
-							"x": 44.14213180541992,
-							"y": 15.85786247253418,
-							"z": 18.0
-						}
-					]
-				},
 				"position": {
-					"x": -6.539154052734375,
-					"y": -0.3323936462402344,
+					"x": 0.0,
+					"y": 0.0,
 					"z": 0.0
 				},
-				"shape": "Mountain",
-				"sigmaValue": 2.0,
+				"shape": "Implicit_Heightmap",
+				"sigmaValue": -1.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,
@@ -167,10 +36,10 @@
 				"dimensions": {
 					"x": 60.0,
 					"y": 60.0,
-					"z": 3.0
+					"z": 30.0
 				},
 				"filename": "",
-				"index": 1,
+				"index": 25,
 				"material": "ROCK",
 				"mirrored": false,
 				"name": "island",
@@ -199,12 +68,12 @@
 						},
 						{
 							"x": 10.0,
-							"y": 30.0,
+							"y": 29.999998092651367,
 							"z": 15.0
 						},
 						{
-							"x": 15.857864379882813,
-							"y": 15.857864379882813,
+							"x": 15.857863426208496,
+							"y": 15.857866287231445,
 							"z": 15.0
 						},
 						{
@@ -213,19 +82,799 @@
 							"z": 15.0
 						},
 						{
-							"x": 44.14213562011719,
-							"y": 15.857864379882813,
+							"x": 44.14213180541992,
+							"y": 15.85786247253418,
 							"z": 15.0
 						}
 					]
 				},
 				"position": {
-					"x": 43.0,
-					"y": 50.0,
+					"x": -6.539154052734375,
+					"y": -0.3323936462402344,
 					"z": 0.0
 				},
 				"shape": "Mountain",
-				"sigmaValue": 2.0,
+				"sigmaValue": 20.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 150.0,
+					"y": 150.0,
+					"z": 5.0
+				},
+				"filename": "",
+				"index": 24,
+				"material": "SAND",
+				"mirrored": false,
+				"name": "lagoon",
+				"optionalCurve": {
+					"closed": true,
+					"points": [
+						{
+							"x": 125.0,
+							"y": 75.0,
+							"z": 2.5
+						},
+						{
+							"x": 110.35533905029297,
+							"y": 110.35533905029297,
+							"z": 2.5
+						},
+						{
+							"x": 75.0,
+							"y": 125.0,
+							"z": 2.5
+						},
+						{
+							"x": 39.64466094970703,
+							"y": 110.35533905029297,
+							"z": 2.5
+						},
+						{
+							"x": 25.0,
+							"y": 75.0,
+							"z": 2.5
+						},
+						{
+							"x": 39.644657135009766,
+							"y": 39.6446647644043,
+							"z": 2.5
+						},
+						{
+							"x": 75.0,
+							"y": 25.0,
+							"z": 2.5
+						},
+						{
+							"x": 110.35533142089844,
+							"y": 39.644657135009766,
+							"z": 2.5
+						}
+					]
+				},
+				"position": {
+					"x": -51.0,
+					"y": -44.0,
+					"z": 0.0
+				},
+				"shape": "Polygon",
+				"sigmaValue": 50.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 39.9755859375,
+					"y": 11.210128784179688,
+					"z": 10.0
+				},
+				"filename": "",
+				"index": 23,
+				"material": "SAND",
+				"mirrored": false,
+				"name": "reef",
+				"optionalCurve": {
+					"closed": false,
+					"points": [
+						{
+							"x": 5.0,
+							"y": 6.2101287841796875,
+							"z": 5.0
+						},
+						{
+							"x": 34.9755859375,
+							"y": 5.0,
+							"z": 5.0
+						}
+					]
+				},
+				"position": {
+					"x": 8.012208938598633,
+					"y": 78.39493560791016,
+					"z": 0.0
+				},
+				"shape": "MountainChain",
+				"sigmaValue": 10.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 39.09493637084961,
+					"y": 17.313329696655273,
+					"z": 10.0
+				},
+				"filename": "",
+				"index": 22,
+				"material": "SAND",
+				"mirrored": false,
+				"name": "reef",
+				"optionalCurve": {
+					"closed": false,
+					"points": [
+						{
+							"x": 5.0,
+							"y": 5.0,
+							"z": 5.0
+						},
+						{
+							"x": 34.09493637084961,
+							"y": 12.313329696655273,
+							"z": 5.0
+						}
+					]
+				},
+				"position": {
+					"x": 45.45253372192383,
+					"y": -1.6566648483276367,
+					"z": 0.0
+				},
+				"shape": "MountainChain",
+				"sigmaValue": 10.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.3499999940395355,
+				"dimensions": {
+					"x": 30.577388763427734,
+					"y": 31.830509185791016,
+					"z": 10.0
+				},
+				"filename": "",
+				"index": 21,
+				"material": "SAND",
+				"mirrored": false,
+				"name": "reef",
+				"optionalCurve": {
+					"closed": false,
+					"points": [
+						{
+							"x": 25.577388763427734,
+							"y": 5.0,
+							"z": 5.0
+						},
+						{
+							"x": 5.0,
+							"y": 26.830509185791016,
+							"z": 5.0
+						}
+					]
+				},
+				"position": {
+					"x": 43.711307525634766,
+					"y": 46.08474349975586,
+					"z": 0.0
+				},
+				"shape": "MountainChain",
+				"sigmaValue": 10.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 20,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 30.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 19,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 94.0,
+					"y": 54.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 18,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 43.0,
+					"y": 22.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 17,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 17.0,
+					"y": 42.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.75,
+				"dimensions": {
+					"x": 3.0,
+					"y": 3.0,
+					"z": 3.0
+				},
+				"filename": "",
+				"index": 16,
+				"material": "DIRT",
+				"mirrored": false,
+				"name": "boulder",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 1.0,
+					"y": 39.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.75,
+				"dimensions": {
+					"x": 3.0,
+					"y": 3.0,
+					"z": 3.0
+				},
+				"filename": "",
+				"index": 15,
+				"material": "DIRT",
+				"mirrored": false,
+				"name": "boulder",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 3.0,
+					"y": 96.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.75,
+				"dimensions": {
+					"x": 3.0,
+					"y": 3.0,
+					"z": 3.0
+				},
+				"filename": "",
+				"index": 14,
+				"material": "DIRT",
+				"mirrored": false,
+				"name": "boulder",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 15.0,
+					"y": 20.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 13,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 85.0,
+					"y": 10.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 12,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 29.0,
+					"y": 41.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 11,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 22.0,
+					"y": 7.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"composableA": {
+					"densityValue": 0.10000000149011612,
+					"dimensions": {
+						"x": 20.0,
+						"y": 20.0,
+						"z": 20.0
+					},
+					"filename": "",
+					"index": 10,
+					"material": "CORAL",
+					"mirrored": false,
+					"name": "coral",
+					"optionalCurve": {
+						"closed": false,
+						"points": []
+					},
+					"position": {
+						"x": 16.0,
+						"y": 10.0,
+						"z": 0.0
+					},
+					"shape": "Sphere",
+					"sigmaValue": 0.0,
+					"supportDimensions": {
+						"x": 0.0,
+						"y": 0.0,
+						"z": 0.0
+					},
+					"type": "primitive"
+				},
+				"index": 9,
+				"mirrored": false,
+				"name": "Translation",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"spreadFactor": 0.0,
+				"translation": {
+					"x": -14.349654197692871,
+					"y": -8.028973579406738,
+					"z": 1.3684154752583144e-16
+				},
+				"type": "unary"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 8,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 12.0,
+					"y": 88.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 7,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 68.0,
+					"y": 49.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 6,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 54.0,
+					"y": 64.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 5,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 32.0,
+					"y": 31.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 4,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 61.0,
+					"y": 75.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 3,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 86.0,
+					"y": 57.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 2,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 48.0,
+					"y": 7.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
+				"supportDimensions": {
+					"x": 0.0,
+					"y": 0.0,
+					"z": 0.0
+				},
+				"type": "primitive"
+			},
+			{
+				"densityValue": 0.10000000149011612,
+				"dimensions": {
+					"x": 20.0,
+					"y": 20.0,
+					"z": 20.0
+				},
+				"filename": "",
+				"index": 1,
+				"material": "CORAL",
+				"mirrored": false,
+				"name": "coral",
+				"optionalCurve": {
+					"closed": false,
+					"points": []
+				},
+				"position": {
+					"x": 4.0,
+					"y": 44.0,
+					"z": 0.0
+				},
+				"shape": "Sphere",
+				"sigmaValue": 0.0,
 				"supportDimensions": {
 					"x": 0.0,
 					"y": 0.0,

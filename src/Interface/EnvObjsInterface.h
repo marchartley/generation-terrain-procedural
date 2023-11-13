@@ -33,6 +33,7 @@ public Q_SLOTS:
 
     void instantiateObject();
     void instantiateSpecific(std::string objectName);
+    void fromGanUI();
 
     void recomputeErosionValues();
 

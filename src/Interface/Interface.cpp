@@ -24,6 +24,7 @@
 #include "Interface/CoralIslandGeneratorInterface.h"
 #include "Interface/SpheroidalErosionInterface.h"
 #include "Interface/EnvObjsInterface.h"
+#include "Interface/EnvObjectFluidSimulation.h"
 
 #include "Interface/CommonInterface.h"
 
@@ -60,7 +61,8 @@ ViewerInterface::ViewerInterface() {
         std::make_shared<LBMFluidSimulationInterface>(this),
         std::make_shared<CoralIslandGeneratorInterface>(this),
         std::make_shared<SpheroidalErosionInterface>(this),
-        std::make_shared<EnvObjsInterface>(this)
+        std::make_shared<EnvObjsInterface>(this),
+        std::make_shared<EnvObjectFluidSimulation>(this)
     };
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>();

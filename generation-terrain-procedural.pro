@@ -151,6 +151,7 @@ SOURCES += \
         src/Interface/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
         src/Interface/CustomInteractiveObject.cpp \
+    src/Interface/EnvObjectFluidSimulation.cpp \
     src/Interface/EnvObjsInterface.cpp \
         src/Interface/ErosionInterface.cpp \
     src/Interface/FLIPSimulationInterface.cpp \
@@ -324,6 +325,7 @@ HEADERS += \
     src/Interface/ControlPoint.h \
     src/Interface/CoralIslandGeneratorInterface.h \
     src/Interface/CustomInteractiveObject.h \
+    src/Interface/EnvObjectFluidSimulation.h \
     src/Interface/EnvObjsInterface.h \
     src/Interface/ErosionInterface.h \
     src/Interface/FLIPSimulationInterface.h \
