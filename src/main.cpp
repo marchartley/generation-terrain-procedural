@@ -27,11 +27,12 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 //    ExpressionParser parser;
-//    std::string formula = "d2(Reef) - <current.vel dot Reef.normal>";
+//    std::string formula = "d2({10 0 1}) * -1";
 
 //    bool check = parser.validate(formula);
 
 //    std::cout << check << std::endl;
+//    std::cout << "= " << parser.parse(formula)({}) << std::endl;
 
 //    return 0;
 

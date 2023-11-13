@@ -34,7 +34,7 @@ public:
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
-    float growingState = .1f;
+    float growingState = 1.f;
 
     virtual float getSqrDistance(const Vector3& position, std::string complement = "") = 0;
     virtual Vector3 getVector(const Vector3& position, std::string complement = "") = 0;

@@ -121,6 +121,7 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         variables[name + ".end"] = Vector3();
         variables[name + ".normal"] = Vector3();
         variables[name + ".dir"] = Vector3();
+        variables[name + ".inside"] = float();
     }
 
     variables["current.center"] = Vector3();
@@ -129,6 +130,7 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.normal"] = Vector3();
     variables["current.dir"] = Vector3();
     variables["current.vel"] = float();
+    variables["sand"] = float();
 
     ExpressionParser parser;
     variables["pos"] = Vector3();
@@ -316,9 +318,11 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties[name + ".end"] = initialVectorPropertyMap;
         EnvObject::allVectorProperties[name + ".normal"] = initialVectorPropertyMap;
         EnvObject::allVectorProperties[name + ".dir"] = initialVectorPropertyMap;
+        EnvObject::allScalarProperties[name + ".inside"] = initialScalarPropertyMap;
     }
     EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
     EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
+    EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
 
 
     // Evaluate at each point
@@ -331,12 +335,14 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
             EnvObject::allVectorProperties[name + ".center"](pos) = object->getProperty(pos, "center");
             EnvObject::allVectorProperties[name + ".start"](pos) = object->getProperty(pos, "start");
             EnvObject::allVectorProperties[name + ".end"](pos) = object->getProperty(pos, "end");
+            EnvObject::allScalarProperties[name + ".inside"](pos) = (object->getProperty(pos, "inside").isValid() ? 1.f : 0.f);
             EnvObject::allVectorProperties[name + ".normal"](pos) = object->getNormal(pos);
             EnvObject::allVectorProperties[name + ".dir"](pos) = object->getDirection(pos);
         }
         Vector3 waterFlow = EnvObject::flowfield(pos);
         EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
         EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
+        EnvObject::allScalarProperties["sand"](pos) = EnvObject::sandDeposit(pos);
     });
 }
 
@@ -379,6 +385,8 @@ Vector3 EnvPoint::getProperty(const Vector3& position, std::string prop) const
         return this->position;
     } else if (prop == "end") {
         return this->position;
+    } else if (prop == "inside") {
+        return ((position - this->position).norm2() < this->radius * this->radius ? Vector3(true) : Vector3(false));
     }
     return this->position; // Default
 }
@@ -484,6 +492,8 @@ Vector3 EnvCurve::getProperty(const Vector3& position, std::string prop) const
         return this->curve.points.front();
     } else if (prop == "end") {
         return this->curve.points.back();
+    } else if (prop == "inside") {
+        return ((position - this->curve.estimateClosestPos(position)).norm2() < this->width * this->width ? Vector3(true) : Vector3(false));
     }
     return this->curve.estimateClosestPos(position); // Default
 }
@@ -526,6 +536,7 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     GridF occupancy(flow.getDimensions());
 
     flow.iterateParallel([&] (const Vector3& pos) {
+        auto initialFlow = EnvObject::flowfield(pos);
         float closestTime = translatedCurve.estimateClosestTime(pos);
         Vector3 closestPos = translatedCurve.getPoint(closestTime);
         float sqrDist = (closestPos - pos).norm2();
@@ -534,8 +545,11 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         Vector3 impact = this->flowEffect * gauss;
         auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
         if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-            if ((translatedCurve.getPoint(closestTime) - pos).dot(normal) > 0)
+            if ((closestPos - pos).dot(normal) > 0)
                 normal *= -1.f;
+        }
+        if (impact.x > 0) {
+//            direction *= (closestPos - pos).dot(initialFlow) > 0 ? -1.f : 1.f);
         }
         flow(pos) = impact.changedBasis(direction, normal, binormal);
         occupancy(pos) = 1.f;
@@ -624,6 +638,8 @@ Vector3 EnvArea::getProperty(const Vector3& position, std::string prop) const
         return Vector3::invalid();
     } else if (prop == "end") {
         return Vector3::invalid();
+    } else if (prop == "inside") {
+        return (this->area.containsXY(position, false) ? Vector3(true) : Vector3(false));
     }
     return this->area.estimateClosestPos(position); // Default
 }
@@ -677,8 +693,8 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     float timePrepare = 0.f;
     float timeApply = 0.f;
 
-    flow.iterate([&] (const Vector3& pos) {
-        if (!box.contains(pos) || !translatedCurve.contains(pos))
+    flow.iterateParallel([&] (const Vector3& pos) {
+        if (!box.contains(pos) || !translatedCurve.contains(pos, false))
             return;
 
         Vector3 impact, direction, normal, binormal;

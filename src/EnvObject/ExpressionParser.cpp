@@ -181,13 +181,14 @@ std::vector<std::string> ExpressionParser::tokenizeExpression(const std::string 
     std::vector<std::string> tokens;
     std::string currentToken;
 
-    for (char ch : expression) {
+    for (size_t i = 0; i < expression.size(); i++) {
+        char ch = expression[i];
         if (std::isspace(ch) || ch == ',') {
             if (!currentToken.empty()) {
                 tokens.push_back(currentToken);
                 currentToken.clear();
             }
-        } else if (std::isalnum(ch) || ch == '.') {
+        } else if (std::isalnum(ch) || ch == '.' || (ch == '-' && std::isalnum(expression[i + 1]))) {
             currentToken += ch;
         } else {
             if (!currentToken.empty()) {

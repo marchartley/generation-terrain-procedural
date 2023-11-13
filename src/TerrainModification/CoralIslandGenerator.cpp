@@ -96,21 +96,15 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
         area = area.fillHoles(true);
     }
 
+
     std::vector<EnvObject*> objects;
+    /*
     for (auto& reef : reefs) {
         if (reef.length() < 30) continue;
         EnvCurve* envReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
         envReef->curve = reef;
         objects.push_back(envReef);
-    }
-    /*
-    auto reefContours = featureAreas["reef"].findContoursAsCurves();
-    for (auto& curve : reefContours) {
-        EnvCurve* frontReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("frontreef"));
-        frontReef->curve = curve;
-        objects.push_back(frontReef);
-    }
-    */
+    }*/
     auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
     for (auto& curve : lagoonContours) {
         for (auto& p : curve)
@@ -118,11 +112,29 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
         ShapeCurve simplifiedCurve = curve.simplifyByRamerDouglasPeucker(5.f);
         simplifiedCurve.resamplePoints(simplifiedCurve.size() * 4);
         if (simplifiedCurve.computeArea() < 5.f) continue;
-        EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
-        lagoon->area = simplifiedCurve;
-        objects.push_back(lagoon);
-//        Plotter::getInstance()->addPlot(curve.points);
-//        Plotter::getInstance()->addPlot(simplifiedCurve.points, "", Qt::red);
+//        EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
+//        lagoon->area = simplifiedCurve;
+//        objects.push_back(lagoon);
+
+        EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+        reef->curve = simplifiedCurve;
+        objects.push_back(reef);
+    }
+    return objects; // TODO : REMOVE THIS RETURN
+
+
+
+
+    auto islandContours = featureAreas["island"].findContoursAsCurves();
+    for (auto& curve : islandContours) {
+        for (auto& p : curve)
+            p *= .5f;
+        ShapeCurve simplifiedCurve = curve.simplifyByRamerDouglasPeucker(5.f);
+        simplifiedCurve.resamplePoints(simplifiedCurve.size() * 4);
+        if (simplifiedCurve.computeArea() < 5.f) continue;
+        EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
+        island->area = simplifiedCurve;
+        objects.push_back(island);
     }
 //    Plotter::getInstance()->exec();
     /*

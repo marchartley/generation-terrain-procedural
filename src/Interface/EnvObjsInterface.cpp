@@ -3,6 +3,8 @@
 #include "Interface/InterfaceUtils.h"
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Interface/CommonInterface.h"
+#include "TerrainModification/CoralIslandGenerator.h"
+#include "DataStructure/Image.h"
 
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
@@ -91,6 +93,9 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* showDepositionButton = new ButtonElement("Show deposition");
     showDepositionButton->setOnClick([&]() { this->displaSedimentsDistrib(); });
 
+    ButtonElement* createFromGAN = new ButtonElement("From GAN");
+    createFromGAN->setOnClick([&]() { this->fromGanUI(); });
+
 //    if (objectsListWidget != nullptr)
 //        delete objectsListWidget;
     objectsListWidget = new HierarchicalListWidget;
@@ -104,6 +109,7 @@ QLayout *EnvObjsInterface::createGUI()
 
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(showDepositionButton->get());
+    layout->addWidget(createFromGAN->get());
 
     layout->addWidget(instantiateButton);
 
@@ -472,6 +478,33 @@ void EnvObjsInterface::hotReloadFile()
     if (needReload) {
         EnvObject::readFile(this->primitiveDefinitionFile); //this->loadPatchesFromFile(this->primitiveDefinitionFile);
         std::cout << "Environmental objects file has changed" << std::endl;
+    }
+}
+
+void EnvObjsInterface::fromGanUI()
+{
+    std::string path = "Python_tests/correct_synthetic_terrains_dataset/features/test/";
+    QString q_filename= QString::fromStdString(path + "84.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
+    if (!q_filename.isEmpty()) {
+        std::string file = q_filename.toStdString();
+        GridV3 img = Image::readFromFile(file).colorImage;
+
+        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img);
+        implicitTerrain->deleteAllChildren();
+        for (auto& newObject : envObjects) {
+            auto implicit = newObject->createImplicitPatch();
+            this->implicitPatchesFromObjects[newObject] = implicit;
+            implicitTerrain->addChild(implicit);
+        }
+        EnvObject::precomputeTerrainProperties(*heightmap);
+        implicitTerrain->updateCache();
+        implicitTerrain->update();
+        voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+        heightmap->fromVoxelGrid(*voxelGrid.get());
+//        implicitTerrain->addChild(obj->createImplicitPatch());
+        implicitTerrain->_cached = false;
+        voxelGrid->fromImplicit(implicitTerrain.get());
+        updateObjectsList();
     }
 }
 
