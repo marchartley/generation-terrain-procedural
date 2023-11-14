@@ -54,6 +54,7 @@ public:
         ImplicitHeightmap,
         ParametricTunnel,
         Ripple,
+        DistanceMap,
         None
     };
 
@@ -153,6 +154,7 @@ public:
     static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path);
+    static std::function<float(Vector3)> createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path);
     static std::function<float(Vector3)> createRippleFunction(float sigma, float width, float depth, float height);
     static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height);

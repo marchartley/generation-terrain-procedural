@@ -483,13 +483,13 @@ void EnvObjsInterface::hotReloadFile()
 
 void EnvObjsInterface::fromGanUI()
 {
-    std::string path = "Python_tests/correct_synthetic_terrains_dataset/features/test/";
-    QString q_filename= QString::fromStdString(path + "84.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
+    std::string path = "Python_tests/test_island_heightmapfeatures/";
+    QString q_filename= QString::fromStdString(path + "1.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
     if (!q_filename.isEmpty()) {
         std::string file = q_filename.toStdString();
         GridV3 img = Image::readFromFile(file).colorImage;
 
-        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img);
+        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
         implicitTerrain->deleteAllChildren();
         for (auto& newObject : envObjects) {
             auto implicit = newObject->createImplicitPatch();
