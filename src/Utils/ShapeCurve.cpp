@@ -97,7 +97,7 @@ float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
     return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
-float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
+float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
 {
     return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
 }
@@ -290,6 +290,13 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 }
 
 ShapeCurve &ShapeCurve::scale(float factor)
+{
+    for (auto& vert : this->points)
+        vert *= factor;
+    return *this;
+}
+
+ShapeCurve &ShapeCurve::scale(const Vector3 &factor)
 {
     for (auto& vert : this->points)
         vert *= factor;
