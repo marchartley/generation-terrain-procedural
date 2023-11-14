@@ -400,8 +400,10 @@ EnvPoint *EnvPoint::clone()
 
 void EnvPoint::applySandDeposit()
 {
-    GridF sand = GridF::gaussian(radius, radius, 1, radius * .5f) * this->sandEffect;
-    EnvObject::sandDeposit.add(sand, sand.getDimensions() * .5f);
+    GridF sand = GridF::gaussian(radius, radius, 1, radius * .1f);
+    sand /= sand.sum();
+    sand *= this->sandEffect;
+    EnvObject::sandDeposit.add(sand, this->position - sand.getDimensions() * .5f);
 
 }
 

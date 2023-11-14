@@ -467,6 +467,9 @@ std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(Pred
     case Polygon:
         func = ImplicitPatch::createPolygonFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
         break;
+    case DistanceMap:
+        func = ImplicitPatch::createDistanceMapFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
+        break;
     case ImplicitHeightmap:
         // Do it yourself!
         break;
@@ -1753,6 +1756,22 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     });
 }
 
+std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path)
+{
+    ShapeCurve polygon(path.points);
+    Vector3 center = polygon.center().xy();
+    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
+//        return std::max(-polygon.estimateSignedDistanceFrom(pos), 0.f) * height;
+        if (!polygon.containsXY(pos.xy(), false))
+            return 0.f;
+//        float dist = (polygon.estimateClosestPos(pos.xy()).xy() - pos.xy()).norm(); // Take the closest point and use only the "xy" components!
+//        return height * std::clamp(std::abs(2.f * dist / std::max(width, depth) ), 0.f, 1.f);
+        Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
+        float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
+        return height * std::clamp(dist, 0.f, 1.f);
+    });
+}
+
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path)
 {
     return [=] (const Vector3& pos) -> float {
@@ -2088,6 +2107,8 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
         return ImplicitPatch::PredefinedShapes::None;
     else if (name == "ripple")
         return ImplicitPatch::PredefinedShapes::Ripple;
+    else if (name == "distancemap")
+        return ImplicitPatch::PredefinedShapes::DistanceMap;
 
     // Error
     std::cerr << "Wrong predefined shape string given. (" << name << ")" << std::endl;
@@ -2130,6 +2151,8 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
         return "None";
     else if (shape == ImplicitPatch::PredefinedShapes::Ripple)
         return "Ripple";
+    else if (shape == ImplicitPatch::PredefinedShapes::DistanceMap)
+        return "DistanceMap";
 
     // Impossible
     std::cerr << "Unknown predefined shape given." << std::endl;
