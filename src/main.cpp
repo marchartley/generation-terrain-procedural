@@ -404,8 +404,46 @@ int main(int argc, char *argv[])
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
 
-//    EnvObject::readFile("saved_maps/primitives.json");
+//    Plotter::get()->addImage(GridF::gaussian(10, 10, 1, 3.f));
+//    return Plotter::get()->exec();
+/*
+    EnvObject::readFile("saved_maps/primitives.json");
 
+    EnvObject::flowfield.reset(Vector3(1.f, 0, 0));
+    EnvObject::flowImpactFactor = 0.f;
+
+    EnvPoint* point = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
+    point->radius = 50;
+    point->sandEffect = 1000.f;
+    point->position = Vector3(50, 50, 0);
+    point->flowEffect = Vector3(1, 1, 1);
+
+    EnvCurve* curve = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
+    curve->width = 20.f;
+    curve->sandEffect = 0.f;
+    curve->curve = BSpline({
+                               Vector3(90, 30, 0),
+                               Vector3(70, 60, 0)
+//                               Vector3(70, 30, 0),
+//                               Vector3(70, 70, 0)
+                           });
+    curve->flowEffect = Vector3(1, 0, 0);
+
+    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
+        float closestTime = curve->curve.estimateClosestTime(pos);
+        auto closestPos = curve->curve.getPoint(closestTime);
+
+        float sqrDist = (pos - closestPos).norm2();
+        EnvObject::flowfield(pos) += (curve->curve.getDirection(closestTime) + Vector3::random(.2f).xy()) * normalizedGaussian(curve->width * .5f, sqrDist) * 1.f;
+    });
+
+    for (int _ = 0; _ < 200; _++) {
+        EnvObject::applyEffects();
+    }
+
+    Plotter::get()->addImage(EnvObject::sandDeposit);
+    return Plotter::get()->exec();
+*/
     /*
     GridV3 grid(100, 100, 1);
     BSpline curve({

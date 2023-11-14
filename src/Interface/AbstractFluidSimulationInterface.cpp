@@ -110,7 +110,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()
 {
-    GridV3 velocities = _simulation->getVelocities(20, 20, 10);
+    GridV3 velocities = _simulation->getVelocities(20, 20, 1);
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 1.f, false, true);
 }
 
