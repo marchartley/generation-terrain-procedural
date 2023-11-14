@@ -474,7 +474,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 //            if (steps < 0)
 //                continueSimulation = false;
         }
-        if (std::get<0>(firstLastCollisionIndices) != std::get<1>(firstLastCollisionIndices)) {
+        if (std::get<0>(firstLastCollisionIndices) < std::get<1>(firstLastCollisionIndices)) {
             size_t startIndex = maxSteps - std::get<0>(firstLastCollisionIndices);
             size_t endIndex = maxSteps - std::get<1>(firstLastCollisionIndices);
             if (rolling) { // Here we often have errors...
