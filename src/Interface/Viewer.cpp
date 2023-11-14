@@ -405,12 +405,12 @@ void Viewer::screenshot()
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
     bool wasRecording = this->isTakingScreenshots;
     if (!wasRecording) {
-        this->startRecording();
+        this->isTakingScreenshots = true;
         this->draw();
     }
     this->copyLastScreenshotTo(this->main_screenshotFolder + "shots/" + s_time + ".png");
     if (!wasRecording)
-        this->stopRecording();
+        this->isTakingScreenshots = wasRecording;
 
     if (this->mapMode == MapMode::GRID_MODE) {
         this->heightmap->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap.png");
