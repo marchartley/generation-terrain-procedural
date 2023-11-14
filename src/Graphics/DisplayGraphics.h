@@ -90,6 +90,7 @@ public:
     void draw();
     int exec();
     void saveFig(std::string filename);
+    void copyToClipboard();
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
 

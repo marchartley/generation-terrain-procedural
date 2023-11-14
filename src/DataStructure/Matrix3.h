@@ -1064,7 +1064,7 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
     float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
     float sqrSigma = sigma * sigma;
     gaussian.iterateParallel([&](const Vector3& pos) {
-        gaussian(pos) = std::exp(-pos.norm2()/(2*sqrSigma)) * oneOverSqrt2Pi;
+        gaussian(pos) = std::exp(-((pos - center).norm2())/(2*sqrSigma)) * oneOverSqrt2Pi;
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < gaussian.sizeX; x++) {

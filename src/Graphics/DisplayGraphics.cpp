@@ -1,4 +1,5 @@
 #include "DisplayGraphics.h"
+#include "Interface/CommonInterface.h"
 #include <iostream>
 
 
@@ -122,6 +123,10 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
 
     this->saveButton = new QPushButton("Save");
     this->layout()->addWidget(this->saveButton);
+
+    auto copyToClipboardButton = new ButtonElement("Copy");
+    copyToClipboardButton->setOnClick([&]() { this->copyToClipboard(); });
+    this->layout()->addWidget(copyToClipboardButton->get());
 
     this->setWindowModality(Qt::WindowModality::NonModal);
     this->setModal(false);
@@ -331,6 +336,12 @@ void Plotter::saveFig(std::string filename)
 {
     QPixmap p = this->chartView->grab();
     p.save(QString::fromStdString(filename), "PNG");
+}
+
+void Plotter::copyToClipboard()
+{
+    QPixmap p = this->chartView->grab();
+    QApplication::clipboard()->setPixmap(p, QClipboard::Clipboard);
 }
 
 void Plotter::resizeEvent(QResizeEvent *event)
