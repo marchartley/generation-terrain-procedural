@@ -37,10 +37,11 @@ public Q_SLOTS:
 
     void recomputeErosionValues();
 
-    void updateEnvironmentFromEnvObjects();
+    void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false);
+    void onlyUpdateFlowAndSandFromEnvObjects();
 
     void displayProbas(std::string objectName);
-    void displaSedimentsDistrib();
+    void displaySedimentsDistrib();
 
     void updateObjectsList();
 

@@ -29,6 +29,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
         float maxHeight = AABBox.max().z;
 
         this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
+//        for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
 //            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
@@ -41,6 +42,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
                 }
             }
             if (totalEval >= ImplicitPatch::isovalue && totalPositive > totalNegative) {
+//            if (totalEval <= ImplicitPatch::isovalue || totalPositive < totalNegative) {
                 this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = z;
                 break;
             }
@@ -334,71 +336,70 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
         finalDimensions = this->getBBox().max();
 
     if (_cached) {
-        return this->_cachedVoxelized.resize(finalDimensions);
+        return this->_cachedVoxelized.subset(Vector3(), finalDimensions);
     }
 
 
     this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-    #pragma omp parallel for collapse(3)
-    for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
-        for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
-            for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
-                Vector3 pos = Vector3(x, y, z) * scale;
-//                if (pos == Vector3(52, 52, 5)) {
-//                    int a = 0;
-//                }
-                std::vector<Vector3> evaluationPoses = {
-                    pos + Vector3(0, 0, 0)/*,
-                    pos + Vector3(0, 0, 1),
-                    pos + Vector3(0, 1, 0),
-                    pos + Vector3(0, 1, 1),
-                    pos + Vector3(1, 0, 0),
-                    pos + Vector3(1, 0, 1),
-                    pos + Vector3(1, 1, 0),
-                    pos + Vector3(1, 1, 1)*/
-                };
-                float allPositiveVals = 0.f;
-                float allNegativeVals = 0.f;
-                std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
-                for (size_t i = 0; i < evaluations.size(); i++) {
-                    auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
-                    evaluations[i] = {totalEval, matVals};
+    std::cout << "Time for evaluating " << this->_cachedVoxelized.size() << " cells: " << showTime(timeIt([&]() {
+        #pragma omp parallel for collapse(3)
+        for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
+            for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
+                for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
+                    Vector3 pos = Vector3(x, y, z) * scale;
+                    std::vector<Vector3> evaluationPoses = {
+                        pos + Vector3(0, 0, 0)/*,
+                        pos + Vector3(0, 0, 1),
+                        pos + Vector3(0, 1, 0),
+                        pos + Vector3(0, 1, 1),
+                        pos + Vector3(1, 0, 0),
+                        pos + Vector3(1, 0, 1),
+                        pos + Vector3(1, 1, 0),
+                        pos + Vector3(1, 1, 1)*/
+                    };
+                    float allPositiveVals = 0.f;
+                    float allNegativeVals = 0.f;
+                    std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
+                    for (size_t i = 0; i < evaluations.size(); i++) {
+                        auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
+                        evaluations[i] = {totalEval, matVals};
 
 
-                    float positiveVal = 0.f;
-                    float negativeVal = 0.f;
-                    for (const auto& [mat, val] : matVals) {
-                        float density = LayerBasedGrid::densityFromMaterial(mat);
-                        positiveVal += (density > 0.f ? val : 0.f);
-                        negativeVal += (density <= 0.f ? val : 0.f);
-                    }
-                    totalEval = positiveVal;
-                    allPositiveVals += positiveVal;
-                    allNegativeVals += negativeVal;
-                }
-
-                allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
-                if (allPositiveVals >= ImplicitPatch::isovalue) {
-                    /*TerrainTypes maxType;
-                    float maxVal = 0.f;
-                    for (const auto& [mat, val] : matVals) {
-                        if (val > maxVal) {
-                            maxType = mat;
-                            maxVal = val;
+                        float positiveVal = 0.f;
+                        float negativeVal = 0.f;
+                        for (const auto& [mat, val] : matVals) {
+                            float density = LayerBasedGrid::densityFromMaterial(mat);
+                            positiveVal += (density > 0.f ? val : 0.f);
+                            negativeVal += (density <= 0.f ? val : 0.f);
                         }
+                        totalEval = positiveVal;
+                        allPositiveVals += positiveVal;
+                        allNegativeVals += negativeVal;
                     }
-                    _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
-                    */
-                    _cachedVoxelized.at(pos) = allPositiveVals;
+
+                    allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
+                    if (allPositiveVals >= ImplicitPatch::isovalue) {
+                        /*TerrainTypes maxType;
+                        float maxVal = 0.f;
+                        for (const auto& [mat, val] : matVals) {
+                            if (val > maxVal) {
+                                maxType = mat;
+                                maxVal = val;
+                            }
+                        }
+                        _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
+                        */
+                        _cachedVoxelized.at(pos) = allPositiveVals;
+                    }
                 }
             }
         }
-    }
+    })) << std::endl;
 //    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
     _cached = true;
 //    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
-    return _cachedVoxelized.resize(finalDimensions);
+    return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
 
 ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve)

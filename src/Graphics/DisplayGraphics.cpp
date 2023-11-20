@@ -1,5 +1,4 @@
 #include "DisplayGraphics.h"
-#include "Interface/CommonInterface.h"
 #include <iostream>
 
 
@@ -41,6 +40,16 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
             this->chart()->scroll(-delta.x(), delta.y());
         Q_EMIT this->updated();
     }
+
+    // Get the coordinate in the plotted area...
+    QPointF qMousePos = event->pos();
+    QPointF mousePosInChart = this->chart()->mapFromParent(qMousePos);
+    QRectF plotArea = this->chart()->plotArea();
+    QPointF mousePosInPlot = mousePosInChart - plotArea.topLeft();
+    QPointF qRelativeMousePos = mousePosInPlot;
+    Vector3 mousePos(qRelativeMousePos.x() / float(plotArea.width()), qRelativeMousePos.y() / float(plotArea.height()));
+    // That was tough!
+    Q_EMIT this->mouseMoved(mousePos);
     return QChartView::mouseMoveEvent(event);
 }
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
@@ -115,31 +124,53 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     if (this->chartView == nullptr)
         this->chartView = new ChartView(new Chart());
 
-    this->setLayout(new QHBoxLayout());
-    this->layout()->addWidget(this->chartView);
+    auto layout = new QHBoxLayout();
+    auto left = new QVBoxLayout();
+    auto right = new QVBoxLayout();
+
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    this->resize(800, 600);
+//    this->chartView->setMaximumSize(10000, 10000);
+//    this->chartView->chart()->setMaximumSize(10000, 10000);
 
-    this->saveButton = new QPushButton("Save");
-    this->layout()->addWidget(this->saveButton);
-
+    this->saveButton = new ButtonElement("Save");
     auto copyToClipboardButton = new ButtonElement("Copy");
-    copyToClipboardButton->setOnClick([&]() { this->copyToClipboard(); });
-    this->layout()->addWidget(copyToClipboardButton->get());
+    this->mouseInfoLabel = new QLabel("");
 
-    this->setWindowModality(Qt::WindowModality::NonModal);
-    this->setModal(false);
 
-    QObject::connect(this->saveButton, &QPushButton::pressed, [&]() {
+//    this->chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//    this->chartView->chart()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//    this->mouseInfoLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+
+
+    saveButton->setOnClick([&]() {
         QString q_filename = QFileDialog::getSaveFileName(this, QString("Save plot"));
         if (!q_filename.isEmpty())
             saveFig(q_filename.toStdString());
     });
+    copyToClipboardButton->setOnClick([&]() { this->copyToClipboard(); });
+
+    left->addWidget(this->chartView);
+    left->addWidget(this->mouseInfoLabel);
+    right->addWidget(this->saveButton->get());
+    right->addWidget(copyToClipboardButton->get());
+
+    this->setWindowModality(Qt::WindowModality::NonModal);
+    this->setModal(false);
+
+    layout->addItem(left);
+    layout->addItem(right);
+    this->setLayout(layout);
+
+    this->resize(800, 600);
+    this->updateGeometry();
+
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &Plotter::selectData);
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView, &ChartView::updated, this, &Plotter::updateLabelsPositions);
+    QObject::connect(this->chartView, &ChartView::mouseMoved, this, &Plotter::displayInfoUnderMouse);
+    QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::draw);
 }
 
 Plotter *Plotter::getInstance()
@@ -196,8 +227,12 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
-void Plotter::addImage(GridV3 image, bool normalize)
+void Plotter::addImage(GridV3 image, bool normalize, bool useAbs)
 {
+    this->displayedImage = image;
+    if (useAbs) {
+        image = image.abs();
+    }
     if (normalize) {
         image.normalize();
     }
@@ -215,7 +250,7 @@ void Plotter::addImage(GridV3 image, bool normalize)
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 }
 
-void Plotter::addImage(GridF image, bool normalize)
+void Plotter::addImage(GridF image, bool normalize, bool useAbs)
 {
     GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
@@ -224,17 +259,17 @@ void Plotter::addImage(GridF image, bool normalize)
 //            int a = 0;
         copy[i] = Vector3(val, val, val);
     }
-    return this->addImage(copy, normalize);
+    return this->addImage(copy, normalize, useAbs);
 }
 
-void Plotter::addImage(Matrix3<double> image, bool normalize)
+void Plotter::addImage(Matrix3<double> image, bool normalize, bool useAbs)
 {
-    return this->addImage((GridF)image, normalize);
+    return this->addImage((GridF)image, normalize, useAbs);
 }
 
-void Plotter::addImage(GridI image, bool normalize)
+void Plotter::addImage(GridI image, bool normalize, bool useAbs)
 {
-    return this->addImage((GridF)image, normalize);
+    return this->addImage((GridF)image, normalize, useAbs);
 }
 
 void Plotter::draw()
@@ -439,6 +474,18 @@ void Plotter::selectData(const Vector3& pos)
     } else {
         this->chartView->unlockView();
     }
+}
+
+void Plotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
+{
+    if (this->displayedImage.empty() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
+        return;
+    std::ostringstream oss;
+    Vector3 size = displayedImage.getDimensions();
+    Vector3 position = relativeMousePos * size;
+    Vector3 value = this->displayedImage(position);
+    oss << "Mouse pos: " << int(position.x) << ", " << int(position.y) << " -- Value : (" << value.x << ", " << value.y << ", " << value.z << ") ";
+    this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
 }
 
 

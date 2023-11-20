@@ -41,6 +41,7 @@ public:
     virtual Vector3 getNormal(const Vector3& position) = 0;
     virtual Vector3 getDirection(const Vector3& position) = 0;
     virtual Vector3 getProperty(const Vector3& position, std::string prop) const = 0;
+    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
     virtual EnvObject* clone() = 0;
 
 
@@ -69,6 +70,8 @@ public:
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr) = 0;
 
     static void applyEffects();
+    static void updateSedimentation();
+    static void updateFlowfield();
     static void beImpactedByEvents();
 
     float evaluate(const Vector3& position);
@@ -80,6 +83,8 @@ public:
     static std::map<std::string, GridV3> allVectorProperties;
     static std::map<std::string, GridF> allScalarProperties;
     static void precomputeTerrainProperties(const Heightmap& heightmap);
+    static void recomputeTerrainPropertiesForObject(const Heightmap& heightmap, std::string objectName);
+    static void recomputeFlowAndSandProperties();
 };
 
 class EnvPoint : public EnvObject {
@@ -96,6 +101,7 @@ public:
     virtual Vector3 getNormal(const Vector3& position);
     virtual Vector3 getDirection(const Vector3& position);
     virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
+    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvPoint* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
@@ -119,6 +125,7 @@ public:
     virtual Vector3 getNormal(const Vector3& position);
     virtual Vector3 getDirection(const Vector3& position);
     virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
+    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
@@ -142,6 +149,7 @@ public:
     virtual Vector3 getNormal(const Vector3& position);
     virtual Vector3 getDirection(const Vector3& position);
     virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
+    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvArea* clone();
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();

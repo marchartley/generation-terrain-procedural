@@ -214,7 +214,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     noise.SetFractalGain(0.7);
     noise.SetFractalWeightedStrength(0.5);
     noise.SetFractalOctaves(1);
-    heightmap->getBiomeIndices() = heightmap->getBiomeIndices().wrapWithoutInterpolation(GridV3::fbmNoise2D(noise, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY)  * 50.f);
+    heightmap->getBiomeIndices() = heightmap->getBiomeIndices().warpWithoutInterpolation(GridV3::fbmNoise2D(noise, heightmap->getBiomeIndices().sizeX, heightmap->getBiomeIndices().sizeY)  * 50.f);
 
     // First, level the terrain as the biomes design it
     GridF heightChange(heightmap->getSizeX(), heightmap->getSizeY(), 1);

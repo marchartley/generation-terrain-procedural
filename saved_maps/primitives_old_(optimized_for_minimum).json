@@ -2,7 +2,7 @@
   {
     "name": "Passe",
     "type": "curve",
-    "rule": "((25 - d(Reef - pos)) * (1/100))^4 * (abs(current.dir dot Reef.normal))",
+    "rule": "((25 - d(Reef - pos)) * (1/100))^4 * -1 * (abs(current.dir dot Reef.normal))",
     "flow": {
       "direction": 1.0,
       "normal": 0.1,
@@ -20,8 +20,8 @@
   {
     "name": "Reef",
     "type": "curve",
-    "rule": "(20*20)^4 - d2(Lagoon - pos)^4",
-    "rulez": "(20*20)^3 - d2(Island - pos)^3",
+    "rule": "d2(Lagoon - pos)^4",
+    "rulez": "d2(Island - pos)^3",
     "flow": {
       "direction": 1.0,
       "normal": 0.9,
@@ -39,7 +39,7 @@
   {
     "name": "FrontReef",
     "type": "curve",
-    "rule": "(20*20) - d2(Reef - pos)",
+    "rule": "d2(Reef - pos)",
     "flow": {
       "direction": 0.0,
       "normal": 0.5,
@@ -57,7 +57,7 @@
   {
     "name": "Lagoon",
     "type": "area",
-    "rule": "(20*20)^8 - d2(Island.center - pos)^8",
+    "rule": "d2(Island.center - pos)^8",
     "flow": {
       "direction": 1.0,
       "normal": 1.0,
@@ -75,7 +75,7 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "(20*20) - d2(Island.center - pos)",
+    "rule": "d2(Island.center - pos)",
     "flow": {
       "direction": 1.0,
       "normal": 0.2,
@@ -93,8 +93,8 @@
   {
     "name": "Coral",
     "type": "point",
-    "rule": "current.vel * 4 - (1 - Lagoon.inside) * 5",
-    "rule_old": "current.vel - (1 - Lagoon.inside) * (d(Lagoon - pos) + d(Island - pos))",
+    "rule": "current.vel * -4 + (1 - Lagoon.inside) * 5",
+    "rule_old": "current.vel * -1 + (1 - Lagoon.inside) * (d(Lagoon - pos) + d(Island - pos))",
     "flow": 0.1,
     "sand": 0.8,
     "dimensions": {
@@ -108,7 +108,7 @@
   {
     "name": "Beach",
     "type": "area",
-    "rule": "((10*10)^5 - d2(Island - pos)^5) * (1 - Island.inside)",
+    "rule": "d2(Island - pos)^5",
     "flow": {
       "direction": 0.1,
       "normal": 0.0,
@@ -126,7 +126,7 @@
   {
     "name": "Coast",
     "type": "area",
-    "rule": "(10*10)^5 - d2(Island - pos)^5",
+    "rule": "d2(Island - pos)^5",
     "flow": {
       "direction": 0.1,
       "normal": 0.0,
@@ -144,7 +144,7 @@
   {
     "name": "Boulder",
     "type": "point",
-    "rule": "(20 * 20) - (d2(Reef - pos)) + current.vel",
+    "rule": "(d2(Reef - pos)) - 5 - current.vel",
     "flow": 0.0,
     "sand": 0.4,
     "dimensions": {
@@ -158,7 +158,7 @@
   {
     "name": "Delta",
     "type": "curve",
-    "rule": "(10*10)^4 - d2(Passe.end - pos)^4",
+    "rule": "d2(Passe.end - pos)^4",
     "flow": {
       "direction": 0.8,
       "normal": 0.8,
@@ -176,7 +176,7 @@
   {
     "name": "Tree",
     "type": "point",
-    "rule": "200 * d2(Island - pos) - 500 * d2(Island.center - pos)",
+    "rule": "200 * d2(Island - pos) + 500 * d2(Island.center - pos)",
     "flow": 0.0,
     "dimensions": {
       "x": 4.0,

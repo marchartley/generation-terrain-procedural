@@ -406,44 +406,70 @@ int main(int argc, char *argv[])
 
 //    Plotter::get()->addImage(GridF::gaussian(10, 10, 1, 3.f));
 //    return Plotter::get()->exec();
-/*
+
+    /*
     EnvObject::readFile("saved_maps/primitives.json");
 
-    EnvObject::flowfield.reset(Vector3(1.f, 0, 0));
-    EnvObject::flowImpactFactor = 0.f;
+    GridV3& flow = EnvObject::flowfield;
+    flow.reset(Vector3(.01f, 0, 0));
+    EnvObject::flowImpactFactor = 1.f;
+
+//    EnvObject::sandDeposit.paste(GridF::gaussian(15, 15, 1, 5.f), 20, 42, 0);
 
     EnvPoint* point = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
-    point->radius = 50;
-    point->sandEffect = 1000.f;
-    point->position = Vector3(50, 50, 0);
-    point->flowEffect = Vector3(1, 1, 1);
+    point->radius = 10;
+    point->sandEffect = 1.f;
+    point->position = Vector3(10, 50, 0);
+    point->flowEffect = Vector3(0, 0, 0);
 
     EnvCurve* curve = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
     curve->width = 20.f;
     curve->sandEffect = 0.f;
     curve->curve = BSpline({
-                               Vector3(90, 30, 0),
-                               Vector3(70, 60, 0)
+                               Vector3(50, 30, 0),
+                               Vector3(30, 50, 0),
+                               Vector3(50, 70, 0),
+                               Vector3(70, 50, 0),
+                               Vector3(50, 30, 0)
 //                               Vector3(70, 30, 0),
 //                               Vector3(70, 70, 0)
                            });
-    curve->flowEffect = Vector3(1, 0, 0);
+    curve->flowEffect = Vector3(1, 1, 0).normalize();
 
-    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
-        float closestTime = curve->curve.estimateClosestTime(pos);
-        auto closestPos = curve->curve.getPoint(closestTime);
+    auto c1 = curve->clone();
+    c1->curve = BSpline({Vector3(20, 0, 0), Vector3(24, 60, 0)});
+    auto c2 = c1->clone();
+    c2->curve = BSpline({Vector3(50, 100, 0), Vector3(51, 40, 0)});
+    auto c3 = c1->clone();
+    c3->curve = BSpline({Vector3(70, 0, 0), Vector3(71, 60, 0)});
 
-        float sqrDist = (pos - closestPos).norm2();
-        EnvObject::flowfield(pos) += (curve->curve.getDirection(closestTime) + Vector3::random(.2f).xy()) * normalizedGaussian(curve->width * .5f, sqrDist) * 1.f;
+    EnvObject::instantiatedObjects.pop_back();
+    EnvObject::instantiatedObjects.push_back(c1);
+    EnvObject::instantiatedObjects.push_back(c2);
+    EnvObject::instantiatedObjects.push_back(c3);
+
+    float angle = 0.f;
+    QTimer* timer = new QTimer();
+    timer->setInterval(50);
+
+    QObject::connect(timer, &QTimer::timeout, [=, &angle]() {
+//        angle += 5.f;
+        float strength = .05f;
+        Vector3 dir = Vector3(cos(deg2rad(angle)) * strength + .1f, sin(deg2rad(angle)) * strength);
+        EnvObject::flowfield.reset(dir);
+        float t1 = timeIt([&]() {
+            EnvObject::applyEffects();
+        });
+        float t2 = timeIt([&]() {
+            Plotter::get()->addImage(EnvObject::sandDeposit, false, true);
+//            Plotter::get()->addImage(EnvObject::flowfield, false, true);
+            Plotter::get()->draw();
+        });
+        std::cout << showTime(t1) << " + " << showTime(t2) << " = " << showTime(t1+t2) << " -> " << EnvObject::sandDeposit.sum() << std::endl;
     });
-
-    for (int _ = 0; _ < 200; _++) {
-        EnvObject::applyEffects();
-    }
-
-    Plotter::get()->addImage(EnvObject::sandDeposit);
+    timer->start();
     return Plotter::get()->exec();
-*/
+    */
     /*
     GridV3 grid(100, 100, 1);
     BSpline curve({
