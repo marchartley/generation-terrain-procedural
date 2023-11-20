@@ -82,74 +82,78 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
         {{255, 255,   0}, "island"}
     };
 
-    // Create binary masks for each of the objects
     std::map<std::string, GridI> featureAreas;
-    for (auto& [_, name] : colorToFeature)
-        featureAreas[name] = GridI(img.getDimensions());
 
-    for (size_t i = 0; i < img.size(); i++) {
-        const auto& pix = img[i];
-        featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
-    }
+    std::cout << "Extraction: " << showTime(timeIt([&]() {
+        // Create binary masks for each of the objects
+        for (auto& [_, name] : colorToFeature)
+            featureAreas[name] = GridI(img.getDimensions());
 
-    // If some binary masks have holes (e.g. the island is inside the lagoon), remove them.
-    // This is done using CCL algorithm, maybe not the fastest and smartest way
-    for (auto& [name, area] : featureAreas) {
-        area = area.fillHoles(true);
-    }
+        for (size_t i = 0; i < img.size(); i++) {
+            const auto& pix = img[i];
+            featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
+        }
+    })) << std::endl;
+
+    std::cout << "Fill holes: " << showTime(timeIt([&]() {
+        // If some binary masks have holes (e.g. the island is inside the lagoon), remove them.
+        // This is done using CCL algorithm, maybe not the fastest and smartest way
+        for (auto& [name, area] : featureAreas) {
+            area = area.fillHoles(true);
+        }
+    })) << std::endl;
 
 
     std::vector<EnvObject*> objects;
-    /*
-    // In this part, we use the medial axis of the reef region to instantiate it.
-    // It creates a small gap between the reef and the lagoon, so I will instead use the lagoon region
-    for (auto& reef : reefs) {
-        if (reef.length() < 30) continue;
-        EnvCurve* envReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
-        envReef->curve = reef;
-        objects.push_back(envReef);
-    }*/
 
-    // Extract the lagoon contours to instantiate the lagoons and the reefs
-    auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
-    for (auto& curve : lagoonContours) {
-        curve.scale(ratio);
-        ShapeCurve simplifiedCurve = curve;
-        simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-        if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+    std::cout << "Lagoon + reefs: " << showTime(timeIt([&]() {
+        // Extract the lagoon contours to instantiate the lagoons and the reefs
+        auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
+        for (auto& curve : lagoonContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
 
-        EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
-        lagoon->area = simplifiedCurve;
-        objects.push_back(lagoon);
+            EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
+            lagoon->area = simplifiedCurve;
+            objects.push_back(lagoon);
 
-        EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
-        reef->curve = simplifiedCurve;
-        objects.push_back(reef);
-    }
+            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+            reef->curve = simplifiedCurve;
+            objects.push_back(reef);
+        }
+    })) << std::endl;
 
-    // Extract the coast contours
-    auto coastContours = featureAreas["coast"].findContoursAsCurves();
-    for (auto& curve : coastContours) {
-        curve.scale(ratio);
-        ShapeCurve simplifiedCurve = curve;
-        simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-        if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
 
-        EnvArea* coast = dynamic_cast<EnvArea*>(EnvObject::instantiate("coast"));
-        coast->area = simplifiedCurve;
-        objects.push_back(coast);
-    }
+    std::cout << "Coasts: " << showTime(timeIt([&]() {
+        // Extract the coast contours
+        auto coastContours = featureAreas["coast"].findContoursAsCurves();
+        for (auto& curve : coastContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
 
-    // Extract the island contours
-    auto islandContours = featureAreas["island"].findContoursAsCurves();
-    for (auto& curve : islandContours) {
-        curve.scale(ratio);
-        ShapeCurve simplifiedCurve = curve;
-        simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-        if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
-        EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
-        island->area = simplifiedCurve;
-        objects.push_back(island);
-    }
+            EnvArea* coast = dynamic_cast<EnvArea*>(EnvObject::instantiate("coast"));
+            coast->area = simplifiedCurve;
+            objects.push_back(coast);
+        }
+    })) << std::endl;
+
+
+    std::cout << "Island: " << showTime(timeIt([&]() {
+        // Extract the island contours
+        auto islandContours = featureAreas["island"].findContoursAsCurves();
+        for (auto& curve : islandContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+            EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
+            island->area = simplifiedCurve;
+            objects.push_back(island);
+        }
+    })) << std::endl;
     return objects;
 }

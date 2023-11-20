@@ -175,11 +175,11 @@ public:
 
     T trace() const;
 
-    Matrix3<T> wrapWith(const Matrix3<Vector3>& wrapper) const;
-    Matrix3<T> wrapWith(const BSpline& original, const BSpline& wrapperCurve) const;
+    Matrix3<T> warpWith(const Matrix3<Vector3>& warper) const;
+    Matrix3<T> warpWith(const BSpline& original, const BSpline& warperCurve) const;
 
-    Matrix3<T> wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper) const;
-    Matrix3<T> wrapWithoutInterpolation(const BSpline& original, const BSpline& wrapperCurve) const;
+    Matrix3<T> warpWithoutInterpolation(const Matrix3<Vector3>& warper) const;
+    Matrix3<T> warpWithoutInterpolation(const BSpline& original, const BSpline& warperCurve) const;
 
     static Matrix3<float> fbmNoise1D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
@@ -2269,7 +2269,7 @@ Vector3 Matrix3<T>::getWrappedPosition(const Vector3& pos) const
 {
     Vector3 rounded = pos.roundedDown();
     Vector3 decimals = pos - rounded;
-    Vector3 wrap = Vector3(int(rounded.x + sizeX) % sizeX,
+    Vector3  wrap = Vector3(int(rounded.x + sizeX) % sizeX,
                            int(rounded.y + sizeY) % sizeY,
                            int(rounded.z + sizeZ) % sizeZ
                            ) + decimals;
@@ -2290,10 +2290,10 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::wrapWith(const Matrix3<Vector3>& wrapper) const
+Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper) const
 {
-    // Wrap definition : f(wrap(p)) = f(p + wrap vec)
-    // But f(p) != f(p - wrap vec), in the definition. I think it should create
+    // Warp definition : f(warp(p)) = f(p + warp vec)
+    // But f(p) != f(p - warp vec), in the definition. I think it should create
     // better results because we can fetch outside values (with mirror for ex)
     // But that's not the current definition.
     Matrix3<T> result(getDimensions());
@@ -2301,90 +2301,70 @@ Matrix3<T> Matrix3<T>::wrapWith(const Matrix3<Vector3>& wrapper) const
     self.raiseErrorOnBadCoord = false;
     self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
-    Matrix3<float> unit(result.getDimensions(), 1.f);
-    Matrix3<float> unit_ctrl = unit;
-    iterate([&](const Vector3& pos) {
-        const Vector3& wrap = wrapper.at(pos);
-        result.addValueAt(self.at(pos), pos + wrap);
-        unit_ctrl.addValueAt(1.f, pos + wrap);
-    });
-    /*for (int x = 0; x < sizeX; x++) {
-        for (int y = 0; y < sizeY; y++) {
-            for (int z = 0; z < sizeZ; z++) {
-                Vector3 pos(x, y, z);
-                const Vector3& wrap = wrapper.at(pos);
-                result.addValueAt(this->at(pos), pos + wrap);
-//                result.addValueAt(this->interpolate(pos - wrap), pos);
 
-                unit_ctrl.addValueAt(1.f, pos + wrap);
-//                unit_ctrl.addValueAt(1.f, pos);
-            }
-        }
-    }*/
-    iterateParallel([&](size_t i) {
-        result[i] = (unit_ctrl[i] != 0 ? result[i] / unit_ctrl[i] : 0.f);
+    iterate([&](const Vector3& pos) {
+        const Vector3& warp = warper.at(pos);
+        result.addValueAt(self.at(pos), pos + warp);
     });
     return result;
-    /*for (auto& val : unit_ctrl) val = (val == 0 ? .00001f : val);
-    return result /= unit_ctrl;*/
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWith(const BSpline& original, const BSpline& wrapperCurve) const
+Matrix3<T> Matrix3<T>::warpWith(const BSpline& original, const BSpline& warperCurve) const
 {
     // For now, start from a straight line on the X-axis
 //    BSpline original = BSpline({this->getDimensions() * Vector3(0, .5, .5) + Vector3(1, 0, 0), this->getDimensions() * Vector3(1, .5, .5) - Vector3(1, 0, 0)});
     float pathsResolution = 1000.f;
     std::vector<Vector3> originalCurvePoints = original.getPath(pathsResolution);
-    std::vector<Vector3> wrapperCurvePoints = wrapperCurve.getPath(pathsResolution);
+    std::vector<Vector3> warperCurvePoints = warperCurve.getPath(pathsResolution);
 
-    Matrix3<Vector3> wrapper(this->getDimensions());
-    wrapper.raiseErrorOnBadCoord = false;
+    Matrix3<Vector3> warper(this->getDimensions());
+    warper.raiseErrorOnBadCoord = false;
     Matrix3<float> modifications(this->getDimensions(), 0.f);
     modifications.raiseErrorOnBadCoord = false;
 
     // Vectors along the curve
     for (size_t i = 0; i < originalCurvePoints.size(); i++) {
         Vector3 pos = originalCurvePoints[i];
-        Vector3 dir = wrapperCurvePoints[i] - pos;
-        float curveWrapLength = dir.norm();
+        Vector3 dir = warperCurvePoints[i] - pos;
+        float curveWarpLength = dir.norm();
         dir.normalize();
 
-        // In direction of the curve wrapping
+        // In direction of the curve warping
         Vector3 endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir, Vector3(), getDimensions());
         float distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
 
         for (int j = 0; j < distanceToBorder; j++) {
-            float wrapLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWrapLength;
-//            wrapper.at(pos + dir * (float)j) += dir * wrapLength;
+            float warpLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWarpLength;
+//            warper.at(pos + dir * (float)j) += dir * warpLength;
 //            modifications.at(pos + dir * (float)j) += 1.f;
-            wrapper.addValueAt(dir * wrapLength, pos + dir * (float)j);
+            warper.addValueAt(dir * warpLength, pos + dir * (float)j);
             modifications.addValueAt(1.f, pos + dir * (float)j);
         }
 
-        // In opposite direction of the curve wrapping
+        // In opposite direction of the curve warping
         endingPropagationPoint = Collision::intersectionRayAABBox(pos + Vector3(.5, .5, .5), dir * -1.f, Vector3(), getDimensions());
         distanceToBorder = (dir.norm2() > 0 ? (endingPropagationPoint - pos).norm() : 1.f);
 
         for (int j = 1; j < distanceToBorder; j++) {
-            float wrapLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWrapLength;
-//            wrapper.at(pos - dir * (float)j) += dir * wrapLength;
+            float warpLength = (1 - interpolation::linear(j / distanceToBorder)) * curveWarpLength;
+//            warper.at(pos - dir * (float)j) += dir * warpLength;
 //            modifications.at(pos - dir * (float)j) += 1.f;
-            wrapper.addValueAt(dir * wrapLength, pos - dir * (float)j);
+            warper.addValueAt(dir * warpLength, pos - dir * (float)j);
             modifications.addValueAt(1.f, pos - dir * (float)j);
         }
     }
 
-    for (size_t i = 0; i < wrapper.size(); i++) {
-        wrapper[i] /= (modifications[i] > 0 ? modifications[i] : 1.f);
+    for (size_t i = 0; i < warper.size(); i++) {
+        warper[i] /= (modifications[i] > 0 ? modifications[i] : 1.f);
         modifications[i] = (modifications[i] > 0 ? 1.f : 0.f);
     }
 
     // Fill the empty gaps left
     while (modifications.min() <= 0) {
-        for (size_t i = 0; i < wrapper.size(); i++) {
+        for (size_t i = 0; i < warper.size(); i++) {
             if (modifications[i] == 0) {
-                Vector3 pos = wrapper.getCoordAsVector3(i);
+                Vector3 pos = warper.getCoordAsVector3(i);
                 Vector3 replaceValue;
                 float divisor = 0.f;
                 for (int x = -1; x <= 1; x++) {
@@ -2392,32 +2372,32 @@ Matrix3<T> Matrix3<T>::wrapWith(const BSpline& original, const BSpline& wrapperC
                         for (int z = -1; z <= 1; z++) {
                             Vector3 offset(x, y, z);
                             if (modifications.at(pos + offset) > 0) {
-                                replaceValue += wrapper.at(pos + offset);
+                                replaceValue += warper.at(pos + offset);
                                 divisor++;
                             }
                         }
                     }
                 }
                 if (divisor > 0.f) {
-                    wrapper.at(pos) = replaceValue / divisor;
+                    warper.at(pos) = replaceValue / divisor;
                     modifications.at(pos) = 1.f;
                 }
 
             }
         }
     }
-//    Matrix3<float> tempReturn(wrapper.getDimensions());
+//    Matrix3<float> tempReturn(warper.getDimensions());
 //    for (size_t i = 0; i < tempReturn.size(); i++) {
-//        tempReturn[i] = wrapper[i].x;
+//        tempReturn[i] = warper[i].x;
 //    }
 //    return tempReturn;
-    return this->wrapWith(wrapper);
+    return this->warpWith(warper);
 
     //    Matrix3<float> unit_ctrl(this->getDimensions(), 1.f);
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper) const
+Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3>& warper) const
 {
     Matrix3<T> result = *this; //(getDimensions());
     auto self = *this;
@@ -2425,14 +2405,14 @@ Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper)
     self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     result.raiseErrorOnBadCoord = false;
     iterateParallel([&](const Vector3& pos) {
-        result.at(pos + wrapper(pos)) = self.at(pos);
+        result.at(pos + warper(pos)) = self.at(pos);
     });
     /*for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 pos(x, y, z);
-                const Vector3& wrap = wrapper.at(pos);
-                result.at(pos + wrap) = this->at(pos);
+                const Vector3& warp = warper.at(pos);
+                result.at(pos + warp) = this->at(pos);
             }
         }
     }*/
@@ -2440,7 +2420,7 @@ Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const Matrix3<Vector3>& wrapper)
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const BSpline &original, const BSpline &wrapperCurve) const
+Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const BSpline &original, const BSpline &warperCurve) const
 {
 //    bool previousRaise = this->raiseErrorOnBadCoord;
 //    T previousDefault  = this->returned_value_on_outside;
@@ -2452,7 +2432,7 @@ Matrix3<T> Matrix3<T>::wrapWithoutInterpolation(const BSpline &original, const B
     for (size_t i = 0; i < this->size(); i++)
         indices[i] = indices.getCoordAsVector3(i);
 
-    indices = indices.wrapWith(original, wrapperCurve);
+    indices = indices.warpWith(original, warperCurve);
 
     Matrix3<T> values(this->getDimensions());
     for (size_t i = 0; i < this->size(); i++) {

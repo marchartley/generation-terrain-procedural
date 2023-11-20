@@ -78,7 +78,7 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
 {
 //    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
-    this->setVoxelValues(implicitTerrain->getVoxelized(this->getDimensions()).meanSmooth(3, 3, 3, true));
+    this->setVoxelValues(implicitTerrain->getVoxelized(this->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? getSizeZ() : fixedHeight)).meanSmooth(3, 3, 3, true));
 //    this->smoothVoxels();
 }
 
@@ -526,7 +526,7 @@ void VoxelGrid::add2DHeightModification(GridF heightmapModifier, float factor, c
             }
         }
     }
-    GridF newVoxels = previousValues.wrapWith(deformation) - previousValues;
+    GridF newVoxels = previousValues.warpWith(deformation) - previousValues;
 
     this->applyModification(newVoxels, anchor);
 

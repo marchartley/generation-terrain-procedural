@@ -11,6 +11,8 @@
 #include <iostream>
 //#include <QButton>
 
+#include "Interface/CommonInterface.h"
+
 enum PlotColor {
     WHITE, GRAY, BLACK, RED, GREEN, BLUE, RANDOM
 };
@@ -52,6 +54,7 @@ public:
 Q_SIGNALS:
     void updated();
     void clickedOnValue(const Vector3& pos);
+    void mouseMoved(const Vector3& relativePos);
 };
 
 class Chart : public QChart {
@@ -82,12 +85,11 @@ public:
     void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(GridV3 image, bool normalize = false);
-    void addImage(GridF image, bool normalize = false);
-    void addImage(Matrix3<double> image, bool normalize = false);
-    void addImage(GridI image, bool normalize = false);
+    void addImage(GridV3 image, bool normalize = false, bool useAbs = false);
+    void addImage(GridF image, bool normalize = false, bool useAbs = false);
+    void addImage(Matrix3<double> image, bool normalize = false, bool useAbs = false);
+    void addImage(GridI image, bool normalize = false, bool useAbs = false);
 
-    void draw();
     int exec();
     void saveFig(std::string filename);
     void copyToClipboard();
@@ -96,9 +98,10 @@ public:
 
     void reset();
 
-    QPushButton* saveButton;
+    ButtonElement* saveButton;
     ChartView* chartView;
     QImage* backImage = nullptr;
+    QLabel* mouseInfoLabel = nullptr;
     std::string title;
     std::vector<std::vector<Vector3>> plot_data;
     std::vector<std::string> plot_names;
@@ -113,6 +116,7 @@ public:
     std::vector<std::pair<int, int>> selectedScatterData;
     std::vector<std::pair<int, int>> selectedPlotData;
 
+    GridV3 displayedImage;
 
 private:
     static Plotter* instance;
@@ -121,6 +125,8 @@ private:
 public Q_SLOTS:
     void updateLabelsPositions();
     void selectData(const Vector3& pos);
+    void displayInfoUnderMouse(const Vector3& relativeMousePos);
+    void draw();
 };
 
 

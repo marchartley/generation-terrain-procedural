@@ -456,12 +456,21 @@ Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
 {
     this->heights = GridF(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
     int sX = this->getSizeX(), sY = this->getSizeY();
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < sX; x++) {
-        for (int y = 0; y < sY; y++) {
-            this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
+//    GridF evalTimeParts(heights.getDimensions());
+//    int nb = sX * sY;
+//    float time = timeIt([&]() {
+        #pragma omp parallel for collapse(2)
+        for (int x = 0; x < sX; x++) {
+            for (int y = 0; y < sY; y++) {
+//                evalTimeParts(x, y) = timeIt([&]() {
+                    this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
+//                });
+//                nb++;
+            }
         }
-    }
+//    });
+//    std::cout << "Evaluation time for implicit->heightmap: " << showTime(time) << " for " << nb << " cells (x20) => " << showTime(time / float(nb * 20)) << " per eval, or " << showTime(time / float(nb)) << " per cell" << std::endl;
+//    std::cout << evalTimeParts.displayAsPlot() << std::endl;
     return *this;
 }
 
