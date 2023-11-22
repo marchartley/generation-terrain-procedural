@@ -68,6 +68,7 @@ public:
     static EnvObject* instantiate(std::string objectName);
     static void removeAllObjects();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr) = 0;
+    virtual GridF createHeightfield() const = 0;
 
     static void applyEffects();
     static void updateSedimentation();
@@ -84,7 +85,7 @@ public:
     static std::map<std::string, GridF> allScalarProperties;
     static void precomputeTerrainProperties(const Heightmap& heightmap);
     static void recomputeTerrainPropertiesForObject(const Heightmap& heightmap, std::string objectName);
-    static void recomputeFlowAndSandProperties();
+    static void recomputeFlowAndSandProperties(const Heightmap &heightmap);
 };
 
 class EnvPoint : public EnvObject {
@@ -106,6 +107,7 @@ public:
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
+    virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);
 };
@@ -130,6 +132,7 @@ public:
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
+    virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);
 };
@@ -154,6 +157,7 @@ public:
     virtual void applySandDeposit();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
+    virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);
 };

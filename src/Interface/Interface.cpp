@@ -145,6 +145,13 @@ ViewerInterface::ViewerInterface() {
                     QObject::blockSignals(false);
                     this->viewer->update();
                 });
+
+                QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged, this, [&](float newLevel) {
+                    QObject::blockSignals(true);
+                    otherActionInterface.second->afterWaterLevelChanged();
+                    QObject::blockSignals(false);
+                    this->viewer->update();
+                });
             }
         }
 
@@ -171,10 +178,10 @@ ViewerInterface::ViewerInterface() {
 */
 
 
-    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
-        this->setFocus(Qt::OtherFocusReason);
+//    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
+//        this->setFocus(Qt::OtherFocusReason);
 //        viewer->setFocus(Qt::OtherFocusReason);
-    });
+//    });
     Plotter::init(nullptr, this);
 //    this->installEventFilter(viewer);
     viewer->installEventFilter(this);

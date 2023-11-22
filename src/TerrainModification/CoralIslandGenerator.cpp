@@ -99,12 +99,28 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
         // If some binary masks have holes (e.g. the island is inside the lagoon), remove them.
         // This is done using CCL algorithm, maybe not the fastest and smartest way
         for (auto& [name, area] : featureAreas) {
+            if (name == "reef") continue;
             area = area.fillHoles(true);
         }
     })) << std::endl;
 
 
     std::vector<EnvObject*> objects;
+
+    std::cout << "Reefs: " << showTime(timeIt([&]() {
+        // Extract the lagoon contours to instantiate the lagoons and the reefs
+        auto skeletons = featureAreas["reef"].skeletonizeToBSplines();
+        for (auto& curve : skeletons) {
+            curve.scale(ratio);
+            BSpline simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.length() < 5.f) continue; // Remove too small elements
+
+            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+            reef->curve = simplifiedCurve;
+            objects.push_back(reef);
+        }
+    })) << std::endl;
 
     std::cout << "Lagoon + reefs: " << showTime(timeIt([&]() {
         // Extract the lagoon contours to instantiate the lagoons and the reefs
@@ -119,9 +135,9 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             lagoon->area = simplifiedCurve;
             objects.push_back(lagoon);
 
-            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
-            reef->curve = simplifiedCurve;
-            objects.push_back(reef);
+//            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+//            reef->curve = simplifiedCurve;
+//            objects.push_back(reef);
         }
     })) << std::endl;
 

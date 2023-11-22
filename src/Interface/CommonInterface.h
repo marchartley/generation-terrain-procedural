@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
+#include <QLineEdit>
 #include <optional>
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
@@ -56,6 +57,7 @@ protected:
 class ButtonElement : public UIElement {
 public:
     ButtonElement(std::string label);
+    ButtonElement(std::string label, std::function<void(void)> onClick);
 
     QPushButton* button();
 
@@ -94,6 +96,7 @@ class CheckboxElement : public UIElement {
 public:
     CheckboxElement(std::string label);
     CheckboxElement(std::string label, bool& binded);
+    CheckboxElement(std::string label, std::function<void(bool)> onCheck);
 
     QCheckBox* checkBox();
 
@@ -120,6 +123,33 @@ public:
 
 protected:
     std::optional<std::reference_wrapper<bool>> boundVariable;
+};
+
+class TextEditElement : public UIElement {
+public:
+    TextEditElement(std::string text, std::string label = "");
+    TextEditElement(std::string text, std::string label, std::string &binded);
+
+    QLineEdit* lineEdit();
+    std::string getText() { return lineEdit()->text().toStdString(); }
+
+//    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
+
+    template <typename Callable, typename... Args>
+    void setOnReturnPressed(Callable&& callback, Args&&... args) {
+        QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
+                                                              std::forward<Callable>(callback),
+                                                              std::forward<Args>(args)...);
+        connections.push_back(connection);
+    }
+    void setOnTextChange(std::function<void(std::string)> func);
+
+    void bindTo(std::string& value);
+
+protected:
+    QLabel* _label = nullptr;
+    QLineEdit* _lineEdit = nullptr;
+    std::optional<std::reference_wrapper<std::string>> boundVariable;
 };
 
 class InterfaceUI : public UIElement {

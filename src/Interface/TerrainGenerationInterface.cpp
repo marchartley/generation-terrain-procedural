@@ -23,6 +23,7 @@ void TerrainGenerationInterface::setWaterLevel(float newLevel)
 {
     this->waterLevel = newLevel;
     voxelGrid->updateEnvironmentalDensities(newLevel);
+    Q_EMIT waterLevelChanged(newLevel);
     Q_EMIT updated();
 }
 

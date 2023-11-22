@@ -289,19 +289,6 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
     return returnedPoints;
 }
 
-ShapeCurve &ShapeCurve::scale(float factor)
-{
-    for (auto& vert : this->points)
-        vert *= factor;
-    return *this;
-}
-
-ShapeCurve &ShapeCurve::scale(const Vector3 &factor)
-{
-    for (auto& vert : this->points)
-        vert *= factor;
-    return *this;
-}
 ShapeCurve __sub_merge(ShapeCurve self, ShapeCurve other)
 {
     std::vector<Vector3> resultingShape;
