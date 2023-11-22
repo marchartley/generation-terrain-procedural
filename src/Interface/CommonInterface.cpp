@@ -42,6 +42,12 @@ const std::string &UIElement::getName() const
 ButtonElement::ButtonElement(std::string label)
     : UIElement(new QPushButton(QString::fromStdString(label))) {}
 
+ButtonElement::ButtonElement(std::string label, std::function<void ()> onClick)
+    : UIElement(new QPushButton(QString::fromStdString(label)))
+{
+    this->setOnClick(onClick);
+}
+
 QPushButton *ButtonElement::button() {
     return static_cast<QPushButton*>(getWidget());
 }
@@ -99,6 +105,12 @@ CheckboxElement::CheckboxElement(std::string label, bool &binded)
     : CheckboxElement(label)
 {
     bindTo(binded);
+}
+
+CheckboxElement::CheckboxElement(std::string label, std::function<void (bool)> onCheck)
+    : CheckboxElement(label)
+{
+    this->setOnChecked(onCheck);
 }
 
 QCheckBox *CheckboxElement::checkBox() {
@@ -197,4 +209,48 @@ InterfaceUI *createVerticalGroupUI(std::vector<UIElement *> widgets)
     for (UIElement*& w : widgets)
         interface->add(w);
     return interface;
+}
+
+TextEditElement::TextEditElement(std::string text, std::string label)
+    : UIElement(new QGroupBox)
+{
+    this->_lineEdit = new QLineEdit(QString::fromStdString(text));
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_lineEdit);
+    getWidget()->setLayout(layout);
+}
+
+TextEditElement::TextEditElement(std::string text, std::string label, std::string &binded)
+    : TextEditElement(text, label)
+{
+    this->bindTo(binded);
+}
+
+QLineEdit *TextEditElement::lineEdit()
+{
+    return dynamic_cast<QLineEdit*>(_lineEdit);
+}
+
+void TextEditElement::setOnTextChange(std::function<void (std::string)> func)
+{
+//    this->addConnection()
+    QObject::connect(_lineEdit, &QLineEdit::textChanged, this, [=](QString newText){ // /!\ Capture function by value
+        func(newText.toStdString());
+    });
+}
+
+void TextEditElement::bindTo(std::string &value)
+{
+    lineEdit()->setText(QString::fromStdString(value));
+    boundVariable = value;
+    setOnTextChange([this](std::string newValue) {
+        if (boundVariable) {
+            boundVariable->get() = newValue;
+        }
+    });
 }

@@ -137,8 +137,7 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
         }
     }
 
-    // Attempt to generate the lambda and catch any exceptions
-//    try {
+    if (raiseErrors) {
         auto groupedTokens = groupTokensHierarchically(tokens);
         VariableMap dummyVars;
         for (const auto& varTypePair : variables) {
@@ -150,16 +149,32 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
         }
         auto lambda = generateLambda(groupedTokens, dummyVars);
         lambda(dummyVars); // Optionally invoke the lambda
-    /*} catch (const std::exception& e) {
-        allErrors.push_back("Error in the evaluation of the function");
-    }*/
-    if (!allErrors.empty()) {
-        allErrors.insert(allErrors.begin(), "Checking " + expression);
-        if (raiseErrors)
-            throw std::runtime_error(join(allErrors, "\n"));
-        else
+    } else {
+
+        // Attempt to generate the lambda and catch any exceptions
+        try {
+            auto groupedTokens = groupTokensHierarchically(tokens);
+            VariableMap dummyVars;
+            for (const auto& varTypePair : variables) {
+                if (std::holds_alternative<float>(varTypePair.second)) {
+                    dummyVars[varTypePair.first] = 0.0f;
+                } else if (std::holds_alternative<Vector3>(varTypePair.second)) {
+                    dummyVars[varTypePair.first] = Vector3{0.0f, 0.0f, 0.0f};
+                }
+            }
+            auto lambda = generateLambda(groupedTokens, dummyVars);
+            lambda(dummyVars); // Optionally invoke the lambda
+        } catch (const std::exception& e) {
+            allErrors.push_back("Error in the evaluation of the function: " + std::string(e.what()));
+        }
+        if (!allErrors.empty()) {
+            allErrors.insert(allErrors.begin(), "Checking " + expression);
+//            if (raiseErrors)
+//                throw std::runtime_error(join(allErrors, "\n"));
+//            else
             std::cerr << join(allErrors, "\n") << std::endl;
-        return false;
+            return false;
+        }
     }
     return true;
 }

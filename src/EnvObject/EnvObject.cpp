@@ -110,6 +110,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
 
 std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject)
 {
+    formula = toLower(formula);
     if (formula == "")
         formula = "0.0";
 
@@ -132,10 +133,13 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.dir"] = Vector3();
     variables["current.vel"] = float();
     variables["sand"] = float();
+    variables["depth"] = float();
 
     ExpressionParser parser;
     variables["pos"] = Vector3();
-    parser.validate(formula, variables);
+    if (!parser.validate(formula, variables, false)) {
+        throw std::runtime_error("The formula " + formula + " is not valid!!");
+    }
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
     auto _func = parser.parse(formula, variables);
     return [&, _func, neededVariables, currentObject](Vector3 pos) -> float {
@@ -224,7 +228,7 @@ void EnvObject::updateSedimentation()
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
-    EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(EnvObject::flowfield.meanSmooth(3, 3, 1) * 10.f);
+    EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(EnvObject::flowfield.meanSmooth(3, 3, 1) * 2.f);
 }
 
 void EnvObject::updateFlowfield()
@@ -284,6 +288,7 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
         EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
         EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
+        EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
 
 
         // Evaluate at each point
@@ -292,7 +297,7 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
                 EnvObject::recomputeTerrainPropertiesForObject(heightmap, name);
             })) << std::endl;
         }
-        EnvObject::recomputeFlowAndSandProperties();
+        EnvObject::recomputeFlowAndSandProperties(heightmap);
     })) << std::endl;
 }
 
@@ -313,7 +318,7 @@ void EnvObject::recomputeTerrainPropertiesForObject(const Heightmap &heightmap, 
     });
 }
 
-void EnvObject::recomputeFlowAndSandProperties()
+void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
 {
     EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
         Vector3 waterFlow = EnvObject::flowfield(pos);
@@ -322,6 +327,7 @@ void EnvObject::recomputeFlowAndSandProperties()
         EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
     });
     EnvObject::allScalarProperties["sand"] = EnvObject::sandDeposit;
+    EnvObject::allScalarProperties["depth"] = (heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights;
 }
 
 EnvPoint::EnvPoint()
@@ -417,16 +423,21 @@ ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0, {}, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0, {}, true);
     }
 
-    patch->position = this->position;
+    patch->position = this->position.xy();
     patch->material = this->material;
     patch->supportDimensions = Vector3(radius, radius, radius * growingState);
     patch->name = this->name;
     return patch;
+}
+
+GridF EnvPoint::createHeightfield() const
+{
+    return GridF();
 }
 
 EnvObject &EnvPoint::translate(const Vector3 &translation)
@@ -577,15 +588,20 @@ ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
     }
-    patch->position = box.min() - offset.xy() * .5f;
+    patch->position = (box.min() - offset.xy() * .5f).xy();
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;
     return patch;
+}
+
+GridF EnvCurve::createHeightfield() const
+{
+    return GridF();
 }
 
 EnvObject &EnvCurve::translate(const Vector3 &translation)
@@ -763,16 +779,21 @@ ImplicitPatch* EnvArea::createImplicitPatch(ImplicitPrimitive* previousPrimitive
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
     }
-    patch->position = box.min() - offset.xy() * .5f;
+    patch->position = (box.min() - offset.xy() * .5f).xy();
 //    patch->position = box.center();
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;
     return patch;
+}
+
+GridF EnvArea::createHeightfield() const
+{
+    return GridF();
 }
 
 EnvObject &EnvArea::translate(const Vector3 &translation)

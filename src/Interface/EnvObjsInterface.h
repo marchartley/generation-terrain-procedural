@@ -30,6 +30,7 @@ public Q_SLOTS:
     void show();
     void hide();
     virtual void afterTerrainUpdated();
+    virtual void afterWaterLevelChanged();
 
     void instantiateObject();
     void instantiateSpecific(std::string objectName);
@@ -70,6 +71,7 @@ public:
     QDateTime lastTimeFileHasBeenModified;
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
+    Implicit2DNary* rootPatch;
 };
 
 

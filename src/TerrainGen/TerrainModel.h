@@ -89,7 +89,7 @@ public:
 
     Vector3 sea_current = Vector3(1.f, 0.0, 0.0);
 
-    float storedWaterLevel = 0.f;
+//    float storedWaterLevel = 0.f;
 };
 
 #endif // TERRAINMODEL_H

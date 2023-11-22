@@ -234,7 +234,19 @@ void Plotter::addImage(GridV3 image, bool normalize, bool useAbs)
         image = image.abs();
     }
     if (normalize) {
-        image.normalize();
+        for (int c = 0; c < 3; c++) {
+            float min = std::numeric_limits<float>::max();
+            float max = std::numeric_limits<float>::min();
+            image.iterate([&](size_t i) {
+                min = std::min(image[i][c], min);
+                max = std::max(image[i][c], max);
+            });
+            float d = max - min;
+            image.iterateParallel([&](size_t i) {
+                image[i][c] = (image[i][c] - min) / d;
+            });
+        }
+//        image.normalize();
     }
     unsigned char* data = new unsigned char[image.size() * 4];
 
@@ -255,8 +267,6 @@ void Plotter::addImage(GridF image, bool normalize, bool useAbs)
     GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
         float val = image[i];
-//        if (i == 40400)
-//            int a = 0;
         copy[i] = Vector3(val, val, val);
     }
     return this->addImage(copy, normalize, useAbs);
@@ -356,7 +366,13 @@ void Plotter::draw()
 
     this->chartView->chart()->createDefaultAxes();
 //    this->chartView->chart()->zoomOut();
-//    this->chartView->update();
+    //    this->chartView->update();
+}
+
+void Plotter::show()
+{
+    this->draw();
+    QDialog::show();
 }
 
 int Plotter::exec()

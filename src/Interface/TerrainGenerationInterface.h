@@ -73,7 +73,6 @@ public Q_SLOTS:
     void changeDisplayToComparativeMode(bool toComparative);
     void setHeightFactor(float newHeightFactor);
 
-
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;

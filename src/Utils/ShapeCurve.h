@@ -32,9 +32,6 @@ public:
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 
-    ShapeCurve& scale(float factor);
-    ShapeCurve& scale(const Vector3& factor);
-
     ShapeCurve merge(ShapeCurve other);
 
     static ShapeCurve circle(float radius, const Vector3& center, int nbPoints);

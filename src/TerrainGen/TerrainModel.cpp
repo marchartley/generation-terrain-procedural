@@ -294,7 +294,8 @@ GridF &TerrainModel::getEnvironmentalDensities()
 
 void TerrainModel::updateEnvironmentalDensities(float waterLevel)
 {
-    this->storedWaterLevel = waterLevel;
+//    this->storedWaterLevel = waterLevel;
+    this->properties->waterLevel = waterLevel;
     float waterLevelOnVoxels = waterLevel * this->getSizeZ();
     for (int x = 0; x < this->getSizeX(); x++) {
         for (int y = 0; y < this->getSizeY(); y++) {

@@ -127,6 +127,7 @@ public Q_SLOTS:
     void selectData(const Vector3& pos);
     void displayInfoUnderMouse(const Vector3& relativeMousePos);
     void draw();
+    void show();
 };
 
 

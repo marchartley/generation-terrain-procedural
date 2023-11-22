@@ -52,6 +52,9 @@ public:
     std::tuple<Vector3, Vector3> AABBox() const;
     Vector3 containingBoxSize() const;
 
+    BSpline& scale(float factor);
+    BSpline& scale(const Vector3& factor);
+
 //    BSpline& grow(float increase);
 //    BSpline& shrink(float decrease);
 
