@@ -151,6 +151,7 @@ SOURCES += \
         src/Interface/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
         src/Interface/CustomInteractiveObject.cpp \
+    src/Interface/EnvObjectFluidSimulation.cpp \
     src/Interface/EnvObjsInterface.cpp \
         src/Interface/ErosionInterface.cpp \
     src/Interface/FLIPSimulationInterface.cpp \
@@ -201,6 +202,7 @@ SOURCES += \
     src/TerrainModification/SpheroidalWeathering.cpp \
         src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
+    src/TerrainModification/particleErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
         src/Utils/BSpline.cpp \
@@ -324,6 +326,7 @@ HEADERS += \
     src/Interface/ControlPoint.h \
     src/Interface/CoralIslandGeneratorInterface.h \
     src/Interface/CustomInteractiveObject.h \
+    src/Interface/EnvObjectFluidSimulation.h \
     src/Interface/EnvObjsInterface.h \
     src/Interface/ErosionInterface.h \
     src/Interface/FLIPSimulationInterface.h \
@@ -373,6 +376,7 @@ HEADERS += \
     src/TerrainModification/SpheroidalWeathering.h \
     src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
+    src/TerrainModification/particleErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/AdjencySolver.h \
     src/Utils/BSpline.h \
@@ -443,6 +447,8 @@ DISTFILES += \
     src/Shaders/gouraud_120.frag \
     src/Shaders/gouraud_120.vert \
     src/Shaders/layer_based.geom \
+    src/Shaders/meshInstancesShader.frag \
+    src/Shaders/meshInstancesShader.vert \
     src/Shaders/test_raymarching_voxels.frag \
     src/Shaders/test_raymarching_voxels.vert \
     src/Shaders/MarchingCubes.frag \

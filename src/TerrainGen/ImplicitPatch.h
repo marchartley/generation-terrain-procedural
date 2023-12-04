@@ -54,28 +54,29 @@ public:
         ImplicitHeightmap,
         ParametricTunnel,
         Ripple,
+        DistanceMap,
         None
     };
 
-    virtual float evaluate(const Vector3& pos) = 0;
+    virtual float evaluate(const Vector3& pos) const = 0;
 //    virtual std::map<TerrainMaterial, float> getMaterials(const Vector3& pos) = 0;
-    virtual std::map<TerrainTypes, float> getMaterials(const Vector3& pos) = 0;
+    virtual std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const = 0;
     virtual float getMaxHeight(const Vector3& pos);
     virtual float getMinHeight(const Vector3& pos);
     virtual float getMinimalHeight(AABBox BBox);
     virtual float getMaximalHeight(AABBox BBox);
     virtual float getMinimalHeight(const Vector3 &minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
     virtual float getMaximalHeight(const Vector3& minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
-    std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float> > getBinaryMaterialsAndTotalEvaluation(const Vector3& pos);
+    std::pair<float, std::map<TerrainTypes, float> > getMaterialsAndTotalEvaluation(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float> > getBinaryMaterialsAndTotalEvaluation(const Vector3& pos) const;
 
-    virtual AABBox getSupportBBox() = 0;
-    virtual AABBox getBBox() = 0;
-    Vector3 getDimensions();
-    Vector3 getSupportDimensions();
+    virtual AABBox getSupportBBox() const = 0;
+    virtual AABBox getBBox() const = 0;
+    Vector3 getDimensions() const;
+    Vector3 getSupportDimensions() const;
 
     virtual GridV3 getNormals();
-    Vector3 getNormal(const Vector3& pos);
+    virtual Vector3 getNormal(const Vector3& pos) const;
 
     void setIndex(int newIndex = -1);
 
@@ -103,7 +104,7 @@ public:
 
     virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3(false), const Vector3 &maxPos = Vector3(false));
 
-    virtual std::string toShortString() { return ""; };
+    virtual std::string toShortString() { return ""; }
 
     virtual float getHeight(float x, float y);
     virtual float getHeight(const Vector3& pos);
@@ -119,9 +120,9 @@ public:
 
 //    virtual size_t getCurrentHistoryIndex() const;
 
-    virtual float getSizeX() { return this->getBBox().max().x; }
-    virtual float getSizeY() { return this->getBBox().max().y; }
-    virtual float getSizeZ() { return this->getBBox().max().z; }
+    virtual float getSizeX() const { return this->getBBox().max().x; }
+    virtual float getSizeY() const { return this->getBBox().max().y; }
+    virtual float getSizeZ() const { return this->getBBox().max().z; }
 
     GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
@@ -134,28 +135,30 @@ public:
     BSpline optionalCurve;
 
     static ImplicitPatch* createIdentity();
-    static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline());
-    static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline());
+    static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
+    static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
     static float isovalue;
     static float zResolution;
 
 
-    static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createBlockFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createGaussianFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createCylinderFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createRockFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createMountainFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createDuneFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createBasinFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createCaveFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createArchFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path);
-    static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path);
-    static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path);
-    static std::function<float(Vector3)> createRippleFunction(float sigma, float width, float depth, float height);
-    static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height);
+    static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createBlockFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createGaussianFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createCylinderFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createRockFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createMountainFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createDuneFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createBasinFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createCaveFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createArchFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(Vector3)> createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(Vector3)> createRippleFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height, bool in2D = false);
+
 //    static std::function<float(Vector3)> ...;
 
     static std::function<float(Vector3)> convert2DfunctionTo3Dfunction(std::function<float(Vector3)> func);
@@ -179,11 +182,11 @@ class ImplicitPrimitive : public ImplicitPatch {
 public:
     ImplicitPrimitive();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -201,6 +204,7 @@ public:
     Vector3 dimensions = Vector3(false);
     Vector3 supportDimensions = Vector3(false);
     std::function<float(Vector3)> evalFunction;
+    std::function<float(Vector3)> evalFunction2D;
     TerrainTypes material = WATER;
 
     PredefinedShapes predefinedShape = None;
@@ -217,10 +221,10 @@ class ImplicitNaryOperator : public ImplicitPatch {
 public:
     ImplicitNaryOperator();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -247,23 +251,23 @@ class ImplicitBinaryOperator : public ImplicitNaryOperator {
 public:
     ImplicitBinaryOperator();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
-    float evaluateFromAandB(float evalA, float evalB);
+    float evaluate(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
+    float evaluateFromAandB(float evalA, float evalB) const;
 
-    float evaluateA(const Vector3& pos);
-    float evaluateB(const Vector3& pos);
+    float evaluateA(const Vector3& pos) const;
+    float evaluateB(const Vector3& pos) const;
 
-    std::map<TerrainTypes, float> getMaterialsA(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterialsB(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(const Vector3& pos);
-    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(const Vector3& pos);
+    std::map<TerrainTypes, float> getMaterialsA(const Vector3& pos) const;
+    std::map<TerrainTypes, float> getMaterialsB(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationA(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluationB(const Vector3& pos) const;
 
     bool contains(PredefinedShapes shape);
     virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     void update();
     std::string toString();
     nlohmann::json toJson();
@@ -274,8 +278,8 @@ public:
     void swapAB();
 
 
-    Vector3 getEvaluationPositionForComposableA(const Vector3& pos);
-    Vector3 getEvaluationPositionForComposableB(const Vector3& pos);
+    Vector3 getEvaluationPositionForComposableA(const Vector3& pos) const;
+    Vector3 getEvaluationPositionForComposableB(const Vector3& pos) const;
 
     virtual ImplicitPatch* copy() const;
     virtual void addChild(ImplicitPatch* newChild, int index);
@@ -283,8 +287,8 @@ public:
 
 //    ImplicitPatch* composableA = nullptr;
 //    ImplicitPatch* composableB = nullptr;
-    ImplicitPatch*& composableA();
-    ImplicitPatch*& composableB();
+    ImplicitPatch* composableA() const;
+    ImplicitPatch* composableB() const;
 
     CompositionFunction composeFunction;
     PositionalLabel positionalB;
@@ -305,7 +309,7 @@ public:
         transformations.emplace_back(std::move(transform), std::move(inverse));
     }
 
-    float evaluate(const Vector3& point);
+    float evaluate(const Vector3& point) const;
 
     void addTranslation(const Vector3& translation);
 
@@ -319,10 +323,10 @@ public:
     Vector3 inverseTransform(const Vector3& pos) const;
 
 
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
+    AABBox getSupportBBox() const;
+    AABBox getBBox() const;
     std::string toString();
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
@@ -339,7 +343,7 @@ public:
     virtual void addChild(ImplicitPatch* newChild, int index = 0);
     virtual void deleteAllChildren();
 
-    ImplicitPatch*& composableA();
+    ImplicitPatch* composableA() const;
 
     void translate(const Vector3& translation);
     void rotate(const Vector3& angles); //float angleX, float angleY, float angleZ);
@@ -413,54 +417,37 @@ public:
 
 
 
-/*
-class ImplicitUnaryOperator : public ImplicitNaryOperator {
+class Implicit2DNary : public ImplicitNaryOperator {
 public:
-    ImplicitUnaryOperator();
+    Implicit2DNary();
 
-    float evaluate(const Vector3& pos);
-    std::map<TerrainTypes, float> getMaterials(const Vector3& pos);
+    std::map<TerrainTypes, float> getMaterials(const Vector3& pos) const;
+    std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluation(const Vector3 &pos) const;
+    float evaluate(const Vector3& pos) const; // In this case, returns the height
 
-    AABBox getSupportBBox();
-    AABBox getBBox();
-    std::string toString();
-    nlohmann::json toJson();
-    static ImplicitPatch* fromJson(nlohmann::json content);
+    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
-    bool contains(PredefinedShapes shape);
-    virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
+    virtual bool contains(const Vector3& v);
 
-    std::function<Vector3(Vector3)> wrapFunction;
-    std::function<Vector3(Vector3)> unwrapFunction;
-    std::function<float(Vector3)> noiseFunction;
-    std::vector<UnaryOp> transforms;
+    bool checkIsInGround(const Vector3& position);
+    virtual Vector3 getNormal(const Vector3& pos) const;
+//    virtual AABBox getSupportBBox() const;
+//    virtual AABBox getBBox() const;
+    virtual float getMaxHeight(const Vector3& pos);
+    virtual float getMinHeight(const Vector3& pos);
+    virtual float getMinimalHeight(const Vector3 &minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
+    virtual float getMaximalHeight(const Vector3& minBox = Vector3::min(), const Vector3& maxBox = Vector3::max());
 
-//    virtual ImplicitPatch* copy() const;
-    virtual void addChild(ImplicitPatch* newChild, int index = 0);
-    virtual void deleteAllChildren();
-
-    ImplicitPatch*& composableA();
-
-    void translate(const Vector3& translation);
-    void rotate(float angleX, float angleY, float angleZ);
-    void scale(const Vector3& scaleFactor);
-
-    void addRandomNoise(float amplitude, float period = 20.f, float offset = 10.f);
-    void addRandomWrap(float amplitude, float period = 20.f, float offset = 10.f);
-    void addWrapFunction(GridV3 func);
-    void spread(float factor = 1.f);
-    void addWavelets();
-
-    Vector3 _translation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
-    Vector3 _rotation = Vector3(0, 0, 0); // Should not be here, just used to be stored in files
-    Vector3 _scale = Vector3(1, 1, 1);
-    Vector3 _distortion = Vector3(0.f, 0.f, 0.f);
-    Vector3 _noise = Vector3(0.f, 0.f, 0.f);
-    float _spreadingFactor = 0.f;
+    void reevaluateAll();
+    float computeHeight(const Vector3& pos) const;
 };
-*/
 
+class Implicit2DPrimitive : public ImplicitPrimitive {
+public:
+    Implicit2DPrimitive();
 
+    float evaluate(const Vector3 &pos) const;
+};
 
 
 

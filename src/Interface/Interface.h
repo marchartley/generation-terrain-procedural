@@ -31,7 +31,7 @@ public:
     void focusOutEvent(QFocusEvent* e);
 
 public Q_SLOTS:
-    void openInterface(std::string interfaceName, std::shared_ptr<ActionInterface> object);
+//    void openInterface(std::string interfaceName, std::shared_ptr<ActionInterface> object);
     void openInterface(std::shared_ptr<ActionInterface> object);
 
     void hideAllInteractiveParts();

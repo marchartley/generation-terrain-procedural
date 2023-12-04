@@ -110,7 +110,7 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()
 {
-    GridV3 velocities = _simulation->getVelocities(20, 20, 10);
+    GridV3 velocities = _simulation->getVelocities(20, 20, 1);
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 1.f, false, true);
 }
 
@@ -150,6 +150,11 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
 
     GridF bigValues = voxelGrid->getVoxelValues();
     GridF values = bigValues; //.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
+
+    values.iterateParallel([&](const Vector3& p) {
+        values(p) = (Vector3::isInBox(p, Vector3(3, 3, 3), voxelGrid->getDimensions() - Vector3(3, 3, 3)) ? -1.f : 1.f);
+    });
+
     auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
         for (auto& p : tri) {
@@ -157,7 +162,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
         }
     }
 
-    otherMeshToDisplay.fromArray(flattenArray(Mesh::applyMarchingCubes(values.binarize()).getTriangles()));
+//    otherMeshToDisplay.fromArray(flattenArray(Mesh::applyMarchingCubes(values.binarize()).getTriangles()));
 
     _simulation->setObstacles(triangles);
     _simulation->setObstacles(values.binarize());

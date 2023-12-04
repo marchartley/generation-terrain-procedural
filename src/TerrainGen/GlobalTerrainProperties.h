@@ -57,6 +57,7 @@ public:
 
 
     GridF environmentalDensities;
+    float waterLevel = 0.f;
 };
 
 std::string stringFromFluidSimType(FluidSimType type);

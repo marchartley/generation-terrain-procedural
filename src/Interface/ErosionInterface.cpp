@@ -221,6 +221,9 @@ void ErosionInterface::display(const Vector3& camPos)
     if (this->displayTrajectories) {
         this->rocksPathSuccess.display(GL_LINES, 3.f);
         this->rocksPathFailure.display(GL_LINES, 3.f);
+//        std::cout << rocksPathSuccess.vertexArray.size() / 2 << " displacements:" << std::endl;
+//        for (const auto& p : rocksPathSuccess.vertexArray)
+//            std::cout << p << std::endl;
     }
     if (this->displayBoundaries) {
         this->boundariesMesh.displayWithOutlines(std::vector<float>{0.f, 0.f, 1.f, .4f}, GL_TRIANGLES);

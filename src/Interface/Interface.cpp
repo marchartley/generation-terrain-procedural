@@ -24,6 +24,7 @@
 #include "Interface/CoralIslandGeneratorInterface.h"
 #include "Interface/SpheroidalErosionInterface.h"
 #include "Interface/EnvObjsInterface.h"
+#include "Interface/EnvObjectFluidSimulation.h"
 
 #include "Interface/CommonInterface.h"
 
@@ -60,7 +61,8 @@ ViewerInterface::ViewerInterface() {
         std::make_shared<LBMFluidSimulationInterface>(this),
         std::make_shared<CoralIslandGeneratorInterface>(this),
         std::make_shared<SpheroidalErosionInterface>(this),
-        std::make_shared<EnvObjsInterface>(this)
+        std::make_shared<EnvObjsInterface>(this),
+        std::make_shared<EnvObjectFluidSimulation>(this)
     };
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>();
@@ -71,6 +73,7 @@ ViewerInterface::ViewerInterface() {
 
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
     std::shared_ptr<CoralIslandGeneratorInterface> coralGenerationInterface = std::static_pointer_cast<CoralIslandGeneratorInterface>(actionInterfaces["coralisland"]);
+    std::shared_ptr<EnvObjsInterface> envObjectsInterface = std::static_pointer_cast<EnvObjsInterface>(actionInterfaces["envobjects"]);
 
     viewer->interfaces = this->actionInterfaces;
     for (auto& actionInterface : this->actionInterfaces) {
@@ -79,13 +82,15 @@ ViewerInterface::ViewerInterface() {
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
+        envObjectsInterface->setDefinitionFile("saved_maps/primitives.json");
+
 //        terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat (copy).png");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
@@ -93,7 +98,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/slope_with_hole.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/_ToClassify/map_2023-08-19__20-31-35-voxels.stl");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/labyrinthe.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano3_2.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/test.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/Pipes/map_2023-08-19__10-23-28-voxels.stl");
@@ -140,6 +145,13 @@ ViewerInterface::ViewerInterface() {
                     QObject::blockSignals(false);
                     this->viewer->update();
                 });
+
+                QObject::connect(actionInterface.second.get(), &ActionInterface::waterLevelChanged, this, [&](float newLevel) {
+                    QObject::blockSignals(true);
+                    otherActionInterface.second->afterWaterLevelChanged();
+                    QObject::blockSignals(false);
+                    this->viewer->update();
+                });
             }
         }
 
@@ -149,8 +161,7 @@ ViewerInterface::ViewerInterface() {
             biomeInterface->generateBiomes();
         }
 
-
-//        coralGenerationInterface->fromGanUI();
+        envObjectsInterface->fromGanUI();
 
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
@@ -166,10 +177,10 @@ ViewerInterface::ViewerInterface() {
 */
 
 
-    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
-        this->setFocus(Qt::OtherFocusReason);
+//    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
+//        this->setFocus(Qt::OtherFocusReason);
 //        viewer->setFocus(Qt::OtherFocusReason);
-    });
+//    });
     Plotter::init(nullptr, this);
 //    this->installEventFilter(viewer);
     viewer->installEventFilter(this);
@@ -449,6 +460,7 @@ void ViewerInterface::openInterface(std::shared_ptr<ActionInterface> object)
         this->frame->show();
     }
     this->viewer->update();
+    this->update();
 }
 
 void ViewerInterface::hideAllInteractiveParts()
@@ -456,8 +468,8 @@ void ViewerInterface::hideAllInteractiveParts()
     for (auto& actionInterface : this->actionInterfaces)
         actionInterface.second->hide();
 
-    this->viewer->update();
-    this->update();
+//    this->viewer->update();
+//    this->update();
 }
 
 

@@ -11,8 +11,9 @@ public:
     ShapeCurve(BSpline path);
 
     bool contains(const Vector3& pos, bool useNativeShape = true) const;
+    bool containsXY(const Vector3& pos, bool useNativeShape = true) const;
     float estimateDistanceFrom(const Vector3& pos) const;
-    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3);
+    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
     float computeArea();
     float computeSignedArea();
 
@@ -31,9 +32,9 @@ public:
 
     std::vector<Vector3> randomPointsInside(int numberOfPoints = 1);
 
-    ShapeCurve& scale(float factor);
-
     ShapeCurve merge(ShapeCurve other);
+
+    static ShapeCurve circle(float radius, const Vector3& center, int nbPoints);
 };
 
 struct ClipVertex {

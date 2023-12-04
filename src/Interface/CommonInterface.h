@@ -9,6 +9,7 @@
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
+#include <QLineEdit>
 #include <optional>
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
@@ -41,10 +42,12 @@ public:
     const std::string& getName() const;
 
 
-    QWidget* getWidget() const;
+    virtual QWidget* getWidget() const;
     QWidget* get() const { return getWidget(); }
     void cleanupConnections();
 
+public Q_SLOTS:
+    virtual void update();
 
 protected:
     QWidget* element;
@@ -56,6 +59,7 @@ protected:
 class ButtonElement : public UIElement {
 public:
     ButtonElement(std::string label);
+    ButtonElement(std::string label, std::function<void(void)> onClick);
 
     QPushButton* button();
 
@@ -67,6 +71,7 @@ public:
 };
 
 class SliderElement : public UIElement {
+    Q_OBJECT
 public:
     SliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
     SliderElement(std::string label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
@@ -84,16 +89,51 @@ public:
 
     void bindTo(float& value);
 
+public Q_SLOTS:
+    void update();
+
 protected:
     QLabel* _label = nullptr;
     FancySlider* _slider = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariable;
 };
 
+
+class RangeSliderElement : public UIElement {
+    Q_OBJECT
+public:
+    RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
+    RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, Qt::Orientation orientation = Qt::Horizontal);
+
+    RangeSlider* slider();
+    QLabel* label();
+
+    template <typename Callable, typename... Args>
+    void setOnValueChanged(Callable&& callback, Args&&... args) {
+        QMetaObject::Connection connection = QObject::connect(_slider, &RangeSlider::alt_valueChanged,
+                                                              std::forward<Callable>(callback),
+                                                              std::forward<Args>(args)...);
+        connections.push_back(connection);
+    }
+
+    void bindTo(float& valueMin, float& valueMax);
+
+public Q_SLOTS:
+    void update();
+
+protected:
+    QLabel* _label = nullptr;
+    RangeSlider* _slider = nullptr;
+    std::optional<std::reference_wrapper<float>> boundVariableMin;
+    std::optional<std::reference_wrapper<float>> boundVariableMax;
+};
+
 class CheckboxElement : public UIElement {
+    Q_OBJECT
 public:
     CheckboxElement(std::string label);
     CheckboxElement(std::string label, bool& binded);
+    CheckboxElement(std::string label, std::function<void(bool)> onCheck);
 
     QCheckBox* checkBox();
 
@@ -103,11 +143,15 @@ public:
 
     void bindTo(bool& value);
 
+public Q_SLOTS:
+    void update();
+
 protected:
     std::optional<std::reference_wrapper<bool>> boundVariable;
 };
 
 class RadioButtonElement : public UIElement {
+    Q_OBJECT
 public:
     RadioButtonElement(std::string label);
     RadioButtonElement(std::string label, bool& binded);
@@ -118,11 +162,46 @@ public:
 
     void bindTo(bool& value);
 
+public Q_SLOTS:
+    void update();
+
 protected:
     std::optional<std::reference_wrapper<bool>> boundVariable;
 };
 
+class TextEditElement : public UIElement {
+    Q_OBJECT
+public:
+    TextEditElement(std::string text, std::string label = "");
+    TextEditElement(std::string text, std::string label, std::string &binded);
+
+    QLineEdit* lineEdit();
+    std::string getText() { return lineEdit()->text().toStdString(); }
+
+//    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
+
+    template <typename Callable, typename... Args>
+    void setOnReturnPressed(Callable&& callback, Args&&... args) {
+        QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
+                                                              std::forward<Callable>(callback),
+                                                              std::forward<Args>(args)...);
+        connections.push_back(connection);
+    }
+    void setOnTextChange(std::function<void(std::string)> func);
+
+    void bindTo(std::string& value);
+
+public Q_SLOTS:
+    void update();
+
+protected:
+    QLabel* _label = nullptr;
+    QLineEdit* _lineEdit = nullptr;
+    std::optional<std::reference_wrapper<std::string>> boundVariable;
+};
+
 class InterfaceUI : public UIElement {
+    Q_OBJECT
 public:
     InterfaceUI(QLayout* layout, std::string title = "");
     ~InterfaceUI();
@@ -136,6 +215,9 @@ public:
     std::vector<UIElement*> elements;
     std::vector<std::string> names;
     std::string title;
+
+public Q_SLOTS:
+    void update();
 };
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets);

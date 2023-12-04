@@ -41,6 +41,11 @@ std::vector<std::string> getAllFiles(std::string folderName);
 float rad2deg(float rad);
 float deg2rad(float deg);
 
+template<class T>
+float sign(T value) {
+    return (value < T() ? -1.f : 1.f);
+}
+
 void sleep(int milliseconds);
 
 //template <typename ... FArgs, typename ... Args>
@@ -51,8 +56,8 @@ void sleep(int milliseconds);
 //    auto end = std::chrono::system_clock::now();
 //    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 //}
-float timeIt(std::function<void()> func);
-std::string showTime(float milliseconds);
+double timeIt(std::function<void()> func);
+std::string showTime(double nanoseconds);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

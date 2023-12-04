@@ -31,8 +31,8 @@ public:
     Mesh& rotate(float rotation_x, float rotation_y, float rotation_Z);
 
     void clear();
-    Mesh merge(std::shared_ptr<Mesh> other, bool recomputeIndices = true);
-    Mesh merge(std::vector<std::shared_ptr<Mesh>> others);
+    Mesh merge(const Mesh &other, bool recomputeIndices = true);
+    Mesh merge(std::vector<Mesh> others);
 
     void update();
     void pushToBuffer();
@@ -41,7 +41,8 @@ public:
     void displayNormals();
 
     void displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
-    void displayAsVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMaginitude = -1, bool normalize = false);
+    Mesh &fromVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMagnitude = -1, bool normalize = false, bool displayArrow = true);
+//    void displayAsVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMagnitude = -1, bool normalize = false);
 
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
     void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
@@ -71,7 +72,8 @@ public:
     bool isWatertight();
 
 
-    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMaginitude = -1, bool normalize = false, bool displayArrow = false);
+    static std::vector<Vector3> getPointsForArrow(const Vector3& from, const Vector3& to);
+    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMagnitude = -1, bool normalize = false, bool displayArrow = false);
 
     static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
 

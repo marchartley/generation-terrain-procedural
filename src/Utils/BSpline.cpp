@@ -67,22 +67,203 @@ Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
     return a * (1 - x) + b * x;
 }
 
-Vector3 BSpline::getDerivative(float x) const
+Vector3 BSpline::getDerivative(float x, bool normalize) const
 {
     float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
+    float e = nextTime - previousTime; // Case for start/end of curve
 
-    return (getPoint(nextTime) - getPoint(previousTime)).normalized();
+    Vector3 v = (getPoint(nextTime) - getPoint(previousTime));
+    return (normalize ? v.normalized() : v / e);
+
 }
 
-Vector3 BSpline::getSecondDerivative(float x) const
+Vector3 BSpline::getSecondDerivative(float x, bool normalize) const
 {
     float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
-    return (getDerivative(nextTime) - getDerivative(previousTime)).normalized();
+    float e = nextTime - previousTime; // Case for start/end of curve
+
+    Vector3 v = (getDerivative(nextTime) - getDerivative(previousTime));
+    return (normalize ? v.normalized() : v / e);
 }
 
-float BSpline::estimateClosestTime(const Vector3& pos, float epsilon) const
+/*
+ * Everything here is useless...
+float getSegmentClosestTime(const BSpline& curve, float t1, float t2, const Vector3& pos) {
+    // Returns the parameter t of the closest point on the curve segment between t1 and t2 to the point pos.
+    Vector3 pointAtT1 = curve.getPoint(t1);
+    Vector3 pointAtT2 = curve.getPoint(t2);
+    Vector3 line = pointAtT2 - pointAtT1;
+    float tClosest = ((pos - pointAtT1).dot(line)) / line.norm2();
+    return std::clamp(tClosest, 0.0f, 1.0f);  // Ensure tClosest is within [0, 1] relative to t1 and t2
+}
+
+float closestTimeSubdivision(const BSpline& curve, const Vector3& pos, float tStart = 0.0f, float tEnd = 1.0f, int depth = 0, const int maxDepth = 10, float epsilon = 0.001f) {
+    // Calculate the midpoint and its position
+    float tMid = (tStart + tEnd) / 2.0f;
+    Vector3 midPoint = curve.getPoint(tMid);
+
+    // Check if the distance at tMid is within the acceptable epsilon range
+    float midDistance = (midPoint - pos).norm2();
+    if (midDistance < epsilon || depth >= maxDepth) {
+        // If the closest distance is less than epsilon or the maximum depth is reached, return tMid
+        return tMid;
+    }
+
+    // Subdivide the curve and check the distance at the midpoints
+    float tLeftMid = (tStart + tMid) / 2.0f;
+    Vector3 leftMidPoint = curve.getPoint(tLeftMid);
+
+    float tRightMid = (tMid + tEnd) / 2.0f;
+    Vector3 rightMidPoint = curve.getPoint(tRightMid);
+
+    // Compute distances to pos
+    float startDistance = (curve.getPoint(tStart) - pos).norm2();
+    float leftMidDistance = (leftMidPoint - pos).norm2();
+    float rightMidDistance = (rightMidPoint - pos).norm2();
+    float endDistance = (curve.getPoint(tEnd) - pos).norm2();
+
+    // Use a lambda function to find the minimum distance and its corresponding parameter
+    auto [minDistance, minT] = std::min({std::make_pair(startDistance, tStart),
+                                         std::make_pair(leftMidDistance, tLeftMid),
+                                         std::make_pair(midDistance, tMid),
+                                         std::make_pair(rightMidDistance, tRightMid),
+                                         std::make_pair(endDistance, tEnd)},
+                                        [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    // If the closest distance is within the epsilon threshold, return the corresponding t value
+    if (minDistance < epsilon) {
+        return minT;
+    }
+
+    // Recur on the appropriate half of the curve
+    if (minT <= tLeftMid) {
+        return closestTimeSubdivision(curve, pos, tStart, tMid, depth + 1, maxDepth, epsilon);
+    } else if (minT <= tRightMid) {
+        return closestTimeSubdivision(curve, pos, tLeftMid, tRightMid, depth + 1, maxDepth, epsilon);
+    } else {
+        return closestTimeSubdivision(curve, pos, tMid, tEnd, depth + 1, maxDepth, epsilon);
+    }
+}
+
+
+float closestTimeIntervalAnalysis(const BSpline& curve, const Vector3& pos, float tolerance = 0.001f) {
+    float lowerBound = 0.0f;
+    float upperBound = 1.0f;
+    float closestTime = 0.0f;
+    float closestDistance = std::numeric_limits<float>::max();
+
+    while ((upperBound - lowerBound) > tolerance) {
+        float mid = (lowerBound + upperBound) / 2.0f;
+        float interval = (upperBound - lowerBound) / 4.0f;
+
+        // Sample the curve at the mid-point and quarter points within the current interval
+        std::vector<float> sampleTimes = {lowerBound, lowerBound + interval, mid, upperBound - interval, upperBound};
+        for (float t : sampleTimes) {
+            Vector3 samplePoint = curve.getPoint(t);
+            float distance = (samplePoint - pos).norm2(); // Using squared distance to avoid sqrt computation
+
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestTime = t;
+            }
+        }
+
+        // Narrow down the interval to the one containing the closestTime
+        if (closestTime <= mid) {
+            upperBound = mid;
+        } else {
+            lowerBound = mid;
+        }
+    }
+
+    return closestTime;
+}
+
+
+struct KDNode {
+    Vector3 point;
+    float t; // parameter t corresponding to the point on the spline
+    std::unique_ptr<KDNode> left;
+    std::unique_ptr<KDNode> right;
+    int axis;
+
+    KDNode(const Vector3& pt, float param, int ax)
+        : point(pt), t(param), axis(ax), left(nullptr), right(nullptr) {}
+};
+
+class KDTree {
+private:
+    std::unique_ptr<KDNode> root;
+
+    std::unique_ptr<KDNode> insert(std::unique_ptr<KDNode> node, const Vector3& point, float t, int depth) {
+        if (!node) {
+            return std::make_unique<KDNode>(point, t, depth % 3);
+        }
+
+        int axis = depth % 3;
+        if (point[axis] < node->point[axis]) {
+            node->left = insert(std::move(node->left), point, t, depth + 1);
+        } else {
+            node->right = insert(std::move(node->right), point, t, depth + 1);
+        }
+
+        return node;
+    }
+
+    void nearest(const KDNode* node, const Vector3& point, float& bestDist, float& bestT, int depth) const {
+        if (!node) return;
+
+        float d = (node->point - point).norm2();
+        if (d < bestDist) {
+            bestDist = d;
+            bestT = node->t;
+        }
+
+        int axis = depth % 3;
+        float delta = point[axis] - node->point[axis];
+        float delta2 = delta * delta;
+
+        const KDNode* near = delta < 0 ? node->left.get() : node->right.get();
+        const KDNode* far = delta < 0 ? node->right.get() : node->left.get();
+
+        nearest(near, point, bestDist, bestT, depth + 1);
+
+        // if there might be a closer point on the other side of the splitting plane
+        if (delta2 < bestDist) {
+            nearest(far, point, bestDist, bestT, depth + 1);
+        }
+    }
+
+public:
+    void insert(const Vector3& point, float t) {
+        root = insert(std::move(root), point, t, 0);
+    }
+
+    float nearest(const Vector3& point) const {
+        float bestDist = std::numeric_limits<float>::max();
+        float bestT = -1;
+        nearest(root.get(), point, bestDist, bestT, 0);
+        return bestT;
+    }
+};
+
+float closestTimeSpatialIndex(const BSpline& curve, const Vector3& pos, int initialSamples = 100, float refinementThreshold = 0.001f) {
+    // Create the spatial index
+    KDTree index;
+
+    // Sample the curve at regular intervals and add the points to the index
+    for (int i = 0; i <= initialSamples; ++i) {
+        float t = i / static_cast<float>(initialSamples);
+        Vector3 point = curve.getPoint(t);
+        index.insert(point, t);
+    }
+
+    return index.nearest(pos);
+}*/
+
+float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, float nbChecksFactor, float earlyExitThreshold) const
 {
     if (this->points.size() == 0) {
         return 0;
@@ -93,9 +274,86 @@ float BSpline::estimateClosestTime(const Vector3& pos, float epsilon) const
         float time = clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
         return time;
     }
+
+    float closestTime = 0.0f;
+    float minDistance = std::numeric_limits<float>::max();
+    int numberOfChecks = int(this->points.size() * nbChecksFactor);
+    float precisionFactor = 1.0f / numberOfChecks;
+    float precision = precisionFactor;
+    float searchRangeMin = 0.0f;
+
+    float epsilon = initialEpsilon;
+
+
+    while (precision > epsilon) {
+        for (int i = 0; i < numberOfChecks + 1; i++) {
+            float time = std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
+            float distance = (getPoint(time) - pos).norm2();
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestTime = time;
+            }
+        }
+        if (minDistance < earlyExitThreshold)
+            return closestTime;
+        searchRangeMin = clamp(closestTime - precision/2.f, 0.f, 1.f);
+        precision *= precisionFactor;
+    }
+    return closestTime;
+}
+    /*
+    while (precision > epsilon) {
+        bool earlyExit = false;
+
+        for (int i = 0; i <= numberOfChecks; i++) {
+            float time = std::clamp(searchRangeMin + (i * precision), 0.0f, 1.0f);
+            float distance = (getPoint(time) - pos).norm2();
+
+            // Early exit if the point is closer than the early exit threshold
+            if (distance < earlyExitThreshold) {
+                closestTime = time;
+                earlyExit = true;
+                break; // Exit the for-loop early
+            }
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestTime = time;
+            }
+        }
+
+        // Break the while loop if early exit was triggered
+        if (earlyExit) break;
+
+        // Adjust search range based on the new closest point found
+        searchRangeMin = std::clamp(closestTime - precision * 0.5f, 0.0f, 1.0f);
+        precision *= precisionFactor;
+
+        if (std::abs(lastMinDistance - minDistance) / lastMinDistance < 0.1) { // For example, a 10% decrease
+            epsilon = minDistance * precisionFactor;
+        }
+
+        lastMinDistance = minDistance;
+    }
+
+    return closestTime;
+}
+
+float BSpline::estimateClosestTime(const Vector3& pos, float epsilon, float nbChecksFactor) const
+{
+    if (this->points.size() == 0) {
+        return 0;
+    } else if (this->points.size() == 1) {
+        return 0;
+    } else if (this->points.size() == 2) {
+        Vector3 line = (this->points[1] - this->points[0]);
+        float time = clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
+        return time;
+    }
+
     float closestTime = 0;
     float minDistance = std::numeric_limits<float>::max();
-    int numberOfChecks = int(this->points.size() * 2.f);
+    int numberOfChecks = int(this->points.size() * nbChecksFactor);
     float precisionFactor = 1.f / numberOfChecks;
     float precision = precisionFactor;
     float searchRangeMin = 0.f;
@@ -113,7 +371,7 @@ float BSpline::estimateClosestTime(const Vector3& pos, float epsilon) const
         precision *= precisionFactor;
     }
     return closestTime;
-}
+}*/
 
 Vector3 BSpline::estimateClosestPos(const Vector3& pos, float epsilon) const
 {
@@ -290,12 +548,6 @@ Vector3 BSpline::getCatmullPoint(float x) const
     float resFloor = iFloor * res;
     float resCeil = iCeil * res;
     float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
-/*
-    if (iFloor <= 0) {
-        return this->getPoint(x_prime, displayedPoints[0], displayedPoints[1]);
-    } else if (iCeil >= int(displayedPoints.size()) - 1) {
-        return this->getPoint(x_prime, displayedPoints[iFloor], displayedPoints[iCeil]);
-    }*/
 
     Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
     Vector3 P1 = displayedPoints[iFloor - 0];
@@ -376,6 +628,18 @@ Vector3 BSpline::containingBoxSize() const
     Vector3 minBox, maxBox;
     std::tie(minBox, maxBox) = this->AABBox();
     return (maxBox - minBox);
+}
+
+BSpline &BSpline::scale(float factor)
+{
+    return this->scale(Vector3(factor, factor, factor));
+}
+
+BSpline &BSpline::scale(const Vector3 &factor)
+{
+    for (auto& vert : this->points)
+        vert *= factor;
+    return *this;
 }
 
 BSpline BSpline::computeConvexHull() const

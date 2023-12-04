@@ -15,9 +15,9 @@ public:
     std::vector<Vector3> getPath(int numberOfPoints) const;
     Vector3 getPoint(float x) const;
     Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
-    Vector3 getDerivative(float x) const;
-    Vector3 getSecondDerivative(float x) const;
-    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5) const;
+    Vector3 getDerivative(float x, bool normalize = false) const;
+    Vector3 getSecondDerivative(float x, bool normalize = false) const;
+    float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5, float nbChecksFactor = 4.f, float earlyExitThreshold = 1e-3) const;
     Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3) const;
     float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
     float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
@@ -28,7 +28,7 @@ public:
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
 
-    operator bool() const { return (this->points.size() > 0); };
+    operator bool() const { return (this->points.size() > 0); }
 
     std::tuple<Vector3, Vector3, Vector3> getFrenetFrame(float x) const;
     Vector3 getFrenetDirection(float x) const;
@@ -51,6 +51,9 @@ public:
 
     std::tuple<Vector3, Vector3> AABBox() const;
     Vector3 containingBoxSize() const;
+
+    BSpline& scale(float factor);
+    BSpline& scale(const Vector3& factor);
 
 //    BSpline& grow(float increase);
 //    BSpline& shrink(float decrease);

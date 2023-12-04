@@ -78,13 +78,26 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
     return (nb_intersections % 2) == 1;*/
 }
 
+bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
+{
+    std::vector<Vector3> pointsUsed;
+    if (useNativeShape) {
+        pointsUsed = this->points;
+    } else {
+        pointsUsed = this->getPath(20);
+    }
+    for (auto& p :  pointsUsed)
+        p = p.xy();
+    return Collision::pointInPolygon(pos.xy(), pointsUsed);
+}
+
 float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
 {
     float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
     return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
-float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon)
+float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
 {
     return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
 }
@@ -276,12 +289,6 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
     return returnedPoints;
 }
 
-ShapeCurve &ShapeCurve::scale(float factor)
-{
-    for (auto& vert : this->points)
-        vert *= factor;
-    return *this;
-}
 ShapeCurve __sub_merge(ShapeCurve self, ShapeCurve other)
 {
     std::vector<Vector3> resultingShape;
@@ -404,6 +411,16 @@ ShapeCurve ShapeCurve::merge(ShapeCurve other) {
     auto res1 = __sub_merge(*this, other);
     auto res2 = __sub_merge(*this, other.reverseVertices());
     return (res1.computeArea() > res2.computeArea() ? res1 : res2);
+}
+
+ShapeCurve ShapeCurve::circle(float radius, const Vector3 &center, int nbPoints)
+{
+    std::vector<Vector3> points;
+    for (int i = 0; i < nbPoints; i++) {
+        float angle = (float(i) * 2.f * M_PI) / float(nbPoints);
+        points.push_back(Vector3(std::cos(angle) * radius, std::sin(angle) * radius, 0) + center);
+    }
+    return ShapeCurve(points);
 }
 
 

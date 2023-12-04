@@ -474,7 +474,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 //            if (steps < 0)
 //                continueSimulation = false;
         }
-        if (std::get<0>(firstLastCollisionIndices) != std::get<1>(firstLastCollisionIndices)) {
+        if (std::get<0>(firstLastCollisionIndices) > std::get<1>(firstLastCollisionIndices)) {
             size_t startIndex = maxSteps - std::get<0>(firstLastCollisionIndices);
             size_t endIndex = maxSteps - std::get<1>(firstLastCollisionIndices);
             if (rolling) { // Here we often have errors...
@@ -869,7 +869,7 @@ void UnderwaterErosion::ParisSeaErosion()
     for (auto& p : resistanceCurve)
         p.y = random_gen::generate(0.f, 1.f);
 
-    float waterLevel = voxelGrid->storedWaterLevel;
+    float waterLevel = voxelGrid->properties->waterLevel;
     float previousWater = clamp(waterLevel - 0.1f, 0.f, 1.f);
     float nextWater = clamp(waterLevel + 0.1f, 0.f, 1.f);
     Curve1D seaErosionCurve = Curve1D({Vector3(0, 0, 0), Vector3(previousWater, 0, 0), Vector3(waterLevel, 1, 0), Vector3(nextWater, 0, 0), Vector3(1, 0, 0)});

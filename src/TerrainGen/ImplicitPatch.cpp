@@ -29,6 +29,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
         float maxHeight = AABBox.max().z;
 
         this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
+//        for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
 //            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
@@ -41,6 +42,7 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
                 }
             }
             if (totalEval >= ImplicitPatch::isovalue && totalPositive > totalNegative) {
+//            if (totalEval <= ImplicitPatch::isovalue || totalPositive < totalNegative) {
                 this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = z;
                 break;
             }
@@ -112,7 +114,7 @@ float ImplicitPatch::getMaximalHeight(const Vector3& minBox, const Vector3& maxB
     return maxHeight;
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndTotalEvaluation(const Vector3& pos) const
 {
     return this->getBinaryMaterialsAndTotalEvaluation(pos);
     /*std::map<TerrainTypes, float> materials = this->getMaterials(pos);
@@ -124,7 +126,7 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getMaterialsAndT
     return {totalValue, materials};*/
 }
 
-std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMaterialsAndTotalEvaluation(const Vector3& pos) const
 {
     std::map<TerrainTypes, float> materials = this->getMaterials(pos);
     float totalValue = 0.f;
@@ -135,13 +137,13 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     return {totalValue, {{SAND, totalValue}}};
 }
 
-Vector3 ImplicitPatch::getDimensions()
+Vector3 ImplicitPatch::getDimensions() const
 {
     auto AABBox = this->getBBox();
     return AABBox.dimensions();
 }
 
-Vector3 ImplicitPatch::getSupportDimensions()
+Vector3 ImplicitPatch::getSupportDimensions() const
 {
     auto AABBox = this->getSupportBBox();
     return AABBox.dimensions();
@@ -157,7 +159,7 @@ GridV3 ImplicitPatch::getNormals()
     return normals;
 }
 
-Vector3 ImplicitPatch::getNormal(const Vector3& pos)
+Vector3 ImplicitPatch::getNormal(const Vector3& pos) const
 {
     float delta = 1e-3; // Not too big, not too small...
 
@@ -334,83 +336,84 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
         finalDimensions = this->getBBox().max();
 
     if (_cached) {
-        return this->_cachedVoxelized.resize(finalDimensions);
+        return this->_cachedVoxelized.subset(Vector3(), finalDimensions);
     }
 
 
     this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-    #pragma omp parallel for collapse(3)
-    for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
-        for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
-            for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
-                Vector3 pos = Vector3(x, y, z) * scale;
-//                if (pos == Vector3(52, 52, 5)) {
-//                    int a = 0;
-//                }
-                std::vector<Vector3> evaluationPoses = {
-                    pos + Vector3(0, 0, 0)/*,
-                    pos + Vector3(0, 0, 1),
-                    pos + Vector3(0, 1, 0),
-                    pos + Vector3(0, 1, 1),
-                    pos + Vector3(1, 0, 0),
-                    pos + Vector3(1, 0, 1),
-                    pos + Vector3(1, 1, 0),
-                    pos + Vector3(1, 1, 1)*/
-                };
-                float allPositiveVals = 0.f;
-                float allNegativeVals = 0.f;
-                std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
-                for (size_t i = 0; i < evaluations.size(); i++) {
-                    auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
-                    evaluations[i] = {totalEval, matVals};
+    std::cout << "Time for evaluating " << this->_cachedVoxelized.size() << " cells: " << showTime(timeIt([&]() {
+        #pragma omp parallel for collapse(3)
+        for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
+            for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
+                for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
+                    Vector3 pos = Vector3(x, y, z) * scale;
+                    std::vector<Vector3> evaluationPoses = {
+                        pos + Vector3(0, 0, 0)/*,
+                        pos + Vector3(0, 0, 1),
+                        pos + Vector3(0, 1, 0),
+                        pos + Vector3(0, 1, 1),
+                        pos + Vector3(1, 0, 0),
+                        pos + Vector3(1, 0, 1),
+                        pos + Vector3(1, 1, 0),
+                        pos + Vector3(1, 1, 1)*/
+                    };
+                    float allPositiveVals = 0.f;
+                    float allNegativeVals = 0.f;
+                    std::vector<std::pair<float, std::map<TerrainTypes, float> > > evaluations(evaluationPoses.size());
+                    for (size_t i = 0; i < evaluations.size(); i++) {
+                        auto [totalEval, matVals] = this->getMaterialsAndTotalEvaluation(evaluationPoses[i]);
+                        evaluations[i] = {totalEval, matVals};
 
 
-                    float positiveVal = 0.f;
-                    float negativeVal = 0.f;
-                    for (const auto& [mat, val] : matVals) {
-                        float density = LayerBasedGrid::densityFromMaterial(mat);
-                        positiveVal += (density > 0.f ? val : 0.f);
-                        negativeVal += (density <= 0.f ? val : 0.f);
-                    }
-                    totalEval = positiveVal;
-                    allPositiveVals += positiveVal;
-                    allNegativeVals += negativeVal;
-                }
-
-                allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
-                if (allPositiveVals >= ImplicitPatch::isovalue) {
-                    /*TerrainTypes maxType;
-                    float maxVal = 0.f;
-                    for (const auto& [mat, val] : matVals) {
-                        if (val > maxVal) {
-                            maxType = mat;
-                            maxVal = val;
+                        float positiveVal = 0.f;
+                        float negativeVal = 0.f;
+                        for (const auto& [mat, val] : matVals) {
+                            float density = LayerBasedGrid::densityFromMaterial(mat);
+                            positiveVal += (density > 0.f ? val : 0.f);
+                            negativeVal += (density <= 0.f ? val : 0.f);
                         }
+                        totalEval = positiveVal;
+                        allPositiveVals += positiveVal;
+                        allNegativeVals += negativeVal;
                     }
-                    _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
-                    */
-                    _cachedVoxelized.at(pos) = allPositiveVals;
+
+                    allPositiveVals = (allPositiveVals - allNegativeVals) / float(evaluations.size());
+                    if (allPositiveVals >= ImplicitPatch::isovalue) {
+                        /*TerrainTypes maxType;
+                        float maxVal = 0.f;
+                        for (const auto& [mat, val] : matVals) {
+                            if (val > maxVal) {
+                                maxType = mat;
+                                maxVal = val;
+                            }
+                        }
+                        _cachedVoxelized.at(pos) = (isIn(maxType, LayerBasedGrid::invisibleLayers) ? -totalEval : totalEval); // LayerBasedGrid::densityFromMaterial(maxType);
+                        */
+                        _cachedVoxelized.at(pos) = allPositiveVals;
+                    }
                 }
             }
         }
-    }
+    })) << std::endl;
 //    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
     _cached = true;
 //    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
-    return _cachedVoxelized.resize(finalDimensions);
+    return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
 
-ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve)
+ImplicitPrimitive *ImplicitPatch::createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
 {
-    ImplicitPrimitive* primitive = new ImplicitPrimitive();
+    ImplicitPrimitive* primitive;
+    if (in2D)
+        primitive = new Implicit2DPrimitive();
+    else
+        primitive = new ImplicitPrimitive();
     primitive->predefinedShape = shape;
-    primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve);
+    primitive->evalFunction = ImplicitPatch::createPredefinedShapeFunction(shape, dimensions, additionalParam, parametricCurve, in2D);
     primitive->optionalCurve = parametricCurve;
     primitive->parametersProvided = {additionalParam};
     primitive->dimensions = dimensions;
-    std::cout << dimensions << std::endl;
-
     return primitive;
 }
 ImplicitPatch *ImplicitPatch::createIdentity()
@@ -424,60 +427,63 @@ ImplicitPatch *ImplicitPatch::createIdentity()
     return primitive;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve)
+std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
 {
     std::function<float(Vector3)> func;
     switch(shape) {
     case Sphere:
-        func = ImplicitPatch::createSphereFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createSphereFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Block:
-        func = ImplicitPatch::createBlockFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createBlockFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Gaussian:
-        func = ImplicitPatch::createGaussianFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createGaussianFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Rock:
-        func = ImplicitPatch::createRockFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createRockFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Mountain:
-        func = ImplicitPatch::createMountainFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createMountainFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Dune:
-        func = ImplicitPatch::createDuneFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createDuneFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Basin:
-        func = ImplicitPatch::createBasinFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createBasinFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Cave:
-        func = ImplicitPatch::createCaveFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createCaveFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Arch:
-        func = ImplicitPatch::createArchFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createArchFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Noise2D:
-        func = ImplicitPatch::createNoise2DFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createNoise2DFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Cylinder:
-        func = ImplicitPatch::createCylinderFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createCylinderFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case MountainChain:
-        func = ImplicitPatch::createMountainChainFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
+        func = ImplicitPatch::createMountainChainFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve, in2D);
         break;
     case Polygon:
-        func = ImplicitPatch::createPolygonFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
+        func = ImplicitPatch::createPolygonFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve, in2D);
+        break;
+    case DistanceMap:
+        func = ImplicitPatch::createDistanceMapFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve, in2D);
         break;
     case ImplicitHeightmap:
         // Do it yourself!
         break;
     case ParametricTunnel:
-        func = ImplicitPatch::createParametricTunnelFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve);
+        func = ImplicitPatch::createParametricTunnelFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, parametricCurve, in2D);
         break;
     case None:
-        func = ImplicitPatch::createIdentityFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createIdentityFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     case Ripple:
-        func = ImplicitPatch::createRippleFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z);
+        func = ImplicitPatch::createRippleFunction(additionalParam, dimensions.x, dimensions.y, dimensions.z, in2D);
         break;
     }
     return func;
@@ -492,7 +498,7 @@ ImplicitPrimitive::ImplicitPrimitive()
     this->parametersProvided = {-1.f}; // Just to have an element at first
 }
 
-float ImplicitPrimitive::evaluate(const Vector3& pos)
+float ImplicitPrimitive::evaluate(const Vector3& pos) const
 {
     auto [minPos, maxPos] = this->getBBox();
     auto [minSupportPos, maxSupportPos] = this->getSupportBBox();
@@ -534,12 +540,12 @@ float ImplicitPrimitive::evaluate(const Vector3& pos)
     return evaluation;
 }
 
-std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitPrimitive::getMaterials(const Vector3& pos) const
 {
     return {{this->material, this->evaluate(pos)}};
 }
 
-AABBox ImplicitPrimitive::getSupportBBox()
+AABBox ImplicitPrimitive::getSupportBBox() const
 {
     Vector3 margin = (this->supportDimensions - this->dimensions) * .5f;
     if (!this->supportDimensions.isValid() || this->supportDimensions == Vector3())
@@ -547,7 +553,7 @@ AABBox ImplicitPrimitive::getSupportBBox()
     return {this->position - margin, this->position + this->dimensions + margin};
 }
 
-AABBox ImplicitPrimitive::getBBox()
+AABBox ImplicitPrimitive::getBBox() const
 {
     return {this->position, this->position + this->dimensions};
 }
@@ -742,7 +748,7 @@ ImplicitBinaryOperator::ImplicitBinaryOperator()
     this->composables = std::vector<ImplicitPatch*>(2);
 }
 
-float ImplicitBinaryOperator::evaluate(const Vector3& pos)
+float ImplicitBinaryOperator::evaluate(const Vector3& pos) const
 {
     // Get the function, depending on the chosen operator
     float evalA = this->evaluateA(pos);
@@ -769,7 +775,7 @@ float ImplicitBinaryOperator::evaluate(const Vector3& pos)
     */
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3& pos) const
 {
     // Get materials on A, get materials on B
     // Take the operator final evaluation
@@ -899,7 +905,7 @@ std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterials(const Vector3
     return result;
 }
 
-float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
+float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB) const
 {
     if (this->withIntersectionOnB && evalA < ImplicitPatch::isovalue) {
         return evalA; // TODO: Check if we need to use "isovalue" in the condition
@@ -918,39 +924,39 @@ float ImplicitBinaryOperator::evaluateFromAandB(float evalA, float evalB)
     return evaluation;
 }
 
-float ImplicitBinaryOperator::evaluateA(const Vector3& pos)
+float ImplicitBinaryOperator::evaluateA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
 
     return this->composableA()->evaluate(evaluationPosA);
 }
 
-float ImplicitBinaryOperator::evaluateB(const Vector3& pos)
+float ImplicitBinaryOperator::evaluateB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
 
     return this->composableB()->evaluate(evaluationPosB);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterials(evaluationPosA);
 }
 
-std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitBinaryOperator::getMaterialsB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterials(evaluationPosB);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationA(const Vector3& pos) const
 {
     Vector3 evaluationPosA = this->getEvaluationPositionForComposableA(pos);
     return this->composableA()->getMaterialsAndTotalEvaluation(evaluationPosA);
 }
 
-std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos)
+std::pair<float, std::map<TerrainTypes, float>> ImplicitBinaryOperator::getMaterialsAndTotalEvaluationB(const Vector3& pos) const
 {
     Vector3 evaluationPosB = this->getEvaluationPositionForComposableB(pos);
     return this->composableB()->getMaterialsAndTotalEvaluation(evaluationPosB);
@@ -966,7 +972,7 @@ std::vector<ImplicitPatch *> ImplicitBinaryOperator::findAll(PredefinedShapes sh
     return vectorMerge(this->composableA()->findAll(shape), this->composableB()->findAll(shape));
 }
 
-AABBox ImplicitBinaryOperator::getSupportBBox()
+AABBox ImplicitBinaryOperator::getSupportBBox() const
 {
     auto AABBoxA = this->composableA()->getSupportBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -993,7 +999,7 @@ AABBox ImplicitBinaryOperator::getSupportBBox()
     return {Vector3::min(AABBoxA.min(), AABBoxB.min()), Vector3::max(AABBoxA.max(), AABBoxB.max())};
 }
 
-AABBox ImplicitBinaryOperator::getBBox()
+AABBox ImplicitBinaryOperator::getBBox() const
 {
     auto AABBoxA = this->composableA()->getBBox();
     if (this->withIntersectionOnB) { // No need to go further, we know the limit with the intersection
@@ -1095,7 +1101,10 @@ void ImplicitBinaryOperator::updateCache()
 void ImplicitBinaryOperator::swapAB()
 {
     if (this->composableB() != nullptr) {
-        std::swap(this->composableA(), this->composableB());
+        auto tmp = this->composableA();
+        this->composables[0] = this->composableB();
+        this->composables[1] = tmp;
+        //std::swap(this->composableA(), this->composableB());
         this->composableA()->updateCache();
         this->composableB()->updateCache();
     }
@@ -1109,12 +1118,12 @@ void ImplicitBinaryOperator::deleteAllChildren()
     this->composables.resize(2, nullptr);
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableA(const Vector3& pos) const
 {
     return pos; // Nothing to do
 }
 
-Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos)
+Vector3 ImplicitBinaryOperator::getEvaluationPositionForComposableB(const Vector3& pos) const
 {
     // Get the correct evaluation position for the B composent
     float offsetB = 0.f;
@@ -1155,11 +1164,11 @@ void ImplicitBinaryOperator::addChild(ImplicitPatch *newChild, int index)
     ImplicitNaryOperator::addChild(newChild, index);
 }
 
-ImplicitPatch*& ImplicitBinaryOperator::composableA()
+ImplicitPatch *ImplicitBinaryOperator::composableA() const
 {
     return this->composables[0];
 }
-ImplicitPatch*& ImplicitBinaryOperator::composableB()
+ImplicitPatch* ImplicitBinaryOperator::composableB() const
 {
     return this->composables[1];
 }
@@ -1187,7 +1196,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
     this->noiseFunction = [](Vector3) { return 0.f; };
 }
 */
-float ImplicitUnaryOperator::evaluate(const Vector3& pos)
+float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
 {
 //    Vector3 evaluationPos = this->unwrapFunction(pos);
     Vector3 evaluationPos = inverseTransform(pos);
@@ -1274,7 +1283,7 @@ Vector3 ImplicitUnaryOperator::inverseTransform(const Vector3& pos) const
     return finalPos;
 }
 
-std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3& pos) const
 {
     Vector3 evaluationPos = this->inverseTransform(pos);
     auto [eval, materials] = this->composableA()->getMaterialsAndTotalEvaluation(evaluationPos);
@@ -1286,7 +1295,7 @@ std::map<TerrainTypes, float> ImplicitUnaryOperator::getMaterials(const Vector3&
     }
     return materials;
 }
-AABBox ImplicitUnaryOperator::getSupportBBox() {
+AABBox ImplicitUnaryOperator::getSupportBBox() const {
     auto AABBox = this->composableA()->getSupportBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
 
@@ -1297,7 +1306,7 @@ AABBox ImplicitUnaryOperator::getSupportBBox() {
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }
 
-AABBox ImplicitUnaryOperator::getBBox()
+AABBox ImplicitUnaryOperator::getBBox() const
 {
     auto AABBox = this->composableA()->getBBox();
     auto vertices = Vector3::getAABBoxVertices(AABBox.min(), AABBox.max());
@@ -1450,7 +1459,7 @@ void ImplicitUnaryOperator::deleteAllChildren()
     this->composables.resize(1, nullptr);
 }
 
-ImplicitPatch *&ImplicitUnaryOperator::composableA()
+ImplicitPatch* ImplicitUnaryOperator::composableA() const
 {
     return this->composables[0];
 }
@@ -1538,252 +1547,278 @@ void ImplicitUnaryOperator::addWavelets()
 
 
 
-std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function sphere = [width, sigma](const Vector3& pos) {
-        Vector3 center = Vector3(width, width, width) * .5f;
-        float sqrDist = (pos - center).norm2();
-        float value = std::max(0.f, (sqrDist > (width * width * .25f) ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width*.5f)) * sigma);
-        return value;
-    };
+    Vector3 center = Vector3(width, width, width) * .5f;
+    std::function<float (Vector3)> sphere;
+    if (in2D) {
+        sphere = [=, width, sigma](const Vector3& pos) {
+            float D = (pos.xy() - center.xy()).norm2();
+            float R = center.xy().norm2();
+            if (D > R) return 0.f;
+            return center.z + std::sqrt(R - D);
+        };
+    } else {
+        sphere = [=, width, sigma](const Vector3& pos) {
+//            Vector3 center = Vector3(width, width, width) * .5f;
+            float sqrDist = (pos - center).norm2();
+            float value = std::max(0.f, (sqrDist > (width * width * .25f) ? 0.f : 1 - std::abs(std::sqrt(sqrDist)) / (width*.5f)) * sigma);
+            return value;
+        };
+    }
     return sphere;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return [sigma, width, depth, height] (const Vector3& pos) {
-        bool onlyUseVerticalDistance = (sigma > 10.f); // Hidden cheat code
-        Vector3 minPos = Vector3(-width * 0.f, -depth * 0.f, -height * 0.f);
-        Vector3 maxPos = Vector3(width * 1.f, depth * 1.f, height * 1.f);
-        Vector3 normalizedPos = (pos - minPos) / (maxPos - minPos);
-        float distanceToBBox = 0.f;
-        if (onlyUseVerticalDistance)
-            distanceToBBox = Vector3::signedDistanceToBoundaries(normalizedPos, Vector3(-1000, -1000, 0), Vector3(1000, 1000, 1)); // /*(pos / maxPos)*/pos, minPos, maxPos /*Vector3(1, 1, 1)*/);
-        else
-            distanceToBBox = Vector3::signedDistanceToBoundaries(normalizedPos, Vector3(0, 0, 0), Vector3(1, 1, 1)); // /*(pos / maxPos)*/pos, minPos, maxPos /*Vector3(1, 1, 1)*/);
-        float distanceFalloff = 1.f - (distanceToBBox + 0.5f);
-        float evaluation = std::clamp(distanceFalloff, 0.f, 1.f);
-        return evaluation;
-    };
+    if (in2D) {
+        return [=](const Vector3& pos) {
+            return height;
+        };
+    } else {
+        return [sigma, width, depth, height] (const Vector3& pos) {
+            bool onlyUseVerticalDistance = (sigma > 10.f); // Hidden cheat code
+            Vector3 minPos = Vector3(-width * 0.f, -depth * 0.f, -height * 0.f);
+            Vector3 maxPos = Vector3(width * 1.f, depth * 1.f, height * 1.f);
+            Vector3 normalizedPos = (pos - minPos) / (maxPos - minPos);
+            float distanceToBBox = 0.f;
+            if (onlyUseVerticalDistance)
+                distanceToBBox = Vector3::signedDistanceToBoundaries(normalizedPos, Vector3(-1000, -1000, 0), Vector3(1000, 1000, 1)); // /*(pos / maxPos)*/pos, minPos, maxPos /*Vector3(1, 1, 1)*/);
+            else
+                distanceToBBox = Vector3::signedDistanceToBoundaries(normalizedPos, Vector3(0, 0, 0), Vector3(1, 1, 1)); // /*(pos / maxPos)*/pos, minPos, maxPos /*Vector3(1, 1, 1)*/);
+            float distanceFalloff = 1.f - (distanceToBBox + 0.5f);
+            float evaluation = std::clamp(distanceFalloff, 0.f, 1.f);
+            return evaluation;
+        };
+    }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([width, depth, sigma, height](const Vector3& pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; });
+    std::function<float (Vector3)> func2D = [width, depth, sigma, height](const Vector3& pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; };
+    if (in2D) return func2D;
+    else return ImplicitPatch::convert2DfunctionTo3Dfunction(func2D);
 }
 
-std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     Vector3 start = Vector3(width * .5f, depth * .5f, height * 0.f);
     Vector3 end = Vector3(width * .5f, depth * .5f, height * 1.f);
-//    float radius = sigma;
-    return [=] (const Vector3& pos) {
-        // Line on Z axis
-        if (pos.z < start.z || end.z < pos.z)
-            return 0.2f;
-        BSpline spline({start, end});
-        Vector3 closestPoint = spline.estimateClosestPos(pos, 1e-5);
-        Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
-        float distance = normalizedClosestPoint.norm();
-        float evaluation = std::clamp(1.f - distance, 0.f, 1.f);
-        return evaluation;
-
-/*
-        // From https://iquilezles.org/articles/distfunctions/
-        Vector3 ba = end - start;
-        Vector3 pa = pos - start;
-        float baba = ba.dot(ba);
-        float paba = pa.dot(ba);
-        float x = (pa*baba-ba*paba).norm() - radius*baba;
-        float y = std::abs(paba-baba*0.5)-baba*0.5;
-        float x2 = x*x;
-        float y2 = y*y*baba;
-
-        float d = (std::max(x,y)<0.0)?-std::min(x2,y2):(((x>0.0)?x2:0.0)+((y>0.0)?y2:0.0));
-
-        float dist = (d > 0 ? 1.f : -1.f) * std::sqrt(std::abs(d))/baba;
-        float eval = std::clamp(1 - dist, 0.f, 1.f);
-        return eval;*/
-    };
+    if (in2D) {
+//        float angle = Vector3(1, 0, 0).getAngleWith(end - start);
+        return [=](const Vector3& pos) {
+            float d = (start.xy() - pos.xy()).norm2();
+            return (d < (width * .5f) * (width * .5f) ? height : 0.f);
+        };
+    } else {
+    //    float radius = sigma;
+        return [=] (const Vector3& pos) {
+            // Line on Z axis
+            if (pos.z < start.z || end.z < pos.z)
+                return 0.2f;
+            BSpline spline({start, end});
+            Vector3 closestPoint = spline.estimateClosestPos(pos, 1e-5);
+            Vector3 normalizedClosestPoint = ((pos - closestPoint) / (Vector3(width, depth, height)));
+            float distance = normalizedClosestPoint.norm();
+            float evaluation = std::clamp(1.f - distance, 0.f, 1.f);
+            return evaluation;
+        };
+    }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    auto sphereFunction = ImplicitPatch::createSphereFunction(sigma, width, depth, height);
-    std::function rockFunction = [=] (const Vector3& pos) {
-        FastNoiseLite noise;
-//        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
-        noise.SetFractalType(FastNoiseLite::FractalType_FBm);
-        float noiseOffset = sigma * 1000.f; // noise.GetNoise(sigma * 1000.f, sigma * 1000.f);
-        float noiseValue = (noise.GetNoise(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
-        return sphereFunction(pos + Vector3(0, 0, 0/*width * .25f*/)) - (noiseValue * .5f);
-    };
+    auto sphereFunction = ImplicitPatch::createSphereFunction(sigma, width, depth, height, in2D);
+    std::function<float (Vector3)> rockFunction;
+    if (in2D) {
+        rockFunction = [=](const Vector3& pos) {
+            float noiseOffset = sigma * 1000.f;
+            float noiseValue = (random_gen::generate_perlin(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * width * .5f;
+            return sphereFunction(pos) + noiseValue;
+        };
+    } else {
+        rockFunction = [=] (const Vector3& pos) {
+            /*FastNoiseLite noise;
+    //        noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
+            noise.SetFractalType(FastNoiseLite::FractalType_FBm);*/
+            float noiseOffset = sigma * 1000.f; // noise.GetNoise(sigma * 1000.f, sigma * 1000.f);
+            float noiseValue = (random_gen::generate_perlin(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
+            return sphereFunction(pos + Vector3(0, 0, 0/*width * .25f*/)) - (noiseValue * .5f);
+        };
+    }
     return rockFunction;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=](const Vector3& pos) {
+    std::function<float (Vector3)> mountainFunction = [=](const Vector3& pos) {
         Vector3 translatedPos = pos - (Vector3(width, depth, 0) * .5f);
         Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, depth, 1.f) * .5f);
 //        return normalizedPos.norm();
         float functionsHeight = std::clamp((1.f - normalizedPos.norm()), 0.f, 1.f) * height;
         return functionsHeight;
-    });
-}
-
-std::function<float (Vector3)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height)
-{
-    return ImplicitPatch::createMountainFunction(sigma, width, depth, height);
-}
-
-std::function<float (Vector3)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height)
-{
-    return ImplicitPatch::createBlockFunction(sigma, width, depth, height);
-}
-
-std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height)
-{
-    std::function caveFunc = [=] (const Vector3& pos) {
-        Vector3 start = Vector3(width * .5f, depth * 1.f, height * 1.f);
-        Vector3 p1 = Vector3(width * .5f, depth * .7f, height * .3f);
-        Vector3 p2 = Vector3(width * .5f, depth * .4f, height * .2f);
-        Vector3 end = Vector3(width * .5f, depth * .2f, height * .2f);
-        BSpline curve = BSpline({start, p1, p2, end});
-        float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
-        return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
     };
-    return caveFunc;
+    if (in2D) {
+        return mountainFunction;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(mountainFunction);
+    }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function archFunc = [=] (const Vector3& pos) {
-        Vector3 start = Vector3(width * .5f, depth * 0.f, height * 0.f);
-        Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
-        Vector3 p2 = Vector3(width * .5f, depth * .7f, height * 1.f);
-        Vector3 end = Vector3(width * .5f, depth * 1.f, height * 0.f);
-        BSpline curve = BSpline({start, p1, p2, end});
-        float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
-        return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
-    };
+    return ImplicitPatch::createMountainFunction(sigma, width, depth, height, in2D);
+}
+
+std::function<float (Vector3)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height, bool in2D)
+{
+    return ImplicitPatch::createBlockFunction(sigma, width, depth, height, in2D);
+}
+
+std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height, bool in2D)
+{
+    if (in2D) {
+        return [=](const Vector3& pos) {
+            return 0.f; // Nothing to do in 2D...
+        };
+    } else {
+        std::function<float (Vector3)> caveFunc = [=] (const Vector3& pos) {
+            Vector3 start = Vector3(width * .5f, depth * 1.f, height * 1.f);
+            Vector3 p1 = Vector3(width * .5f, depth * .7f, height * .3f);
+            Vector3 p2 = Vector3(width * .5f, depth * .4f, height * .2f);
+            Vector3 end = Vector3(width * .5f, depth * .2f, height * .2f);
+            BSpline curve = BSpline({start, p1, p2, end});
+            float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
+            return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+        };
+        return caveFunc;
+    }
+}
+
+std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height, bool in2D)
+{
+    std::function<float (Vector3)> archFunc;
+
+    Vector3 start = Vector3(width * .5f, depth * 0.f, height * 0.f);
+    Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
+    Vector3 p2 = Vector3(width * .5f, depth * .7f, height * 1.f);
+    Vector3 end = Vector3(width * .5f, depth * 1.f, height * 0.f);
+    BSpline curve = BSpline({start, p1, p2, end});
+    BSpline curve2D = BSpline({start.xy(), p1.xy(), p2.xy(), end.xy()});
+    float epsilon = 1e-1; // Keep a coarse epsilon just to speed up the process, no real precision needed
+
+    if (in2D) {
+        archFunc = [=](const Vector3& pos) {
+            float closestTime = curve2D.estimateClosestTime(pos.xy());
+            float dist = (curve2D.getPoint(closestTime) - pos.xy()).norm2();
+            float w = (width * width * .25f);
+            if (dist > w) return 0.f;
+            float h = std::sqrt(w - dist);
+            h += curve.getPoint(closestTime).z;
+            return h;
+        };
+    } else {
+        archFunc = [=] (const Vector3& pos) {
+            return 1.f - (curve.estimateDistanceFrom(pos, epsilon) / (width * .5f));
+        };
+    }
     return archFunc;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([sigma, width, depth, height](const Vector3& pos) -> float {
+    std::function<float (Vector3)> noiseFunc = [sigma, width, depth, height](const Vector3& pos) -> float {
         FastNoiseLite noise;
     //    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
         noise.SetFractalType(FastNoiseLite::FractalType_FBm);
         float noiseOffset = sigma * 1000.f; // noise.GetNoise(sigma * 1000.f, sigma * 1000.f);
         float noiseValue = (noise.GetNoise(pos.x * (100.f * sigma / width) + noiseOffset, pos.y * (100.f * sigma / depth) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
         return noiseValue * height;
-    });
+    };
+    if (in2D) {
+        return noiseFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(noiseFunc);
+    }
     //float noiseValue = (noise.GetNoise(pos.x * (100.f / width) + noiseOffset, pos.y * (100.f / width) + noiseOffset, pos.z * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
 }
 
-std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path)
+std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
-//    Vector3 c = Vector3(0.6, 0.8); // std::sin(deg2rad(45.f)), std::cos(deg2rad(45.f)));
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
-//        BSpline path = _path;
-        if (pos.x == 7 && pos.y == 33) {
-            int a = 0;
-        }
+    std::function<float (Vector3)> chainFunc = [=] (const Vector3& pos) -> float {
         float closestTime = path.estimateClosestTime(pos);
         Vector3 closestPoint = path.getPoint(closestTime);
-        Vector3 vertical(0, 0, 1);
-        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
+//        Vector3 vertical(0, 0, 1);
+//        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
 
         Vector3 translatedPos = pos - closestPoint;
         Vector3 normalizedPos = translatedPos.xy() / (Vector3(sigma, sigma, 1.f) * .5f);
         float distance = normalizedPos.norm();
         float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f) * sigma;
         return functionsHeight;
-    });
-        /*Vector3 p = (pos - closestPoint) / (sigma);
-        Vector3 q = Vector3(p.xy().norm(), -p.y);
-        float d = (q - c * std::max(q.dot(c), 0.f)).norm();
-        float signedDist = d * ((q.x * c.y - q.y * c.x < 0.f) ? -1.f : 1.f);
-        return std::clamp(1.f - signedDist, 0.f, 1.f);
-        */
-        /*
-            vec2 q = vec2( length(p.xz), -p.y );
-            float d = length(q-c*max(dot(q,c), 0.0));
-            return d * ((q.x*c.y-q.y*c.x<0.0)?-1.0:1.0);
-        */
-        /*
-        BSpline path = _path;
-        float closestTime = path.estimateClosestTime(pos);
-        Vector3 closestPoint = path.getPoint(closestTime);
-        Vector3 vertical(0, 0, 1);
-        Vector3 islandDirection = vertical.cross(path.getDirection(closestTime)).normalize();
-        Vector3 toCurve = (closestPoint - pos);
-//        float distance = toCurve.norm();
-        float flatDistance = toCurve.xy().norm();
-//        toCurve.normalize();
-//        float islandFactor = std::pow((toCurve.xy().normalized().dot(islandDirection) + 1.f) * .5f, 1.f); // [-1, 1] -> [0, 1]
-        float distanceEval = (flatDistance * toCurve.z); //  * (islandFactor + 1.f); // d * [1, 2]
-        float normalizedEval = (distanceEval / sigma);
-        float eval = std::clamp(1.f - normalizedEval, 0.f, 1.f);
-        return eval;
-        */
-/*
-        Vector3 translatedPos = pos - closestPoint;
-        Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, depth, 1.f) * .5f);
-//        return normalizedPos.norm();
-        float functionsHeight = std::clamp((1.f - normalizedPos.norm()), 0.f, 1.f) * height;
-        return functionsHeight;*/
-    //    };
-}
-
-std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path)
-{
-//    ShapeCurve polygon = path;
-//    for (auto& p : polygon)
-//        p.z = 0.f;
-//    polygon.points.push_back(polygon.points.front());
-    ShapeCurve polygon(path.points);
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
-        return (polygon.contains(pos.xy(), false) ? height : 0.f);
-    });
-}
-
-std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path)
-{
-    return [=] (const Vector3& pos) -> float {
-//        float closestTime = path.estimateClosestTime(pos);
-//        Vector3 closestPoint = path.getPoint(closestTime);
-        float epsilon = 1e-1;
-        return 1.f - (path.estimateDistanceFrom(pos, epsilon) / (sigma));
-        /*Vector3 newBasisX = path.getFrenetDirection(closestTime); // * sigma;
-        Vector3 newBasisY = path.getFrenetBinormal(closestTime); // * sigma;
-        Vector3 newBasisZ = path.getFrenetNormal(closestTime); //  * sigma;
-        ShapeCurve shape = ShapeCurve({
-                                          Vector3(-.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ),
-                                          Vector3(-.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ),
-                                          Vector3(0.5, 0, 0).changeBasis(newBasisX, newBasisY, newBasisZ),
-                                          Vector3(0.2, 0, 1).changeBasis(newBasisX, newBasisY, newBasisZ)
-                                      });
-        shape.scale(sigma);
-        shape.translate(closestPoint);
-
-        float res = ImplicitPatch::isovalue - shape.estimateSignedDistanceFrom(pos);*/
-//        float res = /*ImplicitPatch::isovalue - */(closestPoint - pos).norm() / sigma;
-//        return std::max(res, 0.f);
-        /*
-        float distance = (pos - closestPoint).norm() / sigma;
-        float functionsHeight = std::clamp((1.f - distance), 0.f, 1.f);
-
-        return functionsHeight;
-        */
     };
+    if (in2D) {
+        return chainFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(chainFunc);
+    }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
-    return ImplicitPatch::convert2DfunctionTo3Dfunction([=] (const Vector3& pos) -> float {
+    ShapeCurve polygon(path.points);
+    std::function<float (Vector3)> polygonFunc = [=] (const Vector3& pos) -> float {
+        return (polygon.containsXY(pos.xy(), false) ? height : 0.f);
+    };
+
+    if (in2D) {
+        return polygonFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(polygonFunc);
+    }
+}
+
+std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+{
+    ShapeCurve polygon(path.points);
+    Vector3 center = polygon.center().xy();
+    std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
+        if (!polygon.containsXY(pos.xy(), false))
+            return 0.f;
+        Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
+        float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
+        return height * std::clamp(dist, 0.f, 1.f);
+    };
+    if (in2D) {
+        return distFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
+    }
+}
+
+std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+{
+    float epsilon = 1e-1;
+    if (in2D) {
+        auto flatPath = path;
+        for (auto & p : flatPath)
+            p = p.xy();
+        return [=](const Vector3& pos) {
+            float d = flatPath.estimateSqrDistanceFrom(pos.xy(), epsilon);
+            float r = (sigma * sigma);
+            if (d > r) return 0.f;
+            return std::sqrt(r - d);
+        };
+    } else {
+        return [=] (const Vector3& pos) -> float {
+            return 1.f - (path.estimateDistanceFrom(pos, epsilon) / (sigma));
+        };
+    }
+}
+
+std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height, bool in2D)
+{
+    std::function<float (Vector3)> rippleFunc = [=] (const Vector3& pos) -> float {
         if(!Vector3::isInBox(pos, Vector3(), Vector3(width, depth, height)))
             return 0.f;
         float x = 2 * pos.x / width;
@@ -1792,17 +1827,22 @@ std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, 
         float damping = std::max(1 - y*y, 0.f);
 //        std::cout << x << " " << y << " " << maxHeight << " " << damping << std::endl;
         return height * maxHeight * damping;
-    });
+    };
+    if (in2D) {
+        return rippleFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(rippleFunc);
+    }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height)
+std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     return [](Vector3) -> float { return 0.f; };
 }
 
 std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (Vector3)> func)
 {
-    std::function _3Dfunction = [func](const Vector3& pos) {
+    std::function<float (Vector3)> _3Dfunction = [func](const Vector3& pos) {
         float height = func(pos);
         float inverse_isovalue = .5f - (pos.z / height); //height * .5f - pos.z;
         float isovalue = 1.f - std::abs(inverse_isovalue);
@@ -2085,6 +2125,8 @@ ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
         return ImplicitPatch::PredefinedShapes::None;
     else if (name == "ripple")
         return ImplicitPatch::PredefinedShapes::Ripple;
+    else if (name == "distancemap")
+        return ImplicitPatch::PredefinedShapes::DistanceMap;
 
     // Error
     std::cerr << "Wrong predefined shape string given. (" << name << ")" << std::endl;
@@ -2127,6 +2169,8 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
         return "None";
     else if (shape == ImplicitPatch::PredefinedShapes::Ripple)
         return "Ripple";
+    else if (shape == ImplicitPatch::PredefinedShapes::DistanceMap)
+        return "DistanceMap";
 
     // Impossible
     std::cerr << "Unknown predefined shape given." << std::endl;
@@ -2240,7 +2284,7 @@ ImplicitNaryOperator::ImplicitNaryOperator()
 
 }
 
-float ImplicitNaryOperator::evaluate(const Vector3& pos)
+float ImplicitNaryOperator::evaluate(const Vector3& pos) const
 {
     float maxVal = 0.f;
     for (auto& compo : this->composables)
@@ -2248,11 +2292,13 @@ float ImplicitNaryOperator::evaluate(const Vector3& pos)
     return maxVal;
 }
 
-std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos)
+std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& pos) const
 {
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
     for (auto& compo : this->composables) {
+        if (auto as2DNary = dynamic_cast<Implicit2DNary*>(compo))
+            as2DNary->reevaluateAll();
         auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
         for (auto& [mat, val] : evaluation) {
             if (bestReturn.count(mat) == 0)
@@ -2275,7 +2321,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
     return bestReturn;*/
 }
 
-AABBox ImplicitNaryOperator::getSupportBBox()
+AABBox ImplicitNaryOperator::getSupportBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
@@ -2286,7 +2332,7 @@ AABBox ImplicitNaryOperator::getSupportBBox()
     return {minPos, maxPos};
 }
 
-AABBox ImplicitNaryOperator::getBBox()
+AABBox ImplicitNaryOperator::getBBox() const
 {
     Vector3 minPos(false), maxPos(false);
     for (auto& compo : this->composables) {
@@ -2488,4 +2534,159 @@ nlohmann::json ImplicitSpread::toJson()
 ImplicitPatch *ImplicitSpread::fromJson(nlohmann::json content)
 {
     return ImplicitUnaryOperator::fromJson(content);
+}
+
+Implicit2DNary::Implicit2DNary()
+    : ImplicitNaryOperator()
+{
+
+}
+
+std::map<TerrainTypes, float> Implicit2DNary::getMaterials(const Vector3 &pos) const
+{
+    return {{DIRT, evaluate(pos)}};
+}
+
+std::pair<float, std::map<TerrainTypes, float> > Implicit2DNary::getMaterialsAndTotalEvaluation(const Vector3 &pos) const
+{
+    float eval = this->evaluate(pos);
+    return {eval, {{DIRT, eval}}};
+}
+
+float Implicit2DNary::evaluate(const Vector3 &pos) const
+{
+    if (_cached)
+        return _cachedMaxHeight(pos.xy());
+    float res = (pos.z < computeHeight(pos) ? 1.f : -1.f);
+    return res;
+}
+
+GridF Implicit2DNary::getVoxelized(const Vector3 &dimensions, const Vector3 &scale)
+{
+//    if (_cached)
+//        return _cachedVoxelized.subset(Vector3(), dimensions);
+
+    if (!_cached || _cachedMaxHeight.empty())
+        reevaluateAll();
+
+    _cachedVoxelized = GridF(dimensions, -1.f);
+    int dimX = dimensions.x;
+    int dimY = dimensions.y;
+#pragma omp parallel for collapse(2)
+    for (int x = 0; x < dimX; x++) {
+        for (int y = 0; y < dimY; y++) {
+            float height = this->_cachedMaxHeight(x, y);
+            int z;
+            for (z = 0; z < height && z < dimensions.z; z++) {
+                _cachedVoxelized(x, y, z) = 1.f;
+            }
+            if (height <= dimensions.z)
+                _cachedVoxelized(x, y, int(height)) = interpolation::inv_linear((height - int(height)), -1.f, 1.f); // Take the fract part to interpolate
+        }
+    }
+    return _cachedVoxelized;
+}
+
+bool Implicit2DNary::contains(const Vector3 &v)
+{
+    return this->getHeight(v) <= v.z;
+}
+
+bool Implicit2DNary::checkIsInGround(const Vector3 &position)
+{
+    return this->contains(position);
+}
+
+Vector3 Implicit2DNary::getNormal(const Vector3 &pos) const
+{
+    float x0 = evaluate(Vector3(pos.x - 1, pos.y));
+    float x1 = evaluate(Vector3(pos.x + 1, pos.y));
+    float y0 = evaluate(Vector3(pos.x, pos.y - 1));
+    float y1 = evaluate(Vector3(pos.x, pos.y + 1));
+
+    return Vector3(x1 - x0, y1 - y0, 2.f).normalized();
+}
+
+float Implicit2DNary::getMaxHeight(const Vector3 &pos)
+{
+    return this->evaluate(pos);
+}
+
+float Implicit2DNary::getMinHeight(const Vector3 &pos)
+{
+    return 0.f;
+}
+
+float Implicit2DNary::getMinimalHeight(const Vector3 &minBox, const Vector3 &maxBox)
+{
+    return 0.f;
+}
+
+float Implicit2DNary::getMaximalHeight(const Vector3 &minBox, const Vector3 &maxBox)
+{
+    if (!_cached)
+        this->reevaluateAll();
+    return this->_cachedMaxHeight.max();
+}
+
+void Implicit2DNary::reevaluateAll()
+{
+    auto dims = this->getSupportBBox().max();
+    int dimX = dims.x;
+    int dimY = dims.y;
+    if (dimX == 0 && dimY == 0) {
+        dimX = 100;
+        dimY = 100;
+    }
+    this->_cachedMaxHeight = GridF(dimX, dimY, 1, -1);
+    this->_cachedMaxHeight.raiseErrorOnBadCoord = false;
+    this->_cachedMaxHeight.defaultValueOnBadCoord = 0.f;
+#pragma omp parallel for collapse(2)
+    for (int x = 0; x < dimX; x++) {
+        for (int y = 0; y < dimY; y++) {
+            this->_cachedMaxHeight(x, y) = computeHeight(Vector3(x, y)); // This updates the cached heights array
+        }
+    }
+    this->_cached = true;
+}
+
+float Implicit2DNary::computeHeight(const Vector3 &pos) const
+{
+    float maxSolid = 0.f;
+    float maxInvisible = 0.f;
+
+    for (const auto& comp : composables) {
+        if (auto asPrimitive = dynamic_cast<Implicit2DPrimitive*>(comp)) {
+            float elemHeight = std::abs(asPrimitive->evaluate(pos.xy()));
+            if (isIn(asPrimitive->material, LayerBasedGrid::invisibleLayers)) {
+                maxInvisible = std::max(maxInvisible, elemHeight);
+            } else {
+                maxSolid = std::max(maxSolid, elemHeight);
+            }
+        }
+    }
+    return maxSolid - maxInvisible;
+}
+
+
+
+Implicit2DPrimitive::Implicit2DPrimitive()
+    : ImplicitPrimitive()
+{
+
+}
+float Implicit2DPrimitive::evaluate(const Vector3& pos) const
+{
+    auto [minPos, maxPos] = this->getBBox();
+    auto [minSupportPos, maxSupportPos] = this->getSupportBBox();
+    if (!Vector3::isInBox(pos, minSupportPos, maxSupportPos))
+        return 0.f;
+    float evaluation = 0.f;
+
+    Vector3 evalPos = pos - this->position.xy();
+    if (Vector3::isInBox(pos, minPos, maxPos)) {
+        evaluation = this->evalFunction(evalPos) * (isIn(this->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+    }
+
+    return evaluation;
 }

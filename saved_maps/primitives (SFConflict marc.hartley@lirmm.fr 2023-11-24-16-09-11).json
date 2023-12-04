@@ -1,0 +1,202 @@
+[
+  {
+    "name": "Passe",
+    "type": "curve",
+    "rule": "(abs(current.dir dot Reef.normal) * 10) + (10 - d(Reef - pos))",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 5,
+      "y": 20,
+      "z": 0
+    },
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "Reef",
+    "type": "curve",
+    "rule": "(20^2 - d2(lagoon - pos))",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.9,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 10,
+      "y": 30,
+      "z": 0
+    },
+    "geometry": "MountainChain",
+    "material": "sand"
+  },
+  {
+    "name": "FrontReef",
+    "type": "curve",
+    "rule": "(20*20) - d2(Reef - pos)",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.5,
+      "binormal": 0.1
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 10,
+      "y": 0,
+      "z": 0
+    },
+    "geometry": "ParametricTunnel",
+    "material": "Coral"
+  },
+  {
+    "name": "Lagoon",
+    "type": "area",
+    "rule": "(20*20)^8 - d2(Island.center - pos)^8",
+    "flow": {
+      "direction": 0.1,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "sand": 0.1,
+    "dimensions": {
+      "x": 50,
+      "y": 0,
+      "z": 5
+    },
+    "geometry": "Polygon",
+    "material": "sand"
+  },
+  {
+    "name": "Island",
+    "type": "area",
+    "rule": "10 - abs(d(Island - pos) - 10)",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.2,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 20,
+      "y": 0,
+      "z": 20
+    },
+    "geometry": "DistanceMap",
+    "material": "Rock"
+  },
+  {
+    "name": "Coral",
+    "type": "point",
+    "rule": "(10 - sand - current.vel) * Lagoon.inside * (depth - 3)",
+    "flow": 0.1,
+    "sand": 0.8,
+    "dimensions": {
+      "x": 2,
+      "y": 2,
+      "z": 10
+    },
+    "geometry": "Block",
+    "material": "Coral"
+  },
+  {
+    "name": "Beach",
+    "type": "area",
+    "rule": "((5*5) - d2(Island - pos)) * (1 - Island.inside)",
+    "flow": {
+      "direction": 0.1,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "sand": 0.8,
+    "dimensions": {
+      "x": 10,
+      "y": 0,
+      "z": 10
+    },
+    "geometry": "Mountain",
+    "material": "Sand"
+  },
+  {
+    "name": "Coast",
+    "type": "area",
+    "rule": "(10*10) - d2(Island - pos)",
+    "flow": {
+      "direction": 0.1,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "sand": 0.1,
+    "dimensions": {
+      "x": 10,
+      "y": 0,
+      "z": 10
+    },
+    "geometry": "DistanceMap",
+    "material": "Sand"
+  },
+  {
+    "name": "Boulder",
+    "type": "point",
+    "rule": "((20 * 20) - (d2(Reef - pos)) + current.vel * 300) * Lagoon.inside",
+    "flow": 0.0,
+    "sand": 0.4,
+    "dimensions": {
+      "x": 3,
+      "y": 0,
+      "z": 0
+    },
+    "geometry": "Sphere",
+    "material": "Dirt"
+  },
+  {
+    "name": "Delta",
+    "type": "curve",
+    "rule": "(10*10)^4 - d2(Passe.end - pos)^4",
+    "flow": {
+      "direction": 0.8,
+      "normal": 0.8,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 4,
+      "y": 10,
+      "z": 0
+    },
+    "sand": 0.1,
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "Tree",
+    "type": "point",
+    "rule": "(200 * d2(Island - pos) - 500 * d2(Island.center - pos)) * depth",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 4.0,
+      "y": 1.0,
+      "z": 5.0
+    },
+    "sand": 0.0,
+    "geometry": "Sphere",
+    "material": "dirt"
+  },
+  {
+    "name": "Motu",
+    "type": "point",
+    "rule": "d(Reef.start) * 1000 + (sand * 10000)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 15.0
+    },
+    "sand": 1.0,
+    "geometry": "Dune",
+    "material": "Sand"
+  }
+]

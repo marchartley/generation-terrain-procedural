@@ -23,6 +23,7 @@ void TerrainGenerationInterface::setWaterLevel(float newLevel)
 {
     this->waterLevel = newLevel;
     voxelGrid->updateEnvironmentalDensities(newLevel);
+    Q_EMIT waterLevelChanged(newLevel);
     Q_EMIT updated();
 }
 
@@ -263,7 +264,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
-//    Vector3 terrainSize = Vector3(300, 300, 50); //Vector3(128, 128, 64);
+//    Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
     Vector3 terrainSize = Vector3(100, 100, 50); //Vector3(128, 128, 64);
     if (this->voxelGrid)
         terrainSize = voxelGrid->getDimensions();

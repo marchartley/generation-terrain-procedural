@@ -42,7 +42,7 @@ Heightmap::Heightmap() : Heightmap(10, 10, 5.0) {
 
 }
 
-float Heightmap::getMaxHeight()
+float Heightmap::getMaxHeight() const
 {
     return this->heights.max(); // this->maxHeight; //this->heights.max();
 }
@@ -418,10 +418,13 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     GridF voxels = voxelGrid.getVoxelValues();
+    int sizeX = voxelGrid.getSizeX();
+    int sizeY = voxelGrid.getSizeY();
 
-    this->heights = GridF(voxelGrid.getSizeX(), voxelGrid.getSizeY(), 1, 0.f);
-    for (int x = 0; x < voxelGrid.getSizeX(); x++) {
-        for (int y = 0; y < voxelGrid.getSizeY(); y++) {
+    this->heights = GridF(sizeX, sizeY, 1, 0.f);
+    #pragma omp parallel for collapse(2)
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
                 if (voxels.at(x, y, z) > 0.f) {
 //                    float current = voxels.at(x, y, z); // Is > 0.f
@@ -453,12 +456,21 @@ Heightmap& Heightmap::fromImplicit(ImplicitPatch* implicitTerrain)
 {
     this->heights = GridF(implicitTerrain->getSizeX(), implicitTerrain->getSizeY());
     int sX = this->getSizeX(), sY = this->getSizeY();
-#pragma omp parallel for collapse(2)
-    for (int x = 0; x < sX; x++) {
-        for (int y = 0; y < sY; y++) {
-            this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
+//    GridF evalTimeParts(heights.getDimensions());
+//    int nb = sX * sY;
+//    float time = timeIt([&]() {
+        #pragma omp parallel for collapse(2)
+        for (int x = 0; x < sX; x++) {
+            for (int y = 0; y < sY; y++) {
+//                evalTimeParts(x, y) = timeIt([&]() {
+                    this->heights.at(x, y) = implicitTerrain->getHeight(x, y);
+//                });
+//                nb++;
+            }
         }
-    }
+//    });
+//    std::cout << "Evaluation time for implicit->heightmap: " << showTime(time) << " for " << nb << " cells (x20) => " << showTime(time / float(nb * 20)) << " per eval, or " << showTime(time / float(nb)) << " per cell" << std::endl;
+//    std::cout << evalTimeParts.displayAsPlot() << std::endl;
     return *this;
 }
 

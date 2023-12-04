@@ -75,7 +75,8 @@ void WarpedFluidSimulation::recomputeVelocities()
     for (size_t i = 0; i < gradients.size(); i++) {
         auto& grad = gradients[i];
         float radius = gaussRadii[i];
-        grad = -(augmentedObstacles.meanSmooth(radius, radius, 1, true).gradient());
+        auto smoothed = augmentedObstacles.meanSmooth(radius, radius, 1, true);
+        grad = -smoothed.gradient();
 
         for (int x = 0; x < grad.sizeX; x++) {
             for (int y = 0; y < grad.sizeY; y++) {

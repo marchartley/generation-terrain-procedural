@@ -57,7 +57,7 @@ public:
         return distribution(random_gen::random_generator);
     }
 
-    static float generate_perlin(float x, float y, float z = 0) {
+    static float generate_perlin(float x, float y = 0, float z = 0) {
         return perlinNoise.GetNoise(x, y, z);
     }
 };

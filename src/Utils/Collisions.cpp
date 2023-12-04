@@ -292,7 +292,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 
     if (_polygon.size() < 3) return false; // A polygon must have at least 3 vertices.
 
-    if (!AABBox(_polygon).contains(point))
+    if (!AABBox(_polygon).containsXY(point.xy()))
         return false;
 
     // Calculate the centroid of the polygon.
@@ -323,6 +323,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
     maxDistance = std::sqrt(maxDistance);
 
     // Adjust the direction of the ray until it is not parallel to any edge of the polygon.
+    float perturbation = 0.01f;
     bool isParallel;
     do {
         isParallel = false;
@@ -335,10 +336,9 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
             }
         }
         if (isParallel) {
-//            direction = Quaternion::AxisAngle(normal, rotationAngle).toVector3() * direction;
-            Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
-            direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
-//            direction.x += 1.f;
+            direction += Vector3::random(perturbation).xy();
+//            Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
+//            direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
         }
     } while (isParallel);
 

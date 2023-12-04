@@ -48,19 +48,19 @@ void Mesh::clear()
     this->needToUpdateNormals = true;
     this->needToUpdateTextures = true;
 }
-Mesh Mesh::merge(std::shared_ptr<Mesh> other, bool recomputeIndices)
+Mesh Mesh::merge(const Mesh& other, bool recomputeIndices)
 {
-    this->vertexArray.insert(this->vertexArray.end(), other->vertexArray.begin(), other->vertexArray.end());
-    this->colorsArray.insert(this->colorsArray.end(), other->colorsArray.begin(), other->colorsArray.end());
+    this->vertexArray.insert(this->vertexArray.end(), other.vertexArray.begin(), other.vertexArray.end());
+    this->colorsArray.insert(this->colorsArray.end(), other.colorsArray.begin(), other.colorsArray.end());
 
     if (recomputeIndices) {
         this->fromArray(this->vertexArray);
     }
     return *this;
 }
-Mesh Mesh::merge(std::vector<std::shared_ptr<Mesh>> others)
+Mesh Mesh::merge(std::vector<Mesh> others)
 {
-    for (std::vector<std::shared_ptr<Mesh>>::iterator it = others.begin(); it != others.end(); it++)
+    for (std::vector<Mesh>::iterator it = others.begin(); it != others.end(); it++)
         merge(*it, false);
 
     this->fromArray(this->vertexArray);
@@ -660,24 +660,28 @@ void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std:
     }
 }
 
-void Mesh::displayAsVectorField(GridV3 field, const Vector3& finalDimensions, float maxMaginitude, bool normalize)
+Mesh& Mesh::fromVectorField(GridV3 field, const Vector3 &finalDimensions, float maxMagnitude, bool normalize, bool displayArrow)
 {
-    if (maxMaginitude > 0.f) {
+    if (maxMagnitude > 0.f) {
         for (auto& v : field)
-            v.maxMagnitude(maxMaginitude);
+            v.maxMagnitude(maxMagnitude);
     }
     if (normalize) {
         field.normalize();
     }
+
+    Vector3 offsetToCenter(.5f, .5f, .5f);
     std::vector<Vector3> normals;
-    for (int x = 0; x < field.sizeX - 1; x++) {
-        for (int y = 0; y < field.sizeY - 1; y++) {
-            for (int z = 0; z < field.sizeZ - 1; z++) {
-                normals.push_back(Vector3(x, y, z) + Vector3(.5f, .5f, .5f));
-                normals.push_back(Vector3(x, y, z) + field.at(x, y, z) + Vector3(.5f, .5f, .5f));
-            }
+    field.iterate([&](const Vector3& pos) {
+        Vector3 value = field.at(pos);
+        if (displayArrow) {
+            auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
+            normals.insert(normals.end(), arrowPoints.begin(), arrowPoints.end());
+        } else {
+            normals.push_back(pos + offsetToCenter);
+            normals.push_back(pos + offsetToCenter + value);
         }
-    }
+    });
     if (finalDimensions.isValid()) {
         Vector3 ratio = finalDimensions / field.getDimensions();
         for (auto& n : normals) {
@@ -685,8 +689,14 @@ void Mesh::displayAsVectorField(GridV3 field, const Vector3& finalDimensions, fl
         }
     }
     this->fromArray(normals);
-    this->display(GL_LINES);
+    return *this;
 }
+/*
+void Mesh::displayAsVectorField(GridV3 field, const Vector3& finalDimensions, float maxMagnitude, bool normalize)
+{
+    this->fromVectorField(field, finalDimensions, maxMagnitude, normalize);
+    this->display(GL_LINES);
+}*/
 
 void Mesh::setShader(std::shared_ptr<Shader> shader)
 {
@@ -1048,11 +1058,27 @@ bool Mesh::isWatertight()
 
 }
 
-Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMaginitude, bool normalize, bool displayArrow)
+std::vector<Vector3> Mesh::getPointsForArrow(const Vector3 &from, const Vector3 &to)
 {
-    if (maxMaginitude > 0.f) {
+    Vector3 direction = to - from;
+    std::vector<Vector3> points;
+
+    points.push_back(from);
+    points.push_back(to);
+
+    Vector3 cross = direction.cross(direction.isAlmostVertical() ? Vector3(0, 1, 0) : Vector3(0, 0, 1)).setMag(direction.norm() * .2f);
+    points.push_back(from + direction * .8f - cross);
+    points.push_back(to);
+    points.push_back(to);
+    points.push_back(from + direction * .8f + cross);
+    return points;
+}
+
+Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMagnitude, bool normalize, bool displayArrow)
+{
+    if (maxMagnitude > 0.f) {
         for (auto& v : field)
-            v.maxMagnitude(maxMaginitude);
+            v.maxMagnitude(maxMagnitude);
     }
     if (normalize) {
         field.normalize();
@@ -1065,16 +1091,12 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
             for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 Vector3 value = field.at(x, y, z);
-                normals.push_back(pos + offsetToCenter);
-                normals.push_back(pos + offsetToCenter + value);
-
                 if (displayArrow) {
-                    // Arrow part
-                    Vector3 cross = value.cross(Vector3(0, 0, 1)).setMag(value.norm() * .2f);
-                    normals.push_back(pos + offsetToCenter + value * .8f - cross);
+                    auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
+                    normals.insert(normals.end(), arrowPoints.begin(), arrowPoints.end());
+                } else {
+                    normals.push_back(pos + offsetToCenter);
                     normals.push_back(pos + offsetToCenter + value);
-                    normals.push_back(pos + offsetToCenter + value);
-                    normals.push_back(pos + offsetToCenter + value * .8f + cross);
                 }
             }
         }

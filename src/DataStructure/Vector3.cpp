@@ -177,11 +177,16 @@ float Vector3::getAngleWith(const Vector3& otherVector) const
     return std::acos(vA.dot(vB));
 }
 
+float Vector3::getSignedAngleWith(const Vector3 &otherVector) const
+{
+    return this->getAngleWith(otherVector) * sign(this->cross(otherVector).z);
+}
+
 float Vector3::getSignedAngleAroundAxisWith(const Vector3 &otherVector, const Vector3 &axis) const
 {
     Vector3 normalizedAxis = axis.normalized();
     Vector3 vA = *this - normalizedAxis * this->dot(normalizedAxis); //this->normalized();
-    Vector3 vB = otherVector - normalizedAxis * otherVector.dot(normalizedAxis);; //.normalized();
+    Vector3 vB = otherVector - normalizedAxis * otherVector.dot(normalizedAxis); //.normalized();
     if (vA == vB)
         return 0.f;
 //    float dot = vA.dot(vB);
@@ -219,6 +224,20 @@ Vector3 Vector3::quaternionToEuler(float x, float y, float z, float w)
     angles.z = std::atan2(siny_cosp, cosy_cosp);
 
     return angles;
+}
+
+Vector3 Vector3::slerp(float t, const Vector3 &A, const Vector3 &B) {
+    float lengthA = A.norm();
+    float lengthB = B.norm();
+    auto start = A / lengthA, end = B / lengthB;
+    float dot = start.dot(end);
+    dot = std::clamp(dot, -1.0f, 1.0f);
+
+    float theta = std::acos(dot) * t;
+    Vector3 relativeVec = end - start * dot;
+    relativeVec.normalize(); // Ensure it's a unit vector
+
+    return ((start * std::cos(theta)) + (relativeVec * std::sin(theta))) * interpolation::inv_linear(t, lengthA, lengthB);
 }
 
 float Vector3::dot(const Vector3& o) const {
@@ -412,10 +431,10 @@ Vector3& Vector3::rotate(const Vector3& eulerAngles) {
     this->z = newCoords[2][0];
     return *this;*/
 }
-Vector3 Vector3::rotated(float angle_x, float angle_y, float angle_z) {
+Vector3 Vector3::rotated(float angle_x, float angle_y, float angle_z) const {
     return this->rotated(Vector3(angle_x, angle_y, angle_z));
 }
-Vector3 Vector3::rotated(const Vector3& eulerAngles) {
+Vector3 Vector3::rotated(const Vector3& eulerAngles) const {
     Vector3 v = *this;
     return v.rotate(eulerAngles);
 }
@@ -437,10 +456,10 @@ Vector3& Vector3::rotate(float angle, const Vector3& direction) {
     this->z = newCoords[2][0];
     return *this;*/
 }
-Vector3 Vector3::rotated(float angle, float dir_x, float dir_y, float dir_z) {
+Vector3 Vector3::rotated(float angle, float dir_x, float dir_y, float dir_z) const {
     return this->rotated(angle, Vector3(dir_x, dir_y, dir_z));
 }
-Vector3 Vector3::rotated(float angle, const Vector3& direction) {
+Vector3 Vector3::rotated(float angle, const Vector3& direction) const {
     Vector3 v = *this;
     return v.rotate(angle, direction);
 }

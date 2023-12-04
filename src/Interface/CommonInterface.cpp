@@ -21,6 +21,11 @@ void UIElement::cleanupConnections() {
     connections.clear();
 }
 
+void UIElement::update()
+{
+    return;
+}
+
 
 UIElement::~UIElement() {
     cleanupConnections();
@@ -41,6 +46,12 @@ const std::string &UIElement::getName() const
 
 ButtonElement::ButtonElement(std::string label)
     : UIElement(new QPushButton(QString::fromStdString(label))) {}
+
+ButtonElement::ButtonElement(std::string label, std::function<void ()> onClick)
+    : UIElement(new QPushButton(QString::fromStdString(label)))
+{
+    this->setOnClick(onClick);
+}
 
 QPushButton *ButtonElement::button() {
     return static_cast<QPushButton*>(getWidget());
@@ -87,6 +98,11 @@ void SliderElement::bindTo(float &value) {
     });
 }
 
+void SliderElement::update()
+{
+    slider()->setfValue(*this->boundVariable);
+}
+
 
 
 CheckboxElement::CheckboxElement(std::string label)
@@ -99,6 +115,12 @@ CheckboxElement::CheckboxElement(std::string label, bool &binded)
     : CheckboxElement(label)
 {
     bindTo(binded);
+}
+
+CheckboxElement::CheckboxElement(std::string label, std::function<void (bool)> onCheck)
+    : CheckboxElement(label)
+{
+    this->setOnChecked(onCheck);
 }
 
 QCheckBox *CheckboxElement::checkBox() {
@@ -114,6 +136,11 @@ void CheckboxElement::bindTo(bool &value)
             boundVariable->get() = newValue;
         }
     });
+}
+
+void CheckboxElement::update()
+{
+    checkBox()->setChecked(*this->boundVariable);
 }
 
 InterfaceUI::InterfaceUI(QLayout *layout, std::string title)
@@ -155,6 +182,15 @@ UIElement *InterfaceUI::find(std::string name)
     return nullptr;
 }
 
+void InterfaceUI::update()
+{
+    for (auto& child : box()->children()) {
+        if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
+            asUIElement->update();
+        }
+    }
+}
+
 RadioButtonElement::RadioButtonElement(std::string label)
     : UIElement(new QRadioButton(QString::fromStdString(label)))
 {
@@ -183,6 +219,11 @@ void RadioButtonElement::bindTo(bool &value)
     });
 }
 
+void RadioButtonElement::update()
+{
+    radioButton()->setChecked(*this->boundVariable);
+}
+
 InterfaceUI *createHorizontalGroupUI(std::vector<UIElement *> widgets)
 {
     InterfaceUI* interface = new InterfaceUI(new QHBoxLayout);
@@ -197,4 +238,104 @@ InterfaceUI *createVerticalGroupUI(std::vector<UIElement *> widgets)
     for (UIElement*& w : widgets)
         interface->add(w);
     return interface;
+}
+
+TextEditElement::TextEditElement(std::string text, std::string label)
+    : UIElement(new QGroupBox)
+{
+    this->_lineEdit = new QLineEdit(QString::fromStdString(text));
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_lineEdit);
+    getWidget()->setLayout(layout);
+}
+
+TextEditElement::TextEditElement(std::string text, std::string label, std::string &binded)
+    : TextEditElement(text, label)
+{
+    this->bindTo(binded);
+}
+
+QLineEdit *TextEditElement::lineEdit()
+{
+    return dynamic_cast<QLineEdit*>(_lineEdit);
+}
+
+void TextEditElement::setOnTextChange(std::function<void (std::string)> func)
+{
+//    this->addConnection()
+    QObject::connect(_lineEdit, &QLineEdit::textChanged, this, [=](QString newText){ // /!\ Capture function by value
+        func(newText.toStdString());
+    });
+}
+
+void TextEditElement::bindTo(std::string &value)
+{
+    lineEdit()->setText(QString::fromStdString(value));
+    boundVariable = value;
+    setOnTextChange([this](std::string newValue) {
+        if (boundVariable) {
+            boundVariable->get() = newValue;
+        }
+    });
+}
+
+void TextEditElement::update()
+{
+    lineEdit()->setText(QString::fromStdString(*this->boundVariable));
+}
+
+RangeSliderElement::RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
+    : UIElement(new QGroupBox)
+{
+    this->_slider = new RangeSlider(orientation, valMin, valMax, multiplier);
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    layout->addWidget(_label);
+    layout->addWidget(_slider);
+    getWidget()->setLayout(layout);
+}
+
+RangeSliderElement::RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, Qt::Orientation orientation)
+    : RangeSliderElement(label, valMin, valMax, multiplier, orientation)
+{
+    this->bindTo(bindedMin, bindedMax);
+}
+
+RangeSlider *RangeSliderElement::slider()
+{
+    return _slider;
+}
+
+QLabel *RangeSliderElement::label()
+{
+    return _label;
+}
+
+void RangeSliderElement::bindTo(float &valueMin, float &valueMax)
+{
+    slider()->setMinValue(valueMin);
+    slider()->setMaxValue(valueMax);
+    boundVariableMin = valueMin;
+    boundVariableMax = valueMax;
+    setOnValueChanged([this](float newMin, float newMax) {
+        if (boundVariableMin) {
+            boundVariableMin->get() = newMin;
+        }
+        if (boundVariableMax) {
+            boundVariableMax->get() = newMax;
+        }
+    });
+}
+
+void RangeSliderElement::update()
+{
+    slider()->setMinValue(*this->boundVariableMin);
+    slider()->setMaxValue(*this->boundVariableMax);
 }
