@@ -108,3 +108,4 @@ Python_tests\.ipynb_checkpoints\*
 usersmarchappdata*
 *.pth
 .qglviewer.xml
+.tmp/screenshots/screen.png
