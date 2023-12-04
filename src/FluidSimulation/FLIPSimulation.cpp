@@ -60,6 +60,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
 
     this->particles.resize(maxParticles);
     for (int i = 0; i < maxParticles; i++) {
+//        particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f)) + Vector3(0, 0, this->dimensions.z);
         particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f)) + Vector3(0, 0, this->dimensions.z);
     }
 

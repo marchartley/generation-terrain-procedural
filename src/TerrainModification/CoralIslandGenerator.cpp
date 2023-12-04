@@ -11,13 +11,8 @@ CoralIslandGenerator::CoralIslandGenerator()
 GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float waterLevel, float minCoralHeight,
                                               float maxCoralHeight, float verticalScale, float horizontalScale, float alpha)
 {
-//    float subsidence = .95f;
-//    float waterLevel = .7f;
-//    float minCoralHeight = waterLevel - .1f;
-//    float maxCoralHeight = waterLevel;
+    GridF perlinMap = GridF::perlin(heights.getDimensions(), Vector3(10.f, 10.f, 10.f)).normalize();
 
-//    float verticalScale = 1.0 / 1.0;
-//    float horizontalScale = 1.0 / 1.0;
     float vh = 1.0 / horizontalScale;
     float vv = 1.0 / verticalScale;
 //    float alpha = 0.1;
@@ -31,7 +26,7 @@ GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float wate
 
     initialCoral = heights.binarizeBetween(minCoralHeight, maxCoralHeight, true, true);
     GridF dilatedInitialSeed = initialCoral.dilate();
-//    lowerBand = ((GridI)dilatedInitialSeed).skeletonize();
+
     for (size_t i = 0; i < lowerBand.size(); i++)
         lowerBand[i] = (initialCoral[i] != dilatedInitialSeed[i] && heights[i] <= minCoralHeight ? 1.f : lowerBand[i]);
     GridF distanceFromLowerCorals = (1.f - lowerBand).toDistanceMap(true, false); //.normalized();
@@ -40,8 +35,7 @@ GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float wate
         if (heights[i] > minCoralHeight)
             distanceFromLowerCorals[i] *= -1.f;
     }
-//    std::cout << std::endl;
-//    distanceFromLowerCorals[heights > minCoralHeight] *= -1
+
     float distanceWhenLowerCoralTouchesWater = (vh / vv) * (maxCoralHeight - minCoralHeight); // / verticalScale;
 
     GridI heightAboveWater = heights.binarize(waterLevel, true, true);
@@ -56,10 +50,9 @@ GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float wate
         if (heightAboveLowBand[i]) //if (heightAboveWater[i] || (distanceIsSmall[i] && !heightAboveLowBand[i]))
             insideCorals[i] = 1.f;
     GridF aFactorIHaveToCheck = maxCoralHeight - (1.f - (distanceFromLowerCorals.abs() / (distanceFromLowerCorals.abs() * insideCorals).max())) * (maxCoralHeight - minCoralHeight) * alpha;
-//    GridF aFactorIHaveToCheck = waterLevel - (1.f - ((distanceWhenLowerCoralTouchesWater - distanceFromLowerCorals) / distanceWhenLowerCoralTouchesWater) * alpha);
+
     for (size_t i = 0; i < insideCorals.size(); i++)
         insideCorals[i] *= aFactorIHaveToCheck[i];
-//    insideCorals *= waterLevel;
 
     GridF outsideCorals(heights.getDimensions());
     for (size_t i = 0; i < outsideCorals.size(); i++)
@@ -70,89 +63,115 @@ GridF CoralIslandGenerator::generate(GridF heights, float subsidence, float wate
     for (size_t i = 0; i < insideCorals.size(); i++)
         outsideCorals[i] *= aFactorIHaveToCheck2[i];
 
-//    Plotter::getInstance()->reset();
-//    Plotter::getInstance()->addImage(1.f - (distanceFromLowerCorals.abs() / (distanceFromLowerCorals.abs() * insideCorals).max()), true);
-//    Plotter::getInstance()->show();
-//    Plotter::getInstance()->draw();
-
     GridF finalMap = GridF::max(GridF::max(insideCorals, outsideCorals)/* * clamp(std::pow(1.f - subsidence, .5f) + .8f, 0.f, 1.f)*/, heights * subsidence);
-//= np.maximum(np.maximum(insideCorals, outsideCorals) * clamp((1-subsidence)**0.5 + .8, 0, 1), heights * subsidence)
     return finalMap * downscale;
 }
 
-std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3& img)
+std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3& img, const Vector3& terrainDimensions)
 {
+    // Input image might not be the same size than the terrain, need to resize all the curves on the XY components
+    Vector3 ratio = terrainDimensions / img.getDimensions();
+    ratio.z = 1;
+
+    // Map the image color to a type of object
     std::map<std::tuple<int, int, int>, std::string> colorToFeature = {
         {{255,   0,   0}, "abyss"},
         {{  0,   0, 255}, "reef"},
         {{  0, 255, 255}, "lagoon"},
-        {{  0, 255,   0}, "beach"},
+        {{  0, 255,   0}, "coast"},
         {{255, 255,   0}, "island"}
     };
+
     std::map<std::string, GridI> featureAreas;
-    for (auto& [_, name] : colorToFeature)
-        featureAreas[name] = GridI(img.getDimensions());
 
-    for (size_t i = 0; i < img.size(); i++) {
-        const auto& pix = img[i];
-        featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
-    }
+    std::cout << "Extraction: " << showTime(timeIt([&]() {
+        // Create binary masks for each of the objects
+        for (auto& [_, name] : colorToFeature)
+            featureAreas[name] = GridI(img.getDimensions());
 
-    auto reefs = ((Matrix3<int>)featureAreas["reef"]).skeletonizeToBSplines();
-    for (auto& curve : reefs) {
-        curve = curve.resamplePoints().simplifyByRamerDouglasPeucker(5.f);
-        for (auto& p : curve)
-            p *= .5f;
-    }
+        for (size_t i = 0; i < img.size(); i++) {
+            const auto& pix = img[i];
+            if (colorToFeature.count({pix.x, pix.y, pix.z}) == 0) continue;
+            featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
+        }
+    })) << std::endl;
 
-    for (auto& [name, area] : featureAreas) {
-        area = area.fillHoles(true);
-    }
+    std::cout << "Fill holes: " << showTime(timeIt([&]() {
+        // If some binary masks have holes (e.g. the island is inside the lagoon), remove them.
+        // This is done using CCL algorithm, maybe not the fastest and smartest way
+        for (auto& [name, area] : featureAreas) {
+            if (name == "reef") continue;
+            area = area.fillHoles(true);
+        }
+    })) << std::endl;
+
 
     std::vector<EnvObject*> objects;
-    for (auto& reef : reefs) {
-        if (reef.length() < 30) continue;
-        EnvCurve* envReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
-        envReef->curve = reef;
-        objects.push_back(envReef);
-    }
-    /*
-    auto reefContours = featureAreas["reef"].findContoursAsCurves();
-    for (auto& curve : reefContours) {
-        EnvCurve* frontReef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("frontreef"));
-        frontReef->curve = curve;
-        objects.push_back(frontReef);
-    }
-    */
-    auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
-    for (auto& curve : lagoonContours) {
-        for (auto& p : curve)
-            p *= .5f;
-        ShapeCurve simplifiedCurve = curve.simplifyByRamerDouglasPeucker(5.f);
-        simplifiedCurve.resamplePoints(simplifiedCurve.size() * 4);
-        if (simplifiedCurve.computeArea() < 5.f) continue;
-        EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
-        lagoon->area = simplifiedCurve;
-        objects.push_back(lagoon);
-//        Plotter::getInstance()->addPlot(curve.points);
-//        Plotter::getInstance()->addPlot(simplifiedCurve.points, "", Qt::red);
-    }
-//    Plotter::getInstance()->exec();
-    /*
-    for (auto curve : featureAreas["island"].findContoursAsCurves()) {
-        for (auto& p : curve)
-            p *= .5f;
-        EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
-        island->area = curve;
-        objects.push_back(island);
-    }
+/*
+    std::cout << "Reefs: " << showTime(timeIt([&]() {
+        // Extract the lagoon contours to instantiate the lagoons and the reefs
+        auto skeletons = featureAreas["reef"].skeletonizeToBSplines();
+        for (auto& curve : skeletons) {
+            curve.scale(ratio);
+            BSpline simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.length() < 5.f) continue; // Remove too small elements
 
-    for (auto curve : featureAreas["beach"].findContoursAsCurves()) {
-        for (auto& p : curve)
-            p *= .5f;
-        EnvArea* beach = dynamic_cast<EnvArea*>(EnvObject::instantiate("beach"));
-        beach->area = curve;
-        objects.push_back(beach);
-    }*/
+            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+            reef->curve = simplifiedCurve;
+            objects.push_back(reef);
+        }
+    })) << std::endl;
+*/
+
+    std::cout << "Lagoon + reefs: " << showTime(timeIt([&]() {
+        // Extract the lagoon contours to instantiate the lagoons and the reefs
+        auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
+        for (auto& curve : lagoonContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+
+            EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+            reef->curve = simplifiedCurve;
+            objects.push_back(reef);
+
+            EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
+            lagoon->area = simplifiedCurve;
+            objects.push_back(lagoon);
+        }
+    })) << std::endl;
+
+    std::cout << "Coasts: " << showTime(timeIt([&]() {
+        // Extract the coast contours
+        auto coastContours = featureAreas["coast"].findContoursAsCurves();
+        for (auto& curve : coastContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+
+            EnvArea* coast = dynamic_cast<EnvArea*>(EnvObject::instantiate("coast"));
+            coast->area = simplifiedCurve;
+            objects.push_back(coast);
+        }
+    })) << std::endl;
+
+
+    std::cout << "Island: " << showTime(timeIt([&]() {
+        // Extract the island contours
+        auto islandContours = featureAreas["island"].findContoursAsCurves();
+        for (auto& curve : islandContours) {
+            curve.scale(ratio);
+            ShapeCurve simplifiedCurve = curve;
+            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+            EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
+            island->area = simplifiedCurve;
+            objects.push_back(island);
+        }
+    })) << std::endl;
+
     return objects;
 }

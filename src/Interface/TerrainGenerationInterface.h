@@ -73,7 +73,6 @@ public Q_SLOTS:
     void changeDisplayToComparativeMode(bool toComparative);
     void setHeightFactor(float newHeightFactor);
 
-
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
@@ -123,7 +122,7 @@ protected:
 public:
     Mesh waterLevelMesh;
     float waterLevel = 0.0f;
-    float ambiantOcclusionFactor = 1.f;
+    float ambiantOcclusionFactor = 0.f;
     bool displayAsComparativeMode = false;
     float heightFactor = 1.f;
 };

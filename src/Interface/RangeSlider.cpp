@@ -93,7 +93,25 @@ void RangeSlider::setMinValue(float value)
 }
 void RangeSlider::setMaxValue(float value)
 {
-  max_handle->setValue(value);
+    max_handle->setValue(value);
+}
+
+void RangeSlider::setMinimalValue(float value)
+{
+    this->setMinimum(value / multiplier);
+    if (this->min_value() < value) {
+        min_handle->setValue(value);
+        std::cout << "Min is now " << min_value() << std::endl;
+    }
+}
+
+void RangeSlider::setMaximalValue(float value)
+{
+    this->setMaximum(value / multiplier);
+    if (this->max_value() > value) {
+        max_handle->setValue(value);
+        std::cout << "Max is now " << max_value() << std::endl;
+    }
 }
 
 void RangeSlider::mouseReleaseEvent(QMouseEvent *mouseEvent)

@@ -304,12 +304,12 @@ std::string simplify(std::string s)
 
 
 
-float timeIt(std::function<void ()> func)
+double timeIt(std::function<void ()> func)
 {
     auto start = std::chrono::system_clock::now();
     func();
     auto end = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
 }
 
 void sleep(int milliseconds)
@@ -317,14 +317,17 @@ void sleep(int milliseconds)
     std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds) );
 }
 
-std::string showTime(float milliseconds)
+std::string showTime(double nanoseconds)
 {
-    if (milliseconds < 1000 * 10) { // < 10 sec
-        return std::to_string(int(milliseconds)) + "ms";
-    } else if (milliseconds < 1000 * 60 * 10) { // < 10 min
-        return std::to_string(int(milliseconds / 1000)) + "s";
+    nanoseconds /= 1000.f;
+    if (nanoseconds < 10) { // < 10ms
+        return std::to_string(int(nanoseconds * 1000)) + "ys";
+    } else if (nanoseconds < 1000 * 10) { // < 10 sec
+        return std::to_string(int(nanoseconds)) + "ms";
+    } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
+        return std::to_string(int(nanoseconds / 1000)) + "s";
     } else { // > 10 min
-        return std::to_string(int(milliseconds / (1000 * 60))) + "min" + std::to_string(int(milliseconds) % (1000 * 60)) + "s (" + std::to_string(int(milliseconds / 1000)) + "s)";
+        return std::to_string(int(nanoseconds / (1000 * 60))) + "min" + std::to_string(int(nanoseconds) % (1000 * 60)) + "s (" + std::to_string(int(nanoseconds / 1000)) + "s)";
     }
 }
 

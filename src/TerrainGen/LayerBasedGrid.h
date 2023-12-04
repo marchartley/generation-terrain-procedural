@@ -74,9 +74,9 @@ public:
 
     virtual bool checkIsInGround(const Vector3& position);
 
-    float getSizeX() { return this->layers.sizeX; }
-    float getSizeY() { return this->layers.sizeY; }
-    float getSizeZ();
+    float getSizeX() const { return this->layers.sizeX; }
+    float getSizeY() const { return this->layers.sizeY; }
+    float getSizeZ() const;
 
     void initMap() {};
 

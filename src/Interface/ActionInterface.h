@@ -97,6 +97,7 @@ public:
 Q_SIGNALS:
     void updated();
     void terrainUpdated();
+    void waterLevelChanged(float newLevel);
 
 public Q_SLOTS:
     virtual void afterTerrainUpdated() {

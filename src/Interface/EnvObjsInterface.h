@@ -5,6 +5,7 @@
 #include "Interface/ActionInterface.h"
 
 #include "EnvObject/EnvObject.h"
+#include "Interface/HierarchicalListWidget.h"
 
 class EnvObjsInterface : public ActionInterface
 {
@@ -23,31 +24,57 @@ public:
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
     void createEnvObjectsFromImplicitTerrain();
+    void setDefinitionFile(std::string filename);
 
 public Q_SLOTS:
     void show();
     void hide();
     virtual void afterTerrainUpdated();
+    virtual void afterWaterLevelChanged();
 
     void instantiateObject();
+    void instantiateSpecific(std::string objectName);
+    void fromGanUI();
 
     void recomputeErosionValues();
 
-    void updateEnvironmentFromEnvObjects();
+    void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false);
+    void onlyUpdateFlowAndSandFromEnvObjects();
+
+    void displayProbas(std::string objectName);
+    void displaySedimentsDistrib();
+    void displayFlowfieldAsImage();
+
+    void updateObjectsList();
+
+    void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
+
+    void hotReloadFile();
 
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
     Mesh highDepositionMesh;
+    Mesh objectsMesh;
+
+    HierarchicalListWidget* objectsListWidget = nullptr;
 
     bool displayVelocities = true;
     bool displayHighErosions = true;
-    bool displaySediments = false;
-    bool displayHighCurrents = false;
+    bool displaySediments = true;
+    bool displayHighCurrents = true;
 
 
     GridF erosionGrid;
     GridV3 velocitiesGrid;
+
+    std::string primitiveDefinitionFile;
+    QDateTime lastTimeFileHasBeenModified;
+
+    std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
+    Implicit2DNary* rootPatch;
+
+    EnvObject* currentSelection = nullptr;
 };
 
 

@@ -61,12 +61,12 @@ public:
 
     Vector3& rotate(float angle_x, float angle_y, float angle_z);
     Vector3& rotate(const Vector3& eulerAngles);
-    Vector3 rotated(float angle_x, float angle_y, float angle_z);
-    Vector3 rotated(const Vector3& eulerAngles);
+    Vector3 rotated(float angle_x, float angle_y, float angle_z) const;
+    Vector3 rotated(const Vector3& eulerAngles) const;
     Vector3& rotate(float angle, float dir_x, float dir_y, float dir_z);
     Vector3& rotate(float angle, const Vector3& direction);
-    Vector3 rotated(float angle, float dir_x, float dir_y, float dir_z);
-    Vector3 rotated(float angle, const Vector3& direction);
+    Vector3 rotated(float angle, float dir_x, float dir_y, float dir_z) const;
+    Vector3 rotated(float angle, const Vector3& direction) const;
     Vector3& translate(float move_x, float move_y, float move_z);
     Vector3& translate(const Vector3& move);
     Vector3 translated(float move_x, float move_y, float move_z);
@@ -91,10 +91,13 @@ public:
 
     Vector3 getAllAnglesWith(const Vector3& otherVector) const;
     float getAngleWith(const Vector3 &otherVector) const;
+    float getSignedAngleWith(const Vector3 &otherVector) const;
     float getSignedAngleAroundAxisWith(const Vector3 &otherVector, const Vector3& axis) const;
 
     static Vector3 quaternionToEuler(qglviewer::Quaternion quaternion);
     static Vector3 quaternionToEuler(float x, float y, float z, float w);
+
+    static Vector3 slerp(float t, const Vector3& a, const Vector3& b);
 
     static Vector3 lerp(float t, const Vector3& min, const Vector3& max) {
         return min + (max - min) * t;
@@ -232,6 +235,7 @@ public:
     Vector3 max() const { return this->maxi; }
     Vector3 dimensions() const { return max() - min(); }
     bool contains(const Vector3& position) const { return Vector3::isInBox(position, min(), max()); }
+    bool containsXY(const Vector3& position) const { return Vector3::isInBox(position.xy(), min().xy(), max().xy()); }
     Vector3 center() const { return (this->min() + this->max()) * .5f; }
     Vector3 normalize(const Vector3& p);
 

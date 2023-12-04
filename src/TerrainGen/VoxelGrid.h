@@ -57,7 +57,7 @@ public:
     bool redo();
     size_t getCurrentHistoryIndex() const;
 
-    GridF getHeights();
+    GridF getHeights() const;
     float getHeight(float x, float y);
 
     bool contains(const Vector3& v);
@@ -93,9 +93,9 @@ public:
     Vector3 getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
     Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
 
-    float getSizeX() { return _cachedVoxelValues.sizeX; }
-    float getSizeY() { return _cachedVoxelValues.sizeY; }
-    float getSizeZ() { return _cachedVoxelValues.sizeZ; }
+    float getSizeX() const { return _cachedVoxelValues.sizeX; }
+    float getSizeY() const { return _cachedVoxelValues.sizeY; }
+    float getSizeZ() const { return _cachedVoxelValues.sizeZ; }
 
     Vector3 fluidSimRescale;
 

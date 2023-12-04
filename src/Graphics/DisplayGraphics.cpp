@@ -15,6 +15,18 @@ ChartView::ChartView(Chart *chart, QWidget *parent) : QChartView((QChart*)chart,
     this->_chart = chart;
 }
 
+Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
+{
+    // Get the coordinate in the plotted area...
+    QPointF qMousePos(pos.x, pos.y);
+    QPointF mousePosInChart = this->chart()->mapFromParent(qMousePos);
+    QRectF plotArea = this->chart()->plotArea();
+    QPointF mousePosInPlot = mousePosInChart - plotArea.topLeft();
+    QPointF qRelativeMousePos = mousePosInPlot;
+    Vector3 mousePos(qRelativeMousePos.x() / float(plotArea.width()), qRelativeMousePos.y() / float(plotArea.height()));
+    return mousePos;
+}
+
 bool ChartView::viewportEvent(QEvent *event)
 {
     return QChartView::viewportEvent(event);
@@ -27,6 +39,7 @@ void ChartView::mousePressEvent(QMouseEvent *event)
     QPointF local = this->chart()->mapToValue(this->previousMousePos);
     Vector3 vecLocal = Vector3(local.x(), local.y());
 
+    vecLocal = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
     Q_EMIT this->clickedOnValue(vecLocal);
 
     QChartView::mousePressEvent(event);
@@ -40,6 +53,10 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
             this->chart()->scroll(-delta.x(), delta.y());
         Q_EMIT this->updated();
     }
+
+    auto mousePos = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
+
+    Q_EMIT this->mouseMoved(mousePos);
     return QChartView::mouseMoveEvent(event);
 }
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
@@ -114,27 +131,76 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     if (this->chartView == nullptr)
         this->chartView = new ChartView(new Chart());
 
-    this->setLayout(new QHBoxLayout());
-    this->layout()->addWidget(this->chartView);
+    auto layout = new QHBoxLayout();
+    auto left = new QVBoxLayout();
+//    auto right = new QVBoxLayout();
+    InterfaceUI* right = new InterfaceUI(new QVBoxLayout(), "Display");
+
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    this->resize(800, 600);
+//    this->chartView->setMaximumSize(10000, 10000);
+//    this->chartView->chart()->setMaximumSize(10000, 10000);
 
-    this->saveButton = new QPushButton("Save");
-    this->layout()->addWidget(this->saveButton);
+    auto normalizeModeButton = new CheckboxElement("Normalize", normalizedMode);
+    auto absoluteModeButton = new CheckboxElement("Absolute", absoluteMode);
+    this->rangeValuesWidget = new RangeSliderElement("Values", -1000, 1000, 0.01f, minValueToDisplay, maxValueToDisplay, Qt::Vertical);
+    auto rangeActiveCheckbox = new CheckboxElement("Filter", clampValues);
+//    this->saveButton = new ButtonElement("Save");
+    auto saveButton = new ButtonElement("Save");
+    auto copyToClipboardButton = new ButtonElement("Copy");
+    this->mouseInfoLabel = new QLabel("");
 
-    this->setWindowModality(Qt::WindowModality::NonModal);
-    this->setModal(false);
 
-    QObject::connect(this->saveButton, &QPushButton::pressed, [&]() {
+//    this->chartView->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//    this->chartView->chart()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+//    this->mouseInfoLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Maximum);
+
+
+    absoluteModeButton->setOnChecked([&](bool toggled) {
+        this->addImage(displayedImage);
+        this->draw();
+    });
+    normalizeModeButton->setOnChecked([&](bool toggled) {
+        this->addImage(displayedImage);
+        this->draw();
+    });
+    saveButton->setOnClick([&]() {
         QString q_filename = QFileDialog::getSaveFileName(this, QString("Save plot"));
         if (!q_filename.isEmpty())
             saveFig(q_filename.toStdString());
     });
+    copyToClipboardButton->setOnClick([&]() { this->copyToClipboard(); });
+
+    rangeValuesWidget->setOnValueChanged([&](float minVal, float maxVal) {
+        this->addImage(displayedImage);
+        this->draw();
+    });
+
+    left->addWidget(this->chartView);
+    left->addWidget(this->mouseInfoLabel);
+    right->add(normalizeModeButton);
+    right->add(absoluteModeButton);
+    right->add(rangeActiveCheckbox);
+    right->add(this->rangeValuesWidget);
+    right->add(saveButton);
+    right->add(copyToClipboardButton);
+
+    this->setWindowModality(Qt::WindowModality::NonModal);
+    this->setModal(false);
+
+    layout->addItem(left);
+    layout->addWidget(right->get());
+    this->setLayout(layout);
+
+    this->resize(800, 600);
+    this->updateGeometry();
+
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &Plotter::selectData);
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView, &ChartView::updated, this, &Plotter::updateLabelsPositions);
+    QObject::connect(this->chartView, &ChartView::mouseMoved, this, &Plotter::displayInfoUnderMouse);
+    QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::draw);
 }
 
 Plotter *Plotter::getInstance()
@@ -191,10 +257,43 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
-void Plotter::addImage(GridV3 image, bool normalize)
+void Plotter::addImage(GridV3 image)
 {
-    if (normalize) {
-        image.normalize();
+    this->displayedImage = image;
+    if (this->clampValues) {
+        float min = std::numeric_limits<float>::max();
+        float max = std::numeric_limits<float>::min();
+        image.iterate([&](size_t i) {
+            min = std::min(min, image[i].minComp());
+            max = std::max(max, image[i].maxComp());
+        });
+        this->rangeValuesWidget->slider()->setMinimalValue(min);
+        this->rangeValuesWidget->slider()->setMaximalValue(max);
+        if (minValueToDisplay < min) minValueToDisplay = min;
+        if (maxValueToDisplay > max) maxValueToDisplay = max;
+        image.iterateParallel([&](size_t i) {
+            for (int c = 0; c < 3; c++) {
+                image[i][c] = std::clamp(image[i][c], this->minValueToDisplay, this->maxValueToDisplay);
+            }
+        });
+    }
+    if (this->absoluteMode) {
+        image = image.abs();
+    }
+    if (this->normalizedMode) {
+        for (int c = 0; c < 3; c++) {
+            float min = std::numeric_limits<float>::max();
+            float max = std::numeric_limits<float>::min();
+            image.iterate([&](size_t i) {
+                min = std::min(image[i][c], min);
+                max = std::max(image[i][c], max);
+            });
+            float d = max - min;
+            image.iterateParallel([&](size_t i) {
+                image[i][c] = (image[i][c] - min) / d;
+            });
+        }
+//        image.normalize();
     }
     unsigned char* data = new unsigned char[image.size() * 4];
 
@@ -205,31 +304,30 @@ void Plotter::addImage(GridV3 image, bool normalize)
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
-//    QImage i;
-//    (data, image.sizeX, image.sizeY);
+    if (this->backImage) {
+        delete this->backImage;
+    }
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 }
 
-void Plotter::addImage(GridF image, bool normalize)
+void Plotter::addImage(GridF image)
 {
     GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
         float val = image[i];
-//        if (i == 40400)
-//            int a = 0;
         copy[i] = Vector3(val, val, val);
     }
-    return this->addImage(copy, normalize);
+    return this->addImage(copy);
 }
 
-void Plotter::addImage(Matrix3<double> image, bool normalize)
+void Plotter::addImage(Matrix3<double> image)
 {
-    return this->addImage((GridF)image, normalize);
+    return this->addImage((GridF)image);
 }
 
-void Plotter::addImage(GridI image, bool normalize)
+void Plotter::addImage(GridI image)
 {
-    return this->addImage((GridF)image, normalize);
+    return this->addImage((GridF)image);
 }
 
 void Plotter::draw()
@@ -316,7 +414,46 @@ void Plotter::draw()
 
     this->chartView->chart()->createDefaultAxes();
 //    this->chartView->chart()->zoomOut();
-//    this->chartView->update();
+    //    this->chartView->update();
+}
+
+void Plotter::show()
+{
+    this->draw();
+    QDialog::show();
+}
+
+void Plotter::updateUI()
+{
+    blockSignals(true);
+    for (auto& child : this->children()) {
+        if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
+            asUIElement->update();
+        }
+    }
+
+    blockSignals(false);
+}
+
+void Plotter::setNormalizedModeImage(bool normalize)
+{
+    this->normalizedMode = normalize;
+    this->addImage(this->displayedImage);
+    updateUI();
+}
+
+void Plotter::setAbsoluteModeImage(bool absolute)
+{
+    this->absoluteMode = absolute;
+    this->addImage(this->displayedImage);
+    updateUI();
+}
+
+void Plotter::setFilteredValuesImage(bool filtered)
+{
+    this->clampValues = filtered;
+    this->addImage(this->displayedImage);
+    updateUI();
 }
 
 int Plotter::exec()
@@ -331,6 +468,12 @@ void Plotter::saveFig(std::string filename)
 {
     QPixmap p = this->chartView->grab();
     p.save(QString::fromStdString(filename), "PNG");
+}
+
+void Plotter::copyToClipboard()
+{
+    QPixmap p = this->chartView->grab();
+    QApplication::clipboard()->setPixmap(p, QClipboard::Clipboard);
 }
 
 void Plotter::resizeEvent(QResizeEvent *event)
@@ -404,6 +547,8 @@ void Plotter::updateLabelsPositions()
 
 void Plotter::selectData(const Vector3& pos)
 {
+    if (!pos.isValid()) return;
+
     float minDist = 0.05f;
     this->selectedScatterData.clear();
     this->selectedPlotData.clear();
@@ -428,6 +573,22 @@ void Plotter::selectData(const Vector3& pos)
     } else {
         this->chartView->unlockView();
     }
+
+    if (!this->displayedImage.empty()) {
+        Q_EMIT clickedOnImage(pos * displayedImage.getDimensions(), this->displayedImage(pos * displayedImage.getDimensions()));
+    }
+}
+
+void Plotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
+{
+    if (this->displayedImage.empty() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
+        return;
+    std::ostringstream oss;
+    Vector3 size = displayedImage.getDimensions();
+    Vector3 position = relativeMousePos * size;
+    Vector3 value = this->displayedImage(position);
+    oss << "Mouse pos: " << int(position.x) << ", " << int(position.y) << " -- Value : (" << value.x << ", " << value.y << ", " << value.z << ") ";
+    this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
 }
 
 

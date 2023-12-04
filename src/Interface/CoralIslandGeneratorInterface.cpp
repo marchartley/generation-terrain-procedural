@@ -170,7 +170,7 @@ void CoralIslandGeneratorInterface::validateTerrainChange()
 void CoralIslandGeneratorInterface::updateCoral()
 {
     if (this->heightmap) {
-        float waterLevel = voxelGrid->storedWaterLevel;
+        float waterLevel = voxelGrid->properties->waterLevel;
         this->heightmap->heights = CoralIslandGenerator::generate(this->startingHeightmap.heights, 1.f - subsidence, waterLevel, coralLevelMin * waterLevel, coralLevelMax * waterLevel, vScale, hScale, alpha);
         Q_EMIT updated();
     }
@@ -184,7 +184,7 @@ void CoralIslandGeneratorInterface::fromGanUI()
         std::string file = q_filename.toStdString();
         GridV3 img = Image::readFromFile(file).colorImage;
 
-        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img);
+        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
         implicitTerrain->deleteAllChildren();
         for (auto& obj : envObjects)
             implicitTerrain->addChild(obj->createImplicitPatch());

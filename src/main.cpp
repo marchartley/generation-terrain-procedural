@@ -21,28 +21,86 @@
 #include <random>
 #include <string>
 
+#include "TerrainModification/particleErosion.h"
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-    /*BSpline spline({
-                       Vector3(0, 10, 0),
-                       Vector3(1, 10, 0),
-                       Vector3(100, 1, 0),
-                       Vector3(100, 50, 0),
-                       Vector3(0, 100, 0),
-                       Vector3(0, 0, 0),
-                   });
-//    spline.resamplePoints();
-    GridI grid(105, 105, 1, 0);
-    grid.iterateParallel([&](const Vector3& pos) {
-        if (spline.estimateDistanceFrom(pos) < 4.f) grid(pos) = 1;
+    float time = 0.f;
+    time = timeIt([&]() {
+        erosion();
     });
 
-    std::cout << grid.displayAsPlot() << "\n" << spline << std::endl;
-    return 0;*/
+    std::cout << "Total time: " << showTime(time) << std::endl;
+    return 0;
+
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+#endif
+    QApplication app(argc, argv);
 
 
+    QGLFormat glFormat;
+    glFormat.setVersion(4, 5);
+    glFormat.setProfile(QGLFormat::CompatibilityProfile);
+    glFormat.setSampleBuffers(true);
+    glFormat.setDefaultFormat(glFormat);
+    glFormat.setSwapInterval(1);
+    QGLWidget widget(glFormat);
+    widget.makeCurrent();
+
+    const QOpenGLContext *context = GlobalsGL::context();
+
+    qDebug() << "Context valid: " << context->isValid();
+    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
+    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
+    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
+    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    /*
+    // Unit test : Slerp between vectors
+    Vector3 A(.5f, .5f, 0);
+    Vector3 B(-.5f, .5f, 0);
+
+    GridV3 check(100, 100, 1);
+    int nbSamples = 500;
+    float timeForLerp = 0.f;
+    float timeForSlerp = 0.f;
+    for (int i = 0; i < nbSamples; i++) {
+        float t = float(i) / float(nbSamples);
+        Vector3 C_slerp, C_lerp;
+        timeForSlerp += timeIt([&]() { for (int _ = 0; _ < 100000; _++) C_slerp = Vector3::slerp(t, A, B); });
+        timeForLerp += timeIt([&]() { for (int _ = 0; _ < 100000; _++) C_lerp = Vector3::lerp(t, A, B); });
+
+        check(C_slerp * 50 + Vector3(50, 50)) = Vector3(t, 0, 0);
+        check(C_lerp * 50 + Vector3(50, 50)) = Vector3(0, t, 0);
+    }
+    std::cout << "Lerp : " << showTime(timeForLerp) << "\nSlerp: " << showTime(timeForSlerp) << std::endl;
+    Plotter::get()->addImage(check);
+    Plotter::get()->exec();
+    return 0;
+    */
+    /*
+    // Unit test : get angle between vectors
+    Vector3 A(5, 0, 0);
+
+    Vector3 B;
+
+    GridF check(100, 100, 1);
+    int nbSamples = 500;
+    for (int i = 0; i < nbSamples; i++) {
+        float t = float(i) / float(nbSamples);
+        float angle = t * 2.f * M_PI;
+        B = Vector3(1, 0, 0).rotate(0, 0, angle);
+        std::cout << rad2deg(A.getAngleWith(B) * sign(A.cross(B).z)) << " deg from " << A << " to " << B << std::endl;
+        check(B * 50 + Vector3(50, 50)) = rad2deg(A.getAngleWith(B) * sign(A.cross(B).z));
+    }
+    Plotter::get()->addImage(check);
+    Plotter::get()->exec();
+    return 0;
+    */
     /*
     GridI grid({
                    {0, 1, 1, 0, 0, 0, 0, 0, 0},
@@ -186,33 +244,46 @@ int main(int argc, char *argv[])
     std::cout << "Position " << pos << " becomes " << newPos << std::endl;
 
     return 0;*/
+/*
+    BSpline spline({
+                       Vector3(0, 10, 0),
+                       Vector3(50, 1, 0),
+                       Vector3(30, 25, 0),
+                       Vector3(50, 50, 0),
+                       Vector3(0, 50, 0),
+                       Vector3(0, 0, 0),
+                   });
+//    BSpline spline;
+//    float r = 20;
+//    for (int i = 0; i < 50; i++) {
+//        float t = float(i) / 48.f;
+//        float a = t * M_PI * 2.f;
+//        spline.points.push_back(Vector3(
+//                                    std::cos(a) * r + 50,
+//                                    std::sin(a) * r + 50,
+//                                    0
+//                                    ));
+//    }
+//    spline.resamplePoints();
+    GridF grid(105, 105, 1, 0);
+    grid.iterateParallel([&](const Vector3& pos) {
+        if (spline.estimateDistanceFrom(pos) < 10.f){
+            float x = spline.estimateClosestTime(pos);
+            float curve = spline.getCurvature(x);
+            grid(pos) = curve;
+        }
+    });
 
+    for (int i = 0; i < 200; i++) {
+        float t = float(i) / 200.f;
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
-#endif
-    QApplication app(argc, argv);
-
-
-    QGLFormat glFormat;
-    glFormat.setVersion(4, 5);
-    glFormat.setProfile(QGLFormat::CompatibilityProfile);
-    glFormat.setSampleBuffers(true);
-    glFormat.setDefaultFormat(glFormat);
-    glFormat.setSwapInterval(1);
-    QGLWidget widget(glFormat);
-    widget.makeCurrent();
-
-    const QOpenGLContext *context = GlobalsGL::context();
-
-    qDebug() << "Context valid: " << context->isValid();
-    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
-    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
-    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
-    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
-    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-
+        std::cout << spline.getCurvature(t) << " " << spline.getDerivative(t) << " " << spline.getSecondDerivative(t) << std::endl;
+    }
+    std::cout << grid.displayAsPlot() << "\n" << spline << std::endl;
+    Plotter::get()->addImage(grid);
+    Plotter::get()->exec();
+    return 0;
+    */
 /*
     int isize = 64;
     int jsize = 64;

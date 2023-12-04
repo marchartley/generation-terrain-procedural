@@ -41,6 +41,10 @@ public:
   void setMinValue(float value);
   void setMaxValue(float value);
 
+  /** Functions for setting the minimal and maximal range the handle can have */
+  void setMinimalValue(float value);
+  void setMaximalValue(float value);
+
   void sliderChange(SliderChange change);
   void resizeEvent(QResizeEvent* e);
 

@@ -249,6 +249,7 @@ void Viewer::drawingProcess() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 */
 
+    this->setSceneCenter(voxelGrid->getDimensions() / 2.f);
     auto allProcessStart = std::chrono::system_clock::now();
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
 //    std::chrono::milliseconds test;
@@ -402,12 +403,22 @@ void Viewer::screenshot()
     tm *gmtm = std::gmtime(&now);
     char s_time[80];
     std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+    bool wasRecording = this->isTakingScreenshots;
+    if (!wasRecording) {
+        this->isTakingScreenshots = true;
+        this->draw();
+    }
     this->copyLastScreenshotTo(this->main_screenshotFolder + "shots/" + s_time + ".png");
-//    this->saveSnapshot(QString::fromStdString(this->main_screenshotFolder + "shots/" + s_time + ".png"));
+    if (!wasRecording)
+        this->isTakingScreenshots = wasRecording;
+
     if (this->mapMode == MapMode::GRID_MODE) {
         this->heightmap->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap.png");
     } else if (this->mapMode == MapMode::VOXEL_MODE) {
-        this->voxelGrid->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap_from_voxels.png");
+        Heightmap tmp;
+        tmp.fromVoxelGrid(*voxelGrid);
+        tmp.saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap_from_voxels.png");
+//        this->voxelGrid->saveHeightmap(this->main_screenshotFolder + "shots/" + s_time + "-heightmap_from_voxels.png");
     }
     //    dynamic_cast<TerrainSavingInterface*>(this->interfaces["terrainSavingInterface"].get())->quickSaveAt(this->main_screenshotFolder + "shots", s_time, true, true, false);
 }

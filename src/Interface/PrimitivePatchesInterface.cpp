@@ -160,6 +160,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
     QPushButton* createStructureButton = new QPushButton("Auto gen.");
 
+//    if (primitiveSelectionGui != nullptr)
+//        delete primitiveSelectionGui;
     primitiveSelectionGui = new HierarchicalListWidget(this);
 
     layout->addWidget(constructionModeButton);
