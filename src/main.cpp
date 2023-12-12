@@ -20,19 +20,13 @@
 #include <iostream>
 #include <random>
 #include <string>
+#include <complex>
 
 #include "TerrainModification/particleErosion.h"
 using namespace std;
 
 int main(int argc, char *argv[])
 {
-    float time = 0.f;
-    time = timeIt([&]() {
-        erosion();
-    });
-
-    std::cout << "Total time: " << showTime(time) << std::endl;
-    return 0;
 
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
@@ -58,6 +52,59 @@ int main(int argc, char *argv[])
     qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    /*
+     * Unit tests: FFT and iFFT on arbitrary sizes (limited to 3 dimensions max)
+//    GridF vals(128, 1);
+//    vals.iterateParallel([&](const Vector3& p) {
+//        vals(p) = std::sin(p.x * .2f) + std::sin(p.x * .1f);
+//    });
+//    GridF vals(1, 128);
+//    vals.iterateParallel([&](const Vector3& p) {
+//        vals(p) = std::sin(p.y * .2f) + std::sin(p.y * .1f);
+//    });
+//    GridF vals(1, 1, 128);
+//    vals.iterateParallel([&](const Vector3& p) {
+//        vals(p) = std::sin(p.z * .2f) + std::sin(p.z * .1f);
+//    });
+    GridF vals(100, 200);
+    vals.iterateParallel([&](const Vector3& p) {
+        vals(p) = std::sin(p.x * .2f) + std::sin(p.y * .1f);
+    });
+    for (size_t i = 0; i < vals.size(); i++)
+        std::cout << vals[i] << "\n";
+    Plotter::get()->addImage(vals);
+    Plotter::get()->exec();
+    auto FFT = vals.FFT();
+    auto iFFT = FFT.iFFT();
+
+    std::cout << " ----------------- FFT -------------------- " << std::endl;
+    for (size_t i = 0; i < FFT.size(); i++)
+        std::cout << FFT[i] << "\n";
+
+    std::cout << " ---------------- iFFT -------------------- " << std::endl;
+    for (size_t i = 0; i < iFFT.size(); i++)
+        std::cout << iFFT[i] << "\n";
+    std::cout << std::endl;
+
+    GridF absolutes(FFT.getDimensions());
+    absolutes.iterateParallel([&](size_t i) {
+        absolutes[i] = std::abs(FFT[i]);
+    });
+    Plotter::get()->addImage(absolutes);
+    Plotter::get()->exec();
+
+    absolutes.iterateParallel([&](size_t i) {
+        absolutes[i] = iFFT[i].real();
+    });
+    Plotter::get()->addImage(absolutes);
+    Plotter::get()->exec();
+
+    GridF diff = absolutes - GridF(absolutes.getDimensions()).paste(vals);
+    Plotter::get()->addImage(diff);
+    Plotter::get()->exec();
+    return 0;*/
+
 
     /*
     // Unit test : Slerp between vectors
@@ -310,7 +357,7 @@ int main(int argc, char *argv[])
 
 
     /*
-    std::cout << timeIt([]() {
+    std::cout << showTime(timeIt([]() {
         Fluid fluid;
         gfx::Program texture_copy_program;
 
@@ -340,7 +387,7 @@ int main(int argc, char *argv[])
             }
             std::cout << "/n" << count << "/n" << std::endl;
         }
-    }) << "ms" << std::endl;
+    })) << std::endl;
 
     return 0;
     */
@@ -436,6 +483,37 @@ int main(int argc, char *argv[])
 //    dual.debug();
 //    G = dual.toGraph().forceDrivenPositioning();
 //    return 0;
+
+    /*
+     * Unit test: smoothing 1D data
+    GridF data(20, 1);
+    for (int i = 0; i < data.size(); i++) {
+        data[i] = i;
+    }
+    data[19] = 0;
+    for (int _ = 0; _ < 20; _++) {
+        data = data.meanSmooth(3, 3, 3, true);
+        Plotter::get()->addImage(data);
+        Plotter::get()->exec();
+    }
+    std::cout << data.displayValues() << std::endl;
+    return 0;
+    */
+    /*
+     * Unit test: median blur on 1D data
+     *
+    GridF data = GridF::fromImageBW("saved_maps/lena.png"); // = GridF(100, 1)
+//    for (int i = 0; i < data.size(); i++) {
+//        data[i] = std::sin(i / 10.f);
+//    }
+//    data[19] = 0;
+    for (int _ = 0; _ < 20; _++) {
+        Plotter::get()->addImage(data);
+        Plotter::get()->exec();
+        data = data.medianBlur(3, 3, 3, true);
+    }
+    return 0;
+    */
 
     EnvObject::readFile("saved_maps/primitives.json");
 
