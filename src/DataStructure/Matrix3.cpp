@@ -339,7 +339,7 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
     return curves;
 }
 
-template<>
+template <>
 Matrix3<float> Matrix3<Vector3>::divergence() const
 {
     auto self = *this;

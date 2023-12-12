@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <complex>
 #include "DataStructure/Vector3.h"
 
 #define PI 3.14159265358979323846
@@ -198,6 +199,22 @@ std::pair<T, T> getMuSigma(const std::vector<T>& data)
 
     return {mu, std::pow(sigma, .5f)};
 }
+}
+
+
+std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, bool inverse = false);
+std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float>>& fft_result);
+bool isPowerOf2(int n);
+
+template<typename T>
+T findNextPowerOfTwo(T n) { // Works for 32bits or 64bits machines
+    size_t numBits = sizeof(T) * 8; // Get the number of bits in the integer type
+
+    n--;
+    for (size_t shift = 1; shift < numBits; shift *= 2) {
+        n |= n >> shift;
+    }
+    return n + 1;
 }
 
 #endif // UTILS_H

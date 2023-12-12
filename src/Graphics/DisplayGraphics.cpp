@@ -185,8 +185,8 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     right->add(saveButton);
     right->add(copyToClipboardButton);
 
-    this->setWindowModality(Qt::WindowModality::NonModal);
-    this->setModal(false);
+//    this->setWindowModality(Qt::WindowModality::NonModal);
+//    this->setModal(false);
 
     layout->addItem(left);
     layout->addWidget(right->get());
@@ -332,6 +332,15 @@ void Plotter::addImage(GridI image)
 
 void Plotter::draw()
 {
+    this->chartView->chart()->removeAllSeries();
+//    while (!this->chartView->chart()->axes().empty()) {
+//        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
+//    }
+
+//    for (auto& labels : this->graphicLabels)
+//        for (auto& lab : labels)
+//            delete lab;
+//    this->graphicLabels.clear();
 //    QTransform prevState = this->chartView->transform();
 //    auto prevState = this->chartView->chart()->transformations();
 //    this->chartView->chart()->removeAllSeries();

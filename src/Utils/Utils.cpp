@@ -319,16 +319,18 @@ void sleep(int milliseconds)
 
 std::string showTime(double nanoseconds)
 {
-    nanoseconds /= 1000.f;
+    std::ostringstream oss;
+    nanoseconds /= 1000000.f;
     if (nanoseconds < 10) { // < 10ms
-        return std::to_string(int(nanoseconds * 1000)) + "ys";
+        oss << std::setprecision(3) << nanoseconds << "ms";
     } else if (nanoseconds < 1000 * 10) { // < 10 sec
-        return std::to_string(int(nanoseconds)) + "ms";
+        oss << int(nanoseconds) << "ms";
     } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
-        return std::to_string(int(nanoseconds / 1000)) + "s";
+        oss << int(nanoseconds / 1000) << "s";
     } else { // > 10 min
-        return std::to_string(int(nanoseconds / (1000 * 60))) + "min" + std::to_string(int(nanoseconds) % (1000 * 60)) + "s (" + std::to_string(int(nanoseconds / 1000)) + "s)";
+        oss << int(nanoseconds / (1000 * 60)) << "min" << int(nanoseconds) % (1000 * 60) << "s (" + int(nanoseconds / 1000) << "s)";
     }
+    return oss.str();
 }
 
 /*
@@ -415,4 +417,82 @@ std::vector<std::string> getAllFiles(std::string folderName)
         filenames.push_back(dir.toStdString());
     }
     return filenames;
+}
+
+// Function to perform FFT
+std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, bool inverse) {
+    const size_t N = x.size();
+    if (N <= 1) return x;
+
+    std::vector<std::complex<float>> result(N);
+
+    // Bit-reversal permutation (optional but enhances performance)
+    std::vector<size_t> permutation(N);
+    size_t logN = static_cast<size_t>(std::log2(N));
+    for (size_t i = 0; i < N; ++i) {
+        size_t j = 0;
+        for (size_t bit = 0; bit < logN; ++bit) {
+            if (i & (1 << bit)) {
+                j |= (1 << (logN - 1 - bit));
+            }
+        }
+        permutation[i] = j;
+    }
+
+    // Perform FFT
+    for (size_t i = 0; i < N; ++i) {
+        result[permutation[i]] = x[i];
+    }
+
+    for (size_t s = 1; s <= logN; ++s) {
+        size_t m = 1 << s;
+        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(M_PI) / float(m));
+        for (size_t k = 0; k < N; k += m) {
+            std::complex<float> w = 1.0f;
+            for (size_t j = 0; j < m / 2; ++j) {
+                std::complex<float> t = w * result[k + j + m / 2];
+                std::complex<float> u = result[k + j];
+                result[k + j] = u + t;
+                result[k + j + m / 2] = u - t;
+                w *= wm;
+            }
+        }
+    }
+
+    if (inverse) {
+        for (size_t i = 0; i < N; ++i) {
+            result[i] /= N; // Scaling for the inverse FFT
+        }
+    }
+
+    return result;
+}
+
+// Function to perform the inverse FFT on a given FFT result
+std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float>>& fft_result) {
+    return fft(fft_result, true);
+    /*
+    size_t size = fft_result.size();
+    std::vector<std::complex<float>> conjugate(size);
+
+    // Take the conjugate of the FFT result
+    for (size_t i = 0; i < size; ++i) {
+        conjugate[i] = std::conj(fft_result[i]);
+    }
+
+    // Perform another FFT (or IFFT) on the conjugate result
+    std::vector<std::complex<float>> inverse_result = fft(conjugate); // Assuming fft() is your IFFT function
+
+    // Normalize the result by dividing by the size
+    for (size_t i = 0; i < size; ++i) {
+        inverse_result[i] /= static_cast<float>(size);
+    }
+
+    return inverse_result;
+    */
+}
+
+bool isPowerOf2(int n)
+{
+    return n > 0 &&  (n & (n-1)) == 0;
 }

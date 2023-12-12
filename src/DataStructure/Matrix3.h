@@ -8,6 +8,7 @@
 #include <string>
 #include <math.h>
 #include <iomanip>
+#include <complex>
 #include "DataStructure/Vector3.h"
 #include "Utils/BSpline.h"
 #include "Utils/ShapeCurve.h"
@@ -124,6 +125,8 @@ public:
     Matrix3<T> concat(const Matrix3<T> matrixToConcat);
 
     Matrix3<float> toDistanceMap(bool ignoreZlayer = false, bool considerBorders = true);
+    Matrix3<std::complex<float>> FFT() const;
+    Matrix3<std::complex<float>> iFFT() const;
 
     Matrix3<T> flip(bool onX, bool onY = false, bool onZ = false);
 
@@ -185,9 +188,10 @@ public:
     static Matrix3<Vector3> fbmNoise2D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
     static Matrix3<Vector3> fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
 
-    static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma, const Vector3& offset = Vector3());
-    Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOfZ, float sigma) const;
-    Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOfZ = 3, bool ignoreBorders = false) const;
+    static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
+    Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) const;
+    Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
+    Matrix3<T> medianBlur(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
 
@@ -1087,9 +1091,87 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
     return this->convolution(laplacian.convolution(gaussian));
 }
 template<class T>
-Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOfZ, bool ignoreBorders) const {
-    Matrix3<float> meanMatrix(sizeOnX, sizeOnY, sizeOfZ, 1.f);
-    return this->convolution(meanMatrix, (ignoreBorders ? CONVOLUTION_BORDERS::IGNORED : CONVOLUTION_BORDERS::ZERO_PAD));
+Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const {
+//    Matrix3<float> meanMatrix(sizeOnX, sizeOnY, sizeOnZ, 1.f);
+//    return this->convolution(meanMatrix, (ignoreBorders ? CONVOLUTION_BORDERS::IGNORED : CONVOLUTION_BORDERS::ZERO_PAD));
+
+    Matrix3<T> tempResult(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
+    float divisor = (sizeOnX * sizeOnY * sizeOnZ);
+
+    // Perform 1D convolution along x-axis
+    this->iterateParallel([&](int x, int y, int z) {
+        T neighboringSum = T();
+//        float outOfGrid = 0;
+        for (int dx = -(sizeOnX / 2); dx <= (sizeOnX / 2); ++dx) {
+            if (x + dx >= 0 && x + dx < this->sizeX) {
+                neighboringSum += this->at(x + dx, y, z);
+            }
+//            else {
+//                outOfGrid++;
+//            }
+        }
+        result.at(x, y, z) = neighboringSum; // / (divisor - outOfGrid);
+    });
+    this->iterateParallel([&](int x, int y, int z) {
+        T neighboringSum = T();
+//        float outOfGrid = 0;
+        for (int dx = -(sizeOnY / 2); dx <= (sizeOnY / 2); ++dx) {
+            if (y + dx >= 0 && y + dx < this->sizeY) {
+                neighboringSum += result.at(x, y + dx, z);
+            }
+//            else {
+//                outOfGrid++;
+//            }
+        }
+        tempResult.at(x, y, z) = neighboringSum; // / (divisor - outOfGrid);
+    });
+    this->iterateParallel([&](int x, int y, int z) {
+        T neighboringSum = T();
+//        float outOfGrid = 0;
+        for (int dx = -(sizeOnZ / 2); dx <= (sizeOnZ / 2); ++dx) {
+            if (z + dx >= 0 && z + dx < this->sizeZ) {
+                neighboringSum += tempResult.at(x, y, z + dx);
+            }
+//            else {
+//                outOfGrid++;
+//            }
+        }
+        result.at(x, y, z) = neighboringSum;// / (divisor - outOfGrid);
+    });
+
+    return result / divisor;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::medianBlur(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const
+{
+    Matrix3<T> result(this->getDimensions());
+
+    int halfX = sizeOnX / 2;
+    int halfY = sizeOnY / 2;
+    int halfZ = sizeOnZ / 2;
+
+    this->iterateParallel([&](const Vector3& p) {
+        std::vector<T> values;
+        values.reserve(sizeOnX * sizeOnY * sizeOnZ);
+        for (int dx = -halfX; dx <= halfX; dx++) {
+            for (int dy = -halfY; dy <= halfY; dy++) {
+                for (int dz = -halfZ; dz <= halfZ; dz++) {
+                    Vector3 pos(p.x + dx, p.y + dy, p.z + dz);
+                    if (!ignoreBorders || checkCoord(pos))
+                        values.push_back(this->at(pos));
+                }
+            }
+        }
+        std::sort(values.begin(), values.end());
+        if (values.size() % 2 == 1) {
+            result(p) = values[values.size() / 2];
+        } else {
+            result(p) = (values[values.size() / 2 - 1] + values[values.size() / 2]) * .5f;
+        }
+    });
+    return result;
 }
 
 /*
@@ -2078,6 +2160,110 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
     return distances; //.normalize();
 }
 
+template <typename T>
+Matrix3<std::complex<float>> Matrix3<T>::FFT() const {
+    int dimX = (isPowerOf2(sizeX) ? sizeX : findNextPowerOfTwo(sizeX));
+    int dimY = (isPowerOf2(sizeY) ? sizeY : findNextPowerOfTwo(sizeY));
+    int dimZ = (isPowerOf2(sizeZ) ? sizeZ : findNextPowerOfTwo(sizeZ));
+    Matrix3<std::complex<float>> resultX(dimX, dimY, dimZ); // Result for X-axis FFT
+    Matrix3<std::complex<float>> resultY(dimX, dimY, dimZ); // Result for Y-axis FFT
+    Matrix3<std::complex<float>> resultZ(dimX, dimY, dimZ); // Result for Z-axis FFT
+
+    // Perform FFT along X-axis for each YZ plane
+    for (size_t y = 0; y < dimY; ++y) {
+        for (size_t z = 0; z < dimZ; ++z) {
+            std::vector<std::complex<float>> col(dimX);
+            for (size_t x = 0; x < dimX; ++x) {
+                col[x] = std::complex<float>(this->at(x, y, z), 0);
+            }
+            std::vector<std::complex<float>> fft_result_x = fft(col); // Perform 1D FFT along X-axis
+            for (size_t x = 0; x < dimX; ++x) {
+                resultX(x, y, z) = fft_result_x[x];
+            }
+        }
+    }
+
+    // Perform FFT along Y-axis for each XZ plane
+    for (size_t x = 0; x < dimX; ++x) {
+        for (size_t z = 0; z < dimZ; ++z) {
+            std::vector<std::complex<float>> col(dimY);
+            for (size_t y = 0; y < dimY; ++y) {
+                col[y] = resultX(x, y, z); // Use the result from X-axis FFT
+            }
+            std::vector<std::complex<float>> fft_result_y = fft(col); // Perform 1D FFT along Y-axis
+            for (size_t y = 0; y < dimY; ++y) {
+                resultY(x, y, z) = fft_result_y[y];
+            }
+        }
+    }
+
+    // Perform FFT along Z-axis for each XY plane
+    for (size_t x = 0; x < dimX; ++x) {
+        for (size_t y = 0; y < dimY; ++y) {
+            std::vector<std::complex<float>> row(dimZ);
+            for (size_t z = 0; z < dimZ; ++z) {
+                row[z] = resultY(x, y, z); // Use the result from Y-axis FFT
+            }
+            std::vector<std::complex<float>> fft_result_z = fft(row); // Perform 1D FFT along Z-axis
+            for (size_t z = 0; z < dimZ; ++z) {
+                resultZ(x, y, z) = fft_result_z[z];
+            }
+        }
+    }
+
+    return resultZ; // Return the final result after X, Y, and Z axis FFTs
+}
+template<class T>
+Matrix3<std::complex<float> > Matrix3<T>::iFFT() const
+{
+    Matrix3<std::complex<float>> result(this->getDimensions()); // Result after inverse FFT
+
+        // Perform inverse FFT along X-axis for each YZ plane
+        for (size_t y = 0; y < sizeY; ++y) {
+            for (size_t z = 0; z < sizeZ; ++z) {
+                std::vector<std::complex<float>> col(sizeX);
+                for (size_t x = 0; x < sizeX; ++x) {
+                    col[x] = this->at(x, y, z);
+                }
+                std::vector<std::complex<float>> ifft_result_x = inverseFFT(col); // Perform 1D IFFT along X-axis
+                for (size_t x = 0; x < sizeX; ++x) {
+                    result(x, y, z) = ifft_result_x[x];
+                }
+            }
+        }
+
+        // Perform inverse FFT along Y-axis for each XZ plane
+        for (size_t x = 0; x < sizeX; ++x) {
+            for (size_t z = 0; z < sizeZ; ++z) {
+                std::vector<std::complex<float>> col(sizeY);
+                for (size_t y = 0; y < sizeY; ++y) {
+                    col[y] = result(x, y, z); // Use the result after X-axis inverse FFT
+                }
+                std::vector<std::complex<float>> ifft_result_y = inverseFFT(col); // Perform 1D IFFT along Y-axis
+                for (size_t y = 0; y < sizeY; ++y) {
+                    result(x, y, z) = ifft_result_y[y];
+                }
+            }
+        }
+
+        // Perform inverse FFT along Z-axis for each XY plane
+        for (size_t x = 0; x < sizeX; ++x) {
+            for (size_t y = 0; y < sizeY; ++y) {
+                std::vector<std::complex<float>> row(sizeZ);
+                for (size_t z = 0; z < sizeZ; ++z) {
+                    row[z] = result(x, y, z); // Use the result after Y-axis inverse FFT
+                }
+                std::vector<std::complex<float>> ifft_result_z = inverseFFT(row); // Perform 1D IFFT along Z-axis
+                for (size_t z = 0; z < sizeZ; ++z) {
+                    result(x, y, z) = ifft_result_z[z];
+                }
+            }
+        }
+
+        return result; // Return the final result after X, Y, and Z axis inverse FFTs
+}
+
+
 template<class T>
 Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
 {
@@ -2218,7 +2404,7 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
         return this->at(pos);
     };
 
-    iterateParallel([&](int x, int y, int z) {
+    this->iterateParallel([&](int x, int y, int z) {
         U divisor = normalisationValue;
         T neighboringSum = T();
         convMatrix.iterate([&](int dx, int dy, int dz) {
