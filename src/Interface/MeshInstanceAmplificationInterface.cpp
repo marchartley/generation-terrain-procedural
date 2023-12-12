@@ -77,81 +77,80 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     std::vector<QString> rocksPaths;
 //    std::vector<QString> algaePaths;
 
-    auto startTime = std::chrono::system_clock::now();
+    float initializationTime = timeIt([&]() {
 
-    QDirIterator itCorals("src/assets/models/coral/", QDir::Files, QDirIterator::Subdirectories);
-    std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (itCorals.hasNext()) {
-        QString dir = itCorals.next();
-        coralPaths.push_back(dir);
-    }
-
-    size_t nbCorals = coralPaths.size();
-    if (this->numberOfLoadedCorals != -1) nbCorals = std::min(nbCorals, (size_t)numberOfLoadedCorals);
-    this->possibleCorals = std::vector<Mesh>(nbCorals);
-
-#pragma omp parallel for
-    for (size_t i = 0; i < nbCorals; i++) {
-        QString& dir = coralPaths[i];
-        // Normalize it and move it upward so the anchor is on the ground
-        possibleCorals[i] = Mesh(coralsShader).fromStl(dir.toStdString()).normalize().rotate(deg2rad(180), 0, 0);
-    }
-
-    QDirIterator itRocks("src/assets/models/rock/", QDir::Files, QDirIterator::Subdirectories);
-    std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
-    while (itRocks.hasNext()) {
-        QString dir = itRocks.next();
-        rocksPaths.push_back(dir);
-    }
-    size_t nbRocks = rocksPaths.size();
-    if (this->numberOfLoadedRocks != -1) nbRocks = std::min(nbRocks, (size_t)numberOfLoadedRocks);
-    this->possibleRocks = std::vector<Mesh>(nbRocks);
-#pragma omp parallel for
-    for (size_t i = 0; i < nbRocks; i++) {
-        QString& dir = rocksPaths[i];
-        // Normalize it and move it upward so the anchor is on the ground
-        possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();
-    }
-
-    meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
-    meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
-    meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
-    meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
-    meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
-
-    for (auto& meshType : meshesOptions) {
-        QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
-        std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
-        std::vector<QString> paths;
-        while (it.hasNext()) {
-            QString dir = it.next();
-            paths.push_back(dir);
+        QDirIterator itCorals("src/assets/models/coral/", QDir::Files, QDirIterator::Subdirectories);
+        std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
+        while (itCorals.hasNext()) {
+            QString dir = itCorals.next();
+            coralPaths.push_back(dir);
         }
-        size_t nbElements = paths.size();
-        if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
-        meshType.possibleMeshes = std::vector<Mesh>(nbElements);
-#pragma omp parallel for
-        for (size_t i = 0; i < nbElements; i++) {
-            QString& dir = paths[i];
+
+        size_t nbCorals = coralPaths.size();
+        if (this->numberOfLoadedCorals != -1) nbCorals = std::min(nbCorals, (size_t)numberOfLoadedCorals);
+        this->possibleCorals = std::vector<Mesh>(nbCorals);
+
+    #pragma omp parallel for
+        for (size_t i = 0; i < nbCorals; i++) {
+            QString& dir = coralPaths[i];
             // Normalize it and move it upward so the anchor is on the ground
-            meshType.possibleMeshes[i] = Mesh(shader);
-
-            if (dir.endsWith("fbx", Qt::CaseInsensitive)) {
-                meshType.possibleMeshes[i].fromFBX(dir.toStdString());
-            } else if (dir.endsWith("stl", Qt::CaseInsensitive)) {
-                meshType.possibleMeshes[i].fromStl(dir.toStdString()).scale(Vector3(1.f, 1.f, -1.f));
-            } else {
-                std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
-            }
-
-            meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f)) + meshType.requiredTranslation);
-            meshType.possibleMeshes[i].cullFace = false;
+            possibleCorals[i] = Mesh(coralsShader).fromStl(dir.toStdString()).normalize().rotate(deg2rad(180), 0, 0);
         }
-    }
 
-    auto endTime = std::chrono::system_clock::now();
+        QDirIterator itRocks("src/assets/models/rock/", QDir::Files, QDirIterator::Subdirectories);
+        std::shared_ptr<Shader> rocksShader = std::make_shared<Shader>(vRockShader, fRockShader);
+        while (itRocks.hasNext()) {
+            QString dir = itRocks.next();
+            rocksPaths.push_back(dir);
+        }
+        size_t nbRocks = rocksPaths.size();
+        if (this->numberOfLoadedRocks != -1) nbRocks = std::min(nbRocks, (size_t)numberOfLoadedRocks);
+        this->possibleRocks = std::vector<Mesh>(nbRocks);
+    #pragma omp parallel for
+        for (size_t i = 0; i < nbRocks; i++) {
+            QString& dir = rocksPaths[i];
+            // Normalize it and move it upward so the anchor is on the ground
+            possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();
+        }
+
+        meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
+
+        for (auto& meshType : meshesOptions) {
+            QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
+            std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
+            std::vector<QString> paths;
+            while (it.hasNext()) {
+                QString dir = it.next();
+                paths.push_back(dir);
+            }
+            size_t nbElements = paths.size();
+            if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
+            meshType.possibleMeshes = std::vector<Mesh>(nbElements);
+    #pragma omp parallel for
+            for (size_t i = 0; i < nbElements; i++) {
+                QString& dir = paths[i];
+                // Normalize it and move it upward so the anchor is on the ground
+                meshType.possibleMeshes[i] = Mesh(shader);
+
+                if (dir.endsWith("fbx", Qt::CaseInsensitive)) {
+                    meshType.possibleMeshes[i].fromFBX(dir.toStdString());
+                } else if (dir.endsWith("stl", Qt::CaseInsensitive)) {
+                    meshType.possibleMeshes[i].fromStl(dir.toStdString()).scale(Vector3(1.f, 1.f, -1.f));
+                } else {
+                    std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
+                }
+
+                meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f)) + meshType.requiredTranslation);
+                meshType.possibleMeshes[i].cullFace = false;
+            }
+        }
+    });
     if (verbose)
-        std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms" << std::endl;
+        std::cout << "Done in " << showTime(initializationTime) << std::endl;
 }
 
 QLayout* MeshInstanceAmplificationInterface::createGUI()

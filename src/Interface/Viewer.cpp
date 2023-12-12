@@ -213,160 +213,130 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
-    /*GLuint depthBuffer; // Depth buffer for the FBO
-
-    if (fbo == 0) {
-        // Generate and bind the FBO
-        GlobalsGL::f()->glGenFramebuffers(1, &fbo);
-        GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-        // Generate texture
-        GlobalsGL::f()->glGenTextures(1, &texture);
-        GlobalsGL::f()->glBindTexture(GL_TEXTURE_2D, texture);
-        GlobalsGL::f()->glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
-        GlobalsGL::f()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        GlobalsGL::f()->glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        // Attach the texture to the FBO
-        GlobalsGL::f()->glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0);
-
-        // Create depth buffer and attach to FBO
-        GlobalsGL::f()->glGenRenderbuffers(1, &depthBuffer);
-        GlobalsGL::f()->glBindRenderbuffer(GL_RENDERBUFFER, depthBuffer);
-        GlobalsGL::f()->glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, w, h);
-        GlobalsGL::f()->glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthBuffer);
-
-        // Check if FBO is complete
-        if (GlobalsGL::f()->glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            std::cerr << "Error setting up framebuffer!" << std::endl;
-        }
-
-        GlobalsGL::f()->glBindRenderbuffer(GL_RENDERBUFFER, 0); // Unbind the renderbuffer
-    }
-
-    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-    GlobalsGL::f()->glViewport(0, 0, w, h); // Set the viewport
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-*/
-
-    this->setSceneCenter(voxelGrid->getDimensions() / 2.f);
-    auto allProcessStart = std::chrono::system_clock::now();
-    std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
-//    std::chrono::milliseconds test;
-    // Update the mouse position in the grid
-    this->checkMouseOnVoxel();
-    float mouseCheckTiming = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - allProcessStart).count();
-
     this->frame_num ++;
-//    glClear(GL_DEPTH_BUFFER_BIT);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    bool displayFill = this->viewerMode != ViewerMode::WIRE_MODE;
-    if (!displayFill) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    } else {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    }
-
-    float pMatrix[16];
-    float mvMatrix[16];
-    camera()->getProjectionMatrix(pMatrix);
-    camera()->getModelViewMatrix(mvMatrix);
-
-    this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
-    Material ground_material(
-                    {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
-                    { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
-                    {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    1.f // 51.2f
-                    );
-    Material grass_material(
-                    { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
-                    {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
-                    {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                    1.f // 51.2f
-                    );
-//    this->light.position = Vector3(100.0 * std::cos(this->frame_num / (float)10), 100.0 * std::sin(this->frame_num / (float)10), 0.0);
-    Vector4 globalAmbiant = {.10, .10, .10, 1.0};
-
-    Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
-        shader->setMatrix("proj_matrix", pMatrix);
-        shader->setMatrix("mv_matrix", mvMatrix);
-        shader->setPositionalLight("light", this->light);
-        shader->setMaterial("ground_material", ground_material);
-        shader->setMaterial("grass_material", grass_material);
-        shader->setVector("globalAmbiant", globalAmbiant);
-        shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
-        shader->setBool("isSpotlight", this->usingSpotlight);
-        if (this->usingSpotlight) {
-            shader->setVector("light.position", this->camera()->position());
-        } else {
-            shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
-        }
-        shader->setBool("display_light_source", true);
-        shader->setVector("min_vertice_positions", minVoxelsShown());
-        shader->setVector("max_vertice_positions", maxVoxelsShown());
-        shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
-        shader->setFloat("fogNear", this->fogNear);
-        shader->setFloat("fogFar", this->fogFar);
-        shader->setBool("wireframeMode", !displayFill);
-
-
-        Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
-        shader->setPositionalLight("lights[0]", this->light);
-        shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200));
-        shader->setPositionalLight("lights[1]", this->light);
-        shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0));
-        shader->setPositionalLight("lights[2]", this->light);
-        shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200));
-        shader->setPositionalLight("lights[3]", this->light);
-        shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100));
-        shader->setPositionalLight("lights[4]", this->light);
-        shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200));
-        shader->setPositionalLight("lights[5]", this->light);
-        shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10));
-    });
     current_frame ++;
-
-    if (this->interfaces.count("terraingeneration")) {
-        static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
-        interfacesTimings[this->interfaces["terraingeneration"]] = timeIt([&]() { this->interfaces["terraingeneration"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    }
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    if (mouseDown) {
-        this->mainGrabber->display();
-    }
-
-    for (auto& actionInterface : this->interfaces) {
-        if (actionInterface.first != "terraingeneration") {
-            interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(this->camera()->position()); });
-        }
-    }
-
-    if (this->interfaces.count("terraingeneration")) {
-        interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-    }
-
-    auto startScreenSaving = std::chrono::system_clock::now();
-    if (this->isTakingScreenshots) {
-        if (makedir(".tmp/screenshots")) {
-            this->saveScreenshotPNG(".tmp/screenshots/screen.png");
-        }
-        this->copyLastScreenshotTo(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
-    }
-    float screenSavingTiming = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startScreenSaving).count();
-
-    auto allProcessEnd = std::chrono::system_clock::now();
-
     bool displayTiming = false;
-    if (displayTiming) {
-        std::cout << "Total time/frame : " << showTime(std::chrono::duration_cast<std::chrono::milliseconds>(allProcessEnd - allProcessStart).count()) << std::endl;
-        for (auto& [interf, time] : interfacesTimings) {
-            std::cout << "\t" << interf->actionType << " : " << showTime(time) << std::endl;
+    std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
+    float GLUniformsTime;
+    float screenSavingTiming;
+    float mouseCheckTiming;
+
+    float totalTime = timeIt([&]() {
+        this->setSceneCenter(voxelGrid->getDimensions() / 2.f);
+        // Update the mouse position in the grid
+        mouseCheckTiming = timeIt([&](){ this->checkMouseOnVoxel(); });
+
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        bool displayFill = this->viewerMode != ViewerMode::WIRE_MODE;
+        if (!displayFill) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
-        std::cout << "\tMouse check : " << showTime(mouseCheckTiming) << std::endl;
-        std::cout << "\tScreen saving : " << showTime(screenSavingTiming) << std::endl;
+
+        GLUniformsTime = timeIt([&]() {
+            float pMatrix[16];
+            float mvMatrix[16];
+            camera()->getProjectionMatrix(pMatrix);
+            camera()->getModelViewMatrix(mvMatrix);
+
+            this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
+            Material ground_material(
+                            {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
+                            { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
+                            {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                            1.f // 51.2f
+                            );
+            Material grass_material(
+                            { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
+                            {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
+                            {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
+                            1.f // 51.2f
+                            );
+            Vector4 globalAmbiant = {.10, .10, .10, 1.0};
+
+            Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
+                shader->setMatrix("proj_matrix", pMatrix);
+                shader->setMatrix("mv_matrix", mvMatrix);
+                shader->setPositionalLight("light", this->light);
+                shader->setMaterial("ground_material", ground_material);
+                shader->setMaterial("grass_material", grass_material);
+                shader->setVector("globalAmbiant", globalAmbiant);
+                shader->setMatrix("norm_matrix", Matrix(4, 4, mvMatrix).transpose().inverse());
+                shader->setBool("isSpotlight", this->usingSpotlight);
+                if (this->usingSpotlight) {
+                    shader->setVector("light.position", this->camera()->position());
+                } else {
+                    shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
+                }
+                shader->setBool("display_light_source", true);
+                shader->setVector("min_vertice_positions", minVoxelsShown());
+                shader->setVector("max_vertice_positions", maxVoxelsShown());
+                shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
+                shader->setFloat("fogNear", this->fogNear);
+                shader->setFloat("fogFar", this->fogFar);
+                shader->setBool("wireframeMode", !displayFill);
+
+
+                Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
+                shader->setPositionalLight("lights[0]", this->light);
+                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200));
+                shader->setPositionalLight("lights[1]", this->light);
+                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0));
+                shader->setPositionalLight("lights[2]", this->light);
+                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200));
+                shader->setPositionalLight("lights[3]", this->light);
+                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100));
+                shader->setPositionalLight("lights[4]", this->light);
+                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200));
+                shader->setPositionalLight("lights[5]", this->light);
+                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10));
+            });
+        });
+
+        if (this->interfaces.count("terraingeneration")) {
+            static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->setVisu(this->mapMode, this->algorithm, this->displayParticles);
+            interfacesTimings[this->interfaces["terraingeneration"]] = timeIt([&]() { this->interfaces["terraingeneration"]->display();}); // std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        }
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        if (mouseDown) {
+            this->mainGrabber->display();
+        }
+
+        for (auto& actionInterface : this->interfaces) {
+            if (actionInterface.first != "terraingeneration") {
+                interfacesTimings[actionInterface.second] = timeIt([&]() { actionInterface.second->display(this->camera()->position()); });
+            }
+        }
+
+        if (this->interfaces.count("terraingeneration")) {
+            interfacesTimings[this->interfaces["terraingeneration"]] += timeIt([&]() { static_cast<TerrainGenerationInterface*>(this->interfaces["terraingeneration"].get())->displayWaterLevel(); }); //std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+        }
+
+        screenSavingTiming = timeIt([&]() {
+            auto startScreenSaving = std::chrono::system_clock::now();
+            if (this->isTakingScreenshots) {
+                if (makedir(".tmp/screenshots")) {
+                    this->saveScreenshotPNG(".tmp/screenshots/screen.png");
+                }
+                this->copyLastScreenshotTo(this->screenshotFolder + std::to_string(this->screenshotIndex++) + ".png");
+            }
+        });
+    });
+
+    if (displayTiming) {
+        std::cout << "Total time/frame : " << showTime(totalTime) << " (" << (1e9 / totalTime) << " FPS)\n";
+        std::vector<std::pair<std::shared_ptr<ActionInterface>, float>> sortedInterfaces(interfacesTimings.size());
+        int i = 0;
+        for (auto it = interfacesTimings.begin(); it != interfacesTimings.end(); i++, it++) sortedInterfaces[i] = *it;
+        std::sort(sortedInterfaces.begin(), sortedInterfaces.end(), [&](const auto& A, const auto& B) { return A.second < B.second; });
+        for (auto& [interf, time] : sortedInterfaces) {
+            std::cout << "\t" << interf->actionType << " : " << showTime(time) << "\n";
+        }
+        std::cout << "\tMouse check : " << showTime(mouseCheckTiming) << "\n";
+        std::cout << "\tScreen saving : " << showTime(screenSavingTiming) << "\n";
+        std::cout << "\tOpenGL uniforms : " << showTime(GLUniformsTime) << std::endl;
     }
-//    GlobalsGL::f()->glBindFramebuffer(GL_FRAMEBUFFER, 0); // Unbind the FBO for subsequent rendering
 }
 
 void Viewer::reloadAllShaders()
@@ -472,32 +442,31 @@ void Viewer::keyReleaseEvent(QKeyEvent *e)
     QGLViewer::keyReleaseEvent(e);
 }
 void Viewer::mouseMoveEvent(QMouseEvent* e)
-{    
-    auto start = std::chrono::system_clock::now();
+{
+    float processTime = timeIt([&]() {
 
-    this->mousePos = e->pos();
+        this->mousePos = e->pos();
 
-    if (this->checkMouseOnVoxel())
-    {
-        this->mainGrabber->move(this->mousePosWorld);
-        this->mainGrabber->setState(ACTIVE);
-    } else {
-        this->mainGrabber->setState(HIDDEN);
-    }
+        if (this->checkMouseOnVoxel())
+        {
+            this->mainGrabber->move(this->mousePosWorld);
+            this->mainGrabber->setState(ACTIVE);
+        } else {
+            this->mainGrabber->setState(HIDDEN);
+        }
 
-    Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
-    Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
-    Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
-    try {
-        QGLViewer::mouseMoveEvent(e);
-    }  catch (std::exception) {
-        std::cout << "Catched this f***ing exception!" << std::endl;
-    }
+        Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
+        Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
+        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
+        try {
+            QGLViewer::mouseMoveEvent(e);
+        }  catch (std::exception) {
+            std::cout << "Catched this f***ing exception!" << std::endl;
+        }
 
-    update();
-
-    auto end = std::chrono::system_clock::now();
-//    std::cout << "Total time on MouseMoveEvent : " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+        update();
+    });
+//    std::cout << "Total time on MouseMoveEvent : " << showTime(processTime) << std::endl;
 }
 
 void Viewer::mouseDoubleClickEvent(QMouseEvent *e)

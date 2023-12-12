@@ -400,20 +400,21 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     }
 
     GridF faultsImpact(getSizeX(), getSizeY());
-    auto start = std::chrono::system_clock::now();
-    for (int x = 0; x < getSizeX(); x++) {
-        for (int y = 0; y < getSizeY(); y++) {
-            Vector3 pos(x, y);
-            float totalInfluence = 0;
-            for (size_t i = 0; i < faults.size(); i++) {
-                float coef = 1.f; // / (float)(i + 1);
-                float distanceToBorder = std::min(int(getSizeX() - x), std::min(x, std::min(int(getSizeY() - y), y)));
-                totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 5.f) - interpolation::fault_distance(distanceToBorder, 10.f)) * coef;
+    float time = timeIt([&]() {
+        for (int x = 0; x < getSizeX(); x++) {
+            for (int y = 0; y < getSizeY(); y++) {
+                Vector3 pos(x, y);
+                float totalInfluence = 0;
+                for (size_t i = 0; i < faults.size(); i++) {
+                    float coef = 1.f; // / (float)(i + 1);
+                    float distanceToBorder = std::min(int(getSizeX() - x), std::min(x, std::min(int(getSizeY() - y), y)));
+                    totalInfluence += std::max(0.f, interpolation::fault_distance(faults[i].estimateDistanceFrom(pos), 5.f) - interpolation::fault_distance(distanceToBorder, 10.f)) * coef;
+                }
+                faultsImpact.at(pos) = totalInfluence / (float)numberOfFaults;
             }
-            faultsImpact.at(pos) = totalInfluence / (float)numberOfFaults;
         }
-    }
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count() << "ms" << std::endl;
+    });
+    std::cout << "Faulting terrain in " << showTime(time) << std::endl;
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
