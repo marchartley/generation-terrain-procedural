@@ -280,11 +280,11 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        std::cout << "Heightmap : " << timeIt([=]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); }) << "ms" << std::endl;
+        std::cout << "Heightmap : " << showTime(timeIt([=]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); })) << std::endl;
 
-        std::cout << "Voxels : " << timeIt([=]() { voxelGrid->from2DGrid(*heightmap); }) << "ms" << std::endl;
+        std::cout << "Voxels : " << showTime(timeIt([=]() { voxelGrid->from2DGrid(*heightmap); })) << std::endl;
 //        layerGrid->fromVoxelGrid(*voxelGrid);
-        std::cout << "Layers : " << timeIt([=]() { layerGrid->from2DGrid(*heightmap); }) << "ms" << std::endl;
+        std::cout << "Layers : " << showTime(timeIt([=]() { layerGrid->from2DGrid(*heightmap); })) << std::endl;
 
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
@@ -391,9 +391,9 @@ void TerrainGenerationInterface::createTerrainFromBiomes(nlohmann::json json_con
 
 void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json json_content)
 {
-    std::cout << "Load implicit: " << timeIt([&]() {
+    std::cout << "Load implicit: " << showTime(timeIt([&]() {
         *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
-    }) << "ms" << std::endl;
+    })) << std::endl;
 /*
     EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
     reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)});
@@ -411,10 +411,10 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
     */
 //    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
 
-    std::cout << "To voxels: " << timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
-    std::cout << "To layers: " << timeIt([&](){ this->layerGrid->fromVoxelGrid(*voxelGrid); }) << "ms" << std::endl;
+    std::cout << "To voxels: " << showTime(timeIt([&](){ this->voxelGrid->fromImplicit(implicitTerrain.get()); })) << std::endl;
+    std::cout << "To layers: " << showTime(timeIt([&](){ this->layerGrid->fromVoxelGrid(*voxelGrid); })) << std::endl;
 //    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromImplicit(implicitTerrain.get()); }) << "ms" << std::endl;
-    std::cout << "To heightmap: " << timeIt([&](){ this->heightmap->fromVoxelGrid(*voxelGrid.get()); }) << "ms" << std::endl;
+    std::cout << "To heightmap: " << showTime(timeIt([&](){ this->heightmap->fromVoxelGrid(*voxelGrid.get()); })) << std::endl;
 
 }
 
@@ -785,71 +785,77 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     size_t nbFiles = filesToLoad.size();
     std::vector<GridV3> texturesMaps(nbFiles);
     int textureSizes = 128;
-    auto startTime = std::chrono::system_clock::now();
-    #pragma omp parallel for
-    for (size_t i = 0; i < nbFiles; i++) {
-        QString dir = filesToLoad[i];
-        QString basename = QFileInfo(dir).baseName();
-            std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-            int imgW, imgH, c;
-            unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
-            texturesMaps[i] = GridV3(imgW, imgH);
-            for (int x = 0; x < imgW; x++) {
-                for (int y = 0; y < imgH; y++) {
-                    unsigned char r = data[3 * (x + y * imgW) + 0];
-                    unsigned char g = data[3 * (x + y * imgW) + 1];
-                    unsigned char b = data[3 * (x + y * imgW) + 2];
-                    texturesMaps[i].at(x, y) = Vector3(r, g, b);
+
+    float parallelTime = 0;
+    float sequentialTime = 0;
+    float totalTime = timeIt([&]() {
+        parallelTime = timeIt([&]() {
+            #pragma omp parallel for
+            for (size_t i = 0; i < nbFiles; i++) {
+                QString dir = filesToLoad[i];
+                QString basename = QFileInfo(dir).baseName();
+                    std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
+                    int imgW, imgH, c;
+                    unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
+                    texturesMaps[i] = GridV3(imgW, imgH);
+                    for (int x = 0; x < imgW; x++) {
+                        for (int y = 0; y < imgH; y++) {
+                            unsigned char r = data[3 * (x + y * imgW) + 0];
+                            unsigned char g = data[3 * (x + y * imgW) + 1];
+                            unsigned char b = data[3 * (x + y * imgW) + 2];
+                            texturesMaps[i].at(x, y) = Vector3(r, g, b);
+                        }
+                    }
+                    texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
+                    stbi_image_free(data);
+            }
+            allColorTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+            allNormalTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+            allDisplacementTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+        });
+        sequentialTime = timeIt([&]() {
+            for (size_t i = 0; i < nbFiles; i++) {
+                QString dir = filesToLoad[i];
+                QString basename = QFileInfo(dir).baseName();
+                std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
+                GridV3& map = texturesMaps[i];
+                int index = colorTexturesIndex[textureClass];
+                if (basename == "color") {
+                    allColorTextures.paste(map, Vector3(textureSizes * index, 0));
+                } else if (basename == "normal") {
+                    allNormalTextures.paste(map, Vector3(textureSizes * index, 0));
+                } else if (basename == "displacement") {
+                    allDisplacementTextures.paste(map, Vector3(textureSizes * index, 0));
                 }
+                        /*
+                if (basename == "color") {
+                    colorTexturesIndex[textureClass] = indexColorTextureClass++;
+                    if (allColorTextures.empty()) {
+                        allColorTextures = map;
+                    } else {
+                        allColorTextures = allColorTextures.concat(map);
+                    }
+                } else if (basename == "normal") {
+        //            normalTexturesIndex[textureClass] = indexNormalTextureClass++;
+                    if (allNormalTextures.empty()) {
+                        allNormalTextures = map;
+                    } else {
+                        allNormalTextures = allNormalTextures.concat(map);
+                    }
+                } else if (basename == "displacement") {
+        //            displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
+                    if (allDisplacementTextures.empty()) {
+                        allDisplacementTextures = map;
+                    } else {
+                        allDisplacementTextures = allDisplacementTextures.concat(map);
+                    }
+                }*/
             }
-            texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
-            stbi_image_free(data);
-    }
-    allColorTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-    allNormalTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-    allDisplacementTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-    auto endTempTime = std::chrono::system_clock::now();
-    for (size_t i = 0; i < nbFiles; i++) {
-        QString dir = filesToLoad[i];
-        QString basename = QFileInfo(dir).baseName();
-        std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-        GridV3& map = texturesMaps[i];
-        int index = colorTexturesIndex[textureClass];
-        if (basename == "color") {
-            allColorTextures.paste(map, Vector3(textureSizes * index, 0));
-        } else if (basename == "normal") {
-            allNormalTextures.paste(map, Vector3(textureSizes * index, 0));
-        } else if (basename == "displacement") {
-            allDisplacementTextures.paste(map, Vector3(textureSizes * index, 0));
-        }
-                /*
-        if (basename == "color") {
-            colorTexturesIndex[textureClass] = indexColorTextureClass++;
-            if (allColorTextures.empty()) {
-                allColorTextures = map;
-            } else {
-                allColorTextures = allColorTextures.concat(map);
-            }
-        } else if (basename == "normal") {
-//            normalTexturesIndex[textureClass] = indexNormalTextureClass++;
-            if (allNormalTextures.empty()) {
-                allNormalTextures = map;
-            } else {
-                allNormalTextures = allNormalTextures.concat(map);
-            }
-        } else if (basename == "displacement") {
-//            displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
-            if (allDisplacementTextures.empty()) {
-                allDisplacementTextures = map;
-            } else {
-                allDisplacementTextures = allDisplacementTextures.concat(map);
-            }
-        }*/
-    }
-    auto endTime = std::chrono::system_clock::now();
+        });
+    });
     if (verbose) {
-        std::cout << "Done in " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count() << "ms " << std::endl;
-        std::cout << "( " << std::chrono::duration_cast<std::chrono::milliseconds>(endTempTime - startTime).count() << "ms for the parallel and " << std::chrono::duration_cast<std::chrono::milliseconds>(endTime - endTempTime).count() << "ms for sequential)" << std::endl;
+        std::cout << "Done in " << showTime(totalTime) << std::endl;
+        std::cout << "( " << showTime(parallelTime) << " for the parallel and " << showTime(sequentialTime) << " for sequential)" << std::endl;
     }
 
     allColorTextures /= 255.f;
@@ -976,194 +982,212 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 
 void TerrainGenerationInterface::display(const Vector3& camPos)
 {
+    float maxHeight;
+    float initTime;
+    float displayTime;
+    float meshCreationTime;
+    float GLcallTime;
+    float realDisplayTime;
 
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
-    glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
-    glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
+    initTime = timeIt([&]() {
+        GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
+        GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
+        glBindTexture(GL_TEXTURE_2D, allBiomesNormalTextures);
+        GlobalsGL::f()->glActiveTexture(GL_TEXTURE7);
+        glBindTexture(GL_TEXTURE_2D, allBiomesDisplacementTextures);
 
-    GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
+        GlobalsGL::f()->glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 
-    GridF heights = heightmap->getHeights();
-    float maxHeight = heights.max();
-    float *heightmapData = new float[heights.size() * 4];
-    GridV3 gradients = heights.gradient();
-    int maxColorTextureIndex = 0;
-    for (auto biome : colorTexturesIndex) {
-        maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
-    }
-    int maxNormalTextureIndex = 0;
-    for (auto biome : normalTexturesIndex) {
-        maxNormalTextureIndex = std::max(maxNormalTextureIndex, biome.second + 1);
-    }
-    int maxDisplacementTextureIndex = 0;
-    for (auto biome : displacementTexturesIndex) {
-        maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
-    }
-    int maxBiomeID = 0; //std::max(1, heightmap->getBiomeIndices().max());
-    for (const auto& biomeValues : heightmap->getBiomeIndices())
-        maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
-    Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->getBiomeIndices(); //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
-    for (size_t i = 0; i < heights.size(); i++) {
-        float colorTextureOffset = 1.f;
-        float normalTextureOffset = 1.f;
-        float displacementTextureOffset = 1.f;
-        if (resizedBiomeIndices.getDimensions() == heights.getDimensions()) {
-            auto biome = (!resizedBiomeIndices[i].empty() ? BiomeInstance::instancedBiomes[resizedBiomeIndices[i].back()] : nullptr);
-            if (biome != nullptr && !biome->getTextureName().empty()) {
-                if (colorTexturesIndex.find(biome->getTextureName()) != colorTexturesIndex.end())
-                    colorTextureOffset = colorTexturesIndex[biome->getTextureName()] / (float)(maxColorTextureIndex);
-                if (normalTexturesIndex.find(biome->getTextureName()) != normalTexturesIndex.end())
-                    normalTextureOffset = normalTexturesIndex[biome->getTextureName()] / (float)(maxNormalTextureIndex);
-                if (displacementTexturesIndex.find(biome->getTextureName()) != displacementTexturesIndex.end())
-                    displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
+        GridF heights = heightmap->getHeights();
+        maxHeight = heights.max();
+        float *heightmapData = new float[heights.size() * 4];
+        GridV3 gradients = heights.gradient();
+        int maxColorTextureIndex = 0;
+        for (auto biome : colorTexturesIndex) {
+            maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
+        }
+        int maxNormalTextureIndex = 0;
+        for (auto biome : normalTexturesIndex) {
+            maxNormalTextureIndex = std::max(maxNormalTextureIndex, biome.second + 1);
+        }
+        int maxDisplacementTextureIndex = 0;
+        for (auto biome : displacementTexturesIndex) {
+            maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
+        }
+        int maxBiomeID = 0; //std::max(1, heightmap->getBiomeIndices().max());
+        for (const auto& biomeValues : heightmap->getBiomeIndices())
+            maxBiomeID = std::max(maxBiomeID, (biomeValues.empty() ? 1 : biomeValues.back()));
+        Matrix3<std::vector<int>> resizedBiomeIndices = heightmap->getBiomeIndices(); //.resize(heightmap->heights.getDimensions(), RESIZE_MODE::MAX_VAL);
+        for (size_t i = 0; i < heights.size(); i++) {
+            float colorTextureOffset = 1.f;
+            float normalTextureOffset = 1.f;
+            float displacementTextureOffset = 1.f;
+            if (resizedBiomeIndices.getDimensions() == heights.getDimensions()) {
+                auto biome = (!resizedBiomeIndices[i].empty() ? BiomeInstance::instancedBiomes[resizedBiomeIndices[i].back()] : nullptr);
+                if (biome != nullptr && !biome->getTextureName().empty()) {
+                    if (colorTexturesIndex.find(biome->getTextureName()) != colorTexturesIndex.end())
+                        colorTextureOffset = colorTexturesIndex[biome->getTextureName()] / (float)(maxColorTextureIndex);
+                    if (normalTexturesIndex.find(biome->getTextureName()) != normalTexturesIndex.end())
+                        normalTextureOffset = normalTexturesIndex[biome->getTextureName()] / (float)(maxNormalTextureIndex);
+                    if (displacementTexturesIndex.find(biome->getTextureName()) != displacementTexturesIndex.end())
+                        displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
+                }
+            }
+            gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
+            heightmapData[i * 4 + 0] = colorTextureOffset;
+            heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
+            heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
+            heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
+        }
+
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
+        GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+        delete[] heightmapData;
+    });
+
+    displayTime = timeIt([&]() {
+        if (mapMode == GRID_MODE) {
+            if (this->heightmap == nullptr) {
+                std::cerr << "No grid to display" << std::endl;
+            } else {
+    //            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
+
+                GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
+                std::vector<Vector3> positions(heightData.size());
+                for (size_t i = 0; i < positions.size(); i++) {
+                    positions[i] = heightData.getCoordAsVector3(i);
+                    heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
+                }
+                heightmapMesh.shader->setFloat("maxHeight", maxHeight);
+                heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+                heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+                heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+                heightmapMesh.shader->setFloat("heightFactor", heightFactor);
+                if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions())
+                    heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
+                heightmapMesh.fromArray(positions);
+                heightmapMesh.update();
+                this->heightmapMesh.display(GL_POINTS);
             }
         }
-        gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
-        heightmapData[i * 4 + 0] = colorTextureOffset;
-        heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
-        heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
-        heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
-    }
-
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-    GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
-    delete[] heightmapData;
-
-    if (mapMode == GRID_MODE) {
-        if (this->heightmap == nullptr) {
-            std::cerr << "No grid to display" << std::endl;
-        } else {
-//            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
-
-            GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
-            std::vector<Vector3> positions(heightData.size());
-            for (size_t i = 0; i < positions.size(); i++) {
-                positions[i] = heightData.getCoordAsVector3(i);
-                heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
-            }
-            heightmapMesh.shader->setFloat("maxHeight", maxHeight);
-            heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-            heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-            heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-            heightmapMesh.shader->setFloat("heightFactor", heightFactor);
-            if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions())
-                heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
-            heightmapMesh.fromArray(positions);
-            heightmapMesh.update();
-            this->heightmapMesh.display(GL_POINTS);
-        }
-    }
-    else if (mapMode == VOXEL_MODE) {
-        if (this->voxelGrid == nullptr) {
-            std::cerr << "No voxel grid to display" << std::endl;
-        } else {
-            GridF values = voxelGrid->getVoxelValues().meanSmooth(2, 2, 2, true);//.meanSmooth(3, 3, 3, true);
-            for (int x = 0; x < values.sizeX; x++) {
-                for (int y = 0; y < values.sizeY; y++) {
-                    for (int z = 0; z < 2; z++) {
-                        values(x, y, z) = std::max(std::abs(values(x, y, z)), .0f);
+        else if (mapMode == VOXEL_MODE) {
+            if (this->voxelGrid == nullptr) {
+                std::cerr << "No voxel grid to display" << std::endl;
+            } else {
+                GridF values;
+                meshCreationTime = timeIt([&]() {
+                    values = voxelGrid->getVoxelValues().meanSmooth(3, 3, 3, true);//.meanSmooth(3, 3, 3, true);
+                    for (int x = 0; x < values.sizeX; x++) {
+                        for (int y = 0; y < values.sizeY; y++) {
+                            for (int z = 0; z < 2; z++) {
+                                values(x, y, z) = std::max(std::abs(values(x, y, z)), .0f);
+                            }
+                        }
                     }
-                }
-            }
-            if (marchingCubeMesh.vertexArray.size() != values.size()) {
-                std::vector<Vector3> points(values.size());
-                for (size_t i = 0; i < points.size(); i++) {
-                    values[i] = (std::max(-3.f, std::min(3.f, values[i])) / 6.f) + 0.5;
-                    points[i] = values.getCoordAsVector3(i);
-                }
-                marchingCubeMesh.useIndices = false;
-                marchingCubeMesh.fromArray(points);
-            }
-            marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-//            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
-            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
+                    if (marchingCubeMesh.vertexArray.size() != values.size()) {
+                        std::vector<Vector3> points(values.size());
+                        for (size_t i = 0; i < points.size(); i++) {
+                            values[i] = (std::max(-3.f, std::min(3.f, values[i])) / 6.f) + 0.5;
+                            points[i] = values.getCoordAsVector3(i);
+                        }
+                        marchingCubeMesh.useIndices = false;
+                        marchingCubeMesh.fromArray(points);
+                    }
+                });
+                GLcallTime = timeIt([&]() {
+                    marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
+        //            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
+                    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
 
-            marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
-            marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
-            marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
-            marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-            marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-            marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-            marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
-            marchingCubeMesh.display( GL_POINTS );
-            if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
-                marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
-                marchingCubeMesh.shader->setFloat("min_isolevel", -1000.f);
-                marchingCubeMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
-                marchingCubeMesh.display( GL_POINTS );
-                marchingCubeMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
-                marchingCubeMesh.shader->setFloat("max_isolevel",  1000.f);
-                marchingCubeMesh.display( GL_POINTS );
-                marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false);
-            }
-            // Check if something changed on the terrain :
-            if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
-                this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+                    marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
+                    marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
+                    marchingCubeMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
+                    marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+                    marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+                    marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+                    marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
+                });
+                realDisplayTime = timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
+                if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
+                    GLcallTime = timeIt([&]() {
+                        marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", true);
+                        marchingCubeMesh.shader->setFloat("min_isolevel", -1000.f);
+                        marchingCubeMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
+                        marchingCubeMesh.display( GL_POINTS );
+                        marchingCubeMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
+                        marchingCubeMesh.shader->setFloat("max_isolevel",  1000.f);
+                    });
+                    realDisplayTime += timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
+                    GLcallTime += timeIt([&]() { marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false); });
+                }
+                // Check if something changed on the terrain :
+                if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
+                    this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+                }
             }
         }
-    }
-    else if (mapMode == LAYER_MODE) {
-        if (this->layerGrid == nullptr) {
-            std::cerr << "No layer based grid to display" << std::endl;
-        } else {
-            layersMesh.cullFace = true;
-            layersMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
-            layersMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
-            layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
-            layersMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-            layersMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-            layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-            layersMesh.shader->setFloat("heightFactor", heightFactor);
+        else if (mapMode == LAYER_MODE) {
+            if (this->layerGrid == nullptr) {
+                std::cerr << "No layer based grid to display" << std::endl;
+            } else {
+                layersMesh.cullFace = true;
+                layersMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
+                layersMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
+                layersMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
+                layersMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+                layersMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+                layersMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+                layersMesh.shader->setFloat("heightFactor", heightFactor);
 
-            //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
-                this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
-                GridI materials;
-                GridF matHeights;
-                std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
-                layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
-                layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
+                //if (this->layersPreviousHistoryIndex != layerGrid->_historyIndex || layerGrid->_historyIndex == -1) {
+                    this->layersPreviousHistoryIndex = layerGrid->_historyIndex;
+                    GridI materials;
+                    GridF matHeights;
+                    std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
+                    layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
+                    layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
 
-                std::vector<Vector3> layersPoints(materials.size());
-                for (size_t i = 0; i < layersPoints.size(); i++) {
-                    layersPoints[i] = materials.getCoordAsVector3(i);
-                }
-                layersMesh.fromArray(layersPoints);
-                layersMesh.update();
-//            }
-            this->layersMesh.display(GL_POINTS);
-        }
-    } else if (mapMode == IMPLICIT_MODE) {
-        if (this->implicitTerrain == nullptr) {
-            std::cerr << "No implicit terrain to display" << std::endl;
-        } else {
-            GridF values;
-            values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
-//            std::cout << values.sum() << std::endl;
-            implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
-            implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
-            implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
-            implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
-            implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
-            implicitMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
-            implicitMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
-            implicitMesh.shader->setFloat("heightFactor", heightFactor);
-            implicitMesh.display( GL_POINTS );
-            if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
-                implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
-                implicitMesh.shader->setFloat("min_isolevel", -1000.f);
-                implicitMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
+                    std::vector<Vector3> layersPoints(materials.size());
+                    for (size_t i = 0; i < layersPoints.size(); i++) {
+                        layersPoints[i] = materials.getCoordAsVector3(i);
+                    }
+                    layersMesh.fromArray(layersPoints);
+                    layersMesh.update();
+    //            }
+                this->layersMesh.display(GL_POINTS);
+            }
+        } else if (mapMode == IMPLICIT_MODE) {
+            if (this->implicitTerrain == nullptr) {
+                std::cerr << "No implicit terrain to display" << std::endl;
+            } else {
+                GridF values;
+                values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
+    //            std::cout << values.sum() << std::endl;
+                implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
+                implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
+                implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
+                implicitMesh.shader->setFloat("max_isolevel", this->maxIsoLevel/3.f);
+                implicitMesh.shader->setFloat("waterRelativeHeight", waterLevel);
+                implicitMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
+                implicitMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+                implicitMesh.shader->setFloat("heightFactor", heightFactor);
                 implicitMesh.display( GL_POINTS );
-                implicitMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
-                implicitMesh.shader->setFloat("max_isolevel",  1000.f);
-                implicitMesh.display( GL_POINTS );
-                implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
+                if (smoothingAlgorithm == SmoothingAlgorithm::NONE) {
+                    implicitMesh.shader->setBool("displayingIgnoredVoxels", true);
+                    implicitMesh.shader->setFloat("min_isolevel", -1000.f);
+                    implicitMesh.shader->setFloat("max_isolevel", this->minIsoLevel/3.f);
+                    implicitMesh.display( GL_POINTS );
+                    implicitMesh.shader->setFloat("min_isolevel", this->maxIsoLevel/3.f);
+                    implicitMesh.shader->setFloat("max_isolevel",  1000.f);
+                    implicitMesh.display( GL_POINTS );
+                    implicitMesh.shader->setBool("displayingIgnoredVoxels", false);
+                }
             }
         }
-    }
+    });
+//    std::cout << "Init    : " << showTime(initTime) << "\nDisplay : " << showTime(displayTime) << "\n(mesh: " << showTime(meshCreationTime) << ", GL calls: " << showTime(GLcallTime) << ", display: " << showTime(realDisplayTime) <<  ")" << std::endl;
 }
 
 

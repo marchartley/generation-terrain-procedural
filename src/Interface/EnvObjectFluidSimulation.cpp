@@ -117,11 +117,12 @@ void EnvObjectFluidSimulation::updateVectorsMesh()
 
 void EnvObjectFluidSimulation::updateSimulationMeshes()
 {
-    /*std::cout << */timeIt([=]() {
+    float renderTime = timeIt([=]() {
         this->updateVectorsMesh();
         this->updateParticlesMesh();
 //        this->updateBoundariesMesh();
-    }); /* << "ms render" << std::endl;*/
+    });
+//    std::cout << showTime(renderTime) << std::endl;
 }
 
 void EnvObjectFluidSimulation::show()

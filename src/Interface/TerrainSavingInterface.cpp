@@ -75,43 +75,42 @@ std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(std::string
     if (verbose)
         std::cout << "Saving geometry..." << std::endl;
     Mesh m;
-    auto start = std::chrono::system_clock::now();
-    auto end = std::chrono::system_clock::now();
+    float timing = 0;
     std::vector<std::string> filenames;
     if (this->saveHeightmap) {
-        start = std::chrono::system_clock::now();
-        m = this->heightmap->getGeometry();
-        file.open(filename + "-heightmap" + ".stl");
-        filenames.push_back(filename + "-heightmap" + ".stl");
-        file << m.toSTL();
-        file.close();
-        end = std::chrono::system_clock::now();
+        timing = timeIt([&]() {
+            m = this->heightmap->getGeometry();
+            file.open(filename + "-heightmap" + ".stl");
+            filenames.push_back(filename + "-heightmap" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
         if (verbose)
-            std::cout << "Heightmap in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+            std::cout << "Heightmap in " << showTime(timing) << std::endl;
     }
 
     if (this->saveVoxels) {
-        start = std::chrono::system_clock::now();
-        m = this->voxelGrid->getGeometry();
-        file.open(filename + "-voxels" + ".stl");
-        filenames.push_back(filename + "-voxels" + ".stl");
-        file << m.toSTL();
-        file.close();
-        end = std::chrono::system_clock::now();
+        timing = timeIt([&]() {
+            m = this->voxelGrid->getGeometry();
+            file.open(filename + "-voxels" + ".stl");
+            filenames.push_back(filename + "-voxels" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
         if (verbose)
-            std::cout << "Voxels in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+            std::cout << "Voxels in " << showTime(timing) << std::endl;
     }
 
     if (this->saveLayers) {
-        start = std::chrono::system_clock::now();
-        m = this->layerGrid->getGeometry();
-        file.open(filename + "-layers" + ".stl");
-        filenames.push_back(filename + "-layers" + ".stl");
-        file << m.toSTL();
-        file.close();
-        end = std::chrono::system_clock::now();
+        timing = timeIt([&]() {
+            m = this->layerGrid->getGeometry();
+            file.open(filename + "-layers" + ".stl");
+            filenames.push_back(filename + "-layers" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
         if (verbose)
-            std::cout << "Layers in " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+            std::cout << "Layers in " << showTime(timing) << std::endl;
     }
 
     if (verbose)

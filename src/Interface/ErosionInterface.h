@@ -73,26 +73,26 @@ public:
     Mesh boundariesMesh;
 
     float erosionSize = 8.f;
-    float erosionStrength = .5; // .35f;
+    float erosionStrength = 0.f; //.5; // .35f;
     int erosionQtt = 1000;
     float rockRandomness = .1f;
 
     int maxParticles = 1000;
 
     float gravity = .981f;
-    float bouncingCoefficient = 0.15f; //0.15f; // 1.f;
+    float bouncingCoefficient = 1.f; // 0.15f; //0.15f;
     float bounciness = 1.f;
     float minSpeed = .1f;
     float maxSpeed = 5.f;
     float maxCapacityFactor = 1.f;
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
-    float matterDensity = 500.f;
+    float matterDensity = -1.f; // 500.f;
     float materialImpact = 1.f;
 
     float airFlowfieldRotation = 0.f; // 270.f;
     float waterFlowfieldRotation = 90.f;
-    float airForce = 0.0f;
+    float airForce = 1.f;
     float waterForce = 1.f;
 
     float dt = 1.f;
@@ -105,24 +105,24 @@ public:
     bool continuousRotation = false;
     bool wrapParticles = false;
 
-    int numberOfIterations = 200;
+    int numberOfIterations = 1; // 200;
 
-    int particleMaxCollisions = 3; // 10; // -1 for infinity
+    int particleMaxCollisions = -1; // 10; // -1 for infinity
 
     float initialCapacity = .0f;
 
     UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS;
 
-    bool displayTrajectories = false;
+    bool displayTrajectories = true;
     bool displayBoundaries = false;
 
     std::string waterFlowImagePath = "";
     std::string airFlowImagePath = "";
     std::string densityFieldImagePath = "";
 
-    FluidSimType selectedSimulationType = STABLE;
+    FluidSimType selectedSimulationType = FLIP;
 
-    UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
+    UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLUID_SIMULATION; //UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
     UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
 
     std::map<PARTICLE_INITIAL_LOCATION, std::vector<std::vector<std::pair<Vector3, Vector3>>>> initialPositionsAndDirections;
