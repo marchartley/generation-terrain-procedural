@@ -200,7 +200,7 @@
       "z": 15.0
     },
     "sand": 1.0,
-    "geometry": "Dune",
+    "geometry": "Gaussian",
     "material": "Sand"
   }
 ]

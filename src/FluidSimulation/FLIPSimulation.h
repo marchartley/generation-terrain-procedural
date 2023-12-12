@@ -56,7 +56,9 @@ public:
     int FLUID_CELL = 1;
     int AIR_CELL = 2;
 
-    float dt;
+    float dt = .1f;
+    float flipRatio = .9f;
+    int averaging = 5;
 
     FLIPSimulation();
     FLIPSimulation(float density, float width, float depth, float height, float spacing, float particleRadius, float maxParticles, float dt);
@@ -72,14 +74,21 @@ public:
     void step();
     void simulate();
 
+    void storeVelocities();
+
     void handleCollisions();
 
 
+    std::vector<GridV3> velocitiesHistory;
     GridV3 getVelocities(int newSizeX, int newSizeY, int newSizeZ);
     Vector3 getVelocity(int x, int y, int z);
     void addVelocity(int x, int y, int z, const Vector3& amount);
 
+    void reset();
+
     bool useVelocityForCollisionDetection;
+
+    bool averagingVelocities = false;
 
     std::vector<Particle> savedState;
 };

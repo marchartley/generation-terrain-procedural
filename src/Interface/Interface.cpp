@@ -29,6 +29,7 @@
 #include "Interface/CommonInterface.h"
 
 ViewerInterface::ViewerInterface() {
+    Plotter::init(nullptr, nullptr);
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);
@@ -181,7 +182,6 @@ ViewerInterface::ViewerInterface() {
 //        this->setFocus(Qt::OtherFocusReason);
 //        viewer->setFocus(Qt::OtherFocusReason);
 //    });
-    Plotter::init(nullptr, this);
 //    this->installEventFilter(viewer);
     viewer->installEventFilter(this);
     setupUi();
@@ -373,17 +373,18 @@ void ViewerInterface::setupUi()
 
     displayOptionUI->add(displayModeLayout);
     displayOptionUI->add(createVerticalGroupUI({
-                                                           createHorizontalGroupUI({
-//                                                               createMultipleSliderGroupWithCheckboxUI({
-//                                                                   {"Density", isolevelSelectionSlider, isolevelSelectionActivation}
-//                                                               }),
-                                                               waterLevelSlider,
-                                                               ambiantOcclusionSlider,
-                                                               heightFactorSlider
-                                                           }),
-//                                                           reloadShadersButton,
-                                                           displayAsComparisonTerrainButton
-                                                 }));
+                                                createHorizontalGroupUI({
+                                                    //createMultipleSliderGroupWithCheckboxUI({
+                                                    //    {"Density", isolevelSelectionSlider, isolevelSelectionActivation}
+                                                    //}),
+                                                    waterLevelSlider,
+                                                    ambiantOcclusionSlider,
+                                                    heightFactorSlider
+                                                }),
+                                                //reloadShadersButton,
+                                                displayAsComparisonTerrainButton,
+                                                new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+                                            }));
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
 
 

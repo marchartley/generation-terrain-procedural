@@ -453,12 +453,12 @@ ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
         patch = previousPrimitive;
         *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0, {}, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0, {}, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), radius * .25f, {}, true);
     }
 
-    patch->position = this->position.xy();
+    patch->position = this->position.xy() - Vector3(radius, radius) * .5f;
     patch->material = this->material;
-    patch->supportDimensions = Vector3(radius, radius, radius * growingState);
+//    patch->supportDimensions = Vector3(radius, radius, radius * growingState);
     patch->name = this->name;
     return patch;
 }

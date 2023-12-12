@@ -24,7 +24,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
     this->fNumY = std::floor(depth / spacing) + 1;
     this->fNumZ = std::floor(height / spacing) + 1;
     this->h = height / fNumZ; // std::max(width / this->fNumX, height / this->fNumY);
-    this->fInvSpacing = 1.0 / this->h;
+    this->fInvSpacing = 1.0 / spacing; //this->h;
     this->fNumCells = this->fNumX * this->fNumY * this->fNumZ;
 
     this->u = std::vector<float>(this->fNumCells);
@@ -60,17 +60,35 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
 
     this->particles.resize(maxParticles);
     for (int i = 0; i < maxParticles; i++) {
-//        particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f)) + Vector3(0, 0, this->dimensions.z);
-        particles[i].position = Vector3::random(this->dimensions * Vector3(.5f, 1.f, 1.f)) + Vector3(0, 0, this->dimensions.z);
+        Vector3 newPos(false);
+        while (!newPos.isValid() || (!this->obstacleGrid.empty() && this->obstacleGrid(newPos) > 0)) {
+            newPos = this->dimensions * Vector3::random(Vector3(.1f, .1f, 1.f), Vector3(.9f, .9f, 1.1f));
+        }
+        particles[i].position = newPos; // + Vector3(0, 0, this->dimensions.z);
     }
 
     //    this->numParticles = 0;
 }
 
 void FLIPSimulation::integrateParticles(double dt, const Vector3& gravity) {
-    for (Particle& p : particles) {
+    for (size_t i = 0; i < particles.size(); i++) {
+        Particle& p = particles[i];
         p.velocity += gravity * dt;
-        p.position = Vector3::wrap(p.position + p.velocity * dt, Vector3(), this->dimensions);
+        p.position = p.position + p.velocity * dt;
+//        p.position = Vector3::wrap(p.position, Vector3(), this->dimensions);
+
+        if (!Vector3::isInBox(p.position, Vector3(), this->dimensions + Vector3(0, 0, 10000))) {
+            Vector3 previousPos = p.position;
+//            p.position = this->dimensions * Vector3(0.f, .1f, 2.f) + Vector3::random(this->dimensions * Vector3(.1f, .8f, 0.f));
+
+//        if (!Vector3::isInBox(p.position, this->dimensions * Vector3(-1.f, 0.f, 0.f), this->dimensions + Vector3(0, 0, 10000))) {
+            p.position = this->dimensions * Vector3::random(Vector3(.0f, .0f, .0f), Vector3(.0f, 1.f, .0f)) + Vector3(0, 0, 5.1f);
+            if (this->savedState.size() > i) {
+                savedState[i].position = p.position - Vector3(1, 0, 0) * 2;
+                p.velocity = Vector3(1, 0, 0) * 2;
+//                savedState[i].position += (p.position - previousPos);
+            }
+        }
     }
 }
 
@@ -81,7 +99,7 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
     std::fill(numCellParticles.begin(), numCellParticles.end(), 0);
 
     int numParticles = this->particles.size();
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < numParticles; i++) {
         Vector3 pos = particles[i].position;
 
@@ -101,7 +119,7 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
     firstCellParticle[pNumCells] = first; // guard
 
     // Fill particles into cells
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < numParticles; i++) {
         Vector3 pos = particles[i].position;
 
@@ -186,16 +204,17 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
 }
 
 void FLIPSimulation::handleCollisions() {
-//    float h = 1.0 / fInvSpacing;
-//    float r = particleRadius;
-//    float or2 = obstacleRadius * obstacleRadius;
-//    float minDist = obstacleRadius + r;
-//    float minDist2 = minDist * minDist;
-
-//    Vector3 min(h + r, h + r, h + r);
-//    Vector3 max((fNumX - 1) * h - r, (fNumY - 1) * h - r, (fNumZ - 1) * h - r);
 
     int numParticles = this->particles.size();
+    /*
+    std::vector<float> heights;
+    for (auto& t : obstacleTriangleTree.triangles) {
+        for (auto& p : t.vertices) {
+            heights.push_back(p.z);
+        }
+    }
+    std::sort(heights.begin(), heights.end());
+    std::reverse(heights.begin(), heights.end());*/
 
 #pragma omp parallel for
     for (int i = 0; i < numParticles; i++) {
@@ -204,36 +223,26 @@ void FLIPSimulation::handleCollisions() {
 
         Vector3 startPos = (useVelocityForCollisionDetection ? pos : savedState[i].position);
         Vector3 endPos = (useVelocityForCollisionDetection ? pos + vel.normalized() : pos);
+        Vector3 offset = (endPos - startPos).normalized();
 //        Vector3 diff = endPos - startPos;
-        auto [collisionPoint, collisionNormal] = obstacleTriangleTree.getIntersectionAndNormal(startPos, endPos);
+        auto [collisionPoint, collisionNormal] = obstacleTriangleTree.getIntersectionAndNormal(startPos - offset, endPos + offset);
         if (collisionPoint.isValid()) {
-            if (useVelocityForCollisionDetection) {
+            /*if (useVelocityForCollisionDetection) {
                 vel = vel.normalized().reflexion(collisionNormal) * vel.norm(); //collisionPoint - startPos;
                 if (vel.dot(collisionNormal) < 0)
                     vel *= -1.f;
                 pos = collisionPoint + vel;
-            } else {
-                pos = collisionPoint + (startPos - collisionPoint) * .1f;
-            }
+            } else {*/
+                vel = endPos - startPos;
+                collisionNormal *= (vel.dot(collisionNormal) < 0 ? 1.f : -1.f);
+                float distToCollision = (startPos - collisionPoint).norm();
+                Vector3 bounce = vel.reflexion(collisionNormal).setMag(vel.norm() - distToCollision);
+//                Vector3 dir = (startPos - collisionPoint);
+//                pos = collisionPoint + dir * .1f;
+                pos = collisionPoint /*+ collisionNormal * .1f*/ + bounce;
+                vel *= 0.f;
+//            }
         }
-        /*std::vector<OctreeNodeData> nearbyTriangles = obstacleTrianglesOctree->queryRange(startPos - diff * 3.f, endPos + diff * 3.f);
-        // Check for intersections with nearby triangles
-        for (auto& triangleData : nearbyTriangles) {
-            auto& triangle = this->triangles[triangleData.index];
-            Vector3 collisionPoint = Collision::segmentToTriangleCollision(startPos - diff, endPos + diff, triangle[0], triangle[1], triangle[2]);
-            if (collisionPoint.isValid()) {
-                if (useVelocityForCollisionDetection) {
-                    Vector3 normal = (triangle[1] - triangle[0]).cross(triangle[2] - triangle[0]).normalize();
-                    vel = vel.normalized().reflexion(normal) * vel.norm(); //collisionPoint - startPos;
-                    if (vel.dot(normal) < 0)
-                        vel *= -1.f;
-                    pos = collisionPoint + vel;
-                } else {
-                    pos = collisionPoint + (startPos - collisionPoint) * .1f;
-                }
-                break;
-            }
-        }*/
     }
 }
 
@@ -541,18 +550,32 @@ void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRe
     }
 }
 
+bool checkValidPositions(std::vector<Particle> particles) {
+    bool validPositions = true;
+    for (size_t i = 0; i < particles.size(); i++) {
+        const auto& particle = particles[i];
+        if (particle.position.z < 4.f) {
+            std::cout << "Invalid #" << i << ": " << particle.position << std::endl;
+            validPositions = false;
+        }
+    }
+    if (!validPositions) {
+        int a = 0;
+    }
+    return validPositions;
+}
+
 void FLIPSimulation::step()
 {
     currentStep++;
 //    float dt = 0.1; // Time step
-    float gravityValue = 9.81; // Acceleration due to gravity
+    float gravityValue = 9.81 * .5f; // Acceleration due to gravity
 //    Vector3 obstaclePos(0, 0, 0);
 //    float obstacleRadius = 0.0; // Radius of obstacle
-    int numIterations = 100; // Number of iterations for each step
+    int numIterations = 10; // Number of iterations for each step
     float overRelaxation = 1.0; // Over-relaxation parameter
-    bool compensateDrift = true; // Whether to compensate for drift
+    bool compensateDrift = false; // Whether to compensate for drift
     Vector3 gravity(0, 0, -gravityValue);
-    float flipRatio = 0.9;
 
 //    std::vector<Particle> copy = {};
 //    for (auto& particle : particles)
@@ -562,16 +585,42 @@ void FLIPSimulation::step()
 
 
     savedState = this->particles;
-    integrateParticles(dt, gravity);
-    this->useVelocityForCollisionDetection = true;
-    handleCollisions();
-    pushParticlesApart(numIterations);
+
+//    checkValidPositions(particles);
+
+    float integrationTime = timeIt([&](){ integrateParticles(dt, gravity); });
+//    checkValidPositions(particles);
+//    this->useVelocityForCollisionDetection = true;
     this->useVelocityForCollisionDetection = false;
-    handleCollisions();
-    updateParticleDensity();
-    transferVelocities(true, flipRatio);
-    solveIncompressibility(numIterations, dt, overRelaxation, compensateDrift);
-    transferVelocities(false, flipRatio);
+//    float collisionTime1 = timeIt([&](){ handleCollisions(); });
+//    checkValidPositions(particles);
+    float pushingTime = timeIt([&](){ pushParticlesApart(numIterations); });
+//    checkValidPositions(particles);
+    this->useVelocityForCollisionDetection = false;
+    float collisionTime2 = timeIt([&](){ handleCollisions(); });
+//    checkValidPositions(particles);
+    float densityTime = timeIt([&](){ updateParticleDensity(); });
+//    checkValidPositions(particles);
+    float transferTime = timeIt([&](){ transferVelocities(true, flipRatio); });
+//    checkValidPositions(particles);
+    float solvingTime = timeIt([&](){ solveIncompressibility(numIterations, dt, overRelaxation, compensateDrift); });
+    this->useVelocityForCollisionDetection = false;
+    float collisionTime3 = timeIt([&](){ handleCollisions(); });
+//    checkValidPositions(particles);
+    float transfer2Time = timeIt([&](){ transferVelocities(false, flipRatio); });
+//    checkValidPositions(particles);
+
+    storeVelocities();
+
+    /*std::cout << "Integration: " << showTime(integrationTime) << "\n"
+              << "Pushing    : " << showTime(pushingTime) << "\n"
+              << "Collision1 : " << showTime(collisionTime) << "\n"
+              << "Collision2 : " << showTime(collisionTime) << "\n"
+              << "Density    : " << showTime(densityTime) << "\n"
+              << "Transfer   : " << showTime(transferTime) << "\n"
+              << "Solving    : " << showTime(solvingTime) << "\n"
+              << "Transfer 2 : " << showTime(transfer2Time) << "\n"
+              << "Total: " << showTime(integrationTime + pushingTime + collisionTime + densityTime + transferTime + solvingTime + transfer2Time) << std::endl;*/
 }
 
 void FLIPSimulation::simulate() {
@@ -581,19 +630,38 @@ void FLIPSimulation::simulate() {
     }
 }
 
+void FLIPSimulation::storeVelocities()
+{
+    GridV3 currentVelocities(this->dimensions);
+    GridF amount(this->dimensions);
+
+    for (size_t i = 0; i < particles.size(); i++) {
+        const auto& particle = particles[i];
+        currentVelocities(particle.position) += (particle.position - savedState[i].position) / dt;
+        amount(particle.position) += 1;
+    }
+
+    currentVelocities.iterateParallel([&](size_t i) {
+        currentVelocities[i] = (amount[i] != 0 ? currentVelocities[i] / amount[i] : currentVelocities[i]);
+    });
+
+    if (velocitiesHistory.size() > averaging) {
+        velocitiesHistory.erase(velocitiesHistory.begin(), velocitiesHistory.begin() + (velocitiesHistory.size() - averaging));
+    }
+    velocitiesHistory.push_back(currentVelocities);
+}
+
 GridV3 FLIPSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        GridV3 velocities(dimensions);
-        GridF amount(dimensions);
 
-        for (auto& particle : this->particles) {
-            velocities[particle.position] += particle.velocity;
-            amount[particle.position] += 1;
+        GridV3 velocities(dimensions);
+        if (!velocitiesHistory.empty()) {
+            for (const auto& velHistory : velocitiesHistory)
+                velocities += velHistory;
+            velocities /= float(velocitiesHistory.size());
         }
-        for (size_t i = 0; i < velocities.size(); i++)
-            velocities[i] /= amount[i];
 
         this->_cachedVelocity = velocities;
     }
@@ -613,6 +681,11 @@ void FLIPSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
         if ((particle.position - effectArea).norm2() < radiusEffect * radiusEffect)
             particle.velocity += amount;
     }
+}
+
+void FLIPSimulation::reset()
+{
+    this->init(this->density, this->dimensions.x, this->dimensions.y, this->dimensions.z, 1.f / this->fInvSpacing, this->particleRadius, this->maxParticles, this->dt);
 }
 
 
