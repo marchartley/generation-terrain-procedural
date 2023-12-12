@@ -13,11 +13,21 @@ public:
     FLIPSimulationInterface(QWidget *parent = nullptr);
 
     void updateParticlesMesh();
+    QLayout* createGUI();
+
+    void resetParticles();
 
 public Q_SLOTS:
     void updateParticles();
+    void computeSimulation(int nbSteps);
+
+    void keyPressEvent(QKeyEvent* e);
 
 protected:
+    FLIPSimulation* simulation;
+    std::vector<float> changesHistory;
+
+    GridV3 _currentVelocities;
 };
 
 #endif // FLIPSIMULATIONINTERFACE_H

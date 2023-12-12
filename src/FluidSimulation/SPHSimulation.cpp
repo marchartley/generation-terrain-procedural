@@ -281,7 +281,7 @@ void SPHSimulation::step() {
     float timeCollisions = timeIt([=]() { this->handleCollisions(); });
     for (const auto& p : particles) nans |= (p.position.x != p.position.x);
     computeTime += (timeKDTree + timeDensity + timeRelaxation + timeForces + timeIntegration + timeCollisions);
-    std::cout << "KD-Tree: " << timeKDTree << "ms - Density: " << timeDensity << "ms - Relaxation: " << timeRelaxation << "ms - Forces: " << timeForces << "ms - Integration: " << timeIntegration << "ms - Collisions: " << timeCollisions << "ms ... t = " << t << " (" << computeTime/1000.f << "s)" << std::endl;
+    std::cout << "KD-Tree: " << showTime(timeKDTree) << " - Density: " << showTime(timeDensity) << " - Relaxation: " << showTime(timeRelaxation) << " - Forces: " << showTime(timeForces) << " - Integration: " << showTime(timeIntegration) << " - Collisions: " << showTime(timeCollisions) << " ... t = " << t << " (" << showTime(computeTime) << ")" << std::endl;
 
     if (nans) {
         std::cout << "NaN found!" << std::endl;

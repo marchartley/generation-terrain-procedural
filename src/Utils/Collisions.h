@@ -15,6 +15,7 @@ Vector3 intersectionRaySphere(const Vector3& rayOrigin, const Vector3& rayDir, c
 bool intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1, const Vector3& t2, const Vector3& minAABBox, const Vector3& maxAABBox);
 bool intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1, const Vector3& t2, const Vector3& boxCenter, const Vector3& halfSizeX, const Vector3& halfSizeY, const Vector3& halfSizeZ);
 bool intersectionAABBoxPlane(const Vector3& boxMin, const Vector3& boxMax, const Triangle& triangle);
+Vector3 intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const AABBox& box);
 Vector3 intersectionRayAABBox(const Vector3& orig, const Vector3& dir, const Vector3& boxMin, const Vector3& boxMax);
 
 Vector3 projectPointOnSegment(const Vector3& point, const Vector3& segmentStart, const Vector3& segmentEnd);

@@ -64,10 +64,10 @@ float Collision::tetrahedronSignedVolume(const Vector3& a, const Vector3& b, con
 int sign(float a){return (a < 0 ? -1 : (a > 0 ? 1 : 0)); }
 Vector3 Collision::segmentToTriangleCollision(const Vector3& s1, const Vector3& s2, const Vector3& t1, const Vector3& t2, const Vector3& t3, bool strict)
 {
+    const float epsilon = 1e-3f;
+    float sqrEps = epsilon * epsilon;
+
     // Möller–Trumbore intersection algorithm
-//    if (int(s1.x) == 10 && int(s1.z) == 10) {
-//        int a = 0;
-//    }
     Vector3 rayOrigin = s1;
     Vector3 rayDir = (s2 - s1);
 
@@ -93,9 +93,15 @@ Vector3 Collision::segmentToTriangleCollision(const Vector3& s1, const Vector3& 
     if (t < 0.f || 1.f < t)
         return Vector3(false); // Intersection before or after the ray
 
+    float distToEdge1 = h.norm2();
+    float distToEdge2 = (rayDir.cross(triEdge1)).norm2();
+    float distToEdge3 = (triEdge1.cross(triEdge2)).norm2();
+
     Vector3 intersectionPoint = rayOrigin + rayDir * t;
-    if (!strict && (intersectionPoint == t1 || intersectionPoint == t2 || intersectionPoint == t3)) // Edge case of collision exactly on the corner
-        return Vector3(false);
+    if (!strict && ((intersectionPoint - t1).norm2() < sqrEps || (intersectionPoint - t2).norm2() < sqrEps || (intersectionPoint - t3).norm2() < sqrEps)) // Edge case of collision exactly on the corner
+        return Vector3(false); // Intersection too close to a triangle vertex
+    if (!strict && (distToEdge1 < sqrEps || distToEdge2 < sqrEps || distToEdge3 < sqrEps))
+        return Vector3(false); // Segment hits exactly on an edge
 
     return intersectionPoint;
 }
@@ -511,4 +517,9 @@ bool Collision::intersectionAABBoxPlane(const Vector3 &boxMin, const Vector3 &bo
 
     // Box intersects plane if absolute distance to plane is within box's extent along plane normal
     return std::abs(dist) <= extent;
+}
+
+Vector3 Collision::intersectionRayAABBox(const Vector3 &orig, const Vector3 &dir, const AABBox &box)
+{
+    return intersectionRayAABBox(orig, dir, box.min(), box.max());
 }

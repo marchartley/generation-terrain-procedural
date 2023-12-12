@@ -209,6 +209,8 @@ public:
     QGroupBox* box() const;
 
     UIElement* add(UIElement* element, std::string name = "");
+    std::vector<UIElement*> add(std::vector<UIElement*> elements);
+    std::vector<UIElement*> add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
     UIElement* add(QLayout* layout, std::string name = "");
     UIElement* find(std::string name);
 

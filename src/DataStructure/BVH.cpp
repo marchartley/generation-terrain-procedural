@@ -297,7 +297,7 @@ std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *no
         for (const auto& triangleIndex : node->trianglesIndices) {
             if (isIn(triangleIndex, ignoredTriangles)) continue;
             auto& triangle = this->triangles[triangleIndex];
-            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], true);
+            Vector3 intersectionPoint = Collision::segmentToTriangleCollision(rayStart, rayEnd, triangle[0], triangle[1], triangle[2], false);
             if (intersectionPoint.isValid() && (intersectionPoint - rayStart).norm2() < closestDistance) {
                 result = {intersectionPoint, triangleIndex};
                 closestDistance = (intersectionPoint - rayStart).norm2();

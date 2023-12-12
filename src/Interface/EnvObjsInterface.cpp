@@ -853,6 +853,33 @@ void EnvObjsInterface::fromGanUI()
 {
     EnvObject::reset();
     EnvObject::readFile(this->primitiveDefinitionFile);
+
+    auto gauss = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
+    gauss->position = Vector3(150, 50, 0);
+    gauss->radius = 40;
+    auto patch = gauss->createImplicitPatch();
+    this->implicitPatchesFromObjects[gauss] = patch;
+    rootPatch->addChild(patch);
+    implicitTerrain->updateCache();
+    implicitTerrain->update();
+    rootPatch->reevaluateAll();
+    std::cout << "To voxels: " << showTime(timeIt([&]() {
+//            voxelGrid->from2DGrid(*heightmap);
+        voxelGrid->fromImplicit(rootPatch, 40);
+    })) << std::endl;
+    std::cout << "To heightmap: " << showTime(timeIt([&]() {
+        heightmap->fromVoxelGrid(*voxelGrid.get());
+    })) << std::endl;
+//        implicitTerrain->addChild(obj->createImplicitPatch());
+//        implicitTerrain->_cached = false;
+//        voxelGrid->fromImplicit(implicitTerrain.get());
+
+    EnvObject::precomputeTerrainProperties(*heightmap);
+    this->updateEnvironmentFromEnvObjects();
+
+
+    return;
+
     std::string path = "Python_tests/test_island_heightmapfeatures/";
     QString q_filename= QString::fromStdString(path + "1.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
     if (!q_filename.isEmpty()) {

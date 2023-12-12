@@ -168,6 +168,25 @@ UIElement *InterfaceUI::add(UIElement *element, std::string name)
     return element;
 }
 
+std::vector<UIElement*> InterfaceUI::add(std::vector<UIElement *> elements)
+{
+    for (auto& element : elements)
+        this->add(element);
+    return elements;
+}
+
+std::vector<UIElement*> InterfaceUI::add(std::vector<std::pair<UIElement *, std::string> > elementsAndNames)
+{
+    std::vector<UIElement*> justElements(elementsAndNames.size());
+    for (size_t i = 0; i < elementsAndNames.size(); i++) {
+        auto& element = elementsAndNames[i].first;
+        auto& name = elementsAndNames[i].second;
+        this->add(element, name);
+        justElements[i] = element;
+    }
+    return justElements;
+}
+
 UIElement *InterfaceUI::add(QLayout *layout, std::string name)
 {
     InterfaceUI* interface = new InterfaceUI(layout, name);
