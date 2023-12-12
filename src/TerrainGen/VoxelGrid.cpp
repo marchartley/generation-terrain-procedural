@@ -1172,32 +1172,73 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
 //    if (!minPos.isValid()) minPos = Vector3();
 //    if (!maxPos.isValid()) maxPos = this->getDimensions();
 
-    Vector3 currPos = origin;
+    Vector3 currentPosition = origin;
+    if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
+        currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    if (!currentPosition.isValid())
+        return Vector3::invalid();
+
+    Vector3 normalizedDir = dir.normalized();
+
     auto values = this->getVoxelValues();
     values.raiseErrorOnBadCoord = false;
-    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
-    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
+
+    Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
+    float tMaxX = (dir.x > 0) ? (std::ceil(currentPosition.x) - currentPosition.x) / dir.x :
+                      (currentPosition.x - std::floor(currentPosition.x)) / (-dir.x);
+    float tMaxY = (dir.y > 0) ? (std::ceil(currentPosition.y) - currentPosition.y) / dir.y :
+                  (currentPosition.y - std::floor(currentPosition.y)) / (-dir.y);
+    float tMaxZ = (dir.z > 0) ? (std::ceil(currentPosition.z) - currentPosition.z) / dir.z :
+                  (currentPosition.z - std::floor(currentPosition.z)) / (-dir.z);
+
+    // Calculate steps in each axis based on stepSizes
+    float tDeltaX = std::abs(stepSizes.x * dir.x);
+    float tDeltaY = std::abs(stepSizes.y * dir.y);
+    float tDeltaZ = std::abs(stepSizes.z * dir.z);
+
+    while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
+        if (values(currentPosition) > 0) {
+            return currentPosition;
+        }
+
+        if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+            currentPosition.x += dir.x;
+            tMaxX += tDeltaX;
+        } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
+            currentPosition.y += dir.y;
+            tMaxY += tDeltaY;
+        } else {
+            currentPosition.z += dir.z;
+            tMaxZ += tDeltaZ;
+        }
+    }
+    return Vector3::invalid();
+/*
+
+
+    float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currentPosition, myAABBox.min(), myAABBox.max());
+    float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currentPosition + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
     bool beenInBox = false;
     while((distanceToGrid < 0 || distanceToGridDT < 0) || distanceToGrid > distanceToGridDT)
     {
-
-        if (Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max())) {
-            float isoval = values.at(currPos);
+        if (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
+            float isoval = values.at(currentPosition);
             if (isoval > 0.0) {
-                return currPos;
+                return currentPosition;
             }
             beenInBox = true;
         }
-        currPos += dir;
-        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
-        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
+        currentPosition += dir;
+        distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currentPosition, myAABBox.min(), myAABBox.max());
+        distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currentPosition + dir, myAABBox.min(), myAABBox.max());
     }
-    if (beenInBox && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy())) {
-        currPos.z = 0;
-        return currPos;
+    if (beenInBox && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy())) {
+        currentPosition.z = 0;
+        return currentPosition;
     }
     return Vector3(false);
+    */
 }
 
 Vector3 VoxelGrid::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
