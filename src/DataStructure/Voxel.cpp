@@ -6,12 +6,13 @@
 VoxelDataFile::VoxelDataFile()
 {}
 
-VoxelDataFile::VoxelDataFile(int w, int h, int d, const GridF&dVec)
-    : width(w), height(h), depth(d), data(dVec) {}
+VoxelDataFile::VoxelDataFile(const GridF&dVec)
+    : data(dVec) {}
 
 void VoxelDataFile::write(const std::string &filename) {
     std::ofstream outFile(filename, std::ios::binary);
     if (outFile.is_open()) {
+        int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
         outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
         outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
         outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
@@ -69,6 +70,7 @@ void VoxelDataFile::load(const std::string &filename) {
 void VoxelDataFile::loadFromFileBinary(const std::string &filename) {
     std::ifstream inFile(filename, std::ios::binary);
     if (inFile.is_open()) {
+        int width, depth, height;
         inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
         inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
         inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
@@ -104,14 +106,12 @@ void VoxelDataFile::loadFromFileOld(const std::string &filename) {
     std::stringstream ss(firstLine);
     ss >> _x >> _y >> _z;
 
-
-    Vector3 finalSize = Vector3(_x, _y, _z);
     GridF _cachedVoxelValues = GridF(_x, _y, _z, 0.f);
 
     if (ss >> _chunkSize) { // Compatibility with previous terrain saving system
         int chunkSize = _chunkSize;
         float map_val;
-        int iChunk = 0;
+//        int iChunk = 0;
         for (int xChunk = 0; xChunk < std::ceil(_x / (float)chunkSize); xChunk++) {
             for (int yChunk = 0; yChunk < std::ceil(_y / (float)chunkSize); yChunk++) {
                 Vector3 offset(xChunk * chunkSize, yChunk * chunkSize, 0.f);
@@ -129,14 +129,81 @@ void VoxelDataFile::loadFromFileOld(const std::string &filename) {
         std::cout << "Retrieving..." << std::endl;
         for (size_t i = 0; i < _cachedVoxelValues.size(); i++)
             in >> _cachedVoxelValues[i];
-        std::cout << _cachedVoxelValues << std::endl;
     }
     _cachedVoxelValues.iterateParallel([&](size_t i) {
         if (_cachedVoxelValues[i] < -1.f)
             _cachedVoxelValues[i] = -1.f;
     });
-    this->width = _x;
-    this->depth = _y;
-    this->height = _z;
     this->data = _cachedVoxelValues;
+}
+
+
+
+
+
+
+
+
+VectorFieldDataFile::VectorFieldDataFile()
+{}
+
+VectorFieldDataFile::VectorFieldDataFile(const GridV3& dVec)
+    : data(dVec) {}
+
+void VectorFieldDataFile::write(const std::string &filename) {
+    std::ofstream outFile(filename, std::ios::binary);
+    if (outFile.is_open()) {
+        int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
+        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
+        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
+        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
+
+        size_t dataSize = data.size();
+        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+        // Write each Vector3 as raw binary data
+        for (const auto& vec : data.data) {
+            outFile.write(reinterpret_cast<const char*>(&vec), sizeof(vec));
+        }
+
+        outFile.close();
+//        std::cout << "Data written to file successfully." << std::endl;
+    } else {
+        std::cerr << "Unable to open file " << filename << " for writing." << std::endl;
+    }
+}
+
+void VectorFieldDataFile::load(const std::string &filename) {
+    loadFromFileBinary(filename);
+}
+
+void VectorFieldDataFile::loadFromFileBinary(const std::string &filename) {
+    std::ifstream inFile(filename, std::ios::binary);
+    if (inFile.is_open()) {
+        int width, depth, height;
+        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
+        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
+        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
+
+        size_t dataSize;
+        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
+        data.data.resize(dataSize);
+        // Read each Vector3 from raw binary data
+        for (size_t i = 0; i < dataSize; ++i) {
+            auto& vec = data.data[i];
+            inFile.read(reinterpret_cast<char*>(&vec), sizeof(vec));/*
+            inFile.read(reinterpret_cast<char*>(&(vec.x)), sizeof(vec.x));
+            inFile.read(reinterpret_cast<char*>(&(vec.y)), sizeof(vec.y));
+            inFile.read(reinterpret_cast<char*>(&(vec.z)), sizeof(vec.z));
+            std::cout << vec << " " << std::flush;*/
+//            inFile.read(reinterpret_cast<const char*>(&vec.valid), sizeof(vec.valid));
+        }
+        data.sizeX = width;
+        data.sizeY = depth;
+        data.sizeZ = height;
+
+        inFile.close();
+        std::cout << "Data loaded from file successfully." << std::endl;
+    } else {
+        std::cerr << "Unable to open file for reading." << std::endl;
+    }
 }

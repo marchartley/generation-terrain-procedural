@@ -1040,7 +1040,7 @@ void VoxelGrid::saveState()
 void VoxelGrid::saveMap(std::string filename)
 {
     GridF voxels = this->getVoxelValues();
-    VoxelDataFile data(voxels.sizeX, voxels.sizeY, voxels.sizeZ, voxels);
+    VoxelDataFile data(voxels);
     data.write(filename);
     return;
     /*std::ofstream out;
@@ -1056,9 +1056,6 @@ void VoxelGrid::retrieveMap(std::string filename)
 {
     VoxelDataFile data;
     data.load(filename);
-//    this->_cachedVoxelValues.sizeX = data.width;
-//    this->_cachedVoxelValues.sizeY = data.depth;
-//    this->_cachedVoxelValues.sizeY = data.height;
     this->_cachedVoxelValues = data.data;
     this->fromCachedData();
     return;

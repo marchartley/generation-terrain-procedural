@@ -29,15 +29,28 @@ enum VOXEL_NEIGHBOR {
 class VoxelDataFile {
 public:
     VoxelDataFile();
-    VoxelDataFile(int w, int h, int d, const GridF& dVec);
+    VoxelDataFile(const GridF& dVec);
 
     void write(const std::string& filename);
     void load(const std::string& filename);
 
-    int width;
-    int height;
-    int depth;
     GridF data;
+
+protected:
+
+    void loadFromFileBinary(const std::string& filename);
+    void loadFromFileOld(const std::string& filename);
+};
+
+class VectorFieldDataFile {
+public:
+    VectorFieldDataFile();
+    VectorFieldDataFile(const GridV3& dVec);
+
+    void write(const std::string& filename);
+    void load(const std::string& filename);
+
+    GridV3 data;
 
 protected:
 
