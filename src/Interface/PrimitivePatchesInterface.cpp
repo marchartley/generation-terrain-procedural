@@ -5,6 +5,7 @@
 #include "Graphics/CubeMesh.h"
 //#include "Utils/stb_image.h"
 #include "Utils/ShapeCurve.h"
+#include "Graphics/MarchingCubes.h"
 
 PrimitivePatchesInterface::PrimitivePatchesInterface(QWidget *parent)
     : ActionInterface("primitivepatches", "Implicit modeling", "model", "Feature primitives", "feature_primitive_button.png", parent)

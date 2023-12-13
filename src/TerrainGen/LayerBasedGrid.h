@@ -18,6 +18,9 @@ class LayerBasedGrid;
 #include "TerrainGen/ImplicitPatch.h"
 #include "TerrainGen/TerrainModel.h"
 
+#include "TerrainGen/VoxelGrid.h"
+#include "TerrainGen/Heightmap.h"
+
 class LayerBasedGrid : public TerrainModel
 {
 public:

@@ -1,5 +1,5 @@
 #include "TerrainGen/VoxelChunk.h"
-
+/*
 #include <set>
 #include <unordered_set>
 #include <chrono>
@@ -146,19 +146,19 @@ void VoxelChunk::createMesh(bool applyMarchingCubes, bool updateMesh) {
         this->mesh.fromArray(voxelVertices);
         this->mesh.update();
     }
-    else {/*
-        this->mesh.fromArray(CubeMesh::cubesVertices);
-        std::vector<Vector3> voxelsPos;
-        GridF allVals = this->getVoxelValues();
-        for (int x = 0; x < this->sizeX; x++) {
-            for (int y = 0; y < this->sizeY; y++) {
-                for (int z = 0; z < this->height; z++) {
-                    if (allVals.at(x, y, z) > 0.f)
-                        voxelsPos.push_back(Vector3(x, y, z));
-                }
-            }
-        }
-        this->mesh.update(voxelsPos);*/
+    else {
+//        this->mesh.fromArray(CubeMesh::cubesVertices);
+//        std::vector<Vector3> voxelsPos;
+//        GridF allVals = this->getVoxelValues();
+//        for (int x = 0; x < this->sizeX; x++) {
+//            for (int y = 0; y < this->sizeY; y++) {
+//                for (int z = 0; z < this->height; z++) {
+//                    if (allVals.at(x, y, z) > 0.f)
+//                        voxelsPos.push_back(Vector3(x, y, z));
+//                }
+//            }
+//        }
+//        this->mesh.update(voxelsPos);
     }
 }
 
@@ -267,7 +267,7 @@ std::vector<Vector3> VoxelChunk::applyMarchingCubes(bool useGlobalCoords, std::v
     if (this->neighboring_chunks.find(FRONT) != this->neighboring_chunks.end()) {
         std::shared_ptr<VoxelChunk> n = this->neighboring_chunks[FRONT];
         int offset = addedLeft ? 1 : 0;
-        map.insertRow(/*offset*/0, 1);
+        map.insertRow(0, 1);
         for (int x = 0; x < this->sizeX; x++) {
             for (int z = 0; z < this->sizeZ; z++)
             {
@@ -517,3 +517,4 @@ GridF& VoxelChunk::getVoxelValues()
     }
     return this->_cachedVoxelValues;
 }
+*/

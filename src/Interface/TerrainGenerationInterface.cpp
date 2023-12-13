@@ -12,6 +12,7 @@
 //#include "Utils/stb_image_write.h"
 #include "DataStructure/Matrix.h"
 #include "DataStructure/Image.h"
+#include "Graphics/MarchingCubes.h"
 
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
     : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_generation_manager_button.png", parent)

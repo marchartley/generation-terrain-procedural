@@ -1039,71 +1039,30 @@ void VoxelGrid::saveState()
 
 void VoxelGrid::saveMap(std::string filename)
 {
-    std::ofstream out;
+    GridF voxels = this->getVoxelValues();
+    VoxelDataFile data(voxels.sizeX, voxels.sizeY, voxels.sizeZ, voxels);
+    data.write(filename);
+    return;
+    /*std::ofstream out;
     out.open(filename);
     out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << "\n";
     auto values = this->getVoxelValues();
     for (size_t i = 0; i < values.size(); i++)
         out << values[i] << " ";
-    /*
-    out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << " " << this->chunkSize << "\n";
-    for (auto& vc : chunks) {
-        for (int x = 0; x < vc->sizeX; x++)
-            for (int y = 0; y < vc->sizeY; y++)
-                for (int z = 0; z < vc->sizeZ; z++)
-                    out << vc->getVoxelValue(x, y, z) << " ";
-    }*/
-    out.close();
+    out.close();*/
 }
-/*
+
 void VoxelGrid::retrieveMap(std::string filename)
 {
-    std::ifstream in;
-    in.open(filename);
-    if (in.fail()) {
-        std::cerr << "Unable to open file " << filename << "..." << std::endl;
-        return;
-    }
-    int _x, _y, _z;
-    int _chunkSize;
-    in >> _x >> _y >> _z >> _chunkSize;
-    this->chunkSize = _chunkSize;
-    Vector3 finalSize = this->getDimensions();
-    this->_cachedVoxelValues = GridF(_x, _y, _z, 0.f);
-    initMap();
-
-    if (_chunkSize > 0) {
-        float map_val;
-        int iChunk = 0;
-        for (int xChunk = 0; xChunk < this->numberOfChunksX(); xChunk++) {
-            for (int yChunk = 0; yChunk < this->numberOfChunksY(); yChunk++) {
-                Vector3 offset(xChunk * chunkSize, yChunk * chunkSize, 0.f);
-    //            this->chunks[iChunk] = std::make_shared<VoxelChunk>(xChunk * chunkSize, yChunk * chunkSize, chunkSize, chunkSize, this->getSizeZ(), GridF(chunkSize, chunkSize, _z), this); //->shared_from_this());
-    //            this->chunks[iChunk]->lastChunkOnX = (xChunk == this->numberOfChunksX() - 1);
-    //            this->chunks[iChunk]->lastChunkOnY = (yChunk == this->numberOfChunksY() - 1);
-    //            GridF values = GridF(this->chunkSize, this->chunkSize, _z);
-                for (int x = 0; x < chunkSize; x++) {
-                    for (int y = 0; y < chunkSize; y++) {
-                        for (int z = 0; z < this->getSizeZ(); z++) {
-                            in >> map_val;
-                            this->_cachedVoxelValues.at(Vector3(x, y, z) + offset) = map_val;
-                        }
-                    }
-                }
-    //            this->applyModification(values);
-            }
-        }
-    } else {
-        for (size_t i = 0; i < _cachedVoxelValues.size(); i++)
-            in >> _cachedVoxelValues[i];
-    }
-    finalSize.z *= 2.f;
-    _cachedVoxelValues.resize(finalSize);
+    VoxelDataFile data;
+    data.load(filename);
+//    this->_cachedVoxelValues.sizeX = data.width;
+//    this->_cachedVoxelValues.sizeY = data.depth;
+//    this->_cachedVoxelValues.sizeY = data.height;
+    this->_cachedVoxelValues = data.data;
     this->fromCachedData();
-}*/
-
-void VoxelGrid::retrieveMap(std::string filename)
-{
+    return;
+    /*
     std::ifstream in;
     in.open(filename);
     if (in.fail()) {
@@ -1118,7 +1077,6 @@ void VoxelGrid::retrieveMap(std::string filename)
 
     std::stringstream ss(firstLine);
     ss >> _x >> _y >> _z;
-//    in >> _x >> _y >> _z >> _chunkSize;
 
 
     Vector3 finalSize = Vector3(_x, _y, _z);
@@ -1150,20 +1108,11 @@ void VoxelGrid::retrieveMap(std::string filename)
             in >> _cachedVoxelValues[i];
         std::cout << _cachedVoxelValues << std::endl;
     }
-//    finalSize.z *= 2.f;
-//    _cachedVoxelValues.resize(finalSize);
-//    GridF temp = GridF(_cachedVoxelValues.getDimensions() + Vector3(0, 0, 20));
-//    _cachedVoxelValues = temp.paste(_cachedVoxelValues);
-    /*_cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
-        if (z > 30 && _cachedVoxelValues(x, y, z)) {
-            _cachedVoxelValues(x, y, z) -= .5f;
-        }
-    });*/
     _cachedVoxelValues.iterateParallel([&](size_t i) {
         if (_cachedVoxelValues[i] < -1.f)
             _cachedVoxelValues[i] = -1.f;
     });
-    this->fromCachedData();
+    this->fromCachedData();*/
 }
 
 Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)

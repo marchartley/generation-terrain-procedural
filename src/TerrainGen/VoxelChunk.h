@@ -1,6 +1,6 @@
 #ifndef VOXELCHUNK_H
 #define VOXELCHUNK_H
-
+/*
 class VoxelChunk;
 
 #include "DataStructure/Voxel.h"
@@ -88,5 +88,5 @@ public:
     GridF _cachedVoxelValues;
 //    static CubeMesh cubeMesh;
 };
-
+*/
 #endif // VOXELCHUNK_H

@@ -3,6 +3,10 @@
 //#include "Utils/stb_image.h"
 #include "Utils/Utils.h"
 
+#include "TerrainGen/VoxelGrid.h"
+#include "TerrainGen/Heightmap.h"
+#include "TerrainGen/LayerBasedGrid.h"
+
 float ImplicitPatch::isovalue = .5f;
 float ImplicitPatch::zResolution = .1f;
 int ImplicitPatch::currentMaxIndex = -1;
