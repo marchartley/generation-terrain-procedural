@@ -54,6 +54,31 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
     /*
+     * Unit test: Save and load vector fields
+    GridV3 input(100, 100, 100);
+    Vector3 center(50, 50, 10);
+    input.iterateParallel([&](const Vector3& p) {
+        input(p).setValid((p - center).norm2() < 30*30);
+    });
+
+    VectorFieldDataFile data(input);
+    data.write("test_vectors.raw");
+
+    Plotter::get()->addImage(input);
+    Plotter::get()->exec();
+
+    VectorFieldDataFile outData;
+    outData.load("test_vectors.raw");
+    GridV3 output = outData.data;
+
+    output.iterateParallel([&](size_t i) {
+        output[i].x = (output[i].isValid() ? 1.f : 0.f);
+    });
+    Plotter::get()->addImage(output);
+    Plotter::get()->exec();
+    return 0;
+    */
+    /*
      * Unit tests: FFT and iFFT on arbitrary sizes (limited to 3 dimensions max)
 //    GridF vals(128, 1);
 //    vals.iterateParallel([&](const Vector3& p) {
