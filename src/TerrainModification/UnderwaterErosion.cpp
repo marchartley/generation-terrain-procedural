@@ -261,8 +261,8 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         }
     } else if (flowType == FLOWFIELD_TYPE::FLUID_SIMULATION) {
         flowfieldValues = GridV3(voxelGrid->getFlowfield(fluidSimType).resize(terrainSize) * airForce).meanSmooth();
-        for (auto& v : flowfieldValues)
-            v = v.xy();
+//        for (auto& v : flowfieldValues)
+//            v = v.xy();
     } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
         flowfieldValues = EnvObject::flowfield.resize(terrainSize).meanSmooth();
         for (auto& v : flowfieldValues)
