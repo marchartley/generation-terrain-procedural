@@ -14,7 +14,9 @@ FLIPSimulation::FLIPSimulation(float density, float width, float depth, float he
 
 void FLIPSimulation::init(float density, float width, float depth, float height, float spacing, float particleRadius, float maxParticles, float dt)
 {
-    spacing = 1.f;
+//    maxParticles = 1; // TO REMOVE
+//    dt = .2f; // TO REMOVE
+    spacing = 2.f;
     this->dimensions = Vector3(width, depth, height);
     this->dt = dt;
 
@@ -75,6 +77,7 @@ void FLIPSimulation::integrateParticles(double dt, const Vector3& gravity) {
         Particle& p = particles[i];
         p.velocity += gravity * dt;
         p.position = p.position + p.velocity * dt;
+        p.isGhost = std::max(0, p.isGhost - 1);
 //        p.position = Vector3::wrap(p.position, Vector3(), this->dimensions);
 
         if (!Vector3::isInBox(p.position, Vector3(), this->dimensions + Vector3(0, 0, 10000))) {
@@ -82,10 +85,11 @@ void FLIPSimulation::integrateParticles(double dt, const Vector3& gravity) {
 //            p.position = this->dimensions * Vector3(0.f, .1f, 2.f) + Vector3::random(this->dimensions * Vector3(.1f, .8f, 0.f));
 
 //        if (!Vector3::isInBox(p.position, this->dimensions * Vector3(-1.f, 0.f, 0.f), this->dimensions + Vector3(0, 0, 10000))) {
-            p.position = this->dimensions * Vector3::random(Vector3(.0f, .0f, .0f), Vector3(.0f, 1.f, .0f)) + Vector3(0, 0, 5.1f);
+            p.position = this->dimensions * Vector3::random(Vector3(.0f, .0f, .0f), Vector3(.0f, 1.f, 1.0f));// + Vector3(0, 0, 5.1f);
             if (this->savedState.size() > i) {
-                savedState[i].position = p.position - Vector3(1, 0, 0) * 2;
-                p.velocity = Vector3(1, 0, 0) * 2;
+                savedState[i].position = p.position - Vector3(1, 0, 0);
+                p.velocity = Vector3(1, 0, 0);
+                p.isGhost = 20; // countdown to the "locked" state
 //                savedState[i].position += (p.position - previousPos);
             }
         }
@@ -138,11 +142,14 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
 
     std::vector<bool> lockedParticles(numParticles);
     Vector3 radiusBox = Vector3(1, 1, 1) * particleRadius;
-//#pragma omp parallel for
-//    for (int i = 0; i < numParticles; i++) {
+#pragma omp parallel for
+    for (int i = 0; i < numParticles; i++) {
+        lockedParticles[i] = particles[i].isGhost > 0;
+//        lockedParticles[i] = (particles[i].position.x < 3.f);
 //        auto closeBorders = obstacleTrianglesOctree->queryRange(particles[i].position - radiusBox, particles[i].position + radiusBox);
 //        lockedParticles[i] = closeBorders.size() > 0;
-//    }
+
+    }
 
     for (int iter = 0; iter < numIters; iter++) {
     #pragma omp parallel for
@@ -182,9 +189,9 @@ void FLIPSimulation::pushParticlesApart(int numIters) {
                             float dLen = std::sqrt(d2);
                             float s = 0.5 * (minDist - dLen) / dLen;
                             d *= s;
-//                            if (!lockedParticles[i])
+                            if (!lockedParticles[i])
                                 particles[i].position -= d;
-//                            if (!lockedParticles[id])
+                            if (!lockedParticles[id])
                                 particles[id].position += d;
 
                             // Diffuse colors
@@ -221,28 +228,55 @@ void FLIPSimulation::handleCollisions() {
         Vector3& pos = particles[i].position;
         Vector3& vel = particles[i].velocity;
 
-        Vector3 startPos = (useVelocityForCollisionDetection ? pos : savedState[i].position);
+        Vector3 initialPoint = pos;
+        Vector3 start = savedState[i].position;
+        Vector3 end = pos;
+        Vector3 collisionPoint(false);
+        Vector3 collisionNormal(false);
+
+        size_t last_hit_index = -1;
+        int maxTries = 5;
+        do {
+            std::tie(collisionPoint, last_hit_index) = obstacleTriangleTree.getIntersectionAndTriangleIndex(start, end, {last_hit_index});
+//            std::tie(collisionPoint, collisionNormal) = obstacleTriangleTree.getIntersectionAndNormal(start, end);
+            if (collisionPoint.isValid()) {
+                collisionNormal = obstacleTriangleTree.triangles[last_hit_index].normal;
+                float distToCollision = (start - collisionPoint).norm();
+                Vector3 bounce = vel.reflexion(collisionNormal).setMag((end - start).norm() - distToCollision);
+                pos = collisionPoint + bounce + collisionNormal * .01f;
+    //            vel *= 0.f;
+                start = collisionPoint + collisionNormal * .01f;
+                end = pos;
+            }
+            if (maxTries < 2) {
+                int a = 0;
+            }
+            if (maxTries-- < 0) {
+                pos += (pos - initialPoint) * .5f;
+                break;
+            }
+        } while(collisionPoint.isValid());
+
+
+
+        /*Vector3 startPos = (useVelocityForCollisionDetection ? pos : savedState[i].position);
         Vector3 endPos = (useVelocityForCollisionDetection ? pos + vel.normalized() : pos);
-        Vector3 offset = (endPos - startPos).normalized();
+        Vector3 offset; // = (endPos - startPos).normalized();
 //        Vector3 diff = endPos - startPos;
         auto [collisionPoint, collisionNormal] = obstacleTriangleTree.getIntersectionAndNormal(startPos - offset, endPos + offset);
         if (collisionPoint.isValid()) {
-            /*if (useVelocityForCollisionDetection) {
-                vel = vel.normalized().reflexion(collisionNormal) * vel.norm(); //collisionPoint - startPos;
-                if (vel.dot(collisionNormal) < 0)
-                    vel *= -1.f;
-                pos = collisionPoint + vel;
-            } else {*/
-                vel = endPos - startPos;
-                collisionNormal *= (vel.dot(collisionNormal) < 0 ? 1.f : -1.f);
-                float distToCollision = (startPos - collisionPoint).norm();
-                Vector3 bounce = vel.reflexion(collisionNormal).setMag(vel.norm() - distToCollision);
+            vel = endPos - startPos;
+            float realMaxDistance = vel.norm();
+            collisionNormal *= (vel.dot(collisionNormal) < 0 ? 1.f : -1.f);
+            float distToCollision = (startPos - collisionPoint).norm();
+            if (distToCollision < realMaxDistance) {
+                Vector3 bounce = vel.reflexion(collisionNormal).setMag(realMaxDistance - distToCollision);
 //                Vector3 dir = (startPos - collisionPoint);
 //                pos = collisionPoint + dir * .1f;
-                pos = collisionPoint /*+ collisionNormal * .1f*/ + bounce;
+                pos = collisionPoint + bounce;
                 vel *= 0.f;
-//            }
-        }
+            }
+        }*/
     }
 }
 
@@ -572,7 +606,7 @@ void FLIPSimulation::step()
     float gravityValue = 9.81 * .5f; // Acceleration due to gravity
 //    Vector3 obstaclePos(0, 0, 0);
 //    float obstacleRadius = 0.0; // Radius of obstacle
-    int numIterations = 10; // Number of iterations for each step
+    int numIterations = 2; // Number of iterations for each step
     float overRelaxation = 1.0; // Over-relaxation parameter
     bool compensateDrift = false; // Whether to compensate for drift
     Vector3 gravity(0, 0, -gravityValue);
@@ -645,8 +679,8 @@ void FLIPSimulation::storeVelocities()
         currentVelocities[i] = (amount[i] != 0 ? currentVelocities[i] / amount[i] : currentVelocities[i]);
     });
 
-    if (velocitiesHistory.size() > averaging) {
-        velocitiesHistory.erase(velocitiesHistory.begin(), velocitiesHistory.begin() + (velocitiesHistory.size() - averaging));
+    if (velocitiesHistory.size() > maxAverageSize) {
+        velocitiesHistory.erase(velocitiesHistory.begin(), velocitiesHistory.begin() + (velocitiesHistory.size() - maxAverageSize));
     }
     velocitiesHistory.push_back(currentVelocities);
 }
@@ -658,8 +692,10 @@ GridV3 FLIPSimulation::getVelocities(int newSizeX, int newSizeY, int newSizeZ)
 
         GridV3 velocities(dimensions);
         if (!velocitiesHistory.empty()) {
-            for (const auto& velHistory : velocitiesHistory)
+            for (size_t i = 0; i < std::min(averaging, int(velocitiesHistory.size())); i++) {
+                const auto& velHistory = velocitiesHistory[i];
                 velocities += velHistory;
+            }
             velocities /= float(velocitiesHistory.size());
         }
 

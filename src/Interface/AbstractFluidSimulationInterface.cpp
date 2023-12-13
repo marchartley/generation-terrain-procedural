@@ -171,11 +171,25 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     AABBox box;
     auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
     for (auto& tri : triangles) {
+        Vector3 center = (tri[0] + tri[1] + tri[2]) / 3.f;
         for (auto& p : tri) {
+            p += (p - center).setMag(.1f);
             p = p *  _simulation->dimensions / values.getDimensions();
             box.expand(p);
         }
     }
+    /*
+    auto triangles = std::vector<std::vector<Vector3>>();
+    triangles.push_back(std::vector<Vector3> {
+                            _simulation->dimensions * Vector3(0, 0, .5f),
+                            _simulation->dimensions * Vector3(1, 0, .5f),
+                            _simulation->dimensions * Vector3(1, 1, .5f)
+                        });
+    triangles.push_back(std::vector<Vector3> {
+                            _simulation->dimensions * Vector3(0, 0, .5f),
+                            _simulation->dimensions * Vector3(1, 1, .5f),
+                            _simulation->dimensions * Vector3(0, 1, .5f)
+                        });*/
 
 //    std::cout << this->interfaceName << ": From ----- " << box.min() << " ----- to ----- " << box.max() << std::endl;
 
