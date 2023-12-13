@@ -242,17 +242,15 @@ void Viewer::drawingProcess() {
 
             this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
             Material ground_material(
-                            {220/255.f, 210/255.f, 110/255.f, 1.f}, // new float[4]{.48, .16, .04, 1.},
-                            { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.60, .20, .08, 1.},
-                            {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                            1.f // 51.2f
-                            );
+                            {220/255.f, 210/255.f, 110/255.f, 1.f},
+                            { 70/255.f,  80/255.f,  70/255.f, 1.f},
+                            {0/255.f, 0/255.f, 0/255.f, 1.f},
+                            1.f);
             Material grass_material(
-                            { 70/255.f,  80/255.f,  70/255.f, 1.f}, // new float[4]{.28, .90, .00, 1.},
-                            {220/255.f, 210/255.f, 160/255.f, 1.f}, // new float[4]{.32, .80, .00, 1.},
-                            {0/255.f, 0/255.f, 0/255.f, 1.f}, // new float[4]{.62, .56, .37, 1.},
-                            1.f // 51.2f
-                            );
+                            { 70/255.f,  80/255.f,  70/255.f, 1.f},
+                            {220/255.f, 210/255.f, 160/255.f, 1.f},
+                            {0/255.f, 0/255.f, 0/255.f, 1.f},
+                            1.f);
             Vector4 globalAmbiant = {.10, .10, .10, 1.0};
 
             Shader::applyToAllShaders([&](std::shared_ptr<Shader> shader) -> void {
@@ -269,13 +267,13 @@ void Viewer::drawingProcess() {
                 } else {
                     shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
                 }
-                shader->setBool("display_light_source", true);
+//                shader->setBool("display_light_source", true);
                 shader->setVector("min_vertice_positions", minVoxelsShown());
                 shader->setVector("max_vertice_positions", maxVoxelsShown());
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
-                shader->setFloat("fogNear", this->fogNear);
-                shader->setFloat("fogFar", this->fogFar);
-                shader->setBool("wireframeMode", !displayFill);
+//                shader->setFloat("fogNear", this->fogNear);
+//                shader->setFloat("fogFar", this->fogFar);
+//                shader->setBool("wireframeMode", !displayFill);
 
 
                 Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
