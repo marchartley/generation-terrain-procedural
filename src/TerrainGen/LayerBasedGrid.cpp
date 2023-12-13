@@ -6,6 +6,7 @@
 
 //#include "Utils/FastNoiseLit.h"
 //#include "Utils/Globals.h"
+#include "Graphics/CubeMesh.h"
 
 std::map<TerrainTypes, std::pair<float, float>> LayerBasedGrid::materialLimits = {
     {AIR, {-10.f, -8.f} },

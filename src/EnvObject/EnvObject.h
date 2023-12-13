@@ -6,6 +6,9 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
 
+#include "TerrainGen/Heightmap.h"
+#include "TerrainGen/LayerBasedGrid.h"
+#include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/ImplicitPatch.h"
 
 class EnvPoint;

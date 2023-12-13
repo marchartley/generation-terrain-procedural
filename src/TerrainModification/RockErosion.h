@@ -1,8 +1,11 @@
 #ifndef ROCKEROSION_H
 #define ROCKEROSION_H
 
-#include "DataStructure/Voxel.h"
 #include "DataStructure/Matrix3.h"
+#include "TerrainGen/VoxelGrid.h"
+#include "TerrainGen/Heightmap.h"
+#include "TerrainGen/LayerBasedGrid.h"
+#include "TerrainGen/ImplicitPatch.h"
 
 class RockErosion
 {
