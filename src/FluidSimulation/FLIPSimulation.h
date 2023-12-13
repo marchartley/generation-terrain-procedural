@@ -59,6 +59,7 @@ public:
     float dt = .1f;
     float flipRatio = .9f;
     int averaging = 5;
+    int maxAverageSize = 100;
 
     FLIPSimulation();
     FLIPSimulation(float density, float width, float depth, float height, float spacing, float particleRadius, float maxParticles, float dt);

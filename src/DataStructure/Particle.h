@@ -15,7 +15,7 @@ public:
     float gasConstant;
     float restDensity;
     float viscosity;
-    bool isGhost;
+    int isGhost;
 
     int index;
 };
