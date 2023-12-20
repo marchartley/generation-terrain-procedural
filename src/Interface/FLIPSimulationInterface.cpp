@@ -6,10 +6,12 @@ FLIPSimulationInterface::FLIPSimulationInterface(QWidget *parent)
     _simulation = GlobalTerrainProperties::get()->simulations[FLIP];
     simulation = dynamic_cast<FLIPSimulation*>(_simulation);
 //    *_simulation = FLIPSimulation(1000, 20, 20, 1, 1, .2f, 20000, 0.1f);
-    nbComputationsPerFrame = 10;
+    nbComputationsPerFrame = 1;
     computeAtEachFrame = false;
     displayParticles = true;
-    displayBoundaries = true;
+    displayBoundaries = false;
+    displayVectors = false;
+    displayOnlyAtSurface = false;
 }
 
 QLayout *FLIPSimulationInterface::createGUI()
@@ -38,6 +40,11 @@ QLayout *FLIPSimulationInterface::createGUI()
     /*auto spacingSlider = new SliderElement("Spacing", 0.1f, 1.f, .01f);
     spacingSlider->slider()->setfValue(1.f / this->simulation->fInvSpacing);
     spacingSlider->setOnValueChanged([&](float newValue) { this->simulation->fInvSpacing = 1.f / newValue; });*/
+    auto driftCheckbox = new CheckboxElement("Compensate drift?", simulation->compensateDrift);
+    auto overrelaxationSlider = new SliderElement("Overrelaxation", 0.01f, 2.f, 0.01f, simulation->overRelaxation);
+    auto numIterationsSlider = new SliderElement("Iterations", 0, 30, 1);
+    numIterationsSlider->slider()->setValue(simulation->numIterations);
+    numIterationsSlider->setOnValueChanged([&](float newVal) { simulation->numIterations = newVal; });
     ui->add({
                 resetButton,
                 particleCountSlider,
@@ -45,7 +52,10 @@ QLayout *FLIPSimulationInterface::createGUI()
                 particleDensitySlider,
                 particleFLIPRatioSlider,
                 averagingSlider,
-//                spacingSlider
+//                spacingSlider,
+                driftCheckbox,
+                overrelaxationSlider,
+                numIterationsSlider
             });
     ui->add(AbstractFluidSimulationInterface::createGUI()); // Still use the default system
 
@@ -61,8 +71,8 @@ void FLIPSimulationInterface::updateParticlesMesh()
     std::vector<Vector3> particlePositions;
     std::vector<Vector3> colors;
 
-    GridF pressure = GridF(simulation->dimensions);
-    pressure.data = simulation->p;
+//    GridF pressure = GridF(simulation->dimensions);
+    GridF pressure = simulation->p;
     pressure.normalize();
 
     std::vector<Vector3> positions(simulation->particles.size());
@@ -90,6 +100,16 @@ void FLIPSimulationInterface::updateParticlesMesh()
 void FLIPSimulationInterface::resetParticles()
 {
     this->simulation->reset();
+}
+
+void FLIPSimulationInterface::display(const Vector3 &camPos)
+{
+    AbstractFluidSimulationInterface::display(camPos);
+    if (!this->isVisible()) return;
+
+    gridBoundaryMesh.shader->setVector("scale", voxelGrid->getDimensions() / simulation->particleDensity.getDimensions());
+//    Mesh::displayScalarField((simulation->particleDensity / simulation->particleDensity.max()).resize(voxelGrid->getDimensions() / 2.f), gridBoundaryMesh, camPos, {0.f, .1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f, 1.f}, voxelGrid->getDimensions());
+//    std::cout << simulation->particleDensity.min() << " -- " << simulation->particleDensity.max() << " -- " << simulation->particleDensity.sum() / float(simulation->particleDensity.size()) << std::endl;
 }
 
 

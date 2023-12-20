@@ -350,19 +350,6 @@ Matrix3<float> Matrix3<Vector3>::divergence() const
                                      (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y +
                                      (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z) * .5f;
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                // Need to change the divergence function...
-//                returningGrid.at(x, y, z) = this->at(x, y, z).divergence();
-                returningGrid.at(x, y, z) = ((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x +
-                                             (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y +
-                                             (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z) * .5f;
-            }
-        }
-    }*/
-//    this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 

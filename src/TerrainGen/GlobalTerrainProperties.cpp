@@ -10,9 +10,9 @@ GlobalTerrainProperties::GlobalTerrainProperties()
     float viscosity = 0.01f;
     int fluidSolverIterations = 5;
     float density = 1000.f;
-    Vector3 fluidSimRescale = Vector3(2, 2, 1);
+    Vector3 fluidSimRescale = Vector3(2, 2, 2);
 
-    Vector3 simulationSize = Vector3(100, 100, 20) / fluidSimRescale;
+    Vector3 simulationSize = Vector3(100, 100, 40) / fluidSimRescale;
     this->simulations[FluidSimType::FLIP] = new FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, .5f, 1.0f, 750, dt);
     this->simulations[FluidSimType::SPH] = new SPHSimulation();
     this->simulations[FluidSimType::LBM] = new LBMFluidSimulation(false);

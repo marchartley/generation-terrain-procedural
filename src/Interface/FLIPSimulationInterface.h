@@ -17,6 +17,8 @@ public:
 
     void resetParticles();
 
+    virtual void display(const Vector3 &camPos = Vector3(false));
+
 public Q_SLOTS:
     void updateParticles();
     void computeSimulation(int nbSteps);

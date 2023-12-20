@@ -116,6 +116,7 @@ SOURCES += \
 #        src/FastWFC/wave.cpp \
 #        src/FastWFC/wfc.cpp \
     src/EnvObject/ExpressionParser.cpp \
+#    src/FluidSimulation/FLIPSimulation_copy.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -178,6 +179,7 @@ SOURCES += \
     src/Interface/SpheroidalErosionInterface.cpp \
         src/Interface/Spoiler.cpp \
         src/Interface/StickyFrame.cpp \
+    src/Interface/TerrainComparatorInterface.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
         src/Interface/TerrainSavingInterface.cpp \
         src/Interface/TunnelInterface.cpp \
@@ -291,6 +293,7 @@ HEADERS += \
 #    src/FastWFC/wave.hpp \
 #    src/FastWFC/wfc.hpp \
     src/EnvObject/ExpressionParser.h \
+#    src/FluidSimulation/FLIPSimulation_copy.h \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \
@@ -353,6 +356,7 @@ HEADERS += \
     src/Interface/SpheroidalErosionInterface.h \
     src/Interface/Spoiler.h \
     src/Interface/StickyFrame.h \
+    src/Interface/TerrainComparatorInterface.h \
     src/Interface/TerrainGenerationInterface.h \
     src/Interface/TerrainSavingInterface.h \
     src/Interface/TunnelInterface.h \

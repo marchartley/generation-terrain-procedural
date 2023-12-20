@@ -855,7 +855,7 @@ void EnvObjsInterface::fromGanUI()
     EnvObject::readFile(this->primitiveDefinitionFile);
 
     auto gauss = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
-    gauss->position = Vector3(150, 50, 0);
+    gauss->position = Vector3(100, 50, 0);
     gauss->radius = 40;
     auto patch = gauss->createImplicitPatch();
     this->implicitPatchesFromObjects[gauss] = patch;

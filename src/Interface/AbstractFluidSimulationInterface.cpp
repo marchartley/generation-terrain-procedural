@@ -165,7 +165,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     GridF values = bigValues; //.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
 
     values.iterateParallel([&](const Vector3& p) {
-        values(p) = (values(p) > 0 ? values(p) : Vector3::isInBox(p, Vector3(-1, 10, 10), voxelGrid->getDimensions() - Vector3(-1, 10, -1)) ? -1.f : 1.f);
+        values(p) = (values(p) > 0 ? values(p) : Vector3::isInBox(p, Vector3(3, 3, 3), voxelGrid->getDimensions() - Vector3(3, 3, 3)) ? -1.f : 1.f);
     });
 
     AABBox box;
