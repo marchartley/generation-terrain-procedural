@@ -30,6 +30,8 @@ public:
     BVHTree(const BVHTree& other);
     BVHTree& operator=(const BVHTree& other);
 
+//    static BVHTree aggregate(const BVHTree& A, const BVHTree& B); // Todo one day
+
 
     virtual SpacePartitioning& build(const std::vector<Triangle>& triangles);
     BVHNode* root = nullptr;

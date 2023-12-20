@@ -120,7 +120,7 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain)
                 for (int z = 0; z < terrainSize.z; z++) {
                     Vector3 pos(x + .5f, y + .5f, z + 1.5f);
                     Vector3 gradient = (z == terrainSize.z - 1 ? Vector3(0, 0, 1) : normals.at(pos).normalized());
-                    if (gradient.z > 0 && (!voxels.checkCoord(pos + gradient * 2.f) || (voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0))) {
+                    if (gradient.z > 0 && (/*!voxels.checkCoord(pos + gradient * 2.f) ||*/ (voxels.at(pos) > 0 && voxels.at(pos + gradient * 2.f) < 0))) {
                         terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f + Vector3::random(0.5f), -gradient + Vector3::random(0.2f)});
                     }
                 }

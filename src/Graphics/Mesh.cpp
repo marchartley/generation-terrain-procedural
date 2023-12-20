@@ -885,7 +885,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
     float refined_isolevel = isolevel + 0.0001;
 
     Vector3 vertDecals[8] = {
-/*        Vector3(0.f, 0.f, 0.f),
+        Vector3(0.f, 0.f, 0.f),
         Vector3(1.f, 0.f, 0.f),
         Vector3(1.f, 1.f, 0.f),
         Vector3(0.f, 1.f, 0.f),
@@ -893,8 +893,8 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
         Vector3(1.f, 0.f, 1.f),
         Vector3(1.f, 1.f, 1.f),
         Vector3(0.f, 1.f, 1.f)
-*/
 
+/*
         Vector3(-.5f, -.5f, -.5f),
         Vector3(0.5f, -.5f, -.5f),
         Vector3(0.5f, 0.5f, -.5f),
@@ -902,7 +902,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
         Vector3(-.5f, -.5f, 0.5f),
         Vector3(0.5f, -.5f, 0.5f),
         Vector3(0.5f, 0.5f, 0.5f),
-        Vector3(-.5f, 0.5f, 0.5f)
+        Vector3(-.5f, 0.5f, 0.5f)*/
     };
 
     Mesh marched;
@@ -1114,8 +1114,10 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
     }
 }
 
-void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosition, std::vector<float> isoValues)
+void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosition, std::vector<float> isoValues, Vector3 desiredDimensions)
 {
+    if (desiredDimensions.isValid())
+        mesh.shader->setVector("scale", desiredDimensions / field.getDimensions());
     std::vector<Vector3> positions(field.size());
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = field.getCoordAsVector3(i);

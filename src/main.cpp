@@ -53,6 +53,38 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+
+    /*
+     * Unit test: divergence of a vector field
+     * There should be the value "2" everywhere, except on the right and bottom borders (and 1.5 on top and left borders)
+    GridV3 vels(50, 50);
+    vels.iterateParallel([&](const Vector3& p) {
+        vels(p) = p;
+    });
+    GridF divergence = vels.divergence();
+
+    Plotter::get()->addImage(divergence);
+    Plotter::get()->exec();
+    return 0;
+    */
+    /*
+     * Unit test: adding value in cells (with interpolation)
+    GridF values(10, 10);
+    values.addValueAt(1.f, Vector3(1.5f, 1.5f));
+    std::cout << values.displayValues() << std::endl;
+    QObject::connect(Plotter::get(), &Plotter::clickedOnImage, Plotter::get(), [&](const Vector3& clickPos, Vector3 value) {
+        std::cout << "Adding at " << clickPos << std::endl;
+        values.reset();
+        values.addValueAt(1.f, clickPos);
+        std::cout << values.displayValues() << std::endl;
+        Plotter::get()->addImage(values);
+        Plotter::get()->draw();
+    });
+
+    Plotter::get()->addImage(values);
+    Plotter::get()->exec();
+    return 0;
+    */
     /*
      * Unit test: Save and load vector fields
     GridV3 input(100, 100, 100);

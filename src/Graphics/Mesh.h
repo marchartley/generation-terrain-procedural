@@ -75,7 +75,7 @@ public:
     static std::vector<Vector3> getPointsForArrow(const Vector3& from, const Vector3& to);
     static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMagnitude = -1, bool normalize = false, bool displayArrow = false);
 
-    static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
+    static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f}, Vector3 desiredDimensions = Vector3(false));
 
 
     unsigned int bufferID;

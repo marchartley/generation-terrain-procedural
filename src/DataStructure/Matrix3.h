@@ -243,6 +243,7 @@ public:
 
     std::vector<T> data;
     int sizeX = 0, sizeY = 0, sizeZ = 1;
+    T dummyValue; // Trash value, just for invalid at() calls
 
     bool raiseErrorOnBadCoord = false; // THIS SHOULD CLEARLY BE SET TO TRUE, BUT F**K IT!
     T defaultValueOnBadCoord = T();
@@ -615,17 +616,18 @@ T &Matrix3<T>::at(int i, int j, int k)
         return this->data[index];
     }
     bool raiseError = raiseErrorOnBadCoord;
+    dummyValue = defaultValueOnBadCoord;
     Vector3 newPos(i, j, k);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
 
         if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
         if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
         if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
 
         if (returned_value_on_outside == MIRROR_VALUE)
             newPos = getMirrorPosition(newPos);
@@ -655,14 +657,14 @@ T &Matrix3<T>::at(size_t i)
     Vector3 newPos(x, y, z);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
 
         if (stillRaiseErrorForX && (newPos.x < 0 || sizeX <= int(newPos.x)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
         if (stillRaiseErrorForY && (newPos.y < 0 || sizeY <= int(newPos.y)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
         if (stillRaiseErrorForZ && (newPos.z < 0 || sizeZ <= int(newPos.z)))
-            return defaultValueOnBadCoord;
+            return dummyValue; // defaultValueOnBadCoord;
 
         if (returned_value_on_outside == MIRROR_VALUE)
             newPos = getMirrorPosition(newPos);
@@ -739,14 +741,23 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, const Vector3& coord) {
     Vector3 floorPos = coord.floor();
     Vector3 offset = coord - floorPos;
 
-    this->at(floorPos + Vector3(0, 0, 0)) += value * (1 - offset.x) * (1 - offset.y) * (1 - offset.z);
-    this->at(floorPos + Vector3(0, 0, 1)) += value * (1 - offset.x) * (1 - offset.y) * (    offset.z);
-    this->at(floorPos + Vector3(0, 1, 0)) += value * (1 - offset.x) * (    offset.y) * (1 - offset.z);
-    this->at(floorPos + Vector3(0, 1, 1)) += value * (1 - offset.x) * (    offset.y) * (    offset.z);
-    this->at(floorPos + Vector3(1, 0, 0)) += value * (    offset.x) * (1 - offset.y) * (1 - offset.z);
-    this->at(floorPos + Vector3(1, 0, 1)) += value * (    offset.x) * (1 - offset.y) * (    offset.z);
-    this->at(floorPos + Vector3(1, 1, 0)) += value * (    offset.x) * (    offset.y) * (1 - offset.z);
-    this->at(floorPos + Vector3(1, 1, 1)) += value * (    offset.x) * (    offset.y) * (    offset.z);
+    const Vector3 v0 = floorPos + Vector3(0, 0, 0);
+    const Vector3 v1 = floorPos + Vector3(0, 0, 1);
+    const Vector3 v2 = floorPos + Vector3(0, 1, 0);
+    const Vector3 v3 = floorPos + Vector3(0, 1, 1);
+    const Vector3 v4 = floorPos + Vector3(1, 0, 0);
+    const Vector3 v5 = floorPos + Vector3(1, 0, 1);
+    const Vector3 v6 = floorPos + Vector3(1, 1, 0);
+    const Vector3 v7 = floorPos + Vector3(1, 1, 1);
+
+    this->at(v0) += value * (1 - offset.x) * (1 - offset.y) * (1 - offset.z);
+    this->at(v1) += value * (1 - offset.x) * (1 - offset.y) * (    offset.z);
+    this->at(v2) += value * (1 - offset.x) * (    offset.y) * (1 - offset.z);
+    this->at(v3) += value * (1 - offset.x) * (    offset.y) * (    offset.z);
+    this->at(v4) += value * (    offset.x) * (1 - offset.y) * (1 - offset.z);
+    this->at(v5) += value * (    offset.x) * (1 - offset.y) * (    offset.z);
+    this->at(v6) += value * (    offset.x) * (    offset.y) * (1 - offset.z);
+    this->at(v7) += value * (    offset.x) * (    offset.y) * (    offset.z);
 
     this->raiseErrorOnBadCoord = previousError;
     return *this;
