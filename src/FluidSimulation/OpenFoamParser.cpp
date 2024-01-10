@@ -64,7 +64,7 @@ std::vector<Vector3> parseOpenFoamPointsFile(const std::string& content) {
         double x, y, z;
 
         if (lineStream >> openPar >> x >> y >> z >> closePar) {
-            points.emplace_back(x, y, z);
+            points.push_back(Vector3(x, y, z) * 10.f);
         } else {
             // Assuming the vectors end when we can't read a proper format
             break;
@@ -168,6 +168,7 @@ std::map<int, Cell> parseOpenFoamCellsFile(const std::string& content) {
 }
 
 AABBox parseOpenFoamBoundariesFile(const std::string& content, std::vector<Face>& faces, std::vector<Vector3>& points) {
+    return AABBox(points);
     std::istringstream iss(content);
     std::string line;
 
@@ -247,6 +248,7 @@ GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std
 
 GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 {
+    bool regularGrid = true;
     int highestIteration = -1;
     std::vector<std::string> filenames;
     QDirIterator it(QString::fromStdString(foldername), QDir::Dirs);
@@ -299,4 +301,145 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
     auto velocities = transformToGrid(cells, faces, points, boundaries);
 
     return velocities;
+}
+
+
+
+
+
+std::string OpenFoamParser::createSimulationFile(std::string foldername, const GridF& _boundaries)
+{
+    GridF boundaries(_boundaries.sizeX, _boundaries.sizeY, 10);
+    boundaries.iterate([&](const Vector3& pos) {
+        boundaries(pos) = _boundaries(pos);
+    });
+    std::string filename = foldername + "/system/blockMeshDict";
+
+    std::ostringstream oss;
+    oss << "FoamFile\n{\n\nformat      ascii;\nclass       dictionary;\nobject      blockMeshDict;\n}\n\nconvertToMeters 0.1;\n\n";
+
+    oss << "vertices\n(\n";
+    boundaries.iterate([&](size_t i) {
+        Vector3 pos = boundaries.getCoordAsVector3(i);
+        oss << "    (" << pos.x << " " << pos.y << " " << pos.z << ")\n";
+    });
+    oss << ");\n\n";
+
+
+    oss << "blocks\n(\n";
+    boundaries.iterate([&](size_t i) {
+        Vector3 pos = boundaries.getCoordAsVector3(i);
+        if (pos.x >= boundaries.sizeX - 1 || pos.y >= boundaries.sizeY - 1 || pos.z >= boundaries.sizeZ - 1) return;
+        size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+        size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+        size_t i2 = boundaries.getIndex(pos + Vector3(1, 1, 0));
+        size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 0));
+        size_t i4 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+        size_t i5 = boundaries.getIndex(pos + Vector3(1, 0, 1));
+        size_t i6 = boundaries.getIndex(pos + Vector3(1, 1, 1));
+        size_t i7 = boundaries.getIndex(pos + Vector3(0, 1, 1));
+        oss << "    hex (" << i0 << " " << i1 << " " << i2 << " " << i3 << " " << i4 << " " << i5 << " " << i6 << " " << i7 << ")\n    (1 1 1)\n    ";
+        if (false)  { // pos.x == 0 || pos.x == boundaries.sizeX - 1 || pos.y == 0 || pos.y == boundaries.sizeY - 1 || pos.z == 0 || pos.z == boundaries.sizeZ - 1) {
+            oss << "edgeGrading (4 4 4 4 -1 1 1 -1 1 1 1 1)";
+        } else {
+            oss << "simpleGrading (10 1 1)\n\n";
+        }
+    });
+    oss << ");\n\n";
+
+
+    oss << "boundary\n(\n";
+
+    oss << "\tinlet\n\t{\n\t\ttype patch;\n\t\tfaces\n\t\t(\n";
+    for (int x = 0; x < boundaries.sizeX - 1; x++) {
+        for (int z = 0; z < boundaries.sizeZ - 1; z++) {
+            Vector3 pos(x, 0, z);
+            size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+            size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+            size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+            size_t i3 = boundaries.getIndex(pos + Vector3(1, 0, 1));
+            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+        }
+    }
+    oss << "\n\t\t);\n\t}\n\n";
+
+    oss << "\toutlet\n\t{\n\t\ttype patch;\n\t\tfaces\n\t\t(\n";
+    for (int x = 0; x < boundaries.sizeX - 1; x++) {
+        for (int z = 0; z < boundaries.sizeZ - 1; z++) {
+            Vector3 pos(x, boundaries.sizeY - 1, z);
+            size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+            size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+            size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+            size_t i3 = boundaries.getIndex(pos + Vector3(1, 0, 1));
+            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+        }
+    }
+    oss << "\n\t\t);\n\t}\n";
+
+    oss << "\tlowerWall\n\t{\n\t\ttype wall;\n\t\tfaces\n\t\t(\n";
+    for (int x = 0; x < boundaries.sizeX; x++) {
+        for (int y = 0; y < boundaries.sizeY-1; y++) {
+            for (int z = 0; z < boundaries.sizeZ-1; z++) {
+                if (x == 0 || x == boundaries.sizeX - 1) {
+                    Vector3 pos(x, y, z);
+                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+                    size_t i1 = boundaries.getIndex(pos + Vector3(0, 1, 0));
+                    size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+                    size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 1));
+                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+                }
+            }
+        }
+    }
+    oss << "\n\t\t);\n\t}\n";
+    oss << "\tupperWall\n\t{\n\t\ttype wall;\n\t\tfaces\n\t\t(\n";
+    for (int x = 0; x < boundaries.sizeX - 1; x++) {
+        for (int y = 0; y < boundaries.sizeY - 1; y++) {
+            for (int z = 0; z < boundaries.sizeZ; z++) {
+                if (z == 0 || z == boundaries.sizeZ - 1) {
+                    Vector3 pos(x, y, z);
+                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+                    size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+                    size_t i2 = boundaries.getIndex(pos + Vector3(0, 1, 0));
+                    size_t i3 = boundaries.getIndex(pos + Vector3(1, 1, 0));
+                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+                }
+            }
+        }
+    }
+    oss << "\n\t\t);\n\t}\n";
+
+/*
+    oss << "\tfrontAndBack\n\t{\n\t\ttype empty;\n\t\tfaces\n\t\t(\n";
+    for (int x = 1; x < boundaries.sizeX - 1; x++) {
+        for (int y = 1; y < boundaries.sizeY - 1; y++) {
+            for (int z = 1; z < boundaries.sizeZ - 1; z++) {
+                if (x != 0 && x != boundaries.sizeX - 1) {
+                    Vector3 pos(x, y, z);
+                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+                    size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+                    size_t i2 = boundaries.getIndex(pos + Vector3(1, 1, 0));
+                    size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 0));
+                    size_t i4 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+                    size_t i5 = boundaries.getIndex(pos + Vector3(1, 0, 1));
+                    size_t i6 = boundaries.getIndex(pos + Vector3(1, 1, 1));
+                    size_t i7 = boundaries.getIndex(pos + Vector3(0, 1, 1));
+//                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i5 << " " << i4 << ")";
+                    oss << "\n\t\t\t(" << i1 << " " << i2 << " " << i6 << " " << i5 << ")";
+                }
+            }
+        }
+    }
+    oss << "\n\t\t);\n\t}\n";
+*/
+    oss << ");\n\n";
+
+
+    std::ofstream file(filename);
+    file << oss.str();
+    file.close();
+
+    return oss.str();
 }

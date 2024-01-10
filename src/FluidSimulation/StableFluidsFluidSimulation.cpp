@@ -463,9 +463,9 @@ GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int res
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        std::string pathToOpenFoamSimulation = "/data/OF_Sim_Marcos";
+        std::string pathToOpenFoamSimulation = "OpenFOAM/simple"; //"/data/OF_Sim_Marcos";
         if (checkPathExists(pathToOpenFoamSimulation)) {
-            this->velocity = OpenFoamParser::parseSimulation(pathToOpenFoamSimulation)/*.resize(sizeX, sizeY, sizeZ)*/;
+            this->velocity = OpenFoamParser::parseSimulation(pathToOpenFoamSimulation).resize(sizeX, sizeY, sizeZ);
         }
         _cachedVelocity = velocity;
 //        std::cout << "Recomputed : " << _cachedVelocity.min() << " " << _cachedVelocity.max() << std::endl;

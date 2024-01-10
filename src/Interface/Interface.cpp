@@ -29,6 +29,8 @@
 
 #include "Interface/CommonInterface.h"
 
+#include "FluidSimulation/OpenFoamParser.h"
+
 ViewerInterface::ViewerInterface() {
     Plotter::init(nullptr, nullptr);
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
@@ -165,6 +167,21 @@ ViewerInterface::ViewerInterface() {
         }
 
         envObjectsInterface->fromGanUI();
+        float time = timeIt([&]() {
+            OpenFoamParser::createSimulationFile("OpenFOAM/simple/", viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
+            std::string command = "blockMesh";
+            int result = std::system(command.c_str());
+            if (result != 0) {
+                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+            }
+            command = "foamRun";
+            result = std::system(command.c_str());
+            if (result != 0) {
+                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+            }
+        });
+        std::cout << "Time for mesh definition: " << showTime(time) << std::endl;
+//        exit(EXIT_SUCCESS);
 
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 

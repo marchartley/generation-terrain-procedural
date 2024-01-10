@@ -1,26 +1,14 @@
 import time
 from multiprocessing import Process
 import os
+import glob
+import shutil
 
+allFiles = glob.glob("/mnt/nvme0n1p5/LaTex/*/main.tex")
 
-def info(title):
-    print(title)
-    print('module name:', __name__)
-    print('parent process:', os.getppid())
-    print('process id:', os.getpid())
-
-def f(name):
-    # info('function f')
-    # print('hello', name, flush=False)
-    time.sleep(3)
-    print(f"Done {name}")
-
-if __name__ == '__main__':
-    # info('main line')
-    start = time.time()
-    ps = [Process(target=f, args=(i,)) for i in range(100)]
-    for p in ps:
-        p.start()
-    for p in ps:
-        p.join()
-    print(time.time() - start)
+for file in allFiles:
+    path = os.path.split(file)
+    parent = os.path.split(path[-2])[-1]
+    newFile = file.replace("main.tex", parent + ".tex")
+    shutil.move(file, newFile)
+print("Done")

@@ -165,7 +165,7 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     GridF values = bigValues; //.resize(20, 20, 10); //.meanSmooth(5, 5, 5); //.resize(100, 100, 10).meanSmooth();
 
     values.iterateParallel([&](const Vector3& p) {
-        values(p) = (values(p) > 0 ? values(p) : Vector3::isInBox(p, Vector3(3, 3, 3), voxelGrid->getDimensions() - Vector3(3, 3, 3)) ? -1.f : 1.f);
+        values(p) = (values(p) > 0 ? values(p) : Vector3::isInBox(p, Vector3(-1, 3, 3), voxelGrid->getDimensions() - Vector3(-1, 3, -1)) ? -1.f : 1.f);
     });
 
     AABBox box;
@@ -178,23 +178,6 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
             box.expand(p);
         }
     }
-    /*
-    auto triangles = std::vector<std::vector<Vector3>>();
-    triangles.push_back(std::vector<Vector3> {
-                            _simulation->dimensions * Vector3(0, 0, .5f),
-                            _simulation->dimensions * Vector3(1, 0, .5f),
-                            _simulation->dimensions * Vector3(1, 1, .5f)
-                        });
-    triangles.push_back(std::vector<Vector3> {
-                            _simulation->dimensions * Vector3(0, 0, .5f),
-                            _simulation->dimensions * Vector3(1, 1, .5f),
-                            _simulation->dimensions * Vector3(0, 1, .5f)
-                        });*/
-
-//    std::cout << this->interfaceName << ": From ----- " << box.min() << " ----- to ----- " << box.max() << std::endl;
-
-//    otherMeshToDisplay.fromArray(flattenArray(Mesh::applyMarchingCubes(values.binarize()).getTriangles()));
-
     _simulation->setObstacles(triangles);
     _simulation->setObstacles(values.binarize());
 
