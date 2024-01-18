@@ -57,7 +57,7 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
         particlesMesh.display(GL_POINTS);
     }
     if (displayVectors) {
-        vectorsMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .8f});
+//        vectorsMesh.shader->setVector("color", std::vector<float>{0.f, .5f, 1.f, .8f});
 //        vectorsMesh.reorderLines(camPos);
         vectorsMesh.display(GL_LINES, 3);
     }
@@ -80,8 +80,8 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     CheckboxElement* displayParticlesButton = new CheckboxElement("Display particles", displayParticles);
     CheckboxElement* displayVectorsButton = new CheckboxElement("Display vectors", displayVectors);
     CheckboxElement* autoComputeButton = new CheckboxElement("Compute at each frame", computeAtEachFrame);
-    QPushButton* computeButton = new QPushButton("Compute");
-    QPushButton* updateMeshButton = new QPushButton("Update terrain");
+    ButtonElement* computeButton = new ButtonElement("Compute", [&]() { computeSimulation(this->nbComputationsPerFrame); });
+    ButtonElement* updateMeshButton = new ButtonElement("Update terrain", [&]() { this->updateBoundariesMesh(); });
 
     layout->addWidget(onlyAtSurfaceButton->get());
     layout->addWidget(displayBoundariesButton->get());
@@ -89,10 +89,10 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     layout->addWidget(displayParticlesButton->get());
     layout->addWidget(displayVectorsButton->get());
     layout->addWidget(autoComputeButton->get());
-    layout->addWidget(createHorizontalGroup({
+    layout->addWidget(createHorizontalGroupUI({
                                                 computeButton,
                                                 updateMeshButton
-                                            }));
+                                            })->get());
 
     /*displayBoundariesButton->setChecked(this->displayBoundaries);
     displayParticlesButton->setChecked(this->displayParticles);
@@ -104,15 +104,16 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
     QObject::connect(displayParticlesButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayParticles = checked; });
     QObject::connect(displayVectorsButton, &QCheckBox::toggled, this, [=](bool checked) { this->displayVectors = checked; });
     QObject::connect(autoComputeButton, &QCheckBox::toggled, this, [=](bool checked) { this->computeAtEachFrame = checked; });*/
-    QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
-    QObject::connect(updateMeshButton, &QPushButton::pressed, this, &AbstractFluidSimulationInterface::updateBoundariesMesh);
+//    QObject::connect(computeButton, &QPushButton::pressed, this, [=]() { computeSimulation(this->nbComputationsPerFrame); });
+//    QObject::connect(updateMeshButton, &QPushButton::pressed, this, &AbstractFluidSimulationInterface::updateBoundariesMesh);
 
     return layout;
 }
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()
 {
-    Vector3 resolution(25, 25, 10);
+//    Vector3 resolution(25, 25, 10);
+    Vector3 resolution(50, 50, 50);
     GridV3 velocities = _simulation->getVelocities(resolution);
     if (displayOnlyAtSurface) {
         GridF surface = voxelGrid->getVoxelValues().resize(resolution).binarize().dilate();
@@ -122,7 +123,7 @@ void AbstractFluidSimulationInterface::updateVectorsMesh()
                     surface.at(x, y, z) = 1;
         velocities *= surface;
     }
-    velocities.iterateParallel([&](size_t i) { velocities[i].normalize(); });
+//    velocities.iterateParallel([&](size_t i) { velocities[i].normalize(); });
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 1.f, false, true);
 }
 

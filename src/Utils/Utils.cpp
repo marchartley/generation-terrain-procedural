@@ -4,6 +4,8 @@
 #include <thread>
 #include <chrono>
 
+#include "Utils/BSpline.h"
+
 std::vector<std::string> split(std::string str, std::string c)
 {
     std::vector<std::string> result;
@@ -495,4 +497,27 @@ std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float
 bool isPowerOf2(int n)
 {
     return n > 0 &&  (n & (n-1)) == 0;
+}
+
+int runCommand(std::string command)
+{
+    command = "/bin/bash -c 'source ~/.bashrc && " + command + "'";
+    return std::system(command.c_str());
+}
+
+Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor)
+{
+    return Vector3::slerp(t, startColor, endColor);
+}
+
+void displayProcessTime(std::string textToDisplay, std::function<void ()> func)
+{
+    std::cout << textToDisplay << std::flush;
+    float time = timeIt(func);
+    std::cout << " " << showTime(time) << std::endl;
+}
+
+Vector3 colorPalette(float t, const std::vector<Vector3> &colors)
+{
+    return BSpline(colors).getPoint(t);
 }

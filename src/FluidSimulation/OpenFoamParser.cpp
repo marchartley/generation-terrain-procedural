@@ -1,4 +1,5 @@
 #include "OpenFoamParser.h"
+#include "TerrainGen/VoxelGrid.h"
 
 OpenFoamParser::OpenFoamParser()
 {
@@ -64,7 +65,7 @@ std::vector<Vector3> parseOpenFoamPointsFile(const std::string& content) {
         double x, y, z;
 
         if (lineStream >> openPar >> x >> y >> z >> closePar) {
-            points.push_back(Vector3(x, y, z) * 10.f);
+            points.push_back(Vector3(x, y, z) * 20.f);
         } else {
             // Assuming the vectors end when we can't read a proper format
             break;
@@ -258,6 +259,7 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
         if (iteration > highestIteration)
             highestIteration = iteration;
     }
+    std::cout << "Reading velocities from " << foldername << "/" << std::to_string(highestIteration) << std::endl;
     std::ifstream filePoints(foldername + "/constant/polyMesh/points");
     std::stringstream bufferPoints;
     bufferPoints << filePoints.rdbuf();
@@ -299,6 +301,11 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 
 
     auto velocities = transformToGrid(cells, faces, points, boundaries);
+    float offsetX = .25f;
+    float offsetY = .25f;
+    AABBox meshDimensions(Vector3(offsetX, offsetY, .0f) * velocities.getDimensions(), Vector3(1.f - offsetX, 1.f - offsetY, 1.f) * velocities.getDimensions());
+//    AABBox meshDimensions = AABBox(Vector3(), velocities.getDimensions());
+    velocities = velocities.subset(meshDimensions.min(), meshDimensions.max());
 
     return velocities;
 }
@@ -309,10 +316,76 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 
 std::string OpenFoamParser::createSimulationFile(std::string foldername, const GridF& _boundaries)
 {
-    GridF boundaries(_boundaries.sizeX, _boundaries.sizeY, 10);
-    boundaries.iterate([&](const Vector3& pos) {
-        boundaries(pos) = _boundaries(pos);
+    Mesh m = Mesh::applyMarchingCubes(_boundaries);
+    std::string file_name = foldername + "/constant/triSurface/cylinder.stl";
+    Vector3 targetSize = Vector3(1.f, .5f, 3.f);
+    m.translate(-(_boundaries.getDimensions().xy() * .5f + Vector3(0, 0, 1)));
+    m.rotate(deg2rad(90), 0, 0);
+    m.scale(targetSize.xzy() / _boundaries.getDimensions());
+
+    displayProcessTime("Saving as STL at " + file_name + "... ", [&]() {
+        std::ofstream off(file_name);
+        off << m.toSTL();
+        off.close();
     });
+
+    std::vector<std::string> commands = {
+        "blockMesh -case \"" + foldername + "\"",
+        "surfaceFeatures -case \"" + foldername + "\"",
+        "snappyHexMesh -case \"" + foldername + "\"",
+        "rm -rf \"" + foldername + "/constant/polyMesh\" && cp -rf \"" + foldername + "/0.5/polyMesh/\" \"" + foldername + "/constant/\" && rm -rf \"" + foldername + "/0.5/\"",
+        "simpleFoam -case \"" + foldername + "\"",
+    };
+
+//    std::string command;
+    int result;
+
+    for (auto command : commands) {
+        displayProcessTime("Running " + command + "...", [&]() {
+            command += " > /dev/null";
+            result = std::system(command.c_str());
+        });
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+            break;
+        }
+    }
+    /*
+    command = "blockMesh -case \"" + foldername + "\" > /dev/null";
+    displayProcessTime("Running " + command + "... ", [&]() {
+        result = std::system(command.c_str());
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+        }
+    });
+    command = "surfaceFeatures -case \"" + foldername + "\" > /dev/null";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+    }
+    command = "snappyHexMesh -case \"" + foldername + "\" > /dev/null";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+    }
+    command = "rm -rf \"" + foldername + "/constant/polyMesh\" && cp -rf \"" + foldername + "/0.1/polyMesh/\" \"" + foldername + "/constant/\" && rm -rf \"" + foldername + "/0.1/\"";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Don't know why..." << std::endl;
+    }
+    command = "simpleFoam -case \"" + foldername + "\" > /dev/null";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+    }
+    */
+
+    return "";
+    /*
+    GridF boundaries(4, 4, 4, -1.f);
+    boundaries(1, 1, 0) = 1;
+    boundaries.raiseErrorOnBadCoord = false;
+    boundaries.defaultValueOnBadCoord = 1;
     std::string filename = foldername + "/system/blockMeshDict";
 
     std::ostringstream oss;
@@ -348,92 +421,55 @@ std::string OpenFoamParser::createSimulationFile(std::string foldername, const G
     oss << ");\n\n";
 
 
+
     oss << "boundary\n(\n";
 
-    oss << "\tinlet\n\t{\n\t\ttype patch;\n\t\tfaces\n\t\t(\n";
-    for (int x = 0; x < boundaries.sizeX - 1; x++) {
-        for (int z = 0; z < boundaries.sizeZ - 1; z++) {
-            Vector3 pos(x, 0, z);
-            size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
-            size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
-            size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
-            size_t i3 = boundaries.getIndex(pos + Vector3(1, 0, 1));
-            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-        }
-    }
-    oss << "\n\t\t);\n\t}\n\n";
-
-    oss << "\toutlet\n\t{\n\t\ttype patch;\n\t\tfaces\n\t\t(\n";
-    for (int x = 0; x < boundaries.sizeX - 1; x++) {
-        for (int z = 0; z < boundaries.sizeZ - 1; z++) {
-            Vector3 pos(x, boundaries.sizeY - 1, z);
-            size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
-            size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
-            size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
-            size_t i3 = boundaries.getIndex(pos + Vector3(1, 0, 1));
-            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-        }
-    }
-    oss << "\n\t\t);\n\t}\n";
-
     oss << "\tlowerWall\n\t{\n\t\ttype wall;\n\t\tfaces\n\t\t(\n";
-    for (int x = 0; x < boundaries.sizeX; x++) {
-        for (int y = 0; y < boundaries.sizeY-1; y++) {
-            for (int z = 0; z < boundaries.sizeZ-1; z++) {
-                if (x == 0 || x == boundaries.sizeX - 1) {
-                    Vector3 pos(x, y, z);
-                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
-                    size_t i1 = boundaries.getIndex(pos + Vector3(0, 1, 0));
-                    size_t i2 = boundaries.getIndex(pos + Vector3(0, 0, 1));
-                    size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 1));
-                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-                }
-            }
-        }
-    }
-    oss << "\n\t\t);\n\t}\n";
-    oss << "\tupperWall\n\t{\n\t\ttype wall;\n\t\tfaces\n\t\t(\n";
-    for (int x = 0; x < boundaries.sizeX - 1; x++) {
-        for (int y = 0; y < boundaries.sizeY - 1; y++) {
-            for (int z = 0; z < boundaries.sizeZ; z++) {
-                if (z == 0 || z == boundaries.sizeZ - 1) {
-                    Vector3 pos(x, y, z);
-                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
-                    size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
-                    size_t i2 = boundaries.getIndex(pos + Vector3(0, 1, 0));
-                    size_t i3 = boundaries.getIndex(pos + Vector3(1, 1, 0));
-                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-                }
-            }
-        }
-    }
-    oss << "\n\t\t);\n\t}\n";
+    boundaries.iterate([&](size_t i) {
+        Vector3 pos = boundaries.getCoordAsVector3(i);
+        size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
+        size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
+        size_t i2 = boundaries.getIndex(pos + Vector3(1, 1, 0));
+        size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 0));
+        size_t i4 = boundaries.getIndex(pos + Vector3(0, 0, 1));
+        size_t i5 = boundaries.getIndex(pos + Vector3(1, 0, 1));
+        size_t i6 = boundaries.getIndex(pos + Vector3(1, 1, 1));
+        size_t i7 = boundaries.getIndex(pos + Vector3(0, 1, 1));
 
-/*
-    oss << "\tfrontAndBack\n\t{\n\t\ttype empty;\n\t\tfaces\n\t\t(\n";
-    for (int x = 1; x < boundaries.sizeX - 1; x++) {
-        for (int y = 1; y < boundaries.sizeY - 1; y++) {
-            for (int z = 1; z < boundaries.sizeZ - 1; z++) {
-                if (x != 0 && x != boundaries.sizeX - 1) {
-                    Vector3 pos(x, y, z);
-                    size_t i0 = boundaries.getIndex(pos + Vector3(0, 0, 0));
-                    size_t i1 = boundaries.getIndex(pos + Vector3(1, 0, 0));
-                    size_t i2 = boundaries.getIndex(pos + Vector3(1, 1, 0));
-                    size_t i3 = boundaries.getIndex(pos + Vector3(0, 1, 0));
-                    size_t i4 = boundaries.getIndex(pos + Vector3(0, 0, 1));
-                    size_t i5 = boundaries.getIndex(pos + Vector3(1, 0, 1));
-                    size_t i6 = boundaries.getIndex(pos + Vector3(1, 1, 1));
-                    size_t i7 = boundaries.getIndex(pos + Vector3(0, 1, 1));
-//                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
-                    oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i5 << " " << i4 << ")";
-                    oss << "\n\t\t\t(" << i1 << " " << i2 << " " << i6 << " " << i5 << ")";
-                }
-            }
+//        if (pos == Vector3(1, 1, 0)) return;
+
+        if (pos.x > boundaries.sizeX - 2 || pos.y > boundaries.sizeY - 2 || pos.z > boundaries.sizeZ - 2)
+            return;
+
+        if (i6 >= boundaries.size()) {
+            return;
         }
-    }
+        // Left (-X) Only on border
+        if ((pos.x == 0 && boundaries(pos) < 0) || (boundaries(pos) > 0 && boundaries(pos - Vector3(1, 0, 0)) < 0)) {
+            oss << "\n\t\t\t(" << i0 << " " << i3 << " " << i7 << " " << i4 << ")";
+        }
+        // Right (+X)
+        if (pos.x >= boundaries.sizeX - 2 || (boundaries(pos) > 0 && boundaries(pos + Vector3(1, 0, 0)) < 0)) {
+            oss << "\n\t\t\t(" << i1 << " " << i2 << " " << i6 << " " << i5 << ")";
+        }
+        // Front (-Y) Only on border
+        if ((pos.y == 0 && boundaries(pos) < 0) || (boundaries(pos) > 0 && boundaries(pos - Vector3(0, 1, 0)) < 0)) {
+            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i5 << " " << i4 << ")";
+        }
+        // Back (+Y)
+        if (pos.y >= boundaries.sizeY - 2 || (boundaries(pos) > 0 && boundaries(pos + Vector3(0, 1, 0)) < 0)) {
+            oss << "\n\t\t\t(" << i3 << " " << i2 << " " << i6 << " " << i7 << ")";
+        }
+        // Bottom (-Z) Only on border
+        if ((pos.z == 0 && boundaries(pos) < 0) || (boundaries(pos) > 0 && boundaries(pos - Vector3(0, 0, 1)) < 0)) {
+            oss << "\n\t\t\t(" << i0 << " " << i1 << " " << i2 << " " << i3 << ")";
+        }
+        // Top (+Z)
+        if (pos.z >= boundaries.sizeZ - 2 || (boundaries(pos) > 0 && boundaries(pos + Vector3(0, 0, 1)) < 0)) {
+            oss << "\n\t\t\t(" << i4 << " " << i5 << " " << i6 << " " << i7 << ")";
+        }
+    });
     oss << "\n\t\t);\n\t}\n";
-*/
     oss << ");\n\n";
 
 
@@ -441,5 +477,18 @@ std::string OpenFoamParser::createSimulationFile(std::string foldername, const G
     file << oss.str();
     file.close();
 
+
+    command = "blockMesh -case \"" + foldername + "\" > /dev/null";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+    }
+    command = "foamRun -case \"" + foldername + "\" > /dev/null";
+    result = std::system(command.c_str());
+    if (result != 0) {
+        std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
+    }
+
     return oss.str();
+    */
 }

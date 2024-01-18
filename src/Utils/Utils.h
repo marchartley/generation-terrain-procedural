@@ -29,6 +29,8 @@ std::vector<std::string> split(std::string str);
 bool makedir(std::string path);
 bool checkPathExists(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);
+Vector3 colorPalette(float t, const std::vector<Vector3>& colors);
+Vector3 colorPalette(float t, const Vector3& startColor = Vector3(1, 0, 0), const Vector3& endColor = Vector3(0, 1, 0));
 
 std::string toUpper(std::string s);
 std::string toLower(std::string s);
@@ -38,6 +40,8 @@ std::string getFilename(std::string path);
 std::string simplify(std::string s);
 
 std::vector<std::string> getAllFiles(std::string folderName);
+
+int runCommand(std::string command);
 
 float rad2deg(float rad);
 float deg2rad(float deg);
@@ -59,6 +63,7 @@ void sleep(int milliseconds);
 //}
 double timeIt(std::function<void()> func);
 std::string showTime(double nanoseconds);
+void displayProcessTime(std::string textToDisplay, std::function<void()> func);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

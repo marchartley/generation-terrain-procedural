@@ -519,7 +519,8 @@ BSpline& BSpline::close()
 
 float CatmullNextT(const Vector3& P0, const Vector3& P1, float t_prev, float alpha)
 {
-    return std::pow((P0 - P1).norm2(), alpha) + t_prev;
+    float norm = std::max(1e-2f, (P0 - P1).norm2());
+    return std::pow(norm, alpha) + t_prev;
 }
 template <class T>
 T map(T x, T prev_min, T prev_max, T new_min, T new_max)

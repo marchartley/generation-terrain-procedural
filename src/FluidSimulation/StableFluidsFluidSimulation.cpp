@@ -463,9 +463,13 @@ GridV3 StableFluidsSimulation::getVelocities(int rescaleX, int rescaleY, int res
 {
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
-        std::string pathToOpenFoamSimulation = "OpenFOAM/simple"; //"/data/OF_Sim_Marcos";
+        std::string pathToOpenFoamSimulation = "OF_Sim_Marcos";
         if (checkPathExists(pathToOpenFoamSimulation)) {
-            this->velocity = OpenFoamParser::parseSimulation(pathToOpenFoamSimulation).resize(sizeX, sizeY, sizeZ);
+            this->velocity = OpenFoamParser::parseSimulation(pathToOpenFoamSimulation);
+            Vector3 aspectRatio = Vector3(rescaleX, rescaleY, rescaleZ).normalize();
+            this->velocity *= aspectRatio;
+            std::cout << "OpenFOAM simu size: " << velocity.getDimensions() << std::endl;
+//            this->velocity = this->velocity.resize(sizeX, sizeY, sizeZ);
         }
         _cachedVelocity = velocity;
 //        std::cout << "Recomputed : " << _cachedVelocity.min() << " " << _cachedVelocity.max() << std::endl;
