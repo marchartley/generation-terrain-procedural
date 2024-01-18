@@ -21,13 +21,57 @@
 #include <random>
 #include <string>
 #include <complex>
+#include <cstdlib>
+#include <cstdio>
+#include <unistd.h>
 
 #include "TerrainModification/particleErosion.h"
 using namespace std;
 
+std::map<std::string, std::string> getAllEnvironmentVariables() {
+    std::string cmd = "/bin/bash -i -c 'source ~/.bashrc && env'";
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (!pipe) {
+        std::cerr << "Error: Unable to run command." << std::endl;
+        return {};
+    }
+
+    std::string currentKey = "";
+
+    char buffer[1024];
+    std::map<std::string, std::string> results;
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result = std::string(buffer);
+        if (!result.empty() && result[result.length() - 1] == '\n') {
+            result.erase(result.length() - 1);
+        }
+        size_t pos = result.find("=");
+        if (pos != result.npos) {
+            currentKey = result.substr(0, pos);
+            results[currentKey] = result.substr(pos + 1);
+
+        } else {
+            results[currentKey] += result;
+        }
+    }
+    pclose(pipe);
+    return results;
+}
+
 int main(int argc, char *argv[])
 {
-
+    auto allVars = getAllEnvironmentVariables();
+    for (auto& [key, val] : allVars) {
+        auto lowerKey = toLower(key);
+//        if (lowerKey == "path" || lowerKey == "ld_library_path" || lowerKey.find("foam") != lowerKey.npos) {
+            std::string s_cmd = key + "=" + val;
+            auto cmd = const_cast<char*>(s_cmd.c_str());
+            setenv(key.c_str(), val.c_str(), 1);
+//        }
+    }
+    //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
+    //return 0;
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
@@ -54,6 +98,43 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 
+    /*
+     * Unit test: BSpline with duplicate values such that it doesn't return any NaN
+    GridV3 vals(200, 200);
+    BSpline spline;
+    // Without duplicate positions
+    spline = BSpline({Vector3(0, 0, 0), Vector3(100, 50, 0), Vector3(100, 25, 0), Vector3(150, 100, 0), Vector3(200, 50, 0)});
+    for (int i = 0; i <= 1000; i++) {
+        float t = float(i) / 1000.f;
+        auto p = spline.getPoint(t);
+        vals(p).x = 1;
+        if (p.x != p.x) {
+            std::cerr << "Without duplicates, NaN found for t = " << t << std::endl;
+        }
+    }
+    // With duplicate positions
+    spline = BSpline({Vector3(0, 0, 0), Vector3(100, 50, 0), Vector3(100, 25, 0), Vector3(100, 25, 0), Vector3(150, 100, 0), Vector3(200, 50, 0)});
+    for (int i = 0; i <= 1000; i++) {
+        float t = float(i) / 1000.f;
+        auto p = spline.getPoint(t);
+        vals(p).y = 1;
+        if (p.x != p.x) {
+            std::cerr << "With duplicates, NaN found for t = " << t << std::endl;
+        }
+    }
+    Plotter::get()->addImage(vals);
+    return Plotter::get()->exec();
+    */
+
+    /*
+     * Unit test: testing the color palette
+    GridV3 colors(1000, 1);
+    colors.iterate([&] (const Vector3& p) {
+        colors(p) = colorPalette(p.x / colors.sizeX, {Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(1, 1, 0)});
+    });
+    Plotter::get()->addImage(colors);
+    return Plotter::get()->exec();
+    */
     /*
      * Unit test: divergence of a vector field
      * There should be the value "2" everywhere, except on the right and bottom borders (and 1.5 on top and left borders)

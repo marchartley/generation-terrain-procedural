@@ -219,11 +219,7 @@ void ErosionInterface::display(const Vector3& camPos)
     if (!this->isVisible())
         return;
     if (this->displayTrajectories) {
-        this->rocksPathSuccess.display(GL_LINES, 3.f);
-        this->rocksPathFailure.display(GL_LINES, 3.f);
-//        std::cout << rocksPathSuccess.vertexArray.size() / 2 << " displacements:" << std::endl;
-//        for (const auto& p : rocksPathSuccess.vertexArray)
-//            std::cout << p << std::endl;
+        this->rocksPathSuccess.displayStrips(countsTrajectories, 3.f);
     }
     if (this->displayBoundaries) {
         this->boundariesMesh.displayWithOutlines(std::vector<float>{0.f, 0.f, 1.f, .4f}, GL_TRIANGLES);
@@ -476,15 +472,29 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
 
             sumTrajectories += timeIt([&]() {
                 std::vector<Vector3> asOneVector;
+                std::vector<float> velocities;
+                this->countsTrajectories.resize(lastRocksLaunched.size());
                 for (size_t i = 0; i < lastRocksLaunched.size(); i++) {
-                    auto points = lastRocksLaunched[i].points; // lastRocksLaunched[i].getPath(std::min(100, int(lastRocksLaunched[i].points.size())));
-                    for (int j = 0; j < int(points.size()) - 1; j++) {
-                        if ((points[j] - points[j+1]).norm2() < 20.f * 20.f) {
-                            asOneVector.push_back(points[j]);
-                            asOneVector.push_back(points[j + 1]);
-                        }
+                    auto points = lastRocksLaunched[i].points;
+                    asOneVector.insert(asOneVector.end(), points.begin(), points.end());
+                    int windowSize = 3;
+                    for (size_t i = 0; i < points.size(); i++) {
+                        int firstIndex = std::max(int(i) - windowSize, 0);
+                        int lastIndex = std::min(int(i) + windowSize, int(points.size()) - 1);
+                        velocities.push_back((points[lastIndex] - points[firstIndex]).norm() / float(lastIndex - firstIndex));
                     }
+                    countsTrajectories[i] = points.size();
                 }
+                float minVel = std::numeric_limits<float>::max();
+                float maxVel = 0.f;
+
+                for (size_t i = 0; i < velocities.size(); i++) {
+                    minVel = std::min(minVel, velocities[i]);
+                    maxVel = std::max(maxVel, velocities[i]);
+                }
+                this->rocksPathSuccess.colorsArray.resize(velocities.size());
+                for (size_t i = 0; i < velocities.size(); i++)
+                    rocksPathSuccess.colorsArray[i] = colorPalette((velocities[i] - minVel) / (maxVel - minVel));
                 this->rocksPathSuccess.fromArray(asOneVector);
             });
             if (applyOn == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP) {

@@ -120,7 +120,7 @@ public:
     std::string airFlowImagePath = "";
     std::string densityFieldImagePath = "";
 
-    FluidSimType selectedSimulationType = FLIP;
+    FluidSimType selectedSimulationType = STABLE;
 
     UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLUID_SIMULATION; //UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
     UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
@@ -133,6 +133,8 @@ public:
     bool currentlyModifyingTerrain = false;
 
     std::vector<std::pair<Vector3, float>> randomObstacles;
+
+    std::vector<int> countsTrajectories;
 };
 
 #endif // EROSIONINTERFACE_H
