@@ -2,21 +2,21 @@
 #define FLOWFIELDINTERFACE_H
 
 
-class FlowFieldInterface;
+class StableFluidSimulationInterface;
 #include <QWidget>
 #include "Interface/AbstractFluidSimulationInterface.h"
 #include "FluidSimulation/StableFluidsFluidSimulation.h"
 
-class FlowFieldInterface : public AbstractFluidSimulationInterface
+class StableFluidSimulationInterface : public AbstractFluidSimulationInterface
 {
     Q_OBJECT
 public:
-    FlowFieldInterface(QWidget *parent = nullptr);
+    StableFluidSimulationInterface(QWidget *parent = nullptr);
 
 //    void updateParticlesMesh();
 
 public Q_SLOTS:
-//    void updateParticles();
+    virtual void computeSimulation(int nbSteps = 1);
 
 protected:
 };

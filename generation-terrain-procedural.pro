@@ -298,7 +298,6 @@ HEADERS += \
     src/Interface/FLIPSimulationInterface.h \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
-    src/Interface/FlowFieldInterface.h \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
     src/Interface/HierarchicalListWidget.h \
@@ -318,6 +317,7 @@ HEADERS += \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/SpheroidalErosionInterface.h \
     src/Interface/Spoiler.h \
+    src/Interface/StableFluidSimulationInterface.h \
     src/Interface/StickyFrame.h \
     src/Interface/TerrainComparatorInterface.h \
     src/Interface/TerrainGenerationInterface.h \

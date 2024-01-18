@@ -140,7 +140,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
                     meshType.possibleMeshes[i].fromFBX(dir.toStdString());
                 } else if (dir.endsWith("stl", Qt::CaseInsensitive)) {
                     meshType.possibleMeshes[i].fromStl(dir.toStdString()).scale(Vector3(1.f, 1.f, -1.f));
-                } else {
+                } else if (!dir.endsWith(".ignore")) {
                     std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
                 }
 

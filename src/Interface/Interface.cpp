@@ -46,7 +46,7 @@ ViewerInterface::ViewerInterface() {
         std::make_shared<KarstPathGenerationInterface>(this),
         std::make_shared<SpaceColonizationInterface>(this),
         std::make_shared<FaultSlipInterface>(this),
-        std::make_shared<FlowFieldInterface>(this),
+        std::make_shared<StableFluidSimulationInterface>(this),
         std::make_shared<TunnelInterface>(this),
         std::make_shared<ManualEditionInterface>(this),
         std::make_shared<GravityInterface>(this),
@@ -93,9 +93,9 @@ ViewerInterface::ViewerInterface() {
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/goblin_test.jpg");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test_openfoam.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
 
@@ -167,21 +167,11 @@ ViewerInterface::ViewerInterface() {
         }
 
         envObjectsInterface->fromGanUI();
-        float time = timeIt([&]() {
-            OpenFoamParser::createSimulationFile("OpenFOAM/simple/", viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
-            std::string command = "blockMesh";
-            int result = std::system(command.c_str());
-            if (result != 0) {
-                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
-            }
-            command = "foamRun";
-            result = std::system(command.c_str());
-            if (result != 0) {
-                std::cerr << "Oups, the command `" << command << "` didn't finished as expected... Maybe OpenFOAM is missing?" << std::endl;
-            }
-        });
-        std::cout << "Time for mesh definition: " << showTime(time) << std::endl;
-//        exit(EXIT_SUCCESS);
+//        float time = timeIt([&]() {
+//            std::string simFolder = "OF_Sim_Marcos/"; //"OpenFOAM/simple/";
+//            OpenFoamParser::createSimulationFile(simFolder, viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
+//        });
+//        std::cout << "Time for mesh definition: " << showTime(time) << std::endl;
 
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
