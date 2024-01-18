@@ -6,44 +6,12 @@ INCLUDEPATH *= src/
 QMAKE_CXXFLAGS += -fopenmp
 LIBS += -fopenmp
 
-#LIBS *= -L"C:\Program Files\ESI-OpenCFD\OpenFOAM\v2112\msys64\home\ofuser\OpenFOAM\OpenFOAM-v2112\platforms\win64MingwDPInt32Opt\bin"
-#INCLUDEPATH *= src/third-party/openFoam/inInclude
-
-#DEFINES += "WM_LINK_LANGUAGE=c++"
-#DEFINES += "WM_ARCH=linux64"
-#DEFINES += "WM_COMPILER_TYPE=system"
-#DEFINES += "WM_OSTYPE=POSIX"
-#DEFINES += "WM_THIRD_PARTY_DIR=/home/marzieh/ThirdParty-7"
-#DEFINES += "WM_CXXFLAGS=-m64 -fPIC -std=c++0x"
-#DEFINES += "WM_CFLAGS=-m64 -fPIC"
-#DEFINES += "WM_PROJECT_VERSION=7"
-#DEFINES += "WM_COMPILER_LIB_ARCH=64"
-#DEFINES += "WM_PROJECT_INST_DIR=/home/marzieh"
-#DEFINES += "WM_CXX=g++"
-#DEFINES += "WM_PROJECT_DIR=/home/marzieh/OpenFOAM-7"
-#DEFINES += "WM_LABEL_OPTION=Int32"
-#DEFINES += "WM_PROJECT=OpenFOAM"
-#DEFINES += "WM_LDFLAGS=-m64"
-#DEFINES += "WM_COMPILER=Gcc"
-#DEFINES += "WM_MPLIB=SYSTEMOPENMPI"
-#DEFINES += "WM_CC=gcc"
-#DEFINES += "WM_COMPILE_OPTION=Opt"
-#DEFINES += "WM_DIR=/home/marzieh/OpenFOAM-7/wmake"
 DEFINES += "WM_LABEL_SIZE=32"
-#DEFINES += "WM_PROJECT_USER_DIR=/home/marzieh/OpenFOAM/marzieh-7"
-#DEFINES += "WM_OPTIONS=linux64GccDPInt32Opt"
-#DEFINES += "WM_PRECISION_OPTION=DP"
-#DEFINES += "WM_ARCH_OPTION=64"
 
 unix {
-#    INCLUDEPATH *= /export/home/scharf/mhartley/codes/libQGLViewer-2.9.1 #/home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
-    #INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-#    LIBS *= -L/export/home/scharf/mhartley/codes/libQGLViewer-2.9.1/QGLViewer
-    LIBS *= -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+    LIBS *= -lQGLViewer-qt5
     LIBS *= -lpng
-#    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
-#    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-#    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+
     INCLUDEPATH *= src/third-party/glad/include
     INCLUDEPATH *= src/third-party/glfw/include
     INCLUDEPATH *= src/third-party/glm
@@ -57,7 +25,6 @@ win32 {
     # Boost and TBB are installed by VCPKG (https://github.com/microsoft/vcpkg) at the location C:\Programs_installations\vcpkg
     # For TBB on Windows, do everything on Release...
     INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0"
-#    INCLUDEPATH *= "C:\Program Files\Python39\include"
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include"
     INCLUDEPATH *= "D:\code\Qt\libQGLViewer-2.7.2"
     INCLUDEPATH *= "src\third-party\glad\include"
@@ -67,10 +34,6 @@ win32 {
     INCLUDEPATH *= "src\third-party"
 
     INCLUDEPATH *= "C:\Users\Marc\Downloads\libpng-1.2.37-lib\include"
-#    INCLUDEPATH *= C:\codes\CPP\eigen
-#    INCLUDEPATH *= "C:/Program Files/OpenVDB/include"
-    # INCLUDEPATH *= C:\Programs_installations\vcpkg\installed\x64-windows\include
-#    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib"
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib"
     LIBS *= -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer"
 
@@ -158,7 +121,6 @@ SOURCES += \
     src/Interface/FLIPSimulationInterface.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
-        src/Interface/FlowFieldInterface.cpp \
         src/Interface/GravityInterface.cpp \
         src/Interface/HeightmapErosionInterface.cpp \
     src/Interface/HierarchicalListWidget.cpp \
@@ -178,6 +140,7 @@ SOURCES += \
         src/Interface/SpaceColonizationInterface.cpp \
     src/Interface/SpheroidalErosionInterface.cpp \
         src/Interface/Spoiler.cpp \
+    src/Interface/StableFluidSimulationInterface.cpp \
         src/Interface/StickyFrame.cpp \
     src/Interface/TerrainComparatorInterface.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
