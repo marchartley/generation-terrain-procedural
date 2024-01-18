@@ -23,6 +23,7 @@ OpenFoam/*
 
 doc/
 
+*.autosave
 *.stl
 saved_maps/onlyVoxels/
 saved_maps/onlyVoxels/*

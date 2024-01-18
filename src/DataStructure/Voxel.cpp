@@ -55,8 +55,13 @@ void VoxelDataFile::load(const std::string &filename) {
 
         if (potentialWidth > 0 && potentialHeight > 0 && potentialDepth > 0) {
             // Assume it's the new binary format
-            inFile.seekg(0, std::ios::beg);
-            loadFromFileBinary(filename);
+            try {
+                inFile.seekg(0, std::ios::beg);
+                loadFromFileBinary(filename);
+            } catch(std::exception e) {
+                inFile.seekg(0, std::ios::beg);
+                loadFromFileOld(filename);
+            }
         } else {
             std::cerr << "Unable to determine the file format." << std::endl;
         }
