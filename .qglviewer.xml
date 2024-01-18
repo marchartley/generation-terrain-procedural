@@ -1,22 +1,22 @@
 <!DOCTYPE QGLVIEWER>
 <QGLViewer version="2.6.3">
   <State stereo="false">
-    <foregroundColor red="180" blue="180" green="180"/>
-    <backgroundColor red="127" blue="127" green="127"/>
+    <foregroundColor blue="180" red="180" green="180"/>
+    <backgroundColor blue="127" red="127" green="127"/>
   </State>
-  <Display cameraIsEdited="false" axisIsDrawn="false" gridIsDrawn="false" FPSIsDisplayed="false"/>
-  <Geometry posX="72" posY="27" fullScreen="false" width="1848" height="1016"/>
+  <Display axisIsDrawn="false" gridIsDrawn="false" cameraIsEdited="false" FPSIsDisplayed="false"/>
+  <Geometry height="1016" posY="27" width="1848" fullScreen="false" posX="72"/>
   <Camera>
-    <Parameters zNearCoefficient="0.005" fieldOfView="0.785398" Type="PERSPECTIVE" zClippingCoefficient="1.73205" orthoCoef="0" sceneRadius="500">
-      <SceneCenter y="50" z="20" x="100"/>
+    <Parameters fieldOfView="0.785398" zNearCoefficient="0.005" Type="PERSPECTIVE" orthoCoef="0" sceneRadius="500" zClippingCoefficient="1.73205">
+      <SceneCenter x="100" z="20" y="50"/>
     </Parameters>
     <Stereo focusDistance="1207.11" IODist="0.062" physScreenWidth="0.5"/>
     <ManipulatedCameraFrame>
-      <position y="206.439" z="212.346" x="151.191"/>
-      <orientation q0="0.0790544" q1="0.358289" q2="0.92293" q3="0.116533"/>
-      <ManipulatedParameters zoomSens="1" rotSens="1" transSens="1" spinSens="0.3" wheelSens="1"/>
-      <ManipulatedCameraParameters rotatesAroundUpVector="false" zoomsOnPivotPoint="false" flySpeed="5">
-        <sceneUpVector y="1" z="0" x="0"/>
+      <position x="489.497" z="117.799" y="2.19884"/>
+      <orientation q2="-0.639928" q1="-0.306034" q3="-0.459351" q0="-0.534633"/>
+      <ManipulatedParameters wheelSens="1" transSens="1" rotSens="1" spinSens="0.3" zoomSens="1"/>
+      <ManipulatedCameraParameters rotatesAroundUpVector="false" flySpeed="5" zoomsOnPivotPoint="false">
+        <sceneUpVector x="0" z="0" y="1"/>
       </ManipulatedCameraParameters>
     </ManipulatedCameraFrame>
   </Camera>
