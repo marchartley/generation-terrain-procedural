@@ -250,8 +250,9 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
     if (!dimensions.isValid())
         finalDimensions = this->getDimensions();
     VoxelGrid voxels;
+    voxels._cachedVoxelValues = GridF(finalDimensions);
     voxels.fromImplicit(this);
-    return voxels.getGeometry(finalDimensions);
+    return voxels.getGeometry(finalDimensions * Vector3(.5f, .5f, .25f));
 }
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
@@ -346,7 +347,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
 
     this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-    std::cout << "Time for evaluating " << this->_cachedVoxelized.size() << " cells: " << showTime(timeIt([&]() {
+    displayProcessTime("Evaluating " + std::to_string(this->_cachedVoxelized.size()) + " cells (" + this->_cachedVoxelized.getDimensions().toString() + ")... ", [&]() {
         #pragma omp parallel for collapse(3)
         for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
             for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
@@ -399,10 +400,8 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
                 }
             }
         }
-    })) << std::endl;
-//    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
+    });
     _cached = true;
-//    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
     return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
 
@@ -2301,8 +2300,8 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
     for (auto& compo : this->composables) {
-        if (auto as2DNary = dynamic_cast<Implicit2DNary*>(compo))
-            as2DNary->reevaluateAll();
+//        if (auto as2DNary = dynamic_cast<Implicit2DNary*>(compo))
+//            as2DNary->reevaluateAll();
         auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
         for (auto& [mat, val] : evaluation) {
             if (bestReturn.count(mat) == 0)

@@ -25,7 +25,7 @@
 #include <cstdio>
 #include <unistd.h>
 
-#include "TerrainModification/particleErosion.h"
+#include "TerrainModification/ParticleErosion.h"
 using namespace std;
 
 std::map<std::string, std::string> getAllEnvironmentVariables() {

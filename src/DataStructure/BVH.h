@@ -8,8 +8,6 @@
 #include "DataStructure/MemoryPool.h"
 
 struct BVHNode {
-//    std::vector<std::vector<Vector3>> triangles;
-//    std::vector<Triangle> triangles;
     std::vector<size_t> trianglesIndices;
     AABBox box;
     BVHNode* left;
@@ -70,6 +68,11 @@ public:
 
     BVHMemoryPool* memoryPool;
     BVHNode* allocateNode();
+
+
+
+    void traverseBVH(BVHNode* node, const Vector3& pos, float& minDistance, size_t& closestTriangleIndex, const std::vector<Triangle>& triangles);
+    size_t getClosestTriangle(const Vector3& pos/*, const std::vector<Triangle>& triangles*/);
 };
 
 #endif // BVH_H

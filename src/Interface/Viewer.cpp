@@ -240,7 +240,7 @@ void Viewer::drawingProcess() {
             camera()->getProjectionMatrix(pMatrix);
             camera()->getModelViewMatrix(mvMatrix);
 
-            this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
+            this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f) * 1000.f;
             Material ground_material(
                             {220/255.f, 210/255.f, 110/255.f, 1.f},
                             { 70/255.f,  80/255.f,  70/255.f, 1.f},
@@ -267,28 +267,24 @@ void Viewer::drawingProcess() {
                 } else {
                     shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
                 }
-//                shader->setBool("display_light_source", true);
                 shader->setVector("min_vertice_positions", minVoxelsShown());
                 shader->setVector("max_vertice_positions", maxVoxelsShown());
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
-//                shader->setFloat("fogNear", this->fogNear);
-//                shader->setFloat("fogFar", this->fogFar);
-//                shader->setBool("wireframeMode", !displayFill);
 
 
                 Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
                 shader->setPositionalLight("lights[0]", this->light);
-                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200));
+                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200) * 1000.f);
                 shader->setPositionalLight("lights[1]", this->light);
-                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0));
+                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0) * 1000.f);
                 shader->setPositionalLight("lights[2]", this->light);
-                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200));
+                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200) * 1000.f);
                 shader->setPositionalLight("lights[3]", this->light);
-                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100));
+                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100) * 1000.f);
                 shader->setPositionalLight("lights[4]", this->light);
-                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200));
+                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200) * 1000.f);
                 shader->setPositionalLight("lights[5]", this->light);
-                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10));
+                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10) * 1000.f);
             });
         });
 
@@ -455,12 +451,12 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
         Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
         Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
-        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
         try {
             QGLViewer::mouseMoveEvent(e);
         }  catch (std::exception) {
             std::cout << "Catched this f***ing exception!" << std::endl;
         }
+        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
 
         update();
     });
@@ -555,7 +551,6 @@ bool Viewer::checkMouseOnVoxel()
         currPos = implicitTerrain->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     }
     bool found = currPos.isValid();
-//    std::cout << found << std::endl;
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos;

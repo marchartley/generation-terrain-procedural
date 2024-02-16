@@ -91,6 +91,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->vShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->vShader);
             GlobalsGL::printShaderErrors(this->vShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             vertexShaderFilename = "";
         }
@@ -105,6 +106,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->fShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->fShader);
             GlobalsGL::printShaderErrors(this->fShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             fragmentShaderFilename = "";
         }
@@ -119,6 +121,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->gShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->gShader);
             GlobalsGL::printShaderErrors(this->gShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             geometryShaderFilename = "";
         }
@@ -132,10 +135,15 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
         GlobalsGL::f()->glTransformFeedbackVaryings(this->programID, feedbackValues.size(), variables, GL_INTERLEAVED_ATTRIBS);
     }
 
+    GlobalsGL::checkOpenGLError();
     GlobalsGL::f()->glLinkProgram(this->programID);
-    GlobalsGL::f()->glDeleteShader(this->vShader);
-    GlobalsGL::f()->glDeleteShader(this->fShader);
-    GlobalsGL::f()->glDeleteShader(this->gShader);
+    if (this->vShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->vShader);
+    if (this->fShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->fShader);
+    if (this->gShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->gShader);
+    GlobalsGL::checkOpenGLError();
 
 #endif
 }

@@ -63,7 +63,7 @@ void sleep(int milliseconds);
 //}
 double timeIt(std::function<void()> func);
 std::string showTime(double nanoseconds);
-void displayProcessTime(std::string textToDisplay, std::function<void()> func);
+void displayProcessTime(std::string textToDisplay, std::function<void()> func, bool print = true);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

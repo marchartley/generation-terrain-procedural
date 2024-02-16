@@ -6,7 +6,7 @@
 VoxelDataFile::VoxelDataFile()
 {}
 
-VoxelDataFile::VoxelDataFile(const GridF&dVec)
+VoxelDataFile::VoxelDataFile(const GridF& dVec)
     : data(dVec) {}
 
 void VoxelDataFile::write(const std::string &filename) {
@@ -19,7 +19,7 @@ void VoxelDataFile::write(const std::string &filename) {
 
         size_t dataSize = data.size();
         outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-        outFile.write(reinterpret_cast<const char*>(data.data.data()), dataSize * sizeof(float));
+        outFile.write(reinterpret_cast<const char*>(((Matrix3<char>)data).data.data()), dataSize * sizeof(float));
 
         outFile.close();
         std::cout << "Data written to file successfully." << std::endl;

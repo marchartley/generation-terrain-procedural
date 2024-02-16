@@ -127,6 +127,8 @@ public:
 
     GridV3 displayedImage;
 
+    InterfaceUI* interfaceButtons;
+
 private:
     static Plotter* instance;
 //    QValueAxis* m_axisX;

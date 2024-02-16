@@ -1,5 +1,6 @@
 #include "CommonInterface.h"
 
+#include <iostream>
 #include <QBoxLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -203,7 +204,7 @@ UIElement *InterfaceUI::find(std::string name)
 
 void InterfaceUI::update()
 {
-    for (auto& child : box()->children()) {
+    for (auto& child : this->elements) {// box()->children()) {
         if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
             asUIElement->update();
         }
@@ -358,3 +359,96 @@ void RangeSliderElement::update()
     slider()->setMinValue(*this->boundVariableMin);
     slider()->setMaxValue(*this->boundVariableMax);
 }
+
+ComboboxElement::ComboboxElement(std::string label)
+    : UIElement(new QGroupBox)
+{
+    this->_combobox = new QComboBox();
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_combobox);
+    getWidget()->setLayout(layout);
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices)
+    : ComboboxElement(label)
+{
+    this->choices = choices;
+    for (auto& c : choices) {
+        if (c.iconPath != "") {
+            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
+        } else {
+            combobox()->addItem(QString::fromStdString(c.label), c.value);
+        }
+    }
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int &currentSelection)
+    : ComboboxElement(label, choices)
+{
+    this->bindTo(currentSelection);
+}
+/*
+ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex)
+    : ComboboxElement(label)
+{
+    bindTo(bindedTexts);
+    bindTo(bindedIndex);
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex, bool interpretAsImages)
+    : ComboboxElement(label, bindedTexts, bindedIndex), itemsAreImages(interpretAsImages)
+{
+
+}
+*/
+QComboBox *ComboboxElement::combobox()
+{
+    return _combobox;
+}
+
+void ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
+{
+    QObject::connect(_combobox, &QComboBox::currentTextChanged, this, [=](QString text) {
+        int index = _combobox->currentIndex();
+        func(index);
+    });
+}
+
+void ComboboxElement::bindTo(int &indexSelected)
+{
+    boundIndex = indexSelected;
+    combobox()->setCurrentIndex(indexSelected);
+    this->setOnSelectionChanged([&](int index) {
+        this->boundIndex->get() = index;
+    });
+}
+
+void ComboboxElement::update()
+{
+    combobox()->clear();
+    for (auto& c : choices) {
+        if (c.iconPath != "") {
+            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
+        } else {
+            combobox()->addItem(QString::fromStdString(c.label), c.value);
+        }
+    }
+    combobox()->setCurrentIndex(*this->boundIndex);
+}
+/*
+void ComboboxElement::bindTo(std::vector<std::string> &values)
+{
+    boundValues = values;
+    for (auto& text : boundValues) {
+        if (itemsAreImages) {
+            combobox()->addItem(QIcon(QString::fromStdString(text)));
+        } else {
+            combobox()->addItem(QString::fromStdString(text));
+        }
+    }
+}*/

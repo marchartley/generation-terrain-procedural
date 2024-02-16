@@ -1,4 +1,4 @@
-#include "FlowFieldInterface.h"
+#include "StableFluidSimulationInterface.h"
 #include "FluidSimulation/OpenFoamParser.h"
 
 StableFluidSimulationInterface::StableFluidSimulationInterface(QWidget *parent)
@@ -11,7 +11,9 @@ StableFluidSimulationInterface::StableFluidSimulationInterface(QWidget *parent)
 
 void StableFluidSimulationInterface::computeSimulation(int nbSteps)
 {
-    OpenFoamParser::createSimulationFile("OF_Sim_Marcos/", this->voxelGrid->getVoxelValues());
+    displayProcessTime("OpenFoam computation... ", [&]() {
+        OpenFoamParser::createSimulationFile("OpenFoam/OF_Sim_Marcos/", this->voxelGrid->getVoxelValues());
+    });
     this->_simulation->_cachedStep = -1;
     this->updateVectorsMesh();
 //    AbstractFluidSimulationInterface::computeSimulation(nbSteps);

@@ -26,11 +26,15 @@ public:
     void createEnvObjectsFromImplicitTerrain();
     void setDefinitionFile(std::string filename);
 
+    EnvObject* instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score);
+
 public Q_SLOTS:
     void show();
     void hide();
     virtual void afterTerrainUpdated();
     virtual void afterWaterLevelChanged();
+
+    virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
     void instantiateObject();
     void instantiateSpecific(std::string objectName);
@@ -38,7 +42,7 @@ public Q_SLOTS:
 
     void recomputeErosionValues();
 
-    void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false);
+    void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true);
     void onlyUpdateFlowAndSandFromEnvObjects();
 
     void displayProbas(std::string objectName);
@@ -50,6 +54,8 @@ public Q_SLOTS:
     void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
 
     void hotReloadFile();
+
+    void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
 public:
     Mesh velocitiesMesh;
@@ -63,6 +69,7 @@ public:
     bool displayHighErosions = true;
     bool displaySediments = true;
     bool displayHighCurrents = true;
+    bool waitAtEachFrame = false;
 
 
     GridF erosionGrid;

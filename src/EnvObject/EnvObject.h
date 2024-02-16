@@ -33,11 +33,14 @@ public:
     Vector3 flowEffect;
     float sandEffect;
     Vector3 inputDimensions;
+    float age = 0.f;
+    std::map<std::string, float> needsForGrowth;
+    std::map<std::string, float> currentSatisfaction;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
-    float growingState = 1.f;
+    float growingState = 0.f;
 
     virtual float getSqrDistance(const Vector3& position, std::string complement = "") = 0;
     virtual Vector3 getVector(const Vector3& position, std::string complement = "") = 0;
@@ -48,7 +51,10 @@ public:
     virtual EnvObject* clone() = 0;
 
 
+    virtual float computeGrowingState();
+
     virtual void applySandDeposit() = 0;
+    virtual void applySandAbsorption() = 0;
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
 
 
@@ -111,6 +117,7 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvPoint* clone();
     virtual void applySandDeposit();
+    virtual void applySandAbsorption();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;
@@ -137,6 +144,7 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
     virtual void applySandDeposit();
+    virtual void applySandAbsorption();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;
@@ -162,6 +170,7 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvArea* clone();
     virtual void applySandDeposit();
+    virtual void applySandAbsorption();
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;

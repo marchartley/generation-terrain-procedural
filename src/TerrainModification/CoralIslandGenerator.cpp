@@ -84,7 +84,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 
     std::map<std::string, GridI> featureAreas;
 
-    std::cout << "Extraction: " << showTime(timeIt([&]() {
+    displayProcessTime("Extracting shapes... ", [&]() {
         // Create binary masks for each of the objects
         for (auto& [_, name] : colorToFeature)
             featureAreas[name] = GridI(img.getDimensions());
@@ -94,16 +94,16 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             if (colorToFeature.count({pix.x, pix.y, pix.z}) == 0) continue;
             featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
         }
-    })) << std::endl;
+    });
 
-    std::cout << "Fill holes: " << showTime(timeIt([&]() {
+    displayProcessTime("Filling holes in shapes... ", [&]() {
         // If some binary masks have holes (e.g. the island is inside the lagoon), remove them.
         // This is done using CCL algorithm, maybe not the fastest and smartest way
         for (auto& [name, area] : featureAreas) {
             if (name == "reef") continue;
             area = area.fillHoles(true);
         }
-    })) << std::endl;
+    });
 
 
     std::vector<EnvObject*> objects;
@@ -124,7 +124,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
     })) << std::endl;
 */
 
-    std::cout << "Lagoon + reefs: " << showTime(timeIt([&]() {
+    displayProcessTime("Finding lagoons and reefs... ", [&]() {
         // Extract the lagoon contours to instantiate the lagoons and the reefs
         auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
         for (auto& curve : lagoonContours) {
@@ -141,9 +141,9 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             lagoon->area = simplifiedCurve;
             objects.push_back(lagoon);
         }
-    })) << std::endl;
+    });
 
-    std::cout << "Coasts: " << showTime(timeIt([&]() {
+    displayProcessTime("Finding coasts... ", [&]() {
         // Extract the coast contours
         auto coastContours = featureAreas["coast"].findContoursAsCurves();
         for (auto& curve : coastContours) {
@@ -156,10 +156,10 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             coast->area = simplifiedCurve;
             objects.push_back(coast);
         }
-    })) << std::endl;
+    });
 
 
-    std::cout << "Island: " << showTime(timeIt([&]() {
+    displayProcessTime("Finding islands... ", [&]() {
         // Extract the island contours
         auto islandContours = featureAreas["island"].findContoursAsCurves();
         for (auto& curve : islandContours) {
@@ -171,7 +171,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             island->area = simplifiedCurve;
             objects.push_back(island);
         }
-    })) << std::endl;
+    });
 
     return objects;
 }

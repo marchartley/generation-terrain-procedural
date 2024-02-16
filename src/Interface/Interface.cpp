@@ -4,7 +4,7 @@
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
 #include "Interface/FaultSlipInterface.h"
-#include "Interface/FlowFieldInterface.h"
+#include "Interface/StableFluidSimulationInterface.h"
 #include "Interface/TunnelInterface.h"
 #include "Interface/ManualEditionInterface.h"
 #include "Interface/GravityInterface.h"
@@ -45,28 +45,28 @@ ViewerInterface::ViewerInterface() {
     std::vector<std::shared_ptr<ActionInterface>> interfacesList = {
         std::make_shared<KarstPathGenerationInterface>(this),
         std::make_shared<SpaceColonizationInterface>(this),
-        std::make_shared<FaultSlipInterface>(this),
+//        std::make_shared<FaultSlipInterface>(this),
         std::make_shared<StableFluidSimulationInterface>(this),
-        std::make_shared<TunnelInterface>(this),
+//        std::make_shared<TunnelInterface>(this),
         std::make_shared<ManualEditionInterface>(this),
-        std::make_shared<GravityInterface>(this),
+//        std::make_shared<GravityInterface>(this),
         std::make_shared<UndoRedoInterface>(this),
         std::make_shared<TerrainGenerationInterface>(this),
         std::make_shared<ErosionInterface>(this),
-        std::make_shared<HeightmapErosionInterface>(this),
+//        std::make_shared<HeightmapErosionInterface>(this),
         std::make_shared<BiomeInterface>(this),
         std::make_shared<SmoothInterface>(this),
         std::make_shared<PrimitivePatchesInterface>(this),
         std::make_shared<TerrainSavingInterface>(this),
-        std::make_shared<MeshInstanceAmplificationInterface>(this),
-        std::make_shared<SPHSimulationInterface>(this),
-        std::make_shared<FLIPSimulationInterface>(this),
-        std::make_shared<WarpFluidSimulationInterface>(this),
-        std::make_shared<LBMFluidSimulationInterface>(this),
-        std::make_shared<CoralIslandGeneratorInterface>(this),
-        std::make_shared<SpheroidalErosionInterface>(this),
+//        std::make_shared<MeshInstanceAmplificationInterface>(this),
+//        std::make_shared<SPHSimulationInterface>(this),
+//        std::make_shared<FLIPSimulationInterface>(this),
+//        std::make_shared<WarpFluidSimulationInterface>(this),
+//        std::make_shared<LBMFluidSimulationInterface>(this),
+//        std::make_shared<CoralIslandGeneratorInterface>(this),
+//        std::make_shared<SpheroidalErosionInterface>(this),
         std::make_shared<EnvObjsInterface>(this),
-        std::make_shared<EnvObjectFluidSimulation>(this),
+//        std::make_shared<EnvObjectFluidSimulation>(this),
         std::make_shared<TerrainComparatorInterface>(this)
     };
 
@@ -77,7 +77,7 @@ ViewerInterface::ViewerInterface() {
     }
 
     std::shared_ptr<TerrainGenerationInterface> terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
-    std::shared_ptr<CoralIslandGeneratorInterface> coralGenerationInterface = std::static_pointer_cast<CoralIslandGeneratorInterface>(actionInterfaces["coralisland"]);
+//    std::shared_ptr<CoralIslandGeneratorInterface> coralGenerationInterface = std::static_pointer_cast<CoralIslandGeneratorInterface>(actionInterfaces["coralisland"]);
     std::shared_ptr<EnvObjsInterface> envObjectsInterface = std::static_pointer_cast<EnvObjsInterface>(actionInterfaces["envobjects"]);
 
     viewer->interfaces = this->actionInterfaces;
@@ -93,7 +93,7 @@ ViewerInterface::ViewerInterface() {
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test_openfoam.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/test_openfoam.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
@@ -103,7 +103,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/slope_with_hole.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/_ToClassify/map_2023-08-19__20-31-35-voxels.stl");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/labyrinthe.data");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
+        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano3_2.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/test.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/Pipes/map_2023-08-19__10-23-28-voxels.stl");
@@ -166,9 +166,9 @@ ViewerInterface::ViewerInterface() {
             biomeInterface->generateBiomes();
         }
 
-        envObjectsInterface->fromGanUI();
+//        envObjectsInterface->fromGanUI();
 //        float time = timeIt([&]() {
-//            std::string simFolder = "OF_Sim_Marcos/"; //"OpenFOAM/simple/";
+//            std::string simFolder = "OpenFoam/OF_Sim_Marcos/"; //"OpenFOAM/simple/";
 //            OpenFoamParser::createSimulationFile(simFolder, viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
 //        });
 //        std::cout << "Time for mesh definition: " << showTime(time) << std::endl;
@@ -371,13 +371,21 @@ void ViewerInterface::setupUi()
 
     CheckboxElement* displayAsComparisonTerrainButton = new CheckboxElement("Comparison terrain");
     displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
-    displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});//&TerrainGenerationInterface::changeDisplayToComparativeMode, terrainGenerationInterface);
+    displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});
+
+    CheckboxElement* displayWaterDepthButton = new CheckboxElement("Depth");
+    displayWaterDepthButton->setChecked(terrainGenerationInterface->displayDepth);
+    displayWaterDepthButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayDepthMode(check);});
+
+    CheckboxElement* displayShadowsButton = new CheckboxElement("Shadows");
+    displayShadowsButton->setChecked(terrainGenerationInterface->displayShadows);
+    displayShadowsButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayShadowsMode(check);});
 
     SliderElement* waterLevelSlider = new SliderElement("Water", 0.f, 1.f, 0.01f, terrainGenerationInterface->waterLevel);
     waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
     SliderElement* ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
     ambiantOcclusionSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    SliderElement* heightFactorSlider = new SliderElement("Height", 0.f, 1.f, 0.01f, terrainGenerationInterface->heightFactor);
+    SliderElement* heightFactorSlider = new SliderElement("Height", 0.f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
     heightFactorSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
 
     displayOptionUI->add(displayModeLayout);
@@ -391,8 +399,16 @@ void ViewerInterface::setupUi()
                                                     heightFactorSlider
                                                 }),
                                                 //reloadShadersButton,
-                                                displayAsComparisonTerrainButton,
-                                                new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+                                                   createHorizontalGroupUI({
+                                                       createVerticalGroupUI({
+                                                           displayAsComparisonTerrainButton,
+                                                           new CheckboxElement("Animated?", [&](bool checked) { (checked ? viewer->startAnimation() : viewer->stopAnimation()); })
+                                                       }),
+                                                       createVerticalGroupUI({
+                                                           displayShadowsButton,
+                                                           displayWaterDepthButton
+                                                       })
+                                                   })
                                             }));
     displayOptionWidget->setWidget(displayOptionUI->getWidget());
 
@@ -532,14 +548,14 @@ void ViewerInterface::erosionsTests()
 
     srand(1);
 
-//    UnderwaterErosion::EROSION_APPLIED terrainType = this->applyOn; //UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP; // 0 = voxels, 1 = heightmap, 2 = implicit, ...
-//    if (terrainType == UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS)
+//    EROSION_APPLIED terrainType = this->applyOn; //EROSION_APPLIED::HEIGHTMAP; // 0 = voxels, 1 = heightmap, 2 = implicit, ...
+//    if (terrainType == EROSION_APPLIED::DENSITY_VOXELS)
 //        viewer->setMapMode(MapMode::VOXEL_MODE);
-//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::HEIGHTMAP)
+//    else if (terrainType == EROSION_APPLIED::HEIGHTMAP)
 //        viewer->setMapMode(MapMode::GRID_MODE);
-//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::LAYER_TERRAIN)
+//    else if (terrainType == EROSION_APPLIED::LAYER_TERRAIN)
 //        viewer->setMapMode(MapMode::LAYER_MODE);
-//    else if (terrainType == UnderwaterErosion::EROSION_APPLIED::IMPLICIT_TERRAIN)
+//    else if (terrainType == EROSION_APPLIED::IMPLICIT_TERRAIN)
 //        viewer->setMapMode(MapMode::IMPLICIT_MODE);
 //    srand(43);
 
@@ -756,11 +772,11 @@ void ViewerInterface::erosionsTests()
                 loc = ErosionInterface::PARTICLE_INITIAL_LOCATION::RANDOM;
             }
 
-            UnderwaterErosion::DENSITY_TYPE densType;
+            DENSITY_TYPE densType;
             if (variables["resistance"] == 0) {
-                densType = UnderwaterErosion::DENSITY_TYPE::NATIVE;
+                densType = DENSITY_TYPE::NATIVE;
             } else {
-                densType = UnderwaterErosion::DENSITY_TYPE::RANDOM_DENSITY;
+                densType = DENSITY_TYPE::RANDOM_DENSITY;
             }
 
             erosionInterface->densityUsed = densType;

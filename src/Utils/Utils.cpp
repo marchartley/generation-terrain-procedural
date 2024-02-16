@@ -321,18 +321,24 @@ void sleep(int milliseconds)
 
 std::string showTime(double nanoseconds)
 {
-    std::ostringstream oss;
-    nanoseconds /= 1000000.f;
-    if (nanoseconds < 10) { // < 10ms
-        oss << std::setprecision(3) << nanoseconds << "ms";
-    } else if (nanoseconds < 1000 * 10) { // < 10 sec
-        oss << int(nanoseconds) << "ms";
-    } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
-        oss << int(nanoseconds / 1000) << "s";
-    } else { // > 10 min
-        oss << int(nanoseconds / (1000 * 60)) << "min" << int(nanoseconds) % (1000 * 60) << "s (" + int(nanoseconds / 1000) << "s)";
+    try {
+        std::ostringstream oss;
+        nanoseconds /= 1000000.f;
+        if (nanoseconds != nanoseconds) // NaN
+            oss << "0ms";
+        else if (nanoseconds < 10) { // < 10ms
+            oss << std::setprecision(3) << nanoseconds << "ms";
+        } else if (nanoseconds < 1000 * 10) { // < 10 sec
+            oss << int(nanoseconds) << "ms";
+        } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
+            oss << int(nanoseconds / 1000) << "s";
+        } else { // > 10 min
+            oss << int(nanoseconds / (1000 * 60)) << "min" << int(nanoseconds) % (1000 * 60) << "s (" + int(nanoseconds / 1000) << "s)";
+        }
+        return oss.str();
+    } catch (std::exception& e) {
+        return e.what();
     }
-    return oss.str();
 }
 
 /*
@@ -510,11 +516,11 @@ Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor
     return Vector3::slerp(t, startColor, endColor);
 }
 
-void displayProcessTime(std::string textToDisplay, std::function<void ()> func)
+void displayProcessTime(std::string textToDisplay, std::function<void ()> func, bool print)
 {
-    std::cout << textToDisplay << std::flush;
+    if (print) std::cout << textToDisplay << std::flush;
     float time = timeIt(func);
-    std::cout << " " << showTime(time) << std::endl;
+    if (print) std::cout << " " << showTime(time) << std::endl;
 }
 
 Vector3 colorPalette(float t, const std::vector<Vector3> &colors)

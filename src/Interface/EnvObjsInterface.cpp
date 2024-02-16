@@ -37,12 +37,13 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     this->rootPatch = new Implicit2DNary;
     this->implicitTerrain->addChild(rootPatch);
-    createEnvObjectsFromImplicitTerrain();
+//    createEnvObjectsFromImplicitTerrain();
 //    recomputeErosionValues();
     EnvObject::precomputeTerrainProperties(*heightmap);
 
 
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
+        if (!this->isVisible()) return;
         auto dataV3 = Plotter::get()->displayedImage;
         GridF data(dataV3.getDimensions());
         data.iterateParallel([&](size_t i) {
@@ -184,7 +185,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         };
 
         float directionLength = 50.f;
-        float widthMaxLength = 30.f;
+        float widthMaxLength = 10.f;
         BSpline isoline = followIsovalue(clickPos, directionLength);
 
         float time = 0.f;
@@ -193,7 +194,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
             std::cout << nbSamples << " samples" << std::endl;
 
 
-            time = timeIt([&]() {
+            displayProcessTime("Shaping (no display)... ", [&]() {
                 ShapeCurve shapeFromPaths;
                 std::vector<Vector3> gradPath(nbSamples);
                 std::vector<Vector3> invGradPath(nbSamples);
@@ -211,9 +212,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                 }
                 shapeFromPaths = vectorMerge(gradPath, invGradPath);
             });
-            std::cout << "Shaping (no display) : " << showTime(time) << std::endl;
 
-            time = timeIt([&]() {
+            displayProcessTime("Shaping (full)... ", [&]() {
                 ShapeCurve shapeFromPaths;
                 std::vector<Vector3> gradPath(nbSamples);
                 std::vector<Vector3> invGradPath(nbSamples);
@@ -236,12 +236,11 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                     result.addValueAt(Vector3(1, 1, 1), pp);
                 }
             });
-            std::cout << "Shaping (full) : " << showTime(time) << std::endl;
 
 
 
 
-            time = timeIt([&]() {
+            displayProcessTime("Creating shape (full)... ", [&]() {
                 auto directionPath = isoline.getPath(nbSamples);
                 for (size_t i = 0; i < directionPath.size(); i++) {
                     const auto& p = directionPath[i];
@@ -258,21 +257,19 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                     }
                 }
             });
-            std::cout << "Creating shape (full): " << showTime(time) << std::endl;
-            time = timeIt([&]() {
+            displayProcessTime("Creating shape (no display)... ", [&]() {
                 auto directionPath = isoline.getPath(nbSamples);
                 for (size_t i = 0; i < directionPath.size(); i++) {
                     const auto& p = directionPath[i];
                     float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                    float width = widthMaxLength * relDistToCenter;
+                    float width = widthMaxLength * interpolation::smooth(1 - relDistToCenter);
                     auto grads = followGradient(p, width);
                     auto invGrads = followInvGradient(p, width);
                 }
             });
-            std::cout << "Creating shape (no display) : " << showTime(time) << std::endl;
 
             Plotter::get()->addImage(result);
-            Plotter::get()->exec();
+            Plotter::get()->show();
         }
 
         /*
@@ -299,6 +296,9 @@ void EnvObjsInterface::display(const Vector3 &camPos)
 {
     if (!this->visible)
         return;
+
+    if (this->waitAtEachFrame)
+        this->updateEnvironmentFromEnvObjects(true, false);
 
 //    if (displayVelocities) {
         velocitiesMesh.shader->setVector("color", std::vector<float>{.2f, .2f, .8f, .5f});
@@ -327,64 +327,23 @@ QLayout *EnvObjsInterface::createGUI()
 {
     QLayout* layout = new QVBoxLayout;
 
-//    CheckboxElement* displayCurrentsButton = new CheckboxElement("Display currents", displayVelocities);
-//    CheckboxElement* displaySedimentsButton = new CheckboxElement("Display sediments", displaySediments);
-//    CheckboxElement* displayHighCurrentsButton = new CheckboxElement("Display high currents", displayHighCurrents);
-//    CheckboxElement* displayErosionsButton = new CheckboxElement("Display erosion", displayHighErosions);
-
-    ButtonElement* instantiateButton = new ButtonElement("Instantiate",
-                                                         [&]() { this->instantiateObject(); });
-
-    ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values",
-                                                              [&]() { this->recomputeErosionValues(); });
-
-    ButtonElement* spendTimeButton = new ButtonElement("Wait",
-                                                       [&]() { this->updateEnvironmentFromEnvObjects(); });
-
-    ButtonElement* showDepositionButton = new ButtonElement("Show deposition",
-                                                            [&]() { this->displaySedimentsDistrib(); });
-
-    ButtonElement* showFlowfieldButton = new ButtonElement("Show flow",
-                                                           [&]() { this->displayFlowfieldAsImage(); });
-//    showDepositionButton->setOnClick([&]() { this->displaySedimentsDistrib(); });
-
-    ButtonElement* createFromGAN = new ButtonElement("From GAN",
-                                                     [&]() { this->fromGanUI(); });
-
+    ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
+    ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
+    ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() { this->updateEnvironmentFromEnvObjects(true); });
+    ButtonElement* showDepositionButton = new ButtonElement("Show deposition", [&]() { this->displaySedimentsDistrib(); });
+    ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
+    CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
+    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
-    testingFormula->setOnTextChange([=](std::string expression) {
-        auto myFormula = expression;
+    testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
 
-        EnvPoint fake;
-        fake.s_FittingFunction = myFormula;
-        try {
-            fake.fittingFunction = EnvObject::parseFittingFunction(myFormula, "");
-
-            GridF eval(EnvObject::flowfield.getDimensions());
-            eval.iterateParallel([&](const Vector3& p) {
-                eval(p) = fake.evaluate(p);
-            });
-
-            Plotter::get()->setNormalizedModeImage(true);
-            Plotter::get()->addImage(eval);
-            Plotter::get()->show();
-        } catch (std::exception e) {
-            std::cerr << e.what() << std::endl;
-        }
-    });
-
-//    if (objectsListWidget != nullptr)
-//        delete objectsListWidget;
     objectsListWidget = new HierarchicalListWidget;
     updateObjectsList();
-    QObject::connect(objectsListWidget, &HierarchicalListWidget::itemClicked, this, &EnvObjsInterface::updateObjectsListSelection);
-
-//    layout->addWidget(displayCurrentsButton);
-//    layout->addWidget(displaySedimentsButton);
-//    layout->addWidget(displayHighCurrentsButton);
-//    layout->addWidget(displayErosionsButton);
+//    QObject::connect(objectsListWidget, &HierarchicalListWidget::itemClicked, this, &EnvObjsInterface::updateObjectsListSelection);
+    QObject::connect(objectsListWidget, &HierarchicalListWidget::currentItemChanged, this, [&](QListWidgetItem* current, QListWidgetItem* previous) { this->updateObjectsListSelection(current); });
 
     layout->addWidget(spendTimeButton->get());
+    layout->addWidget(waitAtEachFrameButton->get());
     layout->addWidget(showDepositionButton->get());
     layout->addWidget(showFlowfieldButton->get());
     layout->addWidget(createFromGAN->get());
@@ -398,22 +357,11 @@ QLayout *EnvObjsInterface::createGUI()
         probaButtons.push_back(showButton->get());
         probaButtons.push_back(forceButton->get());
     }
-    layout->addWidget(createMultiColumnGroup(probaButtons));
+    layout->addWidget(createMultiColumnGroup(probaButtons, 2));
     layout->addWidget(objectsListWidget);
     layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
 
-//    QObject::connect(displayCurrentsButton, &QCheckBox::toggled, this, [=](bool checked) { displayVelocities = checked; });
-//    QObject::connect(displayHighCurrentsButton, &QCheckBox::toggled, this, [=](bool checked) { displayHighCurrents = checked; });
-//    QObject::connect(displaySedimentsButton, &QCheckBox::toggled, this, [=](bool checked) { displaySediments = checked; });
-//    QObject::connect(displayErosionsButton, &QCheckBox::toggled, this, [=](bool checked) { displayHighErosions = checked; });
-
-//    QObject::connect(instantiateReefButton, &QPushButton::pressed, this, [&](){ displayProbas("reef"); });
-
-//    displayCurrentsButton->setChecked(displayVelocities);
-//    displayHighCurrentsButton->setChecked(displayHighCurrents);
-//    displaySedimentsButton->setChecked(displaySediments);
-//    displayErosionsButton->setChecked(displayHighErosions);
 
     return layout;
 }
@@ -490,6 +438,29 @@ void EnvObjsInterface::afterWaterLevelChanged()
     EnvObject::recomputeFlowAndSandProperties(*heightmap);
 }
 
+void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
+{
+    if (!this->isVisible()) return;
+    if (!mouseInMap) return;
+
+    Vector3 newPos = mouseWorldPosition.xy();
+
+    std::string name = "motu";
+    EnvObject* newObject = this->instantiateObjectAtBestPosition(name, newPos, GridF());
+    auto implicit = newObject->createImplicitPatch();
+    this->implicitPatchesFromObjects[newObject] = implicit;
+    rootPatch->addChild(implicit);
+    rootPatch->reevaluateAll();
+    implicitTerrain->updateCache();
+    implicitTerrain->update();
+    voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+    heightmap->fromVoxelGrid(*voxelGrid.get());
+    std::cout << "Instantiating " << name << " at position " << newPos << std::endl;
+    EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
+    EnvObject::recomputeFlowAndSandProperties(*heightmap);
+    updateObjectsList();
+}
+
 GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = true) {
     auto obj = EnvObject::availableObjects[objectName];
     GridF score = GridF(dimensions);
@@ -538,7 +509,7 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     return bestPos;
 }
 
-EnvObject* instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score) {
+EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score) {
     EnvObject* newObject = EnvObject::instantiate(objectName);
 
     auto objAsPoint = dynamic_cast<EnvPoint*>(newObject);
@@ -581,7 +552,7 @@ EnvObject* instantiateObjectAtBestPosition(std::string objectName, const Vector3
 
 void EnvObjsInterface::instantiateObject()
 {
-    std::cout << "Instantiate new object : " << showTime(timeIt([&]() {
+    displayProcessTime("Instantiate new object... ", [&]() {
         GridF heights = heightmap->getHeights();
         /*voxelGrid->computeFlowfield(LBM, 1, implicitTerrain.get());
         GridV3 surfaceNormals = heightmap->getNormals();
@@ -623,13 +594,13 @@ void EnvObjsInterface::instantiateObject()
         } else {
             std::cout << "No object to instantiate..." << std::endl;
         }
-    })) << std::endl;
+    });
     updateObjectsList();
 }
 
 void EnvObjsInterface::instantiateSpecific(std::string objectName)
 {
-    std::cout << "Instantiate new " << objectName << " (forced) : " << showTime(timeIt([&]() {
+    displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
         GridF heights = heightmap->getHeights();
 
         bool possible;
@@ -644,7 +615,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
             rootPatch->reevaluateAll();
             implicitTerrain->updateCache();
             implicitTerrain->update();
-            voxelGrid->fromImplicit(rootPatch, 40);
+            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
             heightmap->fromVoxelGrid(*voxelGrid.get());
             std::cout << "Instantiating " << objectName << " at position " << bestPos << std::endl;
 //            EnvObject::precomputeTerrainProperties(*heightmap);
@@ -653,7 +624,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
         }
-    })) << std::endl;
+    });
     updateObjectsList();
 }
 
@@ -676,7 +647,7 @@ void EnvObjsInterface::recomputeErosionValues()
 //    this->updateEnvironmentFromEnvObjects();
 }
 
-void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain)
+void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal)
 {
     // Get original flowfield, do not accumulate effects (for now).
     EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
@@ -687,7 +658,6 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     });*/
     EnvObject::applyEffects();
     EnvObject::beImpactedByEvents();
-//    EnvObject::precomputeTerrainProperties(*heightmap);
     EnvObject::recomputeFlowAndSandProperties(*heightmap);
     if (updateImplicitTerrain) {
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
@@ -698,6 +668,9 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         implicitTerrain->update();
         voxelGrid->fromImplicit(implicitTerrain.get(), 40);
         heightmap->fromVoxelGrid(*voxelGrid.get());
+        if (emitUpdateSignal) {
+            Q_EMIT this->updated();
+        }
     }
 }
 
@@ -712,7 +685,7 @@ void EnvObjsInterface::displayProbas(std::string objectName)
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
     if (!possible) {
-        Plotter::get()->setNormalizedModeImage(false);
+        // Plotter::get()->setNormalizedModeImage(false);
         Plotter::get()->addImage(score * 0.f);
     } else {
         float smallestPositive = score.max();
@@ -723,7 +696,7 @@ void EnvObjsInterface::displayProbas(std::string objectName)
         score.iterateParallel([&](size_t i) {
             score[i] = std::max(score[i], smallestPositive);
         });
-        Plotter::get()->setNormalizedModeImage(true);
+        // Plotter::get()->setNormalizedModeImage(true);
         Plotter::get()->addImage(score);
     }
     Plotter::get()->show();
@@ -732,7 +705,7 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 void EnvObjsInterface::displaySedimentsDistrib()
 {
     GridF sediments = EnvObject::sandDeposit;
-    Plotter::get()->setNormalizedModeImage(false);
+//    Plotter::get()->setNormalizedModeImage(false);
     Plotter::get()->addImage(sediments);
     Plotter::get()->show();
 }
@@ -744,7 +717,7 @@ void EnvObjsInterface::displayFlowfieldAsImage()
         flow[i] = EnvObject::flowfield[i].norm();
     });*/
     GridV3 flow = EnvObject::flowfield;
-    Plotter::get()->setAbsoluteModeImage(true);
+    // Plotter::get()->setAbsoluteModeImage(true);
     Plotter::get()->addImage(flow);
     Plotter::get()->show();
 }
@@ -762,7 +735,11 @@ void EnvObjsInterface::updateObjectsList()
 
 void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionItem)
 {
+    this->velocitiesMesh.fromArray(std::vector<float>{});
+    this->objectsMesh.fromArray(std::vector<float>{});
+
     auto newSelection = dynamic_cast<HierarchicalListWidgetItem*>(newSelectionItem);
+    if (!newSelection) return;
     int objID = newSelection->ID;
     EnvObject* selection = nullptr;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -771,8 +748,6 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
             break;
         }
     }
-    this->velocitiesMesh.fromArray(std::vector<float>{});
-    this->objectsMesh.fromArray(std::vector<float>{});
     if (selection == this->currentSelection) {
         currentSelection = nullptr;
         return;
@@ -829,7 +804,7 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
     initialFlow = initialFlow * (1.f - EnvObject::flowImpactFactor) + flow * EnvObject::flowImpactFactor;
     std::cout << initialFlow.min() << " ----- " << initialFlow.max() << std::endl;
     velocitiesMesh.fromVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions());
-    Q_EMIT this->update();
+    Q_EMIT this->updated();
 }
 
 void EnvObjsInterface::hotReloadFile()
@@ -844,8 +819,27 @@ void EnvObjsInterface::hotReloadFile()
         }
     }
     if (needReload) {
-        EnvObject::readFile(this->primitiveDefinitionFile); //this->loadPatchesFromFile(this->primitiveDefinitionFile);
-        std::cout << "Environmental objects file has changed" << std::endl;
+        displayProcessTime("Environmental objects file has changed. Parsing... ", [&]() {
+            EnvObject::readFile(this->primitiveDefinitionFile);
+        });
+    }
+}
+
+void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) const
+{
+    EnvPoint fake;
+    fake.s_FittingFunction = formula;
+    try {
+        fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
+
+        GridF eval(EnvObject::flowfield.getDimensions());
+        eval.iterateParallel([&](const Vector3& p) {
+            eval(p) = fake.evaluate(p);
+        });
+        Plotter::get()->addImage(eval);
+        Plotter::get()->show();
+    } catch (std::exception e) {
+        std::cerr << e.what() << std::endl;
     }
 }
 
@@ -853,23 +847,32 @@ void EnvObjsInterface::fromGanUI()
 {
     EnvObject::reset();
     EnvObject::readFile(this->primitiveDefinitionFile);
-
+/*
     auto gauss = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
     gauss->position = Vector3(100, 50, 0);
-    gauss->radius = 40;
+    gauss->radius = 35;
     auto patch = gauss->createImplicitPatch();
     this->implicitPatchesFromObjects[gauss] = patch;
+
+//    auto curve = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+//    curve->curve = BSpline({
+//                               Vector3(120, 0, 0),
+//                               Vector3(90, 50, 0),
+//                               Vector3(120, 100, 0),
+//                           });
+//    auto patch = curve->createImplicitPatch();
+//    this->implicitPatchesFromObjects[curve] = patch;
     rootPatch->addChild(patch);
     implicitTerrain->updateCache();
     implicitTerrain->update();
     rootPatch->reevaluateAll();
-    std::cout << "To voxels: " << showTime(timeIt([&]() {
+    displayProcessTime("Env objects to voxels... ", [&]() {
 //            voxelGrid->from2DGrid(*heightmap);
         voxelGrid->fromImplicit(rootPatch, 40);
-    })) << std::endl;
-    std::cout << "To heightmap: " << showTime(timeIt([&]() {
+    });
+    displayProcessTime("Env objects to heightmap... ", [&]() {
         heightmap->fromVoxelGrid(*voxelGrid.get());
-    })) << std::endl;
+    });
 //        implicitTerrain->addChild(obj->createImplicitPatch());
 //        implicitTerrain->_cached = false;
 //        voxelGrid->fromImplicit(implicitTerrain.get());
@@ -879,6 +882,7 @@ void EnvObjsInterface::fromGanUI()
 
 
     return;
+    */
 
     std::string path = "Python_tests/test_island_heightmapfeatures/";
     QString q_filename= QString::fromStdString(path + "1.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
@@ -898,7 +902,7 @@ void EnvObjsInterface::fromGanUI()
         rootPatch->reevaluateAll();
         std::cout << "To voxels: " << showTime(timeIt([&]() {
 //            voxelGrid->from2DGrid(*heightmap);
-            voxelGrid->fromImplicit(rootPatch, 40);
+            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
         })) << std::endl;
         std::cout << "To heightmap: " << showTime(timeIt([&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
@@ -980,9 +984,9 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
         pos = Vector3::random(Vector3(), terrainDims);
     }
 
-    UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS;
-    UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLOWFIELD_TYPE::BASIC; // UnderwaterErosion::FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS;
-    UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
+    EROSION_APPLIED applyOn = EROSION_APPLIED::DENSITY_VOXELS;
+    FLOWFIELD_TYPE flowfieldUsed = FLOWFIELD_TYPE::BASIC; // FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS;
+    DENSITY_TYPE densityUsed = DENSITY_TYPE::NATIVE;
 
     UnderwaterErosion erod(voxelGrid.get(), erosionSize, erosionStrength, erosionQtt);
     std::tie(lastRocksLaunched, nbPos, nbErosions, allErosions) = erod.Apply(applyOn,
@@ -1025,7 +1029,7 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
                                                                 );
 
     GridF erosionsAmount(terrainDims);
-    std::cout << "Just for the erosion part: " << showTime(timeIt([&]() {
+    displayProcessTime("Computing erosion data... ", [&]() {
         float size = erosionSize;
         std::vector<GridF> suberosions(allErosions.size(), erosionsAmount);
         #pragma omp parallel for
@@ -1036,11 +1040,11 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
         }
         for (auto& sub : suberosions)
             erosionsAmount += sub;
-    })) << std::endl;
+    });
 
     GridV3 velocities(terrainDims);
     GridF evaluationAmounts(terrainDims);
-    std::cout << "Flow evaluation: " << showTime(timeIt([&]() {
+    displayProcessTime("Computing flow from erosion data... ", [&]() {
         for (const auto& path : lastRocksLaunched) {
             for (int i = 1; i < int(path.points.size()) - 1; i++) {
                 auto& pos = path.points[i];
@@ -1060,6 +1064,6 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
             if (evaluationAmounts[i] == 0) continue;
             velocities[i] /= evaluationAmounts[i];
         }
-    })) << std::endl;
+    });
     return {erosionsAmount, velocities};
 }

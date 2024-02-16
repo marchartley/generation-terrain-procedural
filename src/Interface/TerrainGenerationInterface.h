@@ -73,6 +73,9 @@ public Q_SLOTS:
     void changeDisplayToComparativeMode(bool toComparative);
     void setHeightFactor(float newHeightFactor);
 
+    void changeDisplayDepthMode(bool display);
+    void changeDisplayShadowsMode(bool display);
+
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
@@ -125,6 +128,8 @@ public:
     float ambiantOcclusionFactor = 0.f;
     bool displayAsComparativeMode = false;
     float heightFactor = 1.f;
+    bool displayDepth = false;
+    bool displayShadows = false;
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

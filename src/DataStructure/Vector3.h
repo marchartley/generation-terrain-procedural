@@ -242,6 +242,8 @@ public:
     AABBox& expand(const Vector3& newPoint);
     AABBox& expand(const std::vector<Vector3>& newPoints);
 
+    float distanceTo(const Vector3& p);
+
     Vector3 mini;
     Vector3 maxi;
 

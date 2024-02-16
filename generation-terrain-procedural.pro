@@ -163,11 +163,11 @@ SOURCES += \
     src/TerrainModification/CoralGrowth.cpp \
     src/TerrainModification/CoralIslandGenerator.cpp \
         src/TerrainModification/FaultSlip.cpp \
+    src/TerrainModification/ParticleErosion.cpp \
         src/TerrainModification/RockErosion.cpp \
     src/TerrainModification/SpheroidalWeathering.cpp \
         src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
-    src/TerrainModification/particleErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
         src/Utils/BSpline.cpp \
@@ -339,11 +339,11 @@ HEADERS += \
     src/TerrainModification/CoralGrowth.h \
     src/TerrainModification/CoralIslandGenerator.h \
     src/TerrainModification/FaultSlip.h \
+    src/TerrainModification/ParticleErosion.h \
     src/TerrainModification/RockErosion.h \
     src/TerrainModification/SpheroidalWeathering.h \
     src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
-    src/TerrainModification/particleErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/AdjencySolver.h \
     src/Utils/BSpline.h \

@@ -1,6 +1,5 @@
 import math
 import random
-import time
 
 import PIL.Image
 from scipy.fft import fft, ifft
@@ -10,33 +9,16 @@ from math import floor
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import noise.perlin as perlin
-from scipy import signal
 
 def clamp(x, _min, _max):
     return _min if x < _min else _max if x > _max else x
 
 def mutate_heights(y : np.ndarray, returned_array: np.ndarray, axis: int):
-
     mu, sigma = 1., 0.1
     phase_mu, phase_sigma = 0.0, 0.1
     noise = perlin.SimplexNoise()
     offset1 = 10
     offset2 = 100
-
-    gradients = [0] + [y[i] - y[i - 1] for i in range(1 , len(y))]
-    grad2D = np.array([gradients for _ in range(len(gradients))]) * 0
-    # grad2D = (np.rot90(grad2D, 0) + np.rot90(grad2D, 1)+ np.rot90(grad2D, 2)+ np.rot90(grad2D, 3)) * 10
-
-    widths = [i for i in range(1, 1 + len(y))]
-    cwtmatr = signal.cwt(y, signal.wavelets.ricker, widths)
-    # cwtmatr = signal.cwt(cwtmatr[:, 0], signal.wavelets.ricker, widths)
-    final = (np.rot90(cwtmatr, 0)  + np.rot90(cwtmatr, 1)  + np.rot90(cwtmatr, 2)  + np.rot90(cwtmatr, 3)) + grad2D
-
-    scale = .01
-    nosy = np.array([[noise.noise2(x * scale, y * scale) for x in range(len(gradients))] for y in range(len(gradients))])
-
-    return final * nosy
-
     for i in range(len(y)):
         i_x = (i/len(y)) * 2.0 + offset1
         i_y = (i/len(y)) * 2.0 + offset2
@@ -75,9 +57,6 @@ def main():
     modified_img = PIL.Image.fromarray(return_img)
     # modified_img = modified_img.resize((50, 50))# .resize((100, 100))
     return_img = np.array(modified_img)
-    normalized = (modified_img - return_img.min()) / (return_img.max() - return_img.min())
-    modified_img = PIL.Image.fromarray(normalized * 255)
-    modified_img.convert('RGB').save("result.jpg")
 
     # plt.imshow(return_img)
     fig = plt.figure()

@@ -70,14 +70,11 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     std::string vTreeShader = pathToShaders + "meshInstancesShader.vert";
     std::string fTreeShader = pathToShaders + "meshInstancesShader.frag";
 
-    if (verbose)
-        std::cout << "Loading 3D models... " << std::flush;
-
     std::vector<QString> coralPaths;
     std::vector<QString> rocksPaths;
 //    std::vector<QString> algaePaths;
 
-    float initializationTime = timeIt([&]() {
+    displayProcessTime("Loading 3D models... ", [&]() {
 
         QDirIterator itCorals("src/assets/models/coral/", QDir::Files, QDirIterator::Subdirectories);
         std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
@@ -90,7 +87,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         if (this->numberOfLoadedCorals != -1) nbCorals = std::min(nbCorals, (size_t)numberOfLoadedCorals);
         this->possibleCorals = std::vector<Mesh>(nbCorals);
 
-    #pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < nbCorals; i++) {
             QString& dir = coralPaths[i];
             // Normalize it and move it upward so the anchor is on the ground
@@ -106,7 +103,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         size_t nbRocks = rocksPaths.size();
         if (this->numberOfLoadedRocks != -1) nbRocks = std::min(nbRocks, (size_t)numberOfLoadedRocks);
         this->possibleRocks = std::vector<Mesh>(nbRocks);
-    #pragma omp parallel for
+        #pragma omp parallel for
         for (size_t i = 0; i < nbRocks; i++) {
             QString& dir = rocksPaths[i];
             // Normalize it and move it upward so the anchor is on the ground
@@ -130,7 +127,8 @@ void MeshInstanceAmplificationInterface::reloadShaders()
             size_t nbElements = paths.size();
             if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
             meshType.possibleMeshes = std::vector<Mesh>(nbElements);
-    #pragma omp parallel for
+
+            #pragma omp parallel for
             for (size_t i = 0; i < nbElements; i++) {
                 QString& dir = paths[i];
                 // Normalize it and move it upward so the anchor is on the ground
@@ -148,9 +146,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
                 meshType.possibleMeshes[i].cullFace = false;
             }
         }
-    });
-    if (verbose)
-        std::cout << "Done in " << showTime(initializationTime) << std::endl;
+    }, verbose);
 }
 
 QLayout* MeshInstanceAmplificationInterface::createGUI()
@@ -254,7 +250,7 @@ std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPo
     std::vector<std::pair<Vector3, float>> positionsAndGrowthFactor;
     for (auto& obj : EnvObject::instantiatedObjects) {
         if (toUpper(obj->name) != toUpper(type)) continue;
-        float growthFactor = obj->growingState;
+        float growthFactor = obj->computeGrowingState();
         if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
             positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x, asPoint->position.y, heightmap->getHeight(asPoint->position)), growthFactor});
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {

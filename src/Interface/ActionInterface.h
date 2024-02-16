@@ -92,7 +92,9 @@ public:
     std::shared_ptr<LayerBasedGrid> layerGrid;
     std::shared_ptr<ImplicitNaryOperator> implicitTerrain = nullptr;
 
-    Viewer* viewer;
+    Viewer* viewer = nullptr;
+
+    std::shared_ptr<ActionInterface> findOtherInterface(std::string name) const;
 
 Q_SIGNALS:
     void updated();

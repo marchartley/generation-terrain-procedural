@@ -134,7 +134,7 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     auto layout = new QHBoxLayout();
     auto left = new QVBoxLayout();
 //    auto right = new QVBoxLayout();
-    InterfaceUI* right = new InterfaceUI(new QVBoxLayout(), "Display");
+    interfaceButtons = new InterfaceUI(new QVBoxLayout(), "Display");
 
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
@@ -178,18 +178,18 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
 
     left->addWidget(this->chartView);
     left->addWidget(this->mouseInfoLabel);
-    right->add(normalizeModeButton);
-    right->add(absoluteModeButton);
-    right->add(rangeActiveCheckbox);
-    right->add(this->rangeValuesWidget);
-    right->add(saveButton);
-    right->add(copyToClipboardButton);
+    interfaceButtons->add(normalizeModeButton);
+    interfaceButtons->add(absoluteModeButton);
+    interfaceButtons->add(rangeActiveCheckbox);
+    interfaceButtons->add(this->rangeValuesWidget);
+    interfaceButtons->add(saveButton);
+    interfaceButtons->add(copyToClipboardButton);
 
 //    this->setWindowModality(Qt::WindowModality::NonModal);
 //    this->setModal(false);
 
     layout->addItem(left);
-    layout->addWidget(right->get());
+    layout->addWidget(interfaceButtons->get());
     this->setLayout(layout);
 
     this->resize(800, 600);
@@ -435,12 +435,17 @@ void Plotter::show()
 void Plotter::updateUI()
 {
     blockSignals(true);
-    for (auto& child : this->children()) {
+    /*for (auto& child : this->children()) {
         if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
             asUIElement->update();
         }
-    }
-
+    }*/
+    this->interfaceButtons->update();
+    /*for (auto& child : this->interfaceButtons->children()) {
+        if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
+            asUIElement->update();
+        }
+    }*/
     blockSignals(false);
 }
 

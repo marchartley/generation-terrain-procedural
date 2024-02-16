@@ -19,11 +19,11 @@ std::map<std::string, GridF> EnvObject::allScalarProperties;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
-        EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
+        EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(1, 0, 0));
         EnvObject::initialFlowfield.raiseErrorOnBadCoord = false;
         EnvObject::initialFlowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         EnvObject::flowfield = EnvObject::initialFlowfield;
-        EnvObject::sandDeposit = GridF(EnvObject::flowfield.getDimensions());
+        EnvObject::sandDeposit = GridF(EnvObject::flowfield.getDimensions(), 1.f);
         EnvObject::sandDeposit.raiseErrorOnBadCoord = false;
         EnvObject::sandDeposit.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     }
@@ -106,6 +106,13 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     }
 
+
+    if (content.contains("needs")) {
+        obj->needsForGrowth = content["needs"].get<std::map<std::string, float>>();
+        for (auto [key, val] : obj->needsForGrowth)
+            obj->currentSatisfaction[key] = 0;
+    }
+
     obj->name = toLower(objName);
     obj->flowEffect = flowEffect;
     obj->sandEffect = sandEffect;
@@ -115,6 +122,29 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
     return obj;
+}
+
+float EnvObject::computeGrowingState()
+{
+    bool verbose = true;
+    std::ostringstream oss;
+
+    if (this->needsForGrowth.count("age")) {
+        currentSatisfaction["age"] = this->age;
+    }
+
+    float totalScore = 1.f; // Start expecting to be "adult"
+    for (auto [key, value] : needsForGrowth) {
+        if (value == 0) continue;
+        float score = std::clamp(currentSatisfaction[key] / needsForGrowth[key], 0.f, 1.f);
+        totalScore = std::min(totalScore, score);
+
+        oss << key << " (" << currentSatisfaction[key] << "/" << needsForGrowth[key] << "), ";
+    }
+    oss << " => total: " << totalScore * 100 << "%";
+    if (verbose)
+        std::cout << this->name << " state : " << oss.str() << std::endl;
+    return totalScore;
 }
 
 std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject)
@@ -239,6 +269,9 @@ void EnvObject::updateSedimentation()
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandDeposit();
     }
+    for (auto& object : EnvObject::instantiatedObjects) {
+        object->applySandAbsorption();
+    }
     EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(EnvObject::flowfield.meanSmooth(3, 3, 1, true) * 2.f);
 }
 
@@ -270,7 +303,8 @@ void EnvObject::beImpactedByEvents()
 {
     // TODO!!!
     for (auto& obj : EnvObject::instantiatedObjects) {
-        obj->growingState = std::min(obj->growingState + .2f, 1.f);
+        obj->age += 1.f;
+//        obj->growingState = std::min(obj->growingState + .2f, 1.f);
     }
 }
 
@@ -282,7 +316,7 @@ float EnvObject::evaluate(const Vector3 &position)
 void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
 {
 
-    std::cout << "Terrain properties: " << showTime(timeIt([&]() {
+    displayProcessTime("Computing terrain properties... ", [&]() {
         Vector3 terrainDimensions = Vector3(heightmap.getDimensions().x, heightmap.getDimensions().y, 1);
         GridF initialScalarPropertyMap(terrainDimensions, 0.f);
         GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid());
@@ -307,12 +341,12 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
 
         // Evaluate at each point
         for (auto& [name, obj] : EnvObject::availableObjects) {
-            std::cout << "Computing properties for " << name << ": " << showTime(timeIt([&]() {
+            displayProcessTime("Computing properties for " + name + "... ", [&]() {
                 EnvObject::recomputeTerrainPropertiesForObject(heightmap, name);
-            })) << std::endl;
+            }, false);
         }
         EnvObject::recomputeFlowAndSandProperties(heightmap);
-    })) << std::endl;
+    });
 }
 
 void EnvObject::recomputeTerrainPropertiesForObject(const Heightmap &heightmap, std::string objectName)
@@ -426,11 +460,27 @@ EnvPoint *EnvPoint::clone()
 
 void EnvPoint::applySandDeposit()
 {
-    GridF sand = GridF::gaussian(radius, radius, 1, radius * .1f);
-    sand /= sand.sum();
-    sand *= this->sandEffect;
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * this->sandEffect;
     EnvObject::sandDeposit.add(sand, this->position - sand.getDimensions() * .5f);
 
+}
+
+void EnvPoint::applySandAbsorption()
+{
+    if (this->needsForGrowth.count("sand") == 0) return;
+
+    float sandMissing = needsForGrowth["sand"] - currentSatisfaction["sand"];
+
+    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
+    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
+    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
+    GridF currentSand = EnvObject::sandDeposit.subset(subsetStart, subsetEnd);
+    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
+    this->currentSatisfaction["sand"] += sandAbsorbed.sum();
+    EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
+//    GridF diff = (currentSand - sandAbsorbed).max(0.f);
+//    this->currentSatisfaction["sand"] += diff.sum();
+//    EnvObject::sandDeposit.add(-diff, this->position - diff.getDimensions() * .5f);
 }
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
@@ -451,9 +501,9 @@ ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), 0, {}, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * this->computeGrowingState()), 0, {}, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * growingState), radius * .25f, {}, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * this->computeGrowingState()), radius * .25f, {}, true);
     }
 
     patch->position = this->position.xy() - Vector3(radius, radius) * .5f;
@@ -571,6 +621,11 @@ void EnvCurve::applySandDeposit()
     EnvObject::sandDeposit.add(sand, box.min().xy() - Vector3(width, width));
 }
 
+void EnvCurve::applySandAbsorption()
+{
+    return;
+}
+
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
@@ -617,9 +672,9 @@ ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
     patch->supportDimensions = box.dimensions() + offset;
@@ -739,6 +794,11 @@ void EnvArea::applySandDeposit()
     EnvObject::sandDeposit.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
 }
 
+void EnvArea::applySandAbsorption()
+{
+    return;
+}
+
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
@@ -810,17 +870,16 @@ ImplicitPatch* EnvArea::createImplicitPatch(ImplicitPrimitive* previousPrimitive
 {
     BSpline translatedCurve = this->area;
     AABBox box(this->area.points);
-    Vector3 offset(this->width, this->width, this->height * growingState);
+    Vector3 offset(this->width, this->width, this->height * this->computeGrowingState());
     translatedCurve.translate(-(box.min() - offset * .5f));
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * this->computeGrowingState(), translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * growingState, translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * this->computeGrowingState(), translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
-//    patch->position = box.center();
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;

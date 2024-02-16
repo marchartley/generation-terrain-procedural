@@ -5,6 +5,8 @@
 
 #include "DataStructure/Image.h"
 
+#include "TerrainModification/UnderwaterErosion.h"
+
 TerrainComparatorInterface::TerrainComparatorInterface(QWidget *parent)
     : ActionInterface("terraincomparator", "Terrain Comparator", "digging", "Compare different terrains", "need_to_find_logo.png", parent)
 {
@@ -41,6 +43,10 @@ void TerrainComparatorInterface::affectTerrains(std::shared_ptr<Heightmap> heigh
 //    this->otherMeshToDisplay = Mesh(std::make_shared<Shader>(vNoShader, fNoShader)); //(vMCShader, fMCShader, gMCShader));
 //    this->otherMeshToDisplay.useIndices = false;
     this->terrainMesh.shader->setVector("color", std::vector<float> {.1f, .9f, .3f, .5f});
+
+
+    this->voxelsFromHeightmap._cachedVoxelValues = this->voxelGrid->_cachedVoxelValues; // To get same dimensions
+    this->voxelsFromHeightmap.from2DGrid(*this->heightmap);
 }
 
 void TerrainComparatorInterface::replay(nlohmann::json action)
@@ -55,6 +61,13 @@ void TerrainComparatorInterface::mouseMoveEvent(QMouseEvent *event)
 
 void TerrainComparatorInterface::keyPressEvent(QKeyEvent *event)
 {
+    if (!this->isVisible()) return ActionInterface::keyPressEvent(event);
+
+    if (event->key() == Qt::Key_0) {
+        auto colors = this->extractDifferencesAsImage();
+        Plotter::get()->addImage(colors);
+        Plotter::get()->show();
+    }
     return ActionInterface::keyPressEvent(event);
 }
 
@@ -101,6 +114,18 @@ QLayout *TerrainComparatorInterface::createGUI()
                  });
     layout->addWidget(ui->get());
     return layout;
+}
+
+GridV3 TerrainComparatorInterface::extractDifferencesAsImage()
+{
+    auto [untouched, eroded, deposited] = UnderwaterErosion::flatteningErodedTerrain(voxelsFromHeightmap.getVoxelValues(), voxelGrid->getVoxelValues());
+    GridV3 colors(untouched.getDimensions());
+    colors.iterateParallel([&](size_t i) {
+        colors[i].x = untouched[i];
+        colors[i].y = eroded[i];
+        colors[i].z = deposited[i];
+    });
+    return colors;
 }
 
 void TerrainComparatorInterface::hide()
@@ -162,7 +187,7 @@ void TerrainComparatorInterface::updateStuff()
             displayedVoxels[i] = (displayedVoxels[i] > 0 && initial[i] > 0 ? -std::max(std::abs(displayedVoxels[i] - initial[i]), 0.01f) : initial[i]);
         });
     }
-//    displayedVoxels -= .5f;
-    this->terrainMesh.fromArray(Mesh::applyMarchingCubes(displayedVoxels.meanSmooth().meanSmooth()).vertexArray);
+
+    this->terrainMesh.fromArray(Mesh::applyMarchingCubes(displayedVoxels).vertexArray);
     Q_EMIT updated();
 }

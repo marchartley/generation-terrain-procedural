@@ -1472,33 +1472,34 @@ void PrimitivePatchesInterface::findAllSubfiles()
 
 void PrimitivePatchesInterface::loadTransformationRules()
 {
-    std::cout << "Reading and interpreting file " << this->rulesFilename << "..." << std::endl;
-    std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> rules;
-    std::ifstream file(this->rulesFilename);
-    std::string sline;
-//    bool takesInputs = true;
-    while (std::getline(file, sline)) {
-        if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
-        std::istringstream line(sline);
-        std::map<TerrainTypes, float> inputs, outputs;
-        std::string value, word, operation;
-        // Get inputs
-        while (operation != "=") {
-            line >> value;
-            line >> word;
-            line >> operation;
-            inputs[materialFromString(word)] = std::stof(value);
+    displayProcessTime("Reading and interpreting file " + this->rulesFilename + "... ", [&]() {
+        std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> rules;
+        std::ifstream file(this->rulesFilename);
+        std::string sline;
+    //    bool takesInputs = true;
+        while (std::getline(file, sline)) {
+            if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
+            std::istringstream line(sline);
+            std::map<TerrainTypes, float> inputs, outputs;
+            std::string value, word, operation;
+            // Get inputs
+            while (operation != "=") {
+                line >> value;
+                line >> word;
+                line >> operation;
+                inputs[materialFromString(word)] = std::stof(value);
+            }
+            // Get outputs
+            while (true) {
+                line >> value;
+                line >> word;
+                outputs[materialFromString(word)] = std::stof(value);
+                if (!(line >> operation)) break;
+            }
+            rules.push_back({inputs, outputs});
         }
-        // Get outputs
-        while (true) {
-            line >> value;
-            line >> word;
-            outputs[materialFromString(word)] = std::stof(value);
-            if (!(line >> operation)) break;
-        }
-        rules.push_back({inputs, outputs});
-    }
-    this->layerGrid->transformationRules = rules;
+        this->layerGrid->transformationRules = rules;
+    });
 }
 
 void PrimitivePatchesInterface::addParametricPoint(const Vector3& point)

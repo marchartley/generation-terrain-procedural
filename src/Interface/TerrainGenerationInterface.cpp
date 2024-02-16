@@ -14,6 +14,9 @@
 #include "DataStructure/Image.h"
 #include "Graphics/MarchingCubes.h"
 
+#include "Interface/TerrainComparatorInterface.h"
+#include "TerrainModification/UnderwaterErosion.h"
+
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
     : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_generation_manager_button.png", parent)
 {
@@ -74,9 +77,9 @@ void TerrainGenerationInterface::heightmapToImplicit()
 
 void TerrainGenerationInterface::heightmapToAll()
 {
-    heightmapToVoxels();
-    heightmapToLayers();
-    heightmapToImplicit();
+    displayProcessTime("Heightmap to voxels... ", [&]() { heightmapToVoxels(); });
+    displayProcessTime("Heightmap to layers... ", [&]() { heightmapToLayers(); });
+    displayProcessTime("Heightmap to implicit.. ", [&]() { heightmapToImplicit(); });
 }
 
 void TerrainGenerationInterface::voxelsToHeightmap()
@@ -97,10 +100,10 @@ void TerrainGenerationInterface::voxelsToImplicit()
 
 void TerrainGenerationInterface::voxelsToAll()
 {
-    voxelsToHeightmap();
-    voxelsToLayers();
+    displayProcessTime("Voxels to heightmap... ", [&]() { voxelsToHeightmap(); });
+    displayProcessTime("Voxels to layers... ", [&]() { voxelsToLayers(); });
 //    heightmapToLayers();
-    voxelsToImplicit();
+    displayProcessTime("Voxels to implicit... ", [&]() { voxelsToImplicit(); });
 }
 
 void TerrainGenerationInterface::layersToVoxels()
@@ -120,9 +123,9 @@ void TerrainGenerationInterface::layersToImplicit()
 
 void TerrainGenerationInterface::layersToAll()
 {
-    layersToVoxels();
-    layersToHeightmap();
-    layersToImplicit();
+    displayProcessTime("Layers to voxels... ", [&]() { layersToVoxels(); });
+    displayProcessTime("Layers to heightmap... ", [&]() { layersToHeightmap(); });
+    displayProcessTime("Layers to implicit... ", [&]() { layersToImplicit(); });
 }
 
 void TerrainGenerationInterface::implicitToVoxels()
@@ -143,9 +146,9 @@ void TerrainGenerationInterface::implicitToHeightmap()
 
 void TerrainGenerationInterface::implicitToAll()
 {
-    implicitToHeightmap();
-    implicitToVoxels();
-    implicitToLayers();
+    displayProcessTime("Implicit to heightmap... ", [&]() { implicitToHeightmap(); });
+    displayProcessTime("Implicit to voxels... ", [&]() { implicitToVoxels(); });
+    displayProcessTime("Implicit to layers... ", [&]() { implicitToLayers(); });
 }
 
 void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles)
@@ -170,7 +173,6 @@ void TerrainGenerationInterface::displayWaterLevel()
 
 void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, bool noise2D, float noiseStrength, float frequency, float lacunarity, float noise_shifting)
 {
-//    std::cout << noiseStrength << " " << frequency << " " << lacunarity << std::endl;
     GridF values(nx, ny, nz);
 
     // Create and configure FastNoise object
@@ -224,7 +226,6 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
             }
         }
     }
-    std::cout << frequency << std::endl;
 
     if (!this->voxelGrid)
         this->voxelGrid = std::make_shared<VoxelGrid>();
@@ -265,8 +266,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
+    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
 //    Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
-    Vector3 terrainSize = Vector3(200, 100, 50); //Vector3(128, 128, 64);
     if (this->voxelGrid)
         terrainSize = voxelGrid->getDimensions();
 
@@ -281,11 +282,9 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        std::cout << "Heightmap : " << showTime(timeIt([=]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); })) << std::endl;
-
-        std::cout << "Voxels : " << showTime(timeIt([=]() { voxelGrid->from2DGrid(*heightmap); })) << std::endl;
-//        layerGrid->fromVoxelGrid(*voxelGrid);
-        std::cout << "Layers : " << showTime(timeIt([=]() { layerGrid->from2DGrid(*heightmap); })) << std::endl;
+        displayProcessTime("Opening heightmap... ", [&]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); });
+        displayProcessTime("Generatign voxels... ", [&]() { voxelGrid->from2DGrid(*heightmap); });
+        displayProcessTime("Generating layers... ", [&]() { layerGrid->from2DGrid(*heightmap); });
 
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
@@ -294,71 +293,77 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         nlohmann::json json_content = nlohmann::json::parse(content);
         if (!json_content.contains("actions")) {
             if (json_content.contains(ImplicitPatch::json_identifier)) {
-                this->createTerrainFromImplicitPatches(json_content);
-                this->initialTerrainValues = this->voxelGrid->getVoxelValues();
+                displayProcessTime("Map creation from Implicit patch JSON... ", [&]() {
+                    this->createTerrainFromImplicitPatches(json_content);
+                    this->initialTerrainValues = this->voxelGrid->getVoxelValues();
+                });
                 return;
             } else {
-                this->createTerrainFromBiomes(json_content);
+                displayProcessTime("Map creation from Biome JSON... ", [&]() {
+                    this->createTerrainFromBiomes(json_content);
+                });
             }
         } else {
-            for (const auto &action : json_content.at("actions")) {
-                // Let all the interfaces try to replay their actions
-                for (auto& possibleAction : actionInterfaces)
-                    possibleAction.second->replay(action);
-            }
+            displayProcessTime("Map creation from Replay file... ", [&]() {
+                for (const auto &action : json_content.at("actions")) {
+                    // Let all the interfaces try to replay their actions
+                    for (auto& possibleAction : actionInterfaces)
+                        possibleAction.second->replay(action);
+                }
+            });
         }
     } else if (ext == "STL") {
-        Mesh m;
-        m.fromStl(filename);
-        FastNoiseLite noise;
-        GridF newVoxelValues = (GridF(m.voxelize(voxelGrid->getDimensions() * 2.f)) - .5f).resize(voxelGrid->getDimensions());
-//        for (int x = 0; x < newVoxelValues.sizeX; x++) {
-//            for (int y = 0; y < newVoxelValues.sizeY; y++) {
-//                for (int z = 0; z < 13; z++) {
-//                    float noiseVal = abs(noise.GetNoise((float) x, (float) y));
-//                    //newVoxelValues(x, y, z) = noiseVal;
-//                    newVoxelValues(x, y, z) = noiseVal + .2f;
-//                }
-//            }
-//        }
-        GridF swapXY(newVoxelValues.getDimensions().yxz());
-        swapXY.iterateParallel([&](int x, int y, int z) {
-            swapXY(x, y, z) = newVoxelValues(y, x, z);
+        displayProcessTime("Generation from STL file... ", [&]() {
+            Mesh m;
+            m.fromStl(filename);
+            FastNoiseLite noise;
+            GridF newVoxelValues = (GridF(m.voxelize(voxelGrid->getDimensions() * 2.f)) - .5f).resize(voxelGrid->getDimensions());
+            GridF swapXY(newVoxelValues.getDimensions().yxz());
+            swapXY.iterateParallel([&](int x, int y, int z) {
+                swapXY(x, y, z) = newVoxelValues(y, x, z);
+            });
+    //        if (m.isWatertight())
+                voxelGrid->setVoxelValues(swapXY.flip(false, true)); //(newVoxelValues);
+    //        else
+    //            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
+    //        voxelGrid->fromCachedData();
+            heightmap->fromVoxelGrid(*voxelGrid);
+            layerGrid->fromVoxelGrid(*voxelGrid);
         });
-//        if (m.isWatertight())
-            voxelGrid->setVoxelValues(swapXY.flip(false, true)); //(newVoxelValues);
-//        else
-//            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
-//        voxelGrid->fromCachedData();
-        heightmap->fromVoxelGrid(*voxelGrid);
-        layerGrid->fromVoxelGrid(*voxelGrid);
     } else if (ext == "FBX") {
-        Mesh m;
-        if (m.isWatertight())
-            voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
-        else
-            voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
-//        voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
-//        voxelGrid->fromCachedData();
-        heightmap->fromVoxelGrid(*voxelGrid);
-        layerGrid->fromVoxelGrid(*voxelGrid);
+        displayProcessTime("Generation from FBX file... ", [&]() {
+            Mesh m;
+            if (m.isWatertight())
+                voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
+            else
+                voxelGrid->setVoxelValues(m.voxelizeSurface(voxelGrid->getDimensions()));
+    //        voxelGrid->setVoxelValues(m.voxelize(voxelGrid->getDimensions()));
+    //        voxelGrid->fromCachedData();
+            heightmap->fromVoxelGrid(*voxelGrid);
+            layerGrid->fromVoxelGrid(*voxelGrid);
+        });
     }else /*if (ext == "DATA" || ext.empty())*/ {
         // Then it's our custom voxel grid file
-        voxelGrid->retrieveMap(filename);
-//        voxelGrid->smoothVoxels();
-//        voxelGrid->smoothVoxels();
-//        heightmap->fromVoxelGrid(*voxelGrid);
-//        layerGrid->fromVoxelGrid(*voxelGrid);
-        voxelsToAll();
+        displayProcessTime("Opening voxel file... ", [&]() {
+            voxelGrid->retrieveMap(filename);
+    //        voxelGrid->smoothVoxels();
+    //        voxelGrid->smoothVoxels();
+    //        heightmap->fromVoxelGrid(*voxelGrid);
+    //        layerGrid->fromVoxelGrid(*voxelGrid);
+            voxelsToAll();
+        });
+        return;
 
     } /*else {
         // In any other case, consider that nothing has been done, cancel.
         return;
     }*/
-    ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, ""); // , dynamic_cast<ImplicitPrimitive*>(implicitTerrain.get()));
-    implicitHeightmap->material = TerrainTypes::DIRT;
-    this->implicitTerrain->composables = {implicitHeightmap};
-    this->implicitTerrain->_cached = false;
+    displayProcessTime("Generating implicit terrain... ", [&]() {
+        ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, ""); // , dynamic_cast<ImplicitPrimitive*>(implicitTerrain.get()));
+        implicitHeightmap->material = TerrainTypes::DIRT;
+        this->implicitTerrain->composables = {implicitHeightmap};
+        this->implicitTerrain->_cached = false;
+    });
     this->addTerrainAction(nlohmann::json({
                                               {"from_file", filename},
                                               {"from_noise", false}
@@ -564,8 +569,6 @@ void TerrainGenerationInterface::prepareShader(bool reload)
         {BEDROCK, "mountain_rocks"},
     };
 
-//    if (verbose)
-//        std::cout << "Preparing main shaders..." << std::endl;
 
     std::string pathToShaders = "src/Shaders/";
     std::string vShader_mc_voxels = pathToShaders + "MarchingCubes.vert";
@@ -762,8 +765,6 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     implicitMesh.shader->setInt("biomeFieldTex", 4);
     layersMesh.shader->setInt("biomeFieldTex", 4);
 
-    if (verbose)
-        std::cout << "Loading terrain textures... " << std::flush;
 //    QTemporaryDir tempTextureDir;
     QDirIterator iTex("src/assets/textures/", QDir::Files, QDirIterator::Subdirectories);
 //    QDirIterator iTex(":/terrain_textures/", QDir::Files, QDirIterator::Subdirectories);
@@ -787,77 +788,68 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     std::vector<GridV3> texturesMaps(nbFiles);
     int textureSizes = 128;
 
-    float parallelTime = 0;
-    float sequentialTime = 0;
-    float totalTime = timeIt([&]() {
-        parallelTime = timeIt([&]() {
-            #pragma omp parallel for
-            for (size_t i = 0; i < nbFiles; i++) {
-                QString dir = filesToLoad[i];
-                QString basename = QFileInfo(dir).baseName();
-                    std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-                    int imgW, imgH, c;
-                    unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
-                    texturesMaps[i] = GridV3(imgW, imgH);
-                    for (int x = 0; x < imgW; x++) {
-                        for (int y = 0; y < imgH; y++) {
-                            unsigned char r = data[3 * (x + y * imgW) + 0];
-                            unsigned char g = data[3 * (x + y * imgW) + 1];
-                            unsigned char b = data[3 * (x + y * imgW) + 2];
-                            texturesMaps[i].at(x, y) = Vector3(r, g, b);
-                        }
-                    }
-                    texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
-                    stbi_image_free(data);
-            }
-            allColorTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-            allNormalTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-            allDisplacementTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
-        });
-        sequentialTime = timeIt([&]() {
-            for (size_t i = 0; i < nbFiles; i++) {
-                QString dir = filesToLoad[i];
-                QString basename = QFileInfo(dir).baseName();
+    displayProcessTime("Loading textures... ", [&]() {
+        #pragma omp parallel for
+        for (size_t i = 0; i < nbFiles; i++) {
+            QString dir = filesToLoad[i];
+            QString basename = QFileInfo(dir).baseName();
                 std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
-                GridV3& map = texturesMaps[i];
-                int index = colorTexturesIndex[textureClass];
-                if (basename == "color") {
-                    allColorTextures.paste(map, Vector3(textureSizes * index, 0));
-                } else if (basename == "normal") {
-                    allNormalTextures.paste(map, Vector3(textureSizes * index, 0));
-                } else if (basename == "displacement") {
-                    allDisplacementTextures.paste(map, Vector3(textureSizes * index, 0));
+                int imgW, imgH, c;
+                unsigned char *data = stbi_load(dir.toStdString().c_str(), &imgW, &imgH, &c, 3);
+                texturesMaps[i] = GridV3(imgW, imgH);
+                for (int x = 0; x < imgW; x++) {
+                    for (int y = 0; y < imgH; y++) {
+                        unsigned char r = data[3 * (x + y * imgW) + 0];
+                        unsigned char g = data[3 * (x + y * imgW) + 1];
+                        unsigned char b = data[3 * (x + y * imgW) + 2];
+                        texturesMaps[i].at(x, y) = Vector3(r, g, b);
+                    }
                 }
-                        /*
-                if (basename == "color") {
-                    colorTexturesIndex[textureClass] = indexColorTextureClass++;
-                    if (allColorTextures.empty()) {
-                        allColorTextures = map;
-                    } else {
-                        allColorTextures = allColorTextures.concat(map);
-                    }
-                } else if (basename == "normal") {
-        //            normalTexturesIndex[textureClass] = indexNormalTextureClass++;
-                    if (allNormalTextures.empty()) {
-                        allNormalTextures = map;
-                    } else {
-                        allNormalTextures = allNormalTextures.concat(map);
-                    }
-                } else if (basename == "displacement") {
-        //            displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
-                    if (allDisplacementTextures.empty()) {
-                        allDisplacementTextures = map;
-                    } else {
-                        allDisplacementTextures = allDisplacementTextures.concat(map);
-                    }
-                }*/
+                texturesMaps[i] = texturesMaps[i].resize(textureSizes, textureSizes, 1, RESIZE_MODE::LINEAR);
+                stbi_image_free(data);
+        }
+        allColorTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+        allNormalTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+        allDisplacementTextures = GridV3(textureSizes * colorTexturesIndex.size(), textureSizes);
+
+        for (size_t i = 0; i < nbFiles; i++) {
+            QString dir = filesToLoad[i];
+            QString basename = QFileInfo(dir).baseName();
+            std::string textureClass = toLower(QFileInfo(QFileInfo(dir).absolutePath()).baseName().toStdString());
+            GridV3& map = texturesMaps[i];
+            int index = colorTexturesIndex[textureClass];
+            if (basename == "color") {
+                allColorTextures.paste(map, Vector3(textureSizes * index, 0));
+            } else if (basename == "normal") {
+                allNormalTextures.paste(map, Vector3(textureSizes * index, 0));
+            } else if (basename == "displacement") {
+                allDisplacementTextures.paste(map, Vector3(textureSizes * index, 0));
             }
-        });
-    });
-    if (verbose) {
-        std::cout << "Done in " << showTime(totalTime) << std::endl;
-        std::cout << "( " << showTime(parallelTime) << " for the parallel and " << showTime(sequentialTime) << " for sequential)" << std::endl;
-    }
+                    /*
+            if (basename == "color") {
+                colorTexturesIndex[textureClass] = indexColorTextureClass++;
+                if (allColorTextures.empty()) {
+                    allColorTextures = map;
+                } else {
+                    allColorTextures = allColorTextures.concat(map);
+                }
+            } else if (basename == "normal") {
+    //            normalTexturesIndex[textureClass] = indexNormalTextureClass++;
+                if (allNormalTextures.empty()) {
+                    allNormalTextures = map;
+                } else {
+                    allNormalTextures = allNormalTextures.concat(map);
+                }
+            } else if (basename == "displacement") {
+    //            displacementTexturesIndex[textureClass] = indexDisplacementTextureClass++;
+                if (allDisplacementTextures.empty()) {
+                    allDisplacementTextures = map;
+                } else {
+                    allDisplacementTextures = allDisplacementTextures.concat(map);
+                }
+            }*/
+        }
+    }, verbose);
 
     allColorTextures /= 255.f;
     allNormalTextures /= 255.f;
@@ -983,14 +975,13 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 
 void TerrainGenerationInterface::display(const Vector3& camPos)
 {
+    bool verbose = false;
     float maxHeight;
-    float initTime;
-    float displayTime;
     float meshCreationTime;
     float GLcallTime;
     float realDisplayTime;
 
-    initTime = timeIt([&]() {
+    displayProcessTime("Init frame buffers... ", [&]() {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
         glBindTexture(GL_TEXTURE_2D, allBiomesColorTextures);
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE6);
@@ -1046,9 +1037,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
         glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
         GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
         delete[] heightmapData;
-    });
+    }, verbose);
 
-    displayTime = timeIt([&]() {
+    displayProcessTime("Render terrain... ", [&]() {
         if (mapMode == GRID_MODE) {
             if (this->heightmap == nullptr) {
                 std::cerr << "No grid to display" << std::endl;
@@ -1066,8 +1057,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 heightmapMesh.shader->setFloat("heightFactor", heightFactor);
-                if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions())
+                if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions()) {
                     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
+                }
                 heightmapMesh.fromArray(positions);
                 heightmapMesh.update();
                 this->heightmapMesh.display(GL_POINTS);
@@ -1079,7 +1071,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             } else {
                 GridF values;
                 meshCreationTime = timeIt([&]() {
-                    values = voxelGrid->getVoxelValues().meanSmooth(3, 3, 3, true);//.meanSmooth(3, 3, 3, true);
+                    values = voxelGrid->getVoxelValues(); //.meanSmooth(3, 3, 3, true);
+                    #pragma omp parallel for collapse(3)
                     for (int x = 0; x < values.sizeX; x++) {
                         for (int y = 0; y < values.sizeY; y++) {
                             for (int z = 0; z < 2; z++) {
@@ -1100,7 +1093,15 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 GLcallTime = timeIt([&]() {
                     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
         //            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
-                    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
+//                    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
+                    /*if (auto compareInterface = dynamic_cast<TerrainComparatorInterface*>(findOtherInterface("terraincomparator").get())) {
+                        auto [untouched, eroded, deposited] = UnderwaterErosion::flatteningErodedTerrain(compareInterface->voxelsFromHeightmap.getVoxelValues().meanSmooth(3, 3, 3, true), values);
+                        deposited.iterateParallel([&](size_t i) {
+                            deposited[i] = std::max(2.f - (deposited[i] + eroded[i]), 0.f);
+                        });
+                        marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, deposited);
+                    }*/
+//                    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, values + 3.f);
 
                     marchingCubeMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
                     marchingCubeMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
@@ -1108,6 +1109,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                     marchingCubeMesh.shader->setFloat("waterRelativeHeight", waterLevel);
                     marchingCubeMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                     marchingCubeMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
+                    marchingCubeMesh.shader->setBool("displayDepth", displayDepth);
+                    marchingCubeMesh.shader->setBool("displayShadows", displayShadows);
                     marchingCubeMesh.shader->setFloat("heightFactor", heightFactor);
                 });
                 realDisplayTime = timeIt([&]() { marchingCubeMesh.display( GL_POINTS ); });
@@ -1124,9 +1127,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                     GLcallTime += timeIt([&]() { marchingCubeMesh.shader->setBool("displayingIgnoredVoxels", false); });
                 }
                 // Check if something changed on the terrain :
-                if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
-                    this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
-                }
+//                if (this->voxelsPreviousHistoryIndex != voxelGrid->getCurrentHistoryIndex()) {
+//                    this->voxelsPreviousHistoryIndex = voxelGrid->getCurrentHistoryIndex();
+//                }
             }
         }
         else if (mapMode == LAYER_MODE) {
@@ -1187,8 +1190,10 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 }
             }
         }
-    });
-//    std::cout << "Init    : " << showTime(initTime) << "\nDisplay : " << showTime(displayTime) << "\n(mesh: " << showTime(meshCreationTime) << ", GL calls: " << showTime(GLcallTime) << ", display: " << showTime(realDisplayTime) <<  ")" << std::endl;
+    }, verbose);
+
+    if (verbose)
+        std::cout << "Mesh creation: " << showTime(meshCreationTime) << " -- GL calls : " << showTime(GLcallTime) << " -- Display : " << showTime(realDisplayTime) << std::endl;
 }
 
 
@@ -1196,7 +1201,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
 void TerrainGenerationInterface::openMapUI()
 {
     QString q_filename = QFileDialog::getOpenFileName(this, QString("Ouvrir une carte"), QString::fromStdString(this->mapSavingFolder));
-    this->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
+    if (!q_filename.isEmpty())
+        this->createTerrainFromFile(q_filename.toStdString(), this->actionInterfaces);
 //    this->viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 //    this->terrainGenerationInterface->prepareShader(true);
 }
@@ -1272,5 +1278,17 @@ void TerrainGenerationInterface::changeDisplayToComparativeMode(bool toComparati
 void TerrainGenerationInterface::setHeightFactor(float newHeightFactor)
 {
     this->heightFactor = newHeightFactor;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::changeDisplayDepthMode(bool display)
+{
+    this->displayDepth = display;
+    Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::changeDisplayShadowsMode(bool display)
+{
+    this->displayShadows = display;
     Q_EMIT updated();
 }

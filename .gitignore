@@ -19,11 +19,9 @@ Python_tests/private_genetics/
 Python_tests/sketch-to-terrain/outputs/*
 Python_tests/sketch-to-terrain/data_downsampled_blurred/*
 Python_tests/sketch-to-terrain/world_map/*
-OpenFoam/*
 
 doc/
 
-*.autosave
 *.stl
 saved_maps/onlyVoxels/
 saved_maps/onlyVoxels/*
@@ -110,5 +108,3 @@ Python_tests\.ipynb_checkpoints\*
 usersmarchappdata*
 *.pth
 .qglviewer.xml
-.tmp/screenshots/screen.png
-.tmp/screenshots/screen.png

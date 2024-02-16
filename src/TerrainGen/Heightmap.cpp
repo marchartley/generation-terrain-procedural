@@ -400,7 +400,7 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     }
 
     GridF faultsImpact(getSizeX(), getSizeY());
-    float time = timeIt([&]() {
+    displayProcessTime("Generating faults in terrain... ", [&]() {
         for (int x = 0; x < getSizeX(); x++) {
             for (int y = 0; y < getSizeY(); y++) {
                 Vector3 pos(x, y);
@@ -414,7 +414,6 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
             }
         }
     });
-    std::cout << "Faulting terrain in " << showTime(time) << std::endl;
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
@@ -439,6 +438,7 @@ Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     }
 //    this->computeNormals();
 //    this->createMesh();
+    this->heights = this->heights.meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true);
     return *this;
 }
 
@@ -582,15 +582,30 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
     */
 }
 
-Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
+Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    AABBox myAABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
-//    if (!minPos.isValid()) minPos = Vector3();
-//    if (!maxPos.isValid()) maxPos = this->getDimensions();
+    float stepSize = .1f;
 
+    AABBox myAABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
     Vector3 currPos = origin;
-//    auto values = this->getVoxelValues();
-//    values.raiseErrorOnBadCoord = false;
+    Vector3 dir = _dir.normalized();
+
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
+
+    currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox.min(), myAABBox.max());
+    if (!currPos.isValid()) return Vector3(false);
+
+    dir *= stepSize;
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
+
+    while (myAABBox.contains(currPos)) {
+        if (this->checkIsInGround(currPos) != this->checkIsInGround(currPos + dir))
+            return currPos;
+        currPos += dir;
+    }
+//    std::cout << currPos << " is in the ground? " << this->checkIsInGround(currPos) << " -> " << myAABBox << std::endl;
+    return Vector3(false);
+/*
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
@@ -607,11 +622,12 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, co
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
     return Vector3(false);
+    */
 }
 
 Vector3 Heightmap::findSurfaceBetween(const Vector3& start, const Vector3& end)
 {
-
+    return this->getIntersection(start, (end - start));
 }
 
 Mesh Heightmap::getGeometry(const Vector3& dimensions)

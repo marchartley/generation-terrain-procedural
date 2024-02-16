@@ -136,6 +136,9 @@ public:
     T min() const;
     T max() const;
 
+    Matrix3<T>& min(const T& minVal);
+    Matrix3<T>& max(const T& maxVal);
+
     Matrix3<T>& max(const Matrix3<T> &otherMatrix, const Vector3& upperLeftFrontCorner);
     Matrix3<T>& max(const Matrix3<T>& otherMatrix, int left, int up, int front);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
@@ -189,6 +192,7 @@ public:
     static Matrix3<Vector3> fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
+    static Matrix3<float> normalizedGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) const;
     Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
     Matrix3<T> medianBlur(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
@@ -201,6 +205,11 @@ public:
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> isosurface(T isovalue = T(), bool ignoreZtopBorder = false, bool ignoreBorders = true) const;
+
+    Matrix3<T> slice(int index, int axis) const;
+    Matrix3<T> sliceXY(int index) const;
+    Matrix3<T> sliceYZ(int index) const;
+    Matrix3<T> sliceXZ(int index) const;
 
     template<typename U>
     operator Matrix3<U>() const {
@@ -975,6 +984,24 @@ T Matrix3<T>::max() const
     return max;
 }
 
+template<class T>
+Matrix3<T>& Matrix3<T>::min(const T &minVal)
+{
+    this->iterateParallel([&](size_t i) {
+        (*this)[i] = std::min((*this)[i], minVal);
+    });
+    return *this;
+}
+
+template<class T>
+Matrix3<T>& Matrix3<T>::max(const T &maxVal)
+{
+    this->iterateParallel([&](size_t i) {
+        (*this)[i] = std::max((*this)[i], maxVal);
+    });
+    return *this;
+}
+
 template <class T>
 Matrix3<T> Matrix3<T>::abs() const
 {
@@ -1081,16 +1108,17 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
     gaussian.iterateParallel([&](const Vector3& pos) {
         gaussian(pos) = std::exp(-((pos - center).norm2())/(2*sqrSigma)) * oneOverSqrt2Pi;
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < gaussian.sizeX; x++) {
-        for (int y = 0; y < gaussian.sizeY; y++) {
-            for (int z = 0; z < gaussian.sizeZ; z++) {
-                Vector3 pos = Vector3(x, y, z) - center;
-                gaussian.at(x, y, z) = std::exp(-pos.norm2()/(2*sqrSigma)) * oneOverSqrt2Pi;
-            }
-        }
-    }*/
     return gaussian;
+}
+
+template<class T>
+Matrix3<float> Matrix3<T>::normalizedGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3 &offset)
+{
+    Matrix3<float> gauss = Matrix3<float>::gaussian(sizeOnX, sizeOnY, sizeOnZ, sigma, offset);
+    float sum = gauss.sum();
+    if (sum != 0) gauss /= sum;
+//    return gauss / (sum != 0 ? sum : 1.f);
+    return gauss;
 }
 
 template<class T>
@@ -1402,6 +1430,53 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
         }
     }*/
     return surface;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::slice(int index, int axis) const
+{
+    Matrix3<T> result;
+    if (axis == 0) { // YZ
+        result = Matrix3<T>(1, sizeY, sizeZ);
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                result(0, y, z) = this->at(index, y, z);
+            }
+        }
+    } else if (axis == 1) { // XZ
+        result = Matrix3<T>(sizeX, 1, sizeZ);
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+                result(x, 0, z) = this->at(x, index, z);
+            }
+        }
+    } else if (axis == 2) { // XY
+        result = Matrix3<T>(sizeX, sizeY, 1);
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
+                result(x, y, 0) = this->at(x, y, index);
+            }
+        }
+    }
+    return result;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceXY(int index) const
+{
+    return slice(index, 2);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceYZ(int index) const
+{
+    return slice(index, 0);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceXZ(int index) const
+{
+    return slice(index, 1);
 }
 
 template<class T>

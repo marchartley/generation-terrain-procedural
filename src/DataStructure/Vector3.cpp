@@ -825,6 +825,11 @@ AABBox& AABBox::expand(const std::vector<Vector3>& newPoints)
     return *this;
 }
 
+float AABBox::distanceTo(const Vector3 &p)
+{
+    return Vector3::distanceToBoundaries(p, this->min(), this->max());
+}
+
 Vector3 AABBox::random(const Vector3& mini, const Vector3& maxi)
 {
     return Vector3::random(mini, maxi);

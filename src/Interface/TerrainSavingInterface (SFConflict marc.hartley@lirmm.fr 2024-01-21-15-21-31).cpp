@@ -1,0 +1,153 @@
+#include "TerrainSavingInterface.h"
+#include "Interface/InterfaceUtils.h"
+
+TerrainSavingInterface::TerrainSavingInterface(QWidget *parent):
+    ActionInterface("terrainsaving", "Terrain geometry saving", "view", "Save the geometry", "save_geometry.png", parent)
+{
+
+}
+
+void TerrainSavingInterface::display(const Vector3& camPos)
+{
+    // Nothing to display
+}
+
+void TerrainSavingInterface::replay(nlohmann::json action)
+{
+    // Nothing to replay
+}
+
+QLayout *TerrainSavingInterface::createGUI()
+{
+    QVBoxLayout* layout = new QVBoxLayout();
+    QLabel* selectedFilenameLabel = new QLabel((this->mainFilename == "" ? "No file selected" : QString::fromStdString(this->mainFilename).split("/").back().split("\\").back()));
+    QPushButton* fileSelectionButton = new QPushButton("...");
+
+    QCheckBox* saveHeightmapCheck = new QCheckBox("Heightmap");
+    QCheckBox* saveVoxelsCheck = new QCheckBox("Voxels");
+    QCheckBox* saveLayersCheck = new QCheckBox("Layers");
+
+    QPushButton* saveButton = new QPushButton("Save");
+
+    layout->addWidget(createHorizontalGroup({selectedFilenameLabel, fileSelectionButton}));
+    layout->addWidget(createVerticalGroup({
+                                              saveHeightmapCheck,
+                                              saveVoxelsCheck,
+                                              saveLayersCheck
+                                          }));
+    layout->addWidget(saveButton);
+
+    QObject::connect(saveHeightmapCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveHeightmap = checked; });
+    QObject::connect(saveVoxelsCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveVoxels = checked; });
+    QObject::connect(saveLayersCheck, &QCheckBox::toggled, this, [this](bool checked) { this->saveLayers = checked; });
+
+    QObject::connect(saveButton, &QPushButton::pressed, this, [this]() {
+        time_t now = std::time(0);
+        tm *gmtm = std::gmtime(&now);
+        char s_time[80];
+        std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+        this->saveTerrainGeometry(this->mainFilename + "_" + std::string(s_time));
+    });
+
+    QObject::connect(fileSelectionButton, &QPushButton::pressed, this, [this, selectedFilenameLabel]() {
+        std::string path = "saved_maps/Geometry/";
+        QString fileSelection = QFileDialog::getSaveFileName(this, "Saving file", QString::fromStdString(path), "*.json", nullptr, QFileDialog::DontConfirmOverwrite);
+        if (!fileSelection.isEmpty()) {
+            this->mainFilename = fileSelection.toStdString();
+            selectedFilenameLabel->setText(QString::fromStdString(this->mainFilename).split("/").back().split("\\").back());
+        }
+    });
+
+    saveHeightmapCheck->setChecked(this->saveHeightmap);
+    saveVoxelsCheck->setChecked(this->saveVoxels);
+    saveLayersCheck->setChecked(this->saveLayers);
+
+    return layout;
+}
+
+std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(std::string filename)
+{
+    bool verbose = true;
+    if (filename == "")
+        filename = this->mainFilename;
+
+    std::ofstream file;
+    if (verbose)
+        std::cout << "Saving geometry..." << std::endl;
+    Mesh m;
+    float timing = 0;
+    std::vector<std::string> filenames;
+    if (this->saveHeightmap) {
+        timing = timeIt([&]() {
+            m = this->heightmap->getGeometry();
+            file.open(filename + "-heightmap" + ".stl");
+            filenames.push_back(filename + "-heightmap" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
+        if (verbose)
+            std::cout << "Heightmap in " << showTime(timing) << std::endl;
+    }
+
+    if (this->saveVoxels) {
+        timing = timeIt([&]() {
+            m = this->voxelGrid->getGeometry();
+            file.open(filename + "-voxels" + ".stl");
+            filenames.push_back(filename + "-voxels" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
+        if (verbose)
+            std::cout << "Voxels in " << showTime(timing) << std::endl;
+    }
+
+    if (this->saveLayers) {
+        timing = timeIt([&]() {
+            m = this->layerGrid->getGeometry();
+            file.open(filename + "-layers" + ".stl");
+            filenames.push_back(filename + "-layers" + ".stl");
+            file << m.toSTL();
+            file.close();
+        });
+        if (verbose)
+            std::cout << "Layers in " << showTime(timing) << std::endl;
+    }
+
+    if (verbose)
+        std::cout << "Done." << std::endl;
+    return filenames;
+}
+
+void TerrainSavingInterface::quickSaveAt(std::string folderName, std::string filePrefix, bool heightmap, bool voxels, bool layers)
+{
+    std::ofstream file;
+    Mesh m;
+    auto start = std::chrono::system_clock::now();
+    auto end = std::chrono::system_clock::now();
+    if (heightmap) {
+        start = std::chrono::system_clock::now();
+        m = this->heightmap->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-heightmap" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
+
+    if (voxels) {
+        start = std::chrono::system_clock::now();
+        m = this->voxelGrid->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-voxels" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
+
+    if (layers) {
+        start = std::chrono::system_clock::now();
+        m = this->layerGrid->getGeometry();
+        file.open(folderName + "/" + filePrefix + "-layers" + ".stl");
+        file << m.toSTL();
+        file.close();
+        end = std::chrono::system_clock::now();
+    }
+}

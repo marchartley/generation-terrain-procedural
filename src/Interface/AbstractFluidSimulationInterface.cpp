@@ -112,8 +112,8 @@ QLayout *AbstractFluidSimulationInterface::createGUI()
 
 void AbstractFluidSimulationInterface::updateVectorsMesh()
 {
-//    Vector3 resolution(25, 25, 10);
-    Vector3 resolution(50, 50, 50);
+    Vector3 resolution(25, 25, 10);
+//    Vector3 resolution(50, 50, 50);
     GridV3 velocities = _simulation->getVelocities(resolution);
     if (displayOnlyAtSurface) {
         GridF surface = voxelGrid->getVoxelValues().resize(resolution).binarize().dilate();
@@ -129,12 +129,10 @@ void AbstractFluidSimulationInterface::updateVectorsMesh()
 
 void AbstractFluidSimulationInterface::updateSimulationMeshes()
 {
-    float renderTime = timeIt([=]() {
+    displayProcessTime("Rendering fluid sim... ", [&]() {
         this->updateVectorsMesh();
         this->updateParticlesMesh();
-//        this->updateBoundariesMesh();
-    });
-//    std::cout << showTime(renderTime) << std::endl;
+    }, false);
 }
 
 void AbstractFluidSimulationInterface::show()
