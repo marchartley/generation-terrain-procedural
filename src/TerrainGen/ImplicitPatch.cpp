@@ -575,7 +575,7 @@ void ImplicitPrimitive::update()
         } else {
             if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
                 this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
-            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
+//            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
     //        auto cacheCopy = cachedHeightmap;
             this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](const Vector3& pos) -> float {
     //            auto heightmap = cachedHeightmap;
@@ -2300,8 +2300,6 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
     for (auto& compo : this->composables) {
-//        if (auto as2DNary = dynamic_cast<Implicit2DNary*>(compo))
-//            as2DNary->reevaluateAll();
         auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
         for (auto& [mat, val] : evaluation) {
             if (bestReturn.count(mat) == 0)
@@ -2560,7 +2558,7 @@ float Implicit2DNary::evaluate(const Vector3 &pos) const
 {
     if (_cached)
         return _cachedMaxHeight(pos.xy());
-    float res = (pos.z < computeHeight(pos) ? 1.f : -1.f);
+    float res = (pos.z < computeHeight(pos) ? 1.f : 0.f);
     return res;
 }
 

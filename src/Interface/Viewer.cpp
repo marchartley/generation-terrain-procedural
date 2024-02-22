@@ -23,7 +23,7 @@ Viewer::Viewer(QWidget *parent): Viewer(
         std::make_shared<VoxelGrid>(),
         std::make_shared<LayerBasedGrid>(),
         nullptr, // std::make_shared<ImplicitPatch>(new ImplicitPrimitive()),
-        VOXEL_MODE,
+        GRID_MODE, //VOXEL_MODE,
         FILL_MODE,
         parent
         )

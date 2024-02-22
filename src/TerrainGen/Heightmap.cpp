@@ -438,7 +438,7 @@ Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
     }
 //    this->computeNormals();
 //    this->createMesh();
-    this->heights = this->heights.meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true);
+//    this->heights = this->heights.meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true);
     return *this;
 }
 

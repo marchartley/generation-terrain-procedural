@@ -39,10 +39,10 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
         subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
         subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, grid.getMaxHeight(), 0.f);
+    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
     this->initMap();
 
-    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
+    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
     gridHeights.raiseErrorOnBadCoord = false;
 
     int sizeX = this->getSizeX();

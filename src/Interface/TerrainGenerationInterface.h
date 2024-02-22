@@ -88,7 +88,7 @@ public:
     std::map<std::string, int> displacementTexturesIndex;
 
     void setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles);
-    MapMode mapMode = MapMode::VOXEL_MODE;
+    MapMode mapMode = MapMode::GRID_MODE; // MapMode::VOXEL_MODE;
     SmoothingAlgorithm smoothingAlgorithm = SmoothingAlgorithm::MARCHING_CUBES;
 //    bool displayParticles = false;
 

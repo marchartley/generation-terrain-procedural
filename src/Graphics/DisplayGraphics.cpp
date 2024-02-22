@@ -308,6 +308,7 @@ void Plotter::addImage(GridV3 image)
         delete this->backImage;
     }
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+//    *(this->backImage) = this->backImage->mirrored();
 }
 
 void Plotter::addImage(GridF image)

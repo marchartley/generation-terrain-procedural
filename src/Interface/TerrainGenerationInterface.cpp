@@ -233,6 +233,8 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
         this->heightmap = std::make_shared<Heightmap>();
     if (!this->layerGrid)
         this->layerGrid = std::make_shared<LayerBasedGrid>();
+    if (!this->implicitTerrain)
+        this->implicitTerrain = std::make_shared<ImplicitNaryOperator>();
 
 //    *voxelGrid = tempMap;
 //    voxelGrid->_cachedVoxelValues = values;
@@ -240,6 +242,10 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
     voxelGrid->setVoxelValues(values);
     this->heightmap->fromVoxelGrid(*voxelGrid);
     this->layerGrid->fromVoxelGrid(*voxelGrid);
+    ImplicitPrimitive* implicitHeightmap = ImplicitPrimitive::fromHeightmap(heightmap->heights, "");
+    implicitHeightmap->material = TerrainTypes::DIRT;
+    this->implicitTerrain->composables = {implicitHeightmap};
+    this->implicitTerrain->_cached = false;
     this->initialTerrainValues = values;
 
     this->addTerrainAction(nlohmann::json({
@@ -266,8 +272,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
-    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
-//    Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
+//    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
+    Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
     if (this->voxelGrid)
         terrainSize = voxelGrid->getDimensions();
 

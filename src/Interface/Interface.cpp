@@ -103,7 +103,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/slope_with_hole.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/_ToClassify/map_2023-08-19__20-31-35-voxels.stl");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/labyrinthe.data");
-        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png");
+//        terrainGenerationInterface->createTerrainFromFile("saved_maps/gaussian.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/volcano3_2.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/test.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/Geometry/Pipes/map_2023-08-19__10-23-28-voxels.stl");
@@ -123,7 +123,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-//        terrainGenerationInterface->createTerrainFromNoise(30, 30, 30, true);
+        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.f);
 
 //        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
