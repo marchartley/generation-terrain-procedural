@@ -1398,13 +1398,13 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
     bool useZ = (this->sizeZ > 1);
 
     iterateParallel([&](int x, int y, int z) {
-        if (!this->at(x, y, z)) return;
+        if (this->at(x, y, z) <= 0) return;
         if (ignoreBorders && (x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || (ignoreZtopBorder && z == sizeZ - 1))) return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
             for (int dy = -1; dy <= 1 && !isSurface; dy++) {
                 for (int dz = (useZ ? -1 : 0); dz <= (useZ ? 1 : 0); dz++) {
-                    if (!(this->at(x + dx, y + dy, z + dz) - isovalue))
+                    if ((this->at(x + dx, y + dy, z + dz) - isovalue) <= 0)
                         isSurface = true;
                 }
             }
