@@ -951,7 +951,8 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
     Mesh marched;
     marched.vertexArray.reserve(100000);
 
-//    #pragma omp parallel for
+//    std::vector<Vector3> triangles(values.size(), Vector3(false));
+    #pragma omp parallel for
     for (int z = 0; z < values.sizeZ; z++) {
         for (int y = 0; y < values.sizeY; y++) {
             for (int x = 0; x < values.sizeX; x++) {
@@ -986,7 +987,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 
                 int i = 0;
                 while(triTable[cubeindex][i] != -1){
-//                    #pragma omp critical
+                    #pragma omp critical
                     {
                         marched.vertexArray.push_back(vertlist[triTable[cubeindex][i]]);
                         marched.vertexArray.push_back(vertlist[triTable[cubeindex][i+1]]);
@@ -1153,8 +1154,11 @@ Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh*
             for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 Vector3 value = field.at(pos);
-                float mag = sqrMagnitudeField(pos);
-                float relativeMag = (mag - minMag) / (maxMag - minMag);
+                float mag = 0.f, relativeMag = .5f; // Default values
+                if (minMag != maxMag) {
+                    mag = sqrMagnitudeField(pos);
+                    relativeMag = (mag - minMag) / (maxMag - minMag);
+                }
                 if (displayArrow) {
                     auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
                     positions.insert(positions.end(), arrowPoints.begin(), arrowPoints.end());
