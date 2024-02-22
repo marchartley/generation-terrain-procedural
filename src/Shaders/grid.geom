@@ -65,6 +65,7 @@ vec3 getNormal(vec2 pos) {
     return normalize(normal);
 }
 float getAmbiantOcclusion(vec3 pos) {
+    if (ambiantOcclusionFactor == 0.0) return 1.0;
     int nX = 20;
     int nY = 20;
     float fnX = float(nX);
@@ -86,7 +87,7 @@ float getAmbiantOcclusion(vec3 pos) {
             }
         }
     }
-    return clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total) + 0.5, 0.0, 1.0);
+    return pow(clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total) + 0.5, 0.0, 1.0), 2.0);
 }
 
 void sendInfoVertex(vec4 vecPos) {

@@ -74,10 +74,13 @@ SOURCES += \
     src/DataStructure/Vector4.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
+    src/EnvObject/EnvArea.cpp \
+    src/EnvObject/EnvCurve.cpp \
     src/EnvObject/EnvObject.cpp \
 #        src/FastWFC/propagator.cpp \
 #        src/FastWFC/wave.cpp \
 #        src/FastWFC/wfc.cpp \
+    src/EnvObject/EnvPoint.cpp \
     src/EnvObject/ExpressionParser.cpp \
 #    src/FluidSimulation/FLIPSimulation_copy.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
@@ -241,6 +244,8 @@ HEADERS += \
     src/DataStructure/Vector4.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
+    src/EnvObject/EnvArea.h \
+    src/EnvObject/EnvCurve.h \
     src/EnvObject/EnvObject.h \
 #    src/FastWFC/color.hpp \
 #    src/FastWFC/direction.hpp \
@@ -255,6 +260,7 @@ HEADERS += \
 #    src/FastWFC/utils/array3D.hpp \
 #    src/FastWFC/wave.hpp \
 #    src/FastWFC/wfc.hpp \
+    src/EnvObject/EnvPoint.h \
     src/EnvObject/ExpressionParser.h \
 #    src/FluidSimulation/FLIPSimulation_copy.h \
     src/FluidSimulation/FluidSimulation.h \

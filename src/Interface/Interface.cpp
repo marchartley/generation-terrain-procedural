@@ -66,7 +66,7 @@ ViewerInterface::ViewerInterface() {
 //        std::make_shared<CoralIslandGeneratorInterface>(this),
 //        std::make_shared<SpheroidalErosionInterface>(this),
         std::make_shared<EnvObjsInterface>(this),
-//        std::make_shared<EnvObjectFluidSimulation>(this),
+        std::make_shared<EnvObjectFluidSimulation>(this),
         std::make_shared<TerrainComparatorInterface>(this)
     };
 

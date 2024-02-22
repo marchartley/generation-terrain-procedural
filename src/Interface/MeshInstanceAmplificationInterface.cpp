@@ -1,8 +1,10 @@
 #include "MeshInstanceAmplificationInterface.h"
 
-
-#include "EnvObject/EnvObject.h"
 #include "Interface/CommonInterface.h"
+
+#include "EnvObject/EnvPoint.h"
+#include "EnvObject/EnvCurve.h"
+#include "EnvObject/EnvArea.h"
 
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)

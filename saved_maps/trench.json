@@ -6,12 +6,12 @@
 				"composableA": {
 					"densityValue": 1.5,
 					"dimensions": {
-						"x": 100.0,
-						"y": 100.0,
-						"z": 29.0
+						"x": 200.0,
+						"y": 200.0,
+						"z": 50.0
 					},
 					"filename": "",
-					"index": 1,
+					"index": 4,
 					"material": "ROCK",
 					"mirrored": false,
 					"name": "Heightmap",
@@ -35,9 +35,57 @@
 				},
 				"composableB": {
 					"composableA": {
-						"file": "/mnt/nvme0n1p5/code/Qt/generation-terrain-procedural/saved_maps/implicit_patches.json"
+						"densityValue": 1.5,
+						"dimensions": {
+							"x": 42.57037353515625,
+							"y": 43.35633850097656,
+							"z": 16.601194381713867
+						},
+						"filename": "",
+						"index": 3,
+						"material": "ROCK",
+						"mirrored": false,
+						"name": "Mountainchain",
+						"optionalCurve": {
+							"closed": false,
+							"points": [
+								{
+									"x": 19.059371948242188,
+									"y": 3.6999969482421875,
+									"z": 9.600911140441895
+								},
+								{
+									"x": 3.6999969482421875,
+									"y": 32.84794616699219,
+									"z": 12.90119457244873
+								},
+								{
+									"x": 37.84901428222656,
+									"y": 39.656341552734375,
+									"z": 3.9633677005767822
+								},
+								{
+									"x": 38.87037658691406,
+									"y": 10.838424682617188,
+									"z": 3.700000047683716
+								}
+							]
+						},
+						"position": {
+							"x": 125.60560607910156,
+							"y": 94.13951110839844,
+							"z": 0.0
+						},
+						"shape": "MountainChain",
+						"sigmaValue": 20.0,
+						"supportDimensions": {
+							"x": 0.0,
+							"y": 0.0,
+							"z": 0.0
+						},
+						"type": "primitive"
 					},
-					"index": 23,
+					"index": 2,
 					"mirrored": false,
 					"name": "Translation",
 					"optionalCurve": {
@@ -46,13 +94,13 @@
 					},
 					"spreadFactor": 0.0,
 					"translation": {
-						"x": 6.145185470581055,
-						"y": 16.47282600402832,
-						"z": 12.668521881103516
+						"x": 0.0,
+						"y": 0.0,
+						"z": -2.9063560962677
 					},
 					"type": "unary"
 				},
-				"index": 24,
+				"index": 1,
 				"mirrored": false,
 				"name": "Blend",
 				"operator": "Blend",

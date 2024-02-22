@@ -15,7 +15,6 @@ class EnvPoint;
 class EnvCurve;
 class EnvArea;
 
-
 class EnvObject
 {
 public:
@@ -54,7 +53,7 @@ public:
     virtual float computeGrowingState();
 
     virtual void applySandDeposit() = 0;
-    virtual void applySandAbsorption() = 0;
+    virtual void applySandAbsorption() {}
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
 
 
@@ -98,84 +97,6 @@ public:
     static void recomputeFlowAndSandProperties(const Heightmap &heightmap);
 
     static void reset();
-};
-
-class EnvPoint : public EnvObject {
-public:
-    EnvPoint();
-
-    static EnvObject* fromJSON(nlohmann::json content);
-
-    Vector3 position;
-    float radius;
-
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvPoint* clone();
-    virtual void applySandDeposit();
-    virtual void applySandAbsorption();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
-
-    virtual EnvObject& translate(const Vector3& translation);
-};
-
-class EnvCurve : public EnvObject {
-public:
-    EnvCurve();
-
-    static EnvObject* fromJSON(nlohmann::json content);
-
-    BSpline curve;
-    float width;
-    float length;
-    float height;
-
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvCurve* clone();
-    virtual void applySandDeposit();
-    virtual void applySandAbsorption();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
-
-    virtual EnvObject& translate(const Vector3& translation);
-};
-
-class EnvArea : public EnvObject {
-public:
-    EnvArea();
-
-    static EnvObject* fromJSON(nlohmann::json content);
-
-    ShapeCurve area;
-    float width;
-    float height;
-
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvArea* clone();
-    virtual void applySandDeposit();
-    virtual void applySandAbsorption();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
-
-    virtual EnvObject& translate(const Vector3& translation);
 };
 
 #endif // ENVOBJECT_H

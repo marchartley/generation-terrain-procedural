@@ -44,234 +44,100 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
         if (!this->isVisible()) return;
-        auto dataV3 = Plotter::get()->displayedImage;
+        GridV3 dataV3 = Plotter::get()->displayedImage;
         GridF data(dataV3.getDimensions());
-        data.iterateParallel([&](size_t i) {
+        dataV3.iterateParallel([&](size_t i) {
             data[i] = dataV3[i].x;
         });
-        data.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE; // Gradients doesn't use 3rd dimension
-
         GridV3 gradients = data.gradient();
-        Vector3 pos = clickPos;
-        Vector3 dir(1, 0, 0);
-        BSpline path({pos});
-        GridV3 result(data.getDimensions());
+        ShapeCurve isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, 50.f, 10.f);
 
-        auto followIsovalue = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-            BSpline finalPath;
+        int nbSamples = 500;
 
-            Vector3 pos = startPoint;
-            BSpline path({pos});
-            Vector3 dir(1, 0, 0);
-            bool didAFullCircle = false;
-            float totalDistance = 0.f;
-            while (maxDist > totalDistance) {
-                if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-                    didAFullCircle = true;
-                    break; // Got back close to beginning
-                }
-                Vector3 gradient = gradients(pos);
-                if (gradient == Vector3()) break; // Nowhere to go
-                gradient.normalize();
+        GridF result(data.getDimensions());
 
-                Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-                dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-                pos += dir;
-
-                totalDistance += dir.norm();
-
-                path.points.push_back(pos);
+        auto path = isoline.getPath(nbSamples);
+        result.iterateParallel([&](const Vector3& pos) {
+            if (isoline.containsXY(pos)) {
+                result(pos) = .5f;
             }
-
-            finalPath = path;
-            if (!didAFullCircle) {
-                totalDistance = 0.f;
-                pos = startPoint;
-                path = BSpline();
-                dir = Vector3(-1, 0, 0);
-                while (maxDist > totalDistance) {
-                    if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-                        didAFullCircle = true;
-                        break; // Got back close to beginning
-                    }
-                    Vector3 gradient = gradients(pos);
-                    if (gradient == Vector3()) break; // Nowhere to go
-                    gradient.normalize();
-
-                    Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-                    dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-                    pos += dir;
-                    totalDistance += dir.norm();
-
-                    path.points.push_back(pos);
-                }
-                if (didAFullCircle) {
-                    finalPath = path; // No need to take the first half, we just did a full circle
-                } else {
-                    std::reverse(path.points.begin(), path.points.end());
-                    finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
-                }
-            }
-            return finalPath;
-        };
-
-        auto followGradient = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-            Vector3 pos = startPoint;
-            BSpline path({pos});
-            Vector3 dir;
-            float totalDistance = 0.f;
-            while (totalDistance < maxDist) {
-                Vector3 gradient = gradients(pos);
-                if (gradient == Vector3()) break; // Nowhere to go
-                gradient.normalize();
-                dir = gradient;
-
-                pos += dir;
-
-                totalDistance += dir.norm();
-
-                path.points.push_back(pos);
-
-                int nbPoints = std::min(int(path.size()), 5);
-                if (nbPoints > 2) {
-                    std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                    Vector3 meanVel;
-                    for (size_t i = 0; i < nbPoints - 1; i++) {
-                        meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                    }
-                    if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                        path.points.erase(path.points.end() - nbPoints, path.points.end());
-                        break;
-                    }
-                }
-            }
-            return path;
-        };
-        auto followInvGradient = [gradients](const Vector3& startPoint, float maxDistance) -> BSpline {
-            Vector3 pos = startPoint;
-            BSpline path({pos});
-            Vector3 dir;
-            float totalDistance = 0.f;
-            while (totalDistance < maxDistance) {
-                Vector3 gradient = gradients(pos);
-                if (gradient == Vector3()) break; // Nowhere to go
-                gradient.normalize();
-                dir = -gradient;
-
-                pos += dir;
-                totalDistance += dir.norm();
-
-                path.points.push_back(pos);
-
-                int nbPoints = std::min(int(path.size()), 5);
-
-                if (nbPoints > 2) {
-                    std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                    Vector3 meanVel;
-                    for (size_t i = 0; i < nbPoints - 1; i++) {
-                        meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                    }
-                    if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                        path.points.erase(path.points.end() - nbPoints, path.points.end());
-                        break;
-                    }
-                }
-            }
-            return path;
-        };
-
-        float directionLength = 50.f;
-        float widthMaxLength = 10.f;
-        BSpline isoline = followIsovalue(clickPos, directionLength);
-
-        float time = 0.f;
-        for (int nbSamples : {/*5, 10, 20, 50, */1000}) {
-            result.reset();
-            std::cout << nbSamples << " samples" << std::endl;
-
-
-            displayProcessTime("Shaping (no display)... ", [&]() {
-                ShapeCurve shapeFromPaths;
-                std::vector<Vector3> gradPath(nbSamples);
-                std::vector<Vector3> invGradPath(nbSamples);
-                auto directionPath = isoline.getPath(nbSamples);
-                for (size_t i = 0; i < directionPath.size(); i++) {
-                    const auto& p = directionPath[i];
-                    float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                    float width = widthMaxLength * relDistToCenter;
-                    result.addValueAt(Vector3(1, 0, 0), p);
-                    auto grads = followGradient(p, width);
-                    auto invGrads = followInvGradient(p, width);
-
-                    gradPath[i] = grads.points.back();
-                    invGradPath[nbSamples - i - 1] = invGrads.points.back();
-                }
-                shapeFromPaths = vectorMerge(gradPath, invGradPath);
-            });
-
-            displayProcessTime("Shaping (full)... ", [&]() {
-                ShapeCurve shapeFromPaths;
-                std::vector<Vector3> gradPath(nbSamples);
-                std::vector<Vector3> invGradPath(nbSamples);
-                auto directionPath = isoline.getPath(nbSamples);
-                for (size_t i = 0; i < directionPath.size(); i++) {
-                    const auto& p = directionPath[i];
-                    float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                    float width = widthMaxLength * relDistToCenter;
-                    result.addValueAt(Vector3(1, 0, 0), p);
-                    auto grads = followGradient(p, width);
-                    auto invGrads = followInvGradient(p, width);
-
-                    gradPath[i] = grads.points.back();
-                    invGradPath[nbSamples - i - 1] = invGrads.points.back();
-                }
-                shapeFromPaths = vectorMerge(gradPath, invGradPath);
-//                shapeFromPaths = shapeFromPaths.simplifyByRamerDouglasPeucker(.001f);
-                shapeFromPaths = shapeFromPaths.getPath(50);
-                for (const auto& pp : shapeFromPaths.getPath(1000)) {
-                    result.addValueAt(Vector3(1, 1, 1), pp);
-                }
-            });
-
-
-
-
-            displayProcessTime("Creating shape (full)... ", [&]() {
-                auto directionPath = isoline.getPath(nbSamples);
-                for (size_t i = 0; i < directionPath.size(); i++) {
-                    const auto& p = directionPath[i];
-                    float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                    float width = widthMaxLength * relDistToCenter;
-                    result.addValueAt(Vector3(1, 0, 0), p);
-                    auto grads = followGradient(p, width);
-                    for (const auto& pp : grads) {
-                        result.addValueAt(Vector3(0, 1, 0), pp);
-                    }
-                    auto invGrads = followInvGradient(p, width);
-                    for (const auto& pp : invGrads) {
-                        result.addValueAt(Vector3(0, 0, 1), pp);
-                    }
-                }
-            });
-            displayProcessTime("Creating shape (no display)... ", [&]() {
-                auto directionPath = isoline.getPath(nbSamples);
-                for (size_t i = 0; i < directionPath.size(); i++) {
-                    const auto& p = directionPath[i];
-                    float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                    float width = widthMaxLength * interpolation::smooth(1 - relDistToCenter);
-                    auto grads = followGradient(p, width);
-                    auto invGrads = followInvGradient(p, width);
-                }
-            });
-
-            Plotter::get()->addImage(result);
-            Plotter::get()->show();
+        });
+        for (size_t i = 0; i < path.size(); i++) {
+            result(path[i]) = 1.f;
         }
+        /*
+        displayProcessTime("Shaping (no display)... ", [&]() {
+            ShapeCurve shapeFromPaths;
+            std::vector<Vector3> gradPath(nbSamples);
+            std::vector<Vector3> invGradPath(nbSamples);
+            auto directionPath = isoline.getPath(nbSamples);
+            for (size_t i = 0; i < directionPath.size(); i++) {
+                const auto& p = directionPath[i];
+                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
+                float width = widthMaxLength * relDistToCenter;
+                result.addValueAt(Vector3(1, 0, 0), p);
+                auto grads = followGradient(p, width);
+                auto invGrads = followInvGradient(p, width);
 
+                gradPath[i] = grads.points.back();
+                invGradPath[nbSamples - i - 1] = invGrads.points.back();
+            }
+            shapeFromPaths = vectorMerge(gradPath, invGradPath);
+        });
+
+        displayProcessTime("Shaping (full)... ", [&]() {
+            ShapeCurve shapeFromPaths;
+            std::vector<Vector3> gradPath(nbSamples);
+            std::vector<Vector3> invGradPath(nbSamples);
+            auto directionPath = isoline.getPath(nbSamples);
+            for (size_t i = 0; i < directionPath.size(); i++) {
+                const auto& p = directionPath[i];
+                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
+                float width = widthMaxLength * relDistToCenter;
+                result.addValueAt(Vector3(1, 0, 0), p);
+                auto grads = followGradient(p, width);
+                auto invGrads = followInvGradient(p, width);
+
+                gradPath[i] = grads.points.back();
+                invGradPath[nbSamples - i - 1] = invGrads.points.back();
+            }
+            shapeFromPaths = vectorMerge(gradPath, invGradPath);
+    //                shapeFromPaths = shapeFromPaths.simplifyByRamerDouglasPeucker(.001f);
+            shapeFromPaths = shapeFromPaths.getPath(50);
+            for (const auto& pp : shapeFromPaths.getPath(1000)) {
+                result.addValueAt(Vector3(1, 1, 1), pp);
+            }
+        });
+        displayProcessTime("Creating shape (full)... ", [&]() {
+            auto directionPath = isoline.getPath(nbSamples);
+            for (size_t i = 0; i < directionPath.size(); i++) {
+                const auto& p = directionPath[i];
+                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
+                float width = widthMaxLength * relDistToCenter;
+                result.addValueAt(Vector3(1, 0, 0), p);
+                auto grads = followGradient(p, width);
+                for (const auto& pp : grads) {
+                    result.addValueAt(Vector3(0, 1, 0), pp);
+                }
+                auto invGrads = followInvGradient(p, width);
+                for (const auto& pp : invGrads) {
+                    result.addValueAt(Vector3(0, 0, 1), pp);
+                }
+            }
+        });
+        displayProcessTime("Creating shape (no display)... ", [&]() {
+            auto directionPath = isoline.getPath(nbSamples);
+            for (size_t i = 0; i < directionPath.size(); i++) {
+                const auto& p = directionPath[i];
+                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
+                float width = widthMaxLength * interpolation::smooth(1 - relDistToCenter);
+                auto grads = followGradient(p, width);
+                auto invGrads = followInvGradient(p, width);
+            }
+        });*/
+
+        Plotter::get()->addImage(result);
+        Plotter::get()->show();
         /*
         std::vector<BSpline> paths = {
             followIsovalue(clickPos),
@@ -297,8 +163,10 @@ void EnvObjsInterface::display(const Vector3 &camPos)
     if (!this->visible)
         return;
 
-    if (this->waitAtEachFrame)
+    if (this->waitAtEachFrame) {
         this->updateEnvironmentFromEnvObjects(true, false);
+        this->displaySedimentsDistrib();
+    }
 
 //    if (displayVelocities) {
         velocitiesMesh.shader->setVector("color", std::vector<float>{.2f, .2f, .8f, .5f});
@@ -339,7 +207,7 @@ QLayout *EnvObjsInterface::createGUI()
 
     objectsListWidget = new HierarchicalListWidget;
     updateObjectsList();
-//    QObject::connect(objectsListWidget, &HierarchicalListWidget::itemClicked, this, &EnvObjsInterface::updateObjectsListSelection);
+//    QObject::connect(objectsListWidget, &HierarchicalListWidget::clicked, this, [&](QModelIndex item) { qDebug() << item; }); //&EnvObjsInterface::updateObjectsListSelection);
     QObject::connect(objectsListWidget, &HierarchicalListWidget::currentItemChanged, this, [&](QListWidgetItem* current, QListWidgetItem* previous) { this->updateObjectsListSelection(current); });
 
     layout->addWidget(spendTimeButton->get());
@@ -425,6 +293,7 @@ void EnvObjsInterface::show()
 
 void EnvObjsInterface::hide()
 {
+    updateObjectsListSelection(nullptr); // Hide single object's data
     ActionInterface::hide();
 }
 
@@ -442,6 +311,7 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
 {
     if (!this->isVisible()) return;
     if (!mouseInMap) return;
+    if (!event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) return;
 
     Vector3 newPos = mouseWorldPosition.xy();
 
@@ -739,7 +609,10 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
     this->objectsMesh.fromArray(std::vector<float>{});
 
     auto newSelection = dynamic_cast<HierarchicalListWidgetItem*>(newSelectionItem);
-    if (!newSelection) return;
+    if (!newSelection) {
+        currentSelection = nullptr;
+        return;
+    }
     int objID = newSelection->ID;
     EnvObject* selection = nullptr;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -791,16 +664,15 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
 
 
     GridV3 initialFlow = EnvObject::initialFlowfield; // GridV3(EnvObject::flowfield.getDimensions(), Vector3(1, 0, 0));
-    GridV3 totalNewFlow(initialFlow.getDimensions());
-    GridF totalOccupancy(initialFlow.getDimensions());
-    auto [flow, occupancy] = selection->computeFlowModification();
-    totalNewFlow += flow;
-    totalOccupancy += occupancy;
+//    GridV3 totalNewFlow(initialFlow.getDimensions());
+//    GridF totalOccupancy(initialFlow.getDimensions());
+    GridV3 flow;
+    GridF occupancy;
+    std::tie(flow, occupancy) = selection->computeFlowModification();
+//    totalNewFlow += flow;
+//    totalOccupancy += occupancy;
 
     flow = flow * occupancy + initialFlow * (1.f - occupancy);
-//    flow.iterate([&](size_t i) {
-//        flow[i] = (occupacy[i] > 0 ? flow[i] : initialFlow)
-//    });
     initialFlow = initialFlow * (1.f - EnvObject::flowImpactFactor) + flow * EnvObject::flowImpactFactor;
     std::cout << initialFlow.min() << " ----- " << initialFlow.max() << std::endl;
     velocitiesMesh.fromVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions());
@@ -841,6 +713,144 @@ void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) 
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
     }
+}
+
+ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, float directionLength, float widthMaxLength)
+{
+    Vector3 pos = seedPosition;
+    Vector3 dir(1, 0, 0);
+    BSpline path({pos});
+    GridV3 result(gradients.getDimensions());
+
+    auto followIsovalue = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
+        BSpline finalPath;
+
+        Vector3 pos = startPoint;
+        BSpline path({pos});
+        Vector3 dir(1, 0, 0);
+        bool didAFullCircle = false;
+        float totalDistance = 0.f;
+        while (maxDist > totalDistance) {
+            if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
+                didAFullCircle = true;
+                break; // Got back close to beginning
+            }
+            Vector3 gradient = gradients(pos);
+            if (gradient == Vector3()) break; // Nowhere to go
+            gradient.normalize();
+
+            Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
+            dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
+
+            pos += dir;
+
+            totalDistance += dir.norm();
+
+            path.points.push_back(pos);
+        }
+
+        finalPath = path;
+        if (!didAFullCircle) {
+            totalDistance = 0.f;
+            pos = startPoint;
+            path = BSpline();
+            dir = Vector3(-1, 0, 0);
+            while (maxDist > totalDistance) {
+                if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
+                    didAFullCircle = true;
+                    break; // Got back close to beginning
+                }
+                Vector3 gradient = gradients(pos);
+                if (gradient == Vector3()) break; // Nowhere to go
+                gradient.normalize();
+
+                Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
+                dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
+
+                pos += dir;
+                totalDistance += dir.norm();
+
+                path.points.push_back(pos);
+            }
+            if (didAFullCircle) {
+                finalPath = path; // No need to take the first half, we just did a full circle
+            } else {
+                std::reverse(path.points.begin(), path.points.end());
+                finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
+            }
+        }
+        return finalPath;
+    };
+
+    auto followGradient = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
+        Vector3 pos = startPoint;
+        BSpline path({pos});
+        Vector3 dir;
+        float totalDistance = 0.f;
+        while (totalDistance < maxDist) {
+            Vector3 gradient = gradients(pos);
+            if (gradient == Vector3()) break; // Nowhere to go
+            gradient.normalize();
+            dir = gradient;
+
+            pos += dir;
+
+            totalDistance += dir.norm();
+
+            path.points.push_back(pos);
+
+            int nbPoints = std::min(int(path.size()), 5);
+            if (nbPoints > 2) {
+                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
+                Vector3 meanVel;
+                for (size_t i = 0; i < nbPoints - 1; i++) {
+                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
+                }
+                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
+//                        std::cout << "Stuck in grad, stopping" << std::endl;
+                    path.points.erase(path.points.end() - nbPoints, path.points.end());
+                    break;
+                }
+            }
+        }
+        return path;
+    };
+    auto followInvGradient = [gradients](const Vector3& startPoint, float maxDistance) -> BSpline {
+        Vector3 pos = startPoint;
+        BSpline path({pos});
+        Vector3 dir;
+        float totalDistance = 0.f;
+        while (totalDistance < maxDistance) {
+            Vector3 gradient = gradients(pos);
+            if (gradient == Vector3()) break; // Nowhere to go
+            gradient.normalize();
+            dir = -gradient;
+
+            pos += dir;
+            totalDistance += dir.norm();
+
+            path.points.push_back(pos);
+
+            int nbPoints = std::min(int(path.size()), 5);
+
+            if (nbPoints > 2) {
+                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
+                Vector3 meanVel;
+                for (size_t i = 0; i < nbPoints - 1; i++) {
+                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
+                }
+                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
+//                        std::cout << "Stuck in grad, stopping" << std::endl;
+                    path.points.erase(path.points.end() - nbPoints, path.points.end());
+                    break;
+                }
+            }
+        }
+        return path;
+    };
+
+    BSpline isoline = followIsovalue(seedPosition, directionLength);
+    return isoline;
 }
 
 void EnvObjsInterface::fromGanUI()

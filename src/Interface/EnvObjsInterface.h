@@ -3,9 +3,11 @@
 
 #include <QWidget>
 #include "Interface/ActionInterface.h"
-
-#include "EnvObject/EnvObject.h"
 #include "Interface/HierarchicalListWidget.h"
+
+#include "EnvObject/EnvPoint.h"
+#include "EnvObject/EnvCurve.h"
+#include "EnvObject/EnvArea.h"
 
 class EnvObjsInterface : public ActionInterface
 {
@@ -56,6 +58,8 @@ public Q_SLOTS:
     void hotReloadFile();
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
+
+    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
 
 public:
     Mesh velocitiesMesh;
