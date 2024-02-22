@@ -29,6 +29,7 @@ saved_maps/onlyVoxels/*
 
 src/third-party/
 */.idea/
+.idea/*
 __pycache__/
 Python_tests/grid_layout_map
 Python_tests/saved_runs_old
@@ -68,6 +69,7 @@ Python_tests/saved_runs
 *.app
 *.user
 *.2b2237b
+experiments_state*.xml
 build/.qglviewer.xml
 build/.qglviewer.xml
 build/generation-terrain-procedural
@@ -108,3 +110,8 @@ Python_tests\.ipynb_checkpoints\*
 usersmarchappdata*
 *.pth
 .qglviewer.xml
+test.stl
+experiments_state*.xml
+.tmp/*
+Python_tests/test.py
+test.stl
