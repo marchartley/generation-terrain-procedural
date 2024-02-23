@@ -115,3 +115,4 @@ experiments_state*.xml
 .tmp/*
 Python_tests/test.py
 test.stl
+OpenFoam/OF_Sim_Marcos/*
