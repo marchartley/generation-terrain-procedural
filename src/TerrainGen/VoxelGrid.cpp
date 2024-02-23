@@ -1135,6 +1135,7 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
     Vector3 currentPosition = origin;
     if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
         currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
     if (!currentPosition.isValid())
         return Vector3::invalid();
 
@@ -1172,6 +1173,8 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
             tMaxZ += tDeltaZ;
         }
     }
+    if (currentPosition.z <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
     return Vector3::invalid();
 /*
 

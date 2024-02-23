@@ -262,6 +262,9 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
     myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
 
     Vector3 currPos = origin;
+    if (!Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max()))
+        currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1), myAABBox.max() + Vector3(1, 1, 1)});
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
@@ -276,6 +279,9 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
+
+    if (currPos.z <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
     return Vector3(false);
 
 }

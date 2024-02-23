@@ -381,6 +381,9 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(const Vector3& origin, const V
 //    if (!maxPos.isValid()) maxPos = this->getDimensions();
 
     Vector3 currPos = origin;
+    if (!Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max()))
+        currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1), myAABBox.max() + Vector3(1, 1, 1)});
 //    auto values = this->getVoxelValues();
 //    values.raiseErrorOnBadCoord = false;
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
@@ -398,7 +401,9 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(const Vector3& origin, const V
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
-    return Vector3(false);
+    if (currPos.z <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
+    return Vector3::invalid();
 }
 
 Vector3 LayerBasedGrid::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
