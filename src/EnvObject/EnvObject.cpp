@@ -271,6 +271,7 @@ void EnvObject::applyEffects()
 
 void EnvObject::updateSedimentation()
 {
+    EnvObject::sandDeposit = EnvObject::sandDeposit.meanSmooth(5, 5, 1, false); // Diffuse sand
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandAbsorption();
         object->applySandDeposit();
