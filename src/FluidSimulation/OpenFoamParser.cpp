@@ -342,7 +342,7 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 
 std::string OpenFoamParser::createSimulationFile(std::string foldername, const GridF& _boundaries)
 {
-    float scaleFactor = 1000.f;
+    float scaleFactor = 100.f;
     Mesh m = Mesh::applyMarchingCubes(_boundaries);
     std::string file_name = foldername + "/constant/triSurface/cylinder.stl";
     Vector3 targetSize = Vector3(1.f, .5f, 3.f);
