@@ -7,7 +7,7 @@ RegularSimplicialComplex::RegularSimplicialComplex()
 }
 
 RegularSimplicialComplex::RegularSimplicialComplex(int sizeX, int sizeY)
-    : Graph(), sizeX(sizeX), sizeY(sizeY)
+    : GraphTemplate(), sizeX(sizeX), sizeY(sizeY)
 {
     std::vector<int> newNodes(sizeX * sizeY);
     for (int i = 0; i < sizeX * sizeY; i++) newNodes[i] = i;
@@ -38,14 +38,14 @@ RegularSimplicialComplex::RegularSimplicialComplex(int sizeX, int sizeY)
     }
 }
 
-std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(int x, int y)
+std::shared_ptr<GraphNodeTemplate<int> > RegularSimplicialComplex::getNode(int x, int y)
 {
     if (x < 0 || x >= this->sizeX || y < 0 || y >= this->sizeY)
         return nullptr;
     return this->findNodeByID(x * this->sizeX + y);
 }
 
-std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(const Vector3& pos)
+std::shared_ptr<GraphNodeTemplate<int> > RegularSimplicialComplex::getNode(const Vector3& pos)
 {
     return this->getNode(pos.x, pos.y);
 }
@@ -110,7 +110,7 @@ void RegularSimplicialComplex::display()
 int RegularSimplicialComplex::maxNodesValues()
 {
     int max = -1;
-    for (const auto& node : this->nodes)
+    for (const auto& [ID, node] : this->nodes)
         max = std::max(max, node->value);
     return max;
 }
@@ -125,7 +125,7 @@ bool RegularSimplicialComplex::checkConnection(const Vector3& posA, const Vector
         return this->checkConnection(nodeA, nodeB);
 }
 
-bool RegularSimplicialComplex::checkConnection(std::shared_ptr<GraphNode<int> > nodeA, std::shared_ptr<GraphNode<int> > nodeB)
+bool RegularSimplicialComplex::checkConnection(std::shared_ptr<GraphNodeTemplate<int> > nodeA, std::shared_ptr<GraphNodeTemplate<int> > nodeB)
 {
     return nodeA->hasNeighbor(nodeB);
 }

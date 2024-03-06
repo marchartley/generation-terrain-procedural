@@ -23,8 +23,9 @@ Matrix3Graph& Matrix3Graph::initFromBinary(GridI matrix)
     this->originalMatrix = matrix; // Save it for later use
     this->nodes.clear();
     for (size_t i = 0; i < matrix.size(); i++) {
-        GraphNode<int> node(matrix[i], matrix.getCoordAsVector3(i),i);
-        this->nodes.push_back(std::make_shared<GraphNode<int>>(node));
+        GraphNodeTemplate<int> node(matrix[i], matrix.getCoordAsVector3(i),i);
+//        this->nodes.push_back(std::make_shared<GraphNode<int>>(node));
+        this->nodes[node.index] = std::make_shared<GraphNodeTemplate<int>>(node);
     }
     // this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size());
     // this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
@@ -102,7 +103,7 @@ Matrix3Graph& Matrix3Graph::computeSurface(GridI matrix)
 
 Matrix3Graph& Matrix3Graph::randomizeEdges(float randomFactor, bool allowNegatives)
 {
-    for (auto& node : this->nodes) {
+    for (auto& [ID, node] : this->nodes) {
         for (size_t i = 0; i < node->neighbors.size(); i++) {
             float previous_distance = std::get<1>(node->neighbors[i]);
             float rand = 1 + (random_gen::generate(-1.f, 1.f) * randomFactor);
@@ -121,7 +122,7 @@ std::vector<Vector3> Matrix3Graph::shortestPath(const Vector3& start, const Vect
     float closestDistToEnd = std::numeric_limits<float>::max();
     Vector3 newStart;
     Vector3 newEnd;
-    for (auto& node : this->nodes) {
+    for (auto& [ID, node] : this->nodes) {
         Vector3 pos = node->pos;
         if ((pos - start).norm2() < closestDistToStart) {
             closestDistToStart = (pos - start).norm2();
@@ -137,7 +138,7 @@ std::vector<Vector3> Matrix3Graph::shortestPath(const Vector3& start, const Vect
     float totalDistance;
     std::vector<int> path;
     std::tie(totalDistance, path) = Pathfinding::ShortestPathFrom(this->originalMatrix.getIndex(newStart), this->originalMatrix.getIndex(newEnd),
-                                  this->nodes/*, [&](int index) -> float {
+                                  /*this->nodes*/ this->adjencyMatrix /*, [&](int index) -> float {
         return (this->nodes[index]->pos - newEnd).norm2();
     }*/);
 

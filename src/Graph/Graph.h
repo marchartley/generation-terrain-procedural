@@ -8,27 +8,37 @@
 #include "Graphics/DisplayGraphics.h"
 
 template <class T>
-class Graph
+class GraphTemplate
 {
 public:
-    Graph();
+    GraphTemplate(bool useMatrices = true);
 
-    Graph<T>& circularLayout(bool randomOrder = false);
-    Graph<T> &forceDrivenPositioning(bool startWithCircularLayout = true);
+    GraphTemplate<T>& circularLayout(bool randomOrder = false);
+    GraphTemplate<T> &forceDrivenPositioning(bool startWithCircularLayout = true);
 
-    std::shared_ptr<GraphNode<T>> addNode(int node);
-    std::shared_ptr<GraphNode<T>> addNode(std::shared_ptr<GraphNode<T>> newNode);
-    std::vector<std::shared_ptr<GraphNode<T>> > addNodes(std::vector<int> nodes);
-    std::vector<std::shared_ptr<GraphNode<T> > > addNodes(std::vector<std::shared_ptr<GraphNode<T>>> newNodes);
+    std::shared_ptr<GraphNodeTemplate<T>> addNode(int node);
+    std::shared_ptr<GraphNodeTemplate<T>> addNode(std::shared_ptr<GraphNodeTemplate<T>> newNode);
+//    std::vector<std::shared_ptr<GraphNode<T>> > addNodes(std::vector<int> nodes);
+//    std::vector<std::shared_ptr<GraphNode<T> > > addNodes(std::vector<std::shared_ptr<GraphNode<T>>> newNodes);
+
+    std::map<int, std::shared_ptr<GraphNodeTemplate<T>> > addNodes(std::vector<int> nodes);
+    std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > addNodes(std::vector<std::shared_ptr<GraphNodeTemplate<T>>> newNodes);
 
     void addConnection(int nodeA, int nodeB, float weight = 1.f);
-    void addConnection(std::shared_ptr<GraphNode<T>> nodeA, std::shared_ptr<GraphNode<T>> nodeB, float weight = 1.f);
+    void addConnection(std::shared_ptr<GraphNodeTemplate<T>> nodeA, std::shared_ptr<GraphNodeTemplate<T>> nodeB, float weight = 1.f);
     void removeConnection(int nodeA, int nodeB);
-    void removeConnection(std::shared_ptr<GraphNode<T>> nodeA, std::shared_ptr<GraphNode<T>> nodeB);
+    void removeConnection(std::shared_ptr<GraphNodeTemplate<T>> nodeA, std::shared_ptr<GraphNodeTemplate<T>> nodeB);
 
-    std::shared_ptr<GraphNode<T>> findNodeByID(int ID);
+    std::shared_ptr<GraphNodeTemplate<T>> findNodeByID(int ID);
 
-    std::vector<std::shared_ptr<GraphNode<T>>> nodes;
+    std::shared_ptr<GraphNodeTemplate<T>> operator[](T index) const;
+
+    void initAllNodesValues(T value) const;
+    bool empty() const;
+    size_t size() const;
+
+//    std::vector<std::shared_ptr<GraphNode<T>>> nodes;
+    std::map<int, std::shared_ptr<GraphNodeTemplate<T>>> nodes;
 
     GridI nodesIndices;
     GridI connectionMatrix;
@@ -36,15 +46,19 @@ public:
     GridF adjencyMatrix;
 
     void draw();
+
+    bool useMatrices;
 };
 
 template<class T>
-Graph<T>::Graph() {
+GraphTemplate<T>::GraphTemplate(bool useMatrices)
+    : useMatrices(useMatrices)
+{
 
 }
 
 template<class T>
-Graph<T> &Graph<T>::circularLayout(bool randomOrder)
+GraphTemplate<T> &GraphTemplate<T>::circularLayout(bool randomOrder)
 {
     std::vector<size_t> indices(this->nodes.size());
     for (size_t i = 0; i < indices.size(); i++) indices[i] = i;
@@ -58,7 +72,7 @@ Graph<T> &Graph<T>::circularLayout(bool randomOrder)
 }
 
 template<class T>
-Graph<T>& Graph<T>::forceDrivenPositioning(bool startWithCircularLayout)
+GraphTemplate<T>& GraphTemplate<T>::forceDrivenPositioning(bool startWithCircularLayout)
 {
     if (startWithCircularLayout)
         this->circularLayout();
@@ -67,7 +81,7 @@ Graph<T>& Graph<T>::forceDrivenPositioning(bool startWithCircularLayout)
     solver.numberIterations = maxTriesForAdjencyConstraint;
     solver.stoppingEpsilon = 1.f;
 
-    for (auto& n : nodes) {
+    for (auto& [ID, n] : nodes) {
         solver.addItem(new Vector3(n->pos));
     }
 
@@ -94,126 +108,164 @@ Graph<T>& Graph<T>::forceDrivenPositioning(bool startWithCircularLayout)
 }
 
 template<class T>
-std::shared_ptr<GraphNode<T>> Graph<T>::addNode(int node)
+std::shared_ptr<GraphNodeTemplate<T>> GraphTemplate<T>::addNode(int node)
 {
-    return this->addNode(std::make_shared<GraphNode<T>>(T(), Vector3(), node));
+    return this->addNode(std::make_shared<GraphNodeTemplate<T>>(T(), Vector3(), node));
 }
 
 template<class T>
-std::shared_ptr<GraphNode<T>> Graph<T>::addNode(std::shared_ptr<GraphNode<T> > newNode)
+std::shared_ptr<GraphNodeTemplate<T>> GraphTemplate<T>::addNode(std::shared_ptr<GraphNodeTemplate<T> > newNode)
 {
     this->addNodes({newNode});
     return newNode;
 }
 
 template<class T>
-std::vector<std::shared_ptr<GraphNode<T> > > Graph<T>::addNodes(std::vector<int> nodes)
+std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > GraphTemplate<T>::addNodes(std::vector<int> nodes)
 {
-    std::vector<std::shared_ptr<GraphNode<T>>> newNodes;
+    std::vector<std::shared_ptr<GraphNodeTemplate<T>>> newNodes;
     for (auto& node : nodes)
-        newNodes.push_back(std::make_shared<GraphNode<T>>(T(), Vector3(), node));
+        newNodes.push_back(std::make_shared<GraphNodeTemplate<T>>(T(), Vector3(), node));
     return this->addNodes(newNodes);
 }
 
 template<class T>
-std::vector<std::shared_ptr<GraphNode<T> > > Graph<T>::addNodes(std::vector<std::shared_ptr<GraphNode<T> > > newNodes)
+std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > GraphTemplate<T>::addNodes(std::vector<std::shared_ptr<GraphNodeTemplate<T> > > newNodes)
 {
-    int numberOfNodesToAdd = newNodes.size();
-    GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-    nodesIndices.paste(this->nodesIndices);
-    this->nodesIndices = nodesIndices;
+//    this->nodes.insert(this->nodes.end(), newNodes.begin(), newNodes.end());
+    std::map<int, std::shared_ptr<GraphNodeTemplate<T>>> newNodesMap;
+    for (const auto& node : newNodes) {
+        newNodesMap[node->index] = node;
+    }
+    this->nodes.insert(newNodesMap.begin(), newNodesMap.end());
 
-    GridI connectionMatrix = GridI(this->connectionMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-    connectionMatrix.paste(this->connectionMatrix);
-    this->connectionMatrix = connectionMatrix;
+    if (useMatrices) {
+        int numberOfNodesToAdd = newNodes.size();
+        GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+        nodesIndices.paste(this->nodesIndices);
+        this->nodesIndices = nodesIndices;
 
-    GridI precedenceMatrix = GridI(this->precedenceMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-    precedenceMatrix.paste(this->precedenceMatrix);
-    this->precedenceMatrix = precedenceMatrix;
+        GridI connectionMatrix = GridI(this->connectionMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+        connectionMatrix.paste(this->connectionMatrix);
+        this->connectionMatrix = connectionMatrix;
 
-    GridF adjencyMatrix = GridI(this->adjencyMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-    adjencyMatrix.paste(this->adjencyMatrix);
-    this->adjencyMatrix = adjencyMatrix;
+        GridI precedenceMatrix = GridI(this->precedenceMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+        precedenceMatrix.paste(this->precedenceMatrix);
+        this->precedenceMatrix = precedenceMatrix;
 
-    this->nodes.insert(this->nodes.end(), newNodes.begin(), newNodes.end());
-    return newNodes;
+        GridF adjencyMatrix = GridI(this->adjencyMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+        adjencyMatrix.paste(this->adjencyMatrix);
+        this->adjencyMatrix = adjencyMatrix;
+    }
+
+    return newNodesMap;
 }
 
 template<class T>
-void Graph<T>::addConnection(int nodeA, int nodeB, float weight)
+void GraphTemplate<T>::addConnection(int nodeA, int nodeB, float weight)
 {
     return this->addConnection(this->findNodeByID(nodeA), this->findNodeByID(nodeB), weight);
 }
 
 template<class T>
-void Graph<T>::addConnection(std::shared_ptr<GraphNode<T> > nodeA, std::shared_ptr<GraphNode<T> > nodeB, float weight)
+void GraphTemplate<T>::addConnection(std::shared_ptr<GraphNodeTemplate<T> > nodeA, std::shared_ptr<GraphNodeTemplate<T> > nodeB, float weight)
 {
-    int indexA = -1;
-    int indexB = -1;
-    for (size_t i = 0; i < this->nodes.size(); i++) {
-        if (this->nodes[i] == nodeA)
-            indexA = i;
-        if (this->nodes[i] == nodeB)
-            indexB = i;
-        if (indexA > -1 && indexB > -1)
-            break;
-    }
-
     nodeA->addNeighbor(nodeB, weight);
     nodeB->addNeighbor(nodeA, weight);
 
-    this->connectionMatrix.at(indexA, indexB) = 1;
-    this->connectionMatrix.at(indexB, indexA) = 1;
-    this->adjencyMatrix.at(indexA, indexB) = weight;
-    this->adjencyMatrix.at(indexB, indexA) = weight;
+    if (useMatrices) {
+        int indexA = -1;
+        int indexB = -1;
+        for (size_t i = 0; i < this->nodes.size(); i++) {
+            if (this->nodes[i] == nodeA)
+                indexA = i;
+            if (this->nodes[i] == nodeB)
+                indexB = i;
+            if (indexA > -1 && indexB > -1)
+                break;
+        }
+        this->connectionMatrix.at(indexA, indexB) = 1;
+        this->connectionMatrix.at(indexB, indexA) = 1;
+        this->adjencyMatrix.at(indexA, indexB) = weight;
+        this->adjencyMatrix.at(indexB, indexA) = weight;
+    }
 }
 
 template<class T>
-void Graph<T>::removeConnection(int nodeA, int nodeB)
+void GraphTemplate<T>::removeConnection(int nodeA, int nodeB)
 {
     return this->removeConnection(this->findNodeByID(nodeA), this->findNodeByID(nodeB));
 }
 
 template<class T>
-void Graph<T>::removeConnection(std::shared_ptr<GraphNode<T> > nodeA, std::shared_ptr<GraphNode<T> > nodeB)
+void GraphTemplate<T>::removeConnection(std::shared_ptr<GraphNodeTemplate<T> > nodeA, std::shared_ptr<GraphNodeTemplate<T> > nodeB)
 {
-    int indexA = -1;
-    int indexB = -1;
-    for (size_t i = 0; i < this->nodes.size(); i++) {
-        if (this->nodes[i] == nodeA)
-            indexA = i;
-        if (this->nodes[i] == nodeB)
-            indexB = i;
-        if (indexA > -1 && indexB > -1)
-            break;
-    }
-
     nodeA->removeNeighbor(nodeB);
     nodeB->removeNeighbor(nodeA);
 
-    this->connectionMatrix.at(indexA, indexB) = 0;
-    this->connectionMatrix.at(indexB, indexA) = 0;
-    this->adjencyMatrix.at(indexA, indexB) = 0.f;
-    this->adjencyMatrix.at(indexB, indexA) = 0.f;
+    if (useMatrices) {
+        int indexA = -1;
+        int indexB = -1;
+        for (size_t i = 0; i < this->nodes.size(); i++) {
+            if (this->nodes[i] == nodeA)
+                indexA = i;
+            if (this->nodes[i] == nodeB)
+                indexB = i;
+            if (indexA > -1 && indexB > -1)
+                break;
+        }
+        this->connectionMatrix.at(indexA, indexB) = 0;
+        this->connectionMatrix.at(indexB, indexA) = 0;
+        this->adjencyMatrix.at(indexA, indexB) = 0.f;
+        this->adjencyMatrix.at(indexB, indexA) = 0.f;
+    }
 }
 
 template<class T>
-std::shared_ptr<GraphNode<T> > Graph<T>::findNodeByID(int ID)
+std::shared_ptr<GraphNodeTemplate<T> > GraphTemplate<T>::findNodeByID(int ID)
 {
-    for (auto& node : this->nodes) {
+    if (this->nodes.count(ID)) return this->nodes[ID];
+    /*for (auto& node : this->nodes) {
         if (node->index == ID)
             return node;
-    }
+    }*/
     return nullptr;
 }
 
 template<class T>
-void Graph<T>::draw()
+std::shared_ptr<GraphNodeTemplate<T> > GraphTemplate<T>::operator[](T index) const
+{
+    if (!nodes.count(index)) return nullptr;
+    return this->nodes.at(index);
+}
+
+template<class T>
+void GraphTemplate<T>::initAllNodesValues(T value) const
+{
+    for (auto& [ID, node] : nodes) {
+        node->value = value;
+    }
+}
+
+template<class T>
+bool GraphTemplate<T>::empty() const
+{
+    return this->nodes.empty();
+}
+
+template<class T>
+size_t GraphTemplate<T>::size() const
+{
+    return this->nodes.size();
+}
+
+template<class T>
+void GraphTemplate<T>::draw()
 {
     std::vector<Vector3> nodesPos;
     std::vector<std::string> labels;
     std::vector<std::vector<Vector3>> linksPos;
-    for (auto& node : this->nodes) {
+    for (auto& [ID, node] : this->nodes) {
         nodesPos.push_back(node->pos);
         labels.push_back(std::to_string(node->index));
 
@@ -225,4 +277,7 @@ void Graph<T>::draw()
     Plotter::get()->addScatter(nodesPos,  "", labels);
     Plotter::get()->show();
 }
+
+typedef GraphTemplate<int> Graph;
+
 #endif // GRAPH_H

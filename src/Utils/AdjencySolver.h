@@ -14,8 +14,8 @@ public:
 
     void solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace, std::vector<std::pair<std::string, std::string>> impossibleAdjency, ShapeCurve availableSpace);
 
-    Graph<std::string> graph;
-    Graph<std::string> adjency;
+    GraphTemplate<std::string> graph;
+    GraphTemplate<std::string> adjency;
 };
 
 #endif // ADJENCYSOLVER_H

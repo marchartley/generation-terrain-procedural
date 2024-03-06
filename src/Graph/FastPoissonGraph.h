@@ -12,7 +12,7 @@ class FastPoissonGraph;
 #include "Graph/Graph.h"
 
 template<class T>
-class FastPoissonGraph : public Graph<T>
+class FastPoissonGraph : public GraphTemplate<T>
 {
 public:
     FastPoissonGraph();
@@ -37,11 +37,13 @@ public:
 
 template<class T>
 FastPoissonGraph<T>::FastPoissonGraph()
+    : GraphTemplate<T>(true)
 {
 }
 
 template<class T>
 FastPoissonGraph<T>::FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float radius, int max_tries)
+    : FastPoissonGraph()
 {
     Matrix3<short int> available_space_matrix(sizeX, sizeY, sizeZ, 1);
     initNodes(available_space_matrix, radius, max_tries);
@@ -50,6 +52,7 @@ FastPoissonGraph<T>::FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float rad
 
 template<class T> template<class U>
 FastPoissonGraph<T>::FastPoissonGraph(Matrix3<U> &available_space_matrix, float radius, int max_tries)
+    : FastPoissonGraph()
 {
     initNodes(available_space_matrix, radius, max_tries);
 }
@@ -81,8 +84,8 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     this->nodesIndices = GridI(this->sizeX, this->sizeY, this->sizeZ, -1); // Fill all indices to -1 as default values
     Vector3 sizeVec(this->sizeX, this->sizeY, this->sizeZ);
 
-    std::vector<std::shared_ptr<GraphNode<T>>> allNodes;
-    std::vector<std::shared_ptr<GraphNode<T>>> activeList;
+    std::vector<std::shared_ptr<GraphNodeTemplate<T>>> allNodes;
+    std::vector<std::shared_ptr<GraphNodeTemplate<T>>> activeList;
     // Step 1 : Create initial sample, register it and put it in the active list
     Vector3 randomStart;
     int tries = 0;
@@ -92,7 +95,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
         if (tries > 100000)
             return; // Error, not enough space to place nodes
     } while (!available_space_matrix.at(randomStart));
-    std::shared_ptr<GraphNode<T>> firstNode = std::make_shared<GraphNode<T>>(T(), randomStart, 0);
+    std::shared_ptr<GraphNodeTemplate<T>> firstNode = std::make_shared<GraphNodeTemplate<T>>(T(), randomStart, 0);
     activeList.push_back(firstNode);
     allNodes.push_back(firstNode);
     int current_node_index = 1;
@@ -102,7 +105,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     while (!activeList.empty()) {
         steps++;
         int randomIndex = random_gen::generate(0, activeList.size());
-        std::shared_ptr<GraphNode<T>> currentNode = activeList[randomIndex];
+        std::shared_ptr<GraphNodeTemplate<T>> currentNode = activeList[randomIndex];
         bool atLeastOneNodeAdded = false;
         for (int i = 0; i < max_tries && !atLeastOneNodeAdded; i++) {
             Vector3 pos = (currentNode->pos + Vector3::random() * radius * random_gen::generate(1.0, 2.0)).abs();
@@ -133,7 +136,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
                 }
             }
             if (keep) {
-                std::shared_ptr<GraphNode<T>> newSample = std::make_shared<GraphNode<T>>(T(), pos, current_node_index);
+                std::shared_ptr<GraphNodeTemplate<T>> newSample = std::make_shared<GraphNodeTemplate<T>>(T(), pos, current_node_index);
                 newSample->privateVector = pos;
                 activeList.push_back(newSample);
                 allNodes.push_back(newSample);
@@ -147,13 +150,13 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
         if (!atLeastOneNodeAdded) {
             currentNode->privateIndex = this->nodes.size();
             currentNode->privateVector = currentNode->pos;
-            this->nodes.push_back(currentNode);
+            this->nodes[currentNode->index] = currentNode; //.push_back(currentNode);
             activeList.erase(activeList.begin() + randomIndex);
         }
     }
 
     // At this point, put back all positions in their initial reference and update the indices
-    for (auto& val : this->nodes) {
+    for (auto& [ID, val] : this->nodes) {
         val->pos /= sizeVec;
         val->pos *= Vector3(_available_space_matrix.sizeX, _available_space_matrix.sizeY, _available_space_matrix.sizeZ);
 
@@ -178,7 +181,7 @@ void FastPoissonGraph<T>::createEdges(int maxNumberNeighbors, float maxDistanceT
 
     for (size_t i = 0; i < this->nodes.size(); i++) {
         auto sample = this->nodes[i];
-        std::vector<std::shared_ptr<GraphNode<T>>> candidates;
+        std::vector<std::shared_ptr<GraphNodeTemplate<T>>> candidates;
         for (size_t j = 0; j < this->nodes.size(); j++){
             if (i == j) continue;
             if ((sample->pos - this->nodes[j]->pos).norm2() < sqr_dist)

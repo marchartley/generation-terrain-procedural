@@ -14,7 +14,7 @@ public:
 
 
     std::vector<Vector3> points;
-    Graph<int> graph;
+    Graph graph;
 };
 
 #endif // DELAUNAY_H

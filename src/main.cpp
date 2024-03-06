@@ -741,6 +741,82 @@ int main(int argc, char *argv[])
     Plotter::get()->setNormalizedModeImage(true);
     return Plotter::get()->exec();*/
 
+    /*
+     * Unit test : Checking that sparse graphs are faster than matrix graphs
+    std::vector<int> nodesID(500);
+    for (int i = 0; i < nodesID.size(); i++) {
+        nodesID[i] = i;
+    }
+
+
+    Graph g1(false);
+    Graph g2(true);
+
+    displayProcessTime("Generate List graph... ", [&]() {
+        g1.addNodes(nodesID);
+    });
+    displayProcessTime("Random neighbors... ", [&]() {
+        for (int i = 0; i < g1.nodes.size(); i++) {
+            for (int j = 0; j < g1.nodes.size(); j++) {
+                if (random_gen::generate() < 2.f) {
+                    g1.addConnection(i, j);
+                }
+            }
+        }
+    });
+    displayProcessTime("Generate Matrix graph... ", [&]() {
+        g2.addNodes(nodesID);
+    });
+    displayProcessTime("Random neighbors... ", [&]() {
+        for (int i = 0; i < g2.nodes.size(); i++) {
+            for (int j = 0; j < g2.nodes.size(); j++) {
+                if (random_gen::generate() < 0.2f) {
+                    g2.addConnection(i, j);
+                }
+            }
+        }
+    });
+
+    g1.circularLayout();
+    return 0;
+    */
+
+    /*
+     * Unit test : Shortest path algorithm
+     */
+    Graph G(false);
+    G.addNodes({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
+    G.addConnection(0, 1, 85);
+    G.addConnection(0, 2, 217);
+    G.addConnection(0, 4, 173);
+    G.addConnection(1, 5, 80);
+    G.addConnection(2, 6, 186);
+    G.addConnection(2, 7, 103);
+    G.addConnection(3, 7, 183);
+    G.addConnection(5, 8, 250);
+    G.addConnection(7, 9, 167);
+    G.addConnection(4, 9, 502);
+    G.addConnection(8, 9, 84);
+
+    std::vector<int> expectedValues = {0, 85, 217, 503, 173, 165, 403, 320, 415, 487};
+
+    auto [distancesDjikstra, predecessor] = Pathfinding::Djikstra(G, 0);
+    /* TO TEST :
+     * BellmanFord
+     * FloydWarshall
+     * FloydWarshallImproved
+     * Johnson
+    */
+
+    for (int iNode = 0; iNode < distancesDjikstra.size(); iNode++) {
+        auto distDjikstra = distancesDjikstra[iNode];
+        auto node = iNode;
+        auto [distAStar, precAStar] = Pathfinding::AStar(G, 0, iNode);
+        std::cout << "A to " << char('A' + node) << " -> A* : " << distAStar << " -- Djikstra : " << distDjikstra << " -- GT : " << expectedValues[node] << "\n";
+    }
+    std::cout << std::endl;
+    return 0;
+
     EnvObject::readFile("saved_maps/primitives.json");
 
     ViewerInterface vi;

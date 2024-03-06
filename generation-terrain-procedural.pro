@@ -96,6 +96,7 @@ SOURCES += \
         src/Graph/GraphNode.cpp \
         src/Graph/Matrix3Graph.cpp \
         src/Graph/Pathfinding.cpp \
+    src/Graph/PathfindingGraph.cpp \
     src/Graph/RegularSimplicialComplex.cpp \
     src/Graph/TopoMap.cpp \
         src/Graph/WaveFunctionCollapse.cpp \
@@ -277,6 +278,7 @@ HEADERS += \
     src/Graph/GraphNode.h \
     src/Graph/Matrix3Graph.h \
     src/Graph/Pathfinding.h \
+    src/Graph/PathfindingGraph.h \
     src/Graph/RegularSimplicialComplex.h \
     src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \

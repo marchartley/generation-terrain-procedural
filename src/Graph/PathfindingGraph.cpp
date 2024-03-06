@@ -1,8 +1,8 @@
-#include "Graph/Pathfinding.h"
-/*
+#include "PathfindingGraph.h"
+
 std::pair<float, std::vector<int> > Pathfinding::ShortestPathFrom(int source, int dest, GridF &adjencyMap, std::function<float (int)> heuristicFunction)
 {
-    return AStar(adjencyMap, source, dest, heuristicFunction);
+    //return AStar(adjencyMap, source, dest, heuristicFunction);
 }
 std::pair<std::vector<float>, std::vector<int> > Pathfinding::ShortestPathFrom(int source, GridF &adjencyMap)
 {
@@ -24,9 +24,11 @@ std::vector<int> Pathfinding::getPath(int dest, std::vector<int> prec)
     return path;
 }
 
-std::pair<float, std::vector<int> > Pathfinding::AStar(GridF &adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction)
+std::pair<float, std::vector<int> > Pathfinding::AStar(Graph &graph, int source, int dest, std::function<float(int)> heuristicFunction)
 {
-    int n = adjencyMap.sizeX;
+    return Pathfinding::AStar(graph.nodes, source, dest, heuristicFunction);
+    /*
+    int n = graph.size();
     std::vector<int> prec(n, -1);
     std::vector<float> gScore(n, std::numeric_limits<float>::max());
     std::vector<float> fScore(n, std::numeric_limits<float>::max());
@@ -51,7 +53,7 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(GridF &adjencyMap, int so
             int next = current;
             while (current != source) {
                 current = prec[current];
-                totalDist += adjencyMap.at(current, next);
+                totalDist += graph.at(current, next);
                 next = current;
             }
             return std::make_pair(totalDist, prec);
@@ -60,22 +62,22 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(GridF &adjencyMap, int so
         openSet.erase(std::find(openSet.begin(), openSet.end(), current));
 
         for (int u = 0; u < n; u++) {
-            float possibleGScore = gScore[current] + adjencyMap.at(current, u) + heuristicFunction(u);
+            float possibleGScore = gScore[current] + graph.at(current, u) + heuristicFunction(u);
             if (possibleGScore < gScore[u]) {
                 prec[u] = current;
                 gScore[u] = possibleGScore;
-                fScore[u] = possibleGScore + adjencyMap.at(current, u) + heuristicFunction(u);
+                fScore[u] = possibleGScore + graph.at(current, u) + heuristicFunction(u);
                 if (std::find(openSet.begin(), openSet.end(), u) == openSet.end())
                     openSet.push_back(u);
             }
         }
     }
-    return std::make_pair(std::numeric_limits<float>::max(), prec);
+    return std::make_pair(std::numeric_limits<float>::max(), prec);*/
 }
 
-std::pair<std::vector<float>, std::vector<int> > Pathfinding::Djikstra(GridF &adjencyMap, int source)
+std::pair<std::vector<float>, std::vector<int> > Pathfinding::Djikstra(Graph& graph, int source)
 {
-    int n = adjencyMap.sizeX;
+    int n = graph.size();
     std::vector<float> distances(n, std::numeric_limits<float>::max());
     std::vector<int> prec(n, -1);
     distances[source] = 0.0;
@@ -101,8 +103,8 @@ std::pair<std::vector<float>, std::vector<int> > Pathfinding::Djikstra(GridF &ad
         }
         Q.erase(Q.begin() + indexToRemoveFromQ);
         for (int i = 0; i < n; i++) {
-            if (distances[i] > distances[minNodeNumber] + adjencyMap.at(minNodeNumber, i)) {
-                distances[i] = distances[minNodeNumber] + adjencyMap.at(minNodeNumber, i);
+            if (distances[i] > distances[minNodeNumber] + graph[minNodeNumber]->getNeighborDistanceByIndex(i)) {
+                distances[i] = distances[minNodeNumber] + graph[minNodeNumber]->getNeighborDistanceByIndex(i);
                 prec[i] = minNodeNumber;
             }
         }
@@ -257,6 +259,7 @@ std::pair<GridF, GridI > Pathfinding::FloydWarshallImproved(GridF &adjencyMap)
 
 std::pair<GridF, GridI > Pathfinding::Johnson(GridF &adjencyMap)
 {
+    /*
     GridF W = adjencyMap;
     int n = adjencyMap.sizeX;
     GridI prec(n, n, 1, -1);
@@ -299,5 +302,5 @@ std::pair<GridF, GridI > Pathfinding::Johnson(GridF &adjencyMap)
         }
     }
     return std::make_pair(W, prec);
+    */
 }
-*/
