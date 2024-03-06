@@ -260,6 +260,7 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
 void Plotter::addImage(GridV3 image)
 {
     this->displayedImage = image;
+    if (image.empty()) return;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::min();
@@ -356,7 +357,7 @@ void Plotter::draw()
             delete lab;
     this->graphicLabels.clear();
 
-    if (this->backImage != nullptr) {
+    if (!this->displayedImage.empty() && this->backImage && !this->backImage->isNull()) {
         int width = static_cast<int>(this->chartView->chart()->plotArea().width());
         int height = static_cast<int>(this->chartView->chart()->plotArea().height());
         int ViewW = static_cast<int>(chartView->width());

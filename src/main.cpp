@@ -26,6 +26,10 @@
 #include <unistd.h>
 
 #include "TerrainModification/ParticleErosion.h"
+#include "Utils/Delaunay.h"
+#include "Graph/RegularSimplicialComplex.h"
+
+#include "Graph/TopoMap.h"
 using namespace std;
 
 std::map<std::string, std::string> getAllEnvironmentVariables() {
@@ -287,6 +291,7 @@ int main(int argc, char *argv[])
     return 0;
     */
     /*
+     * Unit test: extracting the contours of a binary map
     GridI grid({
                    {0, 1, 1, 0, 0, 0, 0, 0, 0},
                    {0, 1, 1, 0, 0, 0, 0, 0, 0},
@@ -318,6 +323,7 @@ int main(int argc, char *argv[])
     return 0;
     */
     /*
+     * Unit test : checking that the naive "convolution" method is slower than the parallel one
     Vector3 dims(1000, 1000, 1);
     GridF mask = GridF::random(dims);
     GridF grid = GridF::random(dims);
@@ -355,7 +361,9 @@ int main(int argc, char *argv[])
     std::cout << "Check: " << (res == res2 ? "OK" : "Not OK!!!") << std::endl;
     return 0;
     */
-    /*std::string initialPath = "erosionsTests";
+    /*
+     * Unit test : Generate OBJ files from a folder filled with STL files
+    std::string initialPath = "erosionsTests";
     std::string destFolder = "asOBJ";
     std::string finalPath = initialPath + "/" + destFolder;
     std::vector<std::string> filenames;
@@ -386,7 +394,8 @@ int main(int argc, char *argv[])
         }
     })) << std::endl;
     return 0;*/
-/*
+    /*
+     * Unit test : getting global and local positions of implicit patches relative to their parents
     ImplicitPrimitive* primA = new ImplicitPrimitive;
     ImplicitPrimitive* primB = new ImplicitPrimitive;
     ImplicitNaryOperator* nary = new ImplicitNaryOperator;
@@ -429,7 +438,8 @@ int main(int argc, char *argv[])
     std::cout << "Position " << pos << " becomes " << newPos << std::endl;
 
     return 0;*/
-/*
+    /*
+     * Unit test : extract curvature from a curve (?)
     BSpline spline({
                        Vector3(0, 10, 0),
                        Vector3(50, 1, 0),
@@ -469,32 +479,8 @@ int main(int argc, char *argv[])
     Plotter::get()->exec();
     return 0;
     */
-/*
-    int isize = 64;
-    int jsize = 64;
-    int ksize = 64;
-    float dx = 0.125;
-    FluidSimulation fluidsim(isize, jsize, ksize, dx);
-
-    fluidsim.setSurfaceSubdivisionLevel(2);
-
-    float x, y, z;
-    fluidsim.getSimulationDimensions(&x, &y, &z);
-    fluidsim.addImplicitFluidPoint(x/2, y/2, z/2, 7.0);
-
-    fluidsim.addBodyForce(0.0, -25.0, 0.0);
-    fluidsim.initialize();
-
-    float timestep = 1.0 / 30.0;
-    for (;;) {
-        fluidsim.update(timestep);
-    }
-
-    return 0;*/
-
-
-
     /*
+     * Unit test : tried to run a fluid simulation on GPU (?)
     std::cout << showTime(timeIt([]() {
         Fluid fluid;
         gfx::Program texture_copy_program;
@@ -529,7 +515,9 @@ int main(int argc, char *argv[])
 
     return 0;
     */
-    /*Vector3 A = Vector3(1, 0, 0);
+    /*
+     * Unit test : extract euler angles between 2 vectors
+    Vector3 A = Vector3(1, 0, 0);
     Vector3 B = Vector3(0.5, 1, 1).normalize();
     Vector3 UP = Vector3(0, 0, 1); // A.cross(B);
     Vector3 LEFT = UP.cross(A);
@@ -542,15 +530,14 @@ int main(int argc, char *argv[])
 
     std::cout << C << std::endl;
     return 0;*/
-/*
+    /*
+     * No clue what I'm trying to test here...
     AABBox bbox(Vector3(0, 0, 0), Vector3(2, 2, 1));
 
     Matrix3<float> M = Matrix3<float>({
                                           {0, 1},
                                           {1, 0}
                                           });
-//    std::cout << M.displayValues() << std::endl;
-
     Matrix3<float> m(10, 10);
     Vector3 ratio = (M.getDimensions() - Vector3(1, 1, 0)) / (bbox.dimensions() - Vector3(1, 1, 0));
     for (int _x = 0; _x < m.sizeX; _x++) {
@@ -567,9 +554,11 @@ int main(int argc, char *argv[])
     }
     std::cout << M.displayValues() << std::endl;
     std::cout << m.displayValues() << std::endl;
-    return 0;*/
+    return 0;
+    */
 
-/*
+    /*
+     * Unit test : Merging 2 shapes (boolean OR)
     ShapeCurve A = ShapeCurve({
                                   Vector3(0, 0.5, 0),
                                   Vector3(0.5, 0, 0),
@@ -590,9 +579,7 @@ int main(int argc, char *argv[])
                                   Vector3(1, 0.9, 0),
                                   Vector3(1.5, 1, 0)
                               });
-    ShapeCurve AB = merge(A, B);
-
-    Plotter::init();
+    ShapeCurve AB = A.merge(B);
     Plotter::getInstance()->addPlot(A.closedPath(), "A", Qt::blue);
     Plotter::getInstance()->addPlot(B.closedPath(), "B", Qt::green);
     Plotter::getInstance()->addPlot(AB.closedPath(), "AB", Qt::red);
@@ -600,28 +587,52 @@ int main(int argc, char *argv[])
     std::cout << A << std::endl;
     std::cout << B << std::endl;
     std::cout << AB << std::endl;
-    return Plotter::getInstance()->exec();*/
+    return Plotter::getInstance()->exec();
+    */
 
-//    RegularSimplicialComplex grid(10, 10);
-//    grid.getNode(2, 3)->value = 0;
-//    grid.getNode(1, 3)->value = 0;
-//    grid.getNode(1, 4)->value = 0;
-//    grid.removeUnavailableLinks();
-//    grid.display();
+    /*
+     * Unit test : Create a regular simplicial and fill some areas
+    RegularSimplicialComplex grid(10, 10);
+    grid.getNode(1, 3)->value = 0;
+    grid.getNode(2, 3)->value = 0;
+    grid.getNode(1, 4)->value = 0;
+    grid.getNode(2, 4)->value = 0;
+    grid.getNode(3, 4)->value = 0;
+    grid.getNode(1, 5)->value = 0;
+    grid.getNode(2, 5)->value = 0;
+    grid.getNode(3, 5)->value = 0;
 
-//    return 0;
+    grid.getNode(5, 3)->value = 1;
+    grid.getNode(6, 3)->value = 1;
+    grid.getNode(5, 4)->value = 1;
+    grid.getNode(6, 4)->value = 1;
+    grid.getNode(7, 4)->value = 1;
+    grid.getNode(5, 5)->value = 1;
+    grid.getNode(6, 5)->value = 1;
+    grid.getNode(7, 5)->value = 1;
+    grid.removeUnavailableLinks();
+    grid.display();
 
-//    auto g = CombinMap();
-//    g.addFace(5, {}, {100, 101, 102, 103, 104});
-//    g.addFace(4, {g.root->beta2, g.root->beta2->beta1}, {0});
-//    g.addFace(4, {g.root->beta2, g.root->beta2->beta1}, {1});
-//    g.debug();
-//    Graph<int> G = g.toGraph().forceDrivenPositioning();
-//    auto dual = g.dual(g.root->beta1->beta2);
-//    dual.debug();
-//    G = dual.toGraph().forceDrivenPositioning();
-//    return 0;
+    return Plotter::get()->exec();
+    */
 
+    /*
+     * Unit test : create a topological map, extract a dual, and provide a geometry using forces
+     * Soiler: the display looks all broken...
+    auto g = CombinMap();
+    g.addFace(5, {}, {100, 101, 102, 103, 104});
+    g.addFace(4, {g.root->beta2, g.root->beta2->beta1}, {0});
+    g.addFace(4, {g.root->beta2, g.root->beta2->beta1}, {1});
+    g.debug();
+    Graph<int> G = g.toGraph().forceDrivenPositioning();
+    G.draw();
+    Plotter::get()->exec();
+    auto dual = g.dual(g.root->beta1->beta2);
+    dual.debug();
+    G = dual.toGraph().forceDrivenPositioning();
+    G.draw();
+    return Plotter::get()->exec();
+    */
     /*
      * Unit test: smoothing 1D data
     GridF data(20, 1);
@@ -651,6 +662,63 @@ int main(int argc, char *argv[])
         data = data.medianBlur(3, 3, 3, true);
     }
     return 0;
+    */
+    /*
+     * Unit test : Looking at Voronoi and Delaunay timings
+     * Spoiler: Voronoi is in O(n) but since I encode the graphs as matrices (non-sparse), the complexity of Delaunay gets in O(n^2)...
+    for (auto& nbPoints : {20, 100, 500, 2000, 10000}) {
+        displayProcessTime("Voronoi + Delaunay on " + std::to_string(nbPoints) + " with 10 relaxations ...", [&]() {
+            auto points = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)}).randomPointsInside(nbPoints);
+            Voronoi voro(points, Vector3(100, 100));
+            voro.solve(true, 10);
+            Delaunay delaunay(voro);
+        });
+    }
+    return 0;
+    */
+
+    /*
+     * Unit test : Compute and display Voronoi and Delaunay graphs after multiple relaxations
+     *
+    Vector3 size(100, 100, 1);
+    Voronoi voro(100, size.xy());
+
+    for (int relax = 0; relax < 10; relax++) {
+        voro.solve(true, relax);
+        Delaunay delaunay(voro);
+
+        GridV3 screen(size);
+
+        screen.iterateParallel([&](const Vector3& pos) {
+            for (auto& p : voro.pointset) {
+                if ((pos - p).norm2() < 4.f) {
+                    screen(pos).y = 1.f;
+                }
+            }
+
+            for (auto& region : voro.areas) {
+                float distance = region.estimateSqrDistanceFrom(pos);
+                if (0 < distance && distance < 1.f) {
+                    screen(pos).x = 1.f;
+                }
+            }
+
+            for (auto& nodeA : delaunay.graph.nodes) {
+                for (auto& [nodeB, weight] : nodeA->neighbors) {
+                    BSpline path({nodeA->pos, nodeB->pos});
+                    float distance = path.estimateSqrDistanceFrom(pos);
+                    if (0 < distance && distance < 1.f) {
+                        screen(pos).z = 1.f;
+                    }
+                }
+            }
+        });
+
+        std::cout << "Relaxation " << relax << std::endl;
+        Plotter::get()->addImage(screen);
+        Plotter::get()->exec();
+    }
+    return Plotter::get()->exec();
     */
 
     EnvObject::readFile("saved_maps/primitives.json");
