@@ -177,6 +177,7 @@ SOURCES += \
         src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
     src/Utils/Curve1D.cpp \
+    src/Utils/Delaunay.cpp \
         src/Utils/Globals.cpp \
     src/Utils/PbmReader.cpp \
         src/Utils/RewritableFile.cpp \
@@ -356,6 +357,7 @@ HEADERS += \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \
     src/Utils/Curve1D.h \
+    src/Utils/Delaunay.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \

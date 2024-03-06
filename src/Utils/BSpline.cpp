@@ -28,25 +28,23 @@ BSpline::BSpline(std::vector<BSpline> subsplines)
     }
 }
 
-std::vector<Vector3> BSpline::getPath(int numberOfPoints) const
+std::vector<Vector3> BSpline::getPath(int numberOfPoints, bool linearPath) const
 {
     /// I'm really not sure this is the best solution, but an easy fix :
     /// forcing user to have at least 2 points
     numberOfPoints = std::max(numberOfPoints, 2);
-//    if (numberOfPoints < 2)
-//        throw std::invalid_argument("At least 2 points needed to get the path");
+
     std::vector<Vector3> path;
     float resolution = 1.f / (float)(numberOfPoints - 1);
     for (int i = 0; i < numberOfPoints; i ++)
-        path.push_back(this->getPoint(i * resolution));
-//    path.push_back(this->getPoint(1.0));
+        path.push_back(this->getPoint(i * resolution, (linearPath ? 0.f : 2.f)));
     return path;
 }
 
-Vector3 BSpline::getPoint(float x) const
+Vector3 BSpline::getPoint(float x, float alpha) const
 {
     if (points.size() > 2)
-        return this->getCatmullPoint(x);
+        return this->getCatmullPoint(x, alpha);
 
     if(points.size() == 0)
         return Vector3();
@@ -528,8 +526,10 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
     return ((x - prev_min) / (prev_max - prev_min)) * (new_max - new_min) + new_min;
 }
 
-Vector3 BSpline::getCatmullPoint(float x) const
+Vector3 BSpline::getCatmullPoint(float x, float alpha) const
 {
+    alpha /= 2.f;
+
     std::vector<Vector3> displayedPoints = this->points;
     if (this->closed)
         displayedPoints.push_back(displayedPoints.front());
@@ -539,9 +539,7 @@ Vector3 BSpline::getCatmullPoint(float x) const
 
     if (x == 0.f) return displayedPoints[0];
     if (x == 1.f) return displayedPoints[lastPointIndex];
-    float alpha = 1.f; // 2 = very round, 1 = quite normal, 0.5 = almost linear
 
-    alpha /= 2.f;
 
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);

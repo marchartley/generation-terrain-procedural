@@ -12,8 +12,8 @@ public:
     BSpline(std::vector<Vector3> points);
     BSpline(std::vector<BSpline> subsplines);
 
-    std::vector<Vector3> getPath(int numberOfPoints) const;
-    Vector3 getPoint(float x) const;
+    std::vector<Vector3> getPath(int numberOfPoints, bool linearPath = false) const;
+    Vector3 getPoint(float x, float alpha = 2.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
     Vector3 getPoint(float x, const Vector3& a, const Vector3& b) const;
     Vector3 getDerivative(float x, bool normalize = false) const;
     Vector3 getSecondDerivative(float x, bool normalize = false) const;
@@ -45,7 +45,7 @@ public:
 
     BSpline& close();
 
-    Vector3 getCatmullPoint(float x) const;
+    Vector3 getCatmullPoint(float x, float alpha = 2.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());
 
