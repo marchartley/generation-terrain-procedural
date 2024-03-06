@@ -131,7 +131,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
 
 float EnvObject::computeGrowingState()
 {
-    bool verbose = true;
+    bool verbose = false;
     std::ostringstream oss;
 
     if (this->needsForGrowth.count("age")) {
@@ -276,12 +276,10 @@ void EnvObject::updateSedimentation()
         object->applySandAbsorption();
         object->applySandDeposit();
     }
-//    for (auto& object : EnvObject::instantiatedObjects) {
-//    }
     EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(EnvObject::flowfield.meanSmooth(3, 3, 1, true) * 2.f);
     EnvObject::sandDeposit.iterateParallel([&] (const Vector3& pos) {
         if (pos.x > 5) return;
-        EnvObject::sandDeposit(pos) = std::max(1.f, EnvObject::sandDeposit(pos));
+        EnvObject::sandDeposit(pos) = std::max(.1f, EnvObject::sandDeposit(pos));
     });
 }
 

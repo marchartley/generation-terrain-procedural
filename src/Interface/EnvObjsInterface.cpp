@@ -65,96 +65,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         for (size_t i = 0; i < path.size(); i++) {
             result(path[i]) = 1.f;
         }
-        /*
-        displayProcessTime("Shaping (no display)... ", [&]() {
-            ShapeCurve shapeFromPaths;
-            std::vector<Vector3> gradPath(nbSamples);
-            std::vector<Vector3> invGradPath(nbSamples);
-            auto directionPath = isoline.getPath(nbSamples);
-            for (size_t i = 0; i < directionPath.size(); i++) {
-                const auto& p = directionPath[i];
-                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                float width = widthMaxLength * relDistToCenter;
-                result.addValueAt(Vector3(1, 0, 0), p);
-                auto grads = followGradient(p, width);
-                auto invGrads = followInvGradient(p, width);
-
-                gradPath[i] = grads.points.back();
-                invGradPath[nbSamples - i - 1] = invGrads.points.back();
-            }
-            shapeFromPaths = vectorMerge(gradPath, invGradPath);
-        });
-
-        displayProcessTime("Shaping (full)... ", [&]() {
-            ShapeCurve shapeFromPaths;
-            std::vector<Vector3> gradPath(nbSamples);
-            std::vector<Vector3> invGradPath(nbSamples);
-            auto directionPath = isoline.getPath(nbSamples);
-            for (size_t i = 0; i < directionPath.size(); i++) {
-                const auto& p = directionPath[i];
-                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                float width = widthMaxLength * relDistToCenter;
-                result.addValueAt(Vector3(1, 0, 0), p);
-                auto grads = followGradient(p, width);
-                auto invGrads = followInvGradient(p, width);
-
-                gradPath[i] = grads.points.back();
-                invGradPath[nbSamples - i - 1] = invGrads.points.back();
-            }
-            shapeFromPaths = vectorMerge(gradPath, invGradPath);
-    //                shapeFromPaths = shapeFromPaths.simplifyByRamerDouglasPeucker(.001f);
-            shapeFromPaths = shapeFromPaths.getPath(50);
-            for (const auto& pp : shapeFromPaths.getPath(1000)) {
-                result.addValueAt(Vector3(1, 1, 1), pp);
-            }
-        });
-        displayProcessTime("Creating shape (full)... ", [&]() {
-            auto directionPath = isoline.getPath(nbSamples);
-            for (size_t i = 0; i < directionPath.size(); i++) {
-                const auto& p = directionPath[i];
-                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                float width = widthMaxLength * relDistToCenter;
-                result.addValueAt(Vector3(1, 0, 0), p);
-                auto grads = followGradient(p, width);
-                for (const auto& pp : grads) {
-                    result.addValueAt(Vector3(0, 1, 0), pp);
-                }
-                auto invGrads = followInvGradient(p, width);
-                for (const auto& pp : invGrads) {
-                    result.addValueAt(Vector3(0, 0, 1), pp);
-                }
-            }
-        });
-        displayProcessTime("Creating shape (no display)... ", [&]() {
-            auto directionPath = isoline.getPath(nbSamples);
-            for (size_t i = 0; i < directionPath.size(); i++) {
-                const auto& p = directionPath[i];
-                float relDistToCenter = 1.f - std::abs(float(i) / float(directionPath.size()) - .5f) * 2.f;
-                float width = widthMaxLength * interpolation::smooth(1 - relDistToCenter);
-                auto grads = followGradient(p, width);
-                auto invGrads = followInvGradient(p, width);
-            }
-        });*/
-
         Plotter::get()->addImage(result);
         Plotter::get()->show();
-        /*
-        std::vector<BSpline> paths = {
-            followIsovalue(clickPos),
-            followGradient(clickPos),
-            followInvGradient(clickPos)
-        };
-
-        for (int i = 0; i < paths.size(); i++) {
-            Vector3 add;
-            add[i] = 1; // Switch colors depending on path
-            for (const auto& p : paths[i].getPath(paths[i].length())) {
-                result.addValueAt(add, p);
-            }
-        }*/
-
-//        Plotter::get()->addImage(result);
-//        Plotter::get()->draw();
     });
 }
 
@@ -204,6 +116,7 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
+    ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
 
     objectsListWidget = new HierarchicalListWidget;
     updateObjectsList();
@@ -229,6 +142,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
     layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
+    layout->addWidget(testPerformancesButton->get());
 
 
     return layout;
@@ -319,6 +233,8 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
     EnvObject* newObject = this->instantiateObjectAtBestPosition(name, newPos, GridF());
     auto implicit = newObject->createImplicitPatch();
     this->implicitPatchesFromObjects[newObject] = implicit;
+    if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+        this->implicitTerrain->addChild(this->rootPatch);
     rootPatch->addChild(implicit);
     rootPatch->reevaluateAll();
     implicitTerrain->updateCache();
@@ -451,6 +367,8 @@ void EnvObjsInterface::instantiateObject()
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
             auto implicit = newObject->createImplicitPatch();
             this->implicitPatchesFromObjects[newObject] = implicit;
+            if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+                this->implicitTerrain->addChild(this->rootPatch);
             rootPatch->addChild(implicit);
             rootPatch->reevaluateAll();
             implicitTerrain->updateCache();
@@ -481,6 +399,8 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
             auto implicit = newObject->createImplicitPatch();
             this->implicitPatchesFromObjects[newObject] = implicit;
+            if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+                this->implicitTerrain->addChild(this->rootPatch);
             rootPatch->addChild(implicit);
             rootPatch->reevaluateAll();
             implicitTerrain->updateCache();
@@ -555,7 +475,6 @@ void EnvObjsInterface::displayProbas(std::string objectName)
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
     if (!possible) {
-        // Plotter::get()->setNormalizedModeImage(false);
         Plotter::get()->addImage(score * 0.f);
     } else {
         float smallestPositive = score.max();
@@ -566,7 +485,6 @@ void EnvObjsInterface::displayProbas(std::string objectName)
         score.iterateParallel([&](size_t i) {
             score[i] = std::max(score[i], smallestPositive);
         });
-        // Plotter::get()->setNormalizedModeImage(true);
         Plotter::get()->addImage(score);
     }
     Plotter::get()->show();
@@ -575,9 +493,19 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 void EnvObjsInterface::displaySedimentsDistrib()
 {
     GridF sediments = EnvObject::sandDeposit;
-//    Plotter::get()->setNormalizedModeImage(false);
     Plotter::get()->addImage(sediments);
     Plotter::get()->show();
+
+
+    /*if (!EnvObject::instantiatedObjects.empty()) {
+        auto& obj = EnvObject::instantiatedObjects[0];
+        GridF shadows(EnvObject::flowfield.getDimensions());
+        shadows.iterateParallel([&](const Vector3& pos) {
+            shadows(pos) = dynamic_cast<EnvPoint*>(obj)->estimateShadowing(EnvObject::flowfield, pos);
+        });
+        Plotter::get()->addImage(shadows);
+        Plotter::get()->show();
+    }*/
 }
 
 void EnvObjsInterface::displayFlowfieldAsImage()
@@ -853,6 +781,27 @@ ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &see
     return isoline;
 }
 
+void EnvObjsInterface::runPerformanceTest()
+{
+    std::vector<float> timings;
+    for (int i = 0; i < 201; i++) {
+        float time = displayProcessTime("Evaluation with " + std::to_string(EnvObject::instantiatedObjects.size()) + " objects (x5) : ", [&]() {
+            for (int iter = 0; iter < 5; iter++)
+                this->updateEnvironmentFromEnvObjects(false, false);
+        });
+
+        Vector3 newPos = Vector3::random() * heightmap->getDimensions().xy();
+
+        std::string name = "motu";
+        EnvObject* newObject = this->instantiateObjectAtBestPosition(name, newPos, GridF());
+
+        timings.push_back((time * 1e-6) / 5.f);
+    }
+    Plotter::get()->reset();
+    Plotter::get()->addPlot(timings, "Timing", Qt::darkBlue);
+    Plotter::get()->show();
+}
+
 void EnvObjsInterface::fromGanUI()
 {
     EnvObject::reset();
@@ -906,6 +855,8 @@ void EnvObjsInterface::fromGanUI()
             auto implicit = newObject->createImplicitPatch();
             this->implicitPatchesFromObjects[newObject] = implicit;
             rootPatch->addChild(implicit);
+            if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+                this->implicitTerrain->addChild(this->rootPatch);
         }
         implicitTerrain->updateCache();
         implicitTerrain->update();

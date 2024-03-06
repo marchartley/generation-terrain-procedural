@@ -78,7 +78,7 @@ void EnvPoint::applySandAbsorption()
 {
     if (this->needsForGrowth.count("sand") == 0) return;
 
-    float sandMissing = needsForGrowth["sand"] - currentSatisfaction["sand"];
+    float sandMissing = (needsForGrowth["sand"] - currentSatisfaction["sand"]) * (this->computeGrowingState() + .01f) / (1.01f);
 
     GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
     Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
@@ -87,9 +87,6 @@ void EnvPoint::applySandAbsorption()
     sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
     this->currentSatisfaction["sand"] += sandAbsorbed.sum();
     EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
-//    GridF diff = (currentSand - sandAbsorbed).max(0.f);
-//    this->currentSatisfaction["sand"] += diff.sum();
-//    EnvObject::sandDeposit.add(-diff, this->position - diff.getDimensions() * .5f);
 }
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
@@ -130,8 +127,6 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
     occupancy.iterateParallel([&] (const Vector3& pos) {
         occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
     });
-//    Plotter::get()->addImage(flow);
-//    Plotter::get()->exec();
     return {flow, occupancy};
 }
 
@@ -148,7 +143,6 @@ ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
 
     patch->position = this->position.xy() - Vector3(radius, radius) * .5f;
     patch->material = this->material;
-//    patch->supportDimensions = Vector3(radius, radius, radius * growingState);
     patch->name = this->name;
     return patch;
 }
@@ -162,4 +156,12 @@ EnvObject &EnvPoint::translate(const Vector3 &translation)
 {
     this->position += translation;
     return *this;
+}
+
+
+float EnvPoint::estimateShadowing(const GridV3& flow, const Vector3& pos) {
+    Vector3 currents = flow.interpolate(this->position);
+    Vector3 toPos = (pos - this->position);
+
+    return (std::max(0.f, std::abs(std::pow(currents.normalized().dot(toPos.normalized()), 5.f)) * sign(currents.dot(toPos)) - (toPos.norm() / 100.f))); // > 0.5f ? 1.f : 0.f);
 }

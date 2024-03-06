@@ -27,6 +27,9 @@ public:
     virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);
+
+
+    float estimateShadowing(const GridV3 &flow, const Vector3& pos);
 };
 
 #endif // ENVPOINT_H

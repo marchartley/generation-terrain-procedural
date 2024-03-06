@@ -61,6 +61,8 @@ public Q_SLOTS:
 
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
 
+    void runPerformanceTest();
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;

@@ -342,6 +342,7 @@ Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
 
 GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
+    bool verbose = false;
     Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
         finalDimensions = this->getBBox().max();
@@ -406,7 +407,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
                 }
             }
         }
-    });
+    }, verbose);
     _cached = true;
     return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
