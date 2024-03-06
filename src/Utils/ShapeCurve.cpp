@@ -116,6 +116,23 @@ float ShapeCurve::computeSignedArea()
     return area / 2.f;
 }
 
+Vector3 ShapeCurve::centroid() const
+{
+    Vector3 centroid;
+    float totalArea = 0;
+    ShapeCurve copy = *this;
+    copy.removeDuplicates();
+    for (int i = 0; i < copy.points.size(); i++) {
+        int j = (i + 1) % (copy.points.size());
+        int k = (i - 1 + copy.points.size()) % (copy.points.size());
+
+        float triangleArea = 0.5f * (copy.points[i] - copy.points[j]).cross(copy.points[i] - copy.points[k]).norm();
+        centroid += triangleArea * copy.points[i];
+        totalArea += triangleArea;
+    }
+    return centroid / totalArea;
+}
+
 ShapeCurve &ShapeCurve::reverseVertices()
 {
     std::reverse(this->points.begin(), this->points.end());

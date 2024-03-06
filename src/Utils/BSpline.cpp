@@ -502,9 +502,9 @@ Vector3 BSpline::center() const
     BSpline copy = *this;
     copy.removeDuplicates();
     Vector3 center;
-    for (const auto& point : this->points)
+    for (const auto& point : copy.points)
         center += point;
-    return center / (float) this->points.size();
+    return center / (float) copy.points.size();
 }
 
 BSpline& BSpline::close()

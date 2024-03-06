@@ -17,6 +17,8 @@ public:
     float computeArea();
     float computeSignedArea();
 
+    Vector3 centroid() const;
+
     ShapeCurve& reverseVertices();
 
     ShapeCurve intersect(ShapeCurve other);

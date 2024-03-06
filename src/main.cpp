@@ -721,6 +721,26 @@ int main(int argc, char *argv[])
     return Plotter::get()->exec();
     */
 
+    /*
+     * Unit test : High number of relaxation on Voronoi must look like a Poisson-Disk sampling
+    Vector3 size(1000, 1000, 1);
+    Voronoi voro(1000, size.xy());
+    voro.solve(true, 100);
+    Delaunay delaunay(voro);
+
+    GridV3 screen(size);
+    displayProcessTime("Comuting some distances for map of size " + std::to_string(size.x * size.y) + "... ", [&]() {
+        screen.iterateParallel([&](const Vector3& pos) {
+            for (auto& p : voro.pointset) {
+                if ((pos - p).norm2() < 2000.f)
+                    screen(pos).x += .1f;
+            }
+        });
+    });
+    Plotter::get()->addImage(screen);
+    Plotter::get()->setNormalizedModeImage(true);
+    return Plotter::get()->exec();*/
+
     EnvObject::readFile("saved_maps/primitives.json");
 
     ViewerInterface vi;

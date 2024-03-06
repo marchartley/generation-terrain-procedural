@@ -113,7 +113,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json jso
     instance->area = area;
     auto children = json_content.at("children");
     Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve();
+    std::vector<ShapeCurve> subarea_borders = diagram.solve();
     for (size_t i = 0; i < children.size(); i++) {
         std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstance(children[i], diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;

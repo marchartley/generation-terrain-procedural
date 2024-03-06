@@ -159,7 +159,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstanceFromModel(std::shar
     }
 
     Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve(true, 100); // Add some relaxations to be a little bit more uniform
+    std::vector<ShapeCurve> subarea_borders = diagram.solve(true, 100); // Add some relaxations to be a little bit more uniform
 
     std::vector<std::string> allChildrenClassnames;
     for (size_t i = 0; i < children.size() && i < diagram.pointset.size(); i++) {

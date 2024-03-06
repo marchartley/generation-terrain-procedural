@@ -81,7 +81,7 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, ShapeCurve boundingShape)
     std::tie(this->minBoundarie, this->maxBoundarie) = boundingShape.AABBox();
 }
 
-std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numberOfRelaxations)
+std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numberOfRelaxations)
 {
     this->boundingShape = boundingShape.removeDuplicates();
 
@@ -94,10 +94,10 @@ std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
         };
     }
     if (pointset.size() == 0) {
-        return std::vector<BSpline>();
+        return std::vector<ShapeCurve>();
     } else if (pointset.size() == 1) {
         if (!this->boundingShape.points.empty())
-            return std::vector<BSpline>{this->boundingShape};
+            return std::vector<ShapeCurve>{this->boundingShape};
     }
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
     jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.points.size());
@@ -151,7 +151,7 @@ std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
     }
 
     const jcv_site* sites = jcv_diagram_get_sites( &diagram );
-    this->areas = std::vector<BSpline>(pointset.size());
+    this->areas = std::vector<ShapeCurve>(pointset.size());
     this->neighbors = std::vector<std::vector<int>>(pointset.size());
     for( int i = 0; i < diagram.numsites; ++i )
     {
@@ -182,11 +182,11 @@ std::vector<BSpline> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int numb
 
 }
 
-std::vector<BSpline> Voronoi::relax(int numberOfRelaxations)
+std::vector<ShapeCurve> Voronoi::relax(int numberOfRelaxations)
 {
     for (int relaxation = 0; relaxation < numberOfRelaxations; relaxation++) {
         for (size_t i = 0; i < this->pointset.size(); i++) {
-            this->pointset[i] = this->areas[i].center();
+            this->pointset[i] = this->areas[i].centroid();
         }
         this->solve(false, 0);
     }

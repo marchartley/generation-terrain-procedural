@@ -18,15 +18,15 @@ public:
     Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie);
     Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, const Vector3& maxBoundarie);
     Voronoi(std::vector<Vector3> pointset, ShapeCurve boundingShape);
-    std::vector<BSpline> solve(bool randomizeUntilAllPointsAreSet = true, int numberOfRelaxations = 10);
-    std::vector<BSpline> relax(int numberOfRelaxations = 1);
+    std::vector<ShapeCurve> solve(bool randomizeUntilAllPointsAreSet = true, int numberOfRelaxations = 10);
+    std::vector<ShapeCurve> relax(int numberOfRelaxations = 1);
 
 
 public:
     std::vector<Vector3> pointset;
     std::vector<std::vector<Vector3>> intersectionPoints;
     std::vector<std::vector<int>> neighbors;
-    std::vector<BSpline> areas;
+    std::vector<ShapeCurve> areas;
     ShapeCurve boundingShape;
     Vector3 minBoundarie, maxBoundarie;
 };
