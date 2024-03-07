@@ -11,6 +11,17 @@ Table::Table(const std::vector<std::vector<float> > &data, const std::vector<std
     }
 }
 
+Table::Table(const std::vector<std::vector<std::string> > &data, const std::vector<std::string> &colNames, const std::vector<std::string> &rowNames)
+    : colNames(colNames), rowNames(rowNames) {
+    for (const auto& row : data) {
+        std::vector<DataVariant> convertedRow;
+        for (const auto& val : row) {
+            convertedRow.push_back(val);
+        }
+        rows.push_back(convertedRow);
+    }
+}
+
 void Table::addRow(const std::vector<DataVariant> &rowData, const std::string &rowName) {
     if(rowData.size() != colNames.size()) {
         throw std::invalid_argument("Mismatched number of columns in the provided row data");

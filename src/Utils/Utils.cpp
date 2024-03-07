@@ -306,12 +306,13 @@ std::string simplify(std::string s)
 
 
 
-double timeIt(std::function<void ()> func)
+double timeIt(std::function<void ()> func, int repetitions)
 {
     auto start = std::chrono::system_clock::now();
-    func();
+    for (int _ = 0; _ < repetitions; _++)
+        func();
     auto end = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    return (std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) / double(repetitions);
 }
 
 void sleep(int milliseconds)
@@ -321,6 +322,8 @@ void sleep(int milliseconds)
 
 std::string showTime(double nanoseconds)
 {
+    if (std::isinf(nanoseconds)) return "inf";
+    else if (std::isnan(nanoseconds)) return "NaN";
     try {
         std::ostringstream oss;
         nanoseconds /= 1000000.f;

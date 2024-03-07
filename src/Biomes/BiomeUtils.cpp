@@ -20,13 +20,13 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     if (graph.empty()) return graph;
     graph.initAllNodesValues(-1);
 
-    std::set<std::shared_ptr<GraphNodeTemplate<int>>> pendingNodes;
+    std::set<GraphNode*> pendingNodes;
     pendingNodes.insert(graph.nodes.begin()->second);
     while (!pendingNodes.empty()) {
         auto& current = *pendingNodes.begin();
         pendingNodes.erase(pendingNodes.begin());
 
-        std::set<std::shared_ptr<GraphNodeTemplate<int>>> nodesToAddToPending;
+        std::set<GraphNode*> nodesToAddToPending;
 
         // If it's an unknown node type, give it a type
         if (current->value == -1) {

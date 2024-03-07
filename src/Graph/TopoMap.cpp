@@ -646,6 +646,7 @@ Graph CombinMap::toGraph()
             g.addNode(endIndex);
         }
         g.addConnection(startIndex, endIndex);
+        g.addConnection(endIndex, startIndex);
     }
     return g;
 }

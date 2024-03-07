@@ -12,33 +12,40 @@ class GraphTemplate
 {
 public:
     GraphTemplate(bool useMatrices = true);
+    ~GraphTemplate();
 
     GraphTemplate<T>& circularLayout(bool randomOrder = false);
     GraphTemplate<T> &forceDrivenPositioning(bool startWithCircularLayout = true);
 
-    std::shared_ptr<GraphNodeTemplate<T>> addNode(int node);
-    std::shared_ptr<GraphNodeTemplate<T>> addNode(std::shared_ptr<GraphNodeTemplate<T>> newNode);
+    GraphNodeTemplate<T>* addNode(int node);
+    GraphNodeTemplate<T>* addNode(GraphNodeTemplate<T>* newNode);
+    void removeNode(int node);
+    void removeNode(GraphNodeTemplate<T>* newNode);
 //    std::vector<std::shared_ptr<GraphNode<T>> > addNodes(std::vector<int> nodes);
 //    std::vector<std::shared_ptr<GraphNode<T> > > addNodes(std::vector<std::shared_ptr<GraphNode<T>>> newNodes);
 
-    std::map<int, std::shared_ptr<GraphNodeTemplate<T>> > addNodes(std::vector<int> nodes);
-    std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > addNodes(std::vector<std::shared_ptr<GraphNodeTemplate<T>>> newNodes);
+    std::map<int, GraphNodeTemplate<T>* > addNodes(std::vector<int> nodes);
+    std::map<int, GraphNodeTemplate<T>* > addNodes(std::vector<GraphNodeTemplate<T>*> newNodes);
+    void removeNodes(std::vector<int> nodes);
+    void removeNodes(std::vector<GraphNodeTemplate<T>*> newNodes);
 
     void addConnection(int nodeA, int nodeB, float weight = 1.f);
-    void addConnection(std::shared_ptr<GraphNodeTemplate<T>> nodeA, std::shared_ptr<GraphNodeTemplate<T>> nodeB, float weight = 1.f);
+    void addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight = 1.f);
     void removeConnection(int nodeA, int nodeB);
-    void removeConnection(std::shared_ptr<GraphNodeTemplate<T>> nodeA, std::shared_ptr<GraphNodeTemplate<T>> nodeB);
+    void removeConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB);
 
-    std::shared_ptr<GraphNodeTemplate<T>> findNodeByID(int ID);
+    GraphNodeTemplate<T>* findNodeByID(int ID);
 
-    std::shared_ptr<GraphNodeTemplate<T>> operator[](T index) const;
+    GraphNodeTemplate<T>* operator[](T index) const;
 
     void initAllNodesValues(T value) const;
     bool empty() const;
     size_t size() const;
 
+    GridF getAdjacencyMatrix() const;
+
 //    std::vector<std::shared_ptr<GraphNode<T>>> nodes;
-    std::map<int, std::shared_ptr<GraphNodeTemplate<T>>> nodes;
+    std::map<int, GraphNodeTemplate<T>*> nodes;
 
     GridI nodesIndices;
     GridI connectionMatrix;
@@ -55,6 +62,15 @@ GraphTemplate<T>::GraphTemplate(bool useMatrices)
     : useMatrices(useMatrices)
 {
 
+}
+
+template<class T>
+GraphTemplate<T>::~GraphTemplate()
+{
+    for (auto& [ID, node] : nodes) {
+        delete node;
+    }
+    nodes.clear();
 }
 
 template<class T>
@@ -108,32 +124,45 @@ GraphTemplate<T>& GraphTemplate<T>::forceDrivenPositioning(bool startWithCircula
 }
 
 template<class T>
-std::shared_ptr<GraphNodeTemplate<T>> GraphTemplate<T>::addNode(int node)
+GraphNodeTemplate<T>* GraphTemplate<T>::addNode(int node)
 {
-    return this->addNode(std::make_shared<GraphNodeTemplate<T>>(T(), Vector3(), node));
+    return this->addNode(new GraphNodeTemplate<T>(T(), Vector3(), node));
 }
 
 template<class T>
-std::shared_ptr<GraphNodeTemplate<T>> GraphTemplate<T>::addNode(std::shared_ptr<GraphNodeTemplate<T> > newNode)
+GraphNodeTemplate<T>* GraphTemplate<T>::addNode(GraphNodeTemplate<T>* newNode)
 {
     this->addNodes({newNode});
     return newNode;
 }
 
 template<class T>
-std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > GraphTemplate<T>::addNodes(std::vector<int> nodes)
+void GraphTemplate<T>::removeNode(int node)
 {
-    std::vector<std::shared_ptr<GraphNodeTemplate<T>>> newNodes;
+    if (!this->nodes.count(node)) return;
+    this->nodes.erase(node);
+}
+
+template<class T>
+void GraphTemplate<T>::removeNode(GraphNodeTemplate<T>* newNode)
+{
+    this->removeNode(newNode->index);
+}
+
+template<class T>
+std::map<int, GraphNodeTemplate<T>* > GraphTemplate<T>::addNodes(std::vector<int> nodes)
+{
+    std::vector<GraphNodeTemplate<T>*> newNodes;
     for (auto& node : nodes)
-        newNodes.push_back(std::make_shared<GraphNodeTemplate<T>>(T(), Vector3(), node));
+        newNodes.push_back(new GraphNodeTemplate<T>(T(), Vector3(), node));
     return this->addNodes(newNodes);
 }
 
 template<class T>
-std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > GraphTemplate<T>::addNodes(std::vector<std::shared_ptr<GraphNodeTemplate<T> > > newNodes)
+std::map<int, GraphNodeTemplate<T>* > GraphTemplate<T>::addNodes(std::vector<GraphNodeTemplate<T>* > newNodes)
 {
 //    this->nodes.insert(this->nodes.end(), newNodes.begin(), newNodes.end());
-    std::map<int, std::shared_ptr<GraphNodeTemplate<T>>> newNodesMap;
+    std::map<int, GraphNodeTemplate<T>*> newNodesMap;
     for (const auto& node : newNodes) {
         newNodesMap[node->index] = node;
     }
@@ -162,16 +191,30 @@ std::map<int, std::shared_ptr<GraphNodeTemplate<T> > > GraphTemplate<T>::addNode
 }
 
 template<class T>
+void GraphTemplate<T>::removeNodes(std::vector<int> nodes)
+{
+    for (auto node : nodes)
+        this->removeNode(node);
+}
+
+template<class T>
+void GraphTemplate<T>::removeNodes(std::vector<GraphNodeTemplate<T>* > newNodes)
+{
+    for (auto node : nodes)
+        this->removeNode(node);
+}
+
+template<class T>
 void GraphTemplate<T>::addConnection(int nodeA, int nodeB, float weight)
 {
     return this->addConnection(this->findNodeByID(nodeA), this->findNodeByID(nodeB), weight);
 }
 
 template<class T>
-void GraphTemplate<T>::addConnection(std::shared_ptr<GraphNodeTemplate<T> > nodeA, std::shared_ptr<GraphNodeTemplate<T> > nodeB, float weight)
+void GraphTemplate<T>::addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight)
 {
     nodeA->addNeighbor(nodeB, weight);
-    nodeB->addNeighbor(nodeA, weight);
+//    nodeB->addNeighbor(nodeA, weight);
 
     if (useMatrices) {
         int indexA = -1;
@@ -198,7 +241,7 @@ void GraphTemplate<T>::removeConnection(int nodeA, int nodeB)
 }
 
 template<class T>
-void GraphTemplate<T>::removeConnection(std::shared_ptr<GraphNodeTemplate<T> > nodeA, std::shared_ptr<GraphNodeTemplate<T> > nodeB)
+void GraphTemplate<T>::removeConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB)
 {
     nodeA->removeNeighbor(nodeB);
     nodeB->removeNeighbor(nodeA);
@@ -222,7 +265,7 @@ void GraphTemplate<T>::removeConnection(std::shared_ptr<GraphNodeTemplate<T> > n
 }
 
 template<class T>
-std::shared_ptr<GraphNodeTemplate<T> > GraphTemplate<T>::findNodeByID(int ID)
+GraphNodeTemplate<T>* GraphTemplate<T>::findNodeByID(int ID)
 {
     if (this->nodes.count(ID)) return this->nodes[ID];
     /*for (auto& node : this->nodes) {
@@ -233,7 +276,7 @@ std::shared_ptr<GraphNodeTemplate<T> > GraphTemplate<T>::findNodeByID(int ID)
 }
 
 template<class T>
-std::shared_ptr<GraphNodeTemplate<T> > GraphTemplate<T>::operator[](T index) const
+GraphNodeTemplate<T>* GraphTemplate<T>::operator[](T index) const
 {
     if (!nodes.count(index)) return nullptr;
     return this->nodes.at(index);
@@ -257,6 +300,21 @@ template<class T>
 size_t GraphTemplate<T>::size() const
 {
     return this->nodes.size();
+}
+
+template<class T>
+GridF GraphTemplate<T>::getAdjacencyMatrix() const
+{
+    if (this->useMatrices) return this->adjencyMatrix;
+
+    GridF matrix(this->size(), this->size(), 1);
+    for (auto& [IDA, nodeA] : nodes) {
+        for (auto& [IDB, nodeB] : nodes) {
+            if (IDA == IDB) matrix(IDA, IDB) = 0;
+            else matrix(IDA, IDB) = nodeA->getNeighborDistanceByIndex(IDB);
+        }
+    }
+    return matrix;
 }
 
 template<class T>

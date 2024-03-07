@@ -264,7 +264,7 @@ void AdjencySolver::solveTopoToGeom(std::vector<BiomeInstance> instancesToPlace,
     // Create the (empty) topology graph
     GraphTemplate<ID> adjencyGraph;
     for (size_t i = 0; i < numberOfNodes; i++)
-        adjencyGraph.nodes[i] = std::make_shared<GraphNodeTemplate<ID>>(i); //.push_back(std::make_shared<GraphNode<ID>>(i));
+        adjencyGraph.addNode(i);
 
     // Get the adjency map resulting from the Voronoi diagram
     std::vector<std::vector<int>> neighbors = fakeDiagram.neighbors;

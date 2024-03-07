@@ -28,8 +28,9 @@
 #include "TerrainModification/ParticleErosion.h"
 #include "Utils/Delaunay.h"
 #include "Graph/RegularSimplicialComplex.h"
-
 #include "Graph/TopoMap.h"
+#include "Utils/Table.h"
+
 using namespace std;
 
 std::map<std::string, std::string> getAllEnvironmentVariables() {
@@ -782,8 +783,8 @@ int main(int argc, char *argv[])
     */
 
     /*
-     * Unit test : Shortest path algorithm
-     */
+     * Unit test : Shortest path algorithms
+     * Graph source : https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/DijkstraBis01.svg/330px-DijkstraBis01.svg.png
     Graph G(false);
     G.addNodes({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
     G.addConnection(0, 1, 85);
@@ -798,24 +799,180 @@ int main(int argc, char *argv[])
     G.addConnection(4, 9, 502);
     G.addConnection(8, 9, 84);
 
-    std::vector<int> expectedValues = {0, 85, 217, 503, 173, 165, 403, 320, 415, 487};
+    std::vector<float> expectedValues = {0, 85, 217, 503, 173, 165, 403, 320, 415, 487};
 
-    auto [distancesDjikstra, predecessor] = Pathfinding::Djikstra(G, 0);
-    /* TO TEST :
-     * BellmanFord
-     * FloydWarshall
-     * FloydWarshallImproved
-     * Johnson
-    */
+    float distAStar;
+    std::vector<float> distancesDjikstra, distancesBellman;
+    std::vector<int> predecessorAStar, predecessorDjikstra, predecessorBellman;
+    GridF distancesFloyd, distancesFloyd2, distancesJohnson;
+    GridI predecessorFloyd, predecessorFloyd2, predecessorJohnson;
 
+    std::tie(distancesDjikstra, predecessorDjikstra) = Pathfinding::Djikstra(G, 0);
+    std::tie(distancesBellman, predecessorBellman) = Pathfinding::BellmanFord(G, 0);
+    std::tie(distancesFloyd, predecessorFloyd) = Pathfinding::FloydWarshall(G);
+    std::tie(distancesFloyd2, predecessorFloyd2) = Pathfinding::FloydWarshallImproved(G);
+    std::tie(distancesJohnson, predecessorJohnson) = Pathfinding::Johnson(G);
+
+
+    std::vector<std::vector<float>> results(G.size(), std::vector<float>(7));
+    std::vector<std::string> names(G.size());
     for (int iNode = 0; iNode < distancesDjikstra.size(); iNode++) {
         auto distDjikstra = distancesDjikstra[iNode];
+        auto distBellman = distancesBellman[iNode];
+        auto distFloyd = distancesFloyd(0, iNode);
+        auto distFloyd2 = distancesFloyd2(0, iNode);
+        auto distJohnson = distancesJohnson(0, iNode);
         auto node = iNode;
-        auto [distAStar, precAStar] = Pathfinding::AStar(G, 0, iNode);
-        std::cout << "A to " << char('A' + node) << " -> A* : " << distAStar << " -- Djikstra : " << distDjikstra << " -- GT : " << expectedValues[node] << "\n";
+        std::tie(distAStar, predecessorAStar) = Pathfinding::AStar(G, 0, iNode);
+//        std::cout << "A to " << char('A' + node) << " -> A* : " << distAStar << " -- Djikstra : " << distDjikstra << " -- Bellman : " << distBellman << " -- Floyd : " << distFloyd << " -- Floyd2 : " << distFloyd2 << " -- Johnson : " << distJohnson <<  " -- GT : " << expectedValues[node] << "\n";
+        results[iNode] = {distAStar, distDjikstra, distBellman, distFloyd, distFloyd2, distJohnson, expectedValues[iNode]};
+        names[iNode] = "A to " + std::string(1, 'A' + node);
+    }
+
+    Table tab(results, {"A*", "Djikstra", "Bellman", "Floyd", "Floyd (2)", "Johnson", "Ground truth"}, names);
+    std::cout << tab.displayTable() << std::endl;
+    std::cout << "End." << std::endl;
+    return 0;*/
+    /*
+     * Unit test : Shortest path algorithms should give the same output.
+    std::vector<Vector3> randomPositions(100);
+    for (auto& p : randomPositions)
+        p = Vector3::random(Vector3(), Vector3(100, 100));
+
+    Voronoi voro(randomPositions);
+    voro.solve(false, 1);
+    Delaunay delaunay;
+    Graph& G = delaunay.fromVoronoi(voro).graph;
+
+    float distAStar;
+    std::vector<float> distancesDjikstra, distancesBellman;
+    std::vector<int> predecessorAStar, predecessorDjikstra, predecessorBellman;
+    GridF distancesFloyd, distancesFloyd2, distancesJohnson;
+    GridI predecessorFloyd, predecessorFloyd2, predecessorJohnson;
+
+    std::tie(distancesDjikstra, predecessorDjikstra) = Pathfinding::Djikstra(G, 0);
+    std::tie(distancesBellman, predecessorBellman) = Pathfinding::BellmanFord(G, 0);
+    std::tie(distancesFloyd, predecessorFloyd) = Pathfinding::FloydWarshall(G);
+    std::tie(distancesFloyd2, predecessorFloyd2) = Pathfinding::FloydWarshallImproved(G);
+    std::tie(distancesJohnson, predecessorJohnson) = Pathfinding::Johnson(G);
+
+    float longest = 0;
+    int bestTarget;
+    for (int iNode = 0; iNode < distancesDjikstra.size(); iNode++) {
+        std::tie(distAStar, predecessorAStar) = Pathfinding::AStar(G, 0, iNode);
+        if (longest < distAStar) {
+            longest = distAStar;
+            bestTarget = iNode;
+        }
+    }
+
+    int last = bestTarget;
+    std::vector<Vector3> pathAStar, pathDjikstra, pathBellman, pathFloyd1, pathFloyd2, pathJohnson;
+//    for (int idx : Pathfinding::getPath(last, predecessorDjikstra)) {
+//        pathDjikstra.push_back(G.nodes[idx]->pos);
+//    }
+    std::cout << "\nDjikstra: ";
+    for (int idx : Pathfinding::getPath(last, predecessorDjikstra)) {
+        std::cout << idx << " ";
+        pathDjikstra.push_back(G.nodes[idx]->pos +Vector3(0, 0, 0));
+    }
+    std::cout << "\nBellman: ";
+    for (int idx : Pathfinding::getPath(last, predecessorBellman)) {
+        std::cout << idx << " ";
+        pathBellman.push_back(G.nodes[idx]->pos + Vector3(1, 1));
+    }
+    std::cout << "\nFloyd  : ";
+    for (int idx : Pathfinding::getPath(0, last, predecessorFloyd)) {
+        std::cout << idx << " ";
+        pathFloyd1.push_back(G.nodes[idx]->pos + Vector3(2, 2));
+    }
+    std::cout << "\nFloyd2 : ";
+    for (int idx : Pathfinding::getPath(0, last, predecessorFloyd2)) {
+        std::cout << idx << " ";
+        pathFloyd2.push_back(G.nodes[idx]->pos + Vector3(3, 3));
+    }
+    std::cout << "\nJohnson : ";
+    for (int idx : Pathfinding::getPath(0, last, predecessorJohnson)) {
+        std::cout << idx << " ";
+        pathJohnson.push_back(G.nodes[idx]->pos + Vector3(4, 4));
     }
     std::cout << std::endl;
+    G.draw();
+    Plotter::get()->addPlot(pathDjikstra, "Djikstra", Qt::red);
+    Plotter::get()->addPlot(pathBellman, "Bellman", Qt::black);
+    Plotter::get()->addPlot(pathFloyd1, "Floyd", Qt::blue);
+    Plotter::get()->addPlot(pathFloyd2, "Floyd improved", Qt::green);
+    Plotter::get()->addPlot(pathJohnson, "Johnson", Qt::cyan);
+    Plotter::get()->exec();
+    std::cout << "End." << std::endl;
     return 0;
+    */
+
+    /*
+     * Unit test : Check speed of different shortest path algorithms
+    std::vector<int> sizes = {5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120};
+    std::vector<std::string> names(sizes.size());
+    std::vector<std::vector<std::string>> results(sizes.size(), std::vector<std::string>(6));
+    std::vector<bool> toIgnore(6, false);
+    for (int _i = 0; _i < sizes.size(); _i++) {
+        int graphSize = sizes[_i];
+        names[_i] = std::to_string(graphSize);
+        Graph G(false);
+
+        for (int iNode = 0; iNode < graphSize; iNode++) {
+            G.addNode(iNode);
+        }
+        for (int iNodeA = 0; iNodeA < graphSize; iNodeA++) {
+            for (int iNodeB = 0; iNodeB < graphSize; iNodeB++) {
+                if (random_gen::generate() < .1f) {
+                    G.addConnection(iNodeA, iNodeB, random_gen::generate(2.f, 10.f));
+                }
+            }
+        }
+
+        float distAStar;
+        std::vector<float> distancesDjikstra, distancesBellman;
+        std::vector<int> predecessorAStar, predecessorDjikstra, predecessorBellman;
+        GridF distancesFloyd, distancesFloyd2, distancesJohnson;
+        GridI predecessorFloyd, predecessorFloyd2, predecessorJohnson;
+
+        double AStarTime, djikstraTime, bellmanTime, floyd1Time, floyd2Time, johnsonTime;
+        djikstraTime = timeIt([&]() {
+            std::tie(distancesDjikstra, predecessorDjikstra) = Pathfinding::Djikstra(G, 0);
+        }, (toIgnore[1] ? 0 : 5));
+        bellmanTime = timeIt([&]() {
+            std::tie(distancesBellman, predecessorBellman) = Pathfinding::BellmanFord(G, 0);
+        }, (toIgnore[2] ? 0 : 5));
+        floyd1Time = timeIt([&]() {
+            std::tie(distancesFloyd, predecessorFloyd) = Pathfinding::FloydWarshall(G);
+        }, (toIgnore[3] ? 0 : 2));
+        floyd2Time = timeIt([&]() {
+            std::tie(distancesFloyd2, predecessorFloyd2) = Pathfinding::FloydWarshallImproved(G);
+        }, (toIgnore[4] ? 0 : 2));
+        johnsonTime = timeIt([&]() {
+            std::tie(distancesJohnson, predecessorJohnson) = Pathfinding::Johnson(G);
+        }, (toIgnore[5] ? 0 : 1));
+
+        for (int iNode = 0; iNode < graphSize; iNode++) {
+            AStarTime += timeIt([&]() {
+                std::tie(distAStar, predecessorAStar) = Pathfinding::AStar(G, 0, iNode);
+            }, (toIgnore[0] ? 0 : 1));
+        }
+        toIgnore[0] = AStarTime > 1*1e9;
+        toIgnore[1] = djikstraTime > 1*1e9;
+        toIgnore[2] = bellmanTime > 1*1e9;
+        toIgnore[3] = floyd1Time > 1*1e9;
+        toIgnore[4] = floyd2Time > 1*1e9;
+        toIgnore[5] = johnsonTime > 1*1e9;
+        results[_i] = {showTime(AStarTime), showTime(djikstraTime), showTime(bellmanTime), showTime(floyd1Time/float(graphSize)), showTime(floyd2Time/float(graphSize)), showTime(johnsonTime/float(graphSize))};
+        std::cout << "Iteration " << _i+1 << "/" << sizes.size() << std::endl;
+    }
+
+    Table tab(results, {"A*", "Djikstra", "Bellman", "Floyd", "Floyd (2)", "Johnson"}, names);
+    std::cout << tab.displayTable() << std::endl;
+    std::cout << "NB: time is the avg. computation time for shortest path from 1 node to all others" << std::endl;
+    return 0;
+    */
 
     EnvObject::readFile("saved_maps/primitives.json");
 

@@ -61,7 +61,7 @@ void sleep(int milliseconds);
 //    auto end = std::chrono::system_clock::now();
 //    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 //}
-double timeIt(std::function<void()> func);
+double timeIt(std::function<void()> func, int repetitions = 1);
 std::string showTime(double nanoseconds);
 float displayProcessTime(std::string textToDisplay, std::function<void()> func, bool print = true);
 

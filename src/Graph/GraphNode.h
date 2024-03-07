@@ -10,12 +10,12 @@ public:
     GraphNodeTemplate(T value);
     GraphNodeTemplate(T value, const Vector3& pos, int index = 0);
 
-    void addNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor);
-    void addNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor, float distance);
+    void addNeighbor(GraphNodeTemplate<T>* neighbor);
+    void addNeighbor(GraphNodeTemplate<T>* neighbor, float distance);
 
-    void removeNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor);
+    void removeNeighbor(GraphNodeTemplate<T>* neighbor);
 
-    bool hasNeighbor(std::shared_ptr<GraphNodeTemplate<T> > neighbor);
+    bool hasNeighbor(GraphNodeTemplate<T>* neighbor);
 
     float getNeighborDistanceByIndex(int index);
 
@@ -26,7 +26,7 @@ public:
     Vector3 privateVector;
     int privateIndex;
 
-    std::vector<std::pair<std::shared_ptr<GraphNodeTemplate<T>>, float>> neighbors;
+    std::vector<std::pair<GraphNodeTemplate<T>*, float>> neighbors;
 };
 
 template<class T>
@@ -47,19 +47,19 @@ GraphNodeTemplate<T>::GraphNodeTemplate(T value, const Vector3& pos, int index)
 }
 
 template<class T>
-void GraphNodeTemplate<T>::addNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor)
+void GraphNodeTemplate<T>::addNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     this->neighbors.push_back(std::make_pair(neighbor, (this->pos - neighbor->pos).norm()));
 }
 
 template<class T>
-void GraphNodeTemplate<T>::addNeighbor(std::shared_ptr<GraphNodeTemplate<T> > neighbor, float distance)
+void GraphNodeTemplate<T>::addNeighbor(GraphNodeTemplate<T>* neighbor, float distance)
 {
     this->neighbors.push_back(std::make_pair(neighbor, distance));
 }
 
 template<class T>
-void GraphNodeTemplate<T>::removeNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor)
+void GraphNodeTemplate<T>::removeNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     for (int i = this->neighbors.size() - 1; i >= 0; i--)
         if (this->neighbors[i].first == neighbor)
@@ -68,7 +68,7 @@ void GraphNodeTemplate<T>::removeNeighbor(std::shared_ptr<GraphNodeTemplate<T>> 
 }
 
 template<class T>
-bool GraphNodeTemplate<T>::hasNeighbor(std::shared_ptr<GraphNodeTemplate<T>> neighbor)
+bool GraphNodeTemplate<T>::hasNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     for (auto& [n, w] : this->neighbors)
         if (n == neighbor)

@@ -172,7 +172,7 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
             continue;
         int nodeA = std::get<0>(specialNodesToCompute[i]);
         auto start = std::chrono::system_clock::now();
-        std::tie(distances, prec) = Pathfinding::ShortestPathFrom(nodeA, this->graph.adjencyMatrix);
+        std::tie(distances, prec) = Pathfinding::ShortestPathFrom(nodeA, this->graph/*.adjencyMatrix*/);
 
         for(size_t j = 0; j < this->specialNodes.size(); j++) {
 //            if (i == j) continue;

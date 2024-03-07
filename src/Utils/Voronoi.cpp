@@ -40,8 +40,8 @@ Voronoi::Voronoi(int numberRandomPoints, ShapeCurve boundingShape)
 Voronoi::Voronoi(std::vector<Vector3> pointset)
     : pointset(pointset)
 {
-    minBoundarie = Vector3::min();
-    maxBoundarie = Vector3::max();
+    minBoundarie = Vector3::max();
+    maxBoundarie = Vector3::min();
     for (auto& point : pointset) {
         minBoundarie.x = std::min(point.x, minBoundarie.x);
         minBoundarie.y = std::min(point.y, minBoundarie.y);
@@ -52,9 +52,9 @@ Voronoi::Voronoi(std::vector<Vector3> pointset)
     }
     this->boundingShape = ShapeCurve({
                                          Vector3(minBoundarie.xy()),
-                                         Vector3(minBoundarie.x, maxBoundarie.y),
+                                         Vector3(maxBoundarie.x, minBoundarie.y),
                                          Vector3(maxBoundarie.xy()),
-                                         Vector3(maxBoundarie.x, minBoundarie.y)
+                                         Vector3(minBoundarie.x, maxBoundarie.y),
                                      });
 }
 

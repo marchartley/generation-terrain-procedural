@@ -9,30 +9,31 @@
 class Pathfinding
 {
 public:
-    template<class T>
-    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, GridF& adjencyMap, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
-    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, GridF& adjencyMap);
-    static std::pair<GridF, GridI> ShortestPathFrom(GridF& adjencyMap);
+//    template<class T>
+//    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, std::vector<GraphNodeTemplate<T>*>& nodes, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
+    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, Graph& graph, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
+    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, Graph& graph);
+    static std::pair<GridF, GridI> ShortestPathFrom(Graph& graph);
 
     static std::vector<int> getPath(int dest, std::vector<int> prec);
+    static std::vector<int> getPath(int source, int dest, GridI prec);
 
-    template<class T>
-    static std::pair<float, std::vector<int>> AStar(std::map<T, std::shared_ptr<GraphNodeTemplate<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
+//    template<class T>
+//    static std::pair<float, std::vector<int>> AStar(std::map<T, GraphNodeTemplate<T>*>& nodes, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
 //    static std::pair<float, std::vector<int>> AStar(GridF& adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<float, std::vector<int>> AStar(Graph& graph, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<std::vector<float>, std::vector<int>> Djikstra(Graph& graph, int source);
-    static std::pair<std::vector<float>, std::vector<int>> BellmanFord(GridF& adjencyMap, int source);
-    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFasterAlgorithm(GridF& adjencyMap, int source, bool useSmallLabelFirst = false, bool useLargeLabelLast = false);
+    static std::pair<std::vector<float>, std::vector<int>> BellmanFord(Graph &graph, int source);
+    static std::pair<std::vector<float>, std::vector<int>> ShortestPathFasterAlgorithm(Graph& graph, int source, bool useSmallLabelFirst = false, bool useLargeLabelLast = false);
     static bool containsNegativeCycle(const std::vector<float>& distanceVector, GridF& adjencyMap);
-    static std::pair<GridF, GridI> FloydWarshall(GridF& adjencyMap);
-    static std::pair<GridF, GridI> FloydWarshallImproved(GridF& adjencyMap);
-    static std::pair<GridF, GridI> Johnson(GridF& adjencyMap);
+    static std::pair<GridF, GridI> FloydWarshall(Graph &graph);
+    static std::pair<GridF, GridI> FloydWarshallImproved(Graph &graph);
+    static std::pair<GridF, GridI> Johnson(Graph& graph);
 
 };
 
-template<class T>
-std::pair<float, std::vector<int> > Pathfinding::AStar(std::map<T, std::shared_ptr<GraphNodeTemplate<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction)
+/*template<class T>
+std::pair<float, std::vector<int> > Pathfinding::AStar(std::map<T, GraphNodeTemplate<T>*>& nodes, int source, int dest, std::function<float(int)> heuristicFunction)
 {
     int n = nodes.size();
     std::vector<int> prec(n, -1);
@@ -80,12 +81,12 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(std::map<T, std::shared_p
         }
     }
     return std::make_pair(std::numeric_limits<float>::max(), prec);
-}
-
+}*/
+/*
 template<class T>
-std::pair<float, std::vector<int>> Pathfinding::ShortestPathFrom(int source, int dest, std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, std::function<float(int)> heuristicFunction)
+std::pair<float, std::vector<int>> Pathfinding::ShortestPathFrom(int source, int dest, std::vector<GraphNodeTemplate<T>*>& nodes, std::function<float(int)> heuristicFunction)
 {
     return Pathfinding::AStar(nodes, source, dest, heuristicFunction);
 }
-
+*/
 #endif // PATHFINDINGGRAPH_H
