@@ -136,10 +136,11 @@ void KarstPathsGeneration::addPorosityMap(GridF porosity)
 void KarstPathsGeneration::createEdges(int maxNumberNeighbors, float maxNeighboringDistance)
 {
     this->graph.createEdges(maxNumberNeighbors, maxNeighboringDistance, true); // The "true" means the cost are not precomputed, just the connection matrix
-    for (int i = 0; i < this->graph.connectionMatrix.sizeX; i++) {
-        for (int j = 0; j < this->graph.connectionMatrix.sizeY; j++) {
-            if (this->graph.connectionMatrix.at(i, j)) {
-                this->graph.adjencyMatrix.at(i, j) = std::pow(this->computeCost(i, j), this->gamma);
+    for (int i = 0; i < this->graph.size(); i++) {
+        for (int j = 0; j < this->graph.size(); j++) {
+            if (this->graph.connected(i, j)) {
+                this->graph.setConnection(i, j, std::pow(this->computeCost(i, j), this->gamma));
+                this->graph.setConnection(j, i, std::pow(this->computeCost(i, j), this->gamma));
             }
         }
     }

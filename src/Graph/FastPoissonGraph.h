@@ -20,6 +20,9 @@ public:
     template<class U>
     FastPoissonGraph(Matrix3<U>& available_space_matrix, float radius = 1.f, int max_tries = 30);
 
+    void cleanIndices();
+
+    std::map<int, GraphNodeTemplate<T>* > addNodes(std::vector<GraphNodeTemplate<T>*> newNodes);
     void createEdges(int maxNumberNeighbors, float maxDistanceToNeighbor, bool justUpdateConnectionMatrix = false);
 
 //protected:
@@ -32,6 +35,8 @@ public:
     float poissonRadius;
     float maxNeighborRadius;
     int poissonNeighbors;
+
+    GridI nodesIndices;
 };
 
 
@@ -47,6 +52,30 @@ FastPoissonGraph<T>::FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float rad
 {
     Matrix3<short int> available_space_matrix(sizeX, sizeY, sizeZ, 1);
     initNodes(available_space_matrix, radius, max_tries);
+}
+
+template<class T>
+void FastPoissonGraph<T>::cleanIndices()
+{
+    int i = 0;
+    for (auto& [id, node] : this->nodes) {
+        node->index = i;
+        node->privateIndex = i;
+        i++;
+    }
+}
+
+template<class T>
+std::map<int, GraphNodeTemplate<T> *> FastPoissonGraph<T>::addNodes(std::vector<GraphNodeTemplate<T> *> newNodes)
+{
+    auto returnValues = GraphTemplate<T>::addNodes(newNodes);
+    if (this->useMatrices) {
+        int numberOfNodesToAdd = returnValues.size();
+        GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+        nodesIndices.paste(this->nodesIndices);
+        this->nodesIndices = nodesIndices;
+    }
+    return returnValues;
 }
 
 
@@ -84,6 +113,12 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     this->nodesIndices = GridI(this->sizeX, this->sizeY, this->sizeZ, -1); // Fill all indices to -1 as default values
     Vector3 sizeVec(this->sizeX, this->sizeY, this->sizeZ);
 
+    nodesIndices.iterate([&](const Vector3& p) {
+        int idx = nodesIndices.getIndex(p);
+        nodesIndices[idx] = idx;
+        this->addNode(new GraphNodeTemplate<T>(T(), p + Vector3::random(Vector3(), Vector3(1, 1, 1)), idx));
+    });/*
+
     std::vector<GraphNodeTemplate<T>*> allNodes;
     std::vector<GraphNodeTemplate<T>*> activeList;
     // Step 1 : Create initial sample, register it and put it in the active list
@@ -95,7 +130,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
         if (tries > 100000)
             return; // Error, not enough space to place nodes
     } while (!available_space_matrix.at(randomStart));
-    GraphNodeTemplate<T>* firstNode = new GraphNodeTemplate<T>(T(), randomStart, 0);
+    GraphNodeTemplate<T>* firstNode = this->addNode(new GraphNodeTemplate<T>(T(), randomStart, 0));
     activeList.push_back(firstNode);
     allNodes.push_back(firstNode);
     int current_node_index = 1;
@@ -136,7 +171,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
                 }
             }
             if (keep) {
-                GraphNodeTemplate<T>* newSample = new GraphNodeTemplate<T>(T(), pos, current_node_index);
+                GraphNodeTemplate<T>* newSample = this->addNode(new GraphNodeTemplate<T>(T(), pos, current_node_index));
                 newSample->privateVector = pos;
                 activeList.push_back(newSample);
                 allNodes.push_back(newSample);
@@ -154,30 +189,31 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
             activeList.erase(activeList.begin() + randomIndex);
         }
     }
-
+*/
     // At this point, put back all positions in their initial reference and update the indices
     for (auto& [ID, val] : this->nodes) {
         val->pos /= sizeVec;
         val->pos *= Vector3(_available_space_matrix.sizeX, _available_space_matrix.sizeY, _available_space_matrix.sizeZ);
 
-        this->nodesIndices.at(val->privateVector) = val->privateIndex;
-        val->index = val->privateIndex;
+//        this->nodesIndices.at(val->privateVector) = val->privateIndex;
+//        val->index = val->privateIndex;
     }
+    cleanIndices();
 }
 
 template<class T>
 void FastPoissonGraph<T>::createEdges(int maxNumberNeighbors, float maxDistanceToNeighbor, bool justUpdateConnectionMatrix)
 {
+    cleanIndices();
     this->maxNeighborRadius = maxDistanceToNeighbor;
     this->poissonNeighbors = maxNumberNeighbors;
     float sqr_dist = maxNeighborRadius * maxNeighborRadius;
-    this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size(), 1, 0);
-    this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
-    this->precedenceMatrix = GridI(this->nodes.size(), this->nodes.size(), 1, -1);
+//    this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size(), 1, 0);
+//    this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
 
-    int cellsToCheckOnX = std::ceil(this->maxNeighborRadius / this->poissonRadius);
-    int cellsToCheckOnY = std::ceil(this->maxNeighborRadius / this->poissonRadius);
-    int cellsToCheckOnZ = std::ceil(this->maxNeighborRadius / this->poissonRadius);
+//    int cellsToCheckOnX = std::ceil(this->maxNeighborRadius / this->poissonRadius);
+//    int cellsToCheckOnY = std::ceil(this->maxNeighborRadius / this->poissonRadius);
+//    int cellsToCheckOnZ = std::ceil(this->maxNeighborRadius / this->poissonRadius);
 
     for (size_t i = 0; i < this->nodes.size(); i++) {
         auto sample = this->nodes[i];
@@ -211,9 +247,10 @@ void FastPoissonGraph<T>::createEdges(int maxNumberNeighbors, float maxDistanceT
 
         for (int iNeighbor = 0; iNeighbor < std::min(this->poissonNeighbors+1, int(candidates.size())); iNeighbor++) {
             // Just a one-way connection for now
-            this->connectionMatrix.at(sample->privateIndex, candidates[iNeighbor]->privateIndex) = 1;
-            if (!justUpdateConnectionMatrix)
-                this->adjencyMatrix.at(sample->privateIndex, candidates[iNeighbor]->privateIndex) = (candidates[iNeighbor]->pos - sample->pos).norm();
+            this->addConnection(sample->privateIndex, candidates[iNeighbor]->privateIndex, (candidates[iNeighbor]->pos - sample->pos).norm());
+//            this->connectionMatrix.at(sample->privateIndex, candidates[iNeighbor]->privateIndex) = 1;
+//            if (!justUpdateConnectionMatrix)
+//                this->adjencyMatrix.at(sample->privateIndex, candidates[iNeighbor]->privateIndex) = (candidates[iNeighbor]->pos - sample->pos).norm();
         }
     }
 }

@@ -80,13 +80,14 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
         for (int y = 0; y < availableGrid.sizeY; y++) {
             for (int z = 0; z < availableGrid.sizeZ; z++) {
                 float voxelVal = voxels.at(x, y, z);
-                if (voxelVal > 0) {
+                //if (voxelVal > 0) {
                     availableGrid.at(x, y, z) = 1;
-                }
+                //}
             }
         }
     }
-    this->karstCreator = new KarstPathsGeneration(availableGrid, voxelGrid->getDimensions(), 20.f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
+    this->karstCreator = new KarstPathsGeneration(availableGrid, voxelGrid->getDimensions(), 10.f); //Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ), 20.f);
+//    this->computeKarst();
 }
 
 void KarstPathGenerationInterface::updateFracture(const Vector3& newFractureDir)

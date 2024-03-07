@@ -29,12 +29,18 @@ public:
     void removeNodes(std::vector<int> nodes);
     void removeNodes(std::vector<GraphNodeTemplate<T>*> newNodes);
 
+
     void addConnection(int nodeA, int nodeB, float weight = 1.f);
     void addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight = 1.f);
     void removeConnection(int nodeA, int nodeB);
     void removeConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB);
+    void setConnection(int nodeA, int nodeB, float weight);
+    void setConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight);
 
-    GraphNodeTemplate<T>* findNodeByID(int ID);
+    bool connected(int nodeA, int nodeB) const;
+    bool connected(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB) const;
+
+    GraphNodeTemplate<T>* findNodeByID(int ID) const;
 
     GraphNodeTemplate<T>* operator[](T index) const;
 
@@ -47,9 +53,7 @@ public:
 //    std::vector<std::shared_ptr<GraphNode<T>>> nodes;
     std::map<int, GraphNodeTemplate<T>*> nodes;
 
-    GridI nodesIndices;
     GridI connectionMatrix;
-    GridI precedenceMatrix;
     GridF adjencyMatrix;
 
     void draw();
@@ -61,14 +65,14 @@ template<class T>
 GraphTemplate<T>::GraphTemplate(bool useMatrices)
     : useMatrices(useMatrices)
 {
-
+    this->useMatrices = false; // FORCE
 }
 
 template<class T>
 GraphTemplate<T>::~GraphTemplate()
 {
     for (auto& [ID, node] : nodes) {
-        delete node;
+//        delete node;
     }
     nodes.clear();
 }
@@ -170,17 +174,13 @@ std::map<int, GraphNodeTemplate<T>* > GraphTemplate<T>::addNodes(std::vector<Gra
 
     if (useMatrices) {
         int numberOfNodesToAdd = newNodes.size();
-        GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-        nodesIndices.paste(this->nodesIndices);
-        this->nodesIndices = nodesIndices;
+//        GridI nodesIndices = GridI(this->nodesIndices.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
+//        nodesIndices.paste(this->nodesIndices);
+//        this->nodesIndices = nodesIndices;
 
         GridI connectionMatrix = GridI(this->connectionMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
         connectionMatrix.paste(this->connectionMatrix);
         this->connectionMatrix = connectionMatrix;
-
-        GridI precedenceMatrix = GridI(this->precedenceMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
-        precedenceMatrix.paste(this->precedenceMatrix);
-        this->precedenceMatrix = precedenceMatrix;
 
         GridF adjencyMatrix = GridI(this->adjencyMatrix.getDimensions() + Vector3(numberOfNodesToAdd, numberOfNodesToAdd, 0));
         adjencyMatrix.paste(this->adjencyMatrix);
@@ -265,9 +265,34 @@ void GraphTemplate<T>::removeConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTe
 }
 
 template<class T>
-GraphNodeTemplate<T>* GraphTemplate<T>::findNodeByID(int ID)
+void GraphTemplate<T>::setConnection(int nodeA, int nodeB, float weight)
 {
-    if (this->nodes.count(ID)) return this->nodes[ID];
+    return this->setConnection(findNodeByID(nodeA), findNodeByID(nodeB), weight);
+}
+
+template<class T>
+void GraphTemplate<T>::setConnection(GraphNodeTemplate<T> *nodeA, GraphNodeTemplate<T> *nodeB, float weight)
+{
+    nodeA->removeNeighbor(nodeB);
+    nodeA->addNeighbor(nodeB, weight); // Not best, but hey!
+}
+
+template<class T>
+bool GraphTemplate<T>::connected(GraphNodeTemplate<T> *nodeA, GraphNodeTemplate<T> *nodeB) const
+{
+    return nodeA->hasNeighbor(nodeB);
+}
+
+template<class T>
+bool GraphTemplate<T>::connected(int nodeA, int nodeB) const
+{
+    return this->connected(findNodeByID(nodeA), findNodeByID(nodeB));
+}
+
+template<class T>
+GraphNodeTemplate<T>* GraphTemplate<T>::findNodeByID(int ID) const
+{
+    if (this->nodes.count(ID)) return this->nodes.at(ID);
     /*for (auto& node : this->nodes) {
         if (node->index == ID)
             return node;
