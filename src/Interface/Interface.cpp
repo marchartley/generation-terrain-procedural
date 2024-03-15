@@ -166,7 +166,7 @@ ViewerInterface::ViewerInterface() {
             biomeInterface->generateBiomes();
         }
 
-//        envObjectsInterface->fromGanUI();
+        envObjectsInterface->fromGanUI();
 //        float time = timeIt([&]() {
 //            std::string simFolder = "OpenFoam/OF_Sim_Marcos/"; //"OpenFOAM/simple/";
 //            OpenFoamParser::createSimulationFile(simFolder, viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
@@ -177,21 +177,6 @@ ViewerInterface::ViewerInterface() {
 
         QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
     });
-
-    /*
-    QObject::connect(this->tunnelInterface.get(), &TunnelInterface::needToClipView,
-                     this->viewer, &Viewer::clipViewTemporarily);
-    QObject::connect(this->spaceColonization.get(), &SpaceColonizationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
-    QObject::connect(this->karstPathGeneration.get(), &KarstPathGenerationInterface::useAsMainCamera, this->viewer, &Viewer::swapCamera);
-    QObject::connect(this->tunnelInterface.get(), &TunnelInterface::tunnelCreated, this->biomeInterface.get(), &BiomeInterface::addTunnel);
-*/
-
-
-//    QObject::connect(qApp, &QApplication::focusChanged, this, [=](QWidget*, QWidget*) {
-//        this->setFocus(Qt::OtherFocusReason);
-//        viewer->setFocus(Qt::OtherFocusReason);
-//    });
-//    this->installEventFilter(viewer);
     viewer->installEventFilter(this);
     setupUi();
 }

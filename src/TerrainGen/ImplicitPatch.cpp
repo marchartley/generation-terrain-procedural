@@ -516,12 +516,6 @@ float ImplicitPrimitive::evaluate(const Vector3& pos) const
         return 0.f;
     Vector3 supportWidth = maxSupportPos - minSupportPos;
     Vector3 width = maxPos - minPos;
-//    if (this->optionalCurve.points.size() > 2) {
-//        ShapeCurve area = this->optionalCurve.points;
-//        if (!area.inside(pos)) {
-//            return 0.f;
-//        }
-//    }
 
     float evaluation = 0.f;
 

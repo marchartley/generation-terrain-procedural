@@ -56,6 +56,8 @@ Voronoi::Voronoi(std::vector<Vector3> pointset)
                                          Vector3(maxBoundarie.xy()),
                                          Vector3(minBoundarie.x, maxBoundarie.y),
                                      });
+
+    this->solve(false, 0);
 }
 
 Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie)

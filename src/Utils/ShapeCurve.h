@@ -19,8 +19,6 @@ public:
 
     Vector3 centroid() const;
 
-    ShapeCurve& reverseVertices();
-
     ShapeCurve intersect(ShapeCurve other);
 
     Vector3 planeNormal();

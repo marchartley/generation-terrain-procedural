@@ -28,6 +28,13 @@ BSpline::BSpline(std::vector<BSpline> subsplines)
     }
 }
 
+
+BSpline& BSpline::reverseVertices()
+{
+    std::reverse(this->points.begin(), this->points.end());
+    return *this;
+}
+
 std::vector<Vector3> BSpline::getPath(int numberOfPoints, bool linearPath) const
 {
     /// I'm really not sure this is the best solution, but an easy fix :

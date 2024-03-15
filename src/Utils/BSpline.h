@@ -26,6 +26,8 @@ public:
 
     BSpline& resamplePoints(int newNbPoints = -1);
 
+    BSpline& reverseVertices();
+
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
 
     operator bool() const { return (this->points.size() > 0); }

@@ -133,12 +133,6 @@ Vector3 ShapeCurve::centroid() const
     return centroid / totalArea;
 }
 
-ShapeCurve &ShapeCurve::reverseVertices()
-{
-    std::reverse(this->points.begin(), this->points.end());
-    return *this;
-}
-
 int getIndex(int index, size_t size) {
     return (index + size) % size;
 }

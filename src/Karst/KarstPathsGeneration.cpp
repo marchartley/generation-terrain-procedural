@@ -168,7 +168,7 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
     std::vector<float> distances;
     std::vector<int> prec;
     for(size_t i = 0; i < specialNodesToCompute.size(); i++) {
-        std::cout << 100 * i / (float)(specialNodesToCompute.size() - 1) << "%" << std::flush;
+//        std::cout << 100 * i / (float)(specialNodesToCompute.size() - 1) << "%" << std::flush;
         if (std::get<1>(specialNodesToCompute[i]) == KARST_NODE_TYPE::DEAD_END)
             continue;
         int nodeA = std::get<0>(specialNodesToCompute[i]);
@@ -187,7 +187,7 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
                 pathDistances.at(j, i) = distances[nodeB]; //(float)path.size();
             }
         }
-        std::cout << " (" << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << "s)" << std::endl;
+//        std::cout << " (" << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << "s)" << std::endl;
     }
 
     float min = pathDistances.min(), max = pathDistances.max();

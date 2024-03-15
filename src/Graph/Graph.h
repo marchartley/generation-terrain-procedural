@@ -14,6 +14,11 @@ public:
     GraphTemplate(bool useMatrices = true);
     ~GraphTemplate();
 
+//    GraphTemplate(const GraphTemplate& other);
+//    GraphTemplate& operator=(const GraphTemplate& other);
+
+    GraphTemplate<T> copy() const;
+
     GraphTemplate<T>& circularLayout(bool randomOrder = false);
     GraphTemplate<T> &forceDrivenPositioning(bool startWithCircularLayout = true);
 
@@ -56,10 +61,28 @@ public:
     GridI connectionMatrix;
     GridF adjencyMatrix;
 
+    template<typename U>
+    GraphTemplate<U> cast() const;
+
     void draw();
 
     bool useMatrices;
 };
+
+template<typename T> template<typename U>
+GraphTemplate<U> GraphTemplate<T>::cast() const
+{
+    GraphTemplate<U> target;
+    for (auto& [ID, node] : this->nodes) {
+        target.addNode(new GraphNodeTemplate<U>(U(), node->pos, ID));
+    }
+    for (const auto& [ID, node] : this->nodes) {
+        for (const auto& [neighbor, w] : node->neighbors) {
+            target.addConnection(ID, neighbor->index, w);
+        }
+    }
+    return target;
+}
 
 template<class T>
 GraphTemplate<T>::GraphTemplate(bool useMatrices)
@@ -75,6 +98,12 @@ GraphTemplate<T>::~GraphTemplate()
 //        delete node;
     }
     nodes.clear();
+}
+
+template<class T>
+GraphTemplate<T> GraphTemplate<T>::copy() const
+{
+    return this->cast<T>();
 }
 
 template<class T>
