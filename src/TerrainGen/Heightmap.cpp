@@ -269,7 +269,7 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
         pos.setValid(false);
         for (int placementTry = 0; placementTry < 10; placementTry ++) {
             pos.setValid(false);
-            float rnd = random_gen::generate(0, 3.141592 * 2.f);
+            float rnd = random_gen::generate(0, M_PI * 2.f);
             Vector3 posInLine = Vector3(getSizeX()/2, getSizeY()/2) + Vector3(std::cos(rnd), std::sin(rnd)) * terrainDiagonal;//Vector3::lerp(random_gen::generate(), availableStart, availableEnd);
             Vector3 possiblePosX0 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,
                                                                               Vector3(0, 0, 0), Vector3(getSizeX(), 0, 0));

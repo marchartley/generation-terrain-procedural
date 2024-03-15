@@ -47,7 +47,7 @@ KarstHoleProfile::KarstHoleProfile(std::vector<Vector3> shape)
 KarstHoleProfile &KarstHoleProfile::rotateTowardVector(BSpline path, float t)
 {
     for (Vector3& point : this->vertices)
-        point.rotate(-3.141592/2.f, 0, 0);
+        point.rotate(-M_PI/2.f, 0, 0);
 /*
     Vector3 new_dir = path.getDirection(t);
     Vector3 forward(0, 1, 0);
@@ -157,7 +157,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
             // Increase the rotation to fit the interpolation
             for (auto& point : interpolation.vertices) {
                 if (prevNorm.dot(nextNorm) < 0){
-                    point.rotate(3.141592, 0, 0);
+                    point.rotate(M_PI, 0, 0);
                 }
 
                 point.rotate(normalRotation, rotator);

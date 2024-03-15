@@ -7,7 +7,7 @@
 #include <complex>
 #include "DataStructure/Vector3.h"
 
-#define PI 3.14159265358979323846
+#define PI M_PI
 
 template<class T>
 bool isIn(T elem, std::vector<T> arr) {

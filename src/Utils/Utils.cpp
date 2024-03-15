@@ -126,8 +126,7 @@ float cubic(float _x, float _min, float _max) {
 }
 float cosine(float _x, float _min, float _max) {
     float x = linear(_x, _min, _max);
-    float pi = 3.141592;
-    return inv_linear((std::cos(x * pi + pi) / 2.f) + 0.5, _min, _max);
+    return inv_linear((std::cos(x * PI + PI) / 2.f) + 0.5, _min, _max);
 }
 float binary(float _x, float _min, float _max) {
     float x = linear(_x, _min, _max);
@@ -203,7 +202,7 @@ float deg2rad(float deg)
 }
 
 float gaussian(float sigma, float sqrDist) {
-    float oneOverSqrt2Pi = 1.f/(2 * M_PI * sigma * sigma);
+    float oneOverSqrt2Pi = 1.f/(2 * PI * sigma * sigma);
     float sqrSigma = 2 * sigma * sigma;
     return std::exp(-sqrDist/sqrSigma) * oneOverSqrt2Pi;
 }
@@ -235,7 +234,7 @@ float normalizedGaussian(const Vector3& size, const Vector3& position, float sig
 
 float normalDistribution(const Vector3& size, const Vector3& position, float sigma)
 {
-    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
+    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * PI);
     float sqrSigma = 2 * sigma * sigma;
 //    position -= (size * .5f);
     float normal = std::exp(-(position - size * .5f).norm2()/(sqrSigma)) * oneOverSqrt2Pi;
@@ -457,7 +456,7 @@ std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, 
 
     for (size_t s = 1; s <= logN; ++s) {
         size_t m = 1 << s;
-        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(M_PI) / float(m));
+        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * PI / float(m));
         for (size_t k = 0; k < N; k += m) {
             std::complex<float> w = 1.0f;
             for (size_t j = 0; j < m / 2; ++j) {

@@ -154,9 +154,9 @@ Vector3 Vector3::eulerAnglesWith(const Vector3& other)
             R21 = v1.y, R22 = v2.y, R23 = v3.y,
             R31 = v1.z, R32 = v2.z, R33 = v3.z;
     Vector3 result;
-    result.x = std::atan2(R32, R33) * (180.0 / 3.141592);
-    result.y = std::atan2(-1 * R31, std::sqrt(R32 * R32 + R33 * R33)) * (180.0 / 3.141592);
-    result.z = std::atan2(R21, R11) * (180.0 / 3.141592);
+    result.x = std::atan2(R32, R33) * (180.0 / M_PI);
+    result.y = std::atan2(-1 * R31, std::sqrt(R32 * R32 + R33 * R33)) * (180.0 / M_PI);
+    result.z = std::atan2(R21, R11) * (180.0 / M_PI);
     return result;*/
 }
 

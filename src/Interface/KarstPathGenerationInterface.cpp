@@ -154,7 +154,7 @@ void KarstPathGenerationInterface::updateKarstPath()
 {
     if (!this->visitingCamera)
         this->visitingCamera = new qglviewer::Camera();
-    this->visitingCamera->setFieldOfView(3.141592 / 3.f);
+    this->visitingCamera->setFieldOfView(M_PI / 3.f);
     this->visitingCamera->setUpVector(Vector3(0, 0, 1));
     this->karstPaths.clear();
     std::vector<Vector3> pathPositions;
