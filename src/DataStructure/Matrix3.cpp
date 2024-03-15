@@ -4,11 +4,21 @@
 #include <queue>
 
 template<>
-Matrix3<Vector3> Matrix3<Vector3>::curl() const {
+Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
+//    float radius = 1;
     iterateParallel([&] (int x, int y, int z) {
-        const Vector3& vec = this->at(x, y, z);
-        returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
+        // Central finite difference
+        Vector3 dX = at(x + radius, y, z) - at(x - radius, y, z);
+        Vector3 dY = at(x, y + radius, z) - at(x, y - radius, z);
+        Vector3 dZ = at(x, y, z + radius) - at(x, y, z - radius);
+
+        Vector3 curl(dY.z - dZ.y, dZ.x - dX.z, dX.y - dY.x);
+        returningGrid(x, y, z) = curl / (radius * 2.f);
+//        Vector3 dF = Vector3(at(x + radius, y, z) - at(x - radius, y, z), at(x, y + radius, z) - at(x, y - radius, z), at(x, y, z + radius) - at(x, y, z - radius));
+//        returningGrid(x, y, z) = Vector3(dF.z - dF.y, dF.x - dF.z, dF.y - dF.x) / (2 * radius);
+//        const Vector3& vec = this->at(x, y, z);
+//        returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -292,6 +302,7 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
 {
     std::vector<ShapeCurve> curves;
     auto grid = this->resize(sizeX * 2.f, sizeY * 2.f, RESIZE_MODE::MAX_VAL).findContour(true);
+//    std::cout << "Grid : " << grid << "\n" << this->resize(sizeX * .5f, sizeY * .5f, RESIZE_MODE::MAX_VAL).findContour(true).displayAsPlot() << std::endl;
     grid.raiseErrorOnBadCoord = false;
 
     while (grid.max() != 0) {

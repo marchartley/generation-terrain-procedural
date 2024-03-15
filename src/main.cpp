@@ -30,6 +30,7 @@
 #include "Graph/RegularSimplicialComplex.h"
 #include "Graph/TopoMap.h"
 #include "Utils/Table.h"
+#include "Graph/WaveFunctionCollapse.h"
 
 using namespace std;
 
@@ -527,7 +528,7 @@ int main(int argc, char *argv[])
                     std::acos(B.y),
                     std::acos(B.z),
                     std::acos(B.x)
-                ) * (180.f / 3.141592f);
+                ) * (180.f / M_PIf);
 
     std::cout << C << std::endl;
     return 0;*/
@@ -971,6 +972,45 @@ int main(int argc, char *argv[])
     Table tab(results, {"A*", "Djikstra", "Bellman", "Floyd", "Floyd (2)", "Johnson"}, names);
     std::cout << tab.displayTable() << std::endl;
     std::cout << "NB: time is the avg. computation time for shortest path from 1 node to all others" << std::endl;
+    return 0;
+    */
+
+    /*
+     * Unit test : COmputation of the curl on a 2D grid
+     *
+    GridV3 cyclone(200, 200, 1);
+    cyclone.iterateParallel([&](const Vector3& p) {
+        Vector3 pos = p - cyclone.getDimensions().xy() * .5f;
+        float r = pos.norm();
+        Vector3 dir = Vector3(-pos.y, pos.x).normalized(); // * 20.f * r;
+        cyclone(p) = dir;
+    });
+    GridV3 curl;
+    for (float radius : {1.f, 5.f, 10.f, 20.f}) {
+        displayProcessTime("Curl with radius " + std::to_string(radius) + " : ", [&]() {
+            curl = cyclone.curl(radius).meanSmooth(30, 30, 1, true);
+        });
+        Plotter::get()->addImage(curl);
+        Plotter::get()->exec();
+    }
+    return 0;
+    */
+
+    /*
+     * Unit test: Fast Gaussian filter on a Matrix3
+     * Notes: Did not try using FFT as We should have to cast things and it's tiring
+    GridF grid(100, 100, 1);
+    GridF ones(100, 100, 1, 1.f);
+    grid.paste(ones, grid.getDimensions() * .5f - ones.getDimensions() * .5f);
+
+    for (auto sigma : {1.f, 5.f, 10.f, 50.f, 100.f}) {
+        displayProcessTime("Gaussian for sigma=" + std::to_string(sigma), [&]() {
+            grid.gaussianSmooth(sigma, false);
+        });
+    }
+    Plotter::get()->addImage(grid.gaussianSmooth(50.f, true));
+    Plotter::get()->exec();
+
     return 0;
     */
 
