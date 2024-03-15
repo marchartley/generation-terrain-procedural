@@ -144,7 +144,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
-//    layout->addWidget(testPerformancesButton->get());
+    layout->addWidget(testPerformancesButton->get());
 
 
     return layout;
@@ -389,6 +389,7 @@ void EnvObjsInterface::instantiateObject()
 
 void EnvObjsInterface::instantiateSpecific(std::string objectName)
 {
+    bool verbose = false;
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
         GridF heights = heightmap->getHeights();
 
@@ -404,19 +405,11 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
                 this->implicitTerrain->addChild(this->rootPatch);
             rootPatch->addChild(implicit);
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
-            /*rootPatch->reevaluateAll();
-            implicitTerrain->updateCache();
-            implicitTerrain->update();
-            voxelGrid->fromImplicit(implicitTerrain.get(), 20);
-            heightmap->fromVoxelGrid(*voxelGrid.get());
-            std::cout << "Instantiating " << objectName << " at position " << bestPos << std::endl;
-//            EnvObject::precomputeTerrainProperties(*heightmap);
-            EnvObject::recomputeFlowAndSandProperties(*heightmap);*/
             this->updateEnvironmentFromEnvObjects(true);
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
         }
-    });
+    }, verbose);
     updateObjectsList();
 }
 
@@ -441,7 +434,7 @@ void EnvObjsInterface::recomputeErosionValues()
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal)
 {
-    bool verbose = false;
+    bool verbose = true;
     // Get original flowfield, do not accumulate effects (for now).
     displayProcessTime("Get velocity... ", [&]() {
         EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
@@ -502,14 +495,14 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 
 void EnvObjsInterface::displaySedimentsDistrib()
 {
-    GridF sediments = EnvObject::sandDeposit;
+    GridF sediments = EnvObject::materials["sand"].currentState;
     Plotter::get()->addImage(sediments);
     Plotter::get()->show();
 }
 
 void EnvObjsInterface::displayPolypDistrib()
 {
-    GridF polyp = EnvObject::polypDeposit;
+    GridF polyp = EnvObject::materials["polyp"].currentState;
     Plotter::get()->addImage(polyp);
     Plotter::get()->show();
 }
@@ -925,6 +918,13 @@ ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &see
 
 void EnvObjsInterface::runPerformanceTest()
 {
+
+    displayProcessTime("Benchmarking coral growth...", [&]() {
+        for (int i = 0; i < 10; i++) {
+            this->instantiateSpecific("coralpolyp");
+        }
+    });
+    /*
     std::vector<float> timings;
     for (int i = 0; i < 201; i++) {
         float time = displayProcessTime("Evaluation with " + std::to_string(EnvObject::instantiatedObjects.size()) + " objects (x5) : ", [&]() {
@@ -942,6 +942,7 @@ void EnvObjsInterface::runPerformanceTest()
     Plotter::get()->reset();
     Plotter::get()->addPlot(timings, "Timing", Qt::darkBlue);
     Plotter::get()->show();
+    */
 }
 
 void EnvObjsInterface::fromGanUI()

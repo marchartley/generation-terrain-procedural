@@ -22,10 +22,12 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
 
-    virtual void applySandDeposit();
+    /*virtual void applySandDeposit();
     virtual void applySandAbsorption();
     virtual void applyPolypDeposit();
-    virtual void applyPolypAbsorption();
+    virtual void applyPolypAbsorption();*/
+    virtual void applyDeposition(EnvMaterial& material);
+    virtual void applyAbsorption(EnvMaterial& material);
 
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);

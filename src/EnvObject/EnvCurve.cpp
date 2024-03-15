@@ -81,6 +81,40 @@ EnvCurve *EnvCurve::clone()
     return self;
 }
 
+void EnvCurve::applyDeposition(EnvMaterial& material)
+{
+    if (this->materialDepositionRate[material.name] == 0) return;
+
+    AABBox box = AABBox(this->curve.points);
+    BSpline translatedCurve = this->curve;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    sand.iterateParallel([&] (const Vector3& pos) {
+        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->materialDepositionRate[material.name];
+    });
+    material.currentState.add(sand, box.min().xy() - Vector3(width, width));
+    /*
+    AABBox box = AABBox(this->curve.points);
+    BSpline translatedCurve = this->curve;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    sand.iterateParallel([&] (const Vector3& pos) {
+        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
+    });
+    EnvObject::sandDeposit.add(sand, box.min().xy() - Vector3(width, width));
+    */
+}
+
+void EnvCurve::applyAbsorption(EnvMaterial& material)
+{
+    if (this->materialAbsorptionRate[material.name] == 0) return;
+    return;
+}
+/*
 void EnvCurve::applySandDeposit()
 {
     AABBox box = AABBox(this->curve.points);
@@ -122,10 +156,11 @@ void EnvCurve::applyPolypDeposit()
 void EnvCurve::applyPolypAbsorption()
 {
     return;
-}
+}*/
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
+//    return {GridV3(EnvObject::flowfield.getDimensions()), GridF(EnvObject::flowfield.getDimensions())};
     Vector3 objectWidth = Vector3(width, width, 0);
     Vector3 halfWidth = objectWidth * .5f;
     BSpline translatedCurve = this->curve;

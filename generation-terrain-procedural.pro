@@ -76,6 +76,7 @@ SOURCES += \
         src/DataStructure/Voxel.cpp \
     src/EnvObject/EnvArea.cpp \
     src/EnvObject/EnvCurve.cpp \
+    src/EnvObject/EnvMaterial.cpp \
     src/EnvObject/EnvObject.cpp \
 #        src/FastWFC/propagator.cpp \
 #        src/FastWFC/wave.cpp \
@@ -248,6 +249,7 @@ HEADERS += \
     src/DataStructure/Voxel.h \
     src/EnvObject/EnvArea.h \
     src/EnvObject/EnvCurve.h \
+    src/EnvObject/EnvMaterial.h \
     src/EnvObject/EnvObject.h \
 #    src/FastWFC/color.hpp \
 #    src/FastWFC/direction.hpp \

@@ -67,6 +67,46 @@ EnvPoint *EnvPoint::clone()
     return self;
 }
 
+void EnvPoint::applyDeposition(EnvMaterial& material)
+{
+    if (this->materialDepositionRate[material.name] == 0) return;
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->materialDepositionRate[material.name] * this->computeGrowingState();
+    material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
+    /*
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
+    EnvObject::sandDeposit.add(sand, this->position - sand.getDimensions() * .5f);
+    */
+}
+
+void EnvPoint::applyAbsorption(EnvMaterial& material)
+{
+    if (this->materialAbsorptionRate[material.name] == 0) return;
+    if (this->needsForGrowth.count(material.name) == 0) return;
+
+    float sandMissing = (needsForGrowth[material.name] - currentSatisfaction[material.name]) * (this->computeGrowingState() + .01f) / (1.01f);
+
+    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
+    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
+    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
+    GridF currentSand = material.currentState.subset(subsetStart, subsetEnd);
+    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
+    this->currentSatisfaction[material.name] += sandAbsorbed.sum();
+    material.currentState.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
+
+    /*
+    if (this->needsForGrowth.count("sand") == 0) return;
+
+    float sandMissing = (needsForGrowth["sand"] - currentSatisfaction["sand"]) * (this->computeGrowingState() + .01f) / (1.01f);
+
+    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
+    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
+    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
+    GridF currentSand = EnvObject::sandDeposit.subset(subsetStart, subsetEnd);
+    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
+    this->currentSatisfaction["sand"] += sandAbsorbed.sum();
+    EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);*/
+}
+/*
 void EnvPoint::applySandDeposit()
 {
     GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
@@ -110,6 +150,7 @@ void EnvPoint::applyPolypAbsorption()
     this->currentSatisfaction["polyp"] += polypAbsorbed.sum();
     EnvObject::polypDeposit.add(-polypAbsorbed, this->position - polypAbsorbed.getDimensions() * .5f);
 }
+*/
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {

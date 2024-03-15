@@ -12,6 +12,8 @@
 #include "TerrainGen/ImplicitPatch.h"
 #include "Graph/FastPoissonGraph.h"
 
+#include "EnvMaterial.h"
+
 class EnvPoint;
 class EnvCurve;
 class EnvArea;
@@ -36,8 +38,9 @@ public:
     std::string s_FittingFunction;
     std::function<float(Vector3)> fittingFunction;
     Vector3 flowEffect;
-    float sandEffect;
-    float polypEffect;
+//    float sandEffect;
+//    float polypEffect;
+//    std::map<std::string, float> materialEffect;
     std::map<std::string, float> materialDepositionRate;
     std::map<std::string, float> materialAbsorptionRate;
     Vector3 inputDimensions;
@@ -61,12 +64,12 @@ public:
 
     virtual float computeGrowingState();
 
-    virtual void applySandDeposit() = 0;
+    /*virtual void applySandDeposit() = 0;
     virtual void applySandAbsorption() = 0;
     virtual void applyPolypDeposit() = 0;
-    virtual void applyPolypAbsorption() = 0;
-    virtual void applyMaterialDeposition(std::string materialType) {}
-    virtual void applyMaterialAbsorption(std::string materialType) {}
+    virtual void applyPolypAbsorption() = 0;*/
+    virtual void applyDeposition(EnvMaterial& material) = 0;
+    virtual void applyAbsorption(EnvMaterial& material) = 0;
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
 
 
@@ -76,9 +79,11 @@ public:
     static GridV3 flowfield;
     static GridV3 initialFlowfield;
     static GridV3 terrainNormals;
-    static GridF sandDeposit;
-    static GridF polypDeposit;
-    static std::map<std::string, GridF> materialDeposit;
+//    static GridF sandDeposit;
+//    static GridF polypDeposit;
+//    static std::map<std::string, GridF> materialDeposit;
+
+    static std::map<std::string, EnvMaterial> materials;
 
     static float flowImpactFactor;
 

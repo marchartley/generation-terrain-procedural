@@ -84,6 +84,42 @@ EnvArea *EnvArea::clone()
     return self;
 }
 
+void EnvArea::applyDeposition(EnvMaterial& material)
+{
+    if (this->materialDepositionRate[material.name] == 0) return;
+    AABBox box = AABBox(this->area.points);
+    ShapeCurve translatedCurve = this->area;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    sand.iterateParallel([&] (const Vector3& pos) {
+        bool inside = translatedCurve.contains(pos);
+        sand(pos) = (inside ? 1.f : 0.f) * this->materialDepositionRate[material.name]; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+    });
+    material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+
+    /*
+    AABBox box = AABBox(this->area.points);
+    ShapeCurve translatedCurve = this->area;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    sand.iterateParallel([&] (const Vector3& pos) {
+        bool inside = translatedCurve.contains(pos);
+        sand(pos) = (inside ? 1.f : 0.f) * sandEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+    });
+    EnvObject::sandDeposit.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+    */
+}
+
+void EnvArea::applyAbsorption(EnvMaterial& material)
+{
+    if (this->materialAbsorptionRate[material.name] == 0) return;
+    return;
+}
+/*
 void EnvArea::applySandDeposit()
 {
     AABBox box = AABBox(this->area.points);
@@ -127,6 +163,7 @@ void EnvArea::applyPolypAbsorption()
 {
     return;
 }
+*/
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
