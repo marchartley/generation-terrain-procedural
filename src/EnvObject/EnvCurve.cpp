@@ -102,6 +102,28 @@ void EnvCurve::applySandAbsorption()
     return;
 }
 
+void EnvCurve::applyPolypDeposit()
+{
+    if (this->polypEffect == 0) return;
+    AABBox box = AABBox(this->curve.points);
+    BSpline translatedCurve = this->curve;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF polyp = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    polyp.iterateParallel([&] (const Vector3& pos) {
+        polyp.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->polypEffect;
+    });
+//    std::cout << "Deposition of " << polyp.sum() << " (" << polyp.min() << " -- " << polyp.max() << ") at " << box.min() << " for " << polyp << std::endl;
+//    polyp *= this->polypEffect;
+    EnvObject::polypDeposit.add(polyp, box.min().xy() - Vector3(width, width));
+}
+
+void EnvCurve::applyPolypAbsorption()
+{
+    return;
+}
+
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
@@ -142,15 +164,20 @@ ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
 {
     BSpline translatedCurve = this->curve;
     AABBox box(this->curve.points);
-    Vector3 offset(this->width, this->width, this->width);
+    float height = this->height * this->computeGrowingState();
+    Vector3 offset(this->width, this->width, height * .5f);
+    if (height == 0){
+        box = AABBox({box.center()});
+        offset = Vector3();
+    }
     translatedCurve.translate(-(box.min() - offset * .5f));
 
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
     patch->supportDimensions = box.dimensions() + offset;

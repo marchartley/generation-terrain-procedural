@@ -126,12 +126,13 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 
     displayProcessTime("Finding lagoons and reefs... ", [&]() {
         // Extract the lagoon contours to instantiate the lagoons and the reefs
+        int nbLagoonsKept = 0; // Keep track of the number of lagoons reaching threshold area
         auto lagoonContours = featureAreas["lagoon"].findContoursAsCurves();
         for (auto& curve : lagoonContours) {
             curve.scale(ratio);
             ShapeCurve simplifiedCurve = curve;
-            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+            simplifiedCurve = simplifiedCurve.getPath(10); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
 
             EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
             reef->curve = simplifiedCurve;
@@ -140,6 +141,23 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
             lagoon->area = simplifiedCurve;
             objects.push_back(lagoon);
+
+            nbLagoonsKept++;
+        }
+
+        if (nbLagoonsKept == 0) {  // In the case where we have reefs but no lagoon
+            auto skeletons = featureAreas["reef"].skeletonizeToBSplines();
+            std::cout << "Skeletons : " << skeletons.size() << std::endl;
+            for (auto& curve : skeletons) {
+                curve.scale(ratio);
+                BSpline simplifiedCurve = curve;
+                simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
+                if (simplifiedCurve.length() < 5.f) continue; // Remove too small elements
+
+                EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
+                reef->curve = simplifiedCurve;
+                objects.push_back(reef);
+            }
         }
     });
 
@@ -150,7 +168,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             curve.scale(ratio);
             ShapeCurve simplifiedCurve = curve;
             simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+            if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
 
             EnvArea* coast = dynamic_cast<EnvArea*>(EnvObject::instantiate("coast"));
             coast->area = simplifiedCurve;
@@ -161,16 +179,16 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 
     displayProcessTime("Finding islands... ", [&]() {
         // Extract the island contours
-        auto islandContours = featureAreas["island"].findContoursAsCurves();
+        /*auto islandContours = featureAreas["island"].findContoursAsCurves();
         for (auto& curve : islandContours) {
             curve.scale(ratio);
             ShapeCurve simplifiedCurve = curve;
-            simplifiedCurve = simplifiedCurve.getPath(50); // Reduce the complexity of the curve to avoid having too much computations after
-            if (simplifiedCurve.computeArea() < 5.f) continue; // Remove too small elements
+            simplifiedCurve = simplifiedCurve.getPath(20); // Reduce the complexity of the curve to avoid having too much computations after
+            if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
             EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
             island->area = simplifiedCurve;
             objects.push_back(island);
-        }
+        }*/
     });
 
     return objects;

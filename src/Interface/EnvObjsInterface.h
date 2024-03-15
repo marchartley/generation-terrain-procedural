@@ -49,6 +49,7 @@ public Q_SLOTS:
 
     void displayProbas(std::string objectName);
     void displaySedimentsDistrib();
+    void displayPolypDistrib();
     void displayFlowfieldAsImage();
 
     void updateObjectsList();
@@ -59,6 +60,7 @@ public Q_SLOTS:
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
+    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
 
     void runPerformanceTest();

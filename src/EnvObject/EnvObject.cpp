@@ -14,6 +14,8 @@ GridV3 EnvObject::flowfield = initFlow();
 GridV3 EnvObject::initialFlowfield;
 GridV3 EnvObject::terrainNormals;
 GridF EnvObject::sandDeposit;
+GridF EnvObject::polypDeposit;
+std::map<std::string, GridF> EnvObject::materialDeposit;
 std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
 float EnvObject::flowImpactFactor = .5f;
@@ -31,6 +33,7 @@ GridV3 initFlow() {
         EnvObject::sandDeposit = GridF(EnvObject::flowfield.getDimensions(), 0.f);
         EnvObject::sandDeposit.raiseErrorOnBadCoord = false;
         EnvObject::sandDeposit.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+        EnvObject::polypDeposit = EnvObject::sandDeposit;
     }
     return EnvObject::flowfield;
 }
@@ -52,10 +55,11 @@ void EnvObject::readFile(std::string filename)
     auto json = nlohmann::json::parse(toLower(content));
 
     for (auto& obj : json) {
+        std::string objName = obj["name"];
+        if (startsWith(objName, "--")) continue; // Ignore some objects if the name starts with "--"
         if (!obj.contains("type")) {
             throw std::domain_error("No type given for Environmental Object defined as " + nlohmann::to_string(obj));
         }
-        std::string objName = obj["name"];
 
         if (obj["type"] == "point")
             EnvObject::availableObjects[objName] = EnvPoint::fromJSON(obj);
@@ -85,7 +89,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     EnvObject* obj = nullptr;
     std::string objName = content["name"];
     std::string objType = content["type"];
-    float sandEffect = content["sand"];
+    float sandEffect = (content.contains("polyp") ? float(content["sand"]) : 0.f);
+    float polypEffect = (content.contains("polyp") ? float(content["polyp"]) : 0.f);
     TerrainTypes material = materialFromString(content["material"]);
     ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
     Vector3 dimensions = json_to_vec3(content["dimensions"]);
@@ -121,17 +126,18 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->name = toLower(objName);
     obj->flowEffect = flowEffect;
     obj->sandEffect = sandEffect;
+    obj->polypEffect = polypEffect;
     obj->s_FittingFunction = content["rule"];
-//    obj->fittingFunction = EnvObject::parseFittingFunction(content["rule"]);
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
+    if (dimensions.z == 0) obj->inputDimensions = Vector3();
     return obj;
 }
 
 float EnvObject::computeGrowingState()
 {
-    bool verbose = false;
+    bool verbose = true;
     std::ostringstream oss;
 
     if (this->needsForGrowth.count("age")) {
@@ -178,6 +184,7 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.dir"] = Vector3();
     variables["current.vel"] = float();
     variables["sand"] = float();
+    variables["polyp"] = float();
     variables["depth"] = float();
 
     ExpressionParser parser;
@@ -271,16 +278,44 @@ void EnvObject::applyEffects()
 
 void EnvObject::updateSedimentation()
 {
-    EnvObject::sandDeposit = EnvObject::sandDeposit.meanSmooth(5, 5, 1, false); // Diffuse sand
+    int sandDiffusion = 5;
+    float sandSpeed = 2.f;
+
+    int polypDiffusion = 3;
+    float polypSpeed = 2.f;
+
+    auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
+
+    // Sand deposition
+    EnvObject::sandDeposit = EnvObject::sandDeposit.meanSmooth(sandDiffusion, sandDiffusion, 1, false); // Diffuse sand
     for (auto& object : EnvObject::instantiatedObjects) {
         object->applySandAbsorption();
         object->applySandDeposit();
     }
-    EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(EnvObject::flowfield.meanSmooth(3, 3, 1, true) * 2.f);
+    EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(smoothFluids * sandSpeed);
     EnvObject::sandDeposit.iterateParallel([&] (const Vector3& pos) {
         if (pos.x > 5) return;
         EnvObject::sandDeposit(pos) = std::max(.1f, EnvObject::sandDeposit(pos));
     });
+
+    // Polyp deposition
+    EnvObject::polypDeposit = EnvObject::polypDeposit.meanSmooth(polypDiffusion, polypDiffusion, 1, false); // Diffuse
+    for (auto& object : EnvObject::instantiatedObjects) {
+        object->applyPolypAbsorption();
+        object->applyPolypDeposit();
+    }
+    EnvObject::polypDeposit = EnvObject::polypDeposit.warpWith(smoothFluids * polypSpeed);
+    EnvObject::polypDeposit.iterateParallel([&](size_t i) {
+        EnvObject::polypDeposit[i] = std::clamp(EnvObject::polypDeposit[i], 0.f, 1.f);
+    });
+
+    polypDeposit.iterateParallel([&](size_t i) {
+        if (sandDeposit[i] > polypDeposit[i]) {
+            sandDeposit[i] -= polypDeposit[i];
+            polypDeposit[i] = 0;
+        }
+    });
+//    polypDeposit -= sandDeposit;
 }
 
 void EnvObject::updateFlowfield()
@@ -290,8 +325,9 @@ void EnvObject::updateFlowfield()
     GridF totalOccupancy(EnvObject::flowfield.getDimensions());
     for (auto& object : EnvObject::instantiatedObjects) {
         auto [flow, occupancy] = object->computeFlowModification();
+        float currentGrowth = object->computeGrowingState();
         totalNewFlow += flow;
-        totalOccupancy += occupancy;
+        totalOccupancy += occupancy * currentGrowth;
 
         flow = flow * occupancy + EnvObject::flowfield * (1.f - occupancy);
 //        flow.iterateParallel([&] (size_t i) {
@@ -344,6 +380,7 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
         EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
         EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
+        EnvObject::allScalarProperties["polyp"] = initialScalarPropertyMap;
         EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
 
 
@@ -384,6 +421,7 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
         EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
     });
     EnvObject::allScalarProperties["sand"] = EnvObject::sandDeposit;
+    EnvObject::allScalarProperties["polyp"] = EnvObject::polypDeposit;
     EnvObject::allScalarProperties["depth"] = (heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights;
 }
 
@@ -397,4 +435,22 @@ void EnvObject::reset()
     EnvObject::availableObjects.clear();
     initFlow();
 
+}
+
+#include "Utils/Delaunay.h"
+GraphObj EnvObject::sceneToGraph()
+{
+    GraphObj graph;
+    std::vector<GraphNodeObj*> nodes(EnvObject::instantiatedObjects.size());
+    std::vector<Vector3> positions(nodes.size());
+
+    for (int i = 0; i < nodes.size(); i++) {
+        auto& obj = EnvObject::instantiatedObjects[i];
+        positions[i] = dynamic_cast<EnvPoint*>(obj)->position;
+//        nodes[i] = graph.addNode(new GraphNodeObj(obj, positions[i], i));
+    }
+
+    graph = Delaunay().fromVoronoi(Voronoi(positions)).graph.cast<EnvObject*>();
+
+    return graph;
 }

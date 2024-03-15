@@ -584,7 +584,8 @@ bool Viewer::stopRecording()
 {
     std::string command = "ffmpeg -f image2 -i ";
 //    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
-    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
+//    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
+    command += this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.mp4";
     if (this->screenshotIndex > 0) {
         int result = std::system(command.c_str());
         if (result != 0) {

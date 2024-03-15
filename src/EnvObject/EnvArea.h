@@ -20,8 +20,12 @@ public:
     virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvArea* clone();
+
     virtual void applySandDeposit();
     virtual void applySandAbsorption();
+    virtual void applyPolypDeposit();
+    virtual void applyPolypAbsorption();
+
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;

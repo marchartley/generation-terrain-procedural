@@ -89,36 +89,41 @@ void EnvPoint::applySandAbsorption()
     EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
 }
 
+void EnvPoint::applyPolypDeposit()
+{
+    if (this->polypEffect == 0) return;
+    GridF polyp = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->polypEffect * this->computeGrowingState();
+    EnvObject::polypDeposit.add(polyp, this->position - polyp.getDimensions() * .5f);
+}
+
+void EnvPoint::applyPolypAbsorption()
+{
+    if (this->needsForGrowth.count("polyp") == 0) return;
+
+    float polypMissing = (needsForGrowth["polyp"] - currentSatisfaction["polyp"]) * (this->computeGrowingState() + .01f) / (1.01f);
+
+    GridF polypAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * polypMissing;
+    Vector3 subsetStart = (this->position - polypAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
+    Vector3 subsetEnd = (this->position + polypAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
+    GridF currentPolyp = EnvObject::polypDeposit.subset(subsetStart, subsetEnd);
+    polypAbsorbed = polypAbsorbed.min(currentPolyp, 0, 0, 0);
+    this->currentSatisfaction["polyp"] += polypAbsorbed.sum();
+    EnvObject::polypDeposit.add(-polypAbsorbed, this->position - polypAbsorbed.getDimensions() * .5f);
+}
+
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
 //    GridV3 flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
     //GridF gauss = GridF::gaussian(2.f*radius, 2.f*radius, 1, radius/* * .5f*/).normalize();
-    GridF gauss(2.f*radius, 2.f*radius, 1, radius);
-    Vector3 center(radius, radius);
-//    gauss.iterateParallel([&](const Vector3& pos) {
-//        Vector3 dir = pos - center;
-//        float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
-//        gauss(pos) = dir.setMag(mag);
-//    });
-    GridV3 gradients = gauss.gradient();
-    float maxNorm = 0.f;
-    gradients.iterate([&] (size_t i) {
-        maxNorm = std::max(maxNorm, gradients[i].norm2());
-    });
-    maxNorm = std::sqrt(maxNorm);
-    gradients.iterateParallel([&] (size_t i) {
-        gradients[i] /= -maxNorm;
-        /*Vector3 localPos = gradients.getCoordAsVector3(i);
-        Vector3 localPosFromCenter = localPos - Vector3(radius, radius);
-        Vector3 globalPos = localPos + this->position - Vector3(radius, radius);
-        gradients[i] /= (maxNorm * sign((localPosFromCenter).dot(EnvObject::flowfield(globalPos))));
-        gradients[i] *= gauss[i];*/
-    });
 
+    float currentGrowth = 1.f; //computeGrowingState();
+
+    GridV3 gradients(2.f*radius, 2.f*radius, 1);
+    Vector3 center = Vector3(radius, radius);
     gradients.iterateParallel([&](const Vector3& pos) {
         Vector3 dir = pos - center;
         float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
-        gradients(pos) = dir.setMag(mag);
+        gradients(pos) = dir.setMag(mag * currentGrowth);
     });
 
     GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
@@ -134,13 +139,16 @@ ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
 {
 
     ImplicitPrimitive* patch;
+    float currentGrowth = this->computeGrowingState();
+    Vector3 dimensions = Vector3(radius * currentGrowth, radius * currentGrowth, radius * currentGrowth * this->height);
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * this->computeGrowingState() * this->height), 0, {}, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, Vector3(radius, radius, radius * this->computeGrowingState() * this->height), radius * .25f, {}, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * currentGrowth, {}, true);
     }
 
+    patch->supportDimensions = dimensions;
     patch->position = this->position.xy() - Vector3(radius, radius) * .5f;
     patch->material = this->material;
     patch->name = this->name;

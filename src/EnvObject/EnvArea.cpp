@@ -105,6 +105,29 @@ void EnvArea::applySandAbsorption()
     return;
 }
 
+void EnvArea::applyPolypDeposit()
+{
+    if (this->polypEffect == 0) return;
+
+    AABBox box = AABBox(this->area.points);
+    ShapeCurve translatedCurve = this->area;
+    for (auto& p : translatedCurve)
+        p = p + Vector3(width, width, 0) - box.min();
+    GridF polyp = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+    polyp.iterateParallel([&] (const Vector3& pos) {
+        bool inside = translatedCurve.contains(pos);
+        polyp(pos) = (inside ? 1.f : 0.f) * polypEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+    });
+//    polyp *= this->polypEffect;
+    EnvObject::polypDeposit.add(polyp.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+}
+
+void EnvArea::applyPolypAbsorption()
+{
+    return;
+}
+
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
