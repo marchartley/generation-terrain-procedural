@@ -456,7 +456,7 @@ std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, 
 
     for (size_t s = 1; s <= logN; ++s) {
         size_t m = 1 << s;
-        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * PI / float(m));
+        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(PI) / float(m));
         for (size_t k = 0; k < N; k += m) {
             std::complex<float> w = 1.0f;
             for (size_t j = 0; j < m / 2; ++j) {

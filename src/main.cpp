@@ -1014,6 +1014,37 @@ int main(int argc, char *argv[])
     return 0;
     */
 
+    /*
+     * Not a unit test, just being bored...
+    GridV3 res(1000, 1000, 1);
+
+    auto recompute = [&](std::complex<float> c) {
+        res.iterateParallel([&](const Vector3& p) {
+            std::complex<float> z1 = std::complex<float>(p.x - res.sizeX * .5f, p.y - res.sizeY * .5f) / std::complex<float>(res.sizeX * .25f, res.sizeY * .25f);
+            auto z = z1;
+            int iter = 0;
+            int maxIter = 200;
+            for (iter = 0; iter < maxIter; iter++) {
+                z = z * z + c; //z1;
+                auto diff = z - z1;
+                if (diff.real() * diff.real() + diff.imag() * diff.imag() > 5)
+                    break;
+            }
+            res(p) = colorPalette(iter / float(maxIter), {Vector3(0, 0, 0), Vector3(1, 1, 1), Vector3(0, 0, 1)});
+        });
+        Plotter::get()->addImage(res);
+        Plotter::get()->show();
+    };
+
+
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+        recompute({(p.x - .5f) * 2.f, (p.y - .5f) * 2.f});
+    });
+    recompute({0.f, 0.f});
+    Plotter::get()->exec();
+    return 0;
+    */
+
     EnvObject::readFile("saved_maps/primitives.json");
 
     ViewerInterface vi;

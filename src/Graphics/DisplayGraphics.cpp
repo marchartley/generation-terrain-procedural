@@ -483,6 +483,8 @@ int Plotter::exec()
 void Plotter::saveFig(std::string filename)
 {
     QPixmap p = this->chartView->grab();
+    if (this->backImage)
+        p = QPixmap::fromImage(*backImage);
     p.save(QString::fromStdString(filename), "PNG");
 }
 
