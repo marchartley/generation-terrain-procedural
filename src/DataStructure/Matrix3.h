@@ -249,6 +249,7 @@ public:
     template<typename U>
     bool operator==(Matrix3<U> o) const;
 
+
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
 
     std::vector<T> data;
@@ -1657,6 +1658,7 @@ template<typename T>
 Matrix3<T> Matrix3<T>::operator-() const {
     return *this * -1.f;
 }
+
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)

@@ -416,6 +416,7 @@ float BSpline::length() const
 
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
+    if (this->size() == 0) return *this;
     if (newNbPoints == -1)
         newNbPoints = this->points.size();
 
@@ -442,6 +443,7 @@ BSpline& BSpline::resamplePoints(int newNbPoints)
         } else {
             currentDistance += edgeDist;
             currentPointIndex ++;
+            currentPos = p1;
         }
     }
     newPoints.push_back(this->points.back());
@@ -541,7 +543,7 @@ Vector3 BSpline::getCatmullPoint(float x, float alpha) const
     if (this->closed)
         displayedPoints.push_back(displayedPoints.front());
 
-    size_t lastPointIndex = (this->closed ? displayedPoints.size() - 1 : displayedPoints.size() - 1);
+    size_t lastPointIndex = displayedPoints.size() - 1;
     size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
 
     if (x == 0.f) return displayedPoints[0];

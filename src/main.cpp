@@ -31,6 +31,8 @@
 #include "Graph/TopoMap.h"
 #include "Utils/Table.h"
 #include "Graph/WaveFunctionCollapse.h"
+#include "DataStructure/Kelvinlet.h"
+#include "DataStructure/Image.h"
 
 using namespace std;
 
@@ -1043,6 +1045,273 @@ int main(int argc, char *argv[])
     recompute({0.f, 0.f});
     Plotter::get()->exec();
     return 0;
+    */
+
+    /*
+     * Unit test: Resampling the paths on BSplines
+    BSpline curve({
+        Vector3(0, 0, 0),
+        Vector3(1, 0, 0),
+        Vector3(2, 0, 0),
+        Vector3(10, 1, 0),
+        Vector3(11, 1, 0),
+        Vector3(12, 1, 0)
+    });
+
+    curve = curve.resamplePoints(200).resamplePoints(10);
+    auto path = curve.points; // curve.getPath(100, true);
+    Plotter::get()->addScatter(path);
+    Plotter::get()->addPlot(path);
+    return Plotter::get()->exec();
+    */
+
+    /*
+    int nbCandidates = 100;
+    Vector3 startPosition(0, 0, 0);
+    Vector3 direction(1, -1, 0);
+    float radius = 100;
+    float angle = deg2rad(30);
+
+    std::vector<Vector3> points(nbCandidates);
+    float initialAngle = direction.getSignedAngleWith(Vector3(1, 0, 0));
+    for (int i = 0; i < nbCandidates; i++) {
+        float phi = interpolation::inv_linear(random_gen::generate(), -angle, angle);
+        float r = std::sqrt(random_gen::generate()) * radius; // Use square root to svoid bias towards center of the disk
+
+        points[i] = Vector3(r, std::sin(phi) * r).rotate(0, 0, initialAngle) + startPosition;
+    }
+
+    Plotter::get()->addScatter(points);
+    return Plotter::get()->exec();
+    */
+
+    /*
+     * Unit test: Matrix products
+    {
+        std::cout << "Test 1" << std::endl;
+        Matrix A(std::vector<std::vector<float>>{{1, 2, 3}});
+        Matrix B(std::vector<std::vector<float>>{
+                     {1, 0, 0}, {0, 2, 0}, {0, 0, 3}
+                 });
+        std::cout << A << "\n*\n" << B << "\n=\n" << std::flush;
+        std::cout << A.product(B) << std::endl;
+    }
+    {
+        std::cout << "Test 2" << std::endl;
+        Matrix A(std::vector<std::vector<float>>{{1}, {2}, {3}});
+        Matrix B = A.transpose();
+        std::cout << A << "\n*\n" << B << "\n=\n" << std::flush;
+        std::cout << A.product(B) << std::endl;
+    }
+    {
+        std::cout << "Test 3" << std::endl;
+        Matrix A(std::vector<std::vector<float>>{
+                     {1, 0, 0}, {0, 2, 0}, {0, 0, 3}
+                 });
+        Matrix B(std::vector<std::vector<float>>{{1}, {2}, {3}});
+        std::cout << A << "\n*\n" << B << "\n=\n" << std::flush;
+        std::cout << A.product(B) << std::endl;
+    }
+
+    return 0;
+    */
+
+
+    /*
+     * Unit test: Kelvinlets on an image
+    Vector3 size = Vector3(200, 200, 1);
+    Vector3 center = size.xy() * .5f;
+
+    GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;
+
+    std::vector<Kelvinlet*> operations;
+
+    auto f = [&](float r, float s, const Vector3& mousePos) {
+//        TwistKelvinlet* t = new TwistKelvinlet;
+//        TranslateKelvinlet* t = new TranslateKelvinlet;
+//        ScaleKelvinlet* t = new ScaleKelvinlet;
+        PinchKelvinlet* t = new PinchKelvinlet;
+        Vector3 offset = (mousePos - center);
+        t->pos = center;
+//        center = mousePos;
+//        t->force = Vector3(0, 0, -offset.getSignedAngleWith(Vector3(1, 0, 0)));
+        t->force = offset * 10.f; //Vector3(0, s, 0);
+        // t->force = Vector3(20, 0, 0);
+//        t->scale = offset.norm();
+        t->radialScale = r;
+        std::cout << t->force << std::endl;
+
+        for (auto& op : operations)
+            delete op;
+        operations.clear();
+        operations.push_back(t);
+
+        GridV3 img(size);
+        displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                if (p == center) return;
+//                float rEps = t->densityFunction((t->pos - p).norm());
+//                img(p) = Vector3(1, 1, 1) * rEps;
+                Vector3 pos = p;
+                for (int i = operations.size() - 1; i >= 0; i--) {
+                    const auto& t = operations[i];
+                    Vector3 warp = t->evaluate(pos);
+                    pos -= warp;
+                }
+//                pos = p - warp;
+//                img(p) = warp;
+    //            img(p) = pos - mousePos;
+//                img(p) = pos.xy() / size;
+//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y * .1f) * std::sin(pos.x * .1f);
+                img(p) = initialImage.interpolate(pos);
+
+            });
+        });
+        Plotter::get()->addImage(img);
+        Plotter::get()->show();
+    };
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+        float r = p.x * 1.f * size.x;
+        float s = p.y * 1.f * size.y;
+        f(5.f, s, p * size);
+    });
+    QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+        center = clickPos;
+    });
+
+    f(10, 0, center + Vector3(0, 10, 0));
+
+    return Plotter::get()->exec();
+    */
+
+    /*
+     * Unit test: Kelvinlets on curves
+     * Notes: I guess only "TranslateKelvinletCurve" has a meaning...
+    Vector3 size = Vector3(200, 200, 1);
+    Vector3 center = size.xy() * .5f;
+
+    GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;
+
+    std::vector<Kelvinlet*> operations;
+
+    auto f = [&](float r, float s, const Vector3& mousePos) {
+//        TwistKelvinletCurve* t = new TwistKelvinletCurve;
+//        TranslateKelvinletCurve* t = new TranslateKelvinletCurve;
+//        ScaleKelvinletCurve* t = new ScaleKelvinletCurve;
+        PinchKelvinletCurve* t = new PinchKelvinletCurve;
+        t->curve = BSpline({center, center + Vector3(0, size.y * .25f), mousePos});
+        t->force = 3000.f;
+        t->radialScale = r;
+
+        for (auto& op : operations)
+            delete op;
+        operations.clear();
+        operations.push_back(t);
+
+        GridV3 img(size);
+        displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                if (p == center) return;
+                Vector3 pos = p;
+                for (int i = operations.size() - 1; i >= 0; i--) {
+                    const auto& t = operations[i];
+                    Vector3 warp = t->evaluate(pos);
+                    pos -= warp;
+                }
+//                img(p) = pos - p;
+    //            img(p) = pos - mousePos;
+//                img(p) = pos.xy() / size;
+//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y * .1f) * std::sin(pos.x * .1f);
+                img(p) = initialImage.interpolate(pos);
+
+            });
+        });
+        Plotter::get()->addImage(img);
+        Plotter::get()->show();
+    };
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+        float r = p.x * 1.f * size.x;
+        float s = p.y * 1.f * size.y;
+        f(5.f, s, p * size);
+    });
+    QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+        center = clickPos;
+    });
+
+    f(10, 0, center + Vector3(0, 10, 0));
+
+    return Plotter::get()->exec();
+    */
+
+    /*
+     * Not unit test: Displaying the divergence of the resulting vector fields after Kelvinlets
+     *
+    Vector3 size = Vector3(200, 200, 1);
+    Vector3 center = size.xy() * .5f;
+
+    GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;
+
+    std::vector<Kelvinlet*> operations;
+
+    auto f = [&](float r, float s, const Vector3& mousePos) {
+//        TwistKelvinletCurve* t = new TwistKelvinletCurve;
+//        TranslateKelvinletCurve* t = new TranslateKelvinletCurve;
+//        ScaleKelvinletCurve* t = new ScaleKelvinletCurve;
+        PinchKelvinletCurve* t = new PinchKelvinletCurve;
+        t->curve = BSpline({center, center + Vector3(0, size.y * .25f), mousePos});
+        t->force = -3000.f;
+        t->radialScale = r;
+
+        for (auto& op : operations)
+            delete op;
+        operations.clear();
+        operations.push_back(t);
+
+        GridV3 img(size);
+        GridV3 distortion(size);
+        displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
+            img.iterateParallel([&](const Vector3& p) {
+                if (p == center) return;
+                Vector3 pos = p;
+                for (int i = operations.size() - 1; i >= 0; i--) {
+                    const auto& t = operations[i];
+                    Vector3 warp = t->evaluate(pos);
+                    pos -= warp;
+                }
+                distortion(p) = pos - p;
+//                img(p) = pos - p;
+    //            img(p) = pos - mousePos;
+//                img(p) = pos.xy() / size;
+                img(p) = Vector3(1, 1, 1) * (std::sin(pos.y * .1f) * std::sin(pos.x * .1f) > 0.f ? 1.f : 0.f);
+//                img(p) = initialImage.interpolate(pos);
+
+            });
+            GridF divergence = distortion.divergence().meanSmooth(3, 3, 1);
+//            divergence.normalize();
+            float divMin = divergence.min(), divMax = divergence.max();
+            divergence.iterateParallel([&](size_t i){
+                divergence[i] = ((divergence[i] / (divergence[i] < 0 ? std::abs(divMin) : divMax)) + 1.f) * .5f;
+            });
+//            std::cout << divMin << " " << divMax << " " << divergence.min() << " " << divergence.max() << std::endl;
+            img.iterateParallel([&](size_t i) {
+                img[i] *= colorPalette(divergence[i], {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 0, 1)});
+            });
+        });
+        Plotter::get()->addImage(img);
+        Plotter::get()->show();
+    };
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
+        float r = p.x * 1.f * size.x;
+        float s = p.y * 1.f * size.y;
+        f(5.f, s, p * size);
+    });
+    QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
+        center = clickPos;
+    });
+
+    f(10, 0, center + Vector3(0, 10, 0));
+
+    return Plotter::get()->exec();
     */
 
     EnvObject::readFile("saved_maps/primitives.json");

@@ -1,5 +1,7 @@
 #include "DataStructure/Matrix.h"
 
+#include <sstream>
+
 Matrix::Matrix()
     : Matrix(1, 1, 0.0)
 {
@@ -27,7 +29,7 @@ Matrix::Matrix(int n, int m, float** data){
             (*this)[i].push_back(data[i][j]);
     }
 }
-Matrix::Matrix(std::vector<std::vector<float>> data)
+Matrix::Matrix(const std::vector<std::vector<float> > &data)
     : Matrix(data.size(), data[0].size())
 {
     for (int i = 0; i < data.size(); i++) {
@@ -99,21 +101,31 @@ Matrix Matrix::submatrix(size_t rowToIgnore, size_t colToIgnore) const
 
 Matrix Matrix::transpose() const
 {
-    Matrix temp(this[0].size(), this->size());
-    for(size_t row = 0; row < this->size(); row++)
+    Matrix temp((*this)[0].size(), this->size());
+    for(size_t row = 0; row < (*this)[0].size(); row++)
         for(size_t col = 0; col < this->size(); col++)
             temp[row][col] = (*this)[col][row];
     return temp;
 }
 
-Matrix Matrix::product(Matrix m) const
+Matrix Matrix::product(const Matrix& mat) const
 {
-    Matrix temp((*this)[0].size(), m[0].size());
-    for (size_t row = 0; row < (*this)[0].size(); row++) {
-        for (size_t col = 0; col < m[0].size(); col++)
+    int m = this->cols();
+    int l = this->rows();
+    int m2 = mat.rows();
+    int n = mat.cols();
+    if (m != m2) {
+        std::ostringstream oss;
+        oss << "Error on product between matrices. A defined as " << m << "x" << l << " and B defined as " << n << "x" << m2 << ":\n";
+        oss << this->toString() << "\n*\n" << mat.toString();
+        throw std::domain_error(oss.str());
+    }
+    Matrix temp(l, n);
+    for (size_t row = 0; row < l; row++) {
+        for (size_t col = 0; col < n; col++)
         {
-            for (size_t k = 0; k < m.size(); k++) {
-                temp[row][col] += (*this)[row][k] * m[k][col];
+            for (size_t k = 0; k < m; k++) {
+                temp[row][col] += (*this)[row][k] * mat[k][col];
             }
         }
     }
@@ -126,6 +138,15 @@ float Matrix::trace() const
     for (size_t i = 0; i < this->size(); i++)
         trace += (*this)[i][i];
     return trace;
+}
+
+Matrix Matrix::identity(int size)
+{
+    Matrix m(size, size);
+    for (int i = 0; i < size; i++) {
+        m[i][i] = 1;
+    }
+    return m;
 }
 
 std::string Matrix::displayValues() const
@@ -158,10 +179,11 @@ std::string Matrix::displayValuesOneLine() const
 }
 
 
-Matrix operator+(Matrix a, Matrix b)
+Matrix operator+(const Matrix& a, const Matrix& b)
 {
-    a += b;
-    return a;
+    Matrix temp = a;
+    temp += b;
+    return temp;
 }
 Matrix& Matrix::operator+=(const Matrix& o)
 {
@@ -170,10 +192,11 @@ Matrix& Matrix::operator+=(const Matrix& o)
             (*this)[row][col] += o[row][col];
     return (*this);
 }
-Matrix operator-(Matrix a, const Matrix& b)
+Matrix operator-(const Matrix& a, const Matrix& b)
 {
-    a -= b;
-    return b;
+    Matrix temp = a;
+    temp -= b;
+    return temp;
 }
 Matrix& Matrix::operator-=(const Matrix& o)
 {
@@ -183,20 +206,22 @@ Matrix& Matrix::operator-=(const Matrix& o)
     return (*this);
 }
 
-Matrix Matrix::matprod(Matrix A, Matrix B)
+Matrix Matrix::matprod(const Matrix &A, const Matrix &B)
 {
     return A.product(B);
 }
-Matrix operator*(Matrix a, const Matrix& o)
+Matrix operator*(const Matrix& a, const Matrix& o)
 {
-    a *= o;
-    return a;
+    Matrix temp = a;
+    temp *= o;
+    return temp;
 }
 Matrix& Matrix::operator*=(const Matrix& o)
 {
+    *this = Matrix::matprod(*this, o);/*
     for(size_t row = 0; row < o.size(); row++)
         for(size_t col = 0; col < o[0].size(); col++)
-            (*this)[row][col] *= o[row][col];
+            (*this)[row][col] *= o[row][col];*/
     return (*this);
 }
 Matrix Matrix::operator*(float o)

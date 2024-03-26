@@ -61,6 +61,7 @@ SOURCES += \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
+    src/DataStructure/Kelvinlet.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/MemoryPool.cpp \
@@ -234,6 +235,7 @@ HEADERS += \
     src/DataStructure/BVH.h \
     src/DataStructure/Image.h \
     src/DataStructure/KDTree.h \
+    src/DataStructure/Kelvinlet.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/MemoryPool.h \
