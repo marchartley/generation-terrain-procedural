@@ -32,6 +32,9 @@ ExpressionParser::ExpressionParser() {
     unaryVectorOperators["norm"] = [](const Vector3& a) { return a.norm(); };
     unaryVectorOperators["d"] = [](const Vector3& a) { return a.norm(); };
     unaryVectorOperators["random"] = [](const Vector3& a) { return random_gen::generate_perlin(a.x, a.y, a.z); };
+    unaryVectorOperators["x"] = [](const Vector3& a) { return a.x; };
+    unaryVectorOperators["y"] = [](const Vector3& a) { return a.y; };
+    unaryVectorOperators["z"] = [](const Vector3& a) { return a.z; };
 
     precedence = {
             {"+", 1},
@@ -53,7 +56,8 @@ ExpressionParser::ExpressionParser() {
     }
 }
 
-std::function<float (const VariableMap &)> ExpressionParser::parse(const std::string &expression, const VariableMap& variables) {
+std::function<float (const VariableMap &)> ExpressionParser::parse(const std::string &expression, const VariableMap& _variables) {
+    VariableMap variables = extendVariables(_variables);
     auto tokens = tokenizeExpression(expression);
     /*for (auto& t : tokens) {
         std::cout << t << " ";
@@ -79,8 +83,9 @@ std::function<float (const VariableMap &)> ExpressionParser::parse(const std::st
     };
 }
 
-bool ExpressionParser::validate(const std::string &expression, const VariableMap& variables, bool raiseErrors) {
+bool ExpressionParser::validate(const std::string &expression, const VariableMap& _variables, bool raiseErrors) {
 
+    VariableMap variables = extendVariables(_variables);
     std::vector<std::string> allErrors;
     // Tokenize the expression
     auto tokens = tokenizeExpression(expression);
@@ -395,4 +400,21 @@ std::vector<std::vector<std::string> > ExpressionParser::extractObjectPropertyPa
     }
 
     return results;
+}
+
+VariableMap ExpressionParser::extendVariables(const VariableMap &_variables)
+{
+    return _variables;
+    /*
+    VariableMap variables = _variables;
+    for (auto& [name, _var] : _variables) {
+        if (std::holds_alternative<Vector3>(_var)) {
+            Vector3 var = std::get<Vector3>(_var);
+            variables[name + ".x"] = var.x;
+            variables[name + ".y"] = var.y;
+            variables[name + ".z"] = var.z;
+        }
+    }
+    return variables;
+    */
 }
