@@ -171,6 +171,8 @@ public:
 
     static std::string json_identifier;
 
+    virtual void reevaluateAll() {}
+
 //protected:
     GridF _cachedMinHeight;
     GridF _cachedMaxHeight;

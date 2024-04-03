@@ -232,7 +232,7 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
     if (!this->heightmap)
         this->heightmap = std::make_shared<Heightmap>();
     if (!this->layerGrid)
-        this->layerGrid = std::make_shared<LayerBasedGrid>();
+        this->layerGrid = std::make_shared<LayerBasedGrid>(nx, ny);
     if (!this->implicitTerrain)
         this->implicitTerrain = std::make_shared<ImplicitNaryOperator>();
 

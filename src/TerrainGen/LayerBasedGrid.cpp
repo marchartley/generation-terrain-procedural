@@ -719,6 +719,7 @@ void LayerBasedGrid::add(Patch3D patch, TerrainTypes material, bool applyDistanc
 void LayerBasedGrid::add(ImplicitPatch* patch)
 {
     auto AABBox = patch->getSupportBBox();
+//    AABBox.expand({Vector3(0, 0, 0), Vector3(100, 100, 0)});
     Vector3 minPos = (AABBox.min() / this->scaling) - this->translation;
     Vector3 maxPos = (AABBox.max() / this->scaling) - this->translation;
 
@@ -735,13 +736,13 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
         as2Dnary->updateCache();
         as2Dnary->reevaluateAll();
     }
-    #pragma omp parallel for collapse(2)
+//    #pragma omp parallel for collapse(2)
     for (int x = minX; x < maxX; x++) {
         for (int y = minY; y < maxY; y++) {
             float z = minZ;
-//            if (x == 50 && y == 50) {
-//                int a = 0;
-//            }
+            /*if (x == 59 && y == 53) {
+                int a = 0;
+            }*/
             while ( z < maxZ) {
                 nbEvaluations++;
                 auto [totalValue, initialDensityAndProportion] = patch->getMaterialsAndTotalEvaluation((Vector3(x, y, z) + this->translation) * this->scaling); //patch->getDensityAtPosition(Vector3(x, y, z));

@@ -135,7 +135,6 @@ struct Material {
 };
 
 uniform vec4 globalAmbiant;
-//uniform PositionalLight light;
 const int nbLights = 6;
 uniform PositionalLight lights[nbLights];
 uniform bool isSpotlight;

@@ -600,12 +600,12 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
     this->layerGrid->reset();
 //    this->implicitTerrain->cleanCache();
     this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
-    //voxelGrid->fromImplicit(implicitTerrain.get());
+    voxelGrid->fromImplicit(implicitTerrain.get());
 //    voxelGrid->smoothVoxels();
 //    voxelGrid->fromCachedData();
     //heightmap->fromImplicit(implicitTerrain.get());
-    voxelGrid->fromLayerBased(*layerGrid);
-    heightmap->fromLayerGrid(*layerGrid);
+//    voxelGrid->fromLayerBased(*layerGrid);
+//    heightmap->fromLayerGrid(*layerGrid);
     this->savePatchesAsFile(this->mainFilename);
 
     Q_EMIT this->terrainUpdated();

@@ -70,7 +70,7 @@ EnvPoint *EnvPoint::clone()
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->materialDepositionRate[material.name] * this->computeGrowingState();
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState();
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
     /*
     GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
@@ -80,6 +80,7 @@ void EnvPoint::applyDeposition(EnvMaterial& material)
 
 void EnvPoint::applyAbsorption(EnvMaterial& material)
 {
+//    std::cout << "Absorbing " << material.name << " : " << this->materialAbsorptionRate[material.name] << std::endl;
     if (this->materialAbsorptionRate[material.name] == 0) return;
     if (this->needsForGrowth.count(material.name) == 0) return;
 
@@ -92,65 +93,7 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
     sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
     this->currentSatisfaction[material.name] += sandAbsorbed.sum();
     material.currentState.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
-
-    /*
-    if (this->needsForGrowth.count("sand") == 0) return;
-
-    float sandMissing = (needsForGrowth["sand"] - currentSatisfaction["sand"]) * (this->computeGrowingState() + .01f) / (1.01f);
-
-    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
-    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
-    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
-    GridF currentSand = EnvObject::sandDeposit.subset(subsetStart, subsetEnd);
-    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
-    this->currentSatisfaction["sand"] += sandAbsorbed.sum();
-    EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);*/
 }
-/*
-void EnvPoint::applySandDeposit()
-{
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
-    EnvObject::sandDeposit.add(sand, this->position - sand.getDimensions() * .5f);
-
-}
-
-void EnvPoint::applySandAbsorption()
-{
-    if (this->needsForGrowth.count("sand") == 0) return;
-
-    float sandMissing = (needsForGrowth["sand"] - currentSatisfaction["sand"]) * (this->computeGrowingState() + .01f) / (1.01f);
-
-    GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
-    Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
-    Vector3 subsetEnd = (this->position + sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
-    GridF currentSand = EnvObject::sandDeposit.subset(subsetStart, subsetEnd);
-    sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
-    this->currentSatisfaction["sand"] += sandAbsorbed.sum();
-    EnvObject::sandDeposit.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
-}
-
-void EnvPoint::applyPolypDeposit()
-{
-    if (this->polypEffect == 0) return;
-    GridF polyp = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->polypEffect * this->computeGrowingState();
-    EnvObject::polypDeposit.add(polyp, this->position - polyp.getDimensions() * .5f);
-}
-
-void EnvPoint::applyPolypAbsorption()
-{
-    if (this->needsForGrowth.count("polyp") == 0) return;
-
-    float polypMissing = (needsForGrowth["polyp"] - currentSatisfaction["polyp"]) * (this->computeGrowingState() + .01f) / (1.01f);
-
-    GridF polypAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * polypMissing;
-    Vector3 subsetStart = (this->position - polypAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
-    Vector3 subsetEnd = (this->position + polypAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 1);
-    GridF currentPolyp = EnvObject::polypDeposit.subset(subsetStart, subsetEnd);
-    polypAbsorbed = polypAbsorbed.min(currentPolyp, 0, 0, 0);
-    this->currentSatisfaction["polyp"] += polypAbsorbed.sum();
-    EnvObject::polypDeposit.add(-polypAbsorbed, this->position - polypAbsorbed.getDimensions() * .5f);
-}
-*/
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
@@ -159,6 +102,20 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 
     float currentGrowth = 1.f; //computeGrowingState();
 
+    ScaleKelvinlet k;
+    k.pos = this->position;
+    k.radialScale = this->radius;
+    k.scale = 50.f * currentGrowth;
+    k.mu = .9f;
+    k.v = 0.f;
+
+    GridV3 flow = EnvObject::flowfield;
+    flow.iterateParallel([&](const Vector3& p) {
+        Vector3 displacement = k.evaluate(p);
+        flow(p) += displacement;
+    });
+    return {flow, GridF(flow.getDimensions(), 1.f)};
+    /*
     GridV3 gradients(2.f*radius, 2.f*radius, 1);
     Vector3 center = Vector3(radius, radius);
     gradients.iterateParallel([&](const Vector3& pos) {
@@ -173,24 +130,26 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
     occupancy.iterateParallel([&] (const Vector3& pos) {
         occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
     });
-    return {flow, occupancy};
+    return {flow, occupancy};*/
 }
 
-ImplicitPatch* EnvPoint::createImplicitPatch(ImplicitPrimitive *previousPrimitive)
+ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
 {
 
     ImplicitPrimitive* patch;
     float currentGrowth = this->computeGrowingState();
     Vector3 dimensions = Vector3(radius * currentGrowth, radius * currentGrowth, radius * currentGrowth * this->height);
+    Vector3 patchPosition = this->position.xy() - Vector3(radius, radius) * .5f;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, true);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, false);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * currentGrowth, {}, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * currentGrowth, {}, false);
+        patchPosition.z = heights(this->position.xy());
     }
 
+    patch->position = patchPosition;
     patch->supportDimensions = dimensions;
-    patch->position = this->position.xy() - Vector3(radius, radius) * .5f;
     patch->material = this->material;
     patch->name = this->name;
     return patch;

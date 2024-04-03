@@ -33,6 +33,7 @@
 #include "Graph/WaveFunctionCollapse.h"
 #include "DataStructure/Kelvinlet.h"
 #include "DataStructure/Image.h"
+#include "EnvObject/ExpressionParser.h"
 
 using namespace std;
 
@@ -106,6 +107,7 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 
+    //((d((island - pos)?{0 0 0}) min 20 max 10) - 10
     /*
      * Unit test: BSpline with duplicate values such that it doesn't return any NaN
     GridV3 vals(200, 200);
@@ -1313,6 +1315,60 @@ int main(int argc, char *argv[])
 
     return Plotter::get()->exec();
     */
+
+    /*
+    GridF img(100, 100, 1);
+
+    Vector3 center = img.getDimensions().xy() * .5f;
+    float radius = 10.f;
+    ShapeCurve shape = ShapeCurve({
+                                      Vector3(10, 10),
+                                      Vector3(20, 50),
+                                      Vector3(50, 70),
+                                      Vector3(70, 70),
+                                      Vector3(50, 10)
+                                  });
+//    ShapeCurve shape = ShapeCurve::circle(30, center, 10);
+    img.iterateParallel([&](const Vector3& p) {
+        Vector3 pos = p;
+        pos += Vector3(random_gen::generate_perlin(p.x * 2.f, p.y * 2.f, 0), random_gen::generate_perlin(p.x * 2.f, p.y * 2.f, 100), 0) * 100.f;
+        float val = (random_gen::generate_perlin(pos.x, pos.y, pos.z) + 1.f) * .5f;
+
+        float signDistance = BSpline(shape.closedPath()).estimateDistanceFrom(p, true); // * (shape.containsXY(p, false) ? 1.f : -1.f);
+        float falloff = std::clamp((radius - signDistance) / radius, 0.f, 1.f); // shape.containsXY(p, false) ? 1.f : std::max(0.f, (radius - shape.estimateDistanceFrom(p)) / radius);
+//        float falloff = interpolation::smooth((shape.containsXY(p) ? 1.f : std::max(0.f, radius - shape.estimateDistanceFrom(p) / radius)));
+//        float falloff = interpolation::smooth(std::max(0.f, (radius - (p - center).norm()) / radius));
+//        img(p) = val * falloff;
+        img(p) = falloff;
+    });
+    Heightmap heightmap;
+    heightmap.heights = img * 100.f;
+    std::ofstream off("test.stl");
+    off << heightmap.getGeometry().toSTL();
+    off.close();
+//    return 0;
+    Plotter::get()->addImage(img);
+    return Plotter::get()->exec();
+    */
+
+
+    /*Matrix mat({
+                   {1, 2, 3, 11},
+                   {4, 5, 6, 22},
+                   {7, 8, 9, 33}
+               });
+    GridF mat2(mat);
+
+    std::cout << mat << "\n\n" << mat2.displayValues() << std::endl;
+
+    std::cout << "As an array: " << std::flush;
+    float* values = mat.toArray();
+    for (int i = 0; i < mat.rows() * mat.cols(); i++) {
+        std::cout << values[i] << " ";
+    }
+    delete[] values;
+    std::cout << std::endl;
+    return 0;*/
 
     EnvObject::readFile("saved_maps/primitives.json");
 

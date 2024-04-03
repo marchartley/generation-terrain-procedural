@@ -35,7 +35,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->objectsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
     this->objectsMesh.useIndices = false;
 
-    this->rootPatch = new Implicit2DNary;
+    this->rootPatch = new ImplicitNaryOperator;
     this->implicitTerrain->addChild(rootPatch);
 //    createEnvObjectsFromImplicitTerrain();
 //    recomputeErosionValues();
@@ -50,23 +50,42 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
             data[i] = dataV3[i].x;
         });
         GridV3 gradients = data.gradient();
-        ShapeCurve isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, 50.f, 10.f);
+        data.raiseErrorOnBadCoord = false;
+        data.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        gradients.raiseErrorOnBadCoord = false;
+        gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        auto obj = EnvObject::availableObjects[currentlyPreviewedObject];
+        GridV3 result(data.getDimensions());
+        ShapeCurve isoline;
+        if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+            isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, data, 1000.f, 1.f).close();
+            result.iterateParallel([&](const Vector3& pos) {
+                if (isoline.containsXY(pos)) {
+                    result(pos) = Vector3(.5f, .5f, .5f);
+                }
+            });
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+            isoline = computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
+        } else if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+            isoline = ShapeCurve::circle(asPoint->radius, clickPos, 20);
+            result.iterateParallel([&](const Vector3& pos) {
+                if (isoline.containsXY(pos)) {
+                    result(pos) = Vector3(.5f, .5f, .5f);
+                }
+            });
+        }
+
+        result += dataV3;
+
 
         int nbSamples = 500;
-
-        GridF result(data.getDimensions());
-
-        auto path = isoline.getPath(nbSamples);
-        result.iterateParallel([&](const Vector3& pos) {
-            if (isoline.containsXY(pos)) {
-                result(pos) = .5f;
-            }
-        });
+        auto path = isoline.resamplePoints(nbSamples).points;
         for (size_t i = 0; i < path.size(); i++) {
-            result(path[i]) = 1.f;
+            result(path[i]) = colorPalette(float(i) / float(path.size() - 1)); //Vector3(1.f, 0, 0);
         }
         Plotter::get()->addImage(result);
         Plotter::get()->show();
+        Plotter::get()->addImage(dataV3);
     });
 }
 
@@ -77,7 +96,7 @@ void EnvObjsInterface::display(const Vector3 &camPos)
 
     if (this->waitAtEachFrame) {
         this->updateEnvironmentFromEnvObjects(true, false);
-        this->displaySedimentsDistrib();
+//        this->displaySedimentsDistrib();
     }
 
 //    if (displayVelocities) {
@@ -110,8 +129,8 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
     ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
     ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() { this->updateEnvironmentFromEnvObjects(true); });
-    ButtonElement* showDepositionButton = new ButtonElement("Show deposition", [&]() { this->displaySedimentsDistrib(); });
-    ButtonElement* showPolypButton = new ButtonElement("Show coral seeds", [&]() { this->displayPolypDistrib(); });
+//    ButtonElement* showDepositionButton = new ButtonElement("Show deposition", [&]() { this->displaySedimentsDistrib(); });
+//    ButtonElement* showPolypButton = new ButtonElement("Show coral seeds", [&]() { this->displayPolypDistrib(); });
     ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
     ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
@@ -133,10 +152,17 @@ QLayout *EnvObjsInterface::createGUI()
         probaButtons.push_back(forceButton->get());
     }
 
+    std::vector<QWidget*> materialsButtons;
+    for (auto& [name, material] : EnvObject::materials) {
+        ButtonElement* showButton = new ButtonElement("Show " + toCapitalize(name), [&](){ this->displayMaterialDistrib(name); });
+        materialsButtons.push_back(showButton->get());
+    }
+
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(waitAtEachFrameButton->get());
-    layout->addWidget(showDepositionButton->get());
-    layout->addWidget(showPolypButton->get());
+//    layout->addWidget(showDepositionButton->get());
+//    layout->addWidget(showPolypButton->get());
+    layout->addWidget(createVerticalGroup(materialsButtons));
     layout->addWidget(showFlowfieldButton->get());
 //    layout->addWidget(createFromGAN->get());
 //    layout->addWidget(instantiateButton->get());
@@ -233,7 +259,8 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
 
     std::string name = "motu";
     EnvObject* newObject = this->instantiateObjectAtBestPosition(name, newPos, GridF());
-    auto implicit = newObject->createImplicitPatch();
+    auto implicit = newObject->createImplicitPatch(heightmap->heights);
+//    dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(newPos);
     this->implicitPatchesFromObjects[newObject] = implicit;
     if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
         this->implicitTerrain->addChild(this->rootPatch);
@@ -286,22 +313,24 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     Vector3 bestPos = Vector3::invalid();
 //    std::vector<Vector3> possiblePositions(300);
 //    for (auto& p : possiblePositions) {
+
     while (scoreToObtain > 0) {
         Vector3 p = Vector3::random(Vector3(), score.getDimensions().xy());
-        for (int iter = 0; iter < 100; iter++) {
+        /*for (int iter = 0; iter < 50; iter++) {
             p += gradients(p).normalize();
-        }
+        }*/
         scoreToObtain -= score(p);
         bestPos = p;
     }
-    /*score.iterateRandomly([&](size_t i) {
+    /*
+    score.iterateRandomly([&](size_t i) {
         if (scoreToObtain - score[i] > 0) {
             scoreToObtain -= score[i];
         } else {
             bestPos = score.getCoordAsVector3(i);
         }
     });*/
-    return bestPos;
+    return bestPos + Vector3::random().xy().normalize();
 }
 
 EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score) {
@@ -316,11 +345,13 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
 //        objAsPoint->position = position;
     } else if (objAsCurve) {
 
-        GridV3 gradients = score.gradient();
-        BSpline curve = this->computeNewObjectsCurveAtPosition(position, gradients, 200.f, 0.f);
+        GridV3 gradients = score.gaussianSmooth(2.f).gradient();
+        gradients.raiseErrorOnBadCoord = false;
+        gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        BSpline initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
+        BSpline curve = initialCurve;
         curve.translate(-position);
-        objAsCurve->curve = curve.resamplePoints(5);
-
+        objAsCurve->curve = curve.resamplePoints(10);
         /*
         Vector3 direction = -score.gradient(position).normalize();
         if (direction.norm2() < 1e-5) direction = Vector3(1, 0);
@@ -330,7 +361,21 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
             bidirection * objAsCurve->length * .5f,
         });*/
     } else if (objAsArea) {
-        objAsArea->area = ShapeCurve::circle(objAsArea->width, Vector3(), 8);
+        if (toLower(objectName) == "island") {
+            float width = objAsArea->width;
+            objAsArea->area = ShapeCurve::circle(width, Vector3(), 10);
+            for (auto& p : objAsArea->area) {
+                p *= random_gen::generate(0.2f, 1.f);
+            }
+        } else {
+            GridV3 gradients = score.gaussianSmooth(2.f).gradient();
+            gradients.raiseErrorOnBadCoord = false;
+            gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+            BSpline initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, 1000.f, 1.f).close();
+            BSpline curve = initialCurve;
+            curve.translate(-position);
+            objAsArea->area = curve.resamplePoints(10);
+        }
     }
 
     newObject->translate(position.xy());
@@ -352,6 +397,8 @@ void EnvObjsInterface::instantiateObject()
         for (auto& [name, obj] : EnvObject::availableObjects) {
             auto& score = scores[name];
             score = computeScoreMap(name, heights.getDimensions(), possible[name]);
+            score.raiseErrorOnBadCoord = false;
+            score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
         }
 
         std::vector<std::string> possibleObjects;
@@ -366,7 +413,8 @@ void EnvObjsInterface::instantiateObject()
 
             Vector3 bestPos = bestPositionForInstantiation(name, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
-            auto implicit = newObject->createImplicitPatch();
+            auto implicit = newObject->createImplicitPatch(heightmap->heights);
+//            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
@@ -376,6 +424,7 @@ void EnvObjsInterface::instantiateObject()
             implicitTerrain->update();
             voxelGrid->fromImplicit(implicitTerrain.get(), 40);
             heightmap->fromVoxelGrid(*voxelGrid.get());
+//            heightmap->fromImplicit(implicitTerrain.get());
             std::cout << "Instantiating " << name << " at position " << bestPos << std::endl;
 //            EnvObject::precomputeTerrainProperties(*heightmap);
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
@@ -395,11 +444,14 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
 
         bool possible;
         GridF score = computeScoreMap(objectName, heights.getDimensions(), possible);
+        score.raiseErrorOnBadCoord = false;
+        score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
         if (possible) {
             Vector3 bestPos = bestPositionForInstantiation(objectName, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
-            auto implicit = newObject->createImplicitPatch();
+            auto implicit = newObject->createImplicitPatch(heightmap->heights);
+//            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
@@ -447,12 +499,21 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     }, verbose);
     displayProcessTime("Recompute properties... ", [&]() {
         EnvObject::recomputeFlowAndSandProperties(*heightmap);
-    }, verbose);
+    }, verbose);    
+
     if (updateImplicitTerrain) {
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
-            obj->createImplicitPatch(dynamic_cast<ImplicitPrimitive*>(implicit));
+            obj->createImplicitPatch(heightmap->heights, dynamic_cast<ImplicitPrimitive*>(implicit));
         }
+//        auto rootPos = std::find(implicitTerrain->composables.begin(), implicitTerrain->composables.end(), (ImplicitPatch*)rootPatch);
+//        implicitTerrain->composables.erase(rootPos);
+//        rootPatch->composables.insert(rootPatch->composables.begin(), implicitTerrain->composables.begin(), implicitTerrain->composables.end());
+//        implicitTerrain->composables.clear();
+//        implicitTerrain->addChild(rootPatch);
         rootPatch->reevaluateAll();
+        // Move rootPatch to last of list
+//        implicitTerrain->composables.erase(std::find(implicitTerrain->composables.begin(), implicitTerrain->composables.end(), (ImplicitPatch*)rootPatch));
+//        implicitTerrain->addChild(rootPatch);
         implicitTerrain->updateCache();
         implicitTerrain->update();
         displayProcessTime("Update voxels from implicit terrain... ", [&]() {
@@ -460,11 +521,28 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         displayProcessTime("Update heightmap from implicit terrain... ", [&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
+
+            /*
+            EnvCurve* river;
+            for (auto& obj : EnvObject::instantiatedObjects) {
+                if (obj->name == "reef") {
+                    river = dynamic_cast<EnvCurve*>(obj);
+                }
+            }
+            if (river) {
+                GridF heights(Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1));
+                heights.iterateParallel([&](const Vector3& p) {
+                    heights(p) = interpolation::smooth(clamp(river->curve.estimateDistanceFrom(p) / 10.f, 0.f, 1.f)) * 5.f;
+                });
+                heightmap->heights = heights;
+            }*/
+//            heightmap->heights = GridF(heightmap->heights.getDimensions()) + EnvObject::materials["sand"].currentState * 10.f;
         }, verbose);
         if (emitUpdateSignal) {
             Q_EMIT this->updated();
         }
     }
+    updateObjectsList();
 }
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
@@ -474,6 +552,7 @@ void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 
 void EnvObjsInterface::displayProbas(std::string objectName)
 {
+    currentlyPreviewedObject = objectName;
     Vector3 dimensions = Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
@@ -493,7 +572,14 @@ void EnvObjsInterface::displayProbas(std::string objectName)
     Plotter::get()->show();
 }
 
-void EnvObjsInterface::displaySedimentsDistrib()
+void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
+{
+    GridF distribution = EnvObject::materials[materialName].currentState;
+    Plotter::get()->addImage(distribution);
+    Plotter::get()->show();
+}
+
+/*void EnvObjsInterface::displaySedimentsDistrib()
 {
     GridF sediments = EnvObject::materials["sand"].currentState;
     Plotter::get()->addImage(sediments);
@@ -505,7 +591,7 @@ void EnvObjsInterface::displayPolypDistrib()
     GridF polyp = EnvObject::materials["polyp"].currentState;
     Plotter::get()->addImage(polyp);
     Plotter::get()->show();
-}
+}*/
 
 void EnvObjsInterface::displayFlowfieldAsImage()
 {
@@ -516,12 +602,13 @@ void EnvObjsInterface::displayFlowfieldAsImage()
 
 void EnvObjsInterface::updateObjectsList()
 {
+    if (!this->isVisible()) return;
     if (!objectsListWidget) return;
     objectsListWidget->clear();
     auto list = EnvObject::instantiatedObjects;
 
     for (auto& obj : list) {
-        objectsListWidget->addItem(new HierarchicalListWidgetItem(obj->name, obj->ID, 0));
+        objectsListWidget->addItem(new HierarchicalListWidgetItem(obj->name + " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "%)", obj->ID, 0));
     }
 }
 
@@ -561,9 +648,10 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
         selectionPos = asCurve->curve.center();
         std::cout << "Curve " << selection->name << ":" << asCurve->curve.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
         std::vector<Vector3> meshPoints;
-        for (size_t i = 0; i < asCurve->curve.size() - 1; i++) {
-            auto p1 = asCurve->curve[i];
-            auto p2 = asCurve->curve[i + 1];
+        auto path = asCurve->curve.getPath(50);
+        for (size_t i = 0; i < path.size() - 1; i++) {
+            auto p1 = path[i];
+            auto p2 = path[i + 1];
             meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
             meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
         }
@@ -572,9 +660,10 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
         selectionPos = asArea->area.center();
         std::cout << "Area: " << selection->name << "" << asArea->area.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
         std::vector<Vector3> meshPoints;
-        for (size_t i = 0; i < asArea->area.size() - 1; i++) {
-            auto p1 = asArea->area[i];
-            auto p2 = asArea->area[i + 1];
+        auto path = asArea->area.getPath(20);
+        for (size_t i = 0; i < path.size() - 1; i++) {
+            auto p1 = path[i];
+            auto p2 = path[i + 1];
             meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
             meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
         }
@@ -607,13 +696,22 @@ void EnvObjsInterface::hotReloadFile()
         auto lastModifTime = infos.lastModified();
         if (lastModifTime > this->lastTimeFileHasBeenModified || !this->lastTimeFileHasBeenModified.isValid()) {
             needReload = true;
-            this->lastTimeFileHasBeenModified = lastModifTime;
         }
-    }
-    if (needReload) {
-        displayProcessTime("Environmental objects file has changed. Parsing... ", [&]() {
-            EnvObject::readFile(this->primitiveDefinitionFile);
-        });
+        if (needReload) {
+            displayProcessTime("Environmental objects file has changed. Parsing... ", [&]() {
+                try {
+                    std::ifstream file(this->primitiveDefinitionFile);
+                    std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());;
+                    EnvObject::readFileContent(fileContent);
+                    this->previousFileContent = fileContent;
+                    this->lastTimeFileHasBeenModified = lastModifTime;
+                } catch (nlohmann::detail::parse_error exception) {
+                    std::cerr << "Error parsing " << primitiveDefinitionFile << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
+                    if (previousFileContent != "")
+                        EnvObject::readFileContent(this->previousFileContent);
+                }
+            });
+        }
     }
 }
 
@@ -635,18 +733,124 @@ void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) 
     }
 }
 
-BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength)
-{
-    Vector3 pos = seedPosition;
 
-    /*auto followIsovalue = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-        BSpline finalPath;
+BSpline followGradient(const GridV3 gradients, const Vector3& startPoint, float maxDist, bool followInverse) {
+    Vector3 pos = startPoint;
+    BSpline path({pos});
+    Vector3 dir;
+    float totalDistance = 0.f;
+    while (totalDistance < maxDist) {
+        Vector3 gradient = gradients(pos);
+        if (gradient == Vector3()) break; // Nowhere to go
+        gradient.normalize();
+        dir = gradient * (followInverse ? -1.f : 1.f);
 
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir(1, 0, 0);
-        bool didAFullCircle = false;
-        float totalDistance = 0.f;
+        pos += dir;
+
+        totalDistance += dir.norm();
+
+        path.points.push_back(pos);
+
+        int nbPoints = std::min(int(path.size()), 5);
+        if (nbPoints > 4) {
+            std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
+            Vector3 meanVel;
+            for (size_t i = 0; i < nbPoints - 1; i++) {
+                meanVel += (lastPositions[i + 1] - lastPositions[i]);
+            }
+            if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
+//                        std::cout << "Stuck in grad, stopping" << std::endl;
+                path.points.erase(path.points.end() - nbPoints, path.points.end());
+                break;
+            }
+        }
+    }
+    return path;
+}
+
+std::vector<Vector3> findCandidatesPositions(const Vector3& startPosition, const Vector3& direction, float angle, float radius, int nbCandidates) {
+    std::vector<Vector3> points(nbCandidates);
+    float initialAngle = direction.getSignedAngleWith(Vector3(1, 0, 0));
+    for (int i = 0; i < nbCandidates; i++) {
+        float phi = interpolation::inv_linear(random_gen::generate(), -angle, angle);
+        float r = std::sqrt(random_gen::generate()) * radius; // Use square root to svoid bias towards center of the disk
+
+        points[i] = Vector3(r, std::sin(phi) * r).rotate(0, 0, initialAngle) + startPosition;
+    }
+    return points;
+}
+
+std::vector<BSpline> getCandidatesPaths(const GridV3& gradients, const std::vector<Vector3>& positions, float directionLength) {
+    std::vector<BSpline> paths(positions.size());
+    for (int i = 0; i < positions.size(); i++) {
+        paths[i] = followGradient(gradients, positions[i], directionLength * .5f, false);
+    }
+    return paths;
+}
+
+BSpline getBestCandidatesPath(const GridF& score, const BSpline& initialPath, const std::vector<BSpline>& paths) {
+    float longestDistance = 0.f;
+    float smallestScore = std::numeric_limits<float>::max();
+    int bestIndex = 0;
+    for (int i = 0; i < paths.size(); i++) {
+        if (paths[i].size() == 0) continue;
+        float currentScore = score(paths[i].points.back()) / (initialPath.points[0] - paths[i].points.back()).norm2();
+        if (currentScore < smallestScore) {
+            smallestScore = currentScore;
+            bestIndex = i;
+        }
+//            float dist = (initialPath.points[0] - paths[i].points.back()).norm2();
+//            if (dist > longestDistance) {
+//                longestDistance = dist;
+//                bestIndex = i;
+//            }
+    }
+    return paths[bestIndex];
+}
+BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vector3& startPoint, float maxDist) {
+    BSpline finalPath;
+
+    Vector3 pos = startPoint;
+    float initialIsovalue = values.interpolate(pos);
+    BSpline path({pos});
+    Vector3 dir(1, 0, 0);
+    bool didAFullCircle = false;
+    float totalDistance = 0.f;
+    while (maxDist > totalDistance) {
+        if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
+            didAFullCircle = true;
+            break; // Got back close to beginning
+        }
+        Vector3 gradient = gradients(pos);
+        if (gradient == Vector3()) break; // Nowhere to go
+        gradient.normalize();
+
+        Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
+        dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
+
+        float newVal = values(pos + dir);
+
+        if (newVal < initialIsovalue) {
+            Vector3 newGrad = gradients.interpolate(pos + dir);
+            dir += newGrad * .1f;
+        } else if (newVal > initialIsovalue) {
+            Vector3 newGrad = gradients.interpolate(pos + dir);
+            dir -= newGrad * .1f;
+        }
+
+        pos += dir;
+
+        totalDistance += dir.norm();
+
+        path.points.push_back(pos);
+    }
+
+    finalPath = path;
+    if (!didAFullCircle) {
+        totalDistance = 0.f;
+        pos = startPoint;
+        path = BSpline();
+        dir = Vector3(-1, 0, 0);
         while (maxDist > totalDistance) {
             if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
                 didAFullCircle = true;
@@ -660,259 +864,52 @@ BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPo
             dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
 
             pos += dir;
-
             totalDistance += dir.norm();
 
             path.points.push_back(pos);
         }
-
-        finalPath = path;
-        if (!didAFullCircle) {
-            totalDistance = 0.f;
-            pos = startPoint;
-            path = BSpline();
-            dir = Vector3(-1, 0, 0);
-            while (maxDist > totalDistance) {
-                if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-                    didAFullCircle = true;
-                    break; // Got back close to beginning
-                }
-                Vector3 gradient = gradients(pos);
-                if (gradient == Vector3()) break; // Nowhere to go
-                gradient.normalize();
-
-                Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-                dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-                pos += dir;
-                totalDistance += dir.norm();
-
-                path.points.push_back(pos);
-            }
-            if (didAFullCircle) {
-                finalPath = path; // No need to take the first half, we just did a full circle
-            } else {
-                std::reverse(path.points.begin(), path.points.end());
-                finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
-            }
+        if (didAFullCircle) {
+            finalPath = path; // No need to take the first half, we just did a full circle
+        } else {
+            std::reverse(path.points.begin(), path.points.end());
+            finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
         }
-        return finalPath;
-    };*/
+    }
+    return finalPath;
+}
 
-    auto followGradient = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir;
-        float totalDistance = 0.f;
-        while (totalDistance < maxDist) {
-            Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
-            gradient.normalize();
-            dir = gradient;
+BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPosition, const GridV3 &gradients, const GridF& score, float directionLength, float widthMaxLength)
+{
+    Vector3 pos = seedPosition;
 
-            pos += dir;
-
-            totalDistance += dir.norm();
-
-            path.points.push_back(pos);
-
-            int nbPoints = std::min(int(path.size()), 5);
-            if (nbPoints > 2) {
-                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                Vector3 meanVel;
-                for (size_t i = 0; i < nbPoints - 1; i++) {
-                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                }
-                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                    path.points.erase(path.points.end() - nbPoints, path.points.end());
-                    break;
-                }
-            }
-        }
-        return path;
-    };
-    auto followInvGradient = [gradients](const Vector3& startPoint, float maxDistance) -> BSpline {
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir;
-        float totalDistance = 0.f;
-        while (totalDistance < maxDistance) {
-            Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
-            gradient.normalize();
-            dir = -gradient;
-
-            pos += dir;
-            totalDistance += dir.norm();
-
-            path.points.push_back(pos);
-
-            int nbPoints = std::min(int(path.size()), 5);
-
-            if (nbPoints > 2) {
-                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                Vector3 meanVel;
-                for (size_t i = 0; i < nbPoints - 1; i++) {
-                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                }
-                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                    path.points.erase(path.points.end() - nbPoints, path.points.end());
-                    break;
-                }
-            }
-        }
-        return path;
-    };
-
-    BSpline gradSpline = followGradient(pos, directionLength * .5f);
-    BSpline invGradSpline = followInvGradient(pos, directionLength * .5f);
+    Vector3 gradDir = gradients(pos).normalized();
+    BSpline isoline = BSpline({pos - gradDir * directionLength * .5f, pos + gradDir * directionLength * .5f});
+    isoline.resamplePoints(10);
+    for (auto& p : isoline) {
+        p += gradients(p).normalized().rotated(0, 0, deg2rad(90)) * widthMaxLength * random_gen::generate(-1, 1);
+    }
+    return isoline;
+    /*
+    BSpline isoline = followIsovalue(gradients, seedPosition, directionLength);
+    return isoline;
+    */
+    /*
+    BSpline gradSpline = followGradient(gradients, pos, directionLength * .5f, true);
+    gradSpline.reverseVertices();
+    BSpline invGradSpline = getBestCandidatesPath(score, gradSpline, getCandidatesPaths(gradients, findCandidatesPositions(pos, gradSpline.getDirection(1.f), deg2rad(10), 20.f, 100), directionLength));
     invGradSpline.reverseVertices();
 
     BSpline isoline = gradSpline;
     for (auto& p : invGradSpline.points) {
         isoline.points.push_back(p);
     }
-
-    return isoline;
+    return isoline; //.resamplePoints(100).resamplePoints(20);
+    */
 }
 
-ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, float directionLength, float widthMaxLength)
+ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, const GridF& score, float directionLength, float widthMaxLength)
 {
-    Vector3 pos = seedPosition;
-    Vector3 dir(1, 0, 0);
-    BSpline path({pos});
-    GridV3 result(gradients.getDimensions());
-
-    auto followIsovalue = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-        BSpline finalPath;
-
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir(1, 0, 0);
-        bool didAFullCircle = false;
-        float totalDistance = 0.f;
-        while (maxDist > totalDistance) {
-            if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-                didAFullCircle = true;
-                break; // Got back close to beginning
-            }
-            Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
-            gradient.normalize();
-
-            Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-            dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-            pos += dir;
-
-            totalDistance += dir.norm();
-
-            path.points.push_back(pos);
-        }
-
-        finalPath = path;
-        if (!didAFullCircle) {
-            totalDistance = 0.f;
-            pos = startPoint;
-            path = BSpline();
-            dir = Vector3(-1, 0, 0);
-            while (maxDist > totalDistance) {
-                if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
-                    didAFullCircle = true;
-                    break; // Got back close to beginning
-                }
-                Vector3 gradient = gradients(pos);
-                if (gradient == Vector3()) break; // Nowhere to go
-                gradient.normalize();
-
-                Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
-                dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
-
-                pos += dir;
-                totalDistance += dir.norm();
-
-                path.points.push_back(pos);
-            }
-            if (didAFullCircle) {
-                finalPath = path; // No need to take the first half, we just did a full circle
-            } else {
-                std::reverse(path.points.begin(), path.points.end());
-                finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
-            }
-        }
-        return finalPath;
-    };
-
-    /*auto followGradient = [gradients](const Vector3& startPoint, float maxDist) -> BSpline {
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir;
-        float totalDistance = 0.f;
-        while (totalDistance < maxDist) {
-            Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
-            gradient.normalize();
-            dir = gradient;
-
-            pos += dir;
-
-            totalDistance += dir.norm();
-
-            path.points.push_back(pos);
-
-            int nbPoints = std::min(int(path.size()), 5);
-            if (nbPoints > 2) {
-                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                Vector3 meanVel;
-                for (size_t i = 0; i < nbPoints - 1; i++) {
-                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                }
-                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                    path.points.erase(path.points.end() - nbPoints, path.points.end());
-                    break;
-                }
-            }
-        }
-        return path;
-    };
-    auto followInvGradient = [gradients](const Vector3& startPoint, float maxDistance) -> BSpline {
-        Vector3 pos = startPoint;
-        BSpline path({pos});
-        Vector3 dir;
-        float totalDistance = 0.f;
-        while (totalDistance < maxDistance) {
-            Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
-            gradient.normalize();
-            dir = -gradient;
-
-            pos += dir;
-            totalDistance += dir.norm();
-
-            path.points.push_back(pos);
-
-            int nbPoints = std::min(int(path.size()), 5);
-
-            if (nbPoints > 2) {
-                std::vector<Vector3> lastPositions(path.points.end() - nbPoints, path.points.end());
-                Vector3 meanVel;
-                for (size_t i = 0; i < nbPoints - 1; i++) {
-                    meanVel += (lastPositions[i + 1] - lastPositions[i]);
-                }
-                if ((meanVel / float(nbPoints - 1)).norm2() < .25f) {
-//                        std::cout << "Stuck in grad, stopping" << std::endl;
-                    path.points.erase(path.points.end() - nbPoints, path.points.end());
-                    break;
-                }
-            }
-        }
-        return path;
-    };*/
-
-    BSpline isoline = followIsovalue(seedPosition, directionLength);
+    BSpline isoline = followIsovalue(score, gradients, seedPosition, directionLength);
     return isoline;
 }
 
@@ -949,44 +946,9 @@ void EnvObjsInterface::fromGanUI()
 {
     EnvObject::reset();
     EnvObject::readFile(this->primitiveDefinitionFile);
-/*
-    auto gauss = dynamic_cast<EnvPoint*>(EnvObject::instantiate("motu"));
-    gauss->position = Vector3(100, 50, 0);
-    gauss->radius = 35;
-    auto patch = gauss->createImplicitPatch();
-    this->implicitPatchesFromObjects[gauss] = patch;
-
-//    auto curve = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
-//    curve->curve = BSpline({
-//                               Vector3(120, 0, 0),
-//                               Vector3(90, 50, 0),
-//                               Vector3(120, 100, 0),
-//                           });
-//    auto patch = curve->createImplicitPatch();
-//    this->implicitPatchesFromObjects[curve] = patch;
-    rootPatch->addChild(patch);
-    implicitTerrain->updateCache();
-    implicitTerrain->update();
-    rootPatch->reevaluateAll();
-    displayProcessTime("Env objects to voxels... ", [&]() {
-//            voxelGrid->from2DGrid(*heightmap);
-        voxelGrid->fromImplicit(rootPatch, 40);
-    });
-    displayProcessTime("Env objects to heightmap... ", [&]() {
-        heightmap->fromVoxelGrid(*voxelGrid.get());
-    });
-//        implicitTerrain->addChild(obj->createImplicitPatch());
-//        implicitTerrain->_cached = false;
-//        voxelGrid->fromImplicit(implicitTerrain.get());
-
-    EnvObject::precomputeTerrainProperties(*heightmap);
-    this->updateEnvironmentFromEnvObjects();
-
-
-    return;
-    */
 
     std::string path = "Python_tests/test_island_heightmapfeatures/";
+//    QString q_filename= QString::fromStdString(path + "_1.png");
     QString q_filename= QString::fromStdString(path + "1.png");  //QFileDialog::getOpenFileName(this, "Open feature map", QString::fromStdString(path), "*", nullptr);
     if (!q_filename.isEmpty()) {
         std::string file = q_filename.toStdString();
@@ -995,25 +957,41 @@ void EnvObjsInterface::fromGanUI()
         auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
         rootPatch->deleteAllChildren();
         for (auto& newObject : envObjects) {
-            auto implicit = newObject->createImplicitPatch();
+            auto implicit = newObject->createImplicitPatch(heightmap->heights);
             this->implicitPatchesFromObjects[newObject] = implicit;
             rootPatch->addChild(implicit);
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
         }
+
+/*
+        EnvCurve* river;
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (obj->name == "reef") {
+                river = dynamic_cast<EnvCurve*>(obj);
+            }
+        }
+        GridF heights(Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1));
+        heights.iterateParallel([&](const Vector3& p) {
+            heights(p) = interpolation::smooth(clamp(river->curve.estimateDistanceFrom(p) / 10.f, 0.f, 1.f)) * 20.f;
+        });
+        auto primTerrain = ImplicitPrimitive::fromHeightmap(heights);
+        primTerrain->material = SAND;
+        rootPatch->addChild(primTerrain);
+*/
         implicitTerrain->updateCache();
         implicitTerrain->update();
         rootPatch->reevaluateAll();
+
         std::cout << "To voxels: " << showTime(timeIt([&]() {
-//            voxelGrid->from2DGrid(*heightmap);
-            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+//            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
         })) << std::endl;
         std::cout << "To heightmap: " << showTime(timeIt([&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
+//            heightmap->fromImplicit(implicitTerrain.get());
         })) << std::endl;
 //        implicitTerrain->addChild(obj->createImplicitPatch());
 //        implicitTerrain->_cached = false;
-//        voxelGrid->fromImplicit(implicitTerrain.get());
 
         EnvObject::precomputeTerrainProperties(*heightmap);
         this->updateEnvironmentFromEnvObjects();

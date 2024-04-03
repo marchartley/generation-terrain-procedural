@@ -14,6 +14,8 @@
 
 #include "EnvMaterial.h"
 
+#include "DataStructure/Kelvinlet.h"
+
 class EnvPoint;
 class EnvCurve;
 class EnvArea;
@@ -30,6 +32,7 @@ public:
     virtual ~EnvObject();
 
     static void readFile(std::string filename);
+    static void readFileContent(std::string content);
 
     static EnvObject* fromJSON(nlohmann::json content);
 
@@ -96,7 +99,7 @@ public:
 
     static EnvObject* instantiate(std::string objectName);
     static void removeAllObjects();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr) = 0;
+    virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
     virtual GridF createHeightfield() const = 0;
 
     static void applyEffects();

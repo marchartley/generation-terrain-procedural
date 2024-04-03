@@ -306,94 +306,42 @@ float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, flo
     }
     return closestTime;
 }
-    /*
-    while (precision > epsilon) {
-        bool earlyExit = false;
 
-        for (int i = 0; i <= numberOfChecks; i++) {
-            float time = std::clamp(searchRangeMin + (i * precision), 0.0f, 1.0f);
-            float distance = (getPoint(time) - pos).norm2();
-
-            // Early exit if the point is closer than the early exit threshold
-            if (distance < earlyExitThreshold) {
-                closestTime = time;
-                earlyExit = true;
-                break; // Exit the for-loop early
-            }
-
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestTime = time;
-            }
-        }
-
-        // Break the while loop if early exit was triggered
-        if (earlyExit) break;
-
-        // Adjust search range based on the new closest point found
-        searchRangeMin = std::clamp(closestTime - precision * 0.5f, 0.0f, 1.0f);
-        precision *= precisionFactor;
-
-        if (std::abs(lastMinDistance - minDistance) / lastMinDistance < 0.1) { // For example, a 10% decrease
-            epsilon = minDistance * precisionFactor;
-        }
-
-        lastMinDistance = minDistance;
-    }
-
-    return closestTime;
-}
-
-float BSpline::estimateClosestTime(const Vector3& pos, float epsilon, float nbChecksFactor) const
+Vector3 BSpline::estimateClosestPos(const Vector3& pos, bool useNativeShape, float epsilon) const
 {
-    if (this->points.size() == 0) {
-        return 0;
-    } else if (this->points.size() == 1) {
-        return 0;
-    } else if (this->points.size() == 2) {
-        Vector3 line = (this->points[1] - this->points[0]);
-        float time = clamp((pos - this->points[0]).dot(line) / line.dot(line), 0.f, 1.f);
-        return time;
-    }
-
-    float closestTime = 0;
-    float minDistance = std::numeric_limits<float>::max();
-    int numberOfChecks = int(this->points.size() * nbChecksFactor);
-    float precisionFactor = 1.f / numberOfChecks;
-    float precision = precisionFactor;
-    float searchRangeMin = 0.f;
-
-    while (precision > epsilon) {
-        for (int i = 0; i < numberOfChecks + 1; i++) {
-            float time = std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
-            float distance = (getPoint(time) - pos).norm2();
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestTime = time;
+    if (useNativeShape) {
+        float minDist = std::numeric_limits<float>::max();
+        int minIndex = 0;
+        for (int i = 0; i < this->size() - 1; i++) {
+            float dist = (pos - Collision::projectPointOnSegment(pos, points[i], points[i + 1])).norm2();
+            if (dist < minDist) {
+                minDist = dist;
+                minIndex = i;
             }
         }
-        searchRangeMin = clamp(closestTime - precision/2.f, 0.f, 1.f);
-        precision *= precisionFactor;
-    }
-    return closestTime;
-}*/
 
-Vector3 BSpline::estimateClosestPos(const Vector3& pos, float epsilon) const
-{
+        // recompute t on the closest segment
+        Vector3 startToPoint = pos - points[minIndex];
+        Vector3 segment = points[minIndex + 1] - points[minIndex];
+        float t = clamp(startToPoint.dot(segment) / segment.norm2(), 0.f, 1.f);
+        if (t > 1) std::cout << "Too big" << std::endl;
+        return points[minIndex] + t * segment;
+//        return (float(i) + t) / float(this->size());
+    }
     // "Pos epsilon" is in term of distance [0, inf], while "Time epsilon" is in term of time [0, 1]
     return this->getPoint(this->estimateClosestTime(pos, epsilon / this->length()));
 }
 
-float BSpline::estimateSqrDistanceFrom(const Vector3& pos, float epsilon) const
+float BSpline::estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
 {
-    return (this->estimateClosestPos(pos, epsilon) - pos).norm2();
+    return (this->estimateClosestPos(pos, useNativeShape, epsilon) - pos).norm2();
 }
-float BSpline::estimateDistanceFrom(const Vector3& pos, float epsilon) const
+float BSpline::estimateDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
 {
-    return std::sqrt(this->estimateSqrDistanceFrom(pos, epsilon));
+    return std::sqrt(this->estimateSqrDistanceFrom(pos, useNativeShape, epsilon));
 }
 
-float BSpline::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
+float BSpline::estimateSignedDistanceFrom(const Vector3& pos, bool useNativeShape, float epsilon) const
 {
     // Only available for 2D paths, otherwise there's no sense
     float t = this->estimateClosestTime(pos, epsilon);

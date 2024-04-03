@@ -33,7 +33,6 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
         float maxHeight = AABBox.max().z;
 
         this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
-//        for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
 //            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
@@ -138,6 +137,9 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     for (const auto& [mat, val] : materials)
         totalValue += val * (isIn(mat, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
 
+    if (totalValue < 0) {
+        return {-totalValue, {{WATER, -totalValue}}};
+    }
     return {totalValue, {{SAND, totalValue}}};
 }
 
@@ -2300,6 +2302,20 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
 {
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
+    for (int i = composables.size() - 1; i >= 0; i--) {
+        auto& compo = composables[i];
+        auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
+        if (total > ImplicitPatch::isovalue) {
+            for (auto& [mat, val] : evaluation) {
+                if (bestReturn.count(mat) == 0)
+                    bestReturn[mat] = 0;
+                bestReturn[mat] += val;
+            }
+            return bestReturn;
+        }
+    }
+    return bestReturn;
+    /*
     for (auto& compo : this->composables) {
         auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
         for (auto& [mat, val] : evaluation) {
@@ -2308,7 +2324,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
             bestReturn[mat] += val;
         }
     }
-    return bestReturn;
+    return bestReturn;*/
     /*
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
@@ -2634,8 +2650,8 @@ float Implicit2DNary::getMaximalHeight(const Vector3 &minBox, const Vector3 &max
 void Implicit2DNary::reevaluateAll()
 {
     auto dims = this->getSupportBBox().max();
-    int dimX = dims.x;
-    int dimY = dims.y;
+    int dimX = std::max(0.f, dims.x);
+    int dimY = std::max(0.f, dims.y);
     if (dimX == 0 && dimY == 0) {
         dimX = 100;
         dimY = 100;

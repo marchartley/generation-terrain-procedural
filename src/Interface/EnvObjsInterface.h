@@ -48,8 +48,9 @@ public Q_SLOTS:
     void onlyUpdateFlowAndSandFromEnvObjects();
 
     void displayProbas(std::string objectName);
-    void displaySedimentsDistrib();
-    void displayPolypDistrib();
+//    void displaySedimentsDistrib();
+//    void displayPolypDistrib();
+    void displayMaterialDistrib(std::string materialName);
     void displayFlowfieldAsImage();
 
     void updateObjectsList();
@@ -60,8 +61,8 @@ public Q_SLOTS:
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
-    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
-    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, float directionLength, float widthMaxLength);
+    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
+    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
 
     void runPerformanceTest();
 
@@ -79,6 +80,8 @@ public:
     bool displayHighCurrents = true;
     bool waitAtEachFrame = false;
 
+    std::string currentlyPreviewedObject;
+
 
     GridF erosionGrid;
     GridV3 velocitiesGrid;
@@ -87,10 +90,17 @@ public:
     QDateTime lastTimeFileHasBeenModified;
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
-    Implicit2DNary* rootPatch;
+    ImplicitNaryOperator* rootPatch;
 
     EnvObject* currentSelection = nullptr;
+
+    std::string previousFileContent = "";
 };
 
+BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);
+BSpline followGradient(const GridV3 gradients, const Vector3& startPoint, float maxDist, bool followInverse = false) ;
+std::vector<Vector3> findCandidatesPositions(const Vector3& startPosition, const Vector3& direction, float angle, float radius, int nbCandidates);
+std::vector<BSpline> getCandidatesPaths(const GridV3& gradients, const std::vector<Vector3>& positions, float directionLength);
+BSpline getBestCandidatesPath(const GridF &score, const BSpline& initialPath, const std::vector<BSpline>& paths);
 
 #endif // ENVOBJSINTERFACE_H

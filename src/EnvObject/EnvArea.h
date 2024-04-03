@@ -29,7 +29,7 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
 
     virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
+    virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);

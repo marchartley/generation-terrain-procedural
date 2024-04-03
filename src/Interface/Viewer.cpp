@@ -585,11 +585,16 @@ bool Viewer::stopRecording()
     std::string command = "ffmpeg -f image2 -i ";
 //    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
 //    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
-    command += this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.mp4";
     if (this->screenshotIndex > 0) {
-        int result = std::system(command.c_str());
+        std::string command1 = command + this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.mp4";
+        std::string command2 = command + this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.gif";
+        int result = std::system(command1.c_str());
         if (result != 0) {
-            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+            std::cerr << "Oups, the command `" << command1 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+        }
+        result = std::system(command2.c_str());
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command2 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
     this->screenshotFolder += "__next-take/";

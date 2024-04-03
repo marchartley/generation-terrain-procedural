@@ -14,8 +14,8 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
 
 void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
 {
-    if (!this->isVisible())
-        return;
+//    if (!this->isVisible())
+//        return;
 
     if (this->displayRocks || this->displayCorals) {
         if (displayRocks) {
@@ -42,16 +42,29 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
         }
     }
 
-    for (auto& meshType : meshesOptions) {
-        if (!meshType.displayed) continue;
-        for (size_t i = 0; i < meshType.indicesAndPositionsAndSizes.size(); i++) {
-            int iMesh;
-            Vector3 pos;
-            float size;
-            std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
-            meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", pos);
-            meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);
-            meshType.possibleMeshes[iMesh].displayWithOutlines(meshType.color);
+    if (displayEnvObjects) {
+
+        if (autoUpdateEnvObjLocations) {
+            this->regenerateAllTypePositions();
+        }
+        for (auto& meshType : meshesOptions) {
+            if (!meshType.displayed) continue;
+            for (size_t i = 0; i < meshType.indices.size(); i++) {
+                int iMesh = meshType.indices[i];
+                Vector3& pos = meshType.positions[i];
+                float size = meshType.sizes[i];
+                Vector3& orientation = meshType.orientations[i];
+                Matrix rotMatrix = Vector3(0, 0, -(orientation.getAngleWith(Vector3(0, 1, 0)))).toRotationMatrix().toHomogeneous();
+                rotMatrix[2][2] *= -1.f;
+                auto values = rotMatrix.toStdVector();
+//                std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
+                meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", pos);
+                meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);
+                meshType.possibleMeshes[iMesh].shader->setMatrix("instanceRotation", values.data(), 4, 4);
+//                meshType.possibleMeshes[iMesh].displayWithOutlines(meshType.color);
+                meshType.possibleMeshes[iMesh].shader->setVector("color", meshType.color);
+                meshType.possibleMeshes[iMesh].display();
+            }
         }
     }
 }
@@ -113,24 +126,29 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         }
 
         meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
-        meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
+//        meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("coralpolyp", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(), {5, 20}, 10.f));
+        meshesOptions.push_back(InstantiationMeshOption("coralpolypflat", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(), {5, 20}, 10.f));
         meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
         meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
-        meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("arch", "arche", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
+//        meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
 
         for (auto& meshType : meshesOptions) {
+            meshType.displayed = true;
             QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
             std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
             std::vector<QString> paths;
             while (it.hasNext()) {
                 QString dir = it.next();
+                if (endsWith(dir.toStdString(), ".ignore")) continue;
                 paths.push_back(dir);
             }
             size_t nbElements = paths.size();
             if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
             meshType.possibleMeshes = std::vector<Mesh>(nbElements);
 
-            #pragma omp parallel for
+//            #pragma omp parallel for
             for (size_t i = 0; i < nbElements; i++) {
                 QString& dir = paths[i];
                 // Normalize it and move it upward so the anchor is on the ground
@@ -262,7 +280,17 @@ std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPo
                 positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
             }
         } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
-            auto randomPoints = asArea->area.randomPointsInside(60);
+//            float totalArea = asArea->area.computeArea();
+            std::vector<Vector3> randomPoints;
+            AABBox box = AABBox(asArea->area.AABBox());
+            for (int x = box.min().x; x < box.max().x; x += 5) {
+                for (int y = box.min().y; y < box.max().y; y += 5) {
+                    Vector3 pos(x, y, 0);
+                    if (random_gen::generate_perlin(pos.x * 5.f, pos.y * 5.f) > .5f && asArea->area.containsXY(pos))
+                        randomPoints.push_back(pos);
+                }
+            }
+//            auto randomPoints = asArea->area.randomPointsInside(60);
             for (auto p : randomPoints) {
                 positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
             }
@@ -324,17 +352,55 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
 {
     for (auto& meshType : meshesOptions) {
         auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name) : std::vector<std::pair<Vector3, float>>());
-        std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
+//        std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
 
-        meshType.indicesAndPositionsAndSizes = std::vector<std::tuple<int, Vector3, float>>(std::min(meshType.numberDisplayed, int(availablePositions.size())));
-        for (size_t i = 0; i < meshType.indicesAndPositionsAndSizes.size(); i++) {
-            meshType.indicesAndPositionsAndSizes[i] = std::make_tuple<int, Vector3, float>(
-                                                  int(random_gen::generate(0, meshType.possibleMeshes.size())),
-                                                  Vector3(availablePositions[i].first) * (meshType.name == "island" ? Vector3(1, 1, 0) : Vector3(1, 1, 1)),
-                                                    //Vector3(random_gen::generate(0, voxelGrid->sizeX), random_gen::generate(0, voxelGrid->sizeY), random_gen::generate(0, voxelGrid->sizeZ)),
-                                                  random_gen::generate(meshType.minMaxSizes.first, meshType.minMaxSizes.second) * availablePositions[i].second
-                                                         );
+//        meshType.indicesAndPositionsAndSizes = std::vector<std::tuple<int, Vector3, float>>(); //(std::min(meshType.numberDisplayed, int(availablePositions.size())));
+        meshType.clear();
+        for (size_t i = 0; i < availablePositions.size(); i++) { //meshType.indicesAndPositionsAndSizes.size(); i++) {
+            Vector3 position = availablePositions[i].first;
+            float growth = availablePositions[i].second;
+//            Vector3 orientation = EnvObject::flowfield(position.xy()).normalized(); //Vector3(0, 0, EnvObject::flowfield(position).getAngleWith(Vector3(1, 0, 0)));
+
+            int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x * 1000, position.y * 1000, i) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
+            int nbRandomValues = 4;
+            std::vector<float> randomVals(nbInstances * nbRandomValues);
+            for (int iRand = 0; iRand < randomVals.size(); iRand++) {
+                randomVals[iRand] = (random_gen::generate_perlin(position.x * 1000, position.y * 1000, (iRand + i) * 100) + 1) * .5f;
+            }
+            for (int iInstance = 0; iInstance < nbInstances; iInstance++) {
+                size_t randomIdx = iInstance * nbRandomValues;
+                Vector3 instancePos = position + (Vector3(randomVals[randomIdx + 0], randomVals[randomIdx + 1], 0.f) - Vector3(.5f, .5f, 0.f)) * meshType.radius;
+                instancePos.z = heightmap->getHeight(instancePos.xy());
+                Vector3 orientation = EnvObject::flowfield(instancePos.xy()).normalized();
+                int meshIndex = int(randomVals[randomIdx + 2] * meshType.possibleMeshes.size());
+                float scale = interpolation::inv_linear(randomVals[randomIdx + 3], meshType.minMaxSizes.first * growth, meshType.minMaxSizes.second * growth);
+                instancePos.z -= scale * .15f;
+//                meshType.indicesAndPositionsAndSizes.push_back({meshIndex, instancePos, scale});
+                meshType.add(meshIndex, instancePos, scale, orientation);
+            }
+
+            /*int meshIndex = int(random_gen::generate(0, meshType.possibleMeshes.size()));
+            Vector3 position = Vector3(availablePositions[i].first) * (meshType.name == "island" ? Vector3(1, 1, 0) : Vector3(1, 1, 1));
+            float scale = random_gen::generate(meshType.minMaxSizes.first, meshType.minMaxSizes.second) * availablePositions[i].second;
+            */
+//            meshType.indicesAndPositionsAndSizes[i] = {meshIndex, position, scale};
         }
 //        std::cout << meshType.name << ": " << availablePositions.size() << " pos available, " << meshType.indicesAndPositionsAndSizes.size() << " instanciated." << std::endl;
     }
+}
+
+void InstantiationMeshOption::clear()
+{
+    this->indices.clear();
+    this->positions.clear();
+    this->sizes.clear();
+    this->orientations.clear();
+}
+
+void InstantiationMeshOption::add(int index, const Vector3 &position, float size, const Vector3 &orientation)
+{
+    this->indices.push_back(index);
+    this->positions.push_back(position);
+    this->sizes.push_back(size);
+    this->orientations.push_back(orientation);
 }

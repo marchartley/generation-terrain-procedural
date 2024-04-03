@@ -18,10 +18,10 @@ public:
     Vector3 getDerivative(float x, bool normalize = false) const;
     Vector3 getSecondDerivative(float x, bool normalize = false) const;
     float estimateClosestTime(const Vector3& pos, float epsilon = 1e-5, float nbChecksFactor = 4.f, float earlyExitThreshold = 1e-3) const;
-    Vector3 estimateClosestPos(const Vector3& pos, float epsilon = 1e-3) const;
-    float estimateSqrDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
-    float estimateDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
-    float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
+    Vector3 estimateClosestPos(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
+    float estimateSqrDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
+    float estimateDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
+    float estimateSignedDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
     float length() const;
 
     BSpline& resamplePoints(int newNbPoints = -1);

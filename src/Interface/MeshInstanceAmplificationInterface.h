@@ -4,11 +4,11 @@
 #include "ActionInterface.h"
 
 struct InstantiationMeshOption {
-    InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3())
-        : name(name), minMaxSizes(minMaxSizes), color(color), folderName(folderName), requiredTranslation(translation)
+    InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+        : name(name), minMaxSizes(minMaxSizes), color(color), folderName(folderName), requiredTranslation(translation), minMaxInstances(minMaxInstances), radius(radius)
     {}
-    InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3())
-        : InstantiationMeshOption(name, name, minMaxSizes, color, translation)
+    InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+        : InstantiationMeshOption(name, name, minMaxSizes, color, translation, minMaxInstances, radius)
     {}
     std::string name;
     std::string folderName;
@@ -16,10 +16,20 @@ struct InstantiationMeshOption {
     int numberDisplayed = 10000;
     int numberOfLoadedMesh = -1;
     std::vector<Mesh> possibleMeshes;
-    std::vector<std::tuple<int, Vector3, float>> indicesAndPositionsAndSizes;
+//    std::vector<std::tuple<int, Vector3, float>> indicesAndPositionsAndSizes;
+    std::vector<int> indices;
+    std::vector<Vector3> positions;
+    std::vector<float> sizes;
+    std::vector<Vector3> orientations;
     std::pair<float, float> minMaxSizes = {10.f, 15.f};
     std::vector<float> color = {.0f, 1.f, .5f, 1.f};
     Vector3 requiredTranslation;
+    std::pair<int, int> minMaxInstances = {1, 1};
+    float radius = 0.f;
+
+    void clear();
+    void add(int index, const Vector3& position, float size, const Vector3& orientation);
+
 };
 
 class MeshInstanceAmplificationInterface : public ActionInterface
@@ -51,11 +61,8 @@ public Q_SLOTS:
 
 public:
     std::vector<InstantiationMeshOption> meshesOptions;
-    /*std::map<std::string, bool> displayType;
-    std::map<std::string, int> numberOfTypeDisplayed;
-    std::map<std::string, int> numberOfLoadedModel;
-    std::map<std::string, std::vector<Mesh>> possibleMeshType;
-    std::map<std::string, std::vector<std::tuple<int, Vector3, float>>> indicesAndPositionAndSize;*/
+
+    bool displayEnvObjects = true;
 
     bool displayCorals = false;
     bool displayRocks = false;
@@ -71,6 +78,8 @@ public:
     std::vector<std::tuple<int, Vector3, float>> coralsIndicesAndPositionAndSize;
 
     size_t previousHistoryIndex = 0;
+
+    bool autoUpdateEnvObjLocations = true;
 };
 
 #endif // MESHINSTANCEAMPLIFICATIONINTERFACE_H

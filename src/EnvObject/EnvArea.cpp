@@ -232,20 +232,25 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     return {flow, occupancy};
 }
 
-ImplicitPatch* EnvArea::createImplicitPatch(ImplicitPrimitive* previousPrimitive)
+ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
 {
     BSpline translatedCurve = this->area;
-    AABBox box(this->area.points);
+    for (Vector3& p : translatedCurve) {
+        p.z = heights(p.xy());
+    }
+    AABBox box(translatedCurve.points);
     Vector3 offset(this->width, this->width, this->height * this->computeGrowingState());
     translatedCurve.translate(-(box.min() - offset * .5f));
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * this->computeGrowingState(), translatedCurve, true);
+        translatedCurve = previousPrimitive->optionalCurve;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, false);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->width * this->computeGrowingState(), translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * this->computeGrowingState(), translatedCurve, false);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
+    patch->position.z += heights(patch->position.xy());
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;

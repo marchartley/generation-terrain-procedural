@@ -92,7 +92,7 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
     sand.iterateParallel([&] (const Vector3& pos) {
-        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->materialDepositionRate[material.name];
+        sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->materialDepositionRate[material.name];
     });
     material.currentState.add(sand, box.min().xy() - Vector3(width, width));
     /*
@@ -169,7 +169,19 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     AABBox box = AABBox(translatedCurve.points);
     box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
+    TranslateKelvinletCurve k;
+    k.radialScale = width * .25f;
+    k.force = 100.f;
+    k.curve = translatedCurve;
 
+    GridV3 flow = EnvObject::flowfield;
+    flow.iterateParallel([&](const Vector3& p) {
+        Vector3 displacement = k.evaluate(p);
+        flow(p) += displacement;
+    });
+    return {flow, GridF(flow.getDimensions(), 1.f)};
+
+    /*
     GridV3 flow(EnvObject::flowfield.getDimensions());
     GridF occupancy(flow.getDimensions());
 
@@ -182,23 +194,22 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         float gauss = 1.f; // normalizedGaussian(width * .1f, sqrDist);
         Vector3 impact = this->flowEffect * gauss;
         auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
-        /*if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-            if ((closestPos - pos).dot(normal) > 0)
-                normal *= -1.f;
-        }*/
         direction *= direction.dot(initialFlow);
         normal *= -normal.dot(initialFlow);
         binormal *= binormal.dot(initialFlow);
         flow(pos) = impact.changedBasis(direction, normal, binormal);
         occupancy(pos) = 1.f;
     });
-    return {flow, occupancy};
+    return {flow, occupancy};*/
 }
 
-ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitive)
+ImplicitPatch* EnvCurve::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
 {
     BSpline translatedCurve = this->curve;
-    AABBox box(this->curve.points);
+    for (Vector3& p : translatedCurve) {
+        p.z = heights(p.xy());
+    }
+    AABBox box(translatedCurve.points);
     float height = this->height * this->computeGrowingState();
     Vector3 offset(this->width, this->width, height * .5f);
     if (height == 0){
@@ -210,9 +221,10 @@ ImplicitPatch* EnvCurve::createImplicitPatch(ImplicitPrimitive *previousPrimitiv
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, true);
+        translatedCurve = previousPrimitive->optionalCurve;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, true);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
     patch->supportDimensions = box.dimensions() + offset;
