@@ -16,6 +16,7 @@ ExpressionParser::ExpressionParser() {
     unaryFloatOperators["abs"] = [](float a) { return std::abs(a); };
     unaryFloatOperators["sqrt"] = [](float a) { return std::sqrt(a); };
     unaryFloatOperators["pow2"] = [](float a) { return a * a; };
+    unaryFloatOperators["normal"] = [](float a) { return 2.506628275f * std::pow(M_E, -(a*a)*.5f); }; // standard normal:  1/sqrt(2 pi) * e^[-x^2/2]
 
     // Default binary operators
     binaryVectorOperators["+"] = [](const Vector3& a, const Vector3& b) { return a + b; };
@@ -24,6 +25,7 @@ ExpressionParser::ExpressionParser() {
     binaryVectorOperators["/"] = [](const Vector3& a, const Vector3& b) { return a / b; };
     binaryVectorOperators["dot"] = [](const Vector3& a, const Vector3& b) { return a.dot(b); };
     binaryVectorOperators["cross"] = [](const Vector3& a, const Vector3& b) { return a.cross(b); };
+    binaryVectorOperators["?"] = [](const Vector3& a, const Vector3& b) { return (a.isValid() ? a : b); };
 
     // Default unary operators
     unaryVectorOperators["abs"] = [](const Vector3& a) { return std::abs(a); };
@@ -79,7 +81,7 @@ std::function<float (const VariableMap &)> ExpressionParser::parse(const std::st
 
     // Convert the lambda to the desired type
     return [returnedLambda](const VariableMap& vars) -> float {
-        return std::get<float>(returnedLambda(vars));
+        return std::get<float>(returnedLambda(ExpressionParser::extendVariables(vars)));
     };
 }
 
@@ -288,18 +290,44 @@ Token ExpressionParser::groupTokensHierarchically(const std::vector<std::string>
     return std::make_shared<TokenList>(groupedTokens);
 }
 
+bool parse_float(std::string in, double& res) {
+    try {
+        size_t read= 0;
+        res = std::stod(in, &read);
+        if (in.size() != read) {
+            std::replace(in.begin(), in.end(), '.', ',');
+            res = std::stod(in, &read);
+            if (in.size() != read)
+                return false;
+        }
+    } catch (std::invalid_argument) {
+        return false;
+    }
+    return true;
+}
+
 std::function<Variable (const VariableMap &)> ExpressionParser::generateLambda(const Token &token, const VariableMap &variables) {
     if (std::holds_alternative<std::string>(token)) {
         std::string tokenStr = std::get<std::string>(token);
-        try {
-            float value = (tokenStr == "" ? 0.f : std::stof(tokenStr));
+        double dVal;
+        if (parse_float(tokenStr, dVal)) {
+            float fVal = dVal;
+            return [=](const VariableMap&) { return fVal; };
+        } else {
+            return [=](const VariableMap& vars) {
+                if (vars.count(tokenStr)) return vars.at(tokenStr);
+                else return Variable(); //0.f;
+            };
+        }
+        /*try {
+            float value = (tokenStr == "" ? 0.f : std::atof(tokenStr.c_str()));
             return [=](const VariableMap&) { return value; };
         } catch(const std::invalid_argument& e) {
             return [=](const VariableMap& vars) {
                 if (vars.count(tokenStr)) return vars.at(tokenStr);
                 else return Variable(); //0.f;
             };
-        }
+        }*/
     } else if (std::holds_alternative<Vector3>(token)) {
         Vector3 value = std::get<Vector3>(token);
         return [=](const VariableMap&) { return value; };
@@ -404,9 +432,11 @@ std::vector<std::vector<std::string> > ExpressionParser::extractObjectPropertyPa
 
 VariableMap ExpressionParser::extendVariables(const VariableMap &_variables)
 {
-    return _variables;
-    /*
     VariableMap variables = _variables;
+    variables["e"] = float(M_E);
+    variables["pi"] = float(M_PI);
+    return variables;
+    /*
     for (auto& [name, _var] : _variables) {
         if (std::holds_alternative<Vector3>(_var)) {
             Vector3 var = std::get<Vector3>(_var);

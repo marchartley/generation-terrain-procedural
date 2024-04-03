@@ -54,7 +54,7 @@ protected:
 
     std::vector<std::vector<std::string>> extractObjectPropertyPatterns(const std::vector<std::string>& tokens);
 
-    VariableMap extendVariables(const VariableMap& _variables);
+    static VariableMap extendVariables(const VariableMap& _variables);
 
     // Maps for default operators
     std::map<std::string, BinaryFloat> binaryFloatOperators;

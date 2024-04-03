@@ -260,6 +260,7 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
 void Plotter::addImage(GridV3 image)
 {
     this->displayedImage = image;
+//    image = image.flip(false, true);
     if (image.empty()) return;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
