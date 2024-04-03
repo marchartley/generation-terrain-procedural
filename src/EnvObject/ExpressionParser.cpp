@@ -18,6 +18,15 @@ ExpressionParser::ExpressionParser() {
     unaryFloatOperators["pow2"] = [](float a) { return a * a; };
     unaryFloatOperators["normal"] = [](float a) { return 2.506628275f * std::pow(M_E, -(a*a)*.5f); }; // standard normal:  1/sqrt(2 pi) * e^[-x^2/2]
 
+    // Comparator operators
+    binaryFloatOperators[">"] = [](float a, float b) {
+        return (a > b ? 1.f : 0.f);
+    };
+//    binaryFloatOperators[">="] = [](float a, float b) { return (a >= b ? 1.f : 0.f); };
+    binaryFloatOperators["<"] = [](float a, float b) { return (a < b ? 1.f : 0.f); };
+//    binaryFloatOperators["<="] = [](float a, float b) { return (a <= b ? 1.f : 0.f); };
+    binaryFloatOperators["="] = [](float a, float b) { return (a == b ? 1.f : 0.f); }; // Meh... epsilon?
+
     // Default binary operators
     binaryVectorOperators["+"] = [](const Vector3& a, const Vector3& b) { return a + b; };
     binaryVectorOperators["-"] = [](const Vector3& a, const Vector3& b) { return a - b; };
@@ -103,7 +112,7 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
                 case '(':
                 case '{':
                 case '[':
-                case '<':
+//                case '<':
                     bracketStack.push(ch);
                     break;
                 case ')':
@@ -124,12 +133,12 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
                     }
                     bracketStack.pop();
                     break;
-                case '>':
+                /*case '>':
                     if (bracketStack.empty() || bracketStack.top() != '<') {
                         allErrors.push_back("Mismatched closing angle bracket.");
                     }
                     bracketStack.pop();
-                    break;
+                    break;*/
             }
         }
     }
@@ -240,13 +249,13 @@ Token ExpressionParser::groupTokensHierarchically(const std::vector<std::string>
 
     for (size_t i = 0; i < tokens.size(); ++i) {
         const auto& token = tokens[i];
-        if (token == "(" || token == "<" || token == "{") {
+        if (token == "(" /*|| token == "<"*/ || token == "{") {
             size_t depth = 1;
             size_t j = i + 1;
             for (; j < tokens.size() && depth > 0; ++j) {
-                if (tokens[j] == "(" || tokens[j] == "<" || tokens[j] == "{") {
+                if (tokens[j] == "(" /*|| tokens[j] == "<"*/ || tokens[j] == "{") {
                     depth++;
-                } else if (tokens[j] == ")" || tokens[j] == ">" || tokens[j] == "}") {
+                } else if (tokens[j] == ")" /*|| tokens[j] == ">"*/ || tokens[j] == "}") {
                     depth--;
                 }
             }
