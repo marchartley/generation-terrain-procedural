@@ -31,6 +31,9 @@ public:
     std::string toString() const;
     std::string displayValuesOneLine() const;
 
+    float* toArray(bool rowByRow = true) const;
+    std::vector<float> toStdVector(bool rowByRow = true) const;
+
 
 //    friend Matrix operator+(Matrix a, Matrix& b);
     friend Matrix operator+(const Matrix& a, const Matrix& b);
@@ -51,6 +54,8 @@ public:
     Matrix& operator-=(float o);
 
     static Matrix matprod(const Matrix& A, const Matrix& B);
+
+    Matrix toHomogeneous() const;
 
     friend std::ostream& operator<<(std::ostream& io, const Matrix& m);
     friend std::ostream& operator<<(std::ostream& io, Matrix* m);

@@ -797,6 +797,12 @@ AABBox::AABBox(const Vector3& mini, const Vector3& maxi) : mini(mini), maxi(maxi
 
 }
 
+AABBox::AABBox(std::tuple<Vector3, Vector3> minMax)
+    : AABBox(std::get<0>(minMax), std::get<1>(minMax))
+{
+
+}
+
 AABBox::AABBox(std::vector<Vector3> allPointsToContain)
     : AABBox(Vector3::min(allPointsToContain), Vector3::max(allPointsToContain))
 {

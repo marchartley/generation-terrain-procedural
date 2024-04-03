@@ -230,6 +230,7 @@ class AABBox { //: public std::pair<Vector3, Vector3> {
 public:
     AABBox();
     AABBox(const Vector3& mini, const Vector3& maxi);
+    AABBox(std::tuple<Vector3, Vector3> minMax);
     AABBox(std::vector<Vector3> allPointsToContain);
     Vector3 min() const { return this->mini; }
     Vector3 max() const { return this->maxi; }

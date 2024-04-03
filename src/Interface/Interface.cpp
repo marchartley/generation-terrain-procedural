@@ -58,7 +58,7 @@ ViewerInterface::ViewerInterface() {
         std::make_shared<SmoothInterface>(this),
         std::make_shared<PrimitivePatchesInterface>(this),
         std::make_shared<TerrainSavingInterface>(this),
-//        std::make_shared<MeshInstanceAmplificationInterface>(this),
+        std::make_shared<MeshInstanceAmplificationInterface>(this),
 //        std::make_shared<SPHSimulationInterface>(this),
 //        std::make_shared<FLIPSimulationInterface>(this),
 //        std::make_shared<WarpFluidSimulationInterface>(this),
@@ -123,7 +123,9 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
+        terrainGenerationInterface->waterLevel = .2f;
         terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.f);
+        terrainGenerationInterface->waterLevel = .0f;
 
 //        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
@@ -166,7 +168,8 @@ ViewerInterface::ViewerInterface() {
             biomeInterface->generateBiomes();
         }
 
-        envObjectsInterface->fromGanUI();
+//        envObjectsInterface->fromGanUI();
+
 //        float time = timeIt([&]() {
 //            std::string simFolder = "OpenFoam/OF_Sim_Marcos/"; //"OpenFOAM/simple/";
 //            OpenFoamParser::createSimulationFile(simFolder, viewer->voxelGrid->getVoxelValues().resize(Vector3(10, 10, 5)));
@@ -176,6 +179,8 @@ ViewerInterface::ViewerInterface() {
         viewer->setSceneCenter(viewer->voxelGrid->getDimensions() / 2.f);
 
         QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
+
+        this->openInterface(envObjectsInterface);
     });
     viewer->installEventFilter(this);
     setupUi();

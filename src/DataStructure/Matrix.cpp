@@ -178,6 +178,40 @@ std::string Matrix::displayValuesOneLine() const
     return txt;
 }
 
+float* Matrix::toArray(bool rowByRow) const
+{
+    const int nbCols = cols();
+    const int nbRows = rows();
+
+    float* values = new float(nbRows * nbCols);
+    for (size_t r = 0; r < nbRows; r++) {
+        for (size_t c = 0; c < nbCols; c++) {
+            if (rowByRow)
+                values[r * nbCols + c] = (*this)[r][c]; // Row by row
+            else
+                values[c * nbRows + r] = (*this)[r][c]; // Column by column
+        }
+    }
+    return values;
+}
+
+std::vector<float> Matrix::toStdVector(bool rowByRow) const
+{
+    const int nbCols = cols();
+    const int nbRows = rows();
+
+    std::vector<float> values(nbRows * nbCols);
+    for (size_t r = 0; r < nbRows; r++) {
+        for (size_t c = 0; c < nbCols; c++) {
+            if (rowByRow)
+                values[r * nbCols + c] = (*this)[r][c]; // Row by row
+            else
+                values[c * nbRows + r] = (*this)[r][c]; // Column by column
+        }
+    }
+    return values;
+}
+
 
 Matrix operator+(const Matrix& a, const Matrix& b)
 {
@@ -209,6 +243,18 @@ Matrix& Matrix::operator-=(const Matrix& o)
 Matrix Matrix::matprod(const Matrix &A, const Matrix &B)
 {
     return A.product(B);
+}
+
+Matrix Matrix::toHomogeneous() const
+{
+    Matrix res(4, 4);
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            res[i][j] = (*this)[i][j];
+        }
+    }
+    res[3][3] = 1;
+    return res;
 }
 Matrix operator*(const Matrix& a, const Matrix& o)
 {
