@@ -102,8 +102,8 @@ public:
     virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
     virtual GridF createHeightfield() const = 0;
 
-    static void applyEffects();
-    static void updateSedimentation();
+    static void applyEffects(const GridF& heights);
+    static void updateSedimentation(const GridF& heights);
     static void updateFlowfield();
     static void beImpactedByEvents();
 

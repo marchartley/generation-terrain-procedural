@@ -31,15 +31,6 @@ GridV3 initFlow() {
         EnvObject::initialFlowfield.raiseErrorOnBadCoord = false;
         EnvObject::initialFlowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         EnvObject::flowfield = EnvObject::initialFlowfield;
-
-//        EnvMaterial sand("sand", 5.f, 2.f, EnvObject::flowfield.getDimensions());
-//        EnvMaterial polyp("polyp", 3.f, 2.f, EnvObject::flowfield.getDimensions());
-//        EnvObject::materials["sand"] = sand;
-//        EnvObject::materials["polyp"] = polyp;
-//        EnvObject::sandDeposit = GridF(EnvObject::flowfield.getDimensions(), 0.f);
-//        EnvObject::sandDeposit.raiseErrorOnBadCoord = false;
-//        EnvObject::sandDeposit.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-//        EnvObject::polypDeposit = EnvObject::sandDeposit;
     }
     return EnvObject::flowfield;
 }
@@ -56,6 +47,14 @@ EnvObject::~EnvObject()
 
 void EnvObject::readFile(std::string filename)
 {
+
+    EnvMaterial sand("sand", 1.f, 2.f, 2.f, EnvObject::flowfield.getDimensions());
+    EnvMaterial polyp("polyp", 1.f, .1f, 0.f, EnvObject::flowfield.getDimensions());
+    EnvMaterial pebbles("pebbles", .5f, 0.5f, 10.f, EnvObject::flowfield.getDimensions());
+    EnvObject::materials["sand"] = sand;
+    EnvObject::materials["polyp"] = polyp;
+    EnvObject::materials["pebbles"] = pebbles;
+
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     EnvObject::readFileContent(content);
@@ -94,11 +93,6 @@ void EnvObject::readFileContent(std::string content)
         obj->materialDepositionRate = EnvObject::availableObjects[name]->materialDepositionRate;
     }
 //    precomputeTerrainProperties(Heightmap());
-
-    EnvMaterial sand("sand", 5.f, 2.f, EnvObject::flowfield.getDimensions());
-    EnvMaterial polyp("polyp", 3.f, 2.f, EnvObject::flowfield.getDimensions());
-    EnvObject::materials["sand"] = sand;
-    EnvObject::materials["polyp"] = polyp;
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)
@@ -154,6 +148,10 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     if(content.contains("polyp")) {
         materialDepositionRate["polyp"] = float(content["polyp"]);
         materialAbsorptionRate["polyp"] = float(content["polyp"]);
+    }
+    if(content.contains("pebbles")) {
+        materialDepositionRate["pebbles"] = float(content["pebbles"]);
+        materialAbsorptionRate["pebbles"] = float(content["pebbles"]);
     }
 
 
@@ -229,9 +227,11 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.normal"] = Vector3();
     variables["current.dir"] = Vector3();
     variables["current.vel"] = float();
-    variables["sand"] = float();
-    variables["polyp"] = float();
+//    variables["sand"] = float();
+//    variables["polyp"] = float();
     variables["depth"] = float();
+    for (auto& [matName, material] : EnvObject::materials)
+        variables[matName] = float();
 
     ExpressionParser parser;
     variables["pos"] = Vector3();
@@ -317,84 +317,56 @@ void EnvObject::removeAllObjects()
     EnvObject::instantiatedObjects.clear();
 }
 
-void EnvObject::applyEffects()
+void EnvObject::applyEffects(const GridF& heights)
 {
     EnvObject::updateFlowfield();
-    EnvObject::updateSedimentation();
+    EnvObject::updateSedimentation(heights);
 }
 
-void EnvObject::updateSedimentation()
+void EnvObject::updateSedimentation(const GridF& heights)
 {
+    GridV3 heightsGradients = heights.gradient();
     auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
     for (auto& [name, material] : EnvObject::materials) {
         std::vector<std::pair<float, float>> depoAbso(EnvObject::instantiatedObjects.size());
-        material.currentState = material.currentState.meanSmooth(material.diffusionSpeed, material.diffusionSpeed, 1, false); // Diffuse
+        if (material.diffusionSpeed < 1.f) {
+            if (random_gen::generate() < material.diffusionSpeed) {
+                material.currentState = material.currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
+            }
+        } else {
+            material.currentState = material.currentState.meanSmooth(material.diffusionSpeed, material.diffusionSpeed, 1, false); // Diffuse
+        }
+//        material.currentState = material.currentState.gaussianSmooth(material.diffusionSpeed, true, true);
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             float start = material.currentState.sum();
             auto& object = EnvObject::instantiatedObjects[i];
             object->applyAbsorption(material);
             depoAbso[i].second = material.currentState.sum() - start;
         }
-        material.currentState = material.currentState.warpWith(smoothFluids * material.waterTransport);
+        material.currentState = material.currentState.warpWith((smoothFluids * material.waterTransport) - (heightsGradients * material.mass));
+
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
             float start = material.currentState.sum();
             object->applyDeposition(material);
             depoAbso[i].first = material.currentState.sum() - start;
         }
+        /*
+        material.currentState.iterate([&](const Vector3& p) {
+            float displacedMatter = material.currentState(p) * (material.mass / 20.f);
+            material.currentState.addValueAt(displacedMatter, p - heightsGradients(p).normalized());
+            material.currentState.addValueAt(-displacedMatter, p);
+        });*/
 
         material.currentState.iterateParallel([&](size_t i) {
-            material.currentState[i] = std::clamp(material.currentState[i], 0.f, 1.f); // Limited between 0 and 1 ?
+//            material.currentState[i] = std::clamp(material.currentState[i], 0.f, 1.f); // Limited between 0 and 1 ?
         });
 
-        if (name == "polyp") {
-            std::cout << "Absorption of " << name << ": ";
-            for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-                std::cout << "\n" << instantiatedObjects[i]->name << " : -" << depoAbso[i].second << " +" << depoAbso[i].first << " = " << depoAbso[i].second - depoAbso[i].first;
-            }
-            std::cout << std::endl;
-        }
+        material.currentState *= .9f;
     }
 
-    materials["polyp"].currentState *= .9f;
+//    materials["polyp"].currentState *= .9f;
 
-    /*
-    int sandDiffusion = 5;
-    float sandSpeed = 2.f;
-
-    int polypDiffusion = 3;
-    float polypSpeed = 2.f;
-    // Sand deposition
-    EnvObject::sandDeposit = EnvObject::sandDeposit.meanSmooth(sandDiffusion, sandDiffusion, 1, false); // Diffuse sand
-    for (auto& object : EnvObject::instantiatedObjects) {
-        object->applySandAbsorption();
-        object->applySandDeposit();
-    }
-    EnvObject::sandDeposit = EnvObject::sandDeposit.warpWith(smoothFluids * sandSpeed);
-    EnvObject::sandDeposit.iterateParallel([&] (const Vector3& pos) {
-        if (pos.x > 5) return;
-        EnvObject::sandDeposit(pos) = std::max(.1f, EnvObject::sandDeposit(pos));
-    });
-
-    // Polyp deposition
-    EnvObject::polypDeposit = EnvObject::polypDeposit.meanSmooth(polypDiffusion, polypDiffusion, 1, false); // Diffuse
-    for (auto& object : EnvObject::instantiatedObjects) {
-        object->applyPolypAbsorption();
-        object->applyPolypDeposit();
-    }
-    EnvObject::polypDeposit = EnvObject::polypDeposit.warpWith(smoothFluids * polypSpeed);
-    EnvObject::polypDeposit.iterateParallel([&](size_t i) {
-        EnvObject::polypDeposit[i] = std::clamp(EnvObject::polypDeposit[i], 0.f, 1.f);
-    });
-
-    polypDeposit.iterateParallel([&](size_t i) {
-        if (sandDeposit[i] > polypDeposit[i]) {
-            sandDeposit[i] -= polypDeposit[i];
-            polypDeposit[i] = 0;
-        }
-    });
-    */
-//    polypDeposit -= sandDeposit;
 }
 
 void EnvObject::updateFlowfield()
@@ -451,9 +423,12 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties["current"] = initialVectorPropertyMap;
         EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
         EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
-        EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
-        EnvObject::allScalarProperties["polyp"] = initialScalarPropertyMap;
+//        EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
+//        EnvObject::allScalarProperties["polyp"] = initialScalarPropertyMap;
         EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
+        for (const auto& [matName, material] : EnvObject::materials) {
+            EnvObject::allScalarProperties[matName] = initialScalarPropertyMap;
+        }
 
 
         // Evaluate at each point

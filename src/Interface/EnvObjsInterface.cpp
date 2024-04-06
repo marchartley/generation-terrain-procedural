@@ -365,10 +365,10 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
             float width = objAsArea->width;
             objAsArea->area = ShapeCurve::circle(width, Vector3(), 10);
             for (auto& p : objAsArea->area) {
-                p *= random_gen::generate(0.2f, 1.f);
+                p *= random_gen::generate(0.3f, 1.f);
             }
         } else {
-            GridV3 gradients = score.gaussianSmooth(2.f).gradient();
+            GridV3 gradients = score/*.gaussianSmooth(2.f)*/.gradient();
             gradients.raiseErrorOnBadCoord = false;
             gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
             BSpline initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, 1000.f, 1.f).close();
@@ -492,7 +492,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
     }, verbose);
     displayProcessTime("Apply effects... ", [&]() {
-        EnvObject::applyEffects();
+        EnvObject::applyEffects(heightmap->heights);
     }, verbose);
     displayProcessTime("Get impacted... ", [&]() {
         EnvObject::beImpactedByEvents();
@@ -547,7 +547,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
-    EnvObject::applyEffects();
+    EnvObject::applyEffects(heightmap->heights);
 }
 
 void EnvObjsInterface::displayProbas(std::string objectName)
