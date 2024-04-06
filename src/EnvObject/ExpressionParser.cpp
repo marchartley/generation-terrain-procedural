@@ -17,15 +17,12 @@ ExpressionParser::ExpressionParser() {
     unaryFloatOperators["sqrt"] = [](float a) { return std::sqrt(a); };
     unaryFloatOperators["pow2"] = [](float a) { return a * a; };
     unaryFloatOperators["normal"] = [](float a) { return 2.506628275f * std::pow(M_E, -(a*a)*.5f); }; // standard normal:  1/sqrt(2 pi) * e^[-x^2/2]
+    // For any other normal(x, mu, sigma), consider calling "normal((x - mu)/sigma)"
 
     // Comparator operators
-    binaryFloatOperators[">"] = [](float a, float b) {
-        return (a > b ? 1.f : 0.f);
-    };
-//    binaryFloatOperators[">="] = [](float a, float b) { return (a >= b ? 1.f : 0.f); };
+    binaryFloatOperators[">"] = [](float a, float b) { return (a > b ? 1.f : 0.f); };
     binaryFloatOperators["<"] = [](float a, float b) { return (a < b ? 1.f : 0.f); };
-//    binaryFloatOperators["<="] = [](float a, float b) { return (a <= b ? 1.f : 0.f); };
-    binaryFloatOperators["="] = [](float a, float b) { return (a == b ? 1.f : 0.f); }; // Meh... epsilon?
+    binaryFloatOperators["="] = [](float a, float b) { return (std::abs(a - b) < 1e-6 ? 1.f : 0.f); }; // Meh... epsilon?
 
     // Default binary operators
     binaryVectorOperators["+"] = [](const Vector3& a, const Vector3& b) { return a + b; };
