@@ -999,6 +999,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
         glBindTexture(GL_TEXTURE_2D, heightmapFieldTex);
 
         GridF heights = heightmap->getHeights();
+//        heights += EnvObject::materials["sand"].currentState * 1.f;
         maxHeight = heights.max();
         float *heightmapData = new float[heights.size() * 4];
         GridV3 gradients = heights.gradient();
@@ -1056,7 +1057,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 std::vector<Vector3> positions(heightData.size());
                 for (size_t i = 0; i < positions.size(); i++) {
                     positions[i] = heightData.getCoordAsVector3(i);
-                    heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
+//                    heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
                 }
                 heightmapMesh.shader->setFloat("maxHeight", maxHeight);
                 heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);
