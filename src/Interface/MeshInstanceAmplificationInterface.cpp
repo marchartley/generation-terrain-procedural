@@ -6,6 +6,8 @@
 #include "EnvObject/EnvCurve.h"
 #include "EnvObject/EnvArea.h"
 
+#include "Interface/TerrainGenerationInterface.h"
+
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
@@ -47,6 +49,9 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
         if (autoUpdateEnvObjLocations) {
             this->regenerateAllTypePositions();
         }
+        // Dirty, to remove one day :
+        float terrainHeightFactor = dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->heightFactor;
+
         for (auto& meshType : meshesOptions) {
             if (!meshType.displayed) continue;
             for (size_t i = 0; i < meshType.indices.size(); i++) {
@@ -58,7 +63,7 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
                 rotMatrix[2][2] *= -1.f;
                 auto values = rotMatrix.toStdVector();
 //                std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
-                meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", pos);
+                meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", (pos + Vector3(0, 0, 1.f)) * Vector3(1, 1, terrainHeightFactor) - meshType.requiredTranslation * size);
                 meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);
                 meshType.possibleMeshes[iMesh].shader->setMatrix("instanceRotation", values.data(), 4, 4);
 //                meshType.possibleMeshes[iMesh].displayWithOutlines(meshType.color);
@@ -128,10 +133,12 @@ void MeshInstanceAmplificationInterface::reloadShaders()
         meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
 //        meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
         meshesOptions.push_back(InstantiationMeshOption("coralpolyp", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(), {5, 20}, 10.f));
-        meshesOptions.push_back(InstantiationMeshOption("coralpolypflat", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(), {5, 20}, 10.f));
+        meshesOptions.push_back(InstantiationMeshOption("coralpolypflat", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(0, 0, .25f), {5, 20}, 10.f));
         meshesOptions.push_back(InstantiationMeshOption("algae", {10.f, 15.f}, {.1f, .5f, .1f, 1.f}));
         meshesOptions.push_back(InstantiationMeshOption("tree", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
-        meshesOptions.push_back(InstantiationMeshOption("arch", "arche", {20.f, 40.f}, {.1f, 1.f, .1f, 1.f}));
+        meshesOptions.push_back(InstantiationMeshOption("arch", "arche", {20.f, 40.f}, {.8f, .8f, .6f, 1.f}, Vector3(0, 0, .25f)));
+        meshesOptions.push_back(InstantiationMeshOption("bigRock", "rocks", {20.f, 40.f}, {.8f, .8f, .6f, 1.f}, Vector3(0, 0, .5f)));
+        meshesOptions.push_back(InstantiationMeshOption("smallRock", "rocks", {3.f, 5.f}, {.8f, .8f, .6f, 1.f}, Vector3(0, 0, .25f), {10, 30}, 5.f));
 //        meshesOptions.push_back(InstantiationMeshOption("island", {20.f, 40.f}, {.5f, .1f, .5f, 1.f}));
 
         for (auto& meshType : meshesOptions) {
@@ -162,7 +169,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
                     std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
                 }
 
-                meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f)) + meshType.requiredTranslation);
+                meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f))/* + meshType.requiredTranslation*/);
                 meshType.possibleMeshes[i].cullFace = false;
             }
         }
@@ -370,11 +377,12 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
             for (int iInstance = 0; iInstance < nbInstances; iInstance++) {
                 size_t randomIdx = iInstance * nbRandomValues;
                 Vector3 instancePos = position + (Vector3(randomVals[randomIdx + 0], randomVals[randomIdx + 1], 0.f) - Vector3(.5f, .5f, 0.f)) * meshType.radius;
+                if (!Vector3::isInBox(instancePos.xy(), Vector3(.1f, .1f, 0), Vector3(heightmap->getSizeX() - .1f, heightmap->getSizeY() - .1f, 0))) continue;
                 instancePos.z = heightmap->getHeight(instancePos.xy());
                 Vector3 orientation = EnvObject::flowfield(instancePos.xy()).normalized();
                 int meshIndex = int(randomVals[randomIdx + 2] * meshType.possibleMeshes.size());
                 float scale = interpolation::inv_linear(randomVals[randomIdx + 3], meshType.minMaxSizes.first * growth, meshType.minMaxSizes.second * growth);
-                instancePos.z -= scale * .15f;
+//                instancePos.z -= scale * .15f;
 //                meshType.indicesAndPositionsAndSizes.push_back({meshIndex, instancePos, scale});
                 meshType.add(meshIndex, instancePos, scale, orientation);
             }
