@@ -326,16 +326,16 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         for (auto& v : flowfieldValues)
             v *= aspectRatio;
     } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-        flowfieldValues = EnvObject::flowfield.resize(terrainSize).meanSmooth();
+        flowfieldValues = EnvObject::flowfield.resize(terrainSize).meanSmooth() * airForce;
         for (auto& v : flowfieldValues)
             v = v.xy();
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
-    flowfieldValues.iterateParallel([&](const Vector3& pos) {
+    /*flowfieldValues.iterateParallel([&](const Vector3& pos) {
         flowfieldValues(pos) = Vector3(1.f, std::cos(pos.x * .08f), 0.f).normalized() * 1.f * airForce;
-    });
+    });*/
 
     std::vector<BSpline> tunnels(rockAmount);
     std::vector<int> nbPos(rockAmount), nbErosions(rockAmount);
