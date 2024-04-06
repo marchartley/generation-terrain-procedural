@@ -5,7 +5,8 @@
     "__rule": "((abs(current.dir dot Reef.normal) * 1) + (20 - d(Reef - pos))) * (1 - lagoon.inside) - polyp * 10",
     "_rule": "(((abs(current.dir dot Reef.normal) * 1) + (20 - d(Reef - pos))) * (1 - lagoon.inside)) max 0",
     "--rule": "d(pos - island) * reef.inside * d(island - pos)",
-    "rule": "(current.vel * d(island - pos) * (1 - island.inside) * reef.inside) max 0",
+    "--rule": "((current.vel * d(island - pos) * (1 - island.inside) * reef.inside) max 0) * (d(coralpolyp - pos) > 5) / d2((river - pos) ? {1 0 0})",
+    "rule": "((5 - d(reef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(reef - pos) < 5) max 0",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,
@@ -24,14 +25,14 @@
   {
     "name": "Reef",
     "type": "area",
-    "rule": "(1/10) * ((1 - island.inside) * 10 - abs(5 - d(island - pos))) max 0",
+    "rule": "((1 - island.inside) * 10 - abs(15 - d(island - pos))) max 0",
     "--rule": "(20^2 - d2(lagoon - pos))",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
       "binormal": 0.0
     },
-    "polyp": 0.05,
+    "polyp": 0.2,
     "sand": 0.0,
     "dimensions": {
       "x": 1,
@@ -45,7 +46,7 @@
   {
     "name": "CoralPolyp",
     "type": "point",
-    "rule": "(polyp * ((100 - d(reef - pos)) - current.vel * 100) max 0)^2",
+    "rule": "((polyp * ((10 - d(reef - pos)) - current.vel * 10) max 0)^2) * normal((depth + 7)/1.5)",
     "__rule": "(polyp * ((100 - d2(reef - pos))) max 0)^2",
     "flow": 1.0,
     "dimensions": {
@@ -55,7 +56,7 @@
     },
     "needs": {
       "age": 10.0,
-      "polyp": 100.0
+      "polyp": 10.0
     },
     "depositionRate": {
     	"sand": 0.1,
@@ -74,12 +75,12 @@
   {
     "name": "CoralPolypFlat",
     "type": "point",
-    "rule": "10 * polyp + (((d((Fault - pos)?{0 0 0})) min 20 max 10) - 10) + random(pos * {100 100 0})",
+    "rule": "10 * polyp + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1",
     "flow": 1.0,
     "dimensions": {
-      "x": 10.0,
-      "y": 10.0,
-      "z": 10.0
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
     },
     "needs": {
       "age": 10.0
@@ -264,9 +265,9 @@
     "rule": "((d(Passe - pos) - 5) * -1 * 1000 + (sand * 10000)) + 1000 * (10 - d(reef - pos))",
     "flow": 1.0,
     "dimensions": {
-      "x": 10.0,
-      "y": 10.0,
-      "z": 25.0
+      "x": 20.0,
+      "y": 20.0,
+      "z": 0.50
     },
     "needs": {
       "age": 10.0,
@@ -312,7 +313,6 @@
     "geometry": "None",
     "material": "Sand"
   },
-  
   {
     "name": "River",
     "type": "curve",
@@ -325,11 +325,59 @@
     "sand": 0.0,
     "dimensions": {
       "x": 2,
-      "y": 15,
+      "y": 30,
       "z": 5
     },
     "geometry": "ParametricTunnel",
     "material": "water"
+  },
+  {
+    "name": "Canyon",
+    "type": "curve",
+    "rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
+    "flow": {
+      "direction": 10.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 10,
+      "y": 200,
+      "z": 30
+    },
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "BigRock",
+    "type": "point",
+    "rule": "(5 - d(canyon - pos)) max 0",
+    "flow": 5.0,
+    "sand": 0.0,
+    "pebbles": 10.0,
+    "dimensions": {
+      "x": 10,
+      "y": 10,
+      "z": 1
+    },
+    "geometry": "None",
+    "material": "Sand"
+  },
+  {
+    "name": "SmallRock",
+    "type": "point",
+    "--rule": "(10 - d(bigRock - pos)) / current.vel",
+    "--rule": "((20 - d(bigRock - (pos + current * {5 5 0})) max 0) * ((5 - d(canyon - pos)) max 0)) max 0",
+    "rule": "pebbles / d(canyon - pos)",
+    "flow": 0.20,
+    "sand": 1.5,
+    "dimensions": {
+      "x": 10,
+      "y": 10,
+      "z": 1
+    },
+    "geometry": "None",
+    "material": "Sand"
   }
-    
 ]
