@@ -169,15 +169,36 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     AABBox box = AABBox(translatedCurve.points);
     box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
+
+    /*
+    PinchKelvinletCurve k;
+    k.radialScale = width * .05f;
+    k.force = 10.f;
+    */
+    /*
+    ScaleKelvinletCurve k2;
+    k2.radialScale = width * .1f;
+    k2.force = -10.f;
+    k2.mu = .9f;
+    k2.v = 0;
+    k2.curve = translatedCurve;
+    */
     TranslateKelvinletCurve k;
-    k.radialScale = width * .25f;
-    k.force = 100.f;
+    k.radialScale = width * .05f;
+    k.force = 10.f;
+
+    /*
+    TwistKelvinletCurve k;
+    k.radialScale = width * .05f;
+    k.force = 10.f;
+    */
+
     k.curve = translatedCurve;
 
     GridV3 flow = EnvObject::flowfield;
     flow.iterateParallel([&](const Vector3& p) {
         Vector3 displacement = k.evaluate(p);
-        flow(p) += displacement;
+        flow(p) += displacement.xy();
     });
     return {flow, GridF(flow.getDimensions(), 1.f)};
 
@@ -203,27 +224,30 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     return {flow, occupancy};*/
 }
 
-ImplicitPatch* EnvCurve::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
+ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
 {
-    BSpline translatedCurve = this->curve;
-    for (Vector3& p : translatedCurve) {
-        p.z = heights(p.xy());
-    }
-    AABBox box(translatedCurve.points);
+    AABBox box(this->curve.points);
     float height = this->height * this->computeGrowingState();
     Vector3 offset(this->width, this->width, height * .5f);
-    if (height == 0){
-        box = AABBox({box.center()});
-        offset = Vector3();
-    }
-    translatedCurve.translate(-(box.min() - offset * .5f));
 
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        translatedCurve = previousPrimitive->optionalCurve;
+        BSpline translatedCurve = previousPrimitive->optionalCurve;
         *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     } else {
+        BSpline translatedCurve = this->curve;
+        GridF heights = _heights;
+        heights.raiseErrorOnBadCoord = false;
+        heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        for (Vector3& p : translatedCurve) {
+            p.z = heights(p.xy());
+        }
+        if (height == 0){
+            box = AABBox({box.center()});
+            offset = Vector3();
+        }
+        translatedCurve.translate(-(box.min() - offset * .5f));
         patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();

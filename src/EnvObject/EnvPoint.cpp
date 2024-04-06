@@ -70,7 +70,7 @@ EnvPoint *EnvPoint::clone()
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState();
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState() * (EnvObject::flowfield(this->position).norm() * 10.f);
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
     /*
     GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
@@ -100,12 +100,12 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 //    GridV3 flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
     //GridF gauss = GridF::gaussian(2.f*radius, 2.f*radius, 1, radius/* * .5f*/).normalize();
 
-    float currentGrowth = 1.f; //computeGrowingState();
+    float currentGrowth = computeGrowingState();
 
     ScaleKelvinlet k;
     k.pos = this->position;
-    k.radialScale = this->radius;
-    k.scale = 50.f * currentGrowth;
+    k.radialScale = this->radius * .2f;
+    k.scale = 10.f * currentGrowth * this->flowEffect.x;
     k.mu = .9f;
     k.v = 0.f;
 

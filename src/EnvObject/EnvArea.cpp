@@ -98,20 +98,6 @@ void EnvArea::applyDeposition(EnvMaterial& material)
         sand(pos) = (inside ? 1.f : 0.f) * this->materialDepositionRate[material.name]; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
     });
     material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
-
-    /*
-    AABBox box = AABBox(this->area.points);
-    ShapeCurve translatedCurve = this->area;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    sand.iterateParallel([&] (const Vector3& pos) {
-        bool inside = translatedCurve.contains(pos);
-        sand(pos) = (inside ? 1.f : 0.f) * sandEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
-    });
-    EnvObject::sandDeposit.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
-    */
 }
 
 void EnvArea::applyAbsorption(EnvMaterial& material)
@@ -119,51 +105,6 @@ void EnvArea::applyAbsorption(EnvMaterial& material)
     if (this->materialAbsorptionRate[material.name] == 0) return;
     return;
 }
-/*
-void EnvArea::applySandDeposit()
-{
-    AABBox box = AABBox(this->area.points);
-    ShapeCurve translatedCurve = this->area;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    sand.iterateParallel([&] (const Vector3& pos) {
-        bool inside = translatedCurve.contains(pos);
-        sand(pos) = (inside ? 1.f : 0.f) * sandEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
-    });
-//    sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
-}
-
-void EnvArea::applySandAbsorption()
-{
-    return;
-}
-
-void EnvArea::applyPolypDeposit()
-{
-    if (this->polypEffect == 0) return;
-
-    AABBox box = AABBox(this->area.points);
-    ShapeCurve translatedCurve = this->area;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF polyp = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    polyp.iterateParallel([&] (const Vector3& pos) {
-        bool inside = translatedCurve.contains(pos);
-        polyp(pos) = (inside ? 1.f : 0.f) * polypEffect; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
-    });
-//    polyp *= this->polypEffect;
-    EnvObject::polypDeposit.add(polyp.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
-}
-
-void EnvArea::applyPolypAbsorption()
-{
-    return;
-}
-*/
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
@@ -176,7 +117,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
     box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
 
-    GridV3 flow(EnvObject::flowfield.getDimensions());
+    GridV3 flow = EnvObject::flowfield; //(EnvObject::flowfield.getDimensions());
     GridF occupancy(EnvObject::flowfield.getDimensions());
 
     GridF dist(flow.getDimensions());
@@ -213,21 +154,12 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
             if (normal.dot(previousFlow) > 0) {
                 normal *= -1.f;
             }
-//            if (direction.dot(previousFlow) > 0) {
-//                direction *= -1.f;
-//            }
             impact = this->flowEffect;// * distFactor;
-            // Ignore the normal for now, I can't find any logic with it...
-    //            if (impact.y != 0) { // Add an impact on the normal direction: need to change the normal to be in the right side of the curve
-    //                if ((translatedCurve.getPoint(closestTime) - Vector3(x, y, 0)).dot(direction) > 0)
-    //                    normal *= -1.f;
-    //            }
         });
         timeApply += timeIt([&]() {
             flow.at(pos) = impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
             occupancy.at(pos) = 1.f;
         });
-//        std::cout << "Prepare: " <<showTime(timePrepare) << " Apply: " << showTime(timeApply) << std::endl;
     });
     return {flow, occupancy};
 }
