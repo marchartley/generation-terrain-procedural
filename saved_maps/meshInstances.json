@@ -1,0 +1,93 @@
+[
+	{
+		"name": "boulder",
+		"foldername": "",
+		"colors": [
+			{"r": 0.2, "g": 1.0, "b": 0.5, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.0},
+		"minInstances": 1,
+		"maxInstances": 1,
+		"minSize": 3.0,
+		"maxSize": 8.0,
+		"radius": 0.0
+	},
+	{
+		"name": "coralpolyp",
+		"foldername": "corals",
+		"colors": [
+			{"r": 1.0, "g": 0.5, "b": 0.5, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 20,
+		"minSize": 5.0,
+		"maxSize": 5.0,
+		"radius": 10.0
+	},
+	{
+		"name": "coralpolypflat",
+		"foldername": "corals",
+		"colors": [
+			{"r": 1.0, "g": 0.5, "b": 0.5, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 20,
+		"minSize": 5.0,
+		"maxSize": 5.0,
+		"radius": 10.0
+	},
+	{
+		"name": "tree",
+		"foldername": "",
+		"colors": [
+			{"r": 0.1, "g": 1.0, "b": 0.1, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 1,
+		"maxInstances": 1,
+		"minSize": 20.0,
+		"maxSize": 40.0,
+		"radius": 0.0
+	},
+	{
+		"name": "arch",
+		"foldername": "arche",
+		"colors": [
+			{"r": 0.8, "g": 0.8, "b": 0.6, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 1,
+		"maxInstances": 1,
+		"minSize": 20.0,
+		"maxSize": 40.0,
+		"radius": 0.0
+	},
+	{
+		"name": "bigRock",
+		"foldername": "rocks",
+		"colors": [
+			{"r": 0.8, "g": 0.8, "b": 0.6, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.5},
+		"minInstances": 1,
+		"maxInstances": 1,
+		"minSize": 20.0,
+		"maxSize": 40.0,
+		"radius": 0.0
+	},
+	{
+		"name": "smallRock",
+		"foldername": "rocks",
+		"colors": [
+			{"r": 0.8, "g": 0.8, "b": 0.6, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 10,
+		"minSize": 3.0,
+		"maxSize": 5.0,
+		"radius": 5.0
+	}
+]
