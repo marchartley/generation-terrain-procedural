@@ -25,6 +25,8 @@ class EnvObject;
 typedef GraphTemplate<EnvObject*> GraphObj;
 typedef GraphNodeTemplate<EnvObject*> GraphNodeObj;
 
+typedef std::pair<std::map<std::string, float>, std::map<std::string, float>> MaterialsTransformation;
+
 class EnvObject
 {
 public:
@@ -36,6 +38,9 @@ public:
 
     static void readEnvMaterialsFile(std::string filename);
     static void readEnvMaterialsFileContent(std::string content);
+
+    static void readEnvMaterialsTransformationsFile(std::string filename);
+    static void readEnvMaterialsTransformationsFileContent(std::string content);
 
     static EnvObject* fromJSON(nlohmann::json content);
 
@@ -104,6 +109,7 @@ public:
 
     static void applyEffects(const GridF& heights);
     static void updateSedimentation(const GridF& heights);
+    static void applyMaterialsTransformations();
     static void updateFlowfield();
     static void beImpactedByEvents();
 
@@ -122,6 +128,8 @@ public:
     static void reset();
 
     static GraphObj sceneToGraph();
+
+    static std::vector<MaterialsTransformation> transformationRules;
 };
 
 #endif // ENVOBJECT_H

@@ -21,6 +21,7 @@ std::map<std::string, EnvObject*> EnvObject::availableObjects;
 std::vector<EnvObject*> EnvObject::instantiatedObjects;
 float EnvObject::flowImpactFactor = .9f;
 int EnvObject::currentMaxID = -1;
+std::vector<MaterialsTransformation> EnvObject::transformationRules;
 
 std::map<std::string, GridV3> EnvObject::allVectorProperties;
 std::map<std::string, GridF> EnvObject::allScalarProperties;
@@ -129,6 +130,48 @@ void EnvObject::readEnvMaterialsFileContent(std::string content)
     }
 }
 
+void EnvObject::readEnvMaterialsTransformationsFile(std::string filename)
+{
+    std::ifstream file(filename);
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    EnvObject::readEnvMaterialsTransformationsFileContent(content);
+}
+
+void EnvObject::readEnvMaterialsTransformationsFileContent(std::string content)
+{
+    std::vector<MaterialsTransformation> rules;
+//    std::string sline;
+    auto lines = split(content, "\n");
+//    while (std::getline(content, sline)) {
+    for (std::string sline : lines) {
+        if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
+        std::istringstream line(sline);
+        std::map<std::string, float> inputs, outputs;
+        std::string value, word, operation;
+        bool transformationValid = true;
+        // Get inputs
+        while (operation != "=") {
+            line >> value;
+            line >> word;
+            line >> operation;
+            inputs[word] = std::stof(value);
+            transformationValid &= (EnvObject::materials.count(word) != 0);
+        }
+        // Get outputs
+        while (true) {
+            line >> value;
+            line >> word;
+            outputs[word] = std::stof(value);
+            transformationValid &= (EnvObject::materials.count(word) != 0);
+            if (!(line >> operation)) break;
+        }
+        if (transformationValid)
+            rules.push_back({inputs, outputs});
+        else {
+            std::cerr << "Transformation not valid : " << sline << std::endl;
+        }
+    }
+    EnvObject::transformationRules = rules;
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)
@@ -357,6 +400,7 @@ void EnvObject::applyEffects(const GridF& heights)
 {
     EnvObject::updateFlowfield();
     EnvObject::updateSedimentation(heights);
+    EnvObject::applyMaterialsTransformations();
 }
 
 void EnvObject::updateSedimentation(const GridF& heights)
@@ -403,6 +447,56 @@ void EnvObject::updateSedimentation(const GridF& heights)
 
 //    materials["polyp"].currentState *= .9f;
 
+}
+
+void EnvObject::applyMaterialsTransformations()
+{
+    displayProcessTime("Filling compact materials... ", [&]() {
+        std::set<std::string> neededMaterials;
+        for (size_t iRule = 0; iRule < transformationRules.size(); iRule++) {
+            auto [input, output] = transformationRules[iRule];
+            for (auto [inMaterial, inDose] : input) {
+                neededMaterials.insert(inMaterial);
+            }
+            for (auto [outMaterial, outDose] : output) {
+                neededMaterials.insert(outMaterial);
+            }
+        }
+        std::map<std::string, float> initialState; // Loop the map creation only once
+        for (const auto& matName : neededMaterials)
+            initialState.insert({matName, 0.f});
+        Matrix3<std::map<std::string, float>> allMaterials(EnvObject::flowfield.getDimensions(), initialState);
+        allMaterials.iterateParallel([&] (size_t i) {
+            for (const auto& [matName, amount] : allMaterials[i]) {
+                allMaterials[i][matName] = EnvObject::materials[matName].currentState[i];
+            }
+
+            for (size_t iRule = 0; iRule < transformationRules.size(); iRule++) {
+                const auto& [input, output] = transformationRules[iRule];
+                float maxTransform = 10000.f;
+                for (const auto& [inMaterial, inDose] : input) {
+                    float inAmount = allMaterials[i][inMaterial];
+                    float transformVal = inAmount / inDose;
+                    maxTransform = std::min(maxTransform, transformVal);
+                }
+                if (maxTransform > 1e-3) {
+                    for (const auto& [inMaterial, inDose] : input) {
+                        allMaterials[i][inMaterial] -= inDose * maxTransform;
+                    }
+                    for (const auto& [outMaterial, outDose] : output) {
+                        allMaterials[i][outMaterial] += outDose * maxTransform;
+                    }
+                }
+            }
+        });
+
+        for (auto& matName : neededMaterials) {
+            auto& mat = EnvObject::materials[matName];
+            mat.currentState.iterateParallel([&](size_t i) {
+                mat.currentState[i] = allMaterials[i][matName];
+            });
+        }
+    }, false);
 }
 
 void EnvObject::updateFlowfield()
