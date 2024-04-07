@@ -2,6 +2,7 @@
 #define MESHINSTANCEAMPLIFICATIONINTERFACE_H
 
 #include "ActionInterface.h"
+#include "Utils/HotreloadFile.h"
 
 struct InstantiationMeshOption {
     InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
@@ -50,6 +51,8 @@ public:
     std::vector<AABBox> getRocksAvailablePositions();
     std::vector<std::pair<Vector3, float> > getPositionsFor(std::string type);
 
+    void readMeshInstanceFile(const std::string& fileContent);
+
 public Q_SLOTS:
     void setCoralsDisplayed(bool display);
     void setRocksDisplayed(bool display);
@@ -61,6 +64,8 @@ public Q_SLOTS:
 
 public:
     std::vector<InstantiationMeshOption> meshesOptions;
+
+    HotreloadFile meshInstancesFile;
 
     bool displayEnvObjects = true;
 

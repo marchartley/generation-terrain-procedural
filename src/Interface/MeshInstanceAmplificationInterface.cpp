@@ -11,7 +11,17 @@
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
+    meshInstancesFile.path = "saved_maps/meshInstances.json";
+    meshInstancesFile.onChange([&](std::string content) {
+        this->readMeshInstanceFile(content);
+    });
 
+    QTimer* hotreloadTimer = new QTimer(this);
+    hotreloadTimer->setInterval(500);
+    QObject::connect(hotreloadTimer, &QTimer::timeout, this, [&]() {
+        meshInstancesFile.check();
+    });
+    hotreloadTimer->start();
 }
 
 void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
@@ -130,6 +140,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
             possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();
         }
 
+        /*
         meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
 //        meshesOptions.push_back(InstantiationMeshOption("reef", "coral", {1.f, 5.f}, {1.f, .5f, .5f, 1.f}));
         meshesOptions.push_back(InstantiationMeshOption("coralpolyp", "corals", {5.f, 5.f}, {1.f, .5f, .5f, 1.f}, Vector3(), {5, 20}, 10.f));
@@ -169,10 +180,10 @@ void MeshInstanceAmplificationInterface::reloadShaders()
                     std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
                 }
 
-                meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f))/* + meshType.requiredTranslation*/);
+                meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, (meshType.name == "island" && false ? 0.f : -.5f)));
                 meshType.possibleMeshes[i].cullFace = false;
             }
-        }
+        }*/
     }, verbose);
 }
 
@@ -304,6 +315,69 @@ std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPo
         }
     }
     return positionsAndGrowthFactor;
+}
+
+void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string &fileContent)
+{
+    std::string pathToShaders = "src/Shaders/";
+    std::string vTreeShader = pathToShaders + "meshInstancesShader.vert";
+    std::string fTreeShader = pathToShaders + "meshInstancesShader.frag";
+
+    meshesOptions.clear();
+    auto json = nlohmann::json::parse(toLower(fileContent));
+    for (auto& instance : json) {
+        std::string name = instance["name"];
+        if (startsWith(name, "--")) continue;
+
+        std::string folderName = instance["foldername"];
+        if (folderName == "") folderName = name;
+        std::vector<std::vector<float>> colors;
+        auto jsonColors = instance["colors"];
+        for (auto& col : jsonColors) {
+            colors.push_back(json_to_color(col));
+        }
+        Vector3 translation = json_to_vec3(instance["translation"]);
+        int minInstances = instance["mininstances"];
+        int maxInstances = instance["maxinstances"];
+        float minSize = instance["minsize"];
+        float maxSize = instance["maxsize"];
+        float radius = instance["radius"];
+
+        InstantiationMeshOption meshType(name, folderName, {minSize, maxSize}, colors[0], translation, {minInstances, maxInstances}, radius);
+        meshType.displayed = true;
+
+        QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
+        std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
+        std::vector<QString> paths;
+        while (it.hasNext()) {
+            QString dir = it.next();
+            if (endsWith(dir.toStdString(), ".ignore")) continue;
+            paths.push_back(dir);
+        }
+        size_t nbElements = paths.size();
+        if (meshType.numberOfLoadedMesh != -1) nbElements = std::min(nbElements, (size_t)meshType.numberOfLoadedMesh);
+        meshType.possibleMeshes = std::vector<Mesh>(nbElements);
+
+//            #pragma omp parallel for
+        for (size_t i = 0; i < nbElements; i++) {
+            QString& dir = paths[i];
+            // Normalize it and move it upward so the anchor is on the ground
+            meshType.possibleMeshes[i] = Mesh(shader);
+
+            if (dir.endsWith("fbx", Qt::CaseInsensitive)) {
+                meshType.possibleMeshes[i].fromFBX(dir.toStdString());
+            } else if (dir.endsWith("stl", Qt::CaseInsensitive)) {
+                meshType.possibleMeshes[i].fromStl(dir.toStdString()).scale(Vector3(1.f, 1.f, -1.f));
+            } else if (!dir.endsWith(".ignore")) {
+                std::cerr << "Unable to open file " << dir.toStdString() << std::endl;
+            }
+
+            meshType.possibleMeshes[i].normalize().translate(Vector3(0.f, 0.f, -.5f));
+            meshType.possibleMeshes[i].cullFace = false;
+        }
+
+        meshesOptions.push_back(meshType);
+    }
 }
 
 void MeshInstanceAmplificationInterface::setCoralsDisplayed(bool display)
