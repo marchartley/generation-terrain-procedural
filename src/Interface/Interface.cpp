@@ -87,6 +87,8 @@ ViewerInterface::ViewerInterface() {
     }
 
     QObject::connect(this->viewer, &Viewer::viewerInitialized, this, [=](){
+        envObjectsInterface->setMaterialsDefinitionFile("saved_maps/envMaterials.json");
+        envObjectsInterface->setTransformationsFile("saved_maps/envMaterialsTransforms.txt");
         envObjectsInterface->setDefinitionFile("saved_maps/primitives.json");
 
 //        terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);

@@ -45,22 +45,22 @@ EnvObject::~EnvObject()
 
 }
 
-void EnvObject::readFile(std::string filename)
+void EnvObject::readEnvObjectsFile(std::string filename)
 {
 
-    EnvMaterial sand("sand", 1.f, 2.f, 2.f, EnvObject::flowfield.getDimensions());
+    /*EnvMaterial sand("sand", 1.f, 2.f, 2.f, EnvObject::flowfield.getDimensions());
     EnvMaterial polyp("polyp", 1.f, .1f, 0.f, EnvObject::flowfield.getDimensions());
     EnvMaterial pebbles("pebbles", .5f, 0.5f, 10.f, EnvObject::flowfield.getDimensions());
     EnvObject::materials["sand"] = sand;
     EnvObject::materials["polyp"] = polyp;
     EnvObject::materials["pebbles"] = pebbles;
-
+    */
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    EnvObject::readFileContent(content);
+    EnvObject::readEnvObjectsFileContent(content);
 }
 
-void EnvObject::readFileContent(std::string content)
+void EnvObject::readEnvObjectsFileContent(std::string content)
 {
     auto json = nlohmann::json::parse(toLower(content));
     for (auto& obj : json) {
@@ -92,7 +92,43 @@ void EnvObject::readFileContent(std::string content)
         obj->materialAbsorptionRate = EnvObject::availableObjects[name]->materialAbsorptionRate;
         obj->materialDepositionRate = EnvObject::availableObjects[name]->materialDepositionRate;
     }
-//    precomputeTerrainProperties(Heightmap());
+    //    precomputeTerrainProperties(Heightmap());
+}
+
+void EnvObject::readEnvMaterialsFile(std::string filename)
+{
+    std::ifstream file(filename);
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    EnvObject::readEnvMaterialsFileContent(content);
+}
+
+void EnvObject::readEnvMaterialsFileContent(std::string content)
+{
+    auto json = nlohmann::json::parse(toLower(content));
+    for (auto& mat : json) {
+        std::string matName = mat["name"];
+        if (startsWith(matName, "--")) continue; // Ignore some materials if the name starts with "--"
+
+        float diffusionSpeed = mat["diffusionspeed"];
+        float waterTransport = mat["watertransport"];
+        float mass = mat["mass"];
+
+        EnvMaterial material;
+        material.name = matName;
+        material.diffusionSpeed = diffusionSpeed;
+        material.waterTransport = waterTransport;
+        material.mass = mass;
+
+        if (EnvObject::materials.count(matName) != 0) {
+            material.currentState = EnvObject::materials[matName].currentState;
+        } else {
+            material.currentState = GridF(EnvObject::flowfield.getDimensions(), 0.f);
+        }
+
+        EnvObject::materials[matName] = material;
+    }
+}
+
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)

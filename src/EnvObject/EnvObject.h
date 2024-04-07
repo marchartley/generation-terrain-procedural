@@ -31,8 +31,11 @@ public:
     EnvObject();
     virtual ~EnvObject();
 
-    static void readFile(std::string filename);
-    static void readFileContent(std::string content);
+    static void readEnvObjectsFile(std::string filename);
+    static void readEnvObjectsFileContent(std::string content);
+
+    static void readEnvMaterialsFile(std::string filename);
+    static void readEnvMaterialsFileContent(std::string content);
 
     static EnvObject* fromJSON(nlohmann::json content);
 
@@ -41,9 +44,6 @@ public:
     std::string s_FittingFunction;
     std::function<float(Vector3)> fittingFunction;
     Vector3 flowEffect;
-//    float sandEffect;
-//    float polypEffect;
-//    std::map<std::string, float> materialEffect;
     std::map<std::string, float> materialDepositionRate;
     std::map<std::string, float> materialAbsorptionRate;
     Vector3 inputDimensions;

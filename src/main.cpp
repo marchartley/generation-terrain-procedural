@@ -34,6 +34,7 @@
 #include "DataStructure/Kelvinlet.h"
 #include "DataStructure/Image.h"
 #include "EnvObject/ExpressionParser.h"
+#include "Utils/HotreloadFile.h"
 
 using namespace std;
 
@@ -1370,7 +1371,49 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
     return 0;*/
 
-    EnvObject::readFile("saved_maps/primitives.json");
+    /*
+    HotreloadFile file("/home/marc/generation-terrain-procedural/saved_maps/envMaterials.json");
+
+    file.onChange([&](std::string content) {
+        std::cout << content << std::endl;
+    });
+    while (true) {
+        file.check();
+        sleep(1000);
+    }
+
+    return 0;
+    */
+    /*
+    Vector3 size(300, 300, 1);
+    GridV3 img(size, Vector3(0, 1, 0));
+    GridV3 initialImage = Image::readFromFile("poster/profile.png").colorImage.resize(size) / 255.f;
+
+
+    float radialScale = 10.f;
+    float force = 100.f;
+    Vector3 center = size.xy() * .5f;
+
+    TwistKelvinlet k1;
+    k1.pos = center + Vector3(-radialScale, 0, 0);
+    k1.force = Vector3(0, 0, force);
+    k1.radialScale = radialScale;
+
+    TwistKelvinlet k2;
+    k2.pos = center + Vector3(radialScale, 0, 0);
+    k2.force = Vector3(0, 0, -force);
+    k2.radialScale = radialScale;
+
+    img.iterateParallel([&](const Vector3& p) {
+        img(p) = initialImage(p + k1.evaluate(p + k2.evaluate(p))); // initialImage(p + k1.evaluate(p) + k2.evaluate(p));
+    });
+
+    Plotter::get()->addImage(img);
+    return Plotter::get()->exec();
+    */
+
+    EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
+    EnvObject::readEnvObjectsFile("saved_maps/primitives.json");
 
     ViewerInterface vi;
     vi.show();

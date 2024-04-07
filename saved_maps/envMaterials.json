@@ -1,0 +1,33 @@
+[
+	{
+		"name": "sand",
+		"diffusionSpeed": 1.0,
+		"waterTransport": 2.0,
+		"mass": 2.0
+	},
+	{
+		"name": "polyp",
+		"diffusionSpeed": 1.0,
+		"waterTransport": 0.1,
+		"mass": 0.0
+	},
+	{
+		"name": "pebbles",
+		"diffusionSpeed": 0.5,
+		"waterTransport": 0.5,
+		"mass": 10.0
+	},
+	
+	{
+		"name": "polypA",
+		"diffusionSpeed": 1.0,
+		"waterTransport": 0.1,
+		"mass": 0.0
+	},
+	{
+		"name": "polypB",
+		"diffusionSpeed": 1.0,
+		"waterTransport": 0.1,
+		"mass": 0.0
+	}
+]

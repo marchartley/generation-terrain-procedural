@@ -4,6 +4,7 @@
 #include <QWidget>
 #include "Interface/ActionInterface.h"
 #include "Interface/HierarchicalListWidget.h"
+#include "Utils/HotreloadFile.h"
 
 #include "EnvObject/EnvPoint.h"
 #include "EnvObject/EnvCurve.h"
@@ -26,7 +27,9 @@ public:
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
     void createEnvObjectsFromImplicitTerrain();
+    void setMaterialsDefinitionFile(std::string filename);
     void setDefinitionFile(std::string filename);
+    void setTransformationsFile(std::string filename);
 
     EnvObject* instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score);
 
@@ -57,7 +60,11 @@ public Q_SLOTS:
 
     void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
 
-    void hotReloadFile();
+    void updateObjectsDefinitions(const std::string& newDefinition);
+    void updateMaterialsDefinitions(const std::string& newDefinition);
+    void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
+
+    // void hotReloadFile();
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
@@ -86,8 +93,13 @@ public:
     GridF erosionGrid;
     GridV3 velocitiesGrid;
 
-    std::string primitiveDefinitionFile;
-    QDateTime lastTimeFileHasBeenModified;
+//    std::string primitiveDefinitionFile;
+//    std::string materialsDefinitionFile;
+
+    HotreloadFile primitiveDefinitionFile;
+    HotreloadFile materialsDefinitionFile;
+    HotreloadFile transformationsFile;
+//    QDateTime lastTimeFileHasBeenModified;
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
@@ -95,6 +107,8 @@ public:
     EnvObject* currentSelection = nullptr;
 
     std::string previousFileContent = "";
+    std::string previousMaterialsFileContent = "";
+    std::string previousMaterialsTransformationsFileContent = "";
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

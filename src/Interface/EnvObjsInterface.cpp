@@ -10,9 +10,17 @@
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
 {
+    primitiveDefinitionFile.onChange([&](std::string newDefinitions) { updateObjectsDefinitions(newDefinitions); });
+    materialsDefinitionFile.onChange([&](std::string newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
+    transformationsFile.onChange([&](std::string newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
+
     QTimer* hotreloadTimer = new QTimer(this);
     hotreloadTimer->setInterval(500);
-    QObject::connect(hotreloadTimer, &QTimer::timeout, this, &EnvObjsInterface::hotReloadFile);
+    QObject::connect(hotreloadTimer, &QTimer::timeout, this, [&]() {
+        materialsDefinitionFile.check();
+        primitiveDefinitionFile.check();
+        transformationsFile.check();
+    });
     hotreloadTimer->start();
 }
 
@@ -222,10 +230,23 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
         updateObjectsList();
 }
 
+void EnvObjsInterface::setMaterialsDefinitionFile(std::string filename)
+{
+    this->materialsDefinitionFile.path = filename;
+    EnvObject::readEnvMaterialsFile(filename);
+}
+
 void EnvObjsInterface::setDefinitionFile(std::string filename)
 {
-    this->primitiveDefinitionFile = filename;
-    EnvObject::readFile(filename);
+//    this->primitiveDefinitionFile = filename;
+    this->primitiveDefinitionFile.path = filename;
+    EnvObject::readEnvObjectsFile(filename);
+}
+
+void EnvObjsInterface::setTransformationsFile(std::string filename)
+{
+    this->transformationsFile.path = filename;
+    EnvObject::readEnvMaterialsTransformationsFile(filename);
 }
 
 void EnvObjsInterface::show()
@@ -688,6 +709,43 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
     Q_EMIT this->updated();
 }
 
+void EnvObjsInterface::updateObjectsDefinitions(const std::string &newDefinition)
+{
+    try {
+        EnvObject::readEnvObjectsFileContent(newDefinition);
+        this->previousFileContent = newDefinition;
+    } catch (const nlohmann::detail::parse_error& exception) {
+        std::cerr << "Error parsing " << primitiveDefinitionFile.path << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
+        if (previousFileContent != "")
+            EnvObject::readEnvObjectsFileContent(this->previousFileContent);
+    }
+}
+
+void EnvObjsInterface::updateMaterialsDefinitions(const std::string &newDefinition)
+{
+    try {
+        EnvObject::readEnvMaterialsFileContent(newDefinition);
+        this->previousMaterialsFileContent = newDefinition;
+    } catch (const nlohmann::detail::parse_error& exception) {
+        std::cerr << "Error parsing " << materialsDefinitionFile.path << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
+        if (previousMaterialsFileContent != "")
+            EnvObject::readEnvMaterialsFileContent(this->previousMaterialsFileContent);
+    }
+}
+
+void EnvObjsInterface::updateMaterialsTransformationsDefinitions(const std::string &newDefinition)
+{
+    try {
+        EnvObject::readEnvMaterialsTransformationsFileContent(newDefinition);
+        this->previousMaterialsTransformationsFileContent = newDefinition;
+    } catch (const nlohmann::detail::parse_error& exception) {
+        std::cerr << "Error parsing " << transformationsFile.path << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
+        if (previousMaterialsTransformationsFileContent != "")
+            EnvObject::readEnvMaterialsTransformationsFileContent(this->previousMaterialsTransformationsFileContent);
+    }
+}
+
+/*
 void EnvObjsInterface::hotReloadFile()
 {
     bool needReload = false;
@@ -701,7 +759,7 @@ void EnvObjsInterface::hotReloadFile()
             displayProcessTime("Environmental objects file has changed. Parsing... ", [&]() {
                 try {
                     std::ifstream file(this->primitiveDefinitionFile);
-                    std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());;
+                    std::string fileContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
                     EnvObject::readFileContent(fileContent);
                     this->previousFileContent = fileContent;
                     this->lastTimeFileHasBeenModified = lastModifTime;
@@ -714,6 +772,7 @@ void EnvObjsInterface::hotReloadFile()
         }
     }
 }
+*/
 
 void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) const
 {
@@ -945,7 +1004,8 @@ void EnvObjsInterface::runPerformanceTest()
 void EnvObjsInterface::fromGanUI()
 {
     EnvObject::reset();
-    EnvObject::readFile(this->primitiveDefinitionFile);
+    EnvObject::readEnvObjectsFileContent(this->primitiveDefinitionFile.read());
+    EnvObject::readEnvMaterialsFileContent(this->materialsDefinitionFile.read());
 
     std::string path = "Python_tests/test_island_heightmapfeatures/";
 //    QString q_filename= QString::fromStdString(path + "_1.png");
