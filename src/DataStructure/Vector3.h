@@ -261,4 +261,8 @@ public:
 nlohmann::json vec3_to_json(const Vector3& vec);
 Vector3 json_to_vec3(nlohmann::json json);
 
+std::vector<float> json_to_color(nlohmann::json json);
+nlohmann::json color_to_json(const std::vector<float>& color);
+nlohmann::json color_to_json(const Vector3& color);
+
 #endif // VECTOR3_H

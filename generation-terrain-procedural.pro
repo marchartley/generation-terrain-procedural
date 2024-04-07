@@ -182,6 +182,7 @@ SOURCES += \
     src/Utils/Curve1D.cpp \
     src/Utils/Delaunay.cpp \
         src/Utils/Globals.cpp \
+    src/Utils/HotreloadFile.cpp \
     src/Utils/PbmReader.cpp \
         src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
@@ -367,6 +368,7 @@ HEADERS += \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
+    src/Utils/HotreloadFile.h \
     src/Utils/PbmReader.h \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \

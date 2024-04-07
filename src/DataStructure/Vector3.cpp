@@ -777,14 +777,6 @@ float Vector3::distanceToBoundaries(const Vector3& pos, const Vector3& minPos, c
 }
 
 
-nlohmann::json vec3_to_json(const Vector3& vec) {
-    return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});
-}
-
-Vector3 json_to_vec3(nlohmann::json json)
-{
-    return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
-}
 
 AABBox::AABBox()
     : AABBox(Vector3(0, 0, 0), Vector3(0, 0, 0))
@@ -871,4 +863,32 @@ std::ostream& operator<<(std::ostream& io, const AABBox& bbox) {
 std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> bbox) {
     io << bbox->toString();
     return io;
+}
+
+
+
+
+
+nlohmann::json vec3_to_json(const Vector3& vec) {
+    return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});
+}
+
+Vector3 json_to_vec3(nlohmann::json json)
+{
+    return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
+}
+
+std::vector<float> json_to_color(nlohmann::json json)
+{
+    return std::vector<float>({json.at("r").get<float>(), json.at("g").get<float>(), json.at("b").get<float>(), (json.contains("a") ? json.at("a").get<float>() : 1.f)});
+}
+
+nlohmann::json color_to_json(const std::vector<float> &color)
+{
+    return nlohmann::json({{"r", color[0]}, {"g", color[1]}, {"b", color[2]}, {"a", (color.size() > 3 ? color[3] : 1.f)}});
+}
+
+nlohmann::json color_to_json(const Vector3 &color)
+{
+    return color_to_json(std::vector<float>({color.x, color.y, color.z, 1.f}));
 }
