@@ -424,6 +424,9 @@ void Viewer::mouseReleaseEvent(QMouseEvent *e)
 {
     QGLViewer::mouseReleaseEvent(e);
     this->mouseDown = false;
+
+    checkMouseOnVoxel(); // To remove?
+    Q_EMIT this->mouseReleasedOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
@@ -456,7 +459,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
         }  catch (std::exception) {
             std::cout << "Catched this f***ing exception!" << std::endl;
         }
-        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
+        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(false)), this->getCurrentTerrainModel());
 
         update();
     });

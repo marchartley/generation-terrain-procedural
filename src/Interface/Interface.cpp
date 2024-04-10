@@ -146,6 +146,7 @@ ViewerInterface::ViewerInterface() {
             QObject::connect(this->viewer, &Viewer::mouseClickOnMap, actionInterface.second.get(), &ActionInterface::mouseClickedOnMapEvent);
             QObject::connect(this->viewer, &Viewer::mouseMovedOnMap, actionInterface.second.get(), &ActionInterface::mouseMovedOnMapEvent);
             QObject::connect(this->viewer, &Viewer::mouseDoubleClickedOnMap, actionInterface.second.get(), &ActionInterface::mouseDoubleClickedOnMapEvent);
+            QObject::connect(this->viewer, &Viewer::mouseReleasedOnMap, actionInterface.second.get(), &ActionInterface::mouseReleasedOnMapEvent);
 
             for (auto& otherActionInterface : this->actionInterfaces) {
                 QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {

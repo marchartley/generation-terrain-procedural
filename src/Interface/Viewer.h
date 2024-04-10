@@ -60,6 +60,7 @@ Q_SIGNALS:
     void mouseClickOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     void mouseDoubleClickedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     void mouseMovedOnMap(const Vector3& mouseWorldPosition, TerrainModel* model);
+    void mouseReleasedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
 public Q_SLOTS:
     bool startRecording(std::string folderUsed = "");

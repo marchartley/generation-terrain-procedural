@@ -40,6 +40,8 @@ public Q_SLOTS:
     virtual void afterWaterLevelChanged();
 
     virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    virtual void mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model);
+    virtual void mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
     void instantiateObject(bool waitForFullyGrown = true);
     void instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
@@ -84,6 +86,10 @@ public:
     Mesh objectsMesh;
 
     HierarchicalListWidget* objectsListWidget = nullptr;
+
+    Vector3 draggingPoint = Vector3(false);
+    Vector3 draggingFullObject = Vector3(false);
+    Vector3 draggingHasBeenApplied = Vector3(false);
 
     bool displayVelocities = true;
     bool displayHighErosions = true;

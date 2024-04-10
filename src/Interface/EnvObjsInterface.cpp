@@ -145,6 +145,8 @@ QLayout *EnvObjsInterface::createGUI()
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
+    ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
+
 
     QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
 
@@ -180,7 +182,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
-    layout->addWidget(testPerformancesButton->get());
+    layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
     layout->addWidget(label);
 
 
@@ -277,27 +279,110 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
 {
     if (!this->isVisible()) return;
     if (!mouseInMap) return;
-    if (!event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) return;
+    if (event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier)) {
+        draggingPoint = mouseWorldPosition.xy();
+    } else if (event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) {
+        draggingFullObject = mouseWorldPosition.xy();
+    }
+    draggingHasBeenApplied = mouseWorldPosition.xy();
+    draggingHasBeenApplied.setValid(false); // Keep position, but set to invalid
+}
 
-    Vector3 newPos = mouseWorldPosition.xy();
+void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model)
+{
+    if (!this->isVisible()) return;
+    if (!mouseWorldPosition.isValid()) return;
 
-    std::string name = "motu";
-    EnvObject* newObject = this->instantiateObjectAtBestPosition(name, newPos, GridF());
-    auto implicit = newObject->createImplicitPatch(heightmap->heights);
-//    dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(newPos);
-    this->implicitPatchesFromObjects[newObject] = implicit;
-    if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
-        this->implicitTerrain->addChild(this->rootPatch);
-    rootPatch->addChild(implicit);
-    rootPatch->reevaluateAll();
-    implicitTerrain->updateCache();
-    implicitTerrain->update();
-    voxelGrid->fromImplicit(implicitTerrain.get(), 40);
-    heightmap->fromVoxelGrid(*voxelGrid.get());
-    std::cout << "Instantiating " << name << " at position " << newPos << std::endl;
-    EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
-    EnvObject::recomputeFlowAndSandProperties(*heightmap);
-    updateObjectsList();
+    if (draggingPoint.isValid()) {
+        draggingHasBeenApplied.setValid(true);
+        Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
+        draggingHasBeenApplied = mouseWorldPosition.xy();
+
+        if (this->currentSelection != nullptr) {
+            float maxDistToPointSqr = 10.f * 10.f;
+            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
+                point->position = mouseWorldPosition.xy();
+            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
+                int pointIndexToMove = -1;
+                float closestDistToPoint = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < curve->curve.size(); i++) {
+                    float dist = (curve->curve[i] - mouseWorldPosition.xy()).norm2();
+                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
+                        closestDistToPoint = dist;
+                        pointIndexToMove = i;
+                    }
+                }
+
+                if (pointIndexToMove > -1) {
+                    curve->curve[pointIndexToMove].translate(translation);
+                }
+            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
+                int pointIndexToMove = -1;
+                float closestDistToPoint = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < area->area.size(); i++) {
+                    float dist = (area->area[i] - mouseWorldPosition.xy()).norm2();
+                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
+                        closestDistToPoint = dist;
+                        pointIndexToMove = i;
+                    }
+                }
+
+                if (pointIndexToMove > -1) {
+                    area->area[pointIndexToMove].translate(translation);
+                }
+            }
+            this->updateSelectionMesh();
+        }
+    } else if (draggingFullObject.isValid()) {
+        draggingHasBeenApplied.setValid(true);
+        Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
+        draggingHasBeenApplied = mouseWorldPosition.xy();
+
+        if (this->currentSelection != nullptr) {
+            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
+                point->position = mouseWorldPosition.xy();
+            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
+                curve->curve.translate(translation);
+            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
+                area->area.translate(translation);
+            }
+            this->updateSelectionMesh();
+        }
+    }
+}
+
+void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
+{
+    if (!this->isVisible()) return;
+
+    if (draggingFullObject.isValid() && !mouseInMap) {
+        this->destroyEnvObject(currentSelection);
+        this->updateEnvironmentFromEnvObjects(true, true);
+    }
+    if ((draggingPoint.isValid() || draggingFullObject.isValid()) && draggingHasBeenApplied.isValid()) {
+        draggingPoint.setValid(false);
+        draggingFullObject.setValid(false);
+        if (mouseInMap) {
+            if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
+                auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
+                if (newPatch) {
+                    *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
+                    delete newPatch;
+                }
+            }
+        }
+        this->materialSimulationStable = false;
+        this->updateEnvironmentFromEnvObjects(true, true);
+
+        this->updateSelectionMesh();
+    }
+    draggingPoint.setValid(false);
+    draggingFullObject.setValid(false);
+    draggingHasBeenApplied.setValid(false);
+}
+
 }
 
 GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = true) {
@@ -1111,15 +1196,13 @@ void EnvObjsInterface::fromGanUI()
         implicitTerrain->update();
         rootPatch->reevaluateAll();
 
+        /*
         std::cout << "To voxels: " << showTime(timeIt([&]() {
-//            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
         })) << std::endl;
         std::cout << "To heightmap: " << showTime(timeIt([&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
-//            heightmap->fromImplicit(implicitTerrain.get());
-        })) << std::endl;
-//        implicitTerrain->addChild(obj->createImplicitPatch());
-//        implicitTerrain->_cached = false;
+        })) << std::endl;*/
 
         EnvObject::precomputeTerrainProperties(*heightmap);
         this->updateEnvironmentFromEnvObjects(true, true);
