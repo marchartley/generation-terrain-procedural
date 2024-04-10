@@ -49,6 +49,7 @@ public Q_SLOTS:
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true);
     void onlyUpdateFlowAndSandFromEnvObjects();
+    void destroyEnvObject(EnvObject* object);
 
     void displayProbas(std::string objectName);
 //    void displaySedimentsDistrib();
@@ -59,6 +60,7 @@ public Q_SLOTS:
     void updateObjectsList();
 
     void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
+    void updateSelectionMesh();
 
     void updateObjectsDefinitions(const std::string& newDefinition);
     void updateMaterialsDefinitions(const std::string& newDefinition);
@@ -72,6 +74,8 @@ public Q_SLOTS:
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
 
     void runPerformanceTest();
+
+    void resetScene();
 
 public:
     Mesh velocitiesMesh;

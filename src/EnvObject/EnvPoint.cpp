@@ -70,17 +70,12 @@ EnvPoint *EnvPoint::clone()
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState() * (EnvObject::flowfield(this->position).norm() * 10.f);
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState() /** (EnvObject::flowfield(this->position).norm() * 10.f)*/;
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
-    /*
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * 1.f) * this->sandEffect * this->computeGrowingState();
-    EnvObject::sandDeposit.add(sand, this->position - sand.getDimensions() * .5f);
-    */
 }
 
 void EnvPoint::applyAbsorption(EnvMaterial& material)
 {
-//    std::cout << "Absorbing " << material.name << " : " << this->materialAbsorptionRate[material.name] << std::endl;
     if (this->materialAbsorptionRate[material.name] == 0) return;
     if (this->needsForGrowth.count(material.name) == 0) return;
 
@@ -97,9 +92,6 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
-//    GridV3 flowSubset = EnvObject::flowfield.subset(Vector3(this->position.x - radius, this->position.y - radius), Vector3(this->position.x + radius, this->position.y + radius));
-    //GridF gauss = GridF::gaussian(2.f*radius, 2.f*radius, 1, radius/* * .5f*/).normalize();
-
     float currentGrowth = computeGrowingState();
 
     ScaleKelvinlet k;
@@ -135,7 +127,10 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
 {
-
+    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+        previousPrimitive = nullptr;
+        return nullptr;
+    }
     ImplicitPrimitive* patch;
     float currentGrowth = this->computeGrowingState();
     Vector3 dimensions = Vector3(radius * currentGrowth, radius * currentGrowth, radius * currentGrowth * this->height);

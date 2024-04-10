@@ -439,17 +439,21 @@ void EnvObjsInterface::instantiateObject()
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
-            rootPatch->addChild(implicit);
-            rootPatch->reevaluateAll();
-            implicitTerrain->updateCache();
-            implicitTerrain->update();
-            voxelGrid->fromImplicit(implicitTerrain.get(), 40);
-            heightmap->fromVoxelGrid(*voxelGrid.get());
+
+            if (implicit != nullptr) {
+                rootPatch->addChild(implicit);
+                /*rootPatch->reevaluateAll();
+                implicitTerrain->updateCache();
+                implicitTerrain->update();
+                voxelGrid->fromImplicit(implicitTerrain.get(), 40);
+                heightmap->fromVoxelGrid(*voxelGrid.get());*/
+            }
 //            heightmap->fromImplicit(implicitTerrain.get());
             std::cout << "Instantiating " << name << " at position " << bestPos << std::endl;
 //            EnvObject::precomputeTerrainProperties(*heightmap);
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
+            updateEnvironmentFromEnvObjects(implicit != nullptr, true);
         } else {
             std::cout << "No object to instantiate..." << std::endl;
         }
@@ -459,6 +463,11 @@ void EnvObjsInterface::instantiateObject()
 
 void EnvObjsInterface::instantiateSpecific(std::string objectName)
 {
+    objectName = toLower(objectName);
+    if (EnvObject::availableObjects.count(objectName) == 0) {
+        std::cerr << "No object " << objectName << " in database!" << std::endl;
+        return;
+    }
     bool verbose = false;
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
         GridF heights = heightmap->getHeights();
@@ -476,9 +485,12 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
-            rootPatch->addChild(implicit);
+
+            if (implicit != nullptr) {
+                rootPatch->addChild(implicit);
+            }
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
-            this->updateEnvironmentFromEnvObjects(true);
+            this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
         }
@@ -526,15 +538,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
             obj->createImplicitPatch(heightmap->heights, dynamic_cast<ImplicitPrimitive*>(implicit));
         }
-//        auto rootPos = std::find(implicitTerrain->composables.begin(), implicitTerrain->composables.end(), (ImplicitPatch*)rootPatch);
-//        implicitTerrain->composables.erase(rootPos);
-//        rootPatch->composables.insert(rootPatch->composables.begin(), implicitTerrain->composables.begin(), implicitTerrain->composables.end());
-//        implicitTerrain->composables.clear();
-//        implicitTerrain->addChild(rootPatch);
         rootPatch->reevaluateAll();
-        // Move rootPatch to last of list
-//        implicitTerrain->composables.erase(std::find(implicitTerrain->composables.begin(), implicitTerrain->composables.end(), (ImplicitPatch*)rootPatch));
-//        implicitTerrain->addChild(rootPatch);
         implicitTerrain->updateCache();
         implicitTerrain->update();
         displayProcessTime("Update voxels from implicit terrain... ", [&]() {
@@ -542,26 +546,10 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         displayProcessTime("Update heightmap from implicit terrain... ", [&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
-
-            /*
-            EnvCurve* river;
-            for (auto& obj : EnvObject::instantiatedObjects) {
-                if (obj->name == "reef") {
-                    river = dynamic_cast<EnvCurve*>(obj);
-                }
-            }
-            if (river) {
-                GridF heights(Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1));
-                heights.iterateParallel([&](const Vector3& p) {
-                    heights(p) = interpolation::smooth(clamp(river->curve.estimateDistanceFrom(p) / 10.f, 0.f, 1.f)) * 5.f;
-                });
-                heightmap->heights = heights;
-            }*/
-//            heightmap->heights = GridF(heightmap->heights.getDimensions()) + EnvObject::materials["sand"].currentState * 10.f;
         }, verbose);
-        if (emitUpdateSignal) {
-            Q_EMIT this->updated();
-        }
+    }
+    if (emitUpdateSignal) {
+        Q_EMIT this->updated();
     }
     updateObjectsList();
 }
@@ -569,6 +557,19 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
     EnvObject::applyEffects(heightmap->heights);
+}
+
+void EnvObjsInterface::destroyEnvObject(EnvObject *object)
+{
+    for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
+        if (EnvObject::instantiatedObjects[i] == object) {
+            EnvObject::instantiatedObjects.erase(EnvObject::instantiatedObjects.begin() + i);
+            break;
+        }
+    }
+    if (this->implicitPatchesFromObjects.count(object) != 0) {
+        this->implicitPatchesFromObjects.erase(object);
+    }
 }
 
 void EnvObjsInterface::displayProbas(std::string objectName)
@@ -625,12 +626,16 @@ void EnvObjsInterface::updateObjectsList()
 {
     if (!this->isVisible()) return;
     if (!objectsListWidget) return;
+    int currentSelectionID = (currentSelection != nullptr ? currentSelection->ID : -1);
     objectsListWidget->clear();
     auto list = EnvObject::instantiatedObjects;
 
     for (auto& obj : list) {
         objectsListWidget->addItem(new HierarchicalListWidgetItem(obj->name + " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "%)", obj->ID, 0));
+        if (obj->ID == currentSelectionID)
+            currentSelection = obj;
     }
+    if (currentSelectionID > -1) objectsListWidget->setCurrentItem(currentSelectionID);
 }
 
 void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionItem)
@@ -659,28 +664,49 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
     if (!selection)
         return;
 
+    this->updateSelectionMesh();
+}
+
+void EnvObjsInterface::updateSelectionMesh()
+{
+    if (currentSelection == nullptr) {
+        objectsMesh.clear();
+        return;
+    }
     Vector3 selectionPos;
-    if (auto asPoint = dynamic_cast<EnvPoint*>(selection)) {
+    if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
         selectionPos = asPoint->position;
-        std::cout << "Pos " << selection->name << ": " << asPoint->position << "\n-> selection at " << selectionPos.xy() << std::endl;
+        std::cout << "Pos " << currentSelection->name << ": " << asPoint->position << "\n-> selection at " << selectionPos.xy() << std::endl;
         selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + 5.f;
         objectsMesh.fromArray(Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos));
-    } else if (auto asCurve = dynamic_cast<EnvCurve*>(selection)) {
+    } else if (auto asCurve = dynamic_cast<EnvCurve*>(currentSelection)) {
         selectionPos = asCurve->curve.center();
-        std::cout << "Curve " << selection->name << ":" << asCurve->curve.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
+        std::cout << "Curve " << currentSelection->name << ":" << asCurve->curve.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
         std::vector<Vector3> meshPoints;
         auto path = asCurve->curve.getPath(50);
+        float offsetAbove = 5.f;
         for (size_t i = 0; i < path.size() - 1; i++) {
             auto p1 = path[i];
             auto p2 = path[i + 1];
-            meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
-            meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
+            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+            Vector3 p2leveled = p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + offsetAbove);
+            meshPoints.push_back(p1leveled);
+            meshPoints.push_back(p2leveled);
+        }
+        for (int i = 0; i < asCurve->curve.size(); i++) {
+            auto& p1 = asCurve->curve[i];
+            auto& p2 = asCurve->curve[std::abs(i - 1)];
+            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+            Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
+            meshPoints.push_back(p1leveled + perpendicular);
+            meshPoints.push_back(p1leveled - perpendicular);
         }
         objectsMesh.fromArray(meshPoints);
-    } else if (auto asArea = dynamic_cast<EnvArea*>(selection)) {
+    } else if (auto asArea = dynamic_cast<EnvArea*>(currentSelection)) {
         selectionPos = asArea->area.center();
-        std::cout << "Area: " << selection->name << "" << asArea->area.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
+        std::cout << "Area: " << currentSelection->name << "" << asArea->area.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
         std::vector<Vector3> meshPoints;
+        float offsetAbove = 5.f;
         auto path = asArea->area.getPath(20);
         for (size_t i = 0; i < path.size() - 1; i++) {
             auto p1 = path[i];
@@ -688,9 +714,17 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionI
             meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
             meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
         }
+        for (int i = 0; i < asArea->area.size(); i++) {
+            auto& p1 = asArea->area[i];
+            auto& p2 = asArea->area[std::abs(i - 1)];
+            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+            Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
+            meshPoints.push_back(p1leveled + perpendicular);
+            meshPoints.push_back(p1leveled - perpendicular);
+        }
         objectsMesh.fromArray(meshPoints);
     } else {
-        std::cerr << "Object #" << selection->ID << " (" << selection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
+        std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
         return;
     }
 
@@ -1001,9 +1035,25 @@ void EnvObjsInterface::runPerformanceTest()
     */
 }
 
-void EnvObjsInterface::fromGanUI()
+void EnvObjsInterface::resetScene()
 {
     EnvObject::reset();
+    this->materialSimulationStable = false; // We have to compute the simulation again
+    for (auto& [obj, patch] : implicitPatchesFromObjects)
+        delete patch;
+    this->implicitPatchesFromObjects.clear();
+//    this->rootPatch->deleteAllChildren();
+    this->rootPatch->composables.clear();
+    this->rootPatch->updateCache();
+
+    this->updateEnvironmentFromEnvObjects(true);
+
+    Q_EMIT this->updated();
+}
+
+void EnvObjsInterface::fromGanUI()
+{
+    this->resetScene();
     EnvObject::readEnvObjectsFileContent(this->primitiveDefinitionFile.read());
     EnvObject::readEnvMaterialsFileContent(this->materialsDefinitionFile.read());
 
@@ -1019,26 +1069,13 @@ void EnvObjsInterface::fromGanUI()
         for (auto& newObject : envObjects) {
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
             this->implicitPatchesFromObjects[newObject] = implicit;
-            rootPatch->addChild(implicit);
+            if (implicit != nullptr) {
+                rootPatch->addChild(implicit);
+            }
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
         }
 
-/*
-        EnvCurve* river;
-        for (auto& obj : EnvObject::instantiatedObjects) {
-            if (obj->name == "reef") {
-                river = dynamic_cast<EnvCurve*>(obj);
-            }
-        }
-        GridF heights(Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1));
-        heights.iterateParallel([&](const Vector3& p) {
-            heights(p) = interpolation::smooth(clamp(river->curve.estimateDistanceFrom(p) / 10.f, 0.f, 1.f)) * 20.f;
-        });
-        auto primTerrain = ImplicitPrimitive::fromHeightmap(heights);
-        primTerrain->material = SAND;
-        rootPatch->addChild(primTerrain);
-*/
         implicitTerrain->updateCache();
         implicitTerrain->update();
         rootPatch->reevaluateAll();
@@ -1054,7 +1091,7 @@ void EnvObjsInterface::fromGanUI()
 //        implicitTerrain->_cached = false;
 
         EnvObject::precomputeTerrainProperties(*heightmap);
-        this->updateEnvironmentFromEnvObjects();
+        this->updateEnvironmentFromEnvObjects(true, true);
         std::cout << "Update: " << showTime(timeIt([&]() {
             updateObjectsList();
         })) << std::endl;

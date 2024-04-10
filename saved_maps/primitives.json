@@ -412,7 +412,7 @@
     "type": "point",
     "--rule": "(10 - d(bigRock - pos)) / current.vel",
     "--rule": "((20 - d(bigRock - (pos + current * {5 5 0})) max 0) * ((5 - d(canyon - pos)) max 0)) max 0",
-    "rule": "pebbles / d(canyon - pos)",
+    "rule": "pebbles / (d(canyon - pos) + 1)",
     "flow": 0.20,
     "sand": 1.5,
     "dimensions": {
@@ -422,5 +422,72 @@
     },
     "geometry": "None",
     "material": "Sand"
+  },
+  
+  {
+    "name": "CoralPolypFlatA",
+    "type": "point",
+    "rule": "(10 * (2 * polypA - polyp) * (d((CoralPolypFlatA - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypA": 1.0
+    },
+    "absorptionRate": {
+    },
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypFlatB",
+    "type": "point",
+    "rule": "(10 * (2 * polypB - polyp) * (d((CoralPolypFlatB - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypB": 1.0
+    },
+    "absorptionRate": {
+    },
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypFlatC",
+    "type": "point",
+    "rule": "(10 * (2 * polypC - polyp) * (d((CoralPolypFlatC - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypC": 1.0
+    },
+    "absorptionRate": {
+    },
+    "geometry": "None",
+    "material": "coral"
   }
 ]

@@ -89,5 +89,47 @@
 		"minSize": 3.0,
 		"maxSize": 5.0,
 		"radius": 5.0
+	},
+	
+	
+	
+	{
+		"name": "coralpolypflatA",
+		"foldername": "corals",
+		"colors": [
+			{"r": 0.5, "g": 1.0, "b": 0.5, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 20,
+		"minSize": 5.0,
+		"maxSize": 5.0,
+		"radius": 10.0
+	},
+	{
+		"name": "coralpolypflatB",
+		"foldername": "corals",
+		"colors": [
+			{"r": 1.0, "g": 0.5, "b": 0.5, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 20,
+		"minSize": 5.0,
+		"maxSize": 5.0,
+		"radius": 10.0
+	},
+	{
+		"name": "coralpolypflatC",
+		"foldername": "corals",
+		"colors": [
+			{"r": 0.5, "g": 0.5, "b": 1.0, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 20,
+		"minSize": 5.0,
+		"maxSize": 5.0,
+		"radius": 10.0
 	}
 ]

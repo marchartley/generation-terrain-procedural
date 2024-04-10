@@ -2477,7 +2477,8 @@ void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
 void ImplicitNaryOperator::deleteAllChildren()
 {
     for (auto& child : composables) {
-        delete child;
+        if (child)
+            delete child;
     }
     this->composables.clear();
 }

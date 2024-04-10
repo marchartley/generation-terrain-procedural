@@ -113,12 +113,14 @@ void EnvObject::readEnvMaterialsFileContent(std::string content)
         float diffusionSpeed = mat["diffusionspeed"];
         float waterTransport = mat["watertransport"];
         float mass = mat["mass"];
+        float decay = mat["decay"];
 
         EnvMaterial material;
         material.name = matName;
         material.diffusionSpeed = diffusionSpeed;
         material.waterTransport = waterTransport;
         material.mass = mass;
+        material.decay = decay;
 
         if (EnvObject::materials.count(matName) != 0) {
             material.currentState = EnvObject::materials[matName].currentState;
@@ -415,6 +417,7 @@ void EnvObject::updateSedimentation(const GridF& heights)
             }
         } else {
             material.currentState = material.currentState.meanSmooth(material.diffusionSpeed, material.diffusionSpeed, 1, false); // Diffuse
+            material.currentState = material.currentState.meanSmooth(material.diffusionSpeed * 2 + 1, material.diffusionSpeed * 2 + 1, 1, false); // Diffuse
         }
 //        material.currentState = material.currentState.gaussianSmooth(material.diffusionSpeed, true, true);
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
@@ -441,12 +444,10 @@ void EnvObject::updateSedimentation(const GridF& heights)
         material.currentState.iterateParallel([&](size_t i) {
 //            material.currentState[i] = std::clamp(material.currentState[i], 0.f, 1.f); // Limited between 0 and 1 ?
         });
+        material.currentState *= material.decay;
 
-        material.currentState *= .9f;
+
     }
-
-//    materials["polyp"].currentState *= .9f;
-
 }
 
 void EnvObject::applyMaterialsTransformations()
@@ -608,10 +609,13 @@ void EnvObject::reset()
     for (auto& obj : EnvObject::instantiatedObjects)
         delete obj;
     EnvObject::instantiatedObjects.clear();
-    for (auto& [name, obj] : EnvObject::availableObjects)
-        delete obj;
-    EnvObject::availableObjects.clear();
+//    for (auto& [name, obj] : EnvObject::availableObjects)
+//        delete obj;
+//    EnvObject::availableObjects.clear();
     initFlow();
+    for (auto& [matName, mat] : materials) {
+        mat.currentState.reset();
+    }
 
 }
 
