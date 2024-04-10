@@ -147,6 +147,11 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
 
+    ButtonElement* instantiaABCbutton = new ButtonElement("Instantiate ABC", [&]() {
+        this->instantiateSpecific("CoralPolypFlatA", false);
+        this->instantiateSpecific("CoralPolypFlatB", false);
+        this->instantiateSpecific("CoralPolypFlatC", false);
+    });
 
     QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
 
