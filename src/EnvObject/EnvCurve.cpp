@@ -226,6 +226,10 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 
 ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
 {
+    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+        previousPrimitive = nullptr;
+        return nullptr;
+    }
     AABBox box(this->curve.points);
     float height = this->height * this->computeGrowingState();
     Vector3 offset(this->width, this->width, height * .5f);

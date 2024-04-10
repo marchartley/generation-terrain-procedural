@@ -166,6 +166,10 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 
 ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
 {
+    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+        previousPrimitive = nullptr;
+        return nullptr;
+    }
     BSpline translatedCurve = this->area;
     for (Vector3& p : translatedCurve) {
         p.z = heights(p.xy());
