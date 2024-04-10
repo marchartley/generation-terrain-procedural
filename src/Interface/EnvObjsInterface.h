@@ -45,6 +45,9 @@ public Q_SLOTS:
 
     void instantiateObject(bool waitForFullyGrown = true);
     void instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
+
+    bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
+
     void fromGanUI();
 
     void recomputeErosionValues();
@@ -54,8 +57,6 @@ public Q_SLOTS:
     void destroyEnvObject(EnvObject* object);
 
     void displayProbas(std::string objectName);
-//    void displaySedimentsDistrib();
-//    void displayPolypDistrib();
     void displayMaterialDistrib(std::string materialName);
     void displayFlowfieldAsImage();
 
@@ -67,8 +68,6 @@ public Q_SLOTS:
     void updateObjectsDefinitions(const std::string& newDefinition);
     void updateMaterialsDefinitions(const std::string& newDefinition);
     void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
-
-    // void hotReloadFile();
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
@@ -112,7 +111,6 @@ public:
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
 
-//    EnvObject* currentSelection = nullptr;
     std::vector<EnvObject*> currentSelections;
 
     std::string previousFileContent = "";

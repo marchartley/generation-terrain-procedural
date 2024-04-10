@@ -157,7 +157,8 @@ GridF EnvPoint::createHeightfield() const
 
 EnvObject &EnvPoint::translate(const Vector3 &translation)
 {
-    this->position += translation;
+    this->position.translate(translation);
+    this->evaluationPosition.translate(translation);
     return *this;
 }
 

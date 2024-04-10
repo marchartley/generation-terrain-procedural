@@ -526,7 +526,7 @@ void EnvObject::beImpactedByEvents()
 
 float EnvObject::evaluate(const Vector3 &position)
 {
-    return this->fittingFunction(position);
+    return this->fittingFunction(position.xy());
 }
 
 void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)

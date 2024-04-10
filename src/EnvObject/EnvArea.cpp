@@ -14,32 +14,32 @@ EnvObject *EnvArea::fromJSON(nlohmann::json content)
 float EnvArea::getSqrDistance(const Vector3 &position, std::string complement)
 {
     if (complement == "center")
-        return (position - this->area.center()).norm2();
+        return (position - this->curve.center()).norm2();
     else if (complement == "border") // Just keep the absolute value
-        return this->area.estimateSqrDistanceFrom(position);
+        return this->curve.estimateSqrDistanceFrom(position);
     else if (complement == "start") // Yeah, that doesn't make sense...
         return 0.f;
     else if (complement == "end") // Yeah, that doesn't make sense...
         return 0.f;
 
-    float dist = this->area.estimateSignedDistanceFrom(position);
+    float dist = this->curve.estimateSignedDistanceFrom(position);
     return (dist * dist) * (dist > 0 ? 1.f : -1.f); // Keep the sign
 }
 
 Vector3 EnvArea::getVector(const Vector3 &position, std::string complement)
 {
     if (complement == "direction")
-        return this->area.getDirection(area.estimateClosestTime(position));
+        return this->curve.getDirection(curve.estimateClosestTime(position));
     else if (complement == "normal")
-        return this->area.getNormal(area.estimateClosestTime(position));
+        return this->curve.getNormal(curve.estimateClosestTime(position));
     else if (complement == "binormal")
-        return this->area.getBinormal(area.estimateClosestTime(position));
+        return this->curve.getBinormal(curve.estimateClosestTime(position));
     return Vector3();
 }
 
 Vector3 EnvArea::getNormal(const Vector3 &position)
 {
-    return this->area.getNormal(this->area.estimateClosestTime(position));
+    return this->curve.getNormal(this->curve.estimateClosestTime(position));
 }
 
 Vector3 EnvArea::getDirection(const Vector3 &position)
@@ -50,30 +50,30 @@ Vector3 EnvArea::getDirection(const Vector3 &position)
 Vector3 EnvArea::getProperty(const Vector3& position, std::string prop) const
 {
     if (prop == "center") {
-        return this->area.center();
+        return this->curve.center();
     } else if (prop == "start") {
         return Vector3::invalid();
     } else if (prop == "end") {
         return Vector3::invalid();
     } else if (prop == "inside") {
-        return (this->area.containsXY(position, false) ? Vector3(true) : Vector3(false));
+        return (this->curve.containsXY(position, false) ? Vector3(true) : Vector3(false));
     }
-    return this->area.estimateClosestPos(position); // Default
+    return this->curve.estimateClosestPos(position); // Default
 }
 
 std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position) const
 {
-    float closestTime = this->area.estimateClosestTime(position);
-    Vector3 closestPos = this->area.getPoint(closestTime);
+    float closestTime = this->curve.estimateClosestTime(position);
+    Vector3 closestPos = this->curve.getPoint(closestTime);
     return {
         {"default", closestPos},
-        {"center", this->area.center()},
+        {"center", this->curve.center()},
         {"start", Vector3::invalid()},
         {"end", Vector3::invalid()},
-        {"inside", (this->area.containsXY(position, false) ? Vector3(true) : Vector3(false))},
-        {"normal", this->area.getNormal(closestTime)},
+        {"inside", (this->curve.containsXY(position, false) ? Vector3(true) : Vector3(false))},
+        {"normal", this->curve.getNormal(closestTime)},
         {"dir", Vector3::invalid()},
-        {"curvature", Vector3(this->area.getCurvature(closestTime), 0, 0)}
+        {"curvature", Vector3(this->curve.getCurvature(closestTime), 0, 0)}
     };
 }
 
@@ -87,8 +87,8 @@ EnvArea *EnvArea::clone()
 void EnvArea::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
-    AABBox box = AABBox(this->area.points);
-    ShapeCurve translatedCurve = this->area;
+    AABBox box = AABBox(this->curve.points);
+    ShapeCurve translatedCurve = this->curve;
     for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
@@ -110,7 +110,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
     Vector3 objectWidth = Vector3(width, width, 0);
     Vector3 halfWidth = objectWidth * .5f;
-    ShapeCurve translatedCurve = this->area;
+    ShapeCurve translatedCurve = this->curve;
     for (auto& p : translatedCurve)
         p.z = 0;
     AABBox box = AABBox(translatedCurve.points);
@@ -170,7 +170,7 @@ ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimit
         previousPrimitive = nullptr;
         return nullptr;
     }
-    BSpline translatedCurve = this->area;
+    BSpline translatedCurve = this->curve;
     for (Vector3& p : translatedCurve) {
         p.z = heights(p.xy());
     }
@@ -200,6 +200,15 @@ GridF EnvArea::createHeightfield() const
 
 EnvObject &EnvArea::translate(const Vector3 &translation)
 {
-    this->area.translate(translation);
+    this->curve.translate(translation);
+    this->evaluationPosition.translate(translation);
     return *this;
+}
+
+void EnvArea::updateCurve(const BSpline &newCurve)
+{
+    float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);
+    Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
+    this->curve = newCurve;
+    this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
 }

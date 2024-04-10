@@ -21,10 +21,6 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvPoint* clone();
 
-    /*virtual void applySandDeposit();
-    virtual void applySandAbsorption();
-    virtual void applyPolypDeposit();
-    virtual void applyPolypAbsorption();*/
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
 

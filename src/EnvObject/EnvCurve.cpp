@@ -95,18 +95,6 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
         sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->materialDepositionRate[material.name];
     });
     material.currentState.add(sand, box.min().xy() - Vector3(width, width));
-    /*
-    AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    sand.iterateParallel([&] (const Vector3& pos) {
-        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
-    });
-    EnvObject::sandDeposit.add(sand, box.min().xy() - Vector3(width, width));
-    */
 }
 
 void EnvCurve::applyAbsorption(EnvMaterial& material)
@@ -114,49 +102,6 @@ void EnvCurve::applyAbsorption(EnvMaterial& material)
     if (this->materialAbsorptionRate[material.name] == 0) return;
     return;
 }
-/*
-void EnvCurve::applySandDeposit()
-{
-    AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    sand.iterateParallel([&] (const Vector3& pos) {
-        sand.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->sandEffect;
-    });
-//    std::cout << "Deposition of " << sand.sum() << " (" << sand.min() << " -- " << sand.max() << ") at " << box.min() << " for " << sand << std::endl;
-//    sand *= this->sandEffect;
-    EnvObject::sandDeposit.add(sand, box.min().xy() - Vector3(width, width));
-}
-
-void EnvCurve::applySandAbsorption()
-{
-    return;
-}
-
-void EnvCurve::applyPolypDeposit()
-{
-    if (this->polypEffect == 0) return;
-    AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF polyp = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
-
-    polyp.iterateParallel([&] (const Vector3& pos) {
-        polyp.at(pos) = normalizedGaussian(width * .5f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->polypEffect;
-    });
-//    std::cout << "Deposition of " << polyp.sum() << " (" << polyp.min() << " -- " << polyp.max() << ") at " << box.min() << " for " << polyp << std::endl;
-//    polyp *= this->polypEffect;
-    EnvObject::polypDeposit.add(polyp, box.min().xy() - Vector3(width, width));
-}
-
-void EnvCurve::applyPolypAbsorption()
-{
-    return;
-}*/
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
@@ -269,5 +214,15 @@ GridF EnvCurve::createHeightfield() const
 EnvObject &EnvCurve::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
+    this->evaluationPosition.translate(translation);
     return *this;
+}
+
+
+void EnvCurve::updateCurve(const BSpline &newCurve)
+{
+    float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);
+    Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
+    this->curve = newCurve;
+    this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
 }

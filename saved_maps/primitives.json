@@ -47,7 +47,8 @@
   {
     "name": "CoralPolyp",
     "type": "point",
-    "rule": "((polyp * ((10 - d(reef - pos)) - current.vel * 10) max 0)^2) * normal((depth + 7)/1.5)",
+    "--rule": "((polyp * ((10 - d(reef - pos)) - current.vel * 10) max 0)^2) * normal((depth + 7)/1.5)",
+    "rule": "((polyp * ((10 - d(reef - pos))) max 0)^2) * normal((depth + 7)/1.5)",
     "flow": 1.0,
     "dimensions": {
       "x": 10.0,
@@ -427,7 +428,7 @@
   {
     "name": "CoralPolypFlatA",
     "type": "point",
-    "rule": "(10 * (2 * polypA - polyp) * (d((CoralPolypFlatA - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "rule": "(10 * (2 * polypA - polyp) * (d((CoralPolypFlatA - pos) ? {1 0 0}) + (1 * d((CoralPolypFlatA - pos) ? {1 0 0}) < 0.01)) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
     "flow": 1.0,
     "dimensions": {
       "x": 3.0,

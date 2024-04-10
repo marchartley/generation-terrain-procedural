@@ -55,11 +55,12 @@ public:
     float age = 0.f;
     std::map<std::string, float> needsForGrowth;
     std::map<std::string, float> currentSatisfaction;
+    float fittingScoreAtCreation = -1.f;
+    Vector3 evaluationPosition;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
-    float growingState = 0.f;
 
     virtual float getSqrDistance(const Vector3& position, std::string complement = "") = 0;
     virtual Vector3 getVector(const Vector3& position, std::string complement = "") = 0;
@@ -72,10 +73,6 @@ public:
 
     virtual float computeGrowingState();
 
-    /*virtual void applySandDeposit() = 0;
-    virtual void applySandAbsorption() = 0;
-    virtual void applyPolypDeposit() = 0;
-    virtual void applyPolypAbsorption() = 0;*/
     virtual void applyDeposition(EnvMaterial& material) = 0;
     virtual void applyAbsorption(EnvMaterial& material) = 0;
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
@@ -87,9 +84,6 @@ public:
     static GridV3 flowfield;
     static GridV3 initialFlowfield;
     static GridV3 terrainNormals;
-//    static GridF sandDeposit;
-//    static GridF polypDeposit;
-//    static std::map<std::string, GridF> materialDeposit;
 
     static std::map<std::string, EnvMaterial> materials;
 
@@ -115,7 +109,7 @@ public:
 
     float evaluate(const Vector3& position);
 
-    virtual EnvObject& translate(const Vector3& translation) {}
+    virtual EnvObject& translate(const Vector3& translation) = 0;
 
     static int currentMaxID;
 

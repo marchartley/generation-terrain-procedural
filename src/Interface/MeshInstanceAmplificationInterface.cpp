@@ -300,11 +300,11 @@ std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPo
         } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
 //            float totalArea = asArea->area.computeArea();
             std::vector<Vector3> randomPoints;
-            AABBox box = AABBox(asArea->area.AABBox());
+            AABBox box = AABBox(asArea->curve.AABBox());
             for (int x = box.min().x; x < box.max().x; x += 5) {
                 for (int y = box.min().y; y < box.max().y; y += 5) {
                     Vector3 pos(x, y, 0);
-                    if (random_gen::generate_perlin(pos.x * 5.f, pos.y * 5.f) > .5f && asArea->area.containsXY(pos))
+                    if (random_gen::generate_perlin(pos.x * 5.f, pos.y * 5.f) > .5f && asArea->curve.containsXY(pos))
                         randomPoints.push_back(pos);
                 }
             }

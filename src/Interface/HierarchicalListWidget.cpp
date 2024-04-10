@@ -29,6 +29,7 @@ void HierarchicalListWidget::setCurrentItem(int indexToSelect)
 
 void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
 {
+    QObject::blockSignals(true);
     this->clearSelection();
     for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
         HierarchicalListWidgetItem* item = dynamic_cast<HierarchicalListWidgetItem*>(_child);
@@ -38,6 +39,7 @@ void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
             }
         }
     }
+    QObject::blockSignals(false);
 }
 
 void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)

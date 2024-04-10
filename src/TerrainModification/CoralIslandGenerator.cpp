@@ -139,7 +139,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             objects.push_back(reef);
 
             EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
-            lagoon->area = simplifiedCurve;
+            lagoon->curve = simplifiedCurve;
             objects.push_back(lagoon);
 
             nbLagoonsKept++;
@@ -157,7 +157,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 //                EnvCurve* reef = dynamic_cast<EnvCurve*>(EnvObject::instantiate("reef"));
 //                reef->curve = simplifiedCurve;
                 EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
-                reef->area = simplifiedCurve;
+                reef->curve = simplifiedCurve;
                 objects.push_back(reef);
             }
         }
@@ -173,7 +173,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
 
             EnvArea* coast = dynamic_cast<EnvArea*>(EnvObject::instantiate("coast"));
-            coast->area = simplifiedCurve;
+            coast->curve = simplifiedCurve;
             objects.push_back(coast);
         }
     });
@@ -188,7 +188,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
             simplifiedCurve = simplifiedCurve.getPath(20); // Reduce the complexity of the curve to avoid having too much computations after
             if (simplifiedCurve.computeArea() < 15.f) continue; // Remove too small elements
             EnvArea* island = dynamic_cast<EnvArea*>(EnvObject::instantiate("island"));
-            island->area = simplifiedCurve;
+            island->curve = simplifiedCurve;
             objects.push_back(island);
         }
     });

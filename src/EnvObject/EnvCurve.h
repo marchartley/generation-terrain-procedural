@@ -22,10 +22,6 @@ public:
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
 
-    /*virtual void applySandDeposit();
-    virtual void applySandAbsorption();
-    virtual void applyPolypDeposit();
-    virtual void applyPolypAbsorption();*/
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
 
@@ -34,6 +30,7 @@ public:
     virtual GridF createHeightfield() const;
 
     virtual EnvObject& translate(const Vector3& translation);
+    void updateCurve(const BSpline &newCurve);
 };
 
 #endif // ENVCURVE_H
