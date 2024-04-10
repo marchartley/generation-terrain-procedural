@@ -137,8 +137,6 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
     ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
     ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() { this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */); });
-//    ButtonElement* showDepositionButton = new ButtonElement("Show deposition", [&]() { this->displaySedimentsDistrib(); });
-//    ButtonElement* showPolypButton = new ButtonElement("Show coral seeds", [&]() { this->displayPolypDistrib(); });
     ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
     ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
@@ -156,9 +154,11 @@ QLayout *EnvObjsInterface::createGUI()
     QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
 
     objectsListWidget = new HierarchicalListWidget;
+    objectsListWidget->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     updateObjectsList();
 //    QObject::connect(objectsListWidget, &HierarchicalListWidget::clicked, this, [&](QModelIndex item) { qDebug() << item; }); //&EnvObjsInterface::updateObjectsListSelection);
-    QObject::connect(objectsListWidget, &HierarchicalListWidget::currentItemChanged, this, [&](QListWidgetItem* current, QListWidgetItem* previous) { this->updateObjectsListSelection(current); });
+//    QObject::connect(objectsListWidget, &HierarchicalListWidget::currentItemChanged, this, [&](QListWidgetItem* current, QListWidgetItem* previous) { this->updateObjectsListSelection(current); });
+    QObject::connect(objectsListWidget, &HierarchicalListWidget::itemSelectionChanged, this, [&]() { this->updateObjectsListSelection(); });
 
 
     std::vector<QWidget*> probaButtons;
@@ -266,7 +266,7 @@ void EnvObjsInterface::show()
 
 void EnvObjsInterface::hide()
 {
-    updateObjectsListSelection(nullptr); // Hide single object's data
+//    updateObjectsListSelection(nullptr); // Hide single object's data
     ActionInterface::hide();
 }
 
@@ -303,10 +303,10 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
         Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
         draggingHasBeenApplied = mouseWorldPosition.xy();
 
-        if (this->currentSelection != nullptr) {
+        for (auto currentSelection : currentSelections) {
             float maxDistToPointSqr = 10.f * 10.f;
             if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->position = mouseWorldPosition.xy();
+                point->position.translate(translation);
             } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
                 int pointIndexToMove = -1;
                 float closestDistToPoint = std::numeric_limits<float>::max();
@@ -338,23 +338,23 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                     area->area[pointIndexToMove].translate(translation);
                 }
             }
-            this->updateSelectionMesh();
         }
+        this->updateSelectionMesh();
     } else if (draggingFullObject.isValid()) {
         draggingHasBeenApplied.setValid(true);
         Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
         draggingHasBeenApplied = mouseWorldPosition.xy();
 
-        if (this->currentSelection != nullptr) {
+        for (auto currentSelection : currentSelections) {
             if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->position = mouseWorldPosition.xy();
+                point->position.translate(translation);
             } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
                 curve->curve.translate(translation);
             } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
                 area->area.translate(translation);
             }
-            this->updateSelectionMesh();
         }
+        this->updateSelectionMesh();
     }
 }
 
@@ -363,18 +363,22 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
     if (!this->isVisible()) return;
 
     if (draggingFullObject.isValid() && !mouseInMap) {
-        this->destroyEnvObject(currentSelection);
+        for (auto currentSelection : currentSelections) {
+            this->destroyEnvObject(currentSelection);
+        }
         this->updateEnvironmentFromEnvObjects(true, true);
     }
     if ((draggingPoint.isValid() || draggingFullObject.isValid()) && draggingHasBeenApplied.isValid()) {
         draggingPoint.setValid(false);
         draggingFullObject.setValid(false);
         if (mouseInMap) {
-            if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
-                auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
-                if (newPatch) {
-                    *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
-                    delete newPatch;
+            for (auto currentSelection : currentSelections) {
+                if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
+                    auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
+                    if (newPatch) {
+                        *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
+                        delete newPatch;
+                    }
                 }
             }
         }
@@ -386,8 +390,6 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
     draggingPoint.setValid(false);
     draggingFullObject.setValid(false);
     draggingHasBeenApplied.setValid(false);
-}
-
 }
 
 GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = true) {
@@ -747,120 +749,148 @@ void EnvObjsInterface::updateObjectsList()
 {
     if (!this->isVisible()) return;
     if (!objectsListWidget) return;
-    int currentSelectionID = (currentSelection != nullptr ? currentSelection->ID : -1);
+//    int currentSelectionID = (currentSelection != nullptr ? currentSelection->ID : -1);
+    std::vector<int> currentSelectionsIDs;
+    for (auto currentSelection : currentSelections) currentSelectionsIDs.push_back(currentSelection->ID);
     objectsListWidget->clear();
     auto list = EnvObject::instantiatedObjects;
 
     for (auto& obj : list) {
         objectsListWidget->addItem(new HierarchicalListWidgetItem(obj->name + " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "%)", obj->ID, 0));
-        if (obj->ID == currentSelectionID)
-            currentSelection = obj;
+//        if (obj->ID == currentSelectionID)
+//            currentSelection = obj;
+        if (isIn(obj->ID, currentSelectionsIDs))
+            currentSelections.push_back(obj);
     }
-    if (currentSelectionID > -1) objectsListWidget->setCurrentItem(currentSelectionID);
+//    if (currentSelectionID > -1) objectsListWidget->setCurrentItem(currentSelectionID);
+    objectsListWidget->setCurrentItems(currentSelectionsIDs);
 }
 
-void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *newSelectionItem)
+void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *__newSelectionItem)
 {
-    this->velocitiesMesh.fromArray(std::vector<float>{});
-    this->objectsMesh.fromArray(std::vector<float>{});
+    currentSelections.clear();
 
-    auto newSelection = dynamic_cast<HierarchicalListWidgetItem*>(newSelectionItem);
-    if (!newSelection) {
-        currentSelection = nullptr;
-        return;
-    }
-    int objID = newSelection->ID;
-    EnvObject* selection = nullptr;
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        if (obj->ID == objID) {
-            selection = obj;
-            break;
+    for (auto newSelectionItem : objectsListWidget->selectedItems()) {
+        auto newSelection = dynamic_cast<HierarchicalListWidgetItem*>(newSelectionItem);
+        if (!newSelection) {
+//            currentSelection = nullptr;
+//            return;
+            continue; // Does it happen?
         }
+        int objID = newSelection->ID;
+        EnvObject* selection = nullptr;
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (obj->ID == objID) {
+                selection = obj;
+                break;
+            }
+        }
+//        if (selection == this->currentSelection) {
+//            currentSelection = nullptr;
+//            return;
+//        }
+//        currentSelection = selection;
+//        if (!selection)
+//            return;
+        currentSelections.push_back(selection);
     }
-    if (selection == this->currentSelection) {
-        currentSelection = nullptr;
-        return;
-    }
-    currentSelection = selection;
-    if (!selection)
-        return;
 
     this->updateSelectionMesh();
 }
 
 void EnvObjsInterface::updateSelectionMesh()
-{
-    if (currentSelection == nullptr) {
+{    
+//    if (currentSelection == nullptr) {
+//        objectsMesh.clear();
+//        velocitiesMesh.clear();
+//        return;
+//    }
+    if (currentSelections.empty()) {
         objectsMesh.clear();
+        velocitiesMesh.clear();
         return;
     }
+
+    this->velocitiesMesh.fromArray(std::vector<float>{});
+    this->objectsMesh.fromArray(std::vector<float>{});
     Vector3 selectionPos;
-    if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
-        selectionPos = asPoint->position;
-        std::cout << "Pos " << currentSelection->name << ": " << asPoint->position << "\n-> selection at " << selectionPos.xy() << std::endl;
-        selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + 5.f;
-        objectsMesh.fromArray(Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos));
-    } else if (auto asCurve = dynamic_cast<EnvCurve*>(currentSelection)) {
-        selectionPos = asCurve->curve.center();
-        std::cout << "Curve " << currentSelection->name << ":" << asCurve->curve.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
-        std::vector<Vector3> meshPoints;
-        auto path = asCurve->curve.getPath(50);
-        float offsetAbove = 5.f;
-        for (size_t i = 0; i < path.size() - 1; i++) {
-            auto p1 = path[i];
-            auto p2 = path[i + 1];
-            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
-            Vector3 p2leveled = p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + offsetAbove);
-            meshPoints.push_back(p1leveled);
-            meshPoints.push_back(p2leveled);
+    std::vector<Vector3> lines;
+    for (auto currentSelection : currentSelections) {
+        if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
+            selectionPos = asPoint->position;
+            std::cout << "Pos " << currentSelection->name << ": " << asPoint->position << "\n-> selection at " << selectionPos.xy() << std::endl;
+            selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + 5.f;
+//            objectsMesh.fromArray(Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos));
+
+            std::vector<Vector3> meshPoints = Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos);
+            lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(currentSelection)) {
+            selectionPos = asCurve->curve.center();
+            std::cout << "Curve " << currentSelection->name << ":" << asCurve->curve.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
+            std::vector<Vector3> meshPoints;
+            auto path = asCurve->curve.getPath(50);
+            float offsetAbove = 5.f;
+            for (size_t i = 0; i < path.size() - 1; i++) {
+                auto p1 = path[i];
+                auto p2 = path[i + 1];
+                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p2leveled = p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + offsetAbove);
+                meshPoints.push_back(p1leveled);
+                meshPoints.push_back(p2leveled);
+            }
+            for (int i = 0; i < asCurve->curve.size(); i++) {
+                auto& p1 = asCurve->curve[i];
+                auto& p2 = asCurve->curve[std::abs(i - 1)];
+                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
+                meshPoints.push_back(p1leveled + perpendicular);
+                meshPoints.push_back(p1leveled - perpendicular);
+            }
+//            objectsMesh.fromArray(meshPoints);
+            lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+        } else if (auto asArea = dynamic_cast<EnvArea*>(currentSelection)) {
+            selectionPos = asArea->area.center();
+            std::cout << "Area: " << currentSelection->name << "" << asArea->area.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
+            std::vector<Vector3> meshPoints;
+            float offsetAbove = 5.f;
+            auto path = asArea->area.getPath(20);
+            for (size_t i = 0; i < path.size() - 1; i++) {
+                auto p1 = path[i];
+                auto p2 = path[i + 1];
+                meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
+                meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
+            }
+            for (int i = 0; i < asArea->area.size(); i++) {
+                auto& p1 = asArea->area[i];
+                auto& p2 = asArea->area[std::abs(i - 1)];
+                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
+                meshPoints.push_back(p1leveled + perpendicular);
+                meshPoints.push_back(p1leveled - perpendicular);
+            }
+            //            objectsMesh.fromArray(meshPoints);
+            lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+        } else {
+            std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
+//            return;
+            continue;
         }
-        for (int i = 0; i < asCurve->curve.size(); i++) {
-            auto& p1 = asCurve->curve[i];
-            auto& p2 = asCurve->curve[std::abs(i - 1)];
-            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
-            Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
-            meshPoints.push_back(p1leveled + perpendicular);
-            meshPoints.push_back(p1leveled - perpendicular);
-        }
-        objectsMesh.fromArray(meshPoints);
-    } else if (auto asArea = dynamic_cast<EnvArea*>(currentSelection)) {
-        selectionPos = asArea->area.center();
-        std::cout << "Area: " << currentSelection->name << "" << asArea->area.toString() << "\n-> selection at " << selectionPos.xy() << std::endl;
-        std::vector<Vector3> meshPoints;
-        float offsetAbove = 5.f;
-        auto path = asArea->area.getPath(20);
-        for (size_t i = 0; i < path.size() - 1; i++) {
-            auto p1 = path[i];
-            auto p2 = path[i + 1];
-            meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
-            meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
-        }
-        for (int i = 0; i < asArea->area.size(); i++) {
-            auto& p1 = asArea->area[i];
-            auto& p2 = asArea->area[std::abs(i - 1)];
-            Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
-            Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
-            meshPoints.push_back(p1leveled + perpendicular);
-            meshPoints.push_back(p1leveled - perpendicular);
-        }
-        objectsMesh.fromArray(meshPoints);
-    } else {
-        std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
-        return;
+
+        /*
+        GridV3 initialFlow = EnvObject::initialFlowfield;
+        GridV3 flow;
+        GridF occupancy;
+        std::tie(flow, occupancy) = currentSelection->computeFlowModification();
+        float currentGrowth = currentSelection->computeGrowingState();
+        occupancy *= currentGrowth;
+
+        flow = flow * occupancy + initialFlow * (1.f - occupancy);
+        initialFlow = initialFlow * (1.f - EnvObject::flowImpactFactor) + flow * EnvObject::flowImpactFactor;
+    //    velocitiesMesh.fromVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions());
+        Mesh::createVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
+        */
     }
-
-
-    GridV3 initialFlow = EnvObject::initialFlowfield;
-    GridV3 flow;
-    GridF occupancy;
-    std::tie(flow, occupancy) = selection->computeFlowModification();
-    float currentGrowth = selection->computeGrowingState();
-    occupancy *= currentGrowth;
-
-    flow = flow * occupancy + initialFlow * (1.f - occupancy);
-    initialFlow = initialFlow * (1.f - EnvObject::flowImpactFactor) + flow * EnvObject::flowImpactFactor;
-//    velocitiesMesh.fromVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions());
-    Mesh::createVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
+    objectsMesh.fromArray(lines);
     Q_EMIT this->updated();
 }
 

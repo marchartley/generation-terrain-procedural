@@ -61,7 +61,7 @@ public Q_SLOTS:
 
     void updateObjectsList();
 
-    void updateObjectsListSelection(QListWidgetItem* newSelectionItem);
+    void updateObjectsListSelection(QListWidgetItem* __newSelectionItem = nullptr);
     void updateSelectionMesh();
 
     void updateObjectsDefinitions(const std::string& newDefinition);
@@ -105,18 +105,15 @@ public:
     GridF erosionGrid;
     GridV3 velocitiesGrid;
 
-//    std::string primitiveDefinitionFile;
-//    std::string materialsDefinitionFile;
-
     HotreloadFile primitiveDefinitionFile;
     HotreloadFile materialsDefinitionFile;
     HotreloadFile transformationsFile;
-//    QDateTime lastTimeFileHasBeenModified;
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
 
-    EnvObject* currentSelection = nullptr;
+//    EnvObject* currentSelection = nullptr;
+    std::vector<EnvObject*> currentSelections;
 
     std::string previousFileContent = "";
     std::string previousMaterialsFileContent = "";
