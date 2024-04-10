@@ -41,8 +41,8 @@ public Q_SLOTS:
 
     virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
-    void instantiateObject();
-    void instantiateSpecific(std::string objectName);
+    void instantiateObject(bool waitForFullyGrown = true);
+    void instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
     void fromGanUI();
 
     void recomputeErosionValues();
@@ -92,6 +92,8 @@ public:
     bool waitAtEachFrame = false;
 
     std::string currentlyPreviewedObject;
+
+    bool materialSimulationStable = false;
 
 
     GridF erosionGrid;

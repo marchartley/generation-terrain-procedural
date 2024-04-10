@@ -28,7 +28,7 @@ std::map<std::string, GridF> EnvObject::allScalarProperties;
 
 GridV3 initFlow() {
     if (EnvObject::flowfield.empty()) {
-        EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(1, 0, 0));
+        EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
         EnvObject::initialFlowfield.raiseErrorOnBadCoord = false;
         EnvObject::initialFlowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         EnvObject::flowfield = EnvObject::initialFlowfield;
@@ -398,28 +398,28 @@ void EnvObject::removeAllObjects()
     EnvObject::instantiatedObjects.clear();
 }
 
-void EnvObject::applyEffects(const GridF& heights)
+bool EnvObject::applyEffects(const GridF& heights)
 {
     EnvObject::updateFlowfield();
-    EnvObject::updateSedimentation(heights);
-    EnvObject::applyMaterialsTransformations();
+    return EnvObject::updateSedimentation(heights);
+//    EnvObject::applyMaterialsTransformations();
 }
 
-void EnvObject::updateSedimentation(const GridF& heights)
+bool EnvObject::updateSedimentation(const GridF& heights)
 {
+    bool bigChangesInAtLeastOneMaterialDistribution = false;
     GridV3 heightsGradients = heights.gradient();
     auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
     for (auto& [name, material] : EnvObject::materials) {
+        float startingAmount = material.currentState.sum();
         std::vector<std::pair<float, float>> depoAbso(EnvObject::instantiatedObjects.size());
         if (material.diffusionSpeed < 1.f) {
             if (random_gen::generate() < material.diffusionSpeed) {
                 material.currentState = material.currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
             }
         } else {
-            material.currentState = material.currentState.meanSmooth(material.diffusionSpeed, material.diffusionSpeed, 1, false); // Diffuse
             material.currentState = material.currentState.meanSmooth(material.diffusionSpeed * 2 + 1, material.diffusionSpeed * 2 + 1, 1, false); // Diffuse
         }
-//        material.currentState = material.currentState.gaussianSmooth(material.diffusionSpeed, true, true);
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             float start = material.currentState.sum();
             auto& object = EnvObject::instantiatedObjects[i];
@@ -434,20 +434,17 @@ void EnvObject::updateSedimentation(const GridF& heights)
             object->applyDeposition(material);
             depoAbso[i].first = material.currentState.sum() - start;
         }
-        /*
-        material.currentState.iterate([&](const Vector3& p) {
-            float displacedMatter = material.currentState(p) * (material.mass / 20.f);
-            material.currentState.addValueAt(displacedMatter, p - heightsGradients(p).normalized());
-            material.currentState.addValueAt(-displacedMatter, p);
-        });*/
 
         material.currentState.iterateParallel([&](size_t i) {
 //            material.currentState[i] = std::clamp(material.currentState[i], 0.f, 1.f); // Limited between 0 and 1 ?
         });
         material.currentState *= material.decay;
 
+        float endingAmount = material.currentState.sum();
 
+        if (std::abs(endingAmount - startingAmount) > 1e-3) bigChangesInAtLeastOneMaterialDistribution = true;
     }
+    return bigChangesInAtLeastOneMaterialDistribution;
 }
 
 void EnvObject::applyMaterialsTransformations()

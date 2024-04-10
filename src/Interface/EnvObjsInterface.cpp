@@ -136,7 +136,7 @@ QLayout *EnvObjsInterface::createGUI()
 
     ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
     ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
-    ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() { this->updateEnvironmentFromEnvObjects(true); });
+    ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() { this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */); });
 //    ButtonElement* showDepositionButton = new ButtonElement("Show deposition", [&]() { this->displaySedimentsDistrib(); });
 //    ButtonElement* showPolypButton = new ButtonElement("Show coral seeds", [&]() { this->displayPolypDistrib(); });
     ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
@@ -145,6 +145,8 @@ QLayout *EnvObjsInterface::createGUI()
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
+
+    QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
 
     objectsListWidget = new HierarchicalListWidget;
     updateObjectsList();
@@ -179,6 +181,7 @@ QLayout *EnvObjsInterface::createGUI()
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
     layout->addWidget(testPerformancesButton->get());
+    layout->addWidget(label);
 
 
     return layout;
@@ -403,7 +406,7 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     return newObject;
 }
 
-void EnvObjsInterface::instantiateObject()
+void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
 {
     displayProcessTime("Instantiate new object... ", [&]() {
         GridF heights = heightmap->getHeights();
@@ -428,6 +431,7 @@ void EnvObjsInterface::instantiateObject()
                 possibleObjects.push_back(name);
 
         if (possibleObjects.size() > 0) {
+            this->materialSimulationStable = false; // We have to compute the simulation again
             std::shuffle(possibleObjects.begin(), possibleObjects.end(), random_gen::random_generator);
             std::string name = possibleObjects[0];
             auto& score = scores[name];
@@ -451,6 +455,14 @@ void EnvObjsInterface::instantiateObject()
 //            heightmap->fromImplicit(implicitTerrain.get());
             std::cout << "Instantiating " << name << " at position " << bestPos << std::endl;
 //            EnvObject::precomputeTerrainProperties(*heightmap);
+
+            // Wait until the object is 100% grown:
+            int maxIterations = 100;
+            while (waitForFullyGrown && newObject->computeGrowingState() < 1.f) {
+                this->updateEnvironmentFromEnvObjects(false, true);
+                maxIterations--;
+                if (maxIterations < 0) break;
+            }
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
             updateEnvironmentFromEnvObjects(implicit != nullptr, true);
@@ -461,7 +473,7 @@ void EnvObjsInterface::instantiateObject()
     updateObjectsList();
 }
 
-void EnvObjsInterface::instantiateSpecific(std::string objectName)
+void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForFullyGrown)
 {
     objectName = toLower(objectName);
     if (EnvObject::availableObjects.count(objectName) == 0) {
@@ -478,6 +490,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
         score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
         if (possible) {
+            this->materialSimulationStable = false; // We have to compute the simulation again
             Vector3 bestPos = bestPositionForInstantiation(objectName, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
@@ -488,6 +501,13 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName)
 
             if (implicit != nullptr) {
                 rootPatch->addChild(implicit);
+            }
+            // Wait until the object is 100% grown:
+            int maxIterations = 100;
+            while (waitForFullyGrown && newObject->computeGrowingState() < 1.f) {
+                this->updateEnvironmentFromEnvObjects(false, true);
+                maxIterations--;
+                if (maxIterations < 0) break;
             }
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
             this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
@@ -519,16 +539,27 @@ void EnvObjsInterface::recomputeErosionValues()
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal)
 {
-    bool verbose = true;
+    bool verbose = false;
+
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (obj->computeGrowingState() < 1.f) {
+            materialSimulationStable = false;
+            break;
+        }
+    }
+
+    displayProcessTime("Get impacted... ", [&]() {
+        EnvObject::beImpactedByEvents();
+    }, verbose);
+
+    if (this->materialSimulationStable) return; // If the simulation is stable, don't do anything
     // Get original flowfield, do not accumulate effects (for now).
     displayProcessTime("Get velocity... ", [&]() {
         EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
     }, verbose);
     displayProcessTime("Apply effects... ", [&]() {
-        EnvObject::applyEffects(heightmap->heights);
-    }, verbose);
-    displayProcessTime("Get impacted... ", [&]() {
-        EnvObject::beImpactedByEvents();
+        bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
+        this->materialSimulationStable = !bigChangesInMaterials;
     }, verbose);
     displayProcessTime("Recompute properties... ", [&]() {
         EnvObject::recomputeFlowAndSandProperties(*heightmap);
