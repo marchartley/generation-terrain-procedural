@@ -424,6 +424,15 @@ ShapeCurve ShapeCurve::merge(ShapeCurve other) {
     return (res1.computeArea() > res2.computeArea() ? res1 : res2);
 }
 
+ShapeCurve &ShapeCurve::resamplePoints(int newNbPoints)
+{
+    BSpline::resamplePoints(newNbPoints);
+    if (this->points.size() > 0) {
+        this->points.pop_back(); // Remove last point (as it should be also the first one)
+    }
+    return *this;
+}
+
 ShapeCurve ShapeCurve::circle(float radius, const Vector3 &center, int nbPoints)
 {
     std::vector<Vector3> points;

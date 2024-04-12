@@ -34,6 +34,8 @@ public:
 
     ShapeCurve merge(ShapeCurve other);
 
+    ShapeCurve& resamplePoints(int newNbPoints = -1);
+
     static ShapeCurve circle(float radius, const Vector3& center, int nbPoints);
 };
 

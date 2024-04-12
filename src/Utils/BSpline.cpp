@@ -365,7 +365,7 @@ float BSpline::length() const
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
     if (this->size() == 0) return *this;
-    if (newNbPoints == -1)
+    if (newNbPoints < 0)
         newNbPoints = this->points.size();
 
     std::vector<Vector3> newPoints; //(newNbPoints);
