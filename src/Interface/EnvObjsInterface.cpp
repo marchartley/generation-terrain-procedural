@@ -376,6 +376,7 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
         draggingFullObject.setValid(false);
         if (mouseInMap) {
             for (auto currentSelection : currentSelections) {
+                currentSelection->age = 0.f;
                 if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
                     auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
                     if (newPatch) {
@@ -463,8 +464,8 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
             GridV3 gradients = score/*.gaussianSmooth(2.f)*/.gradient();
             gradients.raiseErrorOnBadCoord = false;
             gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-            BSpline initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, 1000.f, 1.f).close();
-            BSpline curve = initialCurve;
+            ShapeCurve initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, 1000.f, 1.f).close();
+            ShapeCurve curve = initialCurve.resamplePoints();
             curve.translate(-position);
             objAsArea->curve = curve.resamplePoints(10);
         }
@@ -570,6 +571,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
                 maxIterations--;
                 if (maxIterations < 0) break;
             }
+            this->currentSelections = {newObject};
             EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
             this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
         } else {
@@ -577,6 +579,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
         }
     }, verbose);
     updateObjectsList();
+    updateSelectionMesh();
 }
 
 bool EnvObjsInterface::checkIfObjectShouldDie(EnvObject *obj, float limitFactorForDying)
@@ -603,24 +606,29 @@ void EnvObjsInterface::recomputeErosionValues()
     highDepositionMesh.fromArray(flattenArray(Mesh::applyMarchingCubes(erosionGrid - iso).getTriangles()));
 }
 
-void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal)
+void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
 {
     bool verbose = false;
 
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        bool shouldDie = this->checkIfObjectShouldDie(obj, .001f);
-        if (shouldDie) {
-            float startingScore = obj->fittingScoreAtCreation;
-            float endingScore = obj->evaluate(obj->evaluationPosition);
-            std::cout << "Object went from " << startingScore << " to " << endingScore << " -> " << (100.f * endingScore / startingScore) << "%" << std::endl;
-            this->destroyEnvObject(obj);
-        }
-    }
 
+    std::vector<EnvObject*> immatureObjects;
     for (auto& obj : EnvObject::instantiatedObjects) {
         if (obj->computeGrowingState() < 1.f) {
             materialSimulationStable = false;
-            break;
+            immatureObjects.push_back(obj);
+        }
+    }
+
+    if (killObjectsIfPossible) {
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (isIn(obj, immatureObjects)) continue;
+            bool shouldDie = this->checkIfObjectShouldDie(obj, .001f);
+            if (shouldDie) {
+                float startingScore = obj->fittingScoreAtCreation;
+                float endingScore = obj->evaluate(obj->evaluationPosition);
+                std::cout << "Object went from " << startingScore << " to " << endingScore << " -> " << std::round(100.f * endingScore / startingScore) << "%" << std::endl;
+                this->destroyEnvObject(obj);
+            }
         }
     }
 
@@ -655,6 +663,12 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             heightmap->fromVoxelGrid(*voxelGrid.get());
         }, verbose);
     }
+    for (auto& obj : immatureObjects) {
+        if (obj->computeGrowingState() >= 1.f) {
+            // Got mature during this process -> now let's save the fitting score
+            obj->fittingScoreAtCreation = obj->evaluate(obj->evaluationPosition);
+        }
+    }
     if (emitUpdateSignal) {
         Q_EMIT this->updated();
         updateObjectsList();
@@ -675,6 +689,10 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object)
         }
     }
     if (this->implicitPatchesFromObjects.count(object) != 0) {
+        for (size_t i = 0; i < rootPatch->composables.size(); i++) {
+            if (rootPatch->composables[i] == this->implicitPatchesFromObjects[object])
+                rootPatch->composables.erase(rootPatch->composables.begin() + i);
+        }
         this->implicitPatchesFromObjects.erase(object);
     }
 }
@@ -786,17 +804,27 @@ void EnvObjsInterface::updateSelectionMesh()
     this->objectsMesh.fromArray(std::vector<float>{});
     Vector3 selectionPos;
     std::vector<Vector3> lines;
+    std::vector<Vector3> colors;
+    float offsetAbove = 5.f;
     for (auto currentSelection : currentSelections) {
+        Vector3 evalPos = currentSelection->evaluationPosition;
+        evalPos.z = voxelGrid->getHeight(evalPos.x, evalPos.y) + offsetAbove;
+        std::vector<Vector3> evalLines = {evalPos - Vector3(2, 2, 0), evalPos + Vector3(2, 2, 0), evalPos - Vector3(-2, 2, 0), evalPos + Vector3(-2, 2, 0)};
+        lines.insert(lines.end(), evalLines.begin(), evalLines.end());
+        std::vector<Vector3> evalColors = std::vector<Vector3>(evalLines.size(), Vector3(0.5, 0.5, 1));
+        colors.insert(colors.end(), evalColors.begin(), evalColors.end());
+
         if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
             selectionPos = asPoint->position;
-            selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + 5.f;
+            selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + offsetAbove;
             std::vector<Vector3> meshPoints = Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos);
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+            std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
+            colors.insert(colors.end(), meshColors.begin(), meshColors.end());
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(currentSelection)) {
             selectionPos = asCurve->curve.center();
             std::vector<Vector3> meshPoints;
             auto path = asCurve->curve.getPath(50);
-            float offsetAbove = 5.f;
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
@@ -814,10 +842,11 @@ void EnvObjsInterface::updateSelectionMesh()
                 meshPoints.push_back(p1leveled - perpendicular);
             }
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+            std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
+            colors.insert(colors.end(), meshColors.begin(), meshColors.end());
         } else if (auto asArea = dynamic_cast<EnvArea*>(currentSelection)) {
             selectionPos = asArea->curve.center();
             std::vector<Vector3> meshPoints;
-            float offsetAbove = 5.f;
             auto path = asArea->curve.getPath(20);
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
@@ -834,6 +863,8 @@ void EnvObjsInterface::updateSelectionMesh()
                 meshPoints.push_back(p1leveled - perpendicular);
             }
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+            std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
+            colors.insert(colors.end(), meshColors.begin(), meshColors.end());
         } else {
             std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
 //            return;
@@ -854,6 +885,7 @@ void EnvObjsInterface::updateSelectionMesh()
         Mesh::createVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
         */
     }
+    objectsMesh.colorsArray = colors;
     objectsMesh.fromArray(lines);
     Q_EMIT this->updated();
 }

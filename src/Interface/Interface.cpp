@@ -125,7 +125,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        terrainGenerationInterface->waterLevel = .2f;
+        terrainGenerationInterface->waterLevel = .05f;
         terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.f);
         terrainGenerationInterface->waterLevel = .0f;
 

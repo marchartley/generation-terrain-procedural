@@ -23,7 +23,7 @@
   {
     "name": "Reef",
     "type": "area",
-    "rule": "((1 - island.inside) * 10 - abs(15 - d(island - pos))) max 0",
+    "rule": "normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
@@ -48,7 +48,7 @@
     "name": "CoralPolyp",
     "type": "point",
     "--rule": "((polyp * ((10 - d(reef - pos)) - current.vel * 10) max 0)^2) * normal((depth + 7)/1.5)",
-    "rule": "((polyp * ((10 - d(reef - pos))) max 0)^2) * normal((depth + 7)/1.5)",
+    "rule": "(polyp + 1) * (normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)) / (current.vel * 100 + 1.0)",
     "flow": 1.0,
     "dimensions": {
       "x": 10.0,
@@ -56,8 +56,7 @@
       "z": 10.0
     },
     "needs": {
-      "age": 10.0,
-      "polyp": 10.0
+      "age": 10.0
     },
     "depositionRate": {
     	"sand": 0.1,
@@ -68,7 +67,10 @@
     	"polyp": 0.1
     },
     "geometry": "None",
-    "material": "coral"
+    "material": "coral",
+    "onDeath": {
+    	"deadCoral": 1.0
+    }
   },
   
   {
@@ -146,8 +148,6 @@
     "name": "Island",
     "type": "area",
     "rule": "(random(pos - {50 0 0}) * (x(pos)/100)) max 0",
-    "-rule": "random(pos - {50 0 0})",
-    "--rule": "10 - abs(d(Island - pos) - 10) + 1",
     "flow": {
       "direction": 1.0,
       "normal": 0.0,
@@ -360,7 +360,7 @@
   {
     "name": "River",
     "type": "curve",
-    "rule": "(20 - abs((depth * -1) - 6)) * island.inside",
+    "rule": "(20 - abs(depth)) * (depth < 0)",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,

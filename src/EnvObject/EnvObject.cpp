@@ -517,10 +517,8 @@ void EnvObject::updateFlowfield()
 
 void EnvObject::beImpactedByEvents()
 {
-    // TODO!!!
     for (auto& obj : EnvObject::instantiatedObjects) {
         obj->age += 1.f;
-//        obj->growingState = std::min(obj->growingState + .2f, 1.f);
     }
 }
 
