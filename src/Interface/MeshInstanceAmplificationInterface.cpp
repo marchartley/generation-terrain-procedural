@@ -283,19 +283,19 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     return extendedPositions;
 }
 
-std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPositionsFor(std::string type)
+std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface::getPositionsFor(std::string type)
 {
-    std::vector<std::pair<Vector3, float>> positionsAndGrowthFactor;
+    std::vector<std::tuple<Vector3, float, int>> positionsAndGrowthFactor;
     for (auto& obj : EnvObject::instantiatedObjects) {
         if (toUpper(obj->name) != toUpper(type)) continue;
         float growthFactor = obj->computeGrowingState();
         if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
-            positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x, asPoint->position.y, heightmap->getHeight(asPoint->position)), growthFactor});
+            positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x, asPoint->position.y, heightmap->getHeight(asPoint->position)), growthFactor, asPoint->ID});
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
             auto path = asCurve->curve.getPath(60);
             for (auto p : path) {
                 p = p + Vector3::random(asCurve->width * .5f);
-                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
+                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor, asCurve->ID});
             }
         } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
 //            float totalArea = asArea->area.computeArea();
@@ -309,8 +309,8 @@ std::vector<std::pair<Vector3, float>> MeshInstanceAmplificationInterface::getPo
                 }
             }
 //            auto randomPoints = asArea->area.randomPointsInside(60);
-            for (auto p : randomPoints) {
-                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor});
+            for (const auto& p : randomPoints) {
+                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor, asArea->ID});
             }
         }
     }
@@ -432,21 +432,22 @@ void MeshInstanceAmplificationInterface::regenerateRocksPositions()
 void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
 {
     for (auto& meshType : meshesOptions) {
-        auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name) : std::vector<std::pair<Vector3, float>>());
+        auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name) : std::vector<std::tuple<Vector3, float, int>>());
 //        std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
 
 //        meshType.indicesAndPositionsAndSizes = std::vector<std::tuple<int, Vector3, float>>(); //(std::min(meshType.numberDisplayed, int(availablePositions.size())));
         meshType.clear();
         for (size_t i = 0; i < availablePositions.size(); i++) { //meshType.indicesAndPositionsAndSizes.size(); i++) {
-            Vector3 position = availablePositions[i].first;
-            float growth = availablePositions[i].second;
+            Vector3 position = std::get<0>(availablePositions[i]);
+            float growth = std::get<1>(availablePositions[i]);
+            int objIndex = std::get<2>(availablePositions[i]);
 //            Vector3 orientation = EnvObject::flowfield(position.xy()).normalized(); //Vector3(0, 0, EnvObject::flowfield(position).getAngleWith(Vector3(1, 0, 0)));
 
-            int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x * 1000, position.y * 1000, i) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
+            int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x * 1000, position.y * 1000, objIndex) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
             int nbRandomValues = 4;
             std::vector<float> randomVals(nbInstances * nbRandomValues);
             for (int iRand = 0; iRand < randomVals.size(); iRand++) {
-                randomVals[iRand] = (random_gen::generate_perlin(position.x * 1000, position.y * 1000, (iRand + i) * 100) + 1) * .5f;
+                randomVals[iRand] = (random_gen::generate_perlin(position.x * 1000, position.y * 1000, (iRand + objIndex) * 100) + 1) * .5f;
             }
             for (int iInstance = 0; iInstance < nbInstances; iInstance++) {
                 size_t randomIdx = iInstance * nbRandomValues;

@@ -49,7 +49,7 @@ public:
     std::vector<AABBox> getAvailablePositionsForMaterial(TerrainTypes target);
     std::vector<AABBox> getCoralAvailablePositions();
     std::vector<AABBox> getRocksAvailablePositions();
-    std::vector<std::pair<Vector3, float> > getPositionsFor(std::string type);
+    std::vector<std::tuple<Vector3, float, int> > getPositionsFor(std::string type);
 
     void readMeshInstanceFile(const std::string& fileContent);
 
