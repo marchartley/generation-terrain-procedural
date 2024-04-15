@@ -49,9 +49,12 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 //    recomputeErosionValues();
     EnvObject::precomputeTerrainProperties(*heightmap);
 
+    this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
+
 
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
         if (!this->isVisible()) return;
+        if (focusAreaEditing) return;
         GridV3 dataV3 = Plotter::get()->displayedImage;
         GridF data(dataV3.getDimensions());
         dataV3.iterateParallel([&](size_t i) {
@@ -73,11 +76,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                 }
             });
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
-            if (asCurve->curveFollow == EnvCurve::GRADIENTS) {
-                isoline = this->computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
-            } else {
-                isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
-            }
+            isoline = this->computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width, asCurve->curveFollow == EnvCurve::ISOVALUE);
         } else if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
             isoline = ShapeCurve::circle(asPoint->radius, clickPos, 20);
             result.iterateParallel([&](const Vector3& pos) {
@@ -98,6 +97,18 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         Plotter::get()->addImage(result);
         Plotter::get()->show();
         Plotter::get()->addImage(dataV3);
+    });
+
+    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, bool pressed, const Vector3& prevPos, QMouseEvent* event) {
+        if (!this->isVisible()) return;
+        if (!this->focusAreaEditing) return;
+
+        if (!pressed) return;
+
+        auto brush = GridF::normalizedGaussian(20, 20, 1, 8.f) * (event->modifiers().testFlag(Qt::ShiftModifier) ? -1.f : 1.f);
+        this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
+        Plotter::get()->addImage(focusedArea);
+        Plotter::get()->show();
     });
 }
 
@@ -141,9 +152,8 @@ QLayout *EnvObjsInterface::createGUI()
         this->updateSelectionMesh();
         this->saveScene("testEnvObjects.json");
     });
-//    ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
-    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
+//    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("testEnvObjects.json"); });
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
@@ -166,13 +176,21 @@ QLayout *EnvObjsInterface::createGUI()
     QObject::connect(objectsListWidget, &HierarchicalListWidget::itemSelectionChanged, this, [&]() { this->updateObjectsListSelection(); });
 
 
-    std::vector<QWidget*> probaButtons;
+//    std::vector<QWidget*> probaButtons;
+    std::vector<ComboboxLineElement> objectsChoices;
     for (auto& [name, obj] : EnvObject::availableObjects) {
-        ButtonElement* showButton = new ButtonElement("Show " + obj->name, [&](){ this->displayProbas(name); });
-        ButtonElement* forceButton = new ButtonElement("Force", [&](){ this->instantiateSpecific(name); });
-        probaButtons.push_back(showButton->get());
-        probaButtons.push_back(forceButton->get());
+//        ButtonElement* showButton = new ButtonElement("Show " + obj->name, [&](){ this->displayProbas(name); });
+//        ButtonElement* forceButton = new ButtonElement("Force", [&](){ this->instantiateSpecific(name); });
+//        probaButtons.push_back(showButton->get());
+//        probaButtons.push_back(forceButton->get());
+        objectsChoices.push_back(ComboboxLineElement{name, 0});
     }
+    ButtonElement* showButton = new ButtonElement("Show", [&](){ this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label); });
+    ButtonElement* forceButton = new ButtonElement("Force", [&](){ this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label); });
+    objectCombobox = new ComboboxElement("Objects", objectsChoices);
+//    objectCombobox->setOnSelectionChanged([=](int newSelectionIndex) {
+//        std::cout << newSelectionIndex << " " << objectCombobox->choices[newSelectionIndex].label << std::endl;
+//    });
 
     std::vector<QWidget*> materialsButtons;
     for (auto& [name, material] : EnvObject::materials) {
@@ -180,15 +198,20 @@ QLayout *EnvObjsInterface::createGUI()
         materialsButtons.push_back(showButton->get());
     }
 
+    ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
+
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(waitAtEachFrameButton->get());
 //    layout->addWidget(showDepositionButton->get());
 //    layout->addWidget(showPolypButton->get());
-    layout->addWidget(createVerticalGroup(materialsButtons));
+    layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
 //    layout->addWidget(showFlowfieldButton->get());
 //    layout->addWidget(createFromGAN->get());
 //    layout->addWidget(instantiateButton->get());
-    layout->addWidget(createMultiColumnGroup(probaButtons, 2));
+//    layout->addWidget(createMultiColumnGroup(probaButtons, 2));
+    layout->addWidget(objectCombobox->get());
+    layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
+    layout->addWidget(editFocusAreaButton->get());
     layout->addWidget(objectsListWidget);
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
@@ -450,16 +473,10 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     if (objAsPoint) {
         // Nothing to do...
     } else if (objAsCurve) {
-
         GridV3 gradients = score.gaussianSmooth(2.f).gradient();
         gradients.raiseErrorOnBadCoord = false;
         gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        BSpline initialCurve;
-        if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
-            initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
-        } else {
-            initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
-        }
+        BSpline initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width, objAsCurve->curveFollow == EnvCurve::ISOVALUE);
         BSpline curve = initialCurve;
         curve.translate(-position);
         objAsCurve->curve = curve.resamplePoints(10);
@@ -517,7 +534,7 @@ void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
             std::string name = possibleObjects[0];
             auto& score = scores[name];
 
-            Vector3 bestPos = bestPositionForInstantiation(name, score);
+            Vector3 bestPos = bestPositionForInstantiation(name, score * focusedArea);
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
 //            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
@@ -558,7 +575,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
         GridF heights = heightmap->getHeights();
 
         bool possible;
-        GridF score = computeScoreMap(objectName, heights.getDimensions(), possible);
+        GridF score = computeScoreMap(objectName, heights.getDimensions(), possible) * focusedArea;
         score.raiseErrorOnBadCoord = false;
         score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
@@ -711,6 +728,7 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object)
 
 void EnvObjsInterface::displayProbas(std::string objectName)
 {
+    focusAreaEditing = false;
     currentlyPreviewedObject = objectName;
     Vector3 dimensions = Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     bool possible;
@@ -756,6 +774,13 @@ void EnvObjsInterface::displayFlowfieldAsImage()
 {
     GridV3 flow = EnvObject::flowfield;
     Plotter::get()->addImage(flow);
+    Plotter::get()->show();
+}
+
+void EnvObjsInterface::manualModificationOfFocusArea()
+{
+    this->focusAreaEditing = true;
+    Plotter::get()->addImage(this->focusedArea);
     Plotter::get()->show();
 }
 
@@ -1045,20 +1070,29 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
             break; // Got back close to beginning
         }
         Vector3 gradient = gradients(pos);
-        if (gradient == Vector3()) break; // Nowhere to go
+        if (gradient.norm2() < 1e-8) break; // Nowhere to go
         gradient.normalize();
 
         Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
         dir = newDir * (dir.dot(newDir) < 0 ? -1.f : 1.f);
 
-        float newVal = values(pos + dir);
+        if (!newDir.isValid() || !gradient.isValid()) break;
 
-        if (newVal < initialIsovalue) {
+        float newVal = values.interpolate(pos + dir);
+
+        if (std::abs(newVal - initialIsovalue) < 1e-5) {
             Vector3 newGrad = gradients.interpolate(pos + dir);
-            dir += newGrad * .1f;
-        } else if (newVal > initialIsovalue) {
-            Vector3 newGrad = gradients.interpolate(pos + dir);
-            dir -= newGrad * .1f;
+            float bestRectificationScale = 0.f;
+            float closestIso = std::numeric_limits<float>::max();
+            for (int i = 0; i < 10; i++) {
+                float scale = float(i) / 10.f * (newVal < initialIsovalue ? 1.f : -1.f);
+                float newDiff = values.interpolate(pos + dir + newGrad * scale);
+                if (newDiff < closestIso) {
+                    closestIso = newDiff;
+                    bestRectificationScale = scale;
+                }
+            }
+            dir += newGrad * bestRectificationScale;
         }
 
         pos += dir;
@@ -1080,7 +1114,7 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
                 break; // Got back close to beginning
             }
             Vector3 gradient = gradients(pos);
-            if (gradient == Vector3()) break; // Nowhere to go
+            if (gradient.norm2() < 1e-8) break; // Nowhere to go
             gradient.normalize();
 
             Vector3 newDir = gradient.cross(Vector3(0, 0, 1));
@@ -1101,15 +1135,19 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
     return finalPath;
 }
 
-BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPosition, const GridV3 &gradients, const GridF& score, float directionLength, float widthMaxLength)
+BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPosition, const GridV3 &gradients, const GridF& score, float directionLength, float widthMaxLength, bool followIsolevel)
 {
     Vector3 pos = seedPosition;
-
-    Vector3 gradDir = gradients(pos).normalized();
-    BSpline isoline = BSpline({pos - gradDir * directionLength * .5f, pos + gradDir * directionLength * .5f});
-    isoline.resamplePoints(10);
-    for (auto& p : isoline) {
-        p += gradients(p).normalized().rotated(0, 0, deg2rad(90)) * widthMaxLength * random_gen::generate(-1, 1);
+    BSpline isoline;
+    if (followIsolevel) {
+        isoline = followIsovalue(score, gradients, pos, directionLength);
+    } else {
+        Vector3 gradDir = gradients(pos).normalized();
+        isoline = BSpline({pos - gradDir * directionLength * .5f, pos + gradDir * directionLength * .5f});
+        isoline.resamplePoints(10);
+        for (auto& p : isoline) {
+            p += gradients(p).normalized().rotated(0, 0, deg2rad(90)) * widthMaxLength * random_gen::generate(-1, 1);
+        }
     }
     return isoline;
 }
@@ -1161,6 +1199,8 @@ void EnvObjsInterface::resetScene()
     this->rootPatch->updateCache();
 
     this->updateEnvironmentFromEnvObjects(true);
+
+    this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
 
     Q_EMIT this->updated();
 }

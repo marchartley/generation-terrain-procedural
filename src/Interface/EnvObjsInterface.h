@@ -60,6 +60,8 @@ public Q_SLOTS:
     void displayMaterialDistrib(std::string materialName);
     void displayFlowfieldAsImage();
 
+    void manualModificationOfFocusArea();
+
     void updateObjectsList();
 
     void updateObjectsListSelection(QListWidgetItem* __newSelectionItem = nullptr);
@@ -71,7 +73,7 @@ public Q_SLOTS:
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
-    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
+    BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
 
     void runPerformanceTest();
@@ -119,6 +121,11 @@ public:
     std::string previousFileContent = "";
     std::string previousMaterialsFileContent = "";
     std::string previousMaterialsTransformationsFileContent = "";
+
+    GridF focusedArea;
+
+    bool focusAreaEditing = false;
+    ComboboxElement* objectCombobox;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);
