@@ -1412,6 +1412,38 @@ int main(int argc, char *argv[])
     return Plotter::get()->exec();
     */
 
+    /*
+     * Unit test: Stringify and loading Matrix3 (float and Vector3 only)
+     *
+    GridF testF(4, 4, 4);
+    testF.iterateParallel([&](size_t i) {
+        testF[i] = i;
+    });
+//    auto resultF = loadGridF(stringifyGridF(testF));
+//    std::cout << "Initial values:\n" << testF.displayValues() << "\nResulting values:\n" << resultF.displayValues() << "\nDifference:\n" << (resultF - testF).displayValues() << std::endl;
+    std::cout << "Check floats binary: " << ((testF - loadGridF(stringifyGridF(testF, true), true)).sum() == 0 ? "OK" : "Error") << "\nCheck float plain: " << ((testF - loadGridF(stringifyGridF(testF, false), false)).sum() == 0 ? "OK" : "Error") << std::endl;
+
+    GridV3 testV3(4, 4, 4);
+    testV3.iterateParallel([&](size_t i) {
+        testV3[i] = Vector3(i, i, i);
+    });
+//    auto resultV3 = loadGridV3(stringifyGridV3(testV3));
+//    std::cout << "Initial values:\n" << testV3.displayValues() << "\nResulting values:\n" << resultV3.displayValues() << "\nDifference:\n" << (resultV3 - testV3).displayValues() << std::endl;
+    std::cout << "Check vec3 binary: " << ((testV3 - loadGridV3(stringifyGridV3(testV3, true), true)).sum() == Vector3() ? "OK" : "Error") << "\nCheck vec3 plain: " << ((testV3 - loadGridV3(stringifyGridV3(testV3, false), false)).sum() == Vector3() ? "OK" : "Error") << std::endl;
+    return 0;*/
+
+    /*
+    GridF testF(4, 4, 1);
+    testF.iterateParallel([&](size_t i) {
+        testF[i] = 0;
+    });
+    testF(Vector3(2, 1, 0)) = 3.f;
+    auto resultF = loadGridF(stringifyGridF(testF));
+
+    std::cout << testF.displayValues() << "\n\n" << resultF.displayValues() << std::endl;
+    return 0;*/
+
+
     EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
     EnvObject::readEnvObjectsFile("saved_maps/primitives.json");
 

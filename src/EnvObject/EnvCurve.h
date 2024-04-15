@@ -14,16 +14,13 @@ public:
     float length;
     float height;
 
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
+    virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
 
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
+    virtual void applyDepositionOnDeath();
 
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
@@ -31,6 +28,12 @@ public:
 
     virtual EnvObject& translate(const Vector3& translation);
     void updateCurve(const BSpline &newCurve);
+
+    virtual nlohmann::json toJSON() const;
+
+    enum CURVE_FOLLOW { GRADIENTS, ISOVALUE };
+
+    CURVE_FOLLOW curveFollow = CURVE_FOLLOW::GRADIENTS;
 };
 
 #endif // ENVCURVE_H

@@ -11,38 +11,9 @@ EnvObject *EnvPoint::fromJSON(nlohmann::json content)
     return EnvObject::fromJSON(content);
 }
 
-float EnvPoint::getSqrDistance(const Vector3 &position, std::string complement)
+float EnvPoint::getSqrDistance(const Vector3 &position)
 {
     return (position - this->position).norm2();
-}
-
-Vector3 EnvPoint::getVector(const Vector3 &position, std::string complement)
-{
-    return Vector3();
-}
-
-Vector3 EnvPoint::getNormal(const Vector3 &position)
-{
-    return (position - this->position).normalized();
-}
-
-Vector3 EnvPoint::getDirection(const Vector3 &position)
-{
-    return Vector3(false);
-}
-
-Vector3 EnvPoint::getProperty(const Vector3& position, std::string prop) const
-{
-    if (prop == "center") {
-        return this->position;
-    } else if (prop == "start") {
-        return this->position;
-    } else if (prop == "end") {
-        return this->position;
-    } else if (prop == "inside") {
-        return ((position - this->position).norm2() < this->radius * this->radius ? Vector3(true) : Vector3(false));
-    }
-    return this->position; // Default
 }
 
 std::map<std::string, Vector3> EnvPoint::getAllProperties(const Vector3 &position) const
@@ -88,6 +59,16 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
     sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
     this->currentSatisfaction[material.name] += sandAbsorbed.sum();
     material.currentState.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
+}
+
+void EnvPoint::applyDepositionOnDeath()
+{
+    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+        auto& material = EnvObject::materials[materialName];
+        if (amount == 0) return;
+        GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * amount;
+        material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
+    }
 }
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
@@ -162,10 +143,17 @@ EnvObject &EnvPoint::translate(const Vector3 &translation)
     return *this;
 }
 
+nlohmann::json EnvPoint::toJSON() const
+{
+    auto json = EnvObject::toJSON();
+    json["position"] = vec3_to_json(this->position);
+    return json;
+}
 
-float EnvPoint::estimateShadowing(const GridV3& flow, const Vector3& pos) {
+
+/*float EnvPoint::estimateShadowing(const GridV3& flow, const Vector3& pos) {
     Vector3 currents = flow.interpolate(this->position);
     Vector3 toPos = (pos - this->position);
 
     return (std::max(0.f, std::abs(std::pow(currents.normalized().dot(toPos.normalized()), 5.f)) * sign(currents.dot(toPos)) - (toPos.norm() / 100.f))); // > 0.5f ? 1.f : 0.f);
-}
+}*/

@@ -2,6 +2,7 @@
 //#include "Utils/stb_image.h"
 #include "Utils/Skeletonize.h"
 #include <queue>
+#include <sstream>
 
 template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
@@ -520,4 +521,117 @@ Matrix3<float> operator+(const float a, Matrix3<float> b) {
     for (size_t i = 0; i < res.size(); i++)
         res[i] = a + res[i];
     return res;*/
+}
+
+std::string stringifyGridF(const GridF &data, bool binaryMode)
+{
+    std::ostringstream outFile;
+    int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
+    if (binaryMode) {
+        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
+        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
+        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
+
+        size_t dataSize = data.size();
+        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+    //    outFile.write(reinterpret_cast<const char*>(((Matrix3<char>)data).data.data()), dataSize * sizeof(float));
+        for (const auto& val : data.data) {
+            outFile.write(reinterpret_cast<const char*>(&val), sizeof(val));
+        }
+    } else {
+        outFile << width << " " << depth << " " << height;
+        for (size_t i = 0; i < data.size(); i++) {
+            outFile << " " << data[i];
+        }
+    }
+    return outFile.str();
+}
+
+std::string stringifyGridV3(const GridV3 &data, bool binaryMode)
+{
+    std::ostringstream outFile;
+    int width = data.sizeX, depth = data.sizeY, height = data.sizeZ;
+    if (binaryMode) {
+        outFile.write(reinterpret_cast<const char*>(&width), sizeof(width));
+        outFile.write(reinterpret_cast<const char*>(&depth), sizeof(depth));
+        outFile.write(reinterpret_cast<const char*>(&height), sizeof(height));
+
+        size_t dataSize = data.size();
+        outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
+        // Write each Vector3 as raw binary data
+        for (const auto& vec : data.data) {
+            outFile.write(reinterpret_cast<const char*>(&vec), sizeof(vec));
+        }
+    } else {
+        outFile << width << " " << depth << " " << height;
+        for (size_t i = 0; i < data.size(); i++) {
+            outFile << " " << data[i].x << " " << data[i].y << " " << data[i].z;
+        }
+    }
+    return outFile.str();
+}
+
+GridF loadGridF(const std::string &str, bool binaryMode)
+{
+    std::istringstream inFile(str);
+    int width, depth, height;
+    GridF data;
+    if (binaryMode) {
+        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
+        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
+        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
+
+        size_t dataSize;
+        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
+        data.data.resize(dataSize);
+        inFile.read(reinterpret_cast<char*>(data.data.data()), dataSize * sizeof(float));
+        data.sizeX = width;
+        data.sizeY = depth;
+        data.sizeZ = height;
+    } else {
+        inFile >> width >> depth >> height;
+        data = GridF(width, depth, height);
+        for (int i = 0; i < data.size(); i++) {
+            inFile >> data[i];
+        }
+    }
+
+    return data;
+}
+
+GridV3 loadGridV3(const std::string &str, bool binaryMode)
+{
+    std::istringstream inFile(str);
+    int width, depth, height;
+    GridV3 data;
+    if (binaryMode) {
+        inFile.read(reinterpret_cast<char*>(&width), sizeof(width));
+        inFile.read(reinterpret_cast<char*>(&depth), sizeof(depth));
+        inFile.read(reinterpret_cast<char*>(&height), sizeof(height));
+
+        size_t dataSize;
+        inFile.read(reinterpret_cast<char*>(&dataSize), sizeof(dataSize));
+        data.data.resize(dataSize);
+        // Read each Vector3 from raw binary data
+        for (size_t i = 0; i < dataSize; ++i) {
+            auto& vec = data.data[i];
+            inFile.read(reinterpret_cast<char*>(&vec), sizeof(vec));/*
+            inFile.read(reinterpret_cast<char*>(&(vec.x)), sizeof(vec.x));
+            inFile.read(reinterpret_cast<char*>(&(vec.y)), sizeof(vec.y));
+            inFile.read(reinterpret_cast<char*>(&(vec.z)), sizeof(vec.z));
+            std::cout << vec << " " << std::flush;*/
+    //            inFile.read(reinterpret_cast<const char*>(&vec.valid), sizeof(vec.valid));
+        }
+        data.sizeX = width;
+        data.sizeY = depth;
+        data.sizeZ = height;
+    } else {
+        inFile >> width >> depth >> height;
+        data = GridF(width, depth, height);
+        for (int i = 0; i < data.size(); i++) {
+            inFile >> data[i].x >> data[i].y >> data[i].z;
+        }
+    }
+
+    return data;
 }

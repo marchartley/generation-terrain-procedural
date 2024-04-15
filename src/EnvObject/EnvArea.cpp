@@ -10,55 +10,9 @@ EnvObject *EnvArea::fromJSON(nlohmann::json content)
 {
     return EnvObject::fromJSON(content);
 }
-
-float EnvArea::getSqrDistance(const Vector3 &position, std::string complement)
+float EnvArea::getSqrDistance(const Vector3 &position)
 {
-    if (complement == "center")
-        return (position - this->curve.center()).norm2();
-    else if (complement == "border") // Just keep the absolute value
-        return this->curve.estimateSqrDistanceFrom(position);
-    else if (complement == "start") // Yeah, that doesn't make sense...
-        return 0.f;
-    else if (complement == "end") // Yeah, that doesn't make sense...
-        return 0.f;
-
-    float dist = this->curve.estimateSignedDistanceFrom(position);
-    return (dist * dist) * (dist > 0 ? 1.f : -1.f); // Keep the sign
-}
-
-Vector3 EnvArea::getVector(const Vector3 &position, std::string complement)
-{
-    if (complement == "direction")
-        return this->curve.getDirection(curve.estimateClosestTime(position));
-    else if (complement == "normal")
-        return this->curve.getNormal(curve.estimateClosestTime(position));
-    else if (complement == "binormal")
-        return this->curve.getBinormal(curve.estimateClosestTime(position));
-    return Vector3();
-}
-
-Vector3 EnvArea::getNormal(const Vector3 &position)
-{
-    return this->curve.getNormal(this->curve.estimateClosestTime(position));
-}
-
-Vector3 EnvArea::getDirection(const Vector3 &position)
-{
-    return Vector3::invalid();
-}
-
-Vector3 EnvArea::getProperty(const Vector3& position, std::string prop) const
-{
-    if (prop == "center") {
-        return this->curve.center();
-    } else if (prop == "start") {
-        return Vector3::invalid();
-    } else if (prop == "end") {
-        return Vector3::invalid();
-    } else if (prop == "inside") {
-        return (this->curve.containsXY(position, false) ? Vector3(true) : Vector3(false));
-    }
-    return this->curve.estimateClosestPos(position); // Default
+    return (position - this->curve.estimateClosestPos(position)).norm2();
 }
 
 std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position) const
@@ -104,6 +58,25 @@ void EnvArea::applyAbsorption(EnvMaterial& material)
 {
     if (this->materialAbsorptionRate[material.name] == 0) return;
     return;
+}
+
+void EnvArea::applyDepositionOnDeath()
+{
+    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+        auto& material = EnvObject::materials[materialName];
+        if (amount == 0) return;
+        AABBox box = AABBox(this->curve.points);
+        ShapeCurve translatedCurve = this->curve;
+        for (auto& p : translatedCurve)
+            p = p + Vector3(width, width, 0) - box.min();
+        GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+        sand.iterateParallel([&] (const Vector3& pos) {
+            bool inside = translatedCurve.contains(pos);
+            sand(pos) = (inside ? 1.f : 0.f) * amount;
+        });
+        material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+    }
 }
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
@@ -211,4 +184,11 @@ void EnvArea::updateCurve(const BSpline &newCurve)
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->curve = newCurve;
     this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
+}
+
+nlohmann::json EnvArea::toJSON() const
+{
+    auto json = EnvObject::toJSON();
+    json["curve"] = bspline_to_json(this->curve);
+    return json;
 }

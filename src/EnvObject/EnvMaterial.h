@@ -16,6 +16,9 @@ public:
     float decay;
 
     GridF currentState;
+
+    nlohmann::json toJSON() const;
+    bool fromJSON(nlohmann::json json);
 };
 
 #endif // ENVMATERIAL_H

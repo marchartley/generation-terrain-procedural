@@ -73,7 +73,11 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                 }
             });
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
-            isoline = computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
+            if (asCurve->curveFollow == EnvCurve::GRADIENTS) {
+                isoline = this->computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
+            } else {
+                isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width);
+            }
         } else if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
             isoline = ShapeCurve::circle(asPoint->radius, clickPos, 20);
             result.iterateParallel([&](const Vector3& pos) {
@@ -135,10 +139,12 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() {
         this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */);
         this->updateSelectionMesh();
+        this->saveScene("testEnvObjects.json");
     });
-    ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
+//    ButtonElement* showFlowfieldButton = new ButtonElement("Show flow", [&]() { this->displayFlowfieldAsImage(); });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
     ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
+    ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("testEnvObjects.json"); });
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
@@ -179,7 +185,7 @@ QLayout *EnvObjsInterface::createGUI()
 //    layout->addWidget(showDepositionButton->get());
 //    layout->addWidget(showPolypButton->get());
     layout->addWidget(createVerticalGroup(materialsButtons));
-    layout->addWidget(showFlowfieldButton->get());
+//    layout->addWidget(showFlowfieldButton->get());
 //    layout->addWidget(createFromGAN->get());
 //    layout->addWidget(instantiateButton->get());
     layout->addWidget(createMultiColumnGroup(probaButtons, 2));
@@ -187,8 +193,7 @@ QLayout *EnvObjsInterface::createGUI()
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
-    layout->addWidget(label);
-
+    layout->addWidget(createHorizontalGroup({label, createFromFile->get()}));
 
     return layout;
 }
@@ -449,7 +454,12 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
         GridV3 gradients = score.gaussianSmooth(2.f).gradient();
         gradients.raiseErrorOnBadCoord = false;
         gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        BSpline initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
+        BSpline initialCurve;
+        if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
+            initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
+        } else {
+            initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width);
+        }
         BSpline curve = initialCurve;
         curve.translate(-position);
         objAsCurve->curve = curve.resamplePoints(10);
@@ -636,18 +646,19 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         EnvObject::beImpactedByEvents();
     }, verbose);
 
-    if (this->materialSimulationStable) return; // If the simulation is stable, don't do anything
-    // Get original flowfield, do not accumulate effects (for now).
-    displayProcessTime("Get velocity... ", [&]() {
-        EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
-    }, verbose);
-    displayProcessTime("Apply effects... ", [&]() {
-        bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
-        this->materialSimulationStable = !bigChangesInMaterials;
-    }, verbose);
-    displayProcessTime("Recompute properties... ", [&]() {
-        EnvObject::recomputeFlowAndSandProperties(*heightmap);
-    }, verbose);    
+    if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
+        // Get original flowfield, do not accumulate effects (for now).
+        displayProcessTime("Get velocity... ", [&]() {
+            EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
+        }, verbose);
+        displayProcessTime("Apply effects... ", [&]() {
+            bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
+            this->materialSimulationStable = !bigChangesInMaterials;
+        }, verbose);
+        displayProcessTime("Recompute properties... ", [&]() {
+            EnvObject::recomputeFlowAndSandProperties(*heightmap);
+        }, verbose);
+    }
 
     if (updateImplicitTerrain) {
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
@@ -682,6 +693,7 @@ void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 
 void EnvObjsInterface::destroyEnvObject(EnvObject *object)
 {
+    object->die();
     for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
         if (EnvObject::instantiatedObjects[i] == object) {
             EnvObject::instantiatedObjects.erase(EnvObject::instantiatedObjects.begin() + i);
@@ -808,7 +820,7 @@ void EnvObjsInterface::updateSelectionMesh()
     float offsetAbove = 5.f;
     for (auto currentSelection : currentSelections) {
         Vector3 evalPos = currentSelection->evaluationPosition;
-        evalPos.z = voxelGrid->getHeight(evalPos.x, evalPos.y) + offsetAbove;
+        evalPos.z = heightmap->getHeight(evalPos.x, evalPos.y) + offsetAbove;
         std::vector<Vector3> evalLines = {evalPos - Vector3(2, 2, 0), evalPos + Vector3(2, 2, 0), evalPos - Vector3(-2, 2, 0), evalPos + Vector3(-2, 2, 0)};
         lines.insert(lines.end(), evalLines.begin(), evalLines.end());
         std::vector<Vector3> evalColors = std::vector<Vector3>(evalLines.size(), Vector3(0.5, 0.5, 1));
@@ -816,7 +828,7 @@ void EnvObjsInterface::updateSelectionMesh()
 
         if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
             selectionPos = asPoint->position;
-            selectionPos.z = voxelGrid->getHeight(selectionPos.x, selectionPos.y) + offsetAbove;
+            selectionPos.z = heightmap->getHeight(selectionPos.x, selectionPos.y) + offsetAbove;
             std::vector<Vector3> meshPoints = Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos);
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
@@ -828,15 +840,15 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
-                Vector3 p2leveled = p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p2leveled = p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + offsetAbove);
                 meshPoints.push_back(p1leveled);
                 meshPoints.push_back(p2leveled);
             }
             for (int i = 0; i < asCurve->curve.size(); i++) {
                 auto& p1 = asCurve->curve[i];
                 auto& p2 = asCurve->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -851,13 +863,13 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                meshPoints.push_back(p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + 5.f));
-                meshPoints.push_back(p2 + Vector3(0, 0, voxelGrid->getHeight(p2.x, p2.y) + 5.f));
+                meshPoints.push_back(p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + 5.f));
+                meshPoints.push_back(p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + 5.f));
             }
             for (int i = 0; i < asArea->curve.size(); i++) {
                 auto& p1 = asArea->curve[i];
                 auto& p2 = asArea->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, voxelGrid->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -1151,6 +1163,70 @@ void EnvObjsInterface::resetScene()
     this->updateEnvironmentFromEnvObjects(true);
 
     Q_EMIT this->updated();
+}
+
+void EnvObjsInterface::loadScene(std::string filename)
+{
+    this->resetScene();
+    nlohmann::json json = nlohmann::json::parse(std::ifstream(filename));
+
+    std::vector<nlohmann::json> allObjects = json["objects"];
+    std::vector<nlohmann::json> allMaterials = json["materials"];
+
+    for (auto mat : allMaterials) {
+        EnvObject::materials[mat["name"]].fromJSON(mat);
+    }
+
+    for (auto obj : allObjects) {
+        std::string objectName = obj["name"];
+        EnvObject* newObject = EnvObject::instantiate(objectName);
+        newObject->age = obj["age"];
+        newObject->fittingScoreAtCreation = obj["fittingScoreAtCreation"];
+        newObject->evaluationPosition = json_to_vec3(obj["evaluationPosition"]);
+
+        if (auto asPoint = dynamic_cast<EnvPoint*>(newObject)) {
+            asPoint->position = json_to_vec3(obj["position"]);
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(newObject)) {
+            asCurve->curve = json_to_bspline(obj["curve"]);
+        } else if (auto asArea = dynamic_cast<EnvArea*>(newObject)) {
+            asArea->curve = json_to_bspline(obj["curve"]);
+        }
+        auto implicit = newObject->createImplicitPatch(heightmap->heights);
+        this->implicitPatchesFromObjects[newObject] = implicit;
+        if (implicit != nullptr) {
+            rootPatch->addChild(implicit);
+        }
+        this->currentSelections = {};
+        EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
+    }
+    EnvObject::recomputeFlowAndSandProperties(*heightmap);
+    updateEnvironmentFromEnvObjects(true, true, false);
+    updateObjectsList();
+    updateSelectionMesh();
+}
+
+void EnvObjsInterface::saveScene(std::string filename)
+{
+    nlohmann::json mainJson;
+    std::vector<nlohmann::json> allObjects(EnvObject::instantiatedObjects.size());
+    std::vector<nlohmann::json> allMaterials(EnvObject::materials.size());
+
+    for (size_t i = 0; i < allObjects.size(); i++) {
+        allObjects[i] = EnvObject::instantiatedObjects[i]->toJSON();
+    }
+
+    size_t i = 0;
+    for (auto& [matName, material] : EnvObject::materials) {
+        allMaterials[i] = material.toJSON();
+        i++;
+    }
+
+    mainJson["objects"] = allObjects;
+    mainJson["materials"] = allMaterials;
+
+    std::ofstream out(filename);
+    out << mainJson.dump(1, '\t');
+    out.close();
 }
 
 void EnvObjsInterface::fromGanUI()

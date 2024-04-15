@@ -2864,4 +2864,11 @@ typedef Matrix3<float> GridF;
 typedef Matrix3<int> GridI;
 typedef Matrix3<Vector3> GridV3;
 
+
+std::string stringifyGridF(const GridF& data, bool binaryMode = true);
+std::string stringifyGridV3(const GridV3& data, bool binaryMode = true);
+
+GridF loadGridF(const std::string& str, bool binaryMode = true);
+GridV3 loadGridV3(const std::string& str, bool binaryMode = true);
+
 #endif // MATRIX3_H

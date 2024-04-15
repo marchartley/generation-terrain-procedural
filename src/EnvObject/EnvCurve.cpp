@@ -10,52 +10,9 @@ EnvObject *EnvCurve::fromJSON(nlohmann::json content)
 {
     return EnvObject::fromJSON(content);
 }
-
-float EnvCurve::getSqrDistance(const Vector3 &position, std::string complement)
+float EnvCurve::getSqrDistance(const Vector3 &position)
 {
-    if (complement == "front")
-        return (position - this->curve.points.front()).norm2();
-    else if (complement == "end")
-        return (position - this->curve.points.back()).norm2();
-    else if (complement == "center")
-        return (position - this->curve.center()).norm2();
-    else
-        return (position - this->curve.estimateClosestPos(position)).norm2();
-}
-
-Vector3 EnvCurve::getVector(const Vector3 &position, std::string complement)
-{
-    if (complement == "direction")
-        return this->curve.getDirection(curve.estimateClosestTime(position));
-    else if (complement == "normal")
-        return this->curve.getNormal(curve.estimateClosestTime(position));
-    else if (complement == "binormal")
-        return this->curve.getBinormal(curve.estimateClosestTime(position));
-    return Vector3();
-}
-
-Vector3 EnvCurve::getNormal(const Vector3 &position)
-{
-    return this->curve.getNormal(this->curve.estimateClosestTime(position));
-}
-
-Vector3 EnvCurve::getDirection(const Vector3 &position)
-{
-    return this->curve.getDirection(this->curve.estimateClosestTime(position));
-}
-
-Vector3 EnvCurve::getProperty(const Vector3& position, std::string prop) const
-{
-    if (prop == "center") {
-        return this->curve.center();
-    } else if (prop == "start") {
-        return this->curve.points.front();
-    } else if (prop == "end") {
-        return this->curve.points.back();
-    } else if (prop == "inside") {
-        return ((position - this->curve.estimateClosestPos(position)).norm2() < this->width * this->width ? Vector3(true) : Vector3(false));
-    }
-    return this->curve.estimateClosestPos(position); // Default
+    return (position - this->curve.estimateClosestPos(position)).norm2();
 }
 
 std::map<std::string, Vector3> EnvCurve::getAllProperties(const Vector3 &position) const
@@ -101,6 +58,25 @@ void EnvCurve::applyAbsorption(EnvMaterial& material)
 {
     if (this->materialAbsorptionRate[material.name] == 0) return;
     return;
+}
+
+void EnvCurve::applyDepositionOnDeath()
+{
+    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+        auto& material = EnvObject::materials[materialName];
+        if (amount == 0) return;
+
+        AABBox box = AABBox(this->curve.points);
+        BSpline translatedCurve = this->curve;
+        for (auto& p : translatedCurve)
+            p = p + Vector3(width, width, 0) - box.min();
+        GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+        sand.iterateParallel([&] (const Vector3& pos) {
+            sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * amount;
+        });
+        material.currentState.add(sand, box.min().xy() - Vector3(width, width));
+    }
 }
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
@@ -225,4 +201,11 @@ void EnvCurve::updateCurve(const BSpline &newCurve)
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->curve = newCurve;
     this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
+}
+
+nlohmann::json EnvCurve::toJSON() const
+{
+    auto json = EnvObject::toJSON();
+    json["curve"] = bspline_to_json(this->curve);
+    return json;
 }

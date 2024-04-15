@@ -48,14 +48,6 @@ EnvObject::~EnvObject()
 
 void EnvObject::readEnvObjectsFile(std::string filename)
 {
-
-    /*EnvMaterial sand("sand", 1.f, 2.f, 2.f, EnvObject::flowfield.getDimensions());
-    EnvMaterial polyp("polyp", 1.f, .1f, 0.f, EnvObject::flowfield.getDimensions());
-    EnvMaterial pebbles("pebbles", .5f, 0.5f, 10.f, EnvObject::flowfield.getDimensions());
-    EnvObject::materials["sand"] = sand;
-    EnvObject::materials["polyp"] = polyp;
-    EnvObject::materials["pebbles"] = pebbles;
-    */
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     EnvObject::readEnvObjectsFileContent(content);
@@ -183,6 +175,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     std::string objType = content["type"];
     std::map<std::string, float> materialDepositionRate;
     std::map<std::string, float> materialAbsorptionRate;
+    std::map<std::string, float> materialDepositionOnDeath;
     TerrainTypes material = materialFromString(content["material"]);
     ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
     Vector3 dimensions = json_to_vec3(content["dimensions"]);
@@ -193,12 +186,20 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
         asPoint->radius = dimensions.x;
         asPoint->height = dimensions.z;
         obj = asPoint;
-        flowEffect = Vector3(content["flow"], content["flow"], content["flow"]);
+        if (content["flow"].is_number())
+            flowEffect = Vector3(content["flow"], content["flow"], content["flow"]);
+        else
+            flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     } else if (objType == "curve") {
         auto asCurve = new EnvCurve;
         asCurve->width = dimensions.x;
         asCurve->length = dimensions.y;
         asCurve->height = dimensions.z;
+        if (content.contains("follows")) {
+            if (content["follows"] == "isovalue") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::ISOVALUE;
+            else if (content["follows"] == "gradients") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::GRADIENTS;
+            else std::cerr << "Value for 'follow' in object " << objName << " not recognized. Should be 'isovalue' or 'gradients'. Got " << content["follows"] << std::endl;
+        }
         obj = asCurve;
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     } else if (objType == "area") {
@@ -222,19 +223,12 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
             materialAbsorptionRate[mat] = val;
         }
     }
-    if(content.contains("sand")) {
-        materialDepositionRate["sand"] = float(content["sand"]);
-        materialAbsorptionRate["sand"] = float(content["sand"]);
+    if (content.contains("ondeath")) {
+        auto depos = content["ondeath"].get<std::map<std::string, float>>();
+        for (auto& [mat, val] : depos) {
+            materialDepositionOnDeath[mat] = val;
+        }
     }
-    if(content.contains("polyp")) {
-        materialDepositionRate["polyp"] = float(content["polyp"]);
-        materialAbsorptionRate["polyp"] = float(content["polyp"]);
-    }
-    if(content.contains("pebbles")) {
-        materialDepositionRate["pebbles"] = float(content["pebbles"]);
-        materialAbsorptionRate["pebbles"] = float(content["pebbles"]);
-    }
-
 
     if (content.contains("needs")) {
         obj->needsForGrowth = content["needs"].get<std::map<std::string, float>>();
@@ -246,18 +240,27 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->flowEffect = flowEffect;
     obj->materialAbsorptionRate = materialAbsorptionRate;
     obj->materialDepositionRate = materialDepositionRate;
-//    obj->materialAbsorptionRate["sand"] = sandEffect;
-//    obj->materialDepositionRate["sand"] = sandEffect;
-//    obj->materialAbsorptionRate["polyp"] = polypEffect;
-//    obj->materialDepositionRate["polyp"] = polypEffect;
-//    obj->sandEffect = sandEffect;
-//    obj->polypEffect = polypEffect;
+    obj->materialDepositionOnDeath = materialDepositionOnDeath;
     obj->s_FittingFunction = content["rule"];
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
     if (dimensions.z == 0) obj->inputDimensions = Vector3();
     return obj;
+}
+
+nlohmann::json EnvObject::toJSON() const
+{
+    nlohmann::json json;
+
+    json["name"] = this->name;
+    json["ID"] = this->ID;
+    json["age"] = this->age;
+    json["needs"] = this->currentSatisfaction;
+    json["evaluationPosition"] = vec3_to_json(this->evaluationPosition);
+    json["fittingScoreAtCreation"] = this->fittingScoreAtCreation;
+
+    return json;
 }
 
 float EnvObject::computeGrowingState()
@@ -342,10 +345,34 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         }
         vars["pos"] = pos;
         float score = _func(vars);
+
+        /*
+        std::cout << "Values used for " << currentObject << ":\n";
+        for (const std::string& usedVar : neededVariables) {
+            if (std::holds_alternative<float>(vars[usedVar]))
+                std::cout << usedVar << " = " << std::get<float>(vars[usedVar]) << std::endl;
+            else
+                std::cout << usedVar << " = " << std::get<Vector3>(vars[usedVar]) << std::endl;
+        }*/
         return score;
     };
 }
 
+EnvObject *EnvObject::findClosest(std::string objectName, const Vector3 &pos)
+{
+    float minDist = std::numeric_limits<float>::max();
+    EnvObject* bestElem = nullptr;
+    for (auto& instance : EnvObject::instantiatedObjects) {
+        if (instance->name != objectName) continue;
+        float distance = instance->getSqrDistance(pos);
+        if (distance < minDist) {
+            minDist = distance;
+            bestElem = instance;
+        }
+    }
+    return bestElem;
+}
+/*
 std::pair<std::string, std::string> EnvObject::extractNameAndComplement(std::string variable)
 {
     auto splitted = split(variable, ".");
@@ -380,7 +407,7 @@ std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(std::string objectName, c
     if (object == nullptr) return {Vector3::invalid(), nullptr};
     return {object->getVector(position, complement), object};
 }
-
+*/
 EnvObject *EnvObject::instantiate(std::string objectName)
 {
     EnvObject::currentMaxID++;
@@ -527,6 +554,11 @@ float EnvObject::evaluate(const Vector3 &position)
     return this->fittingFunction(position.xy());
 }
 
+void EnvObject::die()
+{
+    this->applyDepositionOnDeath();
+}
+
 void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
 {
 
@@ -571,7 +603,8 @@ void EnvObject::recomputeTerrainPropertiesForObject(const Heightmap &heightmap, 
 {
     auto name = objectName;
     EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
-        auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
+//        auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
+        EnvObject* object = EnvObject::findClosest(objectName, pos);
         if (object == nullptr) return;
         auto allProperties = object->getAllProperties(pos);
         EnvObject::allVectorProperties[name](pos) = allProperties["default"];
@@ -595,6 +628,7 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
     });
     for (auto& [matName, material] : EnvObject::materials) {
         EnvObject::allScalarProperties[matName] = material.currentState;
+//        std::cout << "Total of " << matName << ": " << material.currentState.sum() << std::endl;
     }
     EnvObject::allScalarProperties["depth"] = (heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights;
 }

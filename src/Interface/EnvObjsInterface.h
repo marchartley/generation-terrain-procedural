@@ -78,6 +78,9 @@ public Q_SLOTS:
 
     void resetScene();
 
+    void loadScene(std::string filename);
+    void saveScene(std::string filename);
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
