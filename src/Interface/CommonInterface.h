@@ -209,6 +209,7 @@ struct ComboboxLineElement {
     std::string label;
     int value;
     std::string iconPath;
+    std::string otherParameters;
 };
 
 class ComboboxElement : public UIElement {
@@ -232,7 +233,8 @@ public:
 public Q_SLOTS:
     void update();
 
-protected:
+//protected:
+public:
     std::vector<ComboboxLineElement> choices;
     std::optional<std::reference_wrapper<int>> boundIndex;
 //    std::optional<std::reference_wrapper<std::vector<std::string>>> boundValues;

@@ -364,6 +364,7 @@ float BSpline::length() const
 
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
+    this->cleanPoints();
     if (this->size() == 0) return *this;
     if (newNbPoints < 0)
         newNbPoints = this->points.size();
@@ -468,6 +469,14 @@ BSpline& BSpline::close()
 {
     if (this->points.size() > 1 && !this->closed) { // && this->points.front() != this->points.back()) {
         this->closed = true;
+    }
+    return *this;
+}
+
+BSpline &BSpline::cleanPoints()
+{
+    for (int i = this->size() - 1; i >= 0; i--) {
+        if (!this->points[i].isValid()) this->points.erase(this->points.begin() + i);
     }
     return *this;
 }

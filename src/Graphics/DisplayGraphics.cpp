@@ -46,6 +46,7 @@ void ChartView::mousePressEvent(QMouseEvent *event)
 }
 void ChartView::mouseMoveEvent(QMouseEvent *event)
 {
+    auto qPrevPos = this->previousMousePos;
     if (event->buttons().testFlag(Qt::LeftButton)) {
         QPoint delta = event->pos() - this->previousMousePos;
         this->previousMousePos = event->pos();
@@ -55,8 +56,9 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
     }
 
     auto mousePos = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
+    auto prevPos = this->getRelativeMousePositionInImage(Vector3(qPrevPos.x(), qPrevPos.y()));
 
-    Q_EMIT this->mouseMoved(mousePos);
+    Q_EMIT this->mouseMoved(mousePos, event->buttons().testFlag(Qt::LeftButton), prevPos, event);
     return QChartView::mouseMoveEvent(event);
 }
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
@@ -199,7 +201,12 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView, &ChartView::updated, this, &Plotter::updateLabelsPositions);
-    QObject::connect(this->chartView, &ChartView::mouseMoved, this, &Plotter::displayInfoUnderMouse);
+    QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, bool pressed, const Vector3& prevPos, QMouseEvent* e){
+        this->displayInfoUnderMouse(pos);
+        if (!this->displayedImage.empty()) {
+            Q_EMIT movedOnImage(pos * displayedImage.getDimensions(), pressed, prevPos * displayedImage.getDimensions(), e);
+        }
+    });
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::draw);
 }
 

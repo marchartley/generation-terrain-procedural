@@ -47,6 +47,8 @@ public:
 
     BSpline& close();
 
+    BSpline& cleanPoints();
+
     Vector3 getCatmullPoint(float x, float alpha = 1.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
 
     BSpline simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline = BSpline());

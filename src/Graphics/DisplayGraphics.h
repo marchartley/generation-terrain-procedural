@@ -56,7 +56,7 @@ public:
 Q_SIGNALS:
     void updated();
     void clickedOnValue(const Vector3& pos);
-    void mouseMoved(const Vector3& relativePos);
+    void mouseMoved(const Vector3& relativePos, bool mousePressed, const Vector3& previousMousePos, QMouseEvent* e);
 };
 
 class Chart : public QChart {
@@ -147,6 +147,7 @@ public Q_SLOTS:
 
 Q_SIGNALS:
     void clickedOnImage(const Vector3& pos, Vector3 value);
+    void movedOnImage(const Vector3& pos, bool mousePressed, const Vector3& previousPos, QMouseEvent* event);
 };
 
 
