@@ -530,3 +530,21 @@ Vector3 colorPalette(float t, const std::vector<Vector3> &colors)
 {
     return BSpline(colors).getPoint(t);
 }
+
+Vector3 colorPalette(float t, const std::vector<Vector3> &colors, const std::vector<float> &keypoints)
+{
+    float previousKey = 0.f, nextKey = keypoints.front();
+    int iKey = -1;
+    for (int i = 0; i < keypoints.size(); i++) {
+        iKey = i;
+        if (t < keypoints[i]) {
+            break;
+        }
+    }
+    if (iKey <= 0)
+        return colors.front();
+    previousKey = keypoints[iKey - 1];
+    nextKey = keypoints[iKey];
+    float interpol = std::clamp(interpolation::linear(t, previousKey, nextKey), 0.f, 1.f);
+    return colorPalette(interpol, colors[iKey - 1], colors[iKey]);
+}

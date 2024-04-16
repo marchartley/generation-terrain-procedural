@@ -46,19 +46,19 @@ void ChartView::mousePressEvent(QMouseEvent *event)
 }
 void ChartView::mouseMoveEvent(QMouseEvent *event)
 {
-    auto qPrevPos = this->previousMousePos;
     if (event->buttons().testFlag(Qt::LeftButton)) {
         QPoint delta = event->pos() - this->previousMousePos;
-        this->previousMousePos = event->pos();
         if (!this->locked)
             this->chart()->scroll(-delta.x(), delta.y());
         Q_EMIT this->updated();
     }
 
     auto mousePos = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
-    auto prevPos = this->getRelativeMousePositionInImage(Vector3(qPrevPos.x(), qPrevPos.y()));
+    auto prevPos = this->getRelativeMousePositionInImage(Vector3(previousMousePos.x(), previousMousePos.y()));
 
-    Q_EMIT this->mouseMoved(mousePos, event->buttons().testFlag(Qt::LeftButton), prevPos, event);
+    Q_EMIT this->mouseMoved(mousePos, prevPos, event);
+
+    this->previousMousePos = event->pos();
     return QChartView::mouseMoveEvent(event);
 }
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
@@ -201,10 +201,10 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView, &ChartView::updated, this, &Plotter::updateLabelsPositions);
-    QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, bool pressed, const Vector3& prevPos, QMouseEvent* e){
+    QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
         this->displayInfoUnderMouse(pos);
         if (!this->displayedImage.empty()) {
-            Q_EMIT movedOnImage(pos * displayedImage.getDimensions(), pressed, prevPos * displayedImage.getDimensions(), e);
+            Q_EMIT this->movedOnImage(pos * displayedImage.getDimensions(), prevPos * displayedImage.getDimensions(), e);
         }
     });
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::draw);

@@ -99,15 +99,22 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         Plotter::get()->addImage(dataV3);
     });
 
-    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, bool pressed, const Vector3& prevPos, QMouseEvent* event) {
+    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
         if (!this->isVisible()) return;
         if (!this->focusAreaEditing) return;
 
-        if (!pressed) return;
+        bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
+        bool rightPressed = event->buttons().testFlag(Qt::RightButton);
+        if (!leftPressed && !rightPressed) return;
 
-        auto brush = GridF::normalizedGaussian(20, 20, 1, 8.f) * (event->modifiers().testFlag(Qt::ShiftModifier) ? -1.f : 1.f);
+//        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
+        auto brush = GridF::normalizedGaussian(30, 30, 1, 8.f) * (rightPressed ? -1.f : 1.f) * 8.f;
         this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
-        Plotter::get()->addImage(focusedArea);
+
+        focusedArea.iterateParallel([&](size_t i) {
+            focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
+        });
+        Plotter::get()->addImage(renderFocusArea());
         Plotter::get()->show();
     });
 }
@@ -780,7 +787,7 @@ void EnvObjsInterface::displayFlowfieldAsImage()
 void EnvObjsInterface::manualModificationOfFocusArea()
 {
     this->focusAreaEditing = true;
-    Plotter::get()->addImage(this->focusedArea);
+    Plotter::get()->addImage(this->renderFocusArea());
     Plotter::get()->show();
 }
 
@@ -1267,6 +1274,16 @@ void EnvObjsInterface::saveScene(std::string filename)
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
     out.close();
+}
+
+GridV3 EnvObjsInterface::renderFocusArea() const
+{
+    GridV3 coloredFocus(this->focusedArea.getDimensions());
+    this->focusedArea.iterateParallel([&](size_t i) {
+        float value = focusedArea[i];
+        coloredFocus[i] = colorPalette(value, {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)}, {0.f, 1.f, 3.f});
+    });
+    return coloredFocus;
 }
 
 void EnvObjsInterface::fromGanUI()

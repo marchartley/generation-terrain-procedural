@@ -83,6 +83,8 @@ public Q_SLOTS:
     void loadScene(std::string filename);
     void saveScene(std::string filename);
 
+    GridV3 renderFocusArea() const;
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;

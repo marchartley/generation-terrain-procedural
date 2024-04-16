@@ -30,6 +30,7 @@ bool makedir(std::string path);
 bool checkPathExists(std::string path);
 Vector3 HSVtoRGB(float H, float S,float V);
 Vector3 colorPalette(float t, const std::vector<Vector3>& colors);
+Vector3 colorPalette(float t, const std::vector<Vector3>& colors, const std::vector<float>& keypoints);
 Vector3 colorPalette(float t, const Vector3& startColor = Vector3(1, 0, 0), const Vector3& endColor = Vector3(0, 1, 0));
 
 std::string toUpper(std::string s);
@@ -53,14 +54,6 @@ float sign(T value) {
 
 void sleep(int milliseconds);
 
-//template <typename ... FArgs, typename ... Args>
-//float timeIt(std::function<void(FArgs...)> func,
-//                  Args && ... as) {
-//    auto start = std::chrono::system_clock::now();
-//    func(std::forward<Args>(as)...);
-//    auto end = std::chrono::system_clock::now();
-//    return std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-//}
 double timeIt(std::function<void()> func, int repetitions = 1);
 std::string showTime(double nanoseconds);
 float displayProcessTime(std::string textToDisplay, std::function<void()> func, bool print = true);
@@ -154,7 +147,7 @@ std::vector<T> flattenArray(std::vector<std::vector<T>> arr) {
     return finalArray;
 }
 
-// COmpletely stolen from : https://stackoverflow.com/a/54512651
+// Completely stolen from : https://stackoverflow.com/a/54512651
 template <typename Iterator>
 std::string join(Iterator begin, Iterator end, std::string separator = "")
 {
