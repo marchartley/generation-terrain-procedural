@@ -38,7 +38,7 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
 //        if (!this->points.empty())
 //            pointsUsed.insert(pointsUsed.end(), this->points.front());
     } else {
-        pointsUsed = this->getPath(10);
+        pointsUsed = this->getPath(200);
     }
     return Collision::pointInPolygon(pos, pointsUsed);
     /*
@@ -93,13 +93,13 @@ bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
 
 float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
 {
-    float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
-    return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
+    float dist = /*BSpline(this->closedPath()).*/BSpline::estimateDistanceFrom(pos);
+    return dist * (contains(pos, false) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
 float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
 {
-    return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
+    return /*BSpline(this->closedPath()).*/BSpline::estimateSignedDistanceFrom(pos, epsilon);
 }
 
 float ShapeCurve::computeArea()

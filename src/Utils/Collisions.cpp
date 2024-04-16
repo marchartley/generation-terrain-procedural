@@ -331,6 +331,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
     // Adjust the direction of the ray until it is not parallel to any edge of the polygon.
     float perturbation = 0.01f;
     bool isParallel;
+    int maxTries = 20;
     do {
         isParallel = false;
         for (size_t i = 0; i < _polygon.size(); i++) {
@@ -346,7 +347,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 //            Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
 //            direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
         }
-    } while (isParallel);
+    } while (isParallel && (maxTries--) > 0);
 
     // Create the ray from the center towards the direction with a length greater than the maxDistance.
     Vector3 ray = center + direction.normalized() * maxDistance * 1.1f;

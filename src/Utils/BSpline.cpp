@@ -50,6 +50,11 @@ std::vector<Vector3> BSpline::getPath(int numberOfPoints, bool linearPath) const
 
 Vector3 BSpline::getPoint(float x, float alpha) const
 {
+    if (this->closed) {
+        x = x - std::floor(x); // Warp around if x < 0 or x > 1
+    } else {
+        x = std::clamp(x, 0.f, 1.f);
+    }
     if (points.size() > 2)
         return this->getCatmullPoint(x, alpha);
 
@@ -292,17 +297,27 @@ float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, flo
 
     while (precision > epsilon) {
         for (int i = 0; i < numberOfChecks + 1; i++) {
-            float time = std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
+            float time = searchRangeMin + (i * precision); // std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
             float distance = (getPoint(time) - pos).norm2();
             if (distance < minDistance) {
                 minDistance = distance;
                 closestTime = time;
             }
         }
-        if (minDistance < earlyExitThreshold)
-            return closestTime;
-        searchRangeMin = clamp(closestTime - precision/2.f, 0.f, 1.f);
+//        if (minDistance < earlyExitThreshold)
+//            return closestTime;
+        searchRangeMin = closestTime - precision/2.f; //clamp(closestTime - precision/2.f, 0.f, 1.f);
         precision *= precisionFactor;
+    }
+
+    // Second method: get distance to bspline points directly, return closest
+    // This works only because the BSpline go through all the points.
+    for (int i = 0; i < this->size(); i++) {
+        float dist = (this->points[i] - pos).norm2();
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestTime = float(i) / float(this->size() - 1);
+        }
     }
     return closestTime;
 }
