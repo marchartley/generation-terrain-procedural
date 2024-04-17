@@ -79,23 +79,28 @@ Vector3 BSpline::getPoint(float x, const Vector3& a, const Vector3& b) const
 
 Vector3 BSpline::getDerivative(float x, bool normalize) const
 {
-    float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
+    /*float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
     float e = nextTime - previousTime; // Case for start/end of curve
 
     Vector3 v = (getPoint(nextTime) - getPoint(previousTime));
     return (normalize ? v.normalized() : v / e);
-
+    */
+    Vector3 v = std::get<1>(this->pointAndDerivativeAndSecondDerivative(x));
+    return (normalize ? v.normalized() : v);
 }
 
 Vector3 BSpline::getSecondDerivative(float x, bool normalize) const
 {
-    float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
+    /*float previousTime = std::clamp(x - 0.01f, 0.f, 1.f);
     float nextTime = std::clamp(x + 0.01f, 0.f, 1.f);
     float e = nextTime - previousTime; // Case for start/end of curve
 
     Vector3 v = (getDerivative(nextTime) - getDerivative(previousTime));
     return (normalize ? v.normalized() : v / e);
+    */
+    Vector3 v = std::get<2>(this->pointAndDerivativeAndSecondDerivative(x));
+    return (normalize ? v.normalized() : v);
 }
 
 /*
@@ -509,6 +514,9 @@ T map(T x, T prev_min, T prev_max, T new_min, T new_max)
 
 Vector3 BSpline::getCatmullPoint(float x, float alpha) const
 {
+    Vector3 v = std::get<0>(this->pointAndDerivativeAndSecondDerivative(x));
+    return v;
+    /*
     alpha /= 2.f;
 
     std::vector<Vector3> displayedPoints = this->points;
@@ -550,6 +558,7 @@ Vector3 BSpline::getCatmullPoint(float x, float alpha) const
 
     Vector3 C  = B1 * (t2 - t) / (t2 - t1) + B2 * (t - t1) / (t2 - t1);
     return C;
+    */
 }
 
 BSpline BSpline::simplifyByRamerDouglasPeucker(float epsilon, BSpline subspline)
@@ -727,6 +736,163 @@ std::string BSpline::display1DPlot(int sizeX, int sizeY) const
     oss << std::fixed << std::setprecision(2) << maxi.x;
 
     return oss.str();
+}
+
+Vector3 BSpline::computeDerivative(float x, float alpha) const
+{
+    alpha /= 2.f;
+
+    std::vector<Vector3> displayedPoints = this->points;
+    if (this->closed)
+        displayedPoints.push_back(displayedPoints.front());
+
+    size_t lastPointIndex = displayedPoints.size() - 1;
+    size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+
+    float res = 1 / (float)(nbPoints - 1);
+    int iFloor = int(x / res);
+    int iCeil = int(x / res) + 1;
+    float resFloor = iFloor * res;
+    float resCeil = iCeil * res;
+    float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
+
+    Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
+    Vector3 P1 = displayedPoints[iFloor - 0];
+    Vector3 P2 = displayedPoints[iCeil + 0];
+    Vector3 P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+
+    float t0 = 0;
+    float t1 = CatmullNextT(P0, P1, t0, alpha);
+    float t2 = CatmullNextT(P1, P2, t1, alpha);
+    float t3 = CatmullNextT(P2, P3, t2, alpha);
+
+    float t = map(x_prime, 0.f, 1.f, t1, t2);
+
+
+    Vector3 A1 = P0 * (t1 - t) / (t1 - t0) + P1 * (t - t0) / (t1 - t0);
+    Vector3 A2 = P1 * (t2 - t) / (t2 - t1) + P2 * (t - t1) / (t2 - t1);
+    Vector3 A3 = P2 * (t3 - t) / (t3 - t2) + P3 * (t - t2) / (t3 - t2);
+
+    Vector3 B1 = A1 * (t2 - t) / (t2 - t0) + A2 * (t - t0) / (t2 - t0);
+    Vector3 B2 = A2 * (t3 - t) / (t3 - t1) + A3 * (t - t1) / (t3 - t1);
+
+    Vector3 A1_prim = (P1 - P0) / (t1 - t0);
+    Vector3 A2_prim = (P2 - P1) / (t2 - t1);
+    Vector3 A3_prim = (P3 - P2) / (t3 - t2);
+
+    Vector3 B1_prim = (A2 - A1) / (t2 - t0) + ((t2 - t) / (t2 - t0)) * A1_prim + ((t - t0) / (t2 - t0)) * A2_prim;
+    Vector3 B2_prim = (A3 - A2) / (t3 - t1) + ((t3 - t) / (t3 - t1)) * A2_prim + ((t - t1) / (t3 - t1)) * A3_prim;
+
+    Vector3 C_prim  = (B2 - B1) / (t2 - t1) + ((t2 - t) / (t2 - t1)) * B1_prim + ((t - t1) / (t2 - t1)) * B2_prim;
+    return C_prim;
+}
+
+std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x, float alpha) const
+{
+    alpha /= 2.f;
+
+    std::vector<Vector3> displayedPoints = this->points;
+    if (this->closed)
+        displayedPoints.push_back(displayedPoints.front());
+
+    size_t lastPointIndex = displayedPoints.size() - 1;
+    size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+
+    float res = 1 / (float)(nbPoints - 1);
+    int iFloor = int(x / res);
+    int iCeil = int(x / res) + 1;
+    float resFloor = iFloor * res;
+    float resCeil = iCeil * res;
+    float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
+
+    Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
+    Vector3 P1 = displayedPoints[iFloor - 0];
+    Vector3 P2 = displayedPoints[iCeil + 0];
+    Vector3 P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+
+    float t0 = 0;
+    float t1 = CatmullNextT(P0, P1, t0, alpha);
+    float t2 = CatmullNextT(P1, P2, t1, alpha);
+    float t3 = CatmullNextT(P2, P3, t2, alpha);
+
+    float t = map(x_prime, 0.f, 1.f, t1, t2);
+
+
+    Vector3 A1 = P0 * (t1 - t) / (t1 - t0) + P1 * (t - t0) / (t1 - t0);
+    Vector3 A2 = P1 * (t2 - t) / (t2 - t1) + P2 * (t - t1) / (t2 - t1);
+    Vector3 A3 = P2 * (t3 - t) / (t3 - t2) + P3 * (t - t2) / (t3 - t2);
+
+    Vector3 B1 = A1 * (t2 - t) / (t2 - t0) + A2 * (t - t0) / (t2 - t0);
+    Vector3 B2 = A2 * (t3 - t) / (t3 - t1) + A3 * (t - t1) / (t3 - t1);
+
+    Vector3 C  = B1 * (t2 - t) / (t2 - t1) + B2 * (t - t1) / (t2 - t1);
+
+    Vector3 A1_prim = (P1 - P0) / (t1 - t0);
+    Vector3 A2_prim = (P2 - P1) / (t2 - t1);
+    Vector3 A3_prim = (P3 - P2) / (t3 - t2);
+
+    Vector3 B1_prim = (A2 - A1) / (t2 - t0) + ((t2 - t) / (t2 - t0)) * A1_prim + ((t - t0) / (t2 - t0)) * A2_prim;
+    Vector3 B2_prim = (A3 - A2) / (t3 - t1) + ((t3 - t) / (t3 - t1)) * A2_prim + ((t - t1) / (t3 - t1)) * A3_prim;
+
+    Vector3 C_prim  = (B2 - B1) / (t2 - t1) + ((t2 - t) / (t2 - t1)) * B1_prim + ((t - t1) / (t2 - t1)) * B2_prim;
+    return {C, C_prim};
+}
+
+std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDerivative(float x, float alpha) const
+{
+    alpha /= 2.f;
+
+    std::vector<Vector3> displayedPoints = this->points;
+    if (this->closed)
+        displayedPoints.push_back(displayedPoints.front());
+
+    size_t lastPointIndex = displayedPoints.size() - 1;
+    size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+
+    float res = 1 / (float)(nbPoints - 1);
+    int iFloor = int(x / res);
+    int iCeil = int(x / res) + 1;
+    float resFloor = iFloor * res;
+    float resCeil = iCeil * res;
+    float x_prime = map(x, resFloor, resCeil, 0.f, 1.f);
+
+    const Vector3 P0 = displayedPoints[(iFloor == 0 ? (this->closed ? int(nbPoints-2) : 1) : iFloor - 1)];
+    const Vector3 P1 = displayedPoints[iFloor - 0];
+    const Vector3 P2 = displayedPoints[iCeil + 0];
+    const Vector3 P3 = displayedPoints[(iCeil >= int(nbPoints-1) ? (this->closed ? 1 : displayedPoints.size()-2) : iCeil + 1)];
+
+    float t0 = 0;
+    float t1 = CatmullNextT(P0, P1, t0, alpha);
+    float t2 = CatmullNextT(P1, P2, t1, alpha);
+    float t3 = CatmullNextT(P2, P3, t2, alpha);
+
+    float t = map(x_prime, 0.f, 1.f, t1, t2);
+
+
+    const Vector3 A1 = P0 * (t1 - t) / (t1 - t0) + P1 * (t - t0) / (t1 - t0);
+    const Vector3 A2 = P1 * (t2 - t) / (t2 - t1) + P2 * (t - t1) / (t2 - t1);
+    const Vector3 A3 = P2 * (t3 - t) / (t3 - t2) + P3 * (t - t2) / (t3 - t2);
+
+    const Vector3 B1 = A1 * (t2 - t) / (t2 - t0) + A2 * (t - t0) / (t2 - t0);
+    const Vector3 B2 = A2 * (t3 - t) / (t3 - t1) + A3 * (t - t1) / (t3 - t1);
+
+    const Vector3 C  = B1 * (t2 - t) / (t2 - t1) + B2 * (t - t1) / (t2 - t1);
+
+    const Vector3 A1p = (P1 - P0) / (t1 - t0);
+    const Vector3 A2p = (P2 - P1) / (t2 - t1);
+    const Vector3 A3p = (P3 - P2) / (t3 - t2);
+
+    const Vector3 B1p = (A2 - A1) / (t2 - t0) + ((t2 - t) / (t2 - t0)) * A1p + ((t - t0) / (t2 - t0)) * A2p;
+    const Vector3 B2p = (A3 - A2) / (t3 - t1) + ((t3 - t) / (t3 - t1)) * A2p + ((t - t1) / (t3 - t1)) * A3p;
+
+    const Vector3 Cp  = (B2 - B1) / (t2 - t1) + ((t2 - t) / (t2 - t1)) * B1p + ((t - t1) / (t2 - t1)) * B2p;
+
+    const Vector3 B1pp = 2.f * (A2p - A1p) / (t2 - t0);
+    const Vector3 B2pp = 2.f * (A3p - A2p) / (t3 - t1);
+
+    const Vector3 Cpp = (B1pp * (t2 - t) + B2pp * (t - t1) + 2.f * (B2p - B1p)) / (t2 - t1);
+
+    return {C, Cp, Cpp};
 }
 const Vector3 &BSpline::operator[](size_t i) const
 {

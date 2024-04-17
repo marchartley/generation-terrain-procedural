@@ -88,6 +88,12 @@ public:
     const Vector3& operator[](size_t i) const;
 
     std::string display1DPlot(int sizeX, int sizeY) const;
+
+
+    Vector3 computeDerivative(float x, float alpha = 2.f) const; // alpha : 2 = very round, 1 = quite normal, 0.5 = almost linear
+
+    std::pair<Vector3, Vector3> pointAndDerivative(float x, float alpha = 2.f) const;
+    std::tuple<Vector3, Vector3, Vector3> pointAndDerivativeAndSecondDerivative(float x, float alpha = 2.f) const;
 };
 
 
