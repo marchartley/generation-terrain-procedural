@@ -74,6 +74,7 @@ void EnvObject::readEnvObjectsFileContent(std::string content)
         }
     }
 
+    auto test = EnvObject::availableObjects;
     for (auto& [name, obj] : EnvObject::availableObjects) {
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name);
     }
@@ -198,13 +199,15 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
         if (content.contains("follows")) {
             if (content["follows"] == "isovalue") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::ISOVALUE;
             else if (content["follows"] == "gradients") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::GRADIENTS;
-            else std::cerr << "Value for 'follow' in object " << objName << " not recognized. Should be 'isovalue' or 'gradients'. Got " << content["follows"] << std::endl;
+            else if (content["follows"] == "skeleton") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::SKELETON;
+            else std::cerr << "Value for 'follow' in object " << objName << " not recognized. Should be 'isovalue', 'gradients' or 'skeleton'. Got " << content["follows"] << std::endl;
         }
         obj = asCurve;
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     } else if (objType == "area") {
         auto asArea = new EnvArea;
         asArea->width = dimensions.x;
+        asArea->length = dimensions.y;
         asArea->height = dimensions.z;
         obj = asArea;
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
@@ -415,6 +418,14 @@ EnvObject *EnvObject::instantiate(std::string objectName)
     object->ID = EnvObject::currentMaxID;
     EnvObject::instantiatedObjects.push_back(object);
     return object;
+}
+
+void EnvObject::removeObject(EnvObject *obj)
+{
+    if (obj) {
+        auto& list = EnvObject::instantiatedObjects;
+        list.erase(std::find(list.begin(), list.end(), obj));
+    }
 }
 
 void EnvObject::removeAllObjects()

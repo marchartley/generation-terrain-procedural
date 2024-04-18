@@ -22,6 +22,31 @@
   },
   {
     "name": "Reef",
+    "type": "curve",
+    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral) max 0",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    	"polyp": 0.2
+    },
+    "absorptionRate" : {
+    	"polyp": 0.2,
+    	"deadcoral": 0.1
+    },
+    "dimensions": {
+      "x": 1,
+      "y": 300,
+      "z": 10
+    },
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "sand"
+  },
+  {
+    "name": "--Reef",
     "type": "area",
     "rule": "normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)",
     "flow": {
@@ -45,9 +70,31 @@
     "material": "sand"
   },
   {
+    "name": "--Barrier",
+    "type": "area",
+    "rule": "deadCoral",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    	"polyp": 0.0
+    },
+    "absorptionRate" : {
+    	"deadCoral": 0.0
+    },
+    "dimensions": {
+      "x": 1,
+      "y": 100,
+      "z": 0
+    },
+    "geometry": "DistanceMap",
+    "material": "sand"
+  },
+  {
     "name": "CoralPolyp",
     "type": "point",
-    "--rule": "((polyp * ((10 - d(reef - pos)) - current.vel * 10) max 0)^2) * normal((depth + 7)/1.5)",
     "rule": "(polyp + 1) * (normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)) / (current.vel * 100 + 1.0)",
     "flow": 1.0,
     "dimensions": {
@@ -76,7 +123,7 @@
   {
     "name": "CoralPolypFlat",
     "type": "point",
-    "rule": "10 * polyp + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1",
+    "rule": "10 * polyp + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + abs(random(pos * {100 100 0}) * 0.1)",
     "flow": 1.0,
     "dimensions": {
       "x": 3.0,
@@ -160,9 +207,9 @@
     	"sand": 1.0
     },
     "dimensions": {
-      "x": 50,
-      "y": 50,
-      "z": 30
+      "x": 1,
+      "y": 500,
+      "z": 20
     },
     "geometry": "DistanceMap",
     "material": "Rock"
@@ -298,7 +345,7 @@
   {
     "name": "Motu",
     "type": "point",
-    "rule": "((d(Passe - pos) - 5) * -1 * 1000 + (sand * 10000)) + 1000 * (10 - d(reef - pos))",
+    "rule": "((d((Passe - pos) ? {5 0 0}) - 5)  + (sand * 10000)) + 1000 * (10 - d((reef - pos) ? {10 0 0}))",
     "flow": 1.0,
     "dimensions": {
       "x": 20.0,
@@ -342,7 +389,7 @@
   {
     "name": "Arch",
     "type": "point",
-    "rule": "(5 - d(fault - pos)) max 0",
+    "rule": "(5 - d((fault - pos) ? {5 0 0})) max 0",
     "--rule": "(10 - (d(fault.center - pos) - abs(d(fault.start - pos) - d(fault.end - pos))^2)) max 0 * (5 - d(fault - pos)) max 0",
     "flow": 1.0,
     "depositionRate" : {
@@ -396,7 +443,7 @@
   {
     "name": "BigRock",
     "type": "point",
-    "rule": "(5 - d(canyon - pos)) max 0",
+    "rule": "(5 - d((canyon - pos) ? {5 0 0})) max 0",
     "flow": 5.0,
     "sand": 0.0,
     "pebbles": 10.0,

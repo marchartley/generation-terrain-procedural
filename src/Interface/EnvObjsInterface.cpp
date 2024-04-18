@@ -69,14 +69,43 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         GridV3 result(data.getDimensions());
         ShapeCurve isoline;
         if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
-            isoline = this->computeNewObjectsShapeAtPosition(clickPos, gradients, data, 1000.f, 1.f).close();
+            isoline = this->computeNewObjectsShapeAtPositionForceCircleOptimizedArea(clickPos, gradients, data, asArea->length, PI * asArea->length * asArea->width);
+            if (isoline.size() <= 0) return;
+            std::cout << "Area: " << isoline.computeArea() << std::endl;
             result.iterateParallel([&](const Vector3& pos) {
                 if (isoline.containsXY(pos)) {
                     result(pos) = Vector3(.5f, .5f, .5f);
                 }
             });
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
-            isoline = this->computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width, asCurve->curveFollow == EnvCurve::ISOVALUE);
+            if (asCurve->curveFollow == EnvCurve::SKELETON) {
+                int nbTries = 10;
+                while (nbTries > 0) {
+                    ShapeCurve mainArea = this->computeNewObjectsShapeAtPositionForceCircleOptimizedArea(clickPos, gradients, data, asCurve->length, PI * asCurve->length * asCurve->width);
+                    GridI area(EnvObject::flowfield.getDimensions());
+                    area.iterateParallel([&](const Vector3& p) {
+                        area(p) = (mainArea.containsXY(p) ? 1 : 0);
+                    });
+                    auto skeletons = area.dilate(true).skeletonizeToBSplines();
+
+                    float longest = 0.f;
+                    int bestId = -1;
+                    for (int i = 0; i < skeletons.size(); i++) {
+                        float length = skeletons[i].length();
+                        if (length > longest) {
+                            longest = length;
+                            bestId = i;
+                        }
+                    }
+                    if (bestId >= 0) {
+                        isoline = skeletons[bestId];
+                        nbTries = -1;
+                    }
+                    nbTries --;
+                }
+            } else {
+                isoline = this->computeNewObjectsCurveAtPosition(clickPos, gradients, data, asCurve->length, asCurve->width, asCurve->curveFollow == EnvCurve::ISOVALUE);
+            }
         } else if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
             isoline = ShapeCurve::circle(asPoint->radius, clickPos, 20);
             result.iterateParallel([&](const Vector3& pos) {
@@ -206,6 +235,7 @@ QLayout *EnvObjsInterface::createGUI()
     }
 
     ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
+    ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(waitAtEachFrameButton->get());
@@ -219,6 +249,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectCombobox->get());
     layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
     layout->addWidget(editFocusAreaButton->get());
+    layout->addWidget(showElementsOnCanvasButton->get());
     layout->addWidget(objectsListWidget);
 //    layout->addWidget(recomputeErosionButton->get());
     layout->addWidget(testingFormula->get());
@@ -470,7 +501,7 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     return bestPos;
 }
 
-EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score) {
+EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score) {
     EnvObject* newObject = EnvObject::instantiate(objectName);
 
     auto objAsPoint = dynamic_cast<EnvPoint*>(newObject);
@@ -483,26 +514,71 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
         GridV3 gradients = score.gaussianSmooth(2.f).gradient();
         gradients.raiseErrorOnBadCoord = false;
         gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        BSpline initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width, objAsCurve->curveFollow == EnvCurve::ISOVALUE);
+        BSpline initialCurve;
+        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+            int nbTries = 10;
+            while (nbTries > 0) {
+                ShapeCurve mainArea = this->computeNewObjectsShapeAtPositionForceCircleOptimizedArea(position, gradients, score, objAsCurve->length, PI * objAsCurve->length * objAsCurve->width);
+                GridI area(EnvObject::flowfield.getDimensions());
+                area.iterateParallel([&](const Vector3& p) {
+                    area(p) = (mainArea.containsXY(p) ? 1 : 0);
+                });
+                auto skeletons = area.dilate(true).skeletonizeToBSplines();
+                float longest = 0.f;
+                int bestId = -1;
+                for (int i = 0; i < skeletons.size(); i++) {
+                    float length = skeletons[i].length();
+                    if (length > longest) {
+                        longest = length;
+                        bestId = i;
+                    }
+                }
+                if (bestId >= 0) {
+                    initialCurve = skeletons[bestId];
+                    nbTries = -1;
+                }
+                nbTries --;
+            }
+            if (initialCurve.size() == 0) {
+                EnvObject::removeObject(newObject);
+                delete newObject;
+                return nullptr;
+            }
+
+            position = initialCurve[0]; // The optimisation process might have moved the evaluation position greatly
+        } else {
+            initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width, objAsCurve->curveFollow == EnvCurve::ISOVALUE);
+        }
+
+
+//        BSpline initialCurve = this->computeNewObjectsCurveAtPosition(position, gradients, score, objAsCurve->length, objAsCurve->width, objAsCurve->curveFollow == EnvCurve::ISOVALUE);
         BSpline curve = initialCurve;
         curve.translate(-position);
         objAsCurve->curve = curve.resamplePoints(10);
     } else if (objAsArea) {
+        /*
         if (toLower(objectName) == "island") {
             float width = objAsArea->width;
             objAsArea->curve = ShapeCurve::circle(width, Vector3(), 10);
             for (auto& p : objAsArea->curve) {
                 p *= random_gen::generate(0.3f, 1.f);
             }
-        } else {
+        } else {*/
             GridV3 gradients = score/*.gaussianSmooth(2.f)*/.gradient();
             gradients.raiseErrorOnBadCoord = false;
             gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-            ShapeCurve initialCurve = this->computeNewObjectsShapeAtPosition(position, gradients, score, 1000.f, 1.f).close();
+            ShapeCurve initialCurve = this->computeNewObjectsShapeAtPositionForceCircleOptimizedArea(position, gradients, score, objAsArea->length, PI * objAsArea->length * objAsArea->width);
+            if (initialCurve.size() == 0) {
+                EnvObject::removeObject(newObject);
+                delete newObject;
+                return nullptr;
+            }
+
+            position = initialCurve[0]; // The optimisation process might have moved the evaluation position greatly
             ShapeCurve curve = initialCurve.resamplePoints();
             curve.translate(-position);
             objAsArea->curve = curve.resamplePoints(10);
-        }
+//        }
     }
 
     newObject->translate(position.xy());
@@ -543,6 +619,10 @@ void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
 
             Vector3 bestPos = bestPositionForInstantiation(name, score * focusedArea);
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
+            if (!newObject) {
+                this->log("Object not created");
+                return;
+            }
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
 //            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
             this->implicitPatchesFromObjects[newObject] = implicit;
@@ -590,6 +670,10 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
             this->materialSimulationStable = false; // We have to compute the simulation again
             Vector3 bestPos = bestPositionForInstantiation(objectName, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
+            if (!newObject) {
+                this->log("Object not created");
+                return;
+            }
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
@@ -1068,15 +1152,26 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
     Vector3 pos = startPoint;
     float initialIsovalue = values.interpolate(pos);
     BSpline path({pos});
-    Vector3 dir(1, 0, 0);
+    Vector3 dir(0, 0, 0);
     bool didAFullCircle = false;
     float totalDistance = 0.f;
-    while (maxDist > totalDistance) {
+    while (maxDist > totalDistance && path.size() < 5000) {
         if (path.size() > 5 && (pos - startPoint).norm2() < 3*3){
             didAFullCircle = true;
             break; // Got back close to beginning
         }
-        Vector3 gradient = gradients(pos);
+        Vector3 gradient;
+        int maxTries = 100;
+        for (int iTry = 0; iTry < maxTries; iTry++) {
+            Vector3 jitter = Vector3::random() * (5.f * float(iTry) / (float(maxTries)));
+            if (jitter.dot(dir) < 0) continue;
+            auto testPos = pos + jitter;
+            gradient = gradients.interpolate(testPos);
+            if (gradient.norm2() > 1e-8) {
+                pos = testPos;
+                break; // Nowhere to go
+            }
+        }
         if (gradient.norm2() < 1e-8) break; // Nowhere to go
         gradient.normalize();
 
@@ -1110,6 +1205,7 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
     }
 
     finalPath = path;
+    /*
     if (!didAFullCircle) {
         totalDistance = 0.f;
         pos = startPoint;
@@ -1138,7 +1234,7 @@ BSpline followIsovalue(const GridF& values, const GridV3& gradients, const Vecto
             std::reverse(path.points.begin(), path.points.end());
             finalPath.points.insert(finalPath.points.begin(), path.points.begin(), path.points.end());
         }
-    }
+    }*/
     return finalPath;
 }
 
@@ -1159,10 +1255,71 @@ BSpline EnvObjsInterface::computeNewObjectsCurveAtPosition(const Vector3 &seedPo
     return isoline;
 }
 
-ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, const GridF& score, float directionLength, float widthMaxLength)
+ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPosition(const Vector3 &seedPosition, const GridV3& gradients, const GridF& score, float directionLength)
 {
     BSpline isoline = followIsovalue(score, gradients, seedPosition, directionLength);
     return isoline;
+}
+
+ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPositionForceCircle(const Vector3 &seedPosition, const GridV3 &gradients, const GridF &score, float directionLength)
+{
+    ShapeCurve finalIsoline;
+//    float targetArea = directionLength * _widthMaxLength;
+    Vector3 pos = seedPosition;
+
+//    int maxTries = 3;
+//    float bestAreaDiff = std::numeric_limits<float>::max();
+    ShapeCurve bestCurve;
+    Vector3 jitterPos = pos;
+//    while (maxTries > 0) {
+        finalIsoline = this->computeNewObjectsShapeAtPosition(jitterPos, gradients, score, directionLength).close();
+        if (finalIsoline.size() > 5 && (finalIsoline.points.front() - finalIsoline.points.back()).norm2() < 3*3) {
+//            float area = finalIsoline.computeArea();
+//            if (std::abs(area - targetArea) < std::abs(bestAreaDiff)) {
+//                bestAreaDiff = area - targetArea;
+                bestCurve = finalIsoline;
+            }
+//        } else {
+//            jitterPos = pos + Vector3::random() * .1f;
+//        }
+//        maxTries--;
+//    }
+    return bestCurve;
+}
+
+ShapeCurve EnvObjsInterface::computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3 &seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea)
+{
+    Vector3 currentSeedPos = seedPosition;
+    float maxError = 5.f;
+    int maxTries = 100;
+    ShapeCurve finalCurve;
+    float moveFactor = 1.f;
+    bool currentlyAreaGettingSmaller = true;
+
+    // We will move only in the direction of the gradient, since we want to optimize the isolevel.
+    // And we know that higher isolevel => lower area while lower isolevel => higher area.
+    // So isolevel gradient proportional to -area gradient.
+    while (maxTries > 0) {
+        ShapeCurve curve = computeNewObjectsShapeAtPositionForceCircle(currentSeedPos, gradients, score, directionLength);
+        if (curve.size() == 0) {
+            // The isocontour is too big, we didn't manage to do a full circle.
+            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * 2.f;
+        } else {
+            float area = curve.computeArea();
+
+            float diff = targetArea - area; // < 0 means curve too big, > 0 means curve too small
+            finalCurve = curve;
+            if (std::abs(diff) < maxError) break;
+            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * (diff > 0 ? -1.f : 1.f) * moveFactor;
+
+            if (currentlyAreaGettingSmaller != (diff > 0)) {
+                currentlyAreaGettingSmaller = !currentlyAreaGettingSmaller;
+                moveFactor *= .5f;
+            }
+        }
+        maxTries--;
+    }
+    return finalCurve;
 }
 
 void EnvObjsInterface::runPerformanceTest()
@@ -1284,6 +1441,43 @@ GridV3 EnvObjsInterface::renderFocusArea() const
         coloredFocus[i] = colorPalette(value, {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)}, {0.f, 1.f, 3.f});
     });
     return coloredFocus;
+}
+
+void EnvObjsInterface::showAllElementsOnPlotter() const
+{
+    std::map<TerrainTypes, Vector3> materialToColor = {
+        {WATER, Vector3(0, 0, 1)},
+        {AIR,   Vector3(0.4, 0.4, 1)},
+        {SAND,  Vector3(0, 1, 1)},
+        {CORAL, Vector3(0.5, 1.0, 1.0)},
+        {ROCK,  Vector3(0.8, 0.8, 0.8)},
+        {DIRT,  Vector3(0.7, 0.2, 0.2)}
+    };
+    GridV3 img(100, 100, 1);
+
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        TerrainTypes material = obj->material;
+        Vector3 col = materialToColor[material];
+        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+            Vector3 pos = asPoint->position;
+            for (int dx = -1; dx <= 2; dx++) {
+                for (int dy = -1; dy <= 2; dy++) {
+                    img(pos + Vector3(dx, dy)) = col;
+                }
+            }
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+            for (const auto& p : asCurve->curve.getPath(200)) {
+                img(p) = col;
+            }
+        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+            for (const auto& p : asArea->curve.getPath(200)) {
+                img(p) = col;
+            }
+        }
+    }
+
+    Plotter::get()->addImage(img);
+    Plotter::get()->show();
 }
 
 void EnvObjsInterface::fromGanUI()

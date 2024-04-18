@@ -41,5 +41,12 @@
 		"waterTransport": 1.0,
 		"mass": 0.0,
 		"decay": 0.9
+	},
+	{
+		"name": "deadCoral",
+		"diffusionSpeed": 0.0,
+		"waterTransport": 0.0,
+		"mass": 0.0,
+		"decay": 1.0
 	}
 ]
