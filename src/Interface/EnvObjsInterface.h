@@ -31,7 +31,7 @@ public:
     void setDefinitionFile(std::string filename);
     void setTransformationsFile(std::string filename);
 
-    EnvObject* instantiateObjectAtBestPosition(std::string objectName, const Vector3& position, const GridF& score);
+    EnvObject* instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score);
 
 public Q_SLOTS:
     void show();
@@ -74,7 +74,9 @@ public Q_SLOTS:
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
     BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
-    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength);
+    ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
+    ShapeCurve computeNewObjectsShapeAtPositionForceCircle(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
+    ShapeCurve computeNewObjectsShapeAtPositionForceCircleOptimizedArea(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float targetArea);
 
     void runPerformanceTest();
 
@@ -84,6 +86,8 @@ public Q_SLOTS:
     void saveScene(std::string filename);
 
     GridV3 renderFocusArea() const;
+
+    void showAllElementsOnPlotter() const;
 
 public:
     Mesh velocitiesMesh;

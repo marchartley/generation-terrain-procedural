@@ -99,6 +99,7 @@ public:
     static EnvObject* findClosest(std::string objectName, const Vector3& pos);
 
     static EnvObject* instantiate(std::string objectName);
+    static void removeObject(EnvObject* obj);
     static void removeAllObjects();
     static bool applyEffects(const GridF& heights);
     static bool updateSedimentation(const GridF& heights);

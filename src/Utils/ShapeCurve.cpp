@@ -80,6 +80,7 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
 
 bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
 {
+    if (this->size() == 0) return false;
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
         pointsUsed = this->points;

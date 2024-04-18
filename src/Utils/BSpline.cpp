@@ -455,12 +455,12 @@ Vector3 BSpline::getCenterCircle(float x) const
 
 Vector3 BSpline::getDirection(float x) const
 {
-    return this->getDerivative(x).normalize();
+    return this->getDerivative(x, true);
 }
 
 Vector3 BSpline::getNormal(float x) const
 {
-    return this->getSecondDerivative(x).normalize();
+    return this->getSecondDerivative(x, true);
 }
 
 Vector3 BSpline::getBinormal(float x) const

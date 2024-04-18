@@ -11,6 +11,7 @@ public:
 
     ShapeCurve curve;
     float width;
+    float length;
     float height;
 
     virtual float getSqrDistance(const Vector3& position);

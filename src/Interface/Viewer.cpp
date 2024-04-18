@@ -79,6 +79,7 @@ void Viewer::init() {
 
     setTextIsEnabled(true);
     setMouseTracking(true);
+    setAutoFillBackground(true);
 
     std::string pathToShaders = "src/Shaders/";
 
@@ -138,7 +139,8 @@ void Viewer::init() {
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
-//    QGLViewer::init();
+
+    this->setUpdatesEnabled(true);
 }
 
 void Viewer::draw() {
@@ -148,6 +150,9 @@ void Viewer::draw() {
 
 void Viewer::saveScreenshotPNG(std::string filename)
 {
+    QImage img = this->grabFrameBuffer(true);
+    img.save(QString::fromStdString(filename));
+    return;
     int w = this->camera()->screenWidth();
     int h = this->camera()->screenHeight();
     int nbComp = 4;
@@ -213,6 +218,7 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
+    this->makeCurrent();
     this->frame_num ++;
     current_frame ++;
     bool displayTiming = false;
@@ -308,8 +314,8 @@ void Viewer::drawingProcess() {
         }
 
         screenSavingTiming = timeIt([&]() {
-            auto startScreenSaving = std::chrono::system_clock::now();
             if (this->isTakingScreenshots) {
+                glFlush();
                 if (makedir(".tmp/screenshots")) {
                     this->saveScreenshotPNG(".tmp/screenshots/screen.png");
                 }
@@ -331,6 +337,8 @@ void Viewer::drawingProcess() {
         std::cout << "\tScreen saving : " << showTime(screenSavingTiming) << "\n";
         std::cout << "\tOpenGL uniforms : " << showTime(GLUniformsTime) << std::endl;
     }
+    glFlush();
+    this->doneCurrent();
 }
 
 void Viewer::reloadAllShaders()
