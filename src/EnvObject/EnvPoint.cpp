@@ -6,9 +6,9 @@ EnvPoint::EnvPoint()
 
 }
 
-EnvObject *EnvPoint::fromJSON(nlohmann::json content)
+EnvPoint *EnvPoint::fromJSON(nlohmann::json content)
 {
-    return EnvObject::fromJSON(content);
+    return dynamic_cast<EnvPoint*>(EnvObject::fromJSON(content));
 }
 
 float EnvPoint::getSqrDistance(const Vector3 &position)
@@ -36,6 +36,11 @@ EnvPoint *EnvPoint::clone()
     EnvPoint* self = new EnvPoint;
     *self = *this;
     return self;
+}
+
+EnvPoint *EnvPoint::instantiate(std::string objectName)
+{
+    return dynamic_cast<EnvPoint*>(EnvObject::instantiate(objectName));
 }
 
 void EnvPoint::applyDeposition(EnvMaterial& material)
@@ -136,7 +141,7 @@ GridF EnvPoint::createHeightfield() const
     return GridF();
 }
 
-EnvObject &EnvPoint::translate(const Vector3 &translation)
+EnvPoint &EnvPoint::translate(const Vector3 &translation)
 {
     this->position.translate(translation);
     this->evaluationPosition.translate(translation);

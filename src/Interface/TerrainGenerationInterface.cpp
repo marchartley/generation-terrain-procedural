@@ -407,10 +407,10 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
         *this->implicitTerrain = *dynamic_cast<ImplicitNaryOperator*>(ImplicitPatch::fromJson(json_content[ImplicitPatch::json_identifier]));
     })) << std::endl;
 /*
-    EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
+    EnvArea* reef = EnvArea::instantiate("reef"));
     reef->area = ShapeCurve({Vector3(0, 0, 0), Vector3(100, 0, 0), Vector3(100, 100, 0), Vector3(0, 100, 0)});
 
-    EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
+    EnvCurve* passe = EnvCurve::instantiate("passe"));
     passe->curve = BSpline({Vector3(10, 10, 0), Vector3(40, 10, 0), Vector3(40, 50, 0), Vector3(70, 70, 0)});
 
     this->implicitTerrain->addChild(reef->createImplicitPatch());

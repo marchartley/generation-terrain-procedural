@@ -7,7 +7,7 @@ class EnvCurve : public EnvObject {
 public:
     EnvCurve();
 
-    static EnvObject* fromJSON(nlohmann::json content);
+    static EnvCurve* fromJSON(nlohmann::json content);
 
     BSpline curve;
     float width;
@@ -17,6 +17,7 @@ public:
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
+    static EnvCurve* instantiate(std::string objectName);
 
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
@@ -26,7 +27,7 @@ public:
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     virtual GridF createHeightfield() const;
 
-    virtual EnvObject& translate(const Vector3& translation);
+    virtual EnvCurve& translate(const Vector3& translation);
     void updateCurve(const BSpline &newCurve);
 
     virtual nlohmann::json toJSON() const;

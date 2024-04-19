@@ -6,9 +6,9 @@ EnvArea::EnvArea()
 
 }
 
-EnvObject *EnvArea::fromJSON(nlohmann::json content)
+EnvArea *EnvArea::fromJSON(nlohmann::json content)
 {
-    return EnvObject::fromJSON(content);
+    return dynamic_cast<EnvArea*>(EnvObject::fromJSON(content));
 }
 float EnvArea::getSqrDistance(const Vector3 &position)
 {
@@ -36,6 +36,11 @@ EnvArea *EnvArea::clone()
     EnvArea* self = new EnvArea;
     *self = *this;
     return self;
+}
+
+EnvArea *EnvArea::instantiate(std::string objectName)
+{
+    return dynamic_cast<EnvArea*>(EnvObject::instantiate(objectName));
 }
 
 void EnvArea::applyDeposition(EnvMaterial& material)
@@ -171,7 +176,7 @@ GridF EnvArea::createHeightfield() const
     return GridF();
 }
 
-EnvObject &EnvArea::translate(const Vector3 &translation)
+EnvArea &EnvArea::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
     this->evaluationPosition.translate(translation);

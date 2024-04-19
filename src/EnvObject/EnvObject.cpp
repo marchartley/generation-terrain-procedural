@@ -413,6 +413,9 @@ std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(std::string objectName, c
 */
 EnvObject *EnvObject::instantiate(std::string objectName)
 {
+    if (EnvObject::availableObjects.count(objectName) == 0) {
+        return nullptr;
+    }
     EnvObject::currentMaxID++;
     auto object = EnvObject::availableObjects[objectName]->clone();
     object->ID = EnvObject::currentMaxID;

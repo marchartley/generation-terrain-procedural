@@ -270,7 +270,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
-            EnvCurve* passe = dynamic_cast<EnvCurve*>(EnvObject::instantiate("passe"));
+            EnvCurve* passe = EnvCurve::instantiate("passe");
             passe->curve = curve;
         }
     }
@@ -283,7 +283,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
-//            EnvArea* reef = dynamic_cast<EnvArea*>(EnvObject::instantiate("reef"));
+//            EnvArea* reef = EnvArea::instantiate("reef"));
 //            reef->area = curve;
         }
     }
@@ -296,7 +296,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
-            EnvArea* lagoon = dynamic_cast<EnvArea*>(EnvObject::instantiate("lagoon"));
+            EnvArea* lagoon = EnvArea::instantiate("lagoon");
             lagoon->curve = curve;
         }
     }
