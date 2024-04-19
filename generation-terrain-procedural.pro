@@ -85,6 +85,7 @@ SOURCES += \
     src/EnvObject/EnvPoint.cpp \
     src/EnvObject/ExpressionParser.cpp \
 #    src/FluidSimulation/FLIPSimulation_copy.cpp \
+    src/EnvObject/PositionOptimizer.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -270,6 +271,7 @@ HEADERS += \
     src/EnvObject/EnvPoint.h \
     src/EnvObject/ExpressionParser.h \
 #    src/FluidSimulation/FLIPSimulation_copy.h \
+    src/EnvObject/PositionOptimizer.h \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \
