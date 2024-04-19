@@ -181,7 +181,7 @@ bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1,
 }
 
 std::tuple<float, float> project(std::vector<Vector3> vertices, const Vector3& _axis) {
-    float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::min();
+    float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::lowest();
     float projection;
     Vector3 axis = _axis.normalized();
 

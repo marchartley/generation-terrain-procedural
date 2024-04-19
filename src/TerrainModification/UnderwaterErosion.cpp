@@ -999,7 +999,7 @@ void UnderwaterErosion::ParisSeaErosion()
     size_t nbSamples = 400;
 
     float beta = 10.f;
-    float mini = std::numeric_limits<float>::max(), maxi = std::numeric_limits<float>::min();
+    float mini = std::numeric_limits<float>::max(), maxi = std::numeric_limits<float>::lowest();
     float maxZ;
     for (size_t i = 0; i < possiblePositions.size(); i++) {
         auto& p = possiblePositions[i];

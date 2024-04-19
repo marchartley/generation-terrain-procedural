@@ -271,7 +271,7 @@ void Plotter::addImage(GridV3 image)
     if (image.empty()) return;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
-        float max = std::numeric_limits<float>::min();
+        float max = std::numeric_limits<float>::lowest();
         image.iterate([&](size_t i) {
             min = std::min(min, image[i].minComp());
             max = std::max(max, image[i].maxComp());
@@ -292,7 +292,7 @@ void Plotter::addImage(GridV3 image)
     if (this->normalizedMode) {
         for (int c = 0; c < 3; c++) {
             float min = std::numeric_limits<float>::max();
-            float max = std::numeric_limits<float>::min();
+            float max = std::numeric_limits<float>::lowest();
             image.iterate([&](size_t i) {
                 min = std::min(image[i][c], min);
                 max = std::max(image[i][c], max);

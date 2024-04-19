@@ -249,7 +249,7 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
 {
     /*
     Vector3 minVec(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0);
-    Vector3 maxVec(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), 1);
+    Vector3 maxVec(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), 1);
     for (const Vector3& point : this->vertices) {
         minVec.x = std::min(minVec.x, point.x);
         minVec.y = std::min(minVec.y, point.y);

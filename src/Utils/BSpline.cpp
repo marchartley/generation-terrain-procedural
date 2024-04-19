@@ -597,7 +597,7 @@ std::tuple<Vector3, Vector3> BSpline::AABBox() const
     if (this->points.empty()) return std::make_tuple(Vector3(), Vector3());
     if (this->points.size() == 1) return std::make_tuple(points[0], points[0]);
 
-    float minDim = std::numeric_limits<float>::min();
+    float minDim = std::numeric_limits<float>::lowest();
     float maxDim = std::numeric_limits<float>::max();
     Vector3 minVec = Vector3(maxDim, maxDim, maxDim),
             maxVec = Vector3(minDim, minDim, minDim);

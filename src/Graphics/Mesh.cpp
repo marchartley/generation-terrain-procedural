@@ -192,7 +192,7 @@ Mesh &Mesh::fromFBX(std::string filename)
 Mesh& Mesh::normalize()
 {
     Vector3 minAABBox(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-    Vector3 maxAABBox(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+    Vector3 maxAABBox(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
     Vector3 center;
 
     for (const auto& p : this->vertexArray) {

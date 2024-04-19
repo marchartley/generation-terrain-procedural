@@ -356,9 +356,9 @@ std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
 
 Vector3 Vector3::min()
 {
-    return Vector3(std::numeric_limits<float>::min(),
-                   std::numeric_limits<float>::min(),
-                   std::numeric_limits<float>::min());
+    return Vector3(std::numeric_limits<float>::lowest(),
+                   std::numeric_limits<float>::lowest(),
+                   std::numeric_limits<float>::lowest());
 }
 
 Vector3 Vector3::max()
