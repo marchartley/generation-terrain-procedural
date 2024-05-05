@@ -48,13 +48,16 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
     if (this->materialDepositionRate[material.name] == 0) return;
 
     AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = this->curve;
+    BSpline translatedCurve = BSpline(this->curve.getPath(100));
     for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
     GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
     sand.iterateParallel([&] (const Vector3& pos) {
-        sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * this->materialDepositionRate[material.name];
+        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+        float amount = normalizedGaussian(width * .25f, distToCurve) * this->materialDepositionRate[material.name];
+
+        sand.at(pos) = amount;
     });
     material.currentState.add(sand, box.min().xy() - Vector3(width, width));
 }
@@ -62,7 +65,29 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
 void EnvCurve::applyAbsorption(EnvMaterial& material)
 {
     if (this->materialAbsorptionRate[material.name] == 0) return;
-    return;
+    displayProcessTime("Absorption... ", [&]() {
+        AABBox box;
+        BSpline translatedCurve;
+        GridF sand;
+
+        box = AABBox(this->curve.points);
+        translatedCurve = BSpline(this->curve.getPath(100));
+        for (auto& p : translatedCurve)
+            p = p + Vector3(width, width, 0) - box.min();
+        sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+
+        sand.iterateParallel([&] (const Vector3& pos) {
+            float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+            float amount = normalizedGaussian(width * .25f, distToCurve) * this->materialAbsorptionRate[material.name];
+            sand.at(pos) = amount;
+        });
+
+        material.currentState.add(-sand, box.min().xy() - Vector3(width, width));
+
+        material.currentState.iterateParallel([&] (size_t i) {
+            material.currentState[i] = std::max(material.currentState[i], 0.f);
+        });
+    }, false);
 }
 
 void EnvCurve::applyDepositionOnDeath()

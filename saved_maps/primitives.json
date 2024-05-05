@@ -21,6 +21,33 @@
     "material": "water"
   },
   {
+    "name": "aaaReef",
+    "type": "curve",
+    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral * (d((aaareef - pos) ? {10 0 0}) > 5)) max 0",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    	"polyp": 0.2,
+    	"pebbles": 0.1,
+    	"deadcoral": 0.1
+    },
+    "absorptionRate" : {
+    	"polyp": 0.2,
+    	"deadcoral": 0.1
+    },
+    "dimensions": {
+      "x": 10,
+      "y": 50,
+      "z": 10
+    },
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "sand"
+  },
+  {
     "name": "Reef",
     "type": "curve",
     "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral) max 0",
@@ -30,66 +57,20 @@
       "binormal": 0.0
     },
     "depositionRate" : {
-    	"polyp": 0.2
+    	"polyp": 0.2,
+    	"pebbles": 0.1
     },
     "absorptionRate" : {
     	"polyp": 0.2,
     	"deadcoral": 0.1
     },
     "dimensions": {
-      "x": 1,
-      "y": 300,
+      "x": 40,
+      "y": 500,
       "z": 10
     },
     "follows": "skeleton",
     "geometry": "ParametricTunnel",
-    "material": "sand"
-  },
-  {
-    "name": "--Reef",
-    "type": "area",
-    "rule": "normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"polyp": 0.2
-    },
-    "absorptionRate" : {
-    	"polyp": 0.2
-    },
-    "sand": 0.0,
-    "dimensions": {
-      "x": 1,
-      "y": 30,
-      "z": 0
-    },
-    "geometry": "None",
-    "material": "sand"
-  },
-  {
-    "name": "--Barrier",
-    "type": "area",
-    "rule": "deadCoral",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"polyp": 0.0
-    },
-    "absorptionRate" : {
-    	"deadCoral": 0.0
-    },
-    "dimensions": {
-      "x": 1,
-      "y": 100,
-      "z": 0
-    },
-    "geometry": "DistanceMap",
     "material": "sand"
   },
   {
@@ -107,7 +88,8 @@
     },
     "depositionRate": {
     	"sand": 0.1,
-    	"polyp": 0.01
+    	"polyp": 0.01,
+    	"deadCoral": 0.1
     },
     "absorptionRate": {
     	"sand": 0.1,
@@ -143,58 +125,10 @@
     "geometry": "None",
     "material": "coral"
   },
-  
-  {
-    "name": "--FrontReef",
-    "type": "curve",
-    "rule": "(20*20) - d2(Reef - pos)",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.5,
-      "binormal": 0.1
-    },
-    "depositionRate" : {
-    	"sand": 0.0
-    },
-    "absorptionRate" : {
-    	"sand": 1.0
-    },
-    "dimensions": {
-      "x": 10,
-      "y": 0,
-      "z": 0
-    },
-    "geometry": "ParametricTunnel",
-    "material": "Coral"
-  },
-  {
-    "name": "--Lagoon",
-    "type": "area",
-    "--rule": "(20*20)^8 - d2(Island.center - pos)^8",
-    "rule": "((1 - island.inside) * 20 - d(island - pos)) max 0",
-    "flow": {
-      "direction": 0.50,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"sand": 0.0
-    },
-    "absorptionRate" : {
-    	"sand": 0.0
-    },
-    "dimensions": {
-      "x": 500,
-      "y": 10,
-      "z": 5
-    },
-    "geometry": "Polygon",
-    "material": "sand"
-  },
   {
     "name": "Island",
     "type": "area",
-    "rule": "(random(pos - {50 0 0}) * (x(pos)/100)) max 0",
+    "rule": "((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside)) max 0",
     "flow": {
       "direction": 1.0,
       "normal": 0.0,
@@ -207,140 +141,12 @@
     	"sand": 1.0
     },
     "dimensions": {
-      "x": 1,
-      "y": 500,
+      "x": 50,
+      "y": 50,
       "z": 20
     },
     "geometry": "DistanceMap",
     "material": "Rock"
-  },
-  {
-    "name": "--Coral",
-    "type": "point",
-    "rule": "(10 - sand - current.vel) * Lagoon.inside * (depth - 3)",
-    "flow": 0.1,
-    "depositionRate" : {
-    	"sand": 0.8
-    },
-    "absorptionRate" : {
-    	"sand": 0.8
-    },
-    "dimensions": {
-      "x": 2,
-      "y": 2,
-      "z": 10
-    },
-    "geometry": "Block",
-    "material": "Coral"
-  },
-  {
-    "name": "--Beach",
-    "type": "area",
-    "rule": "coast.inside * (1 - d2(island - pos))",
-    "rulez": "((5*5) - d2(Island - pos)) * (1 - Island.inside)",
-    "flow": {
-      "direction": 0.1,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"sand": 0.8
-    },
-    "absorptionRate" : {
-    	"sand": 0.8
-    },
-    "dimensions": {
-      "x": 10,
-      "y": 0,
-      "z": 10
-    },
-    "geometry": "Mountain",
-    "material": "Sand"
-  },
-  {
-    "name": "--Coast",
-    "type": "area",
-    "rule": "(10*10) - d2(Island - pos)",
-    "flow": {
-      "direction": 0.1,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"sand": 0.1
-    },
-    "absorptionRate" : {
-    	"sand": 0.1
-    },
-    "dimensions": {
-      "x": 10,
-      "y": 0,
-      "z": 15
-    },
-    "geometry": "DistanceMap",
-    "material": "Sand"
-  },
-  {
-    "name": "--Boulder",
-    "type": "point",
-    "rule": "((20 * 20) - (d2(Reef - pos)) + current.vel * 300) * Lagoon.inside",
-    "flow": 0.0,
-    "depositionRate" : {
-    	"sand": 0.4
-    },
-    "absorptionRate" : {
-    	"sand": 0.0
-    },
-    "dimensions": {
-      "x": 3,
-      "y": 0,
-      "z": 0
-    },
-    "geometry": "Sphere",
-    "material": "Dirt"
-  },
-  {
-    "name": "--Delta",
-    "type": "curve",
-    "rule": "(5 - d(passe - pos)) * (100 - d(lagoon.center - pos)) * lagoon.inside",
-    "rulezz": "5 - d(Passe.end - pos)",
-    "rulez": "(10*10)^4 - d2(Passe.end - pos)^4",
-    "flow": {
-      "direction": 0.8,
-      "normal": 0.8,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"sand": 0.1
-    },
-    "absorptionRate" : {
-    	"sand": 0.1
-    },
-    "dimensions": {
-      "x": 4,
-      "y": 10,
-      "z": 0
-    }, 
-    "geometry": "ParametricTunnel",
-    "material": "water"
-  },
-  {
-    "name": "Tree",
-    "type": "point",
-    "rule": "(abs(reef.curvature)^(5/6)) * (25 - abs(5 - d(reef - pos))^(7/3)) max 0",
-    "flow": 0.10,
-    "depositionRate" : {
-    },
-    "absorptionRate" : {
-    },
-    "dimensions": {
-      "x": 10.0,
-      "y": 10.0,
-      "z": 5.0
-    },
-    "geometry": "None",
-    "--geometry": "Sphere",
-    "material": "dirt"
   },
   {
     "name": "Motu",
@@ -383,13 +189,15 @@
       "y": 70,
       "z": 10
     },
+    "follows": "skeleton",
     "geometry": "ParametricTunnel",
     "material": "water"
   },
   {
     "name": "Arch",
     "type": "point",
-    "rule": "(5 - d((fault - pos) ? {5 0 0})) max 0",
+    "rule": "(random({50 50 0} + pos * {20 20 20}) * 0.5 + random({50 50 0} + pos * {10 10 10}) * 1 + random({50 50 0} + pos * {5 5 0}) * 2 + random({50 50 0} + pos * {1 1 0}) * 4) / 6.5",
+    "-rule": "(5 - d((fault - pos) ? {5 0 0})) max 0",
     "--rule": "(10 - (d(fault.center - pos) - abs(d(fault.start - pos) - d(fault.end - pos))^2)) max 0 * (5 - d(fault - pos)) max 0",
     "flow": 1.0,
     "depositionRate" : {
@@ -407,7 +215,8 @@
   {
     "name": "River",
     "type": "curve",
-    "rule": "(20 - abs(depth)) * (depth < 0)",
+    "rule": "depth * -1",
+    "--rule": "(20 - abs(depth)) * (depth < 0)",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,
@@ -416,7 +225,7 @@
     "sand": 0.0,
     "dimensions": {
       "x": 2,
-      "y": 30,
+      "y": 40,
       "z": 5
     },
     "geometry": "ParametricTunnel",
@@ -437,6 +246,7 @@
       "y": 200,
       "z": 30
     },
+    "follows": "skeleton",
     "geometry": "ParametricTunnel",
     "material": "water"
   },
@@ -445,12 +255,15 @@
     "type": "point",
     "rule": "(5 - d((canyon - pos) ? {5 0 0})) max 0",
     "flow": 5.0,
-    "sand": 0.0,
-    "pebbles": 10.0,
     "dimensions": {
       "x": 10,
       "y": 10,
       "z": 1
+    },
+    "depositionRate" : {
+	"pebbles": 10.0
+    },
+    "absorptionRate" : {
     },
     "geometry": "None",
     "material": "Sand"
@@ -467,6 +280,11 @@
       "x": 10,
       "y": 10,
       "z": 1
+    },
+    "depositionRate" : {
+    },
+    "absorptionRate" : {
+	"pebbles": 2.0
     },
     "geometry": "None",
     "material": "Sand"

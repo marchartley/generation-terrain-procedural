@@ -4,6 +4,7 @@
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
 #include "Utils/ShapeCurve.h"
+#include "EnvObject/SnakeSegmentation.h"
 
 class PathOptimizer {
 public:
@@ -32,6 +33,7 @@ public:
 
 //protected:
     static BSpline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
+    static BSpline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
 };
 
 class AreaOptimizer

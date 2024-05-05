@@ -20,6 +20,8 @@ Python_tests/sketch-to-terrain/outputs/*
 Python_tests/sketch-to-terrain/data_downsampled_blurred/*
 Python_tests/sketch-to-terrain/world_map/*
 
+.qtc_clangd/
+
 doc/
 
 *.stl
@@ -117,3 +119,4 @@ Python_tests/test.py
 test.stl
 OpenFoam/OF_Sim_Marcos/*
 src/assets/models/FBX
+.qmake.stash

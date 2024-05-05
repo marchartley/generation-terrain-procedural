@@ -35,6 +35,7 @@
 #include "DataStructure/Image.h"
 #include "EnvObject/ExpressionParser.h"
 #include "Utils/HotreloadFile.h"
+#include "EnvObject/PositionOptimizer.h"
 
 using namespace std;
 
@@ -87,7 +88,6 @@ int main(int argc, char *argv[])
     QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
 #endif
     QApplication app(argc, argv);
-
 
     QGLFormat glFormat;
     glFormat.setVersion(4, 5);
@@ -793,17 +793,17 @@ int main(int argc, char *argv[])
      * Graph source : https://upload.wikimedia.org/wikipedia/commons/thumb/2/29/DijkstraBis01.svg/330px-DijkstraBis01.svg.png
     Graph G(false);
     G.addNodes({0, 1, 2, 3, 4, 5, 6, 7, 8, 9});
-    G.addConnection(0, 1, 85);
-    G.addConnection(0, 2, 217);
-    G.addConnection(0, 4, 173);
-    G.addConnection(1, 5, 80);
-    G.addConnection(2, 6, 186);
-    G.addConnection(2, 7, 103);
-    G.addConnection(3, 7, 183);
-    G.addConnection(5, 8, 250);
-    G.addConnection(7, 9, 167);
-    G.addConnection(4, 9, 502);
-    G.addConnection(8, 9, 84);
+    G.addConnection(0, 1, 85, false);
+    G.addConnection(0, 2, 217, false);
+    G.addConnection(0, 4, 173, false);
+    G.addConnection(1, 5, 80, false);
+    G.addConnection(2, 6, 186, false);
+    G.addConnection(2, 7, 103, false);
+    G.addConnection(3, 7, 183, false);
+    G.addConnection(5, 8, 250, false);
+    G.addConnection(7, 9, 167, false);
+    G.addConnection(4, 9, 502, false);
+    G.addConnection(8, 9, 84, false);
 
     std::vector<float> expectedValues = {0, 85, 217, 503, 173, 165, 403, 320, 415, 487};
 
@@ -838,7 +838,8 @@ int main(int argc, char *argv[])
     Table tab(results, {"A*", "Djikstra", "Bellman", "Floyd", "Floyd (2)", "Johnson", "Ground truth"}, names);
     std::cout << tab.displayTable() << std::endl;
     std::cout << "End." << std::endl;
-    return 0;*/
+    return 0;
+    */
     /*
      * Unit test : Shortest path algorithms should give the same output.
     std::vector<Vector3> randomPositions(100);
@@ -1443,6 +1444,174 @@ int main(int argc, char *argv[])
     std::cout << testF.displayValues() << "\n\n" << resultF.displayValues() << std::endl;
     return 0;*/
 
+    /*for (int i = 0; i < 100; i++) {
+        float x = interpolation::linear(float(i), 30.f, 60.f);
+        std::cout << x << " -> " << (x - std::floor(x)) << std::endl;
+    }
+    return 0;*/
+
+    /*
+    int width = 100;
+    GridF img(width, width, 1);
+    GridV3 imgV3(img.getDimensions(), Vector3(1, 1, 1));
+    ShapeCurve shape = ShapeCurve::circle(width * .45f, img.getDimensions().xy() * .5f, 20);
+//    ShapeCurve shape = ShapeCurve({
+//                         Vector3(40, 10),
+//                         Vector3(40, 40),
+//                         Vector3(10, 40),
+//                         Vector3(10, 60),
+//                         Vector3(40, 60),
+//                         Vector3(40, 90),
+//                         Vector3(60, 90),
+//                         Vector3(60, 60),
+//                         Vector3(90, 60),
+//                         Vector3(90, 40),
+//                         Vector3(60, 40),
+//                         Vector3(60, 10)
+//                     });
+//    shape.scale(.01f * width);
+
+    int nbPoints = 20000;
+    displayProcessTime("3 computes... ", [&]() {
+        for (int i = 0; i < nbPoints; i++) {
+            float t = float(i) / float(nbPoints - 1);
+            auto p = shape.getPoint(t);
+            auto d = shape.getDerivative(t).normalize();
+            auto dd = shape.getSecondDerivative(t).normalize();
+
+            imgV3(p) = dd;
+        }
+    });
+    displayProcessTime("1 computes... ", [&]() {
+        for (int i = 0; i < nbPoints; i++) {
+            float t = float(i) / float(nbPoints - 1);
+            auto [p, d, dd] = shape.pointAndDerivativeAndSecondDerivative(t);
+            imgV3(p) = dd.normalized();
+        }
+    });
+
+    imgV3.reset();
+    for (int i = 0; i < nbPoints; i++) {
+        float t = float(i) / float(nbPoints - 1);
+        auto p0 = shape.getPoint(t);
+        auto d0 = shape.getDerivative(t).normalize();
+        auto dd0 = shape.getSecondDerivative(t).normalize();
+        auto [p1, d1, dd1] = shape.pointAndDerivativeAndSecondDerivative(t);
+        imgV3(p0) = dd1.normalized() - dd0.normalized();
+//        imgV3(p0) = dd1.normalized();
+//        imgV3(p0) = dd0;//.normalized();
+//        imgV3(p0) = dd1;
+    }
+
+    Plotter::get()->addImage(imgV3);
+    return Plotter::get()->exec();
+                */
+
+    /*Vector3 size(400, 400, 1);
+    GridF heights = GridF::perlin(size, 3.f * Vector3(1, 1) / (size * .01f)) * .6f + GridF::perlin(size, 5.f * Vector3(1, 1) / (size * .01f)) * .3f + GridF::perlin(size, 10.f * Vector3(1, 1) / (size * .01f)) * .1f;
+    heights.raiseErrorOnBadCoord = false;
+    heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    QObject::connect(Plotter::get(), &Plotter::movedOnImage, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _e) {
+        Vector3 pos = clickPos;
+
+        auto gradients = heights.gradient();
+        gradients.raiseErrorOnBadCoord = false;
+        gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+
+        float targetArea = (size.x * size.x) / 1.f;
+        float targetLength = size.x / 4.f;
+        BSpline track;
+//        ShapeCurve track;
+        displayProcessTime("> ", [&]() {
+    //        auto track = PositionOptimizer::trackHighestPosition(pos, heights, heights.gradient(), 100, true);
+//            track = CurveOptimizer::getMinLengthCurveFollowingIsolevel(pos, heights, gradients, targetLength);
+//            track = CurveOptimizer::getExactLengthCurveFollowingGradients(pos, heights, gradients, targetLength);
+            track = CurveOptimizer::getSkeletonCurve(pos, heights, gradients, targetLength);
+//            track = AreaOptimizer::getInitialShape(pos, heights, gradients);
+//            track = AreaOptimizer::getAreaOptimizedShape(pos, heights, gradients, targetArea);
+        });
+        std::cout << track.length() << " / " << targetLength << std::endl;
+//        std::cout << track.computeArea() << " / " << targetArea << std::endl;
+
+        GridV3 img(heights.getDimensions());
+        img.iterateParallel([&](size_t i) {
+            img[i] = Vector3(1, 1, 1) * heights[i];
+        });
+        auto path = track.getPath(2000);
+        for (int i = 0; i < path.size(); i++) {
+            img(path[i]) = colorPalette(float(i) / float(path.size() - 1));
+        }
+
+        Plotter::get()->addImage(img);
+        Plotter::get()->show();
+    });
+    Plotter::get()->addImage(heights);
+    return Plotter::get()->exec();
+    */
+
+    /*
+    GridF data(100, 100, 1);
+    data(20, 10) = 1.f;
+    data(20, 10) = 1.f;
+    data(30, 10) = 1.f;
+    data(40, 30) = 1.f;
+    data(70, 50) = 1.f;
+    data(50, 20) = 1.f;
+    data(70, 10) = 1.f;
+    data(80, 80) = 1.f;
+    data(10, 80) = 1.f;
+
+    data = data.gaussianSmooth(10.f, true, true);
+    data.normalize();
+    GridV3 gradients = data.gradient();
+
+    BSpline curve = BSpline({Vector3(20, 10), Vector3(80, 80)}).getPath(10);
+    SnakeSegmentation s = SnakeSegmentation(curve, data, gradients);
+    s.alpha = 1.f;
+    s.beta = 1.f;
+    s.gamma = .5f;
+    s.zeta = 0.1f;
+
+    s.externalCoefficient = 100;
+    s.internalCoefficient = 1;
+    s.targetLength = 100;
+
+    GridV3 img(data.getDimensions());
+    img.iterateParallel([&](size_t i) {
+        img[i] = Vector3(1, 1, 1) * data[i];
+    });
+    int nbIterations = 100;
+    for (int i = 0; i < nbIterations; i++) {
+        curve = s.runSegmentation(10);
+        s.contour = curve;
+        std::cout << "Length: " << curve.length() << " / " << s.targetLength << std::endl;
+        for (auto& p : curve.getPath(2000)) {
+            img(p) = colorPalette(float(i) / float(nbIterations - 1));
+        }
+        // for (auto& p : curve) {
+            // img(p) = Vector3(0, 1, 0);
+        // }
+    }
+
+    Plotter::get()->addImage(img);
+    return Plotter::get()->exec();
+    */
+
+    /*
+    Vector3 size(100, 100, 1);
+    GridV3 gradients(size);
+    gradients.raiseErrorOnBadCoord = false;
+    gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    gradients.iterateParallel([&](const Vector3& p) {
+        // gradients(p) = (std::sin(p.x / 3.f) < .75f && std::sin(p.y / 3.f) < .75f ? Vector3(1, 1, 1) : Vector3(0, 0, 0));
+        gradients(p) = (p - size.xy() * .5f);
+    });
+
+    gradients = gradients.gaussianSmooth(15.f, true, true);
+
+    Plotter::get()->addImage(gradients);
+    return Plotter::get()->exec();
+    */
 
     EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
     EnvObject::readEnvObjectsFile("saved_maps/primitives.json");

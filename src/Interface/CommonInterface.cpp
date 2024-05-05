@@ -406,7 +406,7 @@ ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bi
 
 }
 */
-QComboBox *ComboboxElement::combobox()
+QComboBox *ComboboxElement::combobox() const
 {
     return _combobox;
 }
@@ -426,6 +426,11 @@ void ComboboxElement::bindTo(int &indexSelected)
     this->setOnSelectionChanged([&](int index) {
         this->boundIndex->get() = index;
     });
+}
+
+ComboboxLineElement ComboboxElement::getSelection() const
+{
+    return this->choices.at(combobox()->currentIndex());
 }
 
 void ComboboxElement::update()

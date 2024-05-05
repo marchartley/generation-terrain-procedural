@@ -219,16 +219,13 @@ public:
     ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices);
     ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int& currentSelection);
 
-//    ComboboxElement(std::string label, std::vector<std::string>& bindedTexts, int& bindedIndex);
-//    ComboboxElement(std::string label, std::vector<std::string>& bindedTexts, int& bindedIndex, bool interpretAsImages);
-
-    QComboBox* combobox();
+    QComboBox* combobox() const;
 
     void setOnSelectionChanged(std::function<void(int)> func);
-//    DEFINE_SET_ON_FUNCTION(setOnSelectionChanged, QComboBox, currentIndexChanged)
 
     void bindTo(int& indexSelected);
-//    void bindTo(std::vector<std::string>& values);
+
+    ComboboxLineElement getSelection() const;
 
 public Q_SLOTS:
     void update();

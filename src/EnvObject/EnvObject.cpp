@@ -289,30 +289,30 @@ float EnvObject::computeGrowingState()
     return totalScore;
 }
 
-std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject)
+std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances)
 {
     formula = toLower(formula);
     if (formula == "")
-        formula = "0.0";
+        return [](Vector3 _) { return 0.f; };
 
     std::map<std::string, Variable> variables;
     for (auto& [name, obj] : EnvObject::availableObjects) {
-        variables[name] = Vector3();
-        variables[name + ".center"] = Vector3();
-        variables[name + ".start"] = Vector3();
-        variables[name + ".end"] = Vector3();
-        variables[name + ".normal"] = Vector3();
-        variables[name + ".dir"] = Vector3();
+        variables[name] = Vector3::invalid();
+        variables[name + ".center"] = Vector3::invalid();
+        variables[name + ".start"] = Vector3::invalid();
+        variables[name + ".end"] = Vector3::invalid();
+        variables[name + ".normal"] = Vector3::invalid();
+        variables[name + ".dir"] = Vector3::invalid();
         variables[name + ".inside"] = float();
         variables[name + ".curvature"] = float();
     }
 
-    variables["current"] = Vector3();
-    variables["current.center"] = Vector3();
-    variables["current.start"] = Vector3();
-    variables["current.end"] = Vector3();
-    variables["current.normal"] = Vector3();
-    variables["current.dir"] = Vector3();
+    variables["current"] = Vector3::invalid();
+    variables["current.center"] = Vector3::invalid();
+    variables["current.start"] = Vector3::invalid();
+    variables["current.end"] = Vector3::invalid();
+    variables["current.normal"] = Vector3::invalid();
+    variables["current.dir"] = Vector3::invalid();
     variables["current.vel"] = float();
 //    variables["sand"] = float();
 //    variables["polyp"] = float();
@@ -321,32 +321,39 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         variables[matName] = float();
 
     ExpressionParser parser;
-    variables["pos"] = Vector3();
+    variables["pos"] = Vector3::invalid();
     if (!parser.validate(formula, variables, false)) {
         throw std::runtime_error("The formula " + formula + " is not valid for object '" + currentObject + "'");
     }
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
     auto _func = parser.parse(formula, variables);
-    return [&, _func, neededVariables, currentObject](Vector3 pos) -> float {
+    return [&, _func, neededVariables, currentObject, removeSelfInstances](Vector3 pos) -> float {
         std::map<std::string, Variable> vars;
         for (auto& [prop, map] : EnvObject::allVectorProperties) {
-            /*if (neededVariables.count(prop) && !map(pos).isValid()) { // A variable is needed but there are no value attributed (eg : object not instantiated yet)
-                if (prop == currentObject || startsWith(prop, currentObject + ".")) {
-                    std::cout << prop << " -> " << currentObject << std::endl;
-                    vars[prop] = pos;
-                } else {
-                    std::cout << "Missing data for " << prop << std::endl;
-                    return std::numeric_limits<float>::max(); // Return max value
-                }
+            if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
+                vars[prop] = Vector3::invalid();
             } else {
                 vars[prop] = map(pos);
-            }*/
-            vars[prop] = map(pos);
+            }
         }
         for (auto& [prop, map] : EnvObject::allScalarProperties) {
-            vars[prop] = map(pos);
+            if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
+                vars[prop] = float();
+            } else {
+                vars[prop] = map(pos);
+            }
         }
         vars["pos"] = pos;
+        /*
+        for (std::string neededVar : neededVariables) {
+            if (std::holds_alternative<float>(vars[neededVar])) {
+                std::cout << neededVar << ": " << std::get<float>(vars[neededVar]) << std::endl;
+            } else if (std::holds_alternative<Vector3>(vars[neededVar])) {
+                std::cout << neededVar << ": " << std::get<Vector3>(vars[neededVar]) << std::endl;
+            } else {
+                std::cout << neededVar << ": unknown" << std::endl;
+            }
+        }*/
         float score = _func(vars);
 
         /*
@@ -453,7 +460,6 @@ bool EnvObject::updateSedimentation(const GridF& heights)
     auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
     for (auto& [name, material] : EnvObject::materials) {
         float startingAmount = material.currentState.sum();
-        std::vector<std::pair<float, float>> depoAbso(EnvObject::instantiatedObjects.size());
         if (material.diffusionSpeed < 1.f) {
             if (random_gen::generate() < material.diffusionSpeed) {
                 material.currentState = material.currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
@@ -462,23 +468,16 @@ bool EnvObject::updateSedimentation(const GridF& heights)
             material.currentState = material.currentState.meanSmooth(material.diffusionSpeed * 2 + 1, material.diffusionSpeed * 2 + 1, 1, false); // Diffuse
         }
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-            float start = material.currentState.sum();
             auto& object = EnvObject::instantiatedObjects[i];
             object->applyAbsorption(material);
-            depoAbso[i].second = material.currentState.sum() - start;
         }
         material.currentState = material.currentState.warpWith((smoothFluids * material.waterTransport) - (heightsGradients * material.mass));
 
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
-            float start = material.currentState.sum();
             object->applyDeposition(material);
-            depoAbso[i].first = material.currentState.sum() - start;
         }
 
-        material.currentState.iterateParallel([&](size_t i) {
-//            material.currentState[i] = std::clamp(material.currentState[i], 0.f, 1.f); // Limited between 0 and 1 ?
-        });
         material.currentState *= material.decay;
 
         float endingAmount = material.currentState.sum();

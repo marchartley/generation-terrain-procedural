@@ -16,6 +16,8 @@
 
 #include "DataStructure/Kelvinlet.h"
 
+#include "EnvObject/PositionOptimizer.h"
+
 class EnvPoint;
 class EnvCurve;
 class EnvArea;
@@ -82,7 +84,7 @@ public:
     void die();
 
 
-    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject);
+    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false);
 
 
     static GridV3 flowfield;
