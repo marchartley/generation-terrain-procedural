@@ -46,6 +46,7 @@ public:
 
     float magnitude() const;
     float length() const;
+    float lengthSquared() const;
     float norm() const;
     float norm2() const;
     Vector3& normalize();

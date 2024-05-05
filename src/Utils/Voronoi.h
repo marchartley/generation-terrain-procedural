@@ -7,6 +7,8 @@
 #include "Utils/ShapeCurve.h"
 #include <vector>
 
+#include "Graph/Graph.h"
+
 class Voronoi
 {
 public:
@@ -20,6 +22,10 @@ public:
     Voronoi(std::vector<Vector3> pointset, ShapeCurve boundingShape);
     std::vector<ShapeCurve> solve(bool randomizeUntilAllPointsAreSet = true, int numberOfRelaxations = 10);
     std::vector<ShapeCurve> relax(int numberOfRelaxations = 1);
+
+    std::vector<std::vector<Vector3> > computeIntersectionPoints();
+
+    Graph toGraph();
 
 
 public:

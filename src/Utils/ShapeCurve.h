@@ -11,7 +11,7 @@ public:
     ShapeCurve(BSpline path);
 
     bool contains(const Vector3& pos, bool useNativeShape = true) const;
-    bool containsXY(const Vector3& pos, bool useNativeShape = true) const;
+    bool containsXY(const Vector3& pos, bool useNativeShape = true, int increaseAccuracy = 0) const;
     float estimateDistanceFrom(const Vector3& pos) const;
     float estimateSignedDistanceFrom(const Vector3& pos, float epsilon = 1e-3) const;
     float computeArea();

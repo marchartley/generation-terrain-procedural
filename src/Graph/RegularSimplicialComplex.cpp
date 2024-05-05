@@ -114,7 +114,7 @@ void RegularSimplicialComplex::display()
 int RegularSimplicialComplex::maxNodesValues()
 {
     int max = -1;
-    for (const auto& [ID, node] : this->nodes)
+    for (const auto& node : this->nodes)
         max = std::max(max, node->value);
     return max;
 }

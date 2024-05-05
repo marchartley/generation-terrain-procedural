@@ -64,7 +64,7 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(Graph &graph, int source,
             int next = current;
             while (current != source) {
                 current = prec[current];
-                totalDist += graph[current]->getNeighborDistanceByIndex(next);
+                totalDist += graph.getDistance(graph[current], graph[next]); // graph[current]->getNeighborDistanceByIndex(next);
                 next = current;
             }
             return std::make_pair(totalDist, prec);
@@ -73,11 +73,12 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(Graph &graph, int source,
         openSet.erase(std::find(openSet.begin(), openSet.end(), current));
 
         for (int u = 0; u < n; u++) {
-            float possibleGScore = gScore[current] + graph[current]->getNeighborDistanceByIndex(u) + heuristicFunction(u);
+            float distance = graph.getDistance(graph[current], graph[u]) /*graph[current]->getNeighborDistanceByIndex(u)*/;
+            float possibleGScore = gScore[current] + distance + heuristicFunction(u);
             if (possibleGScore < gScore[u]) {
                 prec[u] = current;
                 gScore[u] = possibleGScore;
-                fScore[u] = possibleGScore + graph[current]->getNeighborDistanceByIndex(u) + heuristicFunction(u);
+                fScore[u] = possibleGScore + graph.getDistance(graph[current], graph[u]) /*graph[current]->getNeighborDistanceByIndex(u)*/ + heuristicFunction(u);
                 if (std::find(openSet.begin(), openSet.end(), u) == openSet.end())
                     openSet.push_back(u);
             }
@@ -115,8 +116,8 @@ std::pair<std::vector<float>, std::vector<int> > Pathfinding::Djikstra(Graph& gr
         }
         Q.erase(Q.begin() + indexToRemoveFromQ);
         for (int i = 0; i < n; i++) {
-            if (distances[i] > distances[minNodeNumber] + graph[minNodeNumber]->getNeighborDistanceByIndex(i)) {
-                distances[i] = distances[minNodeNumber] + graph[minNodeNumber]->getNeighborDistanceByIndex(i);
+            if (distances[i] > distances[minNodeNumber] + graph.getDistance(graph[minNodeNumber], graph[i]) /*graph[minNodeNumber]->getNeighborDistanceByIndex(i)*/) {
+                distances[i] = distances[minNodeNumber] + graph.getDistance(graph[minNodeNumber], graph[i]); //graph[minNodeNumber]->getNeighborDistanceByIndex(i);
                 prec[i] = minNodeNumber;
             }
         }
@@ -135,9 +136,9 @@ std::pair<std::vector<float>, std::vector<int> > Pathfinding::BellmanFord(Graph&
         changeMade = false;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
-                if (distances[i] > distances[j] + graph[i]->getNeighborDistanceByIndex(j)) {
-                    distances[i] = distances[j] + graph[i]->getNeighborDistanceByIndex(j);
-                    prec[i] = j;
+                if (distances[j] > distances[i] + graph.getDistance(graph[i], graph[j]) /*graph[i]->getNeighborDistanceByIndex(j)*/) {
+                    distances[j] = distances[i] + graph.getDistance(graph[i], graph[j]); //graph[i]->getNeighborDistanceByIndex(j);
+                    prec[j] = i;
                     changeMade = true;
                 }
             }
@@ -177,8 +178,8 @@ std::pair<std::vector<float>, std::vector<int> > Pathfinding::ShortestPathFaster
         int u = Q[0];
         Q.erase(Q.begin());
         for (int v = 0; v < n; v++) {
-            if (distances[u] + graph[u]->getNeighborDistanceByIndex(v) < distances[v]) {
-                distances[v] = distances[u] + graph[u]->getNeighborDistanceByIndex(v);
+            if (distances[u] + graph.getDistance(graph[u], graph[v]) /*graph[u]->getNeighborDistanceByIndex(v)*/ < distances[v]) {
+                distances[v] = distances[u] + graph.getDistance(graph[u], graph[v]); //graph[u]->getNeighborDistanceByIndex(v);
                 prec[v] = u;
                 if (std::find(Q.begin(), Q.end(), v) == Q.end())
                     Q.push_back(v);
@@ -286,7 +287,7 @@ std::pair<GridF, GridI > Pathfinding::Johnson(Graph& graph)
     GridF W = graph.getAdjacencyMatrix();
     int n = W.sizeX;
     auto newNodePtr = graph.addNode(graph.size());
-    for (auto& [ID, node] : graph.nodes) {
+    for (auto& node : graph.nodes) {
         graph.addConnection(node, newNodePtr, 0.f);
         graph.addConnection(newNodePtr, node, 0.f);
     }
@@ -313,7 +314,7 @@ std::pair<GridF, GridI > Pathfinding::Johnson(Graph& graph)
             W.at(i, j) = W.at(i, j) + (BellmanDistances[i] - BellmanDistances[j]);
         }
     }
-    for (auto& [ID, node] : graph.nodes)
+    for (auto& node : graph.nodes)
         graph.removeConnection(node, newNodePtr);
     graph.removeNode(newNodePtr);
     // Run Djikstra from each node as source

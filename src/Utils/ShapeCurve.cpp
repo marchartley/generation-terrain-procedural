@@ -78,7 +78,7 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
     return (nb_intersections % 2) == 1;*/
 }
 
-bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
+bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape, int increaseAccuracy) const
 {
     if (this->size() == 0) return false;
     std::vector<Vector3> pointsUsed;
@@ -89,7 +89,14 @@ bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
     }
     for (auto& p :  pointsUsed)
         p = p.xy();
-    return Collision::pointInPolygon(pos.xy(), pointsUsed);
+    if (increaseAccuracy <= 0)
+        return Collision::pointInPolygon(pos.xy(), pointsUsed);
+
+    int nbTests = increaseAccuracy * 2 + 1;
+    int positiveCounts = 0;
+    for (int i = 0; i < nbTests; i++)
+        positiveCounts += (Collision::pointInPolygon(pos.xy() + Vector3::random().xy() * .1f, pointsUsed) ? 1 : 0);
+    return positiveCounts > increaseAccuracy;
 }
 
 float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const

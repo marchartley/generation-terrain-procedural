@@ -25,7 +25,7 @@ public:
     GraphNodeTemplate<T>* addNode(int node);
     GraphNodeTemplate<T>* addNode(GraphNodeTemplate<T>* newNode);
     void removeNode(int node);
-    void removeNode(GraphNodeTemplate<T>* newNode);
+    void removeNode(GraphNodeTemplate<T>* removedNode);
 //    std::vector<std::shared_ptr<GraphNode<T>> > addNodes(std::vector<int> nodes);
 //    std::vector<std::shared_ptr<GraphNode<T> > > addNodes(std::vector<std::shared_ptr<GraphNode<T>>> newNodes);
 
@@ -35,8 +35,8 @@ public:
     void removeNodes(std::vector<GraphNodeTemplate<T>*> newNodes);
 
 
-    void addConnection(int nodeA, int nodeB, float weight = 1.f);
-    void addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight = 1.f);
+    void addConnection(int nodeA, int nodeB, float weight = 1.f, bool oriented = true);
+    void addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight = 1.f, bool oriented = true);
     void removeConnection(int nodeA, int nodeB);
     void removeConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB);
     void setConnection(int nodeA, int nodeB, float weight);
@@ -44,6 +44,9 @@ public:
 
     bool connected(int nodeA, int nodeB) const;
     bool connected(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB) const;
+
+    float getDistance(int nodeA, int nodeB) const;
+    float getDistance(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB) const;
 
     GraphNodeTemplate<T>* findNodeByID(int ID) const;
 
@@ -55,8 +58,12 @@ public:
 
     GridF getAdjacencyMatrix() const;
 
+    GraphTemplate<T>& mergeSimilarNodes(float minDistance = 1e-3);
+    GraphTemplate<T>& cleanGraph();
+
 //    std::vector<std::shared_ptr<GraphNode<T>>> nodes;
-    std::map<int, GraphNodeTemplate<T>*> nodes;
+//    std::map<int, GraphNodeTemplate<T>*> nodes;
+    std::vector<GraphNodeTemplate<T>*> nodes;
 
     GridI connectionMatrix;
     GridF adjencyMatrix;
@@ -73,12 +80,12 @@ template<typename T> template<typename U>
 GraphTemplate<U> GraphTemplate<T>::cast() const
 {
     GraphTemplate<U> target;
-    for (auto& [ID, node] : this->nodes) {
-        target.addNode(new GraphNodeTemplate<U>(U(), node->pos, ID));
+    for (auto& node : this->nodes) {
+        target.addNode(new GraphNodeTemplate<U>(U(), node->pos, node->index));
     }
-    for (const auto& [ID, node] : this->nodes) {
+    for (const auto& node : this->nodes) {
         for (const auto& [neighbor, w] : node->neighbors) {
-            target.addConnection(ID, neighbor->index, w);
+            target.addConnection(node->index, neighbor->index, w);
         }
     }
     return target;
@@ -94,9 +101,9 @@ GraphTemplate<T>::GraphTemplate(bool useMatrices)
 template<class T>
 GraphTemplate<T>::~GraphTemplate()
 {
-    for (auto& [ID, node] : nodes) {
+    /*for (auto& [ID, node] : nodes) {
 //        delete node;
-    }
+    }*/
     nodes.clear();
 }
 
@@ -130,7 +137,7 @@ GraphTemplate<T>& GraphTemplate<T>::forceDrivenPositioning(bool startWithCircula
     solver.numberIterations = maxTriesForAdjencyConstraint;
     solver.stoppingEpsilon = 1.f;
 
-    for (auto& [ID, n] : nodes) {
+    for (auto& n : nodes) {
         solver.addItem(new Vector3(n->pos));
     }
 
@@ -172,14 +179,17 @@ GraphNodeTemplate<T>* GraphTemplate<T>::addNode(GraphNodeTemplate<T>* newNode)
 template<class T>
 void GraphTemplate<T>::removeNode(int node)
 {
-    if (!this->nodes.count(node)) return;
-    this->nodes.erase(node);
+//    if (!this->nodes.count(node)) return;
+    this->nodes.erase(nodes.begin() + node);
 }
 
 template<class T>
-void GraphTemplate<T>::removeNode(GraphNodeTemplate<T>* newNode)
+void GraphTemplate<T>::removeNode(GraphNodeTemplate<T>* removedNode)
 {
-    this->removeNode(newNode->index);
+    auto foundAt = std::find(nodes.begin(), nodes.end(), removedNode);
+    if (foundAt != std::end(nodes)) {
+        this->removeNode(std::distance(nodes.begin(), foundAt)/*newNode->index*/);
+    }
 }
 
 template<class T>
@@ -194,12 +204,12 @@ std::map<int, GraphNodeTemplate<T>* > GraphTemplate<T>::addNodes(std::vector<int
 template<class T>
 std::map<int, GraphNodeTemplate<T>* > GraphTemplate<T>::addNodes(std::vector<GraphNodeTemplate<T>* > newNodes)
 {
-//    this->nodes.insert(this->nodes.end(), newNodes.begin(), newNodes.end());
+    this->nodes.insert(this->nodes.end(), newNodes.begin(), newNodes.end());
     std::map<int, GraphNodeTemplate<T>*> newNodesMap;
     for (const auto& node : newNodes) {
         newNodesMap[node->index] = node;
     }
-    this->nodes.insert(newNodesMap.begin(), newNodesMap.end());
+    //this->nodes.insert(newNodesMap.begin(), newNodesMap.end());
 
     if (useMatrices) {
         int numberOfNodesToAdd = newNodes.size();
@@ -234,13 +244,13 @@ void GraphTemplate<T>::removeNodes(std::vector<GraphNodeTemplate<T>* > newNodes)
 }
 
 template<class T>
-void GraphTemplate<T>::addConnection(int nodeA, int nodeB, float weight)
+void GraphTemplate<T>::addConnection(int nodeA, int nodeB, float weight, bool oriented)
 {
-    return this->addConnection(this->findNodeByID(nodeA), this->findNodeByID(nodeB), weight);
+    return this->addConnection(this->findNodeByID(nodeA), this->findNodeByID(nodeB), weight, oriented);
 }
 
 template<class T>
-void GraphTemplate<T>::addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight)
+void GraphTemplate<T>::addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTemplate<T>* nodeB, float weight, bool oriented)
 {
     nodeA->addNeighbor(nodeB, weight);
 //    nodeB->addNeighbor(nodeA, weight);
@@ -261,6 +271,8 @@ void GraphTemplate<T>::addConnection(GraphNodeTemplate<T>* nodeA, GraphNodeTempl
         this->adjencyMatrix.at(indexA, indexB) = weight;
         this->adjencyMatrix.at(indexB, indexA) = weight;
     }
+    if (!oriented)
+        return addConnection(nodeB, nodeA, weight, true); // Add another link, force "oriented" to avoid recursive loop
 }
 
 template<class T>
@@ -313,6 +325,22 @@ bool GraphTemplate<T>::connected(GraphNodeTemplate<T> *nodeA, GraphNodeTemplate<
 }
 
 template<class T>
+float GraphTemplate<T>::getDistance(int nodeA, int nodeB) const
+{
+    return getDistance(this->findNodeByID(nodeA), this->findNodeByID(nodeB));
+}
+
+template<class T>
+float GraphTemplate<T>::getDistance(GraphNodeTemplate<T> *nodeA, GraphNodeTemplate<T> *nodeB) const
+{
+    return nodeA->getNeighborDistanceByIndex(nodeB->index);
+    /*if (connected(nodeA, nodeB)) {
+        return nodeA->getNeighborDistanceByIndex(nodeB->index);
+    }
+    return std::numeric_limits<float>::max();*/
+}
+
+template<class T>
 bool GraphTemplate<T>::connected(int nodeA, int nodeB) const
 {
     return this->connected(findNodeByID(nodeA), findNodeByID(nodeB));
@@ -321,25 +349,25 @@ bool GraphTemplate<T>::connected(int nodeA, int nodeB) const
 template<class T>
 GraphNodeTemplate<T>* GraphTemplate<T>::findNodeByID(int ID) const
 {
-    if (this->nodes.count(ID)) return this->nodes.at(ID);
-    /*for (auto& node : this->nodes) {
+//    if (this->nodes.count(ID)) return this->nodes.at(ID);
+    for (auto& node : this->nodes) {
         if (node->index == ID)
             return node;
-    }*/
+    }
     return nullptr;
 }
 
 template<class T>
 GraphNodeTemplate<T>* GraphTemplate<T>::operator[](T index) const
 {
-    if (!nodes.count(index)) return nullptr;
+//    if (!nodes.count(index)) return nullptr;
     return this->nodes.at(index);
 }
 
 template<class T>
 void GraphTemplate<T>::initAllNodesValues(T value) const
 {
-    for (auto& [ID, node] : nodes) {
+    for (auto& node : nodes) {
         node->value = value;
     }
 }
@@ -362,13 +390,92 @@ GridF GraphTemplate<T>::getAdjacencyMatrix() const
     if (this->useMatrices) return this->adjencyMatrix;
 
     GridF matrix(this->size(), this->size(), 1);
-    for (auto& [IDA, nodeA] : nodes) {
-        for (auto& [IDB, nodeB] : nodes) {
+    for (auto& nodeA : nodes) {
+        for (auto& nodeB : nodes) {
+            int IDA = nodeA->index;
+            int IDB = nodeB->index;
             if (IDA == IDB) matrix(IDA, IDB) = 0;
             else matrix(IDA, IDB) = nodeA->getNeighborDistanceByIndex(IDB);
         }
     }
     return matrix;
+}
+
+template<class T>
+GraphTemplate<T>& GraphTemplate<T>::mergeSimilarNodes(float minDistance)
+{
+    std::map<GraphNodeTemplate<T>*, std::vector<GraphNodeTemplate<T>*>> replaceNodes;
+    std::map<GraphNodeTemplate<T>*, GraphNodeTemplate<T>*> isReplacedBy;
+
+    // First, create a bunch of representants for each "group of nodes"
+    for (int i = 0; i < nodes.size(); i++) {
+        auto& n = nodes[i];
+        bool foundReplacementCloseEnough = false;
+        for (auto& [representant, otherNodes] : replaceNodes) {
+            Vector3& repPos = representant->pos;
+            if ((repPos - n->pos).norm2() <= minDistance) {
+                otherNodes.push_back(n);
+                isReplacedBy[n] = representant;
+                foundReplacementCloseEnough = true;
+                break;
+            }
+        }
+        if (!foundReplacementCloseEnough) {
+            replaceNodes[n] = {};
+            isReplacedBy[n] = n;  // Replaced by himself
+        }
+    }
+
+    // Update the connections for each group of nodes
+    for (auto& [representant, otherNodes] : replaceNodes) {
+        // Copy neihborhood from each represented node
+        for (auto& n : otherNodes) {
+            for (auto& [nn, dist] : n->neighbors) {
+                if (!representant->hasNeighbor(isReplacedBy[nn])) {
+                    representant->addNeighbor(isReplacedBy[nn], dist);
+                }
+            }
+            n->neighbors.clear();
+        }
+        // Remove neighbors that will be removed
+        for (int i = representant->neighbors.size() - 1; i >= 0; i--) {
+            auto& [nn, dist] = representant->neighbors[i];
+            if (replaceNodes.count(nn) == 0) {
+                representant->neighbors.erase(representant->neighbors.begin() + i);
+            }
+        }
+    }
+
+    this->nodes.clear();
+    for (auto& [representant, otherNodes] : replaceNodes) {
+        this->nodes.push_back(representant);
+        for (auto& nn : otherNodes)
+            delete nn;
+    }
+
+    return *this;
+}
+
+template<class T>
+GraphTemplate<T>& GraphTemplate<T>::cleanGraph()
+{
+    this->mergeSimilarNodes();
+    std::vector<GraphNodeTemplate<T>*> allNodesInGraph;
+    for (auto& node : this->nodes) {
+        node->cleanNeighborhood();
+        allNodesInGraph.push_back(node);
+    }
+
+    for (auto& node : this->nodes) {
+        std::vector<std::pair<GraphNodeTemplate<T>*, float>> newNeighbors;
+        for (auto& [nn, dist] : node->neighbors) {
+            if (std::find(allNodesInGraph.begin(), allNodesInGraph.end(), nn) != std::end(allNodesInGraph)) {
+                newNeighbors.push_back({nn, dist});
+            }
+        }
+        node->neighbors = newNeighbors;
+    }
+    return *this;
 }
 
 template<class T>

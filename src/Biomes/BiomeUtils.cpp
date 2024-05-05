@@ -21,7 +21,8 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     graph.initAllNodesValues(-1);
 
     std::set<GraphNode*> pendingNodes;
-    pendingNodes.insert(graph.nodes.begin()->second);
+//    pendingNodes.insert(graph.nodes.begin());
+    pendingNodes.insert(graph.nodes.front());
     while (!pendingNodes.empty()) {
         auto& current = *pendingNodes.begin();
         pendingNodes.erase(pendingNodes.begin());
@@ -71,12 +72,12 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     }
     graph.forceDrivenPositioning();
     Vector3 minPosition = Vector3::max();
-    for (auto& [ID, n] : graph.nodes) {
+    for (auto& n : graph.nodes) {
         minPosition.x = std::min(minPosition.x, n->pos.x);
         minPosition.y = std::min(minPosition.y, n->pos.y);
         minPosition.z = std::min(minPosition.z, n->pos.z);
     }
-    for (auto& [ID, n] : graph.nodes)
+    for (auto& n : graph.nodes)
         n->pos -= minPosition;
 
     return graph;

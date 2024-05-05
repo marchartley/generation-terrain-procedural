@@ -194,3 +194,66 @@ std::vector<ShapeCurve> Voronoi::relax(int numberOfRelaxations)
     }
     return this->areas;
 }
+
+std::vector<std::vector<Vector3>> Voronoi::computeIntersectionPoints()
+{
+    intersectionPoints = std::vector<std::vector<Vector3>>(areas.size());
+    for (int iArea = 0; iArea < areas.size(); iArea++) {
+        const auto& area = areas[iArea];
+
+        for (int i = 0; i < area.size(); i++) {
+            auto& p = area[i];
+            if ((p - pointset[iArea]).norm2() > 1.f && boundingShape.containsXY(p)) {
+                intersectionPoints[iArea].push_back(p);
+            }
+        }
+    }
+    return this->intersectionPoints;
+}
+
+Graph Voronoi::toGraph()
+{
+    Graph g;
+
+    auto intersectionsPerArea = computeIntersectionPoints();
+    auto allIntersections = flattenArray(intersectionsPerArea);
+    std::vector<GraphNode*> nodes;
+
+    int i = 0;
+    std::vector<std::vector<GraphNode*>> nodesPerArea(this->areas.size());
+    for (int iArea = 0; iArea < intersectionsPerArea.size(); iArea++) {
+        std::vector<GraphNode*> nodesInArea(intersectionsPerArea[iArea].size());
+        for (int iIntersect = 0; iIntersect < nodesInArea.size(); iIntersect++) {
+            nodesInArea[iIntersect] = new GraphNode();
+            nodesInArea[iIntersect]->pos = allIntersections[i];
+            nodesInArea[iIntersect]->index = i;
+            nodesInArea[iIntersect]->value = iArea;
+            i++;
+        }
+
+        for (int iIntersect = 0; iIntersect < nodesInArea.size(); iIntersect++) {
+            nodesInArea[iIntersect]->addNeighbor(nodesInArea[(iIntersect + 1) % nodesInArea.size()]);
+            nodesInArea[(iIntersect + 1) % nodesInArea.size()]->addNeighbor(nodesInArea[iIntersect]);
+        }
+
+        nodes.insert(nodes.end(), nodesInArea.begin(), nodesInArea.end());
+        nodesPerArea[iArea] = nodesInArea;
+    }
+    g.addNodes(nodes);
+
+    for (int i = 0; i < nodes.size(); i++) {
+        auto& n = nodes[i];
+        int iArea = nodes[i]->value;
+
+        auto neighborsIndices = this->neighbors[iArea];
+        for (int neighborIdx : neighborsIndices) {
+            for (auto& nn : nodesPerArea[neighborIdx]) {
+                if ((nn->pos - n->pos).norm2() < .1f) {
+                    n->addNeighbor(nn, 0);
+                }
+            }
+        }
+    }
+
+    return g.cleanGraph();
+}

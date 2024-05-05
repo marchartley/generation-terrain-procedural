@@ -382,6 +382,12 @@ float BSpline::length() const
     return length;
 }
 
+BSpline& BSpline::setPoint(int i, const Vector3 &newPos)
+{
+    this->points[(i + this->size()) % this->size()] = newPos;
+    return *this;
+}
+
 BSpline& BSpline::resamplePoints(int newNbPoints)
 {
     this->cleanPoints();
@@ -392,6 +398,11 @@ BSpline& BSpline::resamplePoints(int newNbPoints)
     std::vector<Vector3> newPoints; //(newNbPoints);
 
     float totalLength = this->length();
+
+    if (totalLength == 0) {
+        this->points = std::vector<Vector3>(newNbPoints, this->points[0]);
+        return *this;
+    }
     float currentDistance = 0.f;
     int currentPointIndex = 0;
     Vector3 currentPos = points[currentPointIndex];
@@ -840,6 +851,10 @@ std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x, float alpha) co
 
 std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDerivative(float x, float alpha) const
 {
+    // This is incredibly dirty!!!!
+    x = std::clamp(x, 0.0001f, 0.9999f);
+
+
     alpha /= 2.f;
 
     std::vector<Vector3> displayedPoints = this->points;

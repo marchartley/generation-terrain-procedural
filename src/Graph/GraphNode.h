@@ -19,6 +19,8 @@ public:
 
     float getNeighborDistanceByIndex(int index);
 
+    void cleanNeighborhood();
+
     Vector3 pos;
     T value;
     int index;
@@ -90,6 +92,31 @@ float GraphNodeTemplate<T>::getNeighborDistanceByIndex(int index)
     if (neighborFound)
         return distance;
     return std::numeric_limits<float>::max();
+}
+
+template<class T>
+void GraphNodeTemplate<T>::cleanNeighborhood()
+{
+    std::vector<GraphNodeTemplate<T>*> nodes;
+    std::vector<float> distances;
+    for (int i = this->neighbors.size() - 1; i >= 0; i--) {
+        float dist;
+        GraphNodeTemplate<T>* neighbor;
+        std::tie(neighbor, dist) = this->neighbors[i];
+
+        auto foundIndex = std::find(nodes.begin(), nodes.end(), neighbor);
+        if (foundIndex != std::end(nodes)) {
+            distances[std::distance(nodes.begin(), foundIndex)] += dist;
+        } else {
+            nodes.push_back(neighbor);
+            distances.push_back(dist);
+        }
+    }
+
+    this->neighbors.resize(nodes.size());
+    for (int i = 0; i < nodes.size(); i++) {
+        this->neighbors[i] = {nodes[i], distances[i]};
+    }
 }
 
 typedef GraphNodeTemplate<int> GraphNode;

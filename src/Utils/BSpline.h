@@ -24,6 +24,8 @@ public:
     float estimateSignedDistanceFrom(const Vector3& pos, bool useNativeShape = false, float epsilon = 1e-3) const;
     float length() const;
 
+    BSpline &setPoint(int i, const Vector3& newPos);
+
     BSpline& resamplePoints(int newNbPoints = -1);
 
     BSpline& reverseVertices();
@@ -82,6 +84,7 @@ public:
     auto begin() { return points.begin(); }
     auto end() { return points.end(); }
     std::size_t size() const { return end() - begin(); }
+    std::size_t numPoints() const { return size(); }
     bool empty() const { return begin() == end(); }
 
     Vector3& operator[](size_t i);

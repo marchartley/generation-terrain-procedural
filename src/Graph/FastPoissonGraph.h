@@ -58,7 +58,7 @@ template<class T>
 void FastPoissonGraph<T>::cleanIndices()
 {
     int i = 0;
-    for (auto& [id, node] : this->nodes) {
+    for (auto& node : this->nodes) {
         node->index = i;
         node->privateIndex = i;
         i++;
@@ -191,9 +191,9 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     }
 */
     // At this point, put back all positions in their initial reference and update the indices
-    for (auto& [ID, val] : this->nodes) {
-        val->pos /= sizeVec;
-        val->pos *= Vector3(_available_space_matrix.sizeX, _available_space_matrix.sizeY, _available_space_matrix.sizeZ);
+    for (auto& node : this->nodes) {
+        node->pos /= sizeVec;
+        node->pos *= Vector3(_available_space_matrix.sizeX, _available_space_matrix.sizeY, _available_space_matrix.sizeZ);
 
 //        this->nodesIndices.at(val->privateVector) = val->privateIndex;
 //        val->index = val->privateIndex;

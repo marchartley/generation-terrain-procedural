@@ -103,7 +103,7 @@ Matrix3Graph& Matrix3Graph::computeSurface(GridI matrix)
 
 Matrix3Graph& Matrix3Graph::randomizeEdges(float randomFactor, bool allowNegatives)
 {
-    for (auto& [ID, node] : this->nodes) {
+    for (auto& node : this->nodes) {
         for (size_t i = 0; i < node->neighbors.size(); i++) {
             float previous_distance = std::get<1>(node->neighbors[i]);
             float rand = 1 + (random_gen::generate(-1.f, 1.f) * randomFactor);
@@ -122,7 +122,7 @@ std::vector<Vector3> Matrix3Graph::shortestPath(const Vector3& start, const Vect
     float closestDistToEnd = std::numeric_limits<float>::max();
     Vector3 newStart;
     Vector3 newEnd;
-    for (auto& [ID, node] : this->nodes) {
+    for (auto& node : this->nodes) {
         Vector3 pos = node->pos;
         if ((pos - start).norm2() < closestDistToStart) {
             closestDistToStart = (pos - start).norm2();

@@ -312,6 +312,11 @@ float Vector3::length() const
     return this->norm();
 }
 
+float Vector3::lengthSquared() const
+{
+    return this->norm2();
+}
+
 Vector3 Vector3::random() {
     Vector3 v(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0));
     v.normalize();
