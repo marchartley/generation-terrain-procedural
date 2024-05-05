@@ -195,7 +195,7 @@ public:
     static Matrix3<float> normalizedGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) const;
     Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
-    Matrix3<T> gaussianSmooth(float sigma, bool ignoreZ = false, bool ignoreBorders = false) const;
+    Matrix3<T> gaussianSmooth(float sigma, bool ignoreZ = false, bool ignoreBorders = false, float limitFactor = 4.f) const;
     Matrix3<T> medianBlur(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
@@ -1171,19 +1171,19 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ig
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBorders) const
+Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBorders, float limitFactor) const
 {
+    ignoreBorders = false;
     int sizeX = this->sizeX;
     int sizeY = this->sizeY;
     int sizeZ = this->sizeZ;
 
     Matrix3<T> result(sizeX, sizeY, sizeZ);
-    Matrix3<T> tempResult(sizeX, sizeY, sizeZ);
-
-    // Generate a 1D Gaussian kernel along each axis
-    std::vector<float> kernelX(sizeX);
-    std::vector<float> kernelY(sizeY);
-    std::vector<float> kernelZ(sizeZ);
+    result.raiseErrorOnBadCoord = false;
+    result.returned_value_on_outside = this->returned_value_on_outside;
+    Matrix3<T> tempResult = *this; //(sizeX, sizeY, sizeZ);
+    tempResult.raiseErrorOnBadCoord = false;
+    tempResult.returned_value_on_outside = this->returned_value_on_outside;
 
     auto gaussian = [](float x, float sigma) {
         return exp(-(x * x) / (2 * sigma * sigma)) / (sqrt(2 * M_PI) * sigma);
@@ -1193,14 +1193,15 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
     float sumY = 0.0f;
     float sumZ = 0.0f;
 
-    float limitFactor = 4.f;
+    if (limitFactor < 0)
+        limitFactor = std::max({sizeX, sizeY, sizeZ}) / sigma;
 
-    int startX = std::max(int(std::floor(sizeX / 2 - sigma * limitFactor)), 0);
-    int endX = std::min(int(std::ceil(sizeX / 2 + sigma * limitFactor)), sizeX);
-    int startY = std::max(int(std::floor(sizeY / 2 - sigma * limitFactor)), 0);
-    int endY = std::min(int(std::ceil(sizeY / 2 + sigma * limitFactor)), sizeY);
-    int startZ = std::max(int(std::floor(sizeZ / 2 - sigma * limitFactor)), 0);
-    int endZ = std::min(int(std::ceil(sizeZ / 2 + sigma * limitFactor)), sizeZ);
+    int startX = std::floor(sizeX / 2 - sigma * limitFactor);
+    startX = (ignoreBorders ? startX : std::max(startX, 0));
+    int endX = std::ceil(sizeX / 2 + sigma * limitFactor);
+    endX = (ignoreBorders ? endX : std::min(endX, sizeX));
+
+    std::vector<float> kernelX(sizeX);
 
     for (int i = 0; i < sizeX; ++i) {
         float x = i - sizeX / 2;
@@ -1209,6 +1210,24 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
         sumX += kernelX[i];
     }
 
+    // Convolve along x-axis
+    iterateParallel([&](int x, int y, int z) {
+        T sum = T();
+        for (int dx = startX; dx < endX; ++dx) {
+            int nx = x + dx - sizeX / 2;
+            sum += tempResult.at(nx, y, z) * kernelX[dx];
+        }
+        result.at(x, y, z) = sum / sumX;
+    });
+
+
+    int startY = std::floor(sizeY / 2 - sigma * limitFactor);
+    startY = (ignoreBorders ? startY : std::max(startY, 0));
+    int endY = std::ceil(sizeY / 2 + sigma * limitFactor);
+    endY = (ignoreBorders ? endY : std::min(endY, sizeY));
+
+    std::vector<float> kernelY(sizeY);
+
     for (int i = 0; i < sizeY; ++i) {
         float x = i - sizeY / 2;
         if (std::abs(x) > limitFactor * sigma) continue;
@@ -1216,51 +1235,47 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
         sumY += kernelY[i];
     }
 
-    for (int i = 0; i < sizeZ; ++i) {
-        float x = i - sizeZ / 2;
-        if (std::abs(x) > limitFactor * sigma) continue;
-        kernelZ[i] = gaussian(x, sigma);
-        sumZ += kernelZ[i];
-    }
-
-    // Convolve along x-axis
-    iterateParallel([&](int x, int y, int z) {
-        T sum = T();
-        for (int dx = startX; dx < endX; ++dx) {
-//            if (ignoreZ && kernelX[dx] == 0) continue;
-            int nx = x + dx - sizeX / 2;
-            if (nx >= 0 && nx < sizeX) {
-                sum += at(nx, y, z) * kernelX[dx];
-            }
-        }
-        result.at(x, y, z) = sum / sumX;
-    });
-
     // Convolve along y-axis
     result.iterateParallel([&](int x, int y, int z) {
         T sum = T();
         for (int dy = startY; dy < endY; ++dy) {
-//            if (ignoreZ && kernelY[dy] == 0) continue;
             int ny = y + dy - sizeY / 2;
-            if (ny >= 0 && ny < sizeY) {
+            // if (ny >= 0 && ny < sizeY) {
                 sum += result.at(x, ny, z) * kernelY[dy];
-            }
+            // }
         }
         tempResult.at(x, y, z) = sum / sumY;
     });
+    result = tempResult;
 
-    // Convolve along z-axis
-    tempResult.iterateParallel([&](int x, int y, int z) {
-        T sum = T();
-        for (int dz = startZ; dz < endZ; ++dz) {
-//            if (ignoreZ && kernelZ[dz] == 0) continue;
-            int nz = z + dz - sizeZ / 2;
-            if (nz >= 0 && nz < sizeZ) {
-                sum += tempResult.at(x, y, nz) * kernelZ[dz];
-            }
+    if (!ignoreZ) {
+
+        int startZ = std::floor(sizeZ / 2 - sigma * limitFactor);
+        startZ = (ignoreBorders ? startZ : std::max(startZ, 0));
+        int endZ = std::ceil(sizeZ / 2 + sigma * limitFactor);
+        endZ = (ignoreBorders ? endZ : std::min(endZ, sizeZ));
+
+        std::vector<float> kernelZ(sizeZ);
+
+        for (int i = 0; i < sizeZ; ++i) {
+            float x = i - sizeZ / 2;
+            if (std::abs(x) > limitFactor * sigma) continue;
+            kernelZ[i] = gaussian(x, sigma);
+            sumZ += kernelZ[i];
         }
-        result.at(x, y, z) = sum / sumZ;
-    });
+
+        // Convolve along z-axis
+        tempResult.iterateParallel([&](int x, int y, int z) {
+            T sum = T();
+            for (int dz = startZ; dz < endZ; ++dz) {
+                int nz = z + dz - sizeZ / 2;
+                // if (nz >= 0 && nz < sizeZ) {
+                    sum += tempResult.at(x, y, nz) * kernelZ[dz];
+                // }
+            }
+            result.at(x, y, z) = sum / sumZ;
+        });
+    }
 
     return result;
 }
@@ -2599,12 +2614,15 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
 template<class T>
 Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const
 {
+    if (pos.x < -10000) {
+        int a = 0;
+    }
     float x = pos.x;
     float y = pos.y;
     float z = pos.z;
-    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
-    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
-    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? (sizeX - 1) - (x - sizeX) : x));
+    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? (sizeY - 1) - (y - sizeY) : y));
+    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? (sizeZ - 1) - (z - sizeZ) : z));
     return Vector3(x, y, z);
 }
 
