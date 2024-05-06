@@ -1,4 +1,4 @@
-#include "DisplayGraphics.h"
+#include "Plotter.h"
 #include <iostream>
 
 
@@ -264,63 +264,63 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
-void Plotter::addImage(GridV3 image)
+void Plotter::addImage(const GridV3 &image)
 {
     this->displayedImage = image;
 //    image = image.flip(false, true);
-    if (image.empty()) return;
+    if (displayedImage.empty()) return;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::lowest();
-        image.iterate([&](size_t i) {
-            min = std::min(min, image[i].minComp());
-            max = std::max(max, image[i].maxComp());
+        displayedImage.iterate([&](size_t i) {
+            min = std::min(min, displayedImage[i].minComp());
+            max = std::max(max, displayedImage[i].maxComp());
         });
         this->rangeValuesWidget->slider()->setMinimalValue(min);
         this->rangeValuesWidget->slider()->setMaximalValue(max);
         if (minValueToDisplay < min) minValueToDisplay = min;
         if (maxValueToDisplay > max) maxValueToDisplay = max;
-        image.iterateParallel([&](size_t i) {
+        displayedImage.iterateParallel([&](size_t i) {
             for (int c = 0; c < 3; c++) {
-                image[i][c] = std::clamp(image[i][c], this->minValueToDisplay, this->maxValueToDisplay);
+                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->minValueToDisplay, this->maxValueToDisplay);
             }
         });
     }
     if (this->absoluteMode) {
-        image = image.abs();
+        displayedImage = displayedImage.abs();
     }
     if (this->normalizedMode) {
         for (int c = 0; c < 3; c++) {
             float min = std::numeric_limits<float>::max();
             float max = std::numeric_limits<float>::lowest();
-            image.iterate([&](size_t i) {
-                min = std::min(image[i][c], min);
-                max = std::max(image[i][c], max);
+            displayedImage.iterate([&](size_t i) {
+                min = std::min(displayedImage[i][c], min);
+                max = std::max(displayedImage[i][c], max);
             });
             float d = max - min;
-            image.iterateParallel([&](size_t i) {
-                image[i][c] = (image[i][c] - min) / d;
+            displayedImage.iterateParallel([&](size_t i) {
+                displayedImage[i][c] = (image[i][c] - min) / d;
             });
         }
 //        image.normalize();
     }
     unsigned char* data = new unsigned char[image.size() * 4];
 
-    for (size_t i = 0; i < image.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(std::clamp(image[i].x, 0.f, 1.f) * 255);
-        data[int(4 * i + 1)] = (unsigned char)(std::clamp(image[i].y, 0.f, 1.f) * 255);
-        data[int(4 * i + 0)] = (unsigned char)(std::clamp(image[i].z, 0.f, 1.f) * 255);
+    for (size_t i = 0; i < displayedImage.size(); ++i) {
+        data[int(4 * i + 2)] = (unsigned char)(std::clamp(displayedImage[i].x, 0.f, 1.f) * 255);
+        data[int(4 * i + 1)] = (unsigned char)(std::clamp(displayedImage[i].y, 0.f, 1.f) * 255);
+        data[int(4 * i + 0)] = (unsigned char)(std::clamp(displayedImage[i].z, 0.f, 1.f) * 255);
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
     if (this->backImage) {
         delete this->backImage;
     }
-    this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+    this->backImage = new QImage(data, displayedImage.sizeX, displayedImage.sizeY, QImage::Format_ARGB32);
 //    *(this->backImage) = this->backImage->mirrored();
 }
 
-void Plotter::addImage(GridF image)
+void Plotter::addImage(const GridF &image)
 {
     GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
@@ -330,14 +330,104 @@ void Plotter::addImage(GridF image)
     return this->addImage(copy);
 }
 
-void Plotter::addImage(Matrix3<double> image)
+void Plotter::addImage(const Matrix3<double> &image)
 {
     return this->addImage((GridF)image);
 }
 
-void Plotter::addImage(GridI image)
+void Plotter::addImage(const GridI &image)
 {
     return this->addImage((GridF)image);
+}
+
+GridV3 Plotter::computeVectorFieldRendering(const GridV3 &field, float reductionFactor, Vector3 imgSize) const
+{
+    if (!imgSize.isValid())
+        imgSize = field.getDimensions();
+    imgSize.z = 1;
+    GridV3 img(imgSize);
+    Vector3 reducedSize = (field.getDimensions() * reductionFactor).roundedUp(); //(30, 30, 1);
+    reducedSize.z = 1;
+    Vector3 ratio = imgSize / reducedSize;
+    GridV3 reduced = field.resize(reducedSize);
+
+    float minMag = std::numeric_limits<float>::max();
+    float maxMag = std::numeric_limits<float>::lowest();
+    reduced.iterate([&] (size_t i) {
+        float mag = reduced[i].norm2();
+        minMag = std::min(minMag, mag);
+        maxMag = std::max(maxMag, mag);
+    });
+    minMag = std::sqrt(minMag);
+    maxMag = std::sqrt(maxMag);
+
+    reduced.iterateParallel([&] (const Vector3& p) {
+        AABBox cell(p - Vector3(.45, .45, 0) * ratio, p + Vector3(.45, .45, 0) * ratio);
+        float mag = reduced(p).norm();
+        if (mag < 1e-5) return;
+        Vector3 dir = reduced(p) / mag;
+        float relativeMag = interpolation::inv_linear(mag, minMag, maxMag);
+        Vector3 color = colorPalette(relativeMag, {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)});
+        bool valid = true;
+        for (int i = 0; valid; i++) {
+            valid = false;
+            if (cell.containsXY(p + dir * i)) {
+                img(p * ratio + dir * i) = color;
+                valid = true;
+            }
+        }
+    });
+    return img;
+}
+
+void Plotter::addVectorField(const GridV3 &field, float reductionFactor, Vector3 imgSize, float opacity)
+{
+    GridV3 img = this->computeVectorFieldRendering(field, reductionFactor, imgSize);
+    if (this->displayedImage.size() > 0) {
+        img = displayedImage.resize(img.getDimensions()) + img * (opacity);
+    }
+    return this->addImage(img);
+}
+
+GridV3 Plotter::computeStreamLinesRendering(const GridV3 &field, Vector3 imgSize) const
+{
+    if (!imgSize.isValid())
+        imgSize = field.getDimensions();
+    imgSize.z = 1;
+    GridV3 img(imgSize);
+    GridF particlesPositions(20, 20, 1);
+    Vector3 ratio = imgSize / field.getDimensions();
+
+    int linesLength = 30;
+
+    // Vector3 color(0, 1, 0);
+
+    std::vector<Vector3> particles(particlesPositions.size());
+    for (int i = 0; i < particles.size(); i++) {
+        auto& particle = particles[i];
+        particle = ((particlesPositions.getCoordAsVector3(i) + Vector3(.5, .5, 0)) / particlesPositions.getDimensions()) * field.getDimensions();
+        Vector3 dir;
+
+        BSpline spline;
+        for (int t = 0; t < linesLength; t++) {
+            dir = field.interpolate(particle).normalized();
+            spline.points.push_back(particle);
+            particle += dir;
+        }
+        auto path = spline.getPath(2.f * linesLength * ratio.maxComp());
+        for (int t = 0; t < path.size(); t++)
+            img(path[t] * ratio) = colorPalette(float(t) / float(path.size() - 1), Vector3(0, 1, 0), Vector3(.5, 1, 0));
+    }
+    return img;
+}
+
+void Plotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
+{
+    GridV3 img = computeStreamLinesRendering(field, imgSize);
+    if (this->displayedImage.size() > 0) {
+        img = displayedImage.resize(img.getDimensions()) + img * (opacity);
+    }
+    return this->addImage(img);
 }
 
 void Plotter::draw()

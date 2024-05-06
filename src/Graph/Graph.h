@@ -5,7 +5,7 @@
 #include "Graph/GraphNode.h"
 #include "Utils/ConstraintsSolver.h"
 
-#include "Graphics/DisplayGraphics.h"
+#include "Graphics/Plotter.h"
 
 template <class T>
 class GraphTemplate

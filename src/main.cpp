@@ -1613,6 +1613,25 @@ int main(int argc, char *argv[])
     return Plotter::get()->exec();
     */
 
+    /*
+     * Unit test: Adding vector field and stream lines in Plotter
+     *
+    Vector3 fieldSize(100, 100, 1);
+    Vector3 resultImageSize(300, 300, 1);
+    GridV3 velocities(fieldSize);
+    velocities.iterateParallel([&](const Vector3& p) {
+        // velocities(p) = Vector3(std::cos(PI * p.x / float(velocities.sizeX)), std::cos(2.f * PI * p.y / float(velocities.sizeY)), 0);
+        velocities(p) = Vector3(random_gen::generate_perlin(p.x * (500.f / fieldSize.x), p.y * (500.f / fieldSize.y)), random_gen::generate_perlin(p.x * (500.f / fieldSize.x), p.y * (500.f / fieldSize.y) + 10), 0);
+    });
+    displayProcessTime("Vector field... ", [&]() {
+        Plotter::get()->addVectorField(velocities, 1/10.f, resultImageSize);
+    });
+    displayProcessTime("Stream lines... ", [&]() {
+        Plotter::get()->addStreamLines(velocities, resultImageSize);
+    });
+    return Plotter::get()->exec();
+    */
+
     EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
     EnvObject::readEnvObjectsFile("saved_maps/primitives.json");
 

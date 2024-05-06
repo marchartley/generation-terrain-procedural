@@ -1,5 +1,5 @@
 #include "PrimitivePatchesInterface.h"
-#include "Graphics/DisplayGraphics.h"
+#include "Graphics/Plotter.h"
 #include "Interface/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"

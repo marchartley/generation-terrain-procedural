@@ -107,8 +107,8 @@ SOURCES += \
     src/Graphics/ComputeShader.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
-    src/Graphics/DisplayGraphics.cpp \
         src/Graphics/MarchingCubes.cpp \
+    src/Graphics/Plotter.cpp \
     src/Graphics/RayMarching.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
@@ -294,9 +294,9 @@ HEADERS += \
     src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
-    src/Graphics/DisplayGraphics.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
+    src/Graphics/Plotter.h \
     src/Graphics/RayMarching.h \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \

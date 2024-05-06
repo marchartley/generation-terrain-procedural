@@ -1,7 +1,7 @@
 #include "EnvObject.h"
 #include "ExpressionParser.h"
 
-#include "Graphics/DisplayGraphics.h"
+#include "Graphics/Plotter.h"
 #include <fstream>
 
 #include "EnvObject/EnvPoint.h"

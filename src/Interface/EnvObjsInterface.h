@@ -61,6 +61,7 @@ public Q_SLOTS:
     void displayFlowfieldAsImage();
 
     void manualModificationOfFocusArea();
+    void manualModificationOfFlowfield();
 
     void updateObjectsList();
 
@@ -86,6 +87,7 @@ public Q_SLOTS:
     void saveScene(std::string filename);
 
     GridV3 renderFocusArea() const;
+    GridV3 renderFlowfield() const;
 
     void showAllElementsOnPlotter() const;
 
@@ -132,6 +134,8 @@ public:
 
     bool focusAreaEditing = false;
     ComboboxElement* objectCombobox;
+
+    bool flowfieldEditing = false;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

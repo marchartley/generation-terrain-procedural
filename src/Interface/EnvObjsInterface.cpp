@@ -57,7 +57,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     // QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
     QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
         if (!this->isVisible()) return;
-        if (focusAreaEditing) return;
+        if (focusAreaEditing || flowfieldEditing) return;
         GridV3 dataV3 = Plotter::get()->displayedImage;
         GridF data(dataV3.getDimensions());
         dataV3.iterateParallel([&](size_t i) {
@@ -117,9 +117,6 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         for (size_t i = 0; i < path.size(); i++) {
             result(path[i]) = Vector3(1.f, 0, 0); //colorPalette(float(i) / float(path.size() - 1));
         }
-        // for (size_t i = 0; i < isoline.size(); i++) {
-        //     result(isoline[i]) = Vector3(1, 1, 0);
-        // }
         Plotter::get()->addImage(result);
         Plotter::get()->show();
         Plotter::get()->addImage(data);
@@ -133,7 +130,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
 
-//        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
+        //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
         auto brush = GridF::normalizedGaussian(30, 30, 1, 8.f) * (rightPressed ? -1.f : 1.f) * 8.f;
         this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
 
@@ -141,6 +138,27 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
             focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
         });
         Plotter::get()->addImage(renderFocusArea());
+        Plotter::get()->show();
+    });
+
+    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+        if (!this->isVisible()) return;
+        if (!this->flowfieldEditing) return;
+
+        bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
+        bool rightPressed = event->buttons().testFlag(Qt::RightButton);
+        if (!leftPressed && !rightPressed) return;
+
+        Vector3 brushDir = (mousePos - prevPos).normalize();
+
+        //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
+        GridV3 brush = GridV3(30, 30, 1, brushDir);
+        brush.iterateParallel([&](const Vector3& p) {
+            brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
+        });
+        EnvObject::initialFlowfield.add(brush, mousePos - brush.getDimensions().xy() * .5f);
+
+        Plotter::get()->addImage(renderFlowfield());
         Plotter::get()->show();
     });
 }
@@ -222,6 +240,7 @@ QLayout *EnvObjsInterface::createGUI()
     }
 
     ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
+    ButtonElement* editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
     ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
     layout->addWidget(spendTimeButton->get());
@@ -231,7 +250,7 @@ QLayout *EnvObjsInterface::createGUI()
 //    layout->addWidget(createFromGAN->get());
     layout->addWidget(objectCombobox->get());
     layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
-    layout->addWidget(editFocusAreaButton->get());
+    layout->addWidget(createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton})->get());
     layout->addWidget(showElementsOnCanvasButton->get());
     layout->addWidget(objectsListWidget);
     layout->addWidget(testingFormula->get());
@@ -814,7 +833,16 @@ void EnvObjsInterface::displayFlowfieldAsImage()
 void EnvObjsInterface::manualModificationOfFocusArea()
 {
     this->focusAreaEditing = true;
+    this->flowfieldEditing = false;
     Plotter::get()->addImage(this->renderFocusArea());
+    Plotter::get()->show();
+}
+
+void EnvObjsInterface::manualModificationOfFlowfield()
+{
+    this->focusAreaEditing = false;
+    this->flowfieldEditing = true;
+    Plotter::get()->addImage(this->renderFlowfield());
     Plotter::get()->show();
 }
 
@@ -1384,6 +1412,15 @@ GridV3 EnvObjsInterface::renderFocusArea() const
         coloredFocus[i] = colorPalette(value, {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)}, {0.f, 1.f, 3.f});
     });
     return coloredFocus;
+}
+
+GridV3 EnvObjsInterface::renderFlowfield() const
+{
+    // GridV3 coloredFlowfield(EnvObject::initialFlowfield.getDimensions());
+    // GridV3 flow = EnvObject::initialFlowfield;
+    EnvObject::updateFlowfield();
+    GridV3& flow = EnvObject::flowfield;
+    return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter() const

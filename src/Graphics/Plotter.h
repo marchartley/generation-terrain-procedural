@@ -1,5 +1,5 @@
-#ifndef DISPLAYGRAPHICS_H
-#define DISPLAYGRAPHICS_H
+#ifndef PLOTTER_H
+#define PLOTTER_H
 
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
@@ -87,10 +87,15 @@ public:
     void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(GridV3 image);
-    void addImage(GridF image);
-    void addImage(Matrix3<double> image);
-    void addImage(GridI image);
+    void addImage(const GridV3& image);
+    void addImage(const GridF& image);
+    void addImage(const Matrix3<double>& image);
+    void addImage(const GridI& image);
+
+    GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
+    void addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
+    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
+    void addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
 
     int exec();
     void saveFig(std::string filename);
@@ -167,4 +172,4 @@ private:
     QPointF _anchor;
 };
 
-#endif // DISPLAYGRAPHICS_H
+#endif // PLOTTER_H
