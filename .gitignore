@@ -120,3 +120,5 @@ test.stl
 OpenFoam/OF_Sim_Marcos/*
 src/assets/models/FBX
 .qmake.stash
+poster/profile.png
+testEnvObjects.json
