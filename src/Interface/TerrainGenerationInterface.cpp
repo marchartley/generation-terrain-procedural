@@ -983,9 +983,9 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
 {
     bool verbose = false;
     float maxHeight;
-    float meshCreationTime;
-    float GLcallTime;
-    float realDisplayTime;
+    float meshCreationTime = 0;
+    float GLcallTime = 0;
+    float realDisplayTime = 0;
 
     displayProcessTime("Init frame buffers... ", [&]() {
         GlobalsGL::f()->glActiveTexture(GL_TEXTURE5);
@@ -1051,13 +1051,10 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             if (this->heightmap == nullptr) {
                 std::cerr << "No grid to display" << std::endl;
             } else {
-    //            float time = std::chrono::duration<float>(std::chrono::system_clock::now() - startingTime).count();
-
                 GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
                 std::vector<Vector3> positions(heightData.size());
                 for (size_t i = 0; i < positions.size(); i++) {
                     positions[i] = heightData.getCoordAsVector3(i);
-//                    heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
                 }
                 heightmapMesh.shader->setFloat("maxHeight", maxHeight);
                 heightmapMesh.shader->setFloat("waterRelativeHeight", waterLevel);

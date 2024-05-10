@@ -182,7 +182,9 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         return nullptr;
     }
     AABBox box(this->curve.points);
-    float height = this->height * this->computeGrowingState();
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
+    float height = this->height * growingState;
     Vector3 offset(this->width, this->width, height * .5f);
 
     ImplicitPrimitive* patch;

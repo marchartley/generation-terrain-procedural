@@ -149,17 +149,21 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
 
-        Vector3 brushDir = (mousePos - prevPos).normalize();
+        Vector3 brushDir = (mousePos - prevPos).normalize() * .2f;
 
         //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
         GridV3 brush = GridV3(30, 30, 1, brushDir);
         brush.iterateParallel([&](const Vector3& p) {
             brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
         });
-        EnvObject::initialFlowfield.add(brush, mousePos - brush.getDimensions().xy() * .5f);
+        EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
+        EnvObject::updateFlowfield();
+
+        this->flowErosionSimulation();
 
         Plotter::get()->addImage(renderFlowfield());
         Plotter::get()->show();
+        Q_EMIT this->updated();
     });
 }
 
@@ -243,11 +247,19 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
     ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
+    SliderElement* flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
+    flowErosionSlider->setOnValueChanged([&](float newValue) {
+        this->flowErosionFactor = newValue;
+        this->flowErosionSimulation();
+        Q_EMIT this->updated();
+    });
+
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(waitAtEachFrameButton->get());
     layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
 //    layout->addWidget(showFlowfieldButton->get());
 //    layout->addWidget(createFromGAN->get());
+    layout->addWidget(flowErosionSlider->get());
     layout->addWidget(objectCombobox->get());
     layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
     layout->addWidget(createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton})->get());
@@ -451,7 +463,7 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
                         delete newPatch;
                     }
                 }
-                EnvObject::recomputeTerrainPropertiesForObject(*heightmap, currentSelection->name);
+                EnvObject::recomputeTerrainPropertiesForObject(currentSelection->name);
             }
         }
         this->materialSimulationStable = false;
@@ -515,6 +527,8 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
 
     if (objAsPoint) {
         position = PositionOptimizer::getHighestPosition(position, score, gradients);
+        if (!position.isValid())
+            return nullptr;
     } else if (objAsCurve) {
         BSpline initialCurve;
         if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
@@ -545,6 +559,7 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
 
     newObject->translate(position.xy());
     newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->spawnTime = EnvObject::currentTime;
     std::cout << "Creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
     return newObject;
 }
@@ -596,10 +611,10 @@ void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
                 maxIterations--;
                 if (maxIterations < 0) break;
             }
-            EnvObject::recomputeTerrainPropertiesForObject(*heightmap, name);
+            EnvObject::recomputeTerrainPropertiesForObject(name);
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
             updateEnvironmentFromEnvObjects(implicit != nullptr, true);
-            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true);
+            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
         } else {
             std::cout << "No object to instantiate..." << std::endl;
         }
@@ -627,11 +642,11 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
             this->materialSimulationStable = false; // We have to compute the simulation again
             Vector3 bestPos = bestPositionForInstantiation(objectName, score);
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
-            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true);
             if (!newObject) {
                 this->log("Object not created");
                 return;
             }
+            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
@@ -648,7 +663,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
                 if (maxIterations < 0) break;
             }
             this->currentSelections = {newObject};
-            EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
+            EnvObject::recomputeTerrainPropertiesForObject(objectName);
             this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
@@ -697,6 +712,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
     if (killObjectsIfPossible) {
         bool atLeastOneDeath = false;
+        std::set<std::string> deadObjects;
         for (auto& obj : EnvObject::instantiatedObjects) {
             if (isIn(obj, immatureObjects)) continue;
             bool shouldDie = this->checkIfObjectShouldDie(obj, .1f);
@@ -706,10 +722,15 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
                 float endingScore = obj->evaluate(obj->evaluationPosition);
                 std::cout << "Object went from " << startingScore << " to " << endingScore << " -> " << std::round(100.f * endingScore / startingScore) << "%" << std::endl;
                 this->destroyEnvObject(obj);
+                deadObjects.insert(obj->name);
             }
         }
-        if (atLeastOneDeath)
+        if (atLeastOneDeath) {
             updateImplicitTerrain = true;
+            for (auto death : deadObjects) {
+                EnvObject::recomputeTerrainPropertiesForObject(death);
+            }
+        }
     }
 
     displayProcessTime("Get impacted... ", [&]() {
@@ -742,7 +763,9 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         displayProcessTime("Update heightmap from implicit terrain... ", [&]() {
             heightmap->fromVoxelGrid(*voxelGrid.get());
+            this->flowErosionSimulation();
         }, verbose);
+        EnvObject::recomputeFlowAndSandProperties(*heightmap);
     }
     for (auto& obj : immatureObjects) {
         if (obj->computeGrowingState() >= 1.f) {
@@ -754,6 +777,8 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         Q_EMIT this->updated();
         updateObjectsList();
     }
+
+    EnvObject::currentTime++;
 }
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
@@ -777,6 +802,7 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object)
         }
         this->implicitPatchesFromObjects.erase(object);
     }
+    EnvObject::recomputeTerrainPropertiesForObject(object->name);
 }
 
 void EnvObjsInterface::displayProbas(std::string objectName)
@@ -1372,7 +1398,7 @@ void EnvObjsInterface::loadScene(std::string filename)
             rootPatch->addChild(implicit);
         }
         this->currentSelections = {};
-        EnvObject::recomputeTerrainPropertiesForObject(*heightmap, objectName);
+        EnvObject::recomputeTerrainPropertiesForObject(objectName);
     }
     EnvObject::recomputeFlowAndSandProperties(*heightmap);
     updateEnvironmentFromEnvObjects(true, true, false);
@@ -1416,11 +1442,10 @@ GridV3 EnvObjsInterface::renderFocusArea() const
 
 GridV3 EnvObjsInterface::renderFlowfield() const
 {
-    // GridV3 coloredFlowfield(EnvObject::initialFlowfield.getDimensions());
-    // GridV3 flow = EnvObject::initialFlowfield;
     EnvObject::updateFlowfield();
     GridV3& flow = EnvObject::flowfield;
-    return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
+    // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
+    return Plotter::get()->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter() const
@@ -1458,6 +1483,12 @@ void EnvObjsInterface::showAllElementsOnPlotter() const
 
     Plotter::get()->addImage(img);
     Plotter::get()->show();
+}
+
+void EnvObjsInterface::flowErosionSimulation()
+{
+    this->heightmap->fromVoxelGrid(*this->voxelGrid);
+    this->heightmap->heights = this->heightmap->heights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
 }
 
 void EnvObjsInterface::fromGanUI()

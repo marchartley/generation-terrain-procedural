@@ -46,7 +46,9 @@ EnvPoint *EnvPoint::instantiate(std::string objectName)
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * this->computeGrowingState() /** (EnvObject::flowfield(this->position).norm() * 10.f)*/;
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * growingState /** (EnvObject::flowfield(this->position).norm() * 10.f)*/;
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
 }
 
@@ -55,7 +57,9 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
     if (this->materialAbsorptionRate[material.name] == 0) return;
     if (this->needsForGrowth.count(material.name) == 0) return;
 
-    float sandMissing = (needsForGrowth[material.name] - currentSatisfaction[material.name]) * (this->computeGrowingState() + .01f) / (1.01f);
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
+    float sandMissing = (needsForGrowth[material.name] - currentSatisfaction[material.name]) * (growingState + .01f) / (1.01f);
 
     GridF sandAbsorbed = GridF::normalizedGaussian(radius, radius, 1, radius * .1f) * sandMissing;
     Vector3 subsetStart = (this->position - sandAbsorbed.getDimensions() * .5f).xy() + Vector3(0, 0, 0);
@@ -78,12 +82,13 @@ void EnvPoint::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
-    float currentGrowth = computeGrowingState();
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
 
     ScaleKelvinlet k;
     k.pos = this->position;
     k.radialScale = this->radius * .2f;
-    k.scale = 10.f * currentGrowth * this->flowEffect.x;
+    k.scale = 10.f * growingState * this->flowEffect.x;
     k.mu = .9f;
     k.v = 0.f;
 
@@ -118,14 +123,15 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
         return nullptr;
     }
     ImplicitPrimitive* patch;
-    float currentGrowth = this->computeGrowingState();
-    Vector3 dimensions = Vector3(radius * currentGrowth, radius * currentGrowth, radius * currentGrowth * this->height);
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
+    Vector3 dimensions = Vector3(radius * growingState, radius * growingState, radius * growingState* this->height);
     Vector3 patchPosition = this->position.xy() - Vector3(radius, radius) * .5f;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
         *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, false);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * currentGrowth, {}, false);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * growingState, {}, false);
         patchPosition.z = heights(this->position.xy());
     }
 

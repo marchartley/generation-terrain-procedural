@@ -181,7 +181,7 @@ public:
 
     T trace() const;
 
-    Matrix3<T> warpWith(const Matrix3<Vector3>& warper) const;
+    Matrix3<T> warpWith(const Matrix3<Vector3>& warper, int precision = 1) const;
     Matrix3<T> warpWith(const BSpline& original, const BSpline& warperCurve) const;
 
     Matrix3<T> warpWithoutInterpolation(const Matrix3<Vector3>& warper) const;
@@ -2652,7 +2652,7 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper) const
+Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) const
 {
     // Warp definition : f(warp(p)) = f(p + warp vec)
     // But f(p) != f(p - warp vec), in the definition. I think it should create
@@ -2664,10 +2664,25 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper) const
     self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
 
-    iterate([&](const Vector3& pos) {
-        const Vector3& warp = warper.at(pos);
-        result.addValueAt(self.at(pos), pos + warp);
-    });
+    if (precision > 1) {
+        Matrix3<Vector3> displacements(warper.getDimensions());
+        displacements.iterateParallel([&](const Vector3& p) {
+            auto& pos = displacements(p);
+            pos = p;
+            for (int iter = 0; iter < precision; iter++) {
+                pos -= warper.interpolate(pos) / float(precision);
+            }
+        });
+        self.iterate([&](const Vector3& pos) {
+            const auto& warp = displacements.at(pos);
+            result.at(pos) = self.interpolate(warp);
+        });
+    } else {
+        iterate([&](const Vector3& pos) {
+            const Vector3& warp = warper.at(pos);
+            result.addValueAt(self.at(pos), pos + warp);
+        });
+    }
     return result;
 }
 

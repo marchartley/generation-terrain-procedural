@@ -38,6 +38,7 @@ Vector3 PositionOptimizer::followGradient(const Vector3 &seedPosition, const Gri
     Vector3 previousDir;
 
     for (int i = 0; i < maxTries; i++) {
+        if (!pos.isValid()) break;
         Vector3 grad = gradients.interpolate(pos);
         if (grad.norm2() < epsilon) break;
 
@@ -289,8 +290,13 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const Grid
 BSpline CurveOptimizer::followIsolevel(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float minLength)
 {
     Vector3 pos0 = seedPosition;
-    Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
+    // Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
+    Vector3 gradient;
+    std::tie(pos0, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid(), gradients, 100, 5.f);
+    if (!gradient.isValid())
+        return BSpline();
 
+    Vector3 dir0 = gradient.normalized().cross(Vector3(0, 0, 1));
     Vector3 pos1 = pos0;
     Vector3 dir1 = - dir0;
 
@@ -304,7 +310,6 @@ BSpline CurveOptimizer::followIsolevel(const Vector3 &seedPosition, const GridF 
         // Go in the two directions at the same time
 
         // Start at pos0:
-        Vector3 gradient;
         std::tie(pos0, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos0, dir0, gradients, 100, 5.f);
         if (gradient.isValid()) {
             gradient.normalize();
@@ -401,16 +406,19 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
     // So isolevel gradient proportional to -area gradient.
     while (maxTries > 0) {
         ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients);
+        Vector3 gradient = gradients.interpolate(currentSeedPos).normalized();
+        if (!gradient.isValid()) break;
+
         if (curve.size() == 0) {
             // The isocontour is too big, we didn't manage to do a full circle.
-            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * 2.f;
+            currentSeedPos = currentSeedPos + gradient * 2.f;
         } else {
             float area = curve.computeArea();
 
             float diff = targetArea - area; // < 0 means curve too big, > 0 means curve too small
             finalCurve = curve;
             if (std::abs(diff) < maxError) break;
-            currentSeedPos = currentSeedPos + gradients.interpolate(currentSeedPos).normalized() * (diff > 0 ? -1.f : 1.f) * moveFactor;
+            currentSeedPos = currentSeedPos + gradient * (diff > 0 ? -1.f : 1.f) * moveFactor;
 
             if (currentlyAreaGettingSmaller != (diff > 0)) {
                 currentlyAreaGettingSmaller = !currentlyAreaGettingSmaller;
@@ -432,7 +440,7 @@ std::pair<Vector3, Vector3> PathOptimizer::jitterToFindPointAndGradient(const Ve
         if (previousDir.isValid() && jitter.dot(previousDir) < 0) continue;
         auto testPos = pos + jitter;
         gradient = gradients.interpolate(testPos);
-        if (gradient.norm2() > 1e-8) {
+        if (gradient.isValid() && gradient.norm2() > 1e-8) {
             return {testPos, gradient};
         }
     }

@@ -1632,6 +1632,35 @@ int main(int argc, char *argv[])
     return Plotter::get()->exec();
     */
 
+    /*
+    Vector3 size(100, 100, 1);
+    GridF grid(size);
+    float strength = 2.f;
+    grid.iterateParallel([&](const Vector3& p) {
+        // grid(p) = ((p - size.xy() * .5f).norm2() < 100 * 100 ? 1.f : 0.f);
+        grid(p) = std::cos((p - size.xy() * .5f).norm() * (100.f / size.x));
+    });
+
+    GridV3 flow(size);
+    flow.iterateParallel([&](const Vector3& p) {
+        flow(p) = Vector3(20.f * normalizedGaussian(5.f, std::pow((p.y - (size.y * .5f)) * (100.f / size.x), 2)), 10.f * sin(p.x * .1f * (100.f / size.x)), 0) * strength;
+    });
+
+    Plotter::get()->setNormalizedModeImage(true);
+
+    Plotter::get()->addImage(grid);
+    Plotter::get()->exec();
+
+    for (int precision : {1, 5, 20, 100, 20}) {
+        displayProcessTime("Time for precision = " + std::to_string(precision), [&]() {
+            auto result = grid.warpWith(flow, precision);
+            Plotter::get()->addImage(result);
+        });
+        Plotter::get()->exec();
+    }
+    return 0;*/
+
+
     EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
     EnvObject::readEnvObjectsFile("saved_maps/primitives.json");
 

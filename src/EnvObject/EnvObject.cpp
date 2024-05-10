@@ -8,7 +8,7 @@
 #include "EnvObject/EnvCurve.h"
 #include "EnvObject/EnvArea.h"
 
-GridV3 initFlow();
+GridV3 initFlow(bool force = false);
 
 GridV3 EnvObject::flowfield = initFlow();
 GridV3 EnvObject::initialFlowfield;
@@ -22,12 +22,13 @@ std::vector<EnvObject*> EnvObject::instantiatedObjects;
 float EnvObject::flowImpactFactor = .9f;
 int EnvObject::currentMaxID = -1;
 std::vector<MaterialsTransformation> EnvObject::transformationRules;
+int EnvObject::currentTime = 0;
 
 std::map<std::string, GridV3> EnvObject::allVectorProperties;
 std::map<std::string, GridF> EnvObject::allScalarProperties;
 
-GridV3 initFlow() {
-    if (EnvObject::flowfield.empty()) {
+GridV3 initFlow(bool force) {
+    if (force || EnvObject::flowfield.empty()) {
         EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
         EnvObject::initialFlowfield.raiseErrorOnBadCoord = false;
         EnvObject::initialFlowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -74,7 +75,7 @@ void EnvObject::readEnvObjectsFileContent(std::string content)
         }
     }
 
-    auto test = EnvObject::availableObjects;
+
     for (auto& [name, obj] : EnvObject::availableObjects) {
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name);
     }
@@ -289,7 +290,16 @@ float EnvObject::computeGrowingState()
     return totalScore;
 }
 
-std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances)
+float EnvObject::computeGrowingState2()
+{
+    float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
+    // std::cout << this->fittingScoreAtCreation << " / " << newFitnessEvaluation << std::endl;
+    // if (newFitnessEvaluation <= 0) return 0;
+    if (this->fittingScoreAtCreation == 0) return 0; // This is a problem...
+    return std::clamp(newFitnessEvaluation / this->fittingScoreAtCreation, 0.f, 1.f);
+}
+
+std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances, EnvObject *myObject)
 {
     formula = toLower(formula);
     if (formula == "")
@@ -321,13 +331,15 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         variables[matName] = float();
 
     ExpressionParser parser;
+    variables["currenttime"] = float();
+    variables["spawntime"] = float();
     variables["pos"] = Vector3::invalid();
     if (!parser.validate(formula, variables, false)) {
         throw std::runtime_error("The formula " + formula + " is not valid for object '" + currentObject + "'");
     }
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
     auto _func = parser.parse(formula, variables);
-    return [&, _func, neededVariables, currentObject, removeSelfInstances](Vector3 pos) -> float {
+    return [&, _func, neededVariables, currentObject, removeSelfInstances, myObject](Vector3 pos) -> float {
         std::map<std::string, Variable> vars;
         for (auto& [prop, map] : EnvObject::allVectorProperties) {
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
@@ -344,6 +356,11 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
             }
         }
         vars["pos"] = pos;
+        vars["currenttime"] = float(EnvObject::currentTime);
+        if (myObject != nullptr)
+            vars["spawntime"] = float(std::min(EnvObject::currentTime, myObject->spawnTime));
+        else
+            vars["spawntime"] = float(EnvObject::currentTime);
         /*
         for (std::string neededVar : neededVariables) {
             if (std::holds_alternative<float>(vars[neededVar])) {
@@ -605,29 +622,39 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         // Evaluate at each point
         for (auto& [name, obj] : EnvObject::availableObjects) {
             displayProcessTime("Computing properties for " + name + "... ", [&]() {
-                EnvObject::recomputeTerrainPropertiesForObject(heightmap, name);
+                EnvObject::recomputeTerrainPropertiesForObject(name);
             }, false);
         }
         EnvObject::recomputeFlowAndSandProperties(heightmap);
     });
 }
 
-void EnvObject::recomputeTerrainPropertiesForObject(const Heightmap &heightmap, std::string objectName)
+void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
 {
     auto name = objectName;
     EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
 //        auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
         EnvObject* object = EnvObject::findClosest(objectName, pos);
-        if (object == nullptr) return;
-        auto allProperties = object->getAllProperties(pos);
-        EnvObject::allVectorProperties[name](pos) = allProperties["default"];
-        EnvObject::allVectorProperties[name + ".center"](pos) = allProperties["center"];
-        EnvObject::allVectorProperties[name + ".start"](pos) = allProperties["start"];
-        EnvObject::allVectorProperties[name + ".end"](pos) = allProperties["end"];
-        EnvObject::allScalarProperties[name + ".inside"](pos) = (allProperties["inside"].isValid() ? 1.f : 0.f);
-        EnvObject::allVectorProperties[name + ".normal"](pos) = allProperties["normal"];
-        EnvObject::allVectorProperties[name + ".dir"](pos) = allProperties["dir"];
-        EnvObject::allScalarProperties[name + ".curvature"](pos) = (allProperties["curvature"].x < 1e5 ? allProperties["curvature"].x : -1.f);
+        if (object == nullptr) {
+            EnvObject::allVectorProperties[name](pos) = Vector3::invalid();
+            EnvObject::allVectorProperties[name + ".center"](pos) = Vector3::invalid();
+            EnvObject::allVectorProperties[name + ".start"](pos) = Vector3::invalid();
+            EnvObject::allVectorProperties[name + ".end"](pos) = Vector3::invalid();
+            EnvObject::allScalarProperties[name + ".inside"](pos) = 0.f;
+            EnvObject::allVectorProperties[name + ".normal"](pos) = Vector3::invalid();
+            EnvObject::allVectorProperties[name + ".dir"](pos) = Vector3::invalid();
+            EnvObject::allScalarProperties[name + ".curvature"](pos) = 0.f;
+        } else {
+            auto allProperties = object->getAllProperties(pos);
+            EnvObject::allVectorProperties[name](pos) = allProperties["default"];
+            EnvObject::allVectorProperties[name + ".center"](pos) = allProperties["center"];
+            EnvObject::allVectorProperties[name + ".start"](pos) = allProperties["start"];
+            EnvObject::allVectorProperties[name + ".end"](pos) = allProperties["end"];
+            EnvObject::allScalarProperties[name + ".inside"](pos) = (allProperties["inside"].isValid() ? 1.f : 0.f);
+            EnvObject::allVectorProperties[name + ".normal"](pos) = allProperties["normal"];
+            EnvObject::allVectorProperties[name + ".dir"](pos) = allProperties["dir"];
+            EnvObject::allScalarProperties[name + ".curvature"](pos) = (allProperties["curvature"].x < 1e5 ? allProperties["curvature"].x : -1.f);
+        }
     });
 }
 
@@ -648,13 +675,16 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
 
 void EnvObject::reset()
 {
-    for (auto& obj : EnvObject::instantiatedObjects)
+    std::set<std::string> destroyedObjects;
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        destroyedObjects.insert(obj->name);
         delete obj;
+    }
+    for (auto name : destroyedObjects) {
+        EnvObject::recomputeTerrainPropertiesForObject(name);
+    }
     EnvObject::instantiatedObjects.clear();
-//    for (auto& [name, obj] : EnvObject::availableObjects)
-//        delete obj;
-//    EnvObject::availableObjects.clear();
-    initFlow();
+    initFlow(true);
     for (auto& [matName, mat] : materials) {
         mat.currentState.reset();
     }

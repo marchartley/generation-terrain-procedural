@@ -87,7 +87,7 @@ public:
     void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(const GridV3& image);
+    void addImage(GridV3 image);
     void addImage(const GridF& image);
     void addImage(const Matrix3<double>& image);
     void addImage(const GridI& image);

@@ -264,59 +264,59 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_colors.push_back(colors);
 }
 
-void Plotter::addImage(const GridV3 &image)
+void Plotter::addImage(GridV3 image)
 {
     this->displayedImage = image;
 //    image = image.flip(false, true);
-    if (displayedImage.empty()) return;
+    if (image.empty()) return;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::lowest();
-        displayedImage.iterate([&](size_t i) {
-            min = std::min(min, displayedImage[i].minComp());
-            max = std::max(max, displayedImage[i].maxComp());
+        image.iterate([&](size_t i) {
+            min = std::min(min, image[i].minComp());
+            max = std::max(max, image[i].maxComp());
         });
         this->rangeValuesWidget->slider()->setMinimalValue(min);
         this->rangeValuesWidget->slider()->setMaximalValue(max);
         if (minValueToDisplay < min) minValueToDisplay = min;
         if (maxValueToDisplay > max) maxValueToDisplay = max;
-        displayedImage.iterateParallel([&](size_t i) {
+        image.iterateParallel([&](size_t i) {
             for (int c = 0; c < 3; c++) {
-                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->minValueToDisplay, this->maxValueToDisplay);
+                image[i][c] = std::clamp(image[i][c], this->minValueToDisplay, this->maxValueToDisplay);
             }
         });
     }
     if (this->absoluteMode) {
-        displayedImage = displayedImage.abs();
+        image = image.abs();
     }
     if (this->normalizedMode) {
         for (int c = 0; c < 3; c++) {
             float min = std::numeric_limits<float>::max();
             float max = std::numeric_limits<float>::lowest();
-            displayedImage.iterate([&](size_t i) {
-                min = std::min(displayedImage[i][c], min);
-                max = std::max(displayedImage[i][c], max);
+            image.iterate([&](size_t i) {
+                min = std::min(image[i][c], min);
+                max = std::max(image[i][c], max);
             });
             float d = max - min;
-            displayedImage.iterateParallel([&](size_t i) {
-                displayedImage[i][c] = (image[i][c] - min) / d;
+            image.iterateParallel([&](size_t i) {
+                image[i][c] = (image[i][c] - min) / d;
             });
         }
 //        image.normalize();
     }
     unsigned char* data = new unsigned char[image.size() * 4];
 
-    for (size_t i = 0; i < displayedImage.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(std::clamp(displayedImage[i].x, 0.f, 1.f) * 255);
-        data[int(4 * i + 1)] = (unsigned char)(std::clamp(displayedImage[i].y, 0.f, 1.f) * 255);
-        data[int(4 * i + 0)] = (unsigned char)(std::clamp(displayedImage[i].z, 0.f, 1.f) * 255);
+    for (size_t i = 0; i < image.size(); ++i) {
+        data[int(4 * i + 2)] = (unsigned char)(std::clamp(image[i].x, 0.f, 1.f) * 255);
+        data[int(4 * i + 1)] = (unsigned char)(std::clamp(image[i].y, 0.f, 1.f) * 255);
+        data[int(4 * i + 0)] = (unsigned char)(std::clamp(image[i].z, 0.f, 1.f) * 255);
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
     if (this->backImage) {
         delete this->backImage;
     }
-    this->backImage = new QImage(data, displayedImage.sizeX, displayedImage.sizeY, QImage::Format_ARGB32);
+    this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 //    *(this->backImage) = this->backImage->mirrored();
 }
 
@@ -361,18 +361,23 @@ GridV3 Plotter::computeVectorFieldRendering(const GridV3 &field, float reduction
     minMag = std::sqrt(minMag);
     maxMag = std::sqrt(maxMag);
 
+    // std::cout << minMag << " " << maxMag << std::endl;
+
     reduced.iterateParallel([&] (const Vector3& p) {
         AABBox cell(p - Vector3(.45, .45, 0) * ratio, p + Vector3(.45, .45, 0) * ratio);
         float mag = reduced(p).norm();
         if (mag < 1e-5) return;
         Vector3 dir = reduced(p) / mag;
-        float relativeMag = interpolation::inv_linear(mag, minMag, maxMag);
-        Vector3 color = colorPalette(relativeMag, {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)});
+        Vector3 color(1, 1, 1);
+        if (std::abs(minMag - maxMag) > 1e-5) {
+            float relativeMag = interpolation::linear(mag, minMag, maxMag);
+            color = colorPalette(relativeMag, {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)});
+        }
         bool valid = true;
         for (int i = 0; valid; i++) {
             valid = false;
             if (cell.containsXY(p + dir * i)) {
-                img(p * ratio + dir * i) = color;
+                img((p + Vector3(.5, .5)) * ratio + dir * i) = color;
                 valid = true;
             }
         }

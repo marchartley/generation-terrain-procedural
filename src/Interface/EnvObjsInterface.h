@@ -91,6 +91,8 @@ public Q_SLOTS:
 
     void showAllElementsOnPlotter() const;
 
+    void flowErosionSimulation();
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
@@ -108,6 +110,8 @@ public:
     bool displaySediments = true;
     bool displayHighCurrents = true;
     bool waitAtEachFrame = false;
+
+    float flowErosionFactor = 0.f;
 
     std::string currentlyPreviewedObject;
 

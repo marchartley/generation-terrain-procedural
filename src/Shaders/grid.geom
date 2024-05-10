@@ -4,7 +4,7 @@
 #extension GL_EXT_gpu_shader4 : enable
 
 layout ( points ) in;
-layout ( triangle_strip, max_vertices = 16) out;
+layout ( triangle_strip, max_vertices = 37) out;
 
 //height data field texture
 uniform sampler2D heightmapFieldTex;
@@ -95,6 +95,7 @@ void sendInfoVertex(vec4 vecPos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     grealNormal = getNormal(vecPos.xy);
     gcolor = vec4(texture(heightmapFieldTex, vecPos.xy/texSize).rgb, 1.0);
+    vecPos.z = getHeight(vecPos.xy);
     vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
     vecPos.z *= heightFactor;
     ginitialVertPos = vecPos.xyz;
@@ -134,14 +135,90 @@ void main(void) {
 //    subdivision(vecPos);
 //    return;
 
-    vec4 v1 = vec4(vecPos + vec2(0, 0), getHeight(vecPos + vec2(0, 0)), 1.0);
+
+    /*vec4 v1 = vec4(vecPos + vec2(0, 0), getHeight(vecPos + vec2(0, 0)), 1.0);
     vec4 v2 = vec4(vecPos + vec2(1, 0), getHeight(vecPos + vec2(1, 0)), 1.0);
     vec4 v3 = vec4(vecPos + vec2(0, 1), getHeight(vecPos + vec2(0, 1)), 1.0);
     vec4 v4 = vec4(vecPos + vec2(1, 1), getHeight(vecPos + vec2(1, 1)), 1.0);
 
-//    grealNormal = normalize(cross(v1.xyz - v2.xyz, v3.xyz - v1.xyz)); //realNormal[0];
+    sendInfoVertex(v1);
+    sendInfoVertex(v2);
+    sendInfoVertex(v3);
+    sendInfoVertex(v4);
+    */
 
-    grealNormal = getNormal(v1.xy);
+    vec4 v11 = vec4(vecPos + vec2(0.00, 0.00), 0, 1.0);
+    vec4 v12 = vec4(vecPos + vec2(0.25, 0.00), 0, 1.0);
+    vec4 v13 = vec4(vecPos + vec2(0.50, 0.00), 0, 1.0);
+    vec4 v14 = vec4(vecPos + vec2(0.75, 0.00), 0, 1.0);
+    vec4 v15 = vec4(vecPos + vec2(1.00, 0.00), 0, 1.0);
+
+    vec4 v21 = vec4(vecPos + vec2(0.00, 0.25), 0, 1.0);
+    vec4 v22 = vec4(vecPos + vec2(0.25, 0.25), 0, 1.0);
+    vec4 v23 = vec4(vecPos + vec2(0.50, 0.25), 0, 1.0);
+    vec4 v24 = vec4(vecPos + vec2(0.75, 0.25), 0, 1.0);
+    vec4 v25 = vec4(vecPos + vec2(1.00, 0.25), 0, 1.0);
+
+    vec4 v31 = vec4(vecPos + vec2(0.00, 0.50), 0, 1.0);
+    vec4 v32 = vec4(vecPos + vec2(0.25, 0.50), 0, 1.0);
+    vec4 v33 = vec4(vecPos + vec2(0.50, 0.50), 0, 1.0);
+    vec4 v34 = vec4(vecPos + vec2(0.75, 0.50), 0, 1.0);
+    vec4 v35 = vec4(vecPos + vec2(1.00, 0.50), 0, 1.0);
+
+    vec4 v41 = vec4(vecPos + vec2(0.00, 0.75), 0, 1.0);
+    vec4 v42 = vec4(vecPos + vec2(0.25, 0.75), 0, 1.0);
+    vec4 v43 = vec4(vecPos + vec2(0.50, 0.75), 0, 1.0);
+    vec4 v44 = vec4(vecPos + vec2(0.75, 0.75), 0, 1.0);
+    vec4 v45 = vec4(vecPos + vec2(1.00, 0.75), 0, 1.0);
+
+    vec4 v51 = vec4(vecPos + vec2(0.00, 1.00), 0, 1.0);
+    vec4 v52 = vec4(vecPos + vec2(0.25, 1.00), 0, 1.0);
+    vec4 v53 = vec4(vecPos + vec2(0.50, 1.00), 0, 1.0);
+    vec4 v54 = vec4(vecPos + vec2(0.75, 1.00), 0, 1.0);
+    vec4 v55 = vec4(vecPos + vec2(1.00, 1.00), 0, 1.0);
+
+    sendInfoVertex(v11);
+    sendInfoVertex(v12);
+    sendInfoVertex(v21);
+    sendInfoVertex(v22);
+    sendInfoVertex(v31);
+    sendInfoVertex(v32);
+    sendInfoVertex(v41);
+    sendInfoVertex(v42);
+    sendInfoVertex(v51);
+    sendInfoVertex(v52);
+
+    sendInfoVertex(v53);
+    sendInfoVertex(v42);
+    sendInfoVertex(v43);
+    sendInfoVertex(v32);
+    sendInfoVertex(v33);
+    sendInfoVertex(v22);
+    sendInfoVertex(v23);
+    sendInfoVertex(v12);
+    sendInfoVertex(v13);
+
+    sendInfoVertex(v14);
+    sendInfoVertex(v23);
+    sendInfoVertex(v24);
+    sendInfoVertex(v33);
+    sendInfoVertex(v34);
+    sendInfoVertex(v43);
+    sendInfoVertex(v44);
+    sendInfoVertex(v53);
+    sendInfoVertex(v54);
+
+    sendInfoVertex(v55);
+    sendInfoVertex(v44);
+    sendInfoVertex(v45);
+    sendInfoVertex(v34);
+    sendInfoVertex(v35);
+    sendInfoVertex(v24);
+    sendInfoVertex(v25);
+    sendInfoVertex(v14);
+    sendInfoVertex(v15);
+
+    /*grealNormal = getNormal(v1.xy);
     gambiantOcclusion = getAmbiantOcclusion(v1.xyz);
     v1 += vec4(grealNormal * getDisplacementLength(v1.xy) * displacementStrength, 0.0);
     ginitialVertPos = v1.xyz;
@@ -176,5 +253,6 @@ void main(void) {
     v4.z *= heightFactor;
     gl_Position = proj_matrix * mv_matrix * v4;
     EmitVertex();
+    */
     EndPrimitive();
 }

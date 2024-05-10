@@ -128,9 +128,10 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside)) max 0",
+    "rule": "(((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "--rule": "(((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside)) / ((currenttime - spawntime) / 200 + 1)) max 0",
     "flow": {
-      "direction": 1.0,
+      "direction": 0.10,
       "normal": 0.0,
       "binormal": 0.0
     },

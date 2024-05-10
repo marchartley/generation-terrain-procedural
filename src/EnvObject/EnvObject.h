@@ -66,12 +66,14 @@ public:
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
+    int spawnTime = 0;
 
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
 
     virtual EnvObject* clone() = 0;
     virtual float computeGrowingState();
+    virtual float computeGrowingState2();
     virtual void applyDeposition(EnvMaterial& material) = 0;
     virtual void applyAbsorption(EnvMaterial& material) = 0;
     virtual void applyDepositionOnDeath() = 0;
@@ -84,7 +86,7 @@ public:
     void die();
 
 
-    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false);
+    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
 
     static GridV3 flowfield;
@@ -114,7 +116,7 @@ public:
     static std::map<std::string, GridV3> allVectorProperties;
     static std::map<std::string, GridF> allScalarProperties;
     static void precomputeTerrainProperties(const Heightmap& heightmap);
-    static void recomputeTerrainPropertiesForObject(const Heightmap& heightmap, std::string objectName);
+    static void recomputeTerrainPropertiesForObject(std::string objectName);
     static void recomputeFlowAndSandProperties(const Heightmap &heightmap);
 
     static void reset();
@@ -122,6 +124,8 @@ public:
     static GraphObj sceneToGraph();
 
     static std::vector<MaterialsTransformation> transformationRules;
+
+    static int currentTime;
 };
 
 #endif // ENVOBJECT_H
