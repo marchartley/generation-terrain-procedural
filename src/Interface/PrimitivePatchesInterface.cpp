@@ -422,6 +422,7 @@ void PrimitivePatchesInterface::hide()
 
 void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 {
+    if (!this->isVisible()) return;
     if (constructionMode && e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
         this->createPatchWithOperation(Vector3());
         this->parametricCurve.points.clear();
