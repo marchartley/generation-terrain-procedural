@@ -44,6 +44,9 @@ ExpressionParser::ExpressionParser() {
     unaryVectorOperators["y"] = [](const Vector3& a) { return a.y; };
     unaryVectorOperators["z"] = [](const Vector3& a) { return a.z; };
 
+    binaryVectorFloatOperators["*"] = [](const Vector3& a, float b) { return a * b; };
+    binaryVectorFloatOperators["/"] = [](const Vector3& a, float b) { return a / b; };
+
     precedence = {
             {"+", 1},
             {"-", 1},
@@ -156,7 +159,7 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
     }
 
     if (raiseErrors) {
-        auto groupedTokens = groupTokensHierarchically(tokens);
+        auto groupedTokens = groupTokensHierarchically(tokens, variables);
         VariableMap dummyVars;
         for (const auto& varTypePair : variables) {
             if (std::holds_alternative<float>(varTypePair.second)) {
@@ -171,7 +174,7 @@ bool ExpressionParser::validate(const std::string &expression, const VariableMap
 
         // Attempt to generate the lambda and catch any exceptions
         try {
-            auto groupedTokens = groupTokensHierarchically(tokens);
+            auto groupedTokens = groupTokensHierarchically(tokens, variables);
             VariableMap dummyVars;
             for (const auto& varTypePair : variables) {
                 if (std::holds_alternative<float>(varTypePair.second)) {
@@ -260,15 +263,10 @@ Token ExpressionParser::groupTokensHierarchically(const std::vector<std::string>
                 // Convert tokens inside {} to Vector3
                 auto components = *std::get<std::shared_ptr<TokenList>>(groupTokensHierarchically(std::vector<std::string>(tokens.begin() + i + 1, tokens.begin() + j - 1), variables));
                 if (components.size() == 3) {
-                    auto _x = components[0];
-                    auto _y = components[1];
-                    auto _z = components[2];
-                    std::string sx = std::get<std::string>(_x);
-                    std::string sy = std::get<std::string>(_y);
-                    std::string sz = std::get<std::string>(_z);
-                    float x = std::stof(sx);
-                    float y = std::stof(sy);
-                    float z = std::stof(sz);
+                    float x = std::get<float>(generateLambda(components[0], variables)(variables));
+                    float y = std::get<float>(generateLambda(components[1], variables)(variables));
+                    float z = std::get<float>(generateLambda(components[2], variables)(variables));
+
                     Vector3 vec(x, y, z);
                     groupedTokens.push_back(vec);
                 } else {
@@ -371,6 +369,8 @@ std::function<Variable (const VariableMap &)> ExpressionParser::generateLambda(c
             return getBinaryOperation<float>(token, leftLambda, rightLambda, binaryFloatOperators);
         } else if (std::holds_alternative<Vector3>(leftResult) && std::holds_alternative<Vector3>(rightResult) && binaryVectorOperators.find(token) != binaryVectorOperators.end()) {
             return getBinaryOperation<Vector3>(token, leftLambda, rightLambda, binaryVectorOperators);
+        } else if (std::holds_alternative<Vector3>(leftResult) && std::holds_alternative<float>(rightResult) && binaryVectorFloatOperators.find(token) != binaryVectorFloatOperators.end()) {
+            return getBinaryOperation<Vector3>(token, leftLambda, rightLambda, binaryVectorFloatOperators);
         } else {
             // std::cerr << "No operation found for this equation..." << std::endl;
             throw std::runtime_error("No operation found for this equation...");
@@ -378,26 +378,6 @@ std::function<Variable (const VariableMap &)> ExpressionParser::generateLambda(c
                 return generateLambda("0.0"); // [=](const VariableMap&) -> Variable { return 0.f; };
             };*/
         }
-        /*
-
-        // Use dummy Vector3 to determine the return type of the lambdas
-        return [=](const VariableMap& vars) -> Variable {
-    //        Vector3 dummyVec;
-            auto leftResult = leftLambda(vars);
-            auto rightResult = rightLambda(vars);
-
-            if (std::holds_alternative<float>(leftResult) && std::holds_alternative<float>(rightResult) && binaryFloatOperators.find(token) != binaryFloatOperators.end()) {
-//                auto opFunction = binaryFloatOperators[token];
-                return getBinaryOperation<float>(token, leftLambda, rightLambda, binaryFloatOperators)(vars);
-            } else if (std::holds_alternative<Vector3>(leftResult) && std::holds_alternative<Vector3>(rightResult) && binaryVectorOperators.find(token) != binaryVectorOperators.end()) {
-                return getBinaryOperation<Vector3>(token, leftLambda, rightLambda, binaryVectorOperators)(vars);
-            } else {
-                std::cerr << "No operation found for this equation..." << std::endl;
-                return [=](const VariableMap&) -> std::function<Variable(const VariableMap&)> {
-                    return generateLambda("0.0"); // [=](const VariableMap&) -> Variable { return 0.f; };
-                };
-            }
-        };*/
     }
 
     int nbTokens = int(tokens.size());

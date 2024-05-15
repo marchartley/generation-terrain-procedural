@@ -269,6 +269,8 @@ nlohmann::json EnvObject::toJSON() const
 
 float EnvObject::computeGrowingState()
 {
+    if (this->createdManually) return 1.f;
+
     bool verbose = false;
     std::ostringstream oss;
 
@@ -292,6 +294,8 @@ float EnvObject::computeGrowingState()
 
 float EnvObject::computeGrowingState2()
 {
+    if (this->createdManually) return 1.f;
+
     float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
     // std::cout << this->fittingScoreAtCreation << " / " << newFitnessEvaluation << std::endl;
     // if (newFitnessEvaluation <= 0) return 0;
@@ -339,7 +343,8 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     }
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
     auto _func = parser.parse(formula, variables);
-    return [&, _func, neededVariables, currentObject, removeSelfInstances, myObject](Vector3 pos) -> float {
+    return [&, formula, _func, neededVariables, currentObject, removeSelfInstances, myObject](Vector3 pos) -> float {
+        // ExpressionParser parser;
         std::map<std::string, Variable> vars;
         for (auto& [prop, map] : EnvObject::allVectorProperties) {
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
@@ -468,6 +473,7 @@ bool EnvObject::applyEffects(const GridF& heights)
     EnvObject::updateFlowfield();
     return EnvObject::updateSedimentation(heights);
 //    EnvObject::applyMaterialsTransformations();
+    // return false;
 }
 
 bool EnvObject::updateSedimentation(const GridF& heights)
@@ -475,7 +481,14 @@ bool EnvObject::updateSedimentation(const GridF& heights)
     bool bigChangesInAtLeastOneMaterialDistribution = false;
     GridV3 heightsGradients = heights.gradient();
     auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
+
+    std::vector<std::string> names;
     for (auto& [name, material] : EnvObject::materials) {
+        names.push_back(name);
+    }
+    #pragma omp parallel for
+    for(int i = 0; i < names.size(); i++) {
+        auto& material = materials[names[i]];
         float startingAmount = material.currentState.sum();
         if (material.diffusionSpeed < 1.f) {
             if (random_gen::generate() < material.diffusionSpeed) {
@@ -486,12 +499,14 @@ bool EnvObject::updateSedimentation(const GridF& heights)
         }
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
+            #pragma omp critical
             object->applyAbsorption(material);
         }
         material.currentState = material.currentState.warpWith((smoothFluids * material.waterTransport) - (heightsGradients * material.mass));
 
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
+            #pragma omp critical
             object->applyDeposition(material);
         }
 
@@ -499,7 +514,10 @@ bool EnvObject::updateSedimentation(const GridF& heights)
 
         float endingAmount = material.currentState.sum();
 
-        if (std::abs(endingAmount - startingAmount) > 1e-3) bigChangesInAtLeastOneMaterialDistribution = true;
+        if (std::abs(endingAmount - startingAmount) > 1e-3) {
+            #pragma omp critical
+            bigChangesInAtLeastOneMaterialDistribution = true;
+        }
     }
     return bigChangesInAtLeastOneMaterialDistribution;
 }

@@ -61,7 +61,7 @@ protected:
     std::map<std::string, UnaryFloat> unaryFloatOperators;
     std::map<std::string, BinaryVec3> binaryVectorOperators;
     std::map<std::string, UnaryVec3> unaryVectorOperators;
-//    std::map<std::string, BinaryVec3Float> binaryVectorFloatOperators;
+    std::map<std::string, BinaryVec3Float> binaryVectorFloatOperators;
 
     std::map<std::string, int> precedence;
 };
