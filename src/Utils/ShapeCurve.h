@@ -36,6 +36,8 @@ public:
 
     ShapeCurve& resamplePoints(int newNbPoints = -1);
 
+    ShapeCurve& setPoint(int i, const Vector3 &newPos);
+
     static ShapeCurve circle(float radius, const Vector3& center, int nbPoints);
 };
 

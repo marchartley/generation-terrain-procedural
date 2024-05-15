@@ -441,6 +441,12 @@ ShapeCurve &ShapeCurve::resamplePoints(int newNbPoints)
     return *this;
 }
 
+ShapeCurve &ShapeCurve::setPoint(int i, const Vector3 &newPos)
+{
+    BSpline::setPoint(i, newPos);
+    return *this;
+}
+
 ShapeCurve ShapeCurve::circle(float radius, const Vector3 &center, int nbPoints)
 {
     std::vector<Vector3> points;
