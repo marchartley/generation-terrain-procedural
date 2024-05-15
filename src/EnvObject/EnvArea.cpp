@@ -12,7 +12,7 @@ EnvArea *EnvArea::fromJSON(nlohmann::json content)
 }
 float EnvArea::getSqrDistance(const Vector3 &position)
 {
-    return (position - this->curve.estimateClosestPos(position)).norm2();
+    return (position - this->curve.estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
 }
 
 std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position) const
