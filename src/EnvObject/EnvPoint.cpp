@@ -82,38 +82,43 @@ void EnvPoint::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
-    float growingState = this->computeGrowingState2();
-    // float growingState = this->computeGrowingState();
+    if (_cachedFlowModif.size() == 0) {
+        float growingState = this->computeGrowingState2();
+        // float growingState = this->computeGrowingState();
 
-    ScaleKelvinlet k;
-    k.pos = this->position;
-    k.radialScale = this->radius * .2f;
-    k.scale = 10.f * growingState * this->flowEffect.x;
-    k.mu = .9f;
-    k.v = 0.f;
+        ScaleKelvinlet k;
+        k.pos = this->position;
+        k.radialScale = this->radius * .2f;
+        k.scale = 10.f * growingState * this->flowEffect.x;
+        k.mu = .9f;
+        k.v = 0.f;
 
-    GridV3 flow = EnvObject::flowfield;
-    flow.iterateParallel([&](const Vector3& p) {
-        Vector3 displacement = k.evaluate(p);
-        flow(p) += displacement;
-    });
-    return {flow, GridF(flow.getDimensions(), 1.f)};
-    /*
-    GridV3 gradients(2.f*radius, 2.f*radius, 1);
-    Vector3 center = Vector3(radius, radius);
-    gradients.iterateParallel([&](const Vector3& pos) {
-        Vector3 dir = pos - center;
-        float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
-        gradients(pos) = dir.setMag(mag * currentGrowth);
-    });
+        // GridV3 flow = EnvObject::flowfield;
+        GridV3 flow(EnvObject::flowfield.getDimensions());
+        flow.iterateParallel([&](const Vector3& p) {
+            Vector3 displacement = k.evaluate(p);
+            flow(p) += displacement;
+        });
+        _cachedFlowModif = flow;
+        // return {flow, GridF(flow.getDimensions(), 1.f)};
+        /*
+        GridV3 gradients(2.f*radius, 2.f*radius, 1);
+        Vector3 center = Vector3(radius, radius);
+        gradients.iterateParallel([&](const Vector3& pos) {
+            Vector3 dir = pos - center;
+            float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
+            gradients(pos) = dir.setMag(mag * currentGrowth);
+        });
 
-    GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
-//    GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
-    GridF occupancy(flow.getDimensions());
-    occupancy.iterateParallel([&] (const Vector3& pos) {
-        occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
-    });
-    return {flow, occupancy};*/
+        GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
+    //    GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
+        GridF occupancy(flow.getDimensions());
+        occupancy.iterateParallel([&] (const Vector3& pos) {
+            occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
+        });
+        return {flow, occupancy};*/
+    }
+    return {EnvObject::flowfield.add(_cachedFlowModif, Vector3()), GridF(EnvObject::flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
