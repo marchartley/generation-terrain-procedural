@@ -218,10 +218,10 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
+    bool displayTiming = false;
     this->makeCurrent();
     this->frame_num ++;
     current_frame ++;
-    bool displayTiming = false;
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
     float GLUniformsTime;
     float screenSavingTiming;

@@ -32,6 +32,7 @@ public:
     void setTransformationsFile(std::string filename);
 
     EnvObject* instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score);
+    EnvObject* instantiateObjectUsingSpline(std::string objectName, const BSpline& spline);
 
 public Q_SLOTS:
     void show();
@@ -42,6 +43,7 @@ public Q_SLOTS:
     virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     virtual void mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model);
     virtual void mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    virtual void keyPressEvent(QKeyEvent* event);
 
     void instantiateObject(bool waitForFullyGrown = true);
     void instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
@@ -67,6 +69,7 @@ public Q_SLOTS:
 
     void updateObjectsListSelection(QListWidgetItem* __newSelectionItem = nullptr);
     void updateSelectionMesh();
+    void updateNewObjectMesh();
 
     void updateObjectsDefinitions(const std::string& newDefinition);
     void updateMaterialsDefinitions(const std::string& newDefinition);
@@ -89,15 +92,30 @@ public Q_SLOTS:
     GridV3 renderFocusArea() const;
     GridV3 renderFlowfield() const;
 
+    void previewCurrentEnvObjectPlacement(Vector3 position);
+    void previewFocusAreaEdition(Vector3 mousePos, bool addingFocus);
+    void previewFlowEdition(Vector3 mousePos, Vector3 brushDir);
+
     void showAllElementsOnPlotter() const;
 
     void flowErosionSimulation();
+
+    void startNewObjectCreation();
+    void addPointOnNewObjectCreation(const Vector3& position, bool addPoint = true, float removeRadius = 2.f);
+    void endNewObjectCreation();
+
+    void startDraggingObject(const Vector3& position, bool singleVertexMoved);
+    void moveDraggedObject(const Vector3& position);
+    void endDraggingObject(bool destroyObjects);
+
+    std::string getCurrentObjectName() const;
 
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
     Mesh highDepositionMesh;
-    Mesh objectsMesh;
+    Mesh selectedObjectsMesh;
+    Mesh newObjectMesh;
 
     HierarchicalListWidget* objectsListWidget = nullptr;
 
@@ -113,7 +131,7 @@ public:
 
     float flowErosionFactor = 0.f;
 
-    std::string currentlyPreviewedObject;
+    // std::string currentlyPreviewedObject;
 
     bool materialSimulationStable = false;
 
@@ -140,6 +158,9 @@ public:
     ComboboxElement* objectCombobox;
 
     bool flowfieldEditing = false;
+
+    BSpline objectSkeletonCreation;
+    bool manuallyCreatingObject = false;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

@@ -7,6 +7,7 @@
 #include "DataStructure/Image.h"
 #include "EnvObject/ExpressionParser.h"
 #include "Utils/Voronoi.h"
+#include "Interface/MeshInstanceAmplificationInterface.h"
 
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
@@ -41,13 +42,14 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->highErosionsMesh.useIndices = false;
     this->highDepositionMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader));
     this->highDepositionMesh.useIndices = false;
-    this->objectsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
-    this->objectsMesh.useIndices = false;
+    this->selectedObjectsMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->selectedObjectsMesh.useIndices = false;
+    this->newObjectMesh = Mesh(std::make_shared<Shader>(vNoShader, fNoShader), true, GL_LINES);
+    this->newObjectMesh.useIndices = false;
 
     this->rootPatch = new ImplicitNaryOperator;
     this->implicitTerrain->addChild(rootPatch);
-//    createEnvObjectsFromImplicitTerrain();
-//    recomputeErosionValues();
+
     EnvObject::precomputeTerrainProperties(*heightmap);
 
     this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
@@ -58,68 +60,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
         if (!this->isVisible()) return;
         if (focusAreaEditing || flowfieldEditing) return;
-        GridV3 dataV3 = Plotter::get()->displayedImage;
-        GridF data(dataV3.getDimensions());
-        dataV3.iterateParallel([&](size_t i) {
-            data[i] = dataV3[i].x;
-        });
 
-        auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
-
-        GridV3 result(data.getDimensions());
-        ShapeCurve isoline;
-        auto position = clickPos;
-        auto score = data;
-        // score = score.gaussianSmooth(5.f, true, true, -1);
-        GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
-        data.raiseErrorOnBadCoord = false;
-        data.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        gradients.raiseErrorOnBadCoord = false;
-        gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-
-        if (auto objAsPoint = dynamic_cast<EnvPoint*>(obj)) {
-            position = PositionOptimizer::getHighestPosition(position, score, gradients);
-            isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
-        } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
-            BSpline initialCurve;
-            if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
-                float targetLength = objAsCurve->length;
-                initialCurve = CurveOptimizer::getSkeletonCurve(position, score, gradients, targetLength);
-            } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
-                initialCurve = CurveOptimizer::followIsolevel(position, score, gradients, objAsCurve->length);
-            } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
-                initialCurve = CurveOptimizer::getExactLengthCurveFollowingGradients(position, score, gradients, objAsCurve->length);
-            }
-            isoline = initialCurve;
-            isoline.closed = false;
-        } else if (auto objAsArea = dynamic_cast<EnvArea*>(obj)) {
-            ShapeCurve initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
-            if (initialCurve.size() == 0) {
-                return;
-            }
-            isoline = initialCurve;
-        }
-
-        if (isoline.closed) {
-            dataV3.iterateParallel([&](const Vector3& pos) {
-                result(pos) += Vector3(.5f, .5f, .5f) * (isoline.containsXY(pos, false) ? 1.f : 0.f);
-            });
-        }
-
-        dataV3.iterateParallel([&](size_t i) {
-            dataV3[i] = score[i] * Vector3(1, 1, 1);
-        });
-        result += dataV3;
-
-
-        int nbSamples = 500;
-        auto path = isoline.getPath(nbSamples); // .resamplePoints(nbSamples).points;
-        for (size_t i = 0; i < path.size(); i++) {
-            result(path[i]) = Vector3(1.f, 0, 0); //colorPalette(float(i) / float(path.size() - 1));
-        }
-        Plotter::get()->addImage(result);
-        Plotter::get()->show();
-        Plotter::get()->addImage(data);
+        this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
     QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
@@ -130,15 +72,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
 
-        //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
-        auto brush = GridF::normalizedGaussian(30, 30, 1, 8.f) * (rightPressed ? -1.f : 1.f) * 8.f;
-        this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
-
-        focusedArea.iterateParallel([&](size_t i) {
-            focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
-        });
-        Plotter::get()->addImage(renderFocusArea());
-        Plotter::get()->show();
+        this->previewFocusAreaEdition(mousePos, leftPressed);
     });
 
     QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
@@ -150,19 +84,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         if (!leftPressed && !rightPressed) return;
 
         Vector3 brushDir = (mousePos - prevPos).normalize() * .2f;
+        this->previewFlowEdition(mousePos, brushDir);
 
-        //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
-        GridV3 brush = GridV3(30, 30, 1, brushDir);
-        brush.iterateParallel([&](const Vector3& p) {
-            brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
-        });
-        EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-        EnvObject::updateFlowfield();
-
-        this->flowErosionSimulation();
-
-        Plotter::get()->addImage(renderFlowfield());
-        Plotter::get()->show();
         Q_EMIT this->updated();
     });
 }
@@ -171,6 +94,9 @@ void EnvObjsInterface::display(const Vector3 &camPos)
 {
     if (!this->visible)
         return;
+
+    if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+        this->implicitTerrain->addChild(this->rootPatch);
 
     if (this->waitAtEachFrame)
         this->updateEnvironmentFromEnvObjects(true, false);
@@ -187,8 +113,11 @@ void EnvObjsInterface::display(const Vector3 &camPos)
         highDepositionMesh.reorderTriangles(camPos);
         highDepositionMesh.display();
     }
-    objectsMesh.shader->setVector("color", std::vector<float>{.8f, .2f, .8f, .5f});
-    objectsMesh.display(GL_LINES, 5.f);
+    selectedObjectsMesh.shader->setVector("color", std::vector<float>{.8f, .2f, .8f, .5f});
+    selectedObjectsMesh.display(GL_LINES, 5.f);
+
+    newObjectMesh.shader->setVector("color", std::vector<float>{.8f, .4f, .4f, .5f});
+    newObjectMesh.display(GL_LINES, 5.f);
 }
 
 void EnvObjsInterface::replay(nlohmann::json action)
@@ -205,6 +134,8 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() {
         this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */);
         this->updateSelectionMesh();
+
+        Q_EMIT this->updated();
         //this->saveScene("testEnvObjects.json");
     });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
@@ -233,8 +164,15 @@ QLayout *EnvObjsInterface::createGUI()
     for (auto& [name, obj] : EnvObject::availableObjects) {
         objectsChoices.push_back(ComboboxLineElement{name, 0});
     }
-    ButtonElement* showButton = new ButtonElement("Show", [&](){ this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label); });
-    ButtonElement* forceButton = new ButtonElement("Force", [&](){ this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label); this->updateSelectionMesh(); });
+    ButtonElement* showButton = new ButtonElement("Show", [&](){
+        this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
+    });
+    ButtonElement* forceButton = new ButtonElement("Force", [&](){
+        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
+        this->updateSelectionMesh();
+
+        Q_EMIT this->updated();
+    });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
 
     std::vector<QWidget*> materialsButtons;
@@ -251,9 +189,20 @@ QLayout *EnvObjsInterface::createGUI()
     flowErosionSlider->setOnValueChanged([&](float newValue) {
         this->flowErosionFactor = newValue;
         this->flowErosionSimulation();
+
         Q_EMIT this->updated();
     });
 
+    CheckboxElement* newObjectCreationBox = new CheckboxElement("Manual creation", [&](bool checked) {
+        this->manuallyCreatingObject = checked;
+        this->startNewObjectCreation();
+        this->updateSelectionMesh();
+        this->updateNewObjectMesh();
+
+        Q_EMIT this->updated();
+    });
+
+    layout->addWidget(newObjectCreationBox->get());
     layout->addWidget(spendTimeButton->get());
     layout->addWidget(waitAtEachFrameButton->get());
     layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
@@ -345,6 +294,9 @@ void EnvObjsInterface::show()
 void EnvObjsInterface::hide()
 {
 //    updateObjectsListSelection(nullptr); // Hide single object's data
+    this->manuallyCreatingObject = false;
+    this->flowfieldEditing = false;
+    this->focusAreaEditing = false;
     ActionInterface::hide();
 }
 
@@ -362,13 +314,17 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
 {
     if (!this->isVisible()) return;
     if (!mouseInMap) return;
-    if (event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier)) {
-        draggingPoint = mouseWorldPosition.xy();
-    } else if (event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier)) {
-        draggingFullObject = mouseWorldPosition.xy();
+
+    bool moveSingleVertex = event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier);
+    bool moveWholeObject = event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier);
+
+    if (moveSingleVertex || moveWholeObject) {
+        this->startDraggingObject(mouseWorldPosition, moveSingleVertex);
     }
-    draggingHasBeenApplied = mouseWorldPosition.xy();
-    draggingHasBeenApplied.setValid(false); // Keep position, but set to invalid
+    else if (this->manuallyCreatingObject) {
+        bool addingPoint = event->buttons().testFlag(Qt::LeftButton);
+        this->addPointOnNewObjectCreation(mouseWorldPosition, addingPoint);
+    }
 }
 
 void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model)
@@ -376,104 +332,26 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
     if (!this->isVisible()) return;
     if (!mouseWorldPosition.isValid()) return;
 
-    if (draggingPoint.isValid()) {
-        draggingHasBeenApplied.setValid(true);
-        Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
-        draggingHasBeenApplied = mouseWorldPosition.xy();
-
-        for (auto currentSelection : currentSelections) {
-            float maxDistToPointSqr = 10.f * 10.f;
-            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->translate(translation);
-            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
-                auto newCurve = curve->curve;
-                int pointIndexToMove = -1;
-                float closestDistToPoint = std::numeric_limits<float>::max();
-
-                for (int i = 0; i < curve->curve.size(); i++) {
-                    float dist = (curve->curve[i] - mouseWorldPosition.xy()).norm2();
-                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
-                        closestDistToPoint = dist;
-                        pointIndexToMove = i;
-                    }
-                }
-
-                if (pointIndexToMove > -1) {
-                    newCurve[pointIndexToMove].translate(translation);
-                }
-                curve->updateCurve(newCurve);
-            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
-                auto newCurve = area->curve;
-                int pointIndexToMove = -1;
-                float closestDistToPoint = std::numeric_limits<float>::max();
-
-                for (int i = 0; i < area->curve.size(); i++) {
-                    float dist = (area->curve[i] - mouseWorldPosition.xy()).norm2();
-                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
-                        closestDistToPoint = dist;
-                        pointIndexToMove = i;
-                    }
-                }
-
-                if (pointIndexToMove > -1) {
-                    newCurve[pointIndexToMove].translate(translation);
-                }
-                area->updateCurve(newCurve);
-            }
-        }
-        this->updateSelectionMesh();
-    } else if (draggingFullObject.isValid()) {
-        draggingHasBeenApplied.setValid(true);
-        Vector3 translation = (mouseWorldPosition.xy() - draggingHasBeenApplied.xy());
-        draggingHasBeenApplied = mouseWorldPosition.xy();
-
-        for (auto currentSelection : currentSelections) {
-            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->translate(translation);
-            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
-                curve->translate(translation);
-            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
-                area->translate(translation);
-            }
-        }
-        this->updateSelectionMesh();
-    }
+    this->moveDraggedObject(mouseWorldPosition);
 }
 
 void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
 {
     if (!this->isVisible()) return;
 
-    if (draggingFullObject.isValid() && !mouseInMap) {
-        for (auto currentSelection : currentSelections) {
-            this->destroyEnvObject(currentSelection);
-        }
-        this->updateEnvironmentFromEnvObjects(true, true);
-    }
-    if ((draggingPoint.isValid() || draggingFullObject.isValid()) && draggingHasBeenApplied.isValid()) {
-        draggingPoint.setValid(false);
-        draggingFullObject.setValid(false);
-        if (mouseInMap) {
-            for (auto currentSelection : currentSelections) {
-                currentSelection->age = 0.f;
-                if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
-                    auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
-                    if (newPatch) {
-                        *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
-                        delete newPatch;
-                    }
-                }
-                EnvObject::recomputeTerrainPropertiesForObject(currentSelection->name);
-            }
-        }
-        this->materialSimulationStable = false;
-        this->updateEnvironmentFromEnvObjects(true, true);
+    bool destroyObjects = !mouseInMap;
 
-        this->updateSelectionMesh();
+    this->endDraggingObject(destroyObjects);
+}
+
+void EnvObjsInterface::keyPressEvent(QKeyEvent *event)
+{
+    if (!this->isVisible()) return;
+    if (this->manuallyCreatingObject) {
+        if (event->key() == Qt::Key_Enter) {
+            this->endNewObjectCreation();
+        }
     }
-    draggingPoint.setValid(false);
-    draggingFullObject.setValid(false);
-    draggingHasBeenApplied.setValid(false);
 }
 
 GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = false) {
@@ -496,7 +374,7 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     GridV3 gradients = score.gradient();
     if (std::abs(score.max() - score.min()) < 1e-5)
         return Vector3::random(Vector3(score.sizeX, score.sizeY, 0));
-    float scoreToObtain = random_gen::generate(score.sum());
+    float scoreToObtain = random_gen::generate(score.sum() / 100.f);
     float bestScore = 10000;
     Vector3 bestPos = Vector3::invalid();
 
@@ -507,6 +385,7 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
             p += gradients(p).normalize();
         }*/
         float scoreObtained = score(p);
+        if (scoreObtained < 1e-6) continue;
         scoreToObtain -= scoreObtained;
         bestPos = p;
         nbIterationsToFindBestPos++;
@@ -561,6 +440,37 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
     newObject->spawnTime = EnvObject::currentTime;
     std::cout << "Creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
+    return newObject;
+}
+
+EnvObject *EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName, const BSpline &spline)
+{
+    EnvObject* newObject = EnvObject::instantiate(objectName);
+
+    auto objAsPoint = dynamic_cast<EnvPoint*>(newObject);
+    auto objAsCurve = dynamic_cast<EnvCurve*>(newObject);
+    auto objAsArea = dynamic_cast<EnvArea*>(newObject);
+
+    Vector3 position;
+    if (objAsPoint) {
+        position = spline.points.back();
+    } else if (objAsCurve) {
+        BSpline curve = spline;
+        curve.resamplePoints(10);
+        position = curve[curve.size() / 2];
+        curve.translate(-position);
+        objAsCurve->curve = curve;
+    } else if (objAsArea) {
+        position = spline[0]; // The optimisation process might have moved the evaluation position greatly
+        ShapeCurve curve = spline;
+        curve.translate(-position);
+        objAsArea->curve = curve.resamplePoints(10);
+    }
+
+    newObject->translate(position.xy());
+    newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->spawnTime = EnvObject::currentTime;
+    std::cout << "Manual creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
     return newObject;
 }
 
@@ -657,10 +567,13 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
             }
             // Wait until the object is 100% grown:
             int maxIterations = 100;
-            while (waitForFullyGrown && newObject->computeGrowingState() < 1.f) {
+            while (waitForFullyGrown && newObject && newObject->computeGrowingState() < 1.f) {
                 this->updateEnvironmentFromEnvObjects(false, true);
                 maxIterations--;
                 if (maxIterations < 0) break;
+                if (!isIn(newObject, EnvObject::instantiatedObjects)) {
+                    return; // Object died in this process, stop this function now
+                }
             }
             this->currentSelections = {newObject};
             EnvObject::recomputeTerrainPropertiesForObject(objectName);
@@ -675,6 +588,7 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
 
 bool EnvObjsInterface::checkIfObjectShouldDie(EnvObject *obj, float limitFactorForDying)
 {
+    if (obj->createdManually) return false;
     Vector3 evaluationPosition = obj->evaluationPosition;
     float score = obj->evaluate(evaluationPosition);
 
@@ -744,7 +658,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         displayProcessTime("Apply effects... ", [&]() {
             bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
-            this->materialSimulationStable = !bigChangesInMaterials;
+            //this->materialSimulationStable = !bigChangesInMaterials;
         }, verbose);
         displayProcessTime("Recompute properties... ", [&]() {
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
@@ -752,6 +666,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     }
 
     if (updateImplicitTerrain) {
+
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
             obj->createImplicitPatch(heightmap->heights, dynamic_cast<ImplicitPrimitive*>(implicit));
         }
@@ -777,6 +692,9 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         Q_EMIT this->updated();
         updateObjectsList();
     }
+
+    // auto meshInstancer = std::static_pointer_cast<MeshInstanceAmplificationInterface>(this->viewer->interfaces["meshinstance"]);
+    // meshInstancer->regenerateAllTypePositions();
 
     EnvObject::currentTime++;
 }
@@ -808,7 +726,7 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object)
 void EnvObjsInterface::displayProbas(std::string objectName)
 {
     focusAreaEditing = false;
-    currentlyPreviewedObject = objectName;
+    // currentlyPreviewedObject = objectName;
     Vector3 dimensions = Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1);
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
@@ -883,10 +801,15 @@ void EnvObjsInterface::updateObjectsList()
 
     for (auto& obj : list) {
 
-        float startingScore = obj->fittingScoreAtCreation;
-        float endingScore = obj->evaluate(obj->evaluationPosition);
+        // float startingScore = obj->fittingScoreAtCreation;
+        // float endingScore = obj->evaluate(obj->evaluationPosition);
 
-        objectsListWidget->addItem(new HierarchicalListWidgetItem(obj->name + " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * endingScore / startingScore)) + "%)", obj->ID, 0));
+        std::string text = obj->name;
+        if (obj->createdManually)
+            text += " [*]";
+        else
+            text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "%)";
+        objectsListWidget->addItem(new HierarchicalListWidgetItem(text, obj->ID, 0));
         if (isIn(obj->ID, currentSelectionsIDs))
             currentSelections.push_back(obj);
     }
@@ -920,13 +843,13 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *__newSelectio
 void EnvObjsInterface::updateSelectionMesh()
 {
     if (currentSelections.empty()) {
-        objectsMesh.clear();
+        selectedObjectsMesh.clear();
         velocitiesMesh.clear();
         return;
     }
 
     this->velocitiesMesh.fromArray(std::vector<float>{});
-    this->objectsMesh.fromArray(std::vector<float>{});
+    this->selectedObjectsMesh.fromArray(std::vector<float>{});
     Vector3 selectionPos;
     std::vector<Vector3> lines;
     std::vector<Vector3> colors;
@@ -1010,9 +933,44 @@ void EnvObjsInterface::updateSelectionMesh()
         Mesh::createVectorField(initialFlow.resize(30, 30, 1), voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
         */
     }
-    objectsMesh.colorsArray = colors;
-    objectsMesh.fromArray(lines);
-    Q_EMIT this->updated();
+    selectedObjectsMesh.colorsArray = colors;
+    selectedObjectsMesh.fromArray(lines);
+}
+
+void EnvObjsInterface::updateNewObjectMesh()
+{
+    // auto objectModel = EnvObject::availableObjects[getCurrentObjectName()];
+
+    newObjectMesh.clear();
+
+    std::vector<Vector3> lines;
+    std::vector<Vector3> colors;
+    float offsetAbove = 5.f;
+
+    std::vector<Vector3> meshPoints;
+    auto path = objectSkeletonCreation.getPath(50);
+    for (size_t i = 0; i < path.size() - 1; i++) {
+        auto p1 = path[i];
+        auto p2 = path[i + 1];
+        Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+        Vector3 p2leveled = p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + offsetAbove);
+        meshPoints.push_back(p1leveled);
+        meshPoints.push_back(p2leveled);
+    }
+    for (int i = 0; i < objectSkeletonCreation.size(); i++) {
+        auto& p1 = objectSkeletonCreation[i];
+        auto& p2 = objectSkeletonCreation[std::abs(i - 1)];
+        Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+        Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
+        meshPoints.push_back(p1leveled + perpendicular);
+        meshPoints.push_back(p1leveled - perpendicular);
+    }
+    lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
+    std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
+    colors.insert(colors.end(), meshColors.begin(), meshColors.end());
+
+    newObjectMesh.colorsArray = colors;
+    newObjectMesh.fromArray(lines);
 }
 
 void EnvObjsInterface::updateObjectsDefinitions(const std::string &newDefinition)
@@ -1404,6 +1362,8 @@ void EnvObjsInterface::loadScene(std::string filename)
     updateEnvironmentFromEnvObjects(true, true, false);
     updateObjectsList();
     updateSelectionMesh();
+
+    Q_EMIT this->updated();
 }
 
 void EnvObjsInterface::saveScene(std::string filename)
@@ -1448,6 +1408,96 @@ GridV3 EnvObjsInterface::renderFlowfield() const
     return Plotter::get()->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
 }
 
+void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
+{
+    GridV3 dataV3 = Plotter::get()->displayedImage;
+    GridF data(dataV3.getDimensions());
+    dataV3.iterateParallel([&](size_t i) {
+        data[i] = dataV3[i].x;
+    });
+
+    auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
+
+    GridV3 result(data.getDimensions());
+    ShapeCurve isoline;
+    // auto position = clickPos;
+    auto score = data;
+    // score = score.gaussianSmooth(5.f, true, true, -1);
+    GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
+    data.raiseErrorOnBadCoord = false;
+    data.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    gradients.raiseErrorOnBadCoord = false;
+    gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+
+    if (auto objAsPoint = dynamic_cast<EnvPoint*>(obj)) {
+        position = PositionOptimizer::getHighestPosition(position, score, gradients);
+        isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
+    } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
+        BSpline initialCurve;
+        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+            float targetLength = objAsCurve->length;
+            initialCurve = CurveOptimizer::getSkeletonCurve(position, score, gradients, targetLength);
+        } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
+            initialCurve = CurveOptimizer::followIsolevel(position, score, gradients, objAsCurve->length);
+        } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
+            initialCurve = CurveOptimizer::getExactLengthCurveFollowingGradients(position, score, gradients, objAsCurve->length);
+        }
+        isoline = initialCurve;
+        isoline.closed = false;
+    } else if (auto objAsArea = dynamic_cast<EnvArea*>(obj)) {
+        ShapeCurve initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
+        isoline = initialCurve;
+    }
+
+    result += dataV3;
+    if (isoline.closed) {
+        dataV3.iterateParallel([&](const Vector3& pos) {
+            result(pos) += Vector3(.5f, .5f, .5f) * (isoline.containsXY(pos, false) ? 1.f : 0.f);
+        });
+    }
+    int nbSamples = 500;
+    auto path = isoline.getPath(nbSamples); // .resamplePoints(nbSamples).points;
+    for (size_t i = 0; i < path.size(); i++) {
+        result(path[i]) = Vector3(1.f, 0, 0); //colorPalette(float(i) / float(path.size() - 1));
+    }
+    // for (size_t i = 0; i < isoline.size(); i++) {
+    //     result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
+    // }
+    Plotter::get()->addImage(result);
+    Plotter::get()->show();
+    Plotter::get()->addImage(data);
+}
+
+void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocus)
+{
+    //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
+    auto brush = GridF::normalizedGaussian(30, 30, 1, 8.f) * (addingFocus ? 1.f : -1.f) * 8.f;
+    this->focusedArea.add(brush, mousePos - brush.getDimensions().xy() * .5f);
+
+    focusedArea.iterateParallel([&](size_t i) {
+        focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
+    });
+    Plotter::get()->addImage(renderFocusArea());
+    Plotter::get()->show();
+}
+
+void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
+{
+
+    // float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
+    GridV3 brush = GridV3(30, 30, 1, brushDir);
+    brush.iterateParallel([&](const Vector3& p) {
+        brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
+    });
+    EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
+    EnvObject::updateFlowfield();
+
+    this->flowErosionSimulation();
+
+    Plotter::get()->addImage(renderFlowfield());
+    Plotter::get()->show();
+}
+
 void EnvObjsInterface::showAllElementsOnPlotter() const
 {
     std::map<TerrainTypes, Vector3> materialToColor = {
@@ -1489,6 +1539,217 @@ void EnvObjsInterface::flowErosionSimulation()
 {
     this->heightmap->fromVoxelGrid(*this->voxelGrid);
     this->heightmap->heights = this->heightmap->heights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+}
+
+void EnvObjsInterface::startNewObjectCreation()
+{
+    this->objectSkeletonCreation = BSpline();
+    this->updateNewObjectMesh();
+}
+
+void EnvObjsInterface::addPointOnNewObjectCreation(const Vector3 &position, bool addPoint, float removeRadius)
+{
+    if (addPoint) {
+        auto objectModel = EnvObject::availableObjects[getCurrentObjectName()];
+        this->objectSkeletonCreation.points.push_back(position.xy());
+        if (auto asPoint = dynamic_cast<EnvPoint*>(objectModel)) {
+            this->endNewObjectCreation();
+        } else {
+            // Nothing to do
+        }
+    } else {
+        for (int i = objectSkeletonCreation.size() - 1; i >= 0; i--) {
+            if ((objectSkeletonCreation[i] - position).xy().norm2() < removeRadius * removeRadius) {
+                objectSkeletonCreation.points.erase(objectSkeletonCreation.begin() + i);
+            }
+        }
+    }
+    this->updateNewObjectMesh();
+}
+
+void EnvObjsInterface::endNewObjectCreation()
+{
+    // Creation of an object
+    auto objectModel = EnvObject::availableObjects[getCurrentObjectName()];
+
+    auto newObject = this->instantiateObjectUsingSpline(objectModel->name, this->objectSkeletonCreation);
+    this->objectSkeletonCreation = BSpline();
+    if (newObject) {
+        newObject->createdManually = true;
+    }
+    if (!newObject) {
+        this->log("Object not created");
+        return;
+    }
+    newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+    auto implicit = newObject->createImplicitPatch(heightmap->heights);
+    this->implicitPatchesFromObjects[newObject] = implicit;
+    if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+        this->implicitTerrain->addChild(this->rootPatch);
+
+    if (implicit != nullptr) {
+        rootPatch->addChild(implicit);
+    }
+    // Wait until the object is 100% grown:
+    int maxIterations = 100;
+    while (newObject->computeGrowingState() < 1.f) {
+        this->updateEnvironmentFromEnvObjects(false, true);
+        maxIterations--;
+        if (maxIterations < 0) break;
+    }
+    this->currentSelections = {newObject};
+    EnvObject::recomputeTerrainPropertiesForObject(newObject->name);
+    this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
+
+    this->updateNewObjectMesh();
+    this->updateSelectionMesh();
+
+    Q_EMIT this->updated();
+}
+
+void EnvObjsInterface::startDraggingObject(const Vector3 &position, bool singleVertexMoved)
+{
+    if (singleVertexMoved) {
+        draggingPoint = position.xy();
+    } else {
+        draggingFullObject = position.xy();
+    }
+    draggingHasBeenApplied = position.xy();
+    draggingHasBeenApplied.setValid(false); // Keep position, but set to invalid
+}
+
+void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
+{
+    if (draggingPoint.isValid()) {
+        draggingHasBeenApplied.setValid(true);
+        Vector3 translation = (position.xy() - draggingHasBeenApplied.xy());
+        draggingHasBeenApplied = position.xy();
+        float maxDistToPointSqr = 10.f * 10.f;
+
+        for (auto currentSelection : currentSelections) {
+            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
+                point->translate(translation);
+            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
+                auto newCurve = curve->curve;
+                int pointIndexToMove = -1;
+                float closestDistToPoint = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < curve->curve.size(); i++) {
+                    float dist = (curve->curve[i] - position.xy()).norm2();
+                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
+                        closestDistToPoint = dist;
+                        pointIndexToMove = i;
+                    }
+                }
+
+                if (pointIndexToMove > -1) {
+                    newCurve[pointIndexToMove].translate(translation);
+                }
+                curve->updateCurve(newCurve);
+            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
+                auto newCurve = area->curve;
+                int pointIndexToMove = -1;
+                float closestDistToPoint = std::numeric_limits<float>::max();
+
+                for (int i = 0; i < area->curve.size(); i++) {
+                    float dist = (area->curve[i] - position.xy()).norm2();
+                    if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
+                        closestDistToPoint = dist;
+                        pointIndexToMove = i;
+                    }
+                }
+
+                if (pointIndexToMove > -1) {
+                    newCurve[pointIndexToMove].translate(translation);
+                }
+                area->updateCurve(newCurve);
+            }
+        }
+        // Also do it on the creation curve :
+
+        auto newCurve = objectSkeletonCreation;
+        int pointIndexToMove = -1;
+        float closestDistToPoint = std::numeric_limits<float>::max();
+
+        for (int i = 0; i < objectSkeletonCreation.size(); i++) {
+            float dist = (objectSkeletonCreation[i] - position.xy()).norm2();
+            if (dist < maxDistToPointSqr && dist < closestDistToPoint) {
+                closestDistToPoint = dist;
+                pointIndexToMove = i;
+            }
+        }
+
+        if (pointIndexToMove > -1) {
+            newCurve[pointIndexToMove].translate(translation);
+        }
+        objectSkeletonCreation = newCurve;
+
+        this->updateNewObjectMesh();
+        this->updateSelectionMesh();
+    } else if (draggingFullObject.isValid()) {
+        draggingHasBeenApplied.setValid(true);
+        Vector3 translation = (position.xy() - draggingHasBeenApplied.xy());
+        draggingHasBeenApplied = position.xy();
+
+        for (auto currentSelection : currentSelections) {
+            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
+                point->translate(translation);
+            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
+                curve->translate(translation);
+            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
+                area->translate(translation);
+            }
+        }
+
+        // Also do it for the creation curve
+        objectSkeletonCreation.translate(translation);
+    }
+    this->updateNewObjectMesh();
+    this->updateSelectionMesh();
+
+    Q_EMIT this->updated();
+}
+
+void EnvObjsInterface::endDraggingObject(bool destroyObjects)
+{
+
+    if (draggingFullObject.isValid() && destroyObjects) {
+        for (auto currentSelection : currentSelections) {
+            this->destroyEnvObject(currentSelection);
+        }
+        this->updateEnvironmentFromEnvObjects(true, true);
+    }
+    if ((draggingPoint.isValid() || draggingFullObject.isValid()) && draggingHasBeenApplied.isValid()) {
+        draggingPoint.setValid(false);
+        draggingFullObject.setValid(false);
+        if (!destroyObjects) {
+            for (auto currentSelection : currentSelections) {
+                currentSelection->age = 0.f;
+                if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
+                    auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
+                    if (newPatch) {
+                        *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
+                        delete newPatch;
+                    }
+                }
+                EnvObject::recomputeTerrainPropertiesForObject(currentSelection->name);
+            }
+        }
+        this->materialSimulationStable = false;
+        this->updateEnvironmentFromEnvObjects(true, true);
+
+    }
+    this->updateSelectionMesh();
+    draggingPoint.setValid(false);
+    draggingFullObject.setValid(false);
+    draggingHasBeenApplied.setValid(false);
+
+    Q_EMIT this->updated();
+}
+
+std::string EnvObjsInterface::getCurrentObjectName() const
+{
+    return objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label;
 }
 
 void EnvObjsInterface::fromGanUI()

@@ -85,6 +85,8 @@ public:
 
     void die();
 
+    bool createdManually = false;
+
 
     static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
@@ -126,6 +128,8 @@ public:
     static std::vector<MaterialsTransformation> transformationRules;
 
     static int currentTime;
+
+    GridV3 _cachedFlowModif;
 };
 
 #endif // ENVOBJECT_H
