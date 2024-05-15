@@ -175,6 +175,8 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
     return {flow, occupancy};*/
 }
 
+
+/*
 ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
 {
     if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
@@ -190,8 +192,11 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
-        BSpline translatedCurve = previousPrimitive->optionalCurve;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
+        // BSpline translatedCurve = previousPrimitive->optionalCurve;
+        // box = AABBox(translatedCurve.points);
+        // box.expand({box.min() - offset, box.max() + offset});
+        // std::cout << "Not nullptr box: " << box << std::endl;
+        // *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     } else {
         BSpline translatedCurve = this->curve;
         GridF heights = _heights;
@@ -203,12 +208,83 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         if (height == 0){
             box = AABBox({box.center()});
             offset = Vector3();
+        } else {
+            box = AABBox(translatedCurve.points);
+            box.expand({box.min() - offset, box.max() + offset});
         }
-        translatedCurve.translate(-(box.min() - offset * .5f));
+        std::cout << "Nullptr box: " << box << std::endl;
+        // translatedCurve.translate(-(box.min() - offset * .5f));
+        // translatedCurve.translate(-(box.min()).xy());
+        // translatedCurve.translate(Vector3(0, 0, -offset.z * 0.5f));
+        // box = AABBox(translatedCurve.points);
+        // box.expand({box.min() - offset, box.max() + offset});
         patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
     patch->supportDimensions = box.dimensions() + offset;
+    patch->material = this->material;
+    patch->name = this->name;
+    return patch;
+}*/
+ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
+{
+    if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
+        previousPrimitive = nullptr;
+        return nullptr;
+    }
+    AABBox box(this->curve.points);
+    float growingState = this->computeGrowingState2();
+    // float growingState = this->computeGrowingState();
+    float height = this->height * growingState;
+    Vector3 offset(this->width, this->width, height * .5f);
+
+    ImplicitPrimitive* patch;
+    if (previousPrimitive != nullptr) {
+        patch = previousPrimitive;
+        /*BSpline translatedCurve = previousPrimitive->optionalCurve;
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);*/
+
+        BSpline translatedCurve = this->curve;
+        GridF heights = _heights;
+        heights.raiseErrorOnBadCoord = false;
+        heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        float maxHeight = 0;
+        for (Vector3& p : translatedCurve) {
+            p.z = heights(p.xy());
+            maxHeight = std::max(maxHeight, p.z);
+        }
+        if (height == 0){
+            box = AABBox({box.center()});
+            offset = Vector3();
+        }
+        box = AABBox(translatedCurve.points);
+        box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
+        translatedCurve.translate(-(box.min() - offset * .5f));
+        *patch = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
+        patch->position = (box.min() - offset.xy() * .5f).xy();
+        patch->supportDimensions = box.dimensions() + offset;
+
+    } else {
+        BSpline translatedCurve = this->curve;
+        GridF heights = _heights;
+        heights.raiseErrorOnBadCoord = false;
+        heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+        float maxHeight = 0;
+        for (Vector3& p : translatedCurve) {
+            p.z = heights(p.xy());
+            maxHeight = std::max(maxHeight, p.z);
+        }
+        if (height == 0){
+            box = AABBox({box.center()});
+            offset = Vector3();
+        }
+        box = AABBox(translatedCurve.points);
+        box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
+        translatedCurve.translate(-(box.min() - offset * .5f));
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
+        patch->position = (box.min() - offset.xy() * .5f).xy();
+        patch->supportDimensions = box.dimensions() + offset;
+    }
     patch->material = this->material;
     patch->name = this->name;
     return patch;
