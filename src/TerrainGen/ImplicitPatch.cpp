@@ -1787,19 +1787,89 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
 std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     ShapeCurve polygon(path.points);
-    Vector3 center = polygon.center().xy();
+    for (auto& p : polygon)
+        p.z = 0;
+    AABBox bbox(polygon.AABBox());
+    Vector3 size = bbox.dimensions();
+    polygon.translate(-bbox.min());//(-(bbox.min()));
+    // auto points = ShapeCurve(path).randomPointsInside(50);
+    int maxTries = 1000 * 50;
+    std::vector<Vector3> points;
+    while(points.size() < 50 && maxTries > 0) {
+        Vector3 newPoint = Vector3::random(Vector3(size.xy()));
+        if (polygon.containsXY(newPoint)) points.push_back(newPoint);
+        else maxTries--;
+    }
+    if (points.size() == 0) return [](Vector3) {return 0.f;};
+
+    GridF heights(size.x, size.y, 1);
+
+    std::vector<BSpline> randomPaths(50);
+    for (int i = 0; i < randomPaths.size(); i++) {
+        auto& path = randomPaths[i];
+        int i0 = int(random_gen::generate(0, points.size()));
+        int i1 = int(random_gen::generate(0, points.size()));
+        // while (i0 == i1)
+        // i1 = int(random_gen::generate(0, points.size()));
+        path = BSpline({points[i0], points[i1]}).resamplePoints(4);
+        float length = (path[-1] - path[0]).norm();
+        for (auto& p : path) {
+            p += Vector3::random().xy() * (length / 10.f);
+        }
+    }
+    heights.iterateParallel([&] (const Vector3& pos) {
+        for (int i = 0; i < randomPaths.size(); i++) {
+            auto& path = randomPaths[i];
+            auto closestPoint = path.estimateClosestPos(pos, true);
+            heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
+        }
+    });
+    heights = heights.gaussianSmooth(2.f).normalized();
+    heights.iterateParallel([&] (const Vector3& pos) {
+        // heights(pos) -= 2.f;
+        if (!polygon.containsXY(pos)) heights(pos) = 0;
+    });
+    heights = heights.gaussianSmooth(2.f).normalize();
+    heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    heights.defaultValueOnBadCoord = 0.f;
+
+    Vector3 offsets = Vector3(width - size.x, depth - size.y) * .5f;
+
     std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
-        if (!polygon.containsXY(pos.xy(), false))
-            return 0.f;
-        Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
-        float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
-        return height * std::clamp(dist, 0.f, 1.f);
+        return sigma * std::clamp(heights(pos.xy() - offsets), 0.f, 1.f);
     };
     if (in2D) {
         return distFunc;
     } else {
         return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
     }
+
+    /*
+    ShapeCurve polygon(path.points);
+    Vector3 center = polygon.centroid().xy();
+    std::vector<Vector3> randomPoints = polygon.randomPointsInside(10);
+    std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
+        if (!polygon.containsXY(pos.xy(), false))
+            return 0.f;
+        Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
+        Vector3 closestCenter;
+        float closestDist = std::numeric_limits<float>::max();
+        for (auto& p : randomPoints) {
+            float dist = (p - pos).norm2();
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestCenter = p;
+            }
+        }
+        float dist = (closest - pos.xy()).norm() / (closestCenter - closest).norm(); // Take the closest point and use only the "xy" components!
+        // float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
+        return height * std::clamp(dist, 0.f, 1.f);
+    };
+    if (in2D) {
+        return distFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
+    }*/
 }
 
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
@@ -1817,7 +1887,12 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
         };
     } else {
         return [=] (const Vector3& pos) -> float {
-            return 1.f - (path.estimateDistanceFrom(pos, epsilon) / (sigma));
+            auto closestPoint = path.estimateClosestPos(pos, true, epsilon);
+            float distance = (pos - closestPoint).norm();
+            if (distance < sigma / 2.f) {
+                int a = 0;
+            }
+            return 1.f - (distance / (sigma));
         };
     }
 }
