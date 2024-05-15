@@ -35,8 +35,12 @@ public:
     float curvatureCost = 0.5f;
     float lengthCost = 0.5f;
     float imageCost = 0.5f;
+    float areaCost = 0.f;
 
-    float targetLength = 70.f;
+    float targetLength = 0.f;
+    float targetArea = 0.f;
+
+    bool collapseFirstAndLastPoint = false;
 
     // float internalCoefficient = 1.f;  // Coefficient for internal energy
     // float externalCoefficient = 1.f;  // Coefficient for external energy
