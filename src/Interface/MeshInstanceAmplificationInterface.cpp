@@ -29,6 +29,7 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
 //    if (!this->isVisible())
 //        return;
 
+    /*
     if (this->displayRocks || this->displayCorals) {
         if (displayRocks) {
             for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
@@ -52,13 +53,15 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
                 possibleCorals[iCoral].display();
             }
         }
-    }
+    }*/
 
     if (displayEnvObjects) {
 
         if (autoUpdateEnvObjLocations) {
             this->regenerateAllTypePositions();
         }
+        // allAtOnce.display();
+        // return;
         // Dirty, to remove one day :
         float terrainHeightFactor = dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->heightFactor;
 
@@ -99,6 +102,8 @@ void MeshInstanceAmplificationInterface::reloadShaders()
     std::string fRockShader = pathToShaders + "rockShader.frag";
     std::string vTreeShader = pathToShaders + "meshInstancesShader.vert";
     std::string fTreeShader = pathToShaders + "meshInstancesShader.frag";
+
+    // allAtOnce = Mesh(std::make_shared<Shader>(pathToShaders + "no_shader.vert", pathToShaders + "no_shader.frag"));
 
     std::vector<QString> coralPaths;
     std::vector<QString> rocksPaths;
@@ -470,6 +475,16 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
         }
 //        std::cout << meshType.name << ": " << availablePositions.size() << " pos available, " << meshType.indicesAndPositionsAndSizes.size() << " instanciated." << std::endl;
     }
+
+    /*allAtOnce.clear();
+    for (auto& meshType : meshesOptions) {
+        for (int i = 0; i < meshType.indices.size(); i++) {
+            auto mesh = meshType.possibleMeshes[meshType.indices[i]];
+            float scale = meshType.sizes[i];
+            auto& pos = meshType.positions[i];
+            allAtOnce.merge(mesh.scale(scale).translate(pos), false);
+        }
+    }*/
 }
 
 void InstantiationMeshOption::clear()
