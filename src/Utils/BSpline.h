@@ -31,6 +31,7 @@ public:
     BSpline& reverseVertices();
 
     size_t nextID(int i) { return (i + 1 + this->points.size()) % this->points.size(); }
+    size_t prevID(int i) { return (i - 1 + this->points.size()) % this->points.size(); }
 
     operator bool() const { return (this->points.size() > 0); }
 
@@ -67,6 +68,8 @@ public:
     BSpline computeConvexHull() const;
 
     BSpline& translate(const Vector3& translation);
+
+    std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
     virtual BSpline& removeDuplicates();
 

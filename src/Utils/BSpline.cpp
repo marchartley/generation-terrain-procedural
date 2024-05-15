@@ -343,8 +343,9 @@ Vector3 BSpline::estimateClosestPos(const Vector3& pos, bool useNativeShape, flo
         // recompute t on the closest segment
         Vector3 startToPoint = pos - points[minIndex];
         Vector3 segment = points[minIndex + 1] - points[minIndex];
-        float t = clamp(startToPoint.dot(segment) / segment.norm2(), 0.f, 1.f);
-        if (t > 1) std::cout << "Too big" << std::endl;
+        float lengthSqr = segment.norm2();
+        float t = (lengthSqr != 0 ? clamp(startToPoint.dot(segment) / lengthSqr, 0.f, 1.f) : 0.f);
+        // if (t > 1) std::cout << "Too big" << std::endl;
         return points[minIndex] + t * segment;
 //        return (float(i) + t) / float(this->size());
     }
@@ -689,6 +690,38 @@ BSpline &BSpline::translate(const Vector3& translation)
     return *this;
 }
 
+std::vector<std::pair<size_t, size_t> > BSpline::checkAutointersections() const
+{
+    auto self = *this;
+    float spacingHeuristic = 1.0f;
+    float selfSpacing = self.length() / float(self.size() - 1);
+    if (selfSpacing < spacingHeuristic)
+        self.scale(spacingHeuristic / selfSpacing);
+    std::vector<std::pair<size_t, size_t> > results;
+    int s = size();
+    #pragma omp parallel for collapse(2)
+    for (int i = 0; i < s; i++) {
+        for (int j = 0; j < s; j++) {
+            int i00 = i;
+            int i01 = (i00 + 1) % s;
+            int i10 = (j + i + 2) % s;
+            int i11 = (i10 + 1) % s;
+
+            if (i10 <= i00 || i11 == i00 || i01 == i10 || (!closed && i11 <= i00)) continue;
+
+            Vector3 intersection = Collision::intersectionBetweenTwoSegments(self[i00], self[i01], self[i10], self[i11], 1e-6);
+
+            if (intersection.isValid()) {
+                #pragma omp critical
+                {
+                    results.push_back({i00, i10});
+                }
+            }
+        }
+    }
+    return results;
+}
+
 BSpline& BSpline::removeDuplicates()
 {
     std::vector<Vector3> newPoints;
@@ -711,7 +744,7 @@ std::string BSpline::toString() const
 
 Vector3 &BSpline::operator[](size_t i)
 {
-    return this->points[i];
+    return this->points[(i + size()) % size()];
 }
 
 std::string BSpline::display1DPlot(int sizeX, int sizeY) const
@@ -911,7 +944,7 @@ std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDeriva
 }
 const Vector3 &BSpline::operator[](size_t i) const
 {
-    return this->points[i];
+    return this->points[(i + size()) % size()];
 }
 
 std::ostream& operator<<(std::ostream& io, const BSpline& s) {
