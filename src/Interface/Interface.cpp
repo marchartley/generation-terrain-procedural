@@ -90,6 +90,7 @@ ViewerInterface::ViewerInterface() {
         envObjectsInterface->setMaterialsDefinitionFile("EnvObjects/envMaterials.json");
         envObjectsInterface->setTransformationsFile("EnvObjects/envMaterialsTransforms.txt");
         envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
+        envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
 
 //        terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 

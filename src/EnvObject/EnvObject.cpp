@@ -23,6 +23,7 @@ float EnvObject::flowImpactFactor = .9f;
 int EnvObject::currentMaxID = -1;
 std::vector<MaterialsTransformation> EnvObject::transformationRules;
 int EnvObject::currentTime = 0;
+Scenario EnvObject::scenario;
 
 std::map<std::string, GridV3> EnvObject::allVectorProperties;
 std::map<std::string, GridF> EnvObject::allScalarProperties;
@@ -168,6 +169,35 @@ void EnvObject::readEnvMaterialsTransformationsFileContent(std::string content)
         }
     }
     EnvObject::transformationRules = rules;
+}
+
+void EnvObject::readScenarioFile(std::string filename)
+{
+    std::ifstream file(filename);
+    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    EnvObject::readScenarioFileContent(content);
+}
+
+void EnvObject::readScenarioFileContent(std::string content)
+{
+    auto json = nlohmann::json::parse(toLower(content));
+
+    scenario = Scenario();
+
+    auto objects = json["objects"].get<std::map<std::string, nlohmann::json>>();
+    for (auto [name, obj] : objects) {
+        float proba = obj["proba"];
+        int amount = (obj.contains("amount") ? obj["amount"].get<int>() : -1);
+
+        scenario.addObject(name, proba, amount);
+    }
+
+    auto parameters = json["simulation"];
+    float duration = parameters["end"];
+    float dt = parameters["dt"];
+
+    scenario.duration = duration;
+    scenario.dt = dt;
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)
@@ -725,4 +755,69 @@ GraphObj EnvObject::sceneToGraph()
     graph = Delaunay().fromVoronoi(Voronoi(positions)).graph.cast<EnvObject*>();
 
     return graph;
+}
+
+void Scenario::addObject(std::string name, float proba, int amount)
+{
+    for (int i = objects.size() - 1; i >= 0; i--) {
+        if (objects[i].objectName == name)
+            objects.erase(objects.begin() + i);
+    }
+    objects.push_back(ScenariosObject(name, proba, amount));
+
+    // Recompute the normalized probability
+    float sumProbas = 0;
+    for (auto& object : objects) {
+        sumProbas += object.probabilityPerStep;
+    }
+    for (auto& object : objects) {
+        object.normalizedProba = object.probabilityPerStep / sumProbas;
+    }
+}
+
+ScenariosObject Scenario::nextObject()
+{
+    float sumProbas = 0;
+    std::map<size_t, float> probas;
+    for (size_t i = 0; i < objects.size(); i++) {
+        auto& requiredObjects = objects[i];
+        int objCount = 0;
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (obj->name == requiredObjects.objectName)
+                objCount ++;
+        }
+        if (objCount < requiredObjects.amountRequired || requiredObjects.amountRequired < 0) {
+            sumProbas += requiredObjects.normalizedProba;
+            probas[i] = requiredObjects.normalizedProba;
+        }
+    }
+
+
+
+    float isNextObject = random_gen::generate(sumProbas);
+    for (auto& [i, proba] : probas) {
+        // std::cout << objects[i].objectName << " -> " << isNextObject << " .. " << std::flush;
+        isNextObject -= proba;
+
+        if (isNextObject <= 0) return objects[i];
+    }
+
+    std::cerr << "WTF, should not be here..." << std::endl;
+    return objects[int(random_gen::generate(objects.size()))];
+}
+
+bool Scenario::finished() const
+{
+    for (auto& requiredObjects : objects) {
+        if (requiredObjects.amountRequired < 0) continue;
+        int objCount = 0;
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (obj->name == requiredObjects.objectName)
+                objCount ++;
+        }
+        if (objCount < requiredObjects.amountRequired) {
+            return false;
+        }
+    }
+    return true;
 }

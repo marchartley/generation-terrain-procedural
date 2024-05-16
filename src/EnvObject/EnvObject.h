@@ -29,6 +29,31 @@ typedef GraphNodeTemplate<EnvObject*> GraphNodeObj;
 
 typedef std::pair<std::map<std::string, float>, std::map<std::string, float>> MaterialsTransformation;
 
+struct ScenariosObject {
+    ScenariosObject(std::string objectName, float proba, int amount = -1) : objectName(objectName), probabilityPerStep(proba), amountRequired(amount)
+    {}
+    std::string objectName;
+    float probabilityPerStep;
+    int amountRequired;
+
+    float normalizedProba;
+};
+
+class Scenario {
+public:
+    void addObject(std::string name, float proba, int amount = -1);
+    std::vector<ScenariosObject> objects;
+    ScenariosObject nextObject();
+
+
+    float duration;
+    float dt = 1.f;
+    float startTime = 0;
+
+    bool finished() const;
+};
+
+
 class EnvObject
 {
 public:
@@ -43,6 +68,9 @@ public:
 
     static void readEnvMaterialsTransformationsFile(std::string filename);
     static void readEnvMaterialsTransformationsFileContent(std::string content);
+
+    static void readScenarioFile(std::string filename);
+    static void readScenarioFileContent(std::string content);
 
     static EnvObject* fromJSON(nlohmann::json content);
 
@@ -130,6 +158,8 @@ public:
     static int currentTime;
 
     GridV3 _cachedFlowModif;
+
+    static Scenario scenario;
 };
 
 #endif // ENVOBJECT_H

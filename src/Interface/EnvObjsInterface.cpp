@@ -15,6 +15,7 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     primitiveDefinitionFile.onChange([&](std::string newDefinitions) { updateObjectsDefinitions(newDefinitions); });
     materialsDefinitionFile.onChange([&](std::string newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
     transformationsFile.onChange([&](std::string newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
+    scenarioFile.onChange([&](std::string newDefinitions) { updateScenarioDefinition(newDefinitions); });
 
     QTimer* hotreloadTimer = new QTimer(this);
     hotreloadTimer->setInterval(500);
@@ -22,6 +23,7 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
         materialsDefinitionFile.check();
         primitiveDefinitionFile.check();
         transformationsFile.check();
+        scenarioFile.check();
     });
     hotreloadTimer->start();
 }
@@ -202,8 +204,12 @@ QLayout *EnvObjsInterface::createGUI()
         Q_EMIT this->updated();
     });
 
+    ButtonElement* nextStepButton = new ButtonElement("Step", [&]() {
+        this->runNextStep();
+    });
+
     layout->addWidget(newObjectCreationBox->get());
-    layout->addWidget(spendTimeButton->get());
+    layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton})->get());
     layout->addWidget(waitAtEachFrameButton->get());
     layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
 //    layout->addWidget(showFlowfieldButton->get());
@@ -284,6 +290,12 @@ void EnvObjsInterface::setTransformationsFile(std::string filename)
 {
     this->transformationsFile.path = filename;
     EnvObject::readEnvMaterialsTransformationsFile(filename);
+}
+
+void EnvObjsInterface::setScenarioFile(std::string filename)
+{
+    this->scenarioFile.path = filename;
+    EnvObject::readScenarioFile(filename);
 }
 
 void EnvObjsInterface::show()
@@ -439,8 +451,14 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     newObject->translate(position.xy());
     newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
     newObject->spawnTime = EnvObject::currentTime;
-    std::cout << "Creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
-    return newObject;
+    if (newObject->fittingScoreAtCreation <= 0) {
+        log("Object has score of 0...");
+        this->destroyEnvObject(newObject, false);
+        return nullptr;
+    } else {
+        std::cout << "Creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
+        return newObject;
+    }
 }
 
 EnvObject *EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName, const BSpline &spline)
@@ -474,8 +492,9 @@ EnvObject *EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName
     return newObject;
 }
 
-void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
+EnvObject* EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
 {
+    EnvObject* result = nullptr;
     displayProcessTime("Instantiate new object... ", [&]() {
         GridF heights = heightmap->getHeights();
         std::map<std::string, GridF> scores;
@@ -502,7 +521,7 @@ void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
             EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
             if (!newObject) {
                 this->log("Object not created");
-                return;
+                return nullptr;
             }
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
 //            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
@@ -525,19 +544,22 @@ void EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
             updateEnvironmentFromEnvObjects(implicit != nullptr, true);
             newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+            result = newObject;
         } else {
             std::cout << "No object to instantiate..." << std::endl;
         }
     });
     updateObjectsList();
+    return result;
 }
 
-void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForFullyGrown)
+EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForFullyGrown)
 {
+    EnvObject* result = nullptr;
     objectName = toLower(objectName);
     if (EnvObject::availableObjects.count(objectName) == 0) {
         std::cerr << "No object " << objectName << " in database!" << std::endl;
-        return;
+        return result;
     }
     bool verbose = false;
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
@@ -549,12 +571,22 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
         score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
         if (possible) {
-            this->materialSimulationStable = false; // We have to compute the simulation again
-            Vector3 bestPos = bestPositionForInstantiation(objectName, score);
-            EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
+            Vector3 bestPosition(false);
+            float bestScore = -1;
+            for (int iteration = 0; iteration < 10; iteration++) {
+                Vector3 bestPos = bestPositionForInstantiation(objectName, score);
+                EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
+                if (!newObject) continue;
+                if (newObject->fittingScoreAtCreation > bestScore) {
+                    bestPosition = bestPos;
+                    bestScore = newObject->fittingScoreAtCreation;
+                }
+                this->destroyEnvObject(newObject, false);
+            }
+            EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPosition, score);
             if (!newObject) {
                 this->log("Object not created");
-                return;
+                return nullptr;
             }
             newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
@@ -572,18 +604,21 @@ void EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForF
                 maxIterations--;
                 if (maxIterations < 0) break;
                 if (!isIn(newObject, EnvObject::instantiatedObjects)) {
-                    return; // Object died in this process, stop this function now
+                    return nullptr; // Object died in this process, stop this function now
                 }
             }
             this->currentSelections = {newObject};
             EnvObject::recomputeTerrainPropertiesForObject(objectName);
             this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
+            result = newObject;
+            this->materialSimulationStable = false; // We have to compute the simulation again
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
         }
     }, verbose);
     updateObjectsList();
     // updateSelectionMesh();
+    return result;
 }
 
 bool EnvObjsInterface::checkIfObjectShouldDie(EnvObject *obj, float limitFactorForDying)
@@ -609,6 +644,16 @@ void EnvObjsInterface::recomputeErosionValues()
     float iso = .01f;
     highErosionsMesh.fromArray(flattenArray(Mesh::applyMarchingCubes((-erosionGrid) - iso).getTriangles()));
     highDepositionMesh.fromArray(flattenArray(Mesh::applyMarchingCubes(erosionGrid - iso).getTriangles()));
+}
+
+void EnvObjsInterface::runNextStep()
+{
+    EnvObject* createdObject = nullptr;
+    while (!createdObject) {
+        auto nextObject = EnvObject::scenario.nextObject();
+        std::cout << "Generating " << nextObject.objectName << "?" << std::endl;
+        createdObject = this->instantiateSpecific(nextObject.objectName, true);
+    }
 }
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
@@ -704,9 +749,10 @@ void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
     EnvObject::applyEffects(heightmap->heights);
 }
 
-void EnvObjsInterface::destroyEnvObject(EnvObject *object)
+void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying)
 {
-    object->die();
+    if (applyDying)
+        object->die();
     for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
         if (EnvObject::instantiatedObjects[i] == object) {
             EnvObject::instantiatedObjects.erase(EnvObject::instantiatedObjects.begin() + i);
@@ -1006,6 +1052,18 @@ void EnvObjsInterface::updateMaterialsTransformationsDefinitions(const std::stri
         std::cerr << "Error parsing " << transformationsFile.path << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
         if (previousMaterialsTransformationsFileContent != "")
             EnvObject::readEnvMaterialsTransformationsFileContent(this->previousMaterialsTransformationsFileContent);
+    }
+}
+
+void EnvObjsInterface::updateScenarioDefinition(const std::string &newDefinition)
+{
+    try {
+        EnvObject::readScenarioFileContent(newDefinition);
+        this->previousScenarioFileContent = newDefinition;
+    } catch (const nlohmann::detail::parse_error& exception) {
+        std::cerr << "Error parsing " << scenarioFile.path << "... No change taken into account. Cause:\n" << exception.what() << std::endl;
+        if (previousScenarioFileContent != "")
+            EnvObject::readScenarioFileContent(this->previousScenarioFileContent);
     }
 }
 

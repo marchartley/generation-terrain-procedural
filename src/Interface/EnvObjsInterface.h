@@ -30,6 +30,7 @@ public:
     void setMaterialsDefinitionFile(std::string filename);
     void setDefinitionFile(std::string filename);
     void setTransformationsFile(std::string filename);
+    void setScenarioFile(std::string filename);
 
     EnvObject* instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score);
     EnvObject* instantiateObjectUsingSpline(std::string objectName, const BSpline& spline);
@@ -45,8 +46,8 @@ public Q_SLOTS:
     virtual void mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     virtual void keyPressEvent(QKeyEvent* event);
 
-    void instantiateObject(bool waitForFullyGrown = true);
-    void instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
+    EnvObject *instantiateObject(bool waitForFullyGrown = true);
+    EnvObject *instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
 
     bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
 
@@ -54,9 +55,11 @@ public Q_SLOTS:
 
     void recomputeErosionValues();
 
+    void runNextStep();
+
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
     void onlyUpdateFlowAndSandFromEnvObjects();
-    void destroyEnvObject(EnvObject* object);
+    void destroyEnvObject(EnvObject* object, bool applyDying = true);
 
     void displayProbas(std::string objectName);
     void displayMaterialDistrib(std::string materialName);
@@ -74,6 +77,7 @@ public Q_SLOTS:
     void updateObjectsDefinitions(const std::string& newDefinition);
     void updateMaterialsDefinitions(const std::string& newDefinition);
     void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
+    void updateScenarioDefinition(const std::string& newDefinition);
 
     void evaluateAndDisplayCustomCostFormula(std::string formula) const;
 
@@ -142,6 +146,7 @@ public:
     HotreloadFile primitiveDefinitionFile;
     HotreloadFile materialsDefinitionFile;
     HotreloadFile transformationsFile;
+    HotreloadFile scenarioFile;
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
@@ -151,6 +156,7 @@ public:
     std::string previousFileContent = "";
     std::string previousMaterialsFileContent = "";
     std::string previousMaterialsTransformationsFileContent = "";
+    std::string previousScenarioFileContent = "";
 
     GridF focusedArea;
 
