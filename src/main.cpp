@@ -1373,7 +1373,7 @@ int main(int argc, char *argv[])
     return 0;*/
 
     /*
-    HotreloadFile file("/home/marc/generation-terrain-procedural/saved_maps/envMaterials.json");
+    HotreloadFile file("/home/marc/generation-terrain-procedural/EnvObjects/envMaterials.json");
 
     file.onChange([&](std::string content) {
         std::cout << content << std::endl;
@@ -1633,6 +1633,7 @@ int main(int argc, char *argv[])
     */
 
     /*
+     * Unit test: Warping of a scalar field with a vector field
     Vector3 size(100, 100, 1);
     GridF grid(size);
     float strength = 2.f;
@@ -1660,9 +1661,132 @@ int main(int argc, char *argv[])
     }
     return 0;*/
 
+    /*
+     * Unit test: Autointersection detection in Splines (with straight lines)
+    BSpline spline = BSpline({
+        Vector3(0, 0, 0),
+        Vector3(10, 10, 0),
+                              Vector3(10, 0, 0),
+        Vector3(0, 10, 0)
+                             });
+    spline.closed = true;
 
-    EnvObject::readEnvMaterialsFile("saved_maps/envMaterials.json");
-    EnvObject::readEnvObjectsFile("saved_maps/primitives.json");
+    for (int nb = 1; nb < 5; nb++) {
+        int verts = std::pow(10, nb);
+        auto curve = spline;
+        curve.resamplePoints(verts);
+        displayProcessTime("With 1e" + std::to_string(nb) + " (" + std::to_string((curve[0] - curve[1]).norm()) +  "/segment): ", [&]() {
+            for (int i = 0; i < 2; i++) {
+                bool intersection = curve.checkAutointersections().size() > 0;
+                if (!intersection && i == 0.) std::cout << "[Not found] " << std::flush;
+            }
+        });
+    }
+    return 0;
+    */
+    /*
+    Vector3 size(100, 100, 1);
+    ShapeCurve curve = ShapeCurve::circle(50, Vector3(50, 50, 0), 20);
+    auto points = curve.randomPointsInside(50);
+    GridF heights(size);
+
+    std::vector<BSpline> randomPaths(50);
+    for (int i = 0; i < randomPaths.size(); i++) {
+        auto& path = randomPaths[i];
+        int i0 = int(random_gen::generate(0, points.size()));
+        int i1 = int(random_gen::generate(0, points.size()));
+        // while (i0 == i1)
+            // i1 = int(random_gen::generate(0, points.size()));
+        path = BSpline({points[i0], points[i1]}).resamplePoints(4);
+        float length = (path[-1] - path[0]).norm();
+        for (auto& p : path) {
+            p += Vector3::random().xy() * (length / 10.f);
+        }
+    }
+
+    Plotter::get()->setNormalizedModeImage(true);
+
+    displayProcessTime("1) ", [&]() {
+        int nbPathsPerRange = 5;
+        for (int iRange = 0; iRange < randomPaths.size() / nbPathsPerRange; iRange++) {
+            heights.iterateParallel([&] (const Vector3& pos) {
+                for (int i = iRange * nbPathsPerRange; i < (iRange + 1) * nbPathsPerRange; i++) {
+                    auto& path = randomPaths[i];
+                    auto closestPoint = path.estimateClosestPos(pos);
+                    heights(pos) += std::exp(-(pos - closestPoint).norm2());
+                }
+            });
+            heights = heights.meanSmooth(3, 3, 1);
+        }
+    });
+    Plotter::get()->addImage(heights);
+    Plotter::get()->exec();
+
+    displayProcessTime("2) ", [&]() {
+        heights.iterateParallel([&] (const Vector3& pos) {
+            // if (!curve.containsXY(pos)) return;
+            for (int i = 0; i < randomPaths.size(); i++) {
+                auto& path = randomPaths[i];
+                auto closestPoint = path.estimateClosestPos(pos, true);
+                heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
+            }
+        });
+        heights = heights.gaussianSmooth(2.f);
+        heights.iterateParallel([&] (const Vector3& pos) {
+            heights(pos) -= 1.f;
+            if (!curve.containsXY(pos)) heights(pos) = 0;
+        });
+        heights = heights.gaussianSmooth(2.f);
+    });
+
+    Plotter::get()->addImage(heights);
+    Plotter::get()->exec();
+    heights.reset();
+    displayProcessTime("3) ", [&]() {
+        heights.iterateParallel([&] (const Vector3& pos) {
+            for (int i = 0; i < randomPaths.size(); i++) {
+                auto& path = randomPaths[i];
+                auto closestPoint = path.estimateClosestPos(pos, true);
+                heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
+            }
+        });
+        heights = heights.gaussianSmooth(2.f);
+    });
+
+    Plotter::get()->addImage(heights);
+    Plotter::get()->exec();
+
+    heights.reset();
+
+
+    Plotter::get()->setNormalizedModeImage(true);
+    float scale = 8;
+    heights = GridF(size.x / 8, size.y / 8, 1);
+    for (auto& path : randomPaths)
+        path.scale(1.f / scale);
+    displayProcessTime("4) ", [&]() {
+        for (int iter = 0; iter < 3; iter++) {
+            float factor = 1 << (3 - iter);
+            heights.iterateParallel([&] (const Vector3& pos) {
+                for (int i = 0; i < randomPaths.size(); i++) {
+                    auto& path = randomPaths[i];
+                    auto closestPoint = path.estimateClosestPos(pos, true);
+                    heights(pos) += std::exp(-(pos - closestPoint).norm2() / (factor * factor));
+                }
+            });
+
+            for (auto& path : randomPaths)
+                path.scale(2.f);
+            heights = heights.resize(2.f);
+        }
+    });
+
+    Plotter::get()->addImage(heights);
+    return Plotter::get()->exec();
+    */
+
+    EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
 
     ViewerInterface vi;
     vi.show();

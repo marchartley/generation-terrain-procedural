@@ -1,0 +1,30 @@
+{
+"objects": {
+		"island": {
+			"proba": 0.01,
+			"amount": 4
+		},
+		"reef": {
+			"proba": 0.1,
+			"amount": 4
+		},
+		"coralpolyp": {
+			"proba": 0.99,
+			"amount": -1
+		}
+	},
+
+"simulation": {
+		"dt": 1,
+		"end": 500
+	},
+
+"events": [
+		{
+			"type": "waterlevel",
+			"amount": 10,
+			"start": 20,
+			"end": 20
+		}
+	]
+}

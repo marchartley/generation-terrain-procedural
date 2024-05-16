@@ -21,9 +21,9 @@
     "material": "water"
   },
   {
-    "name": "aaaReef",
+    "name": "Reef",
     "type": "curve",
-    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral * (d((aaareef - pos) ? {10 0 0}) > 5)) max 0",
+    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral * (d((reef - pos) ? {10 0 0}) > 5)) max 0",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
@@ -41,32 +41,6 @@
     "dimensions": {
       "x": 10,
       "y": 50,
-      "z": 10
-    },
-    "follows": "skeleton",
-    "geometry": "ParametricTunnel",
-    "material": "sand"
-  },
-  {
-    "name": "Reef",
-    "type": "curve",
-    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral) max 0",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "depositionRate" : {
-    	"polyp": 0.2,
-    	"pebbles": 0.1
-    },
-    "absorptionRate" : {
-    	"polyp": 0.2,
-    	"deadcoral": 0.1
-    },
-    "dimensions": {
-      "x": 40,
-      "y": 500,
       "z": 10
     },
     "follows": "skeleton",
@@ -105,11 +79,11 @@
   {
     "name": "CoralPolypFlat",
     "type": "point",
-    "rule": "10 * polyp + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + abs(random(pos * {100 100 0}) * 0.1)",
+    "rule": "(10 * polyp + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + abs(random(pos * {100 100 0}) * 0.1)) * (((currenttime - spawntime) < 20) + normal(((currenttime - spawntime) - 20) / 10.0))",
     "flow": 1.0,
     "dimensions": {
-      "x": 3.0,
-      "y": 3.0,
+      "x": 10.0,
+      "y": 10.0,
       "z": 1.0
     },
     "needs": {
@@ -128,7 +102,7 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "(((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "rule": "(((random((pos - {50 0 0}) + ({1 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
     "--rule": "(((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside)) / ((currenttime - spawntime) / 200 + 1)) max 0",
     "flow": {
       "direction": 0.10,
@@ -143,7 +117,7 @@
     },
     "dimensions": {
       "x": 50,
-      "y": 50,
+      "y": 10,
       "z": 20
     },
     "geometry": "DistanceMap",
@@ -167,7 +141,7 @@
     	"sand": 1.0
     },
     "absorptionRate" : {
-    	"sand": 1.0
+    	"sand": 0.50
     },
     "geometry": "Mountain",
     "material": "Sand"
@@ -188,7 +162,7 @@
     "dimensions": {
       "x": 10,
       "y": 70,
-      "z": 10
+      "z": 20
     },
     "follows": "skeleton",
     "geometry": "ParametricTunnel",
@@ -245,7 +219,7 @@
     "dimensions": {
       "x": 10,
       "y": 200,
-      "z": 30
+      "z": 10
     },
     "follows": "skeleton",
     "geometry": "ParametricTunnel",
