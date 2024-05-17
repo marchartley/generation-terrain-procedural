@@ -254,7 +254,7 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
     VoxelGrid voxels;
     voxels._cachedVoxelValues = GridF(finalDimensions);
     voxels.fromImplicit(this);
-    return voxels.getGeometry(finalDimensions * Vector3(.5f, .5f, .25f));
+    return voxels.getGeometry(finalDimensions); // * Vector3(.5f, .5f, .25f));
 }
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)

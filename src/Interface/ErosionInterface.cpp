@@ -327,7 +327,8 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
             } else if (applyOn == EROSION_APPLIED::HEIGHTMAP) {
                 terrain = heightmap.get();
             } else if (applyOn == EROSION_APPLIED::IMPLICIT_TERRAIN) {
-                implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())};
+                implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(implicitTerrain->getVoxelized())};
+                // implicitTerrain->composables = {ImplicitPrimitive::fromHeightmap(voxelGrid->getVoxelValues())};
                 implicitTerrain->_cached = false;
 //                implicitTerrain->update();
 //                implicitTerrain->updateCache();
@@ -346,8 +347,14 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 if (applyOn == EROSION_APPLIED::LAYER_TERRAIN) {
                     m = Mesh::applyMarchingCubes(layerGrid->voxelize().meanSmooth(3, 3, 3, true).resize(geomSize));
                 } else {
-                    m = terrain->getGeometry(geomSize * Vector3(1.f, 1.f, (applyOn == IMPLICIT_TERRAIN ? 1.f : .5f)));
-                    m.translate(Vector3(1.f, 1.f, 0.f));
+                    m = terrain->getGeometry(geomSize * Vector3(1.f, 1.f, (applyOn == IMPLICIT_TERRAIN ? 10.f : 1.f)));
+                    if (applyOn == IMPLICIT_TERRAIN) {
+
+                    } else if (applyOn == HEIGHTMAP) {
+                        m.translate(Vector3(.5f, .5f, 0.f));
+                    } else if (applyOn == DENSITY_VOXELS) {
+                        m.translate(Vector3(.5f, .5f, .5f));
+                    }
                 }
             });
             triangles = m.getTriangles();
@@ -1017,6 +1024,9 @@ QLayout *ErosionInterface::createGUI()
     ButtonElement* coastalButton = new ButtonElement("Coastal", [&]() { coastalErosionProcess(); });
     ButtonElement* fluidButton = new ButtonElement("Simu fluid", [&]() { fluidSimErosionProcess(); });
     ButtonElement* volcanoButton = new ButtonElement("Volcano 1", [&]() { volcanoErosionProcess(); });
+    ButtonElement* implicitButton = new ButtonElement("Implicit", [&]() { implicitErosionProcess(); });
+    ButtonElement* heightmapButton = new ButtonElement("Heightmap", [&]() { heightmapErosionProcess(); });
+    ButtonElement* voxelsButton = new ButtonElement("Voxels", [&]() { voxelsErosionProcess(); });
 
     FancySlider* rockSizeSlider = new FancySlider(Qt::Horizontal, 0.f, 100.f);
     FancySlider* rockStrengthSlider = new FancySlider(Qt::Horizontal, 0.f, .5f, .01f);
@@ -1114,8 +1124,48 @@ QLayout *ErosionInterface::createGUI()
     QRadioButton* tenCollisionButton = new QRadioButton("10");
 
 
-//    erosionLayout->addWidget(createVerticalGroup({displayTrajectoriesButton}));
+//    erosionLayout->addWidget(createVerticalGroup({displayTrajectoriesButton})););
 
+    erosionLayout->addWidget(createVerticalGroup({
+                                                     thermalButton->get(),
+                                                     hydraulicButton->get(),
+                                                     gobelinsButton->get(),
+                                                     desertButton->get(),
+                                                     volcanoButton->get(),
+                                                    implicitButton->get(),
+                                                    heightmapButton->get(),
+                                                    voxelsButton->get(),
+                                                     createMultipleSliderGroup({
+//                                                           {"Taille", rockSizeSlider},
+                                                           {"Strength", rockStrengthSlider},
+                                                           {"Quantity", rockQttSlider},
+                                                           // {"gravity", gravitySlider},
+                                                           // {"bouncing Coefficient", bouncingCoefficientSlider},
+                                                           {"bounciness", bouncinessSlider},
+//                                                           {"minSpeed", minSpeedSlider},
+//                                                           {"maxSpeed", maxSpeedSlider},
+                                                           {"max Capacity Factor", maxCapacityFactorSlider},
+                                                           {"erosion Factor", erosionFactorSlider},
+                                                           {"deposit Factor", depositFactorSlider},
+//                                                           {"matter Density", matterDensitySlider},
+//                                                           {"material Impact", materialImpactSlider},
+                                                           // {"air Rotation", airFlowfieldRotationSlider},
+                                                           // {"water Rotation", waterFlowfieldRotationSlider},
+                                                           {"air Force", airForceSlider},
+                                                           {"water Force", waterForceSlider},
+                                                           {"nb iterations", iterationSlider},
+//                                                           {"dt", dtSlider},
+//                                                           {"ShearConstantK", shearingStressConstantKSlider},
+//                                                           {"ShearRatePower", shearingRatePowerSlider},
+//                                                           {"ErosionPower", erosionPowerValueSlider},
+//                                                           {"Critical shear stress", criticalShearStressSlider},
+                                                           {"Initial capacity", initialCapacitySlider},
+                                                       }),
+                                                        displayTrajectoriesButton,
+                                                        displayBoundariesButton
+    }));
+
+/*
     erosionLayout->addWidget(createVerticalGroup({
                                                      thermalButton->get(),
                                                      hydraulicButton->get(),
@@ -1198,7 +1248,7 @@ QLayout *ErosionInterface::createGUI()
                                                          useNativeDensity,
                                                          useRandomDensity
                                                      })
-                                                 }));
+                                                 }));*/
 
     /*
     erosionLayout->addWidget(createVerticalGroup({
@@ -1616,4 +1666,41 @@ void ErosionInterface::volcanoErosionProcess()
     erosionQtt = 145;
     initialCapacity = 0.75f;
     throwFrom(VOLCANO);
+}
+
+void ErosionInterface::implicitErosionProcess()
+{
+    erosionStrength = 0.25;
+    applyOn = IMPLICIT_TERRAIN;
+    erosionQtt = 100;
+    maxCapacityFactor = 10.f;
+    particleMaxCollisions = 10;
+    numberOfIterations = 100;
+    throwFrom(SKY);
+}
+
+void ErosionInterface::heightmapErosionProcess()
+{
+    erosionStrength = 0.1;
+    applyOn = HEIGHTMAP;
+    erosionQtt = 1000;
+    bouncingCoefficient = 0.4;
+    bounciness = 0.2;
+    maxCapacityFactor = 1.f;
+    particleMaxCollisions = 10;
+    numberOfIterations = 300;
+    throwFrom(SKY);
+}
+
+void ErosionInterface::voxelsErosionProcess()
+{
+    erosionStrength = 0.5;
+    applyOn = DENSITY_VOXELS;
+    erosionQtt = 200;
+    bouncingCoefficient = 0.2;
+    bounciness = 0.6;
+    maxCapacityFactor = 1.f;
+    particleMaxCollisions = -1;
+    numberOfIterations = 70;
+    throwFrom(JUST_ABOVE_VOXELS);
 }

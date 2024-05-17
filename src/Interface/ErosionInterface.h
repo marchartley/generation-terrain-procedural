@@ -40,6 +40,9 @@ public Q_SLOTS:
     void coastalErosionProcess();
     void fluidSimErosionProcess();
     void volcanoErosionProcess();
+    void implicitErosionProcess();
+    void heightmapErosionProcess();
+    void voxelsErosionProcess();
 
     void throwFromCam();
     void throwFromSky();
@@ -96,8 +99,8 @@ public:
 
     float airFlowfieldRotation = 0.f; // 270.f;
     float waterFlowfieldRotation = 90.f;
-    float airForce = 1.f;
-    float waterForce = 1.f;
+    float airForce = 0.f;
+    float waterForce = 0.f;
 
     float dt = 1.f;
 
@@ -109,7 +112,7 @@ public:
     bool continuousRotation = false;
     bool wrapParticles = false;
 
-    int numberOfIterations = 18; // 200;
+    int numberOfIterations = 1; // 200;
 
     int particleMaxCollisions = -1; // 10; // -1 for infinity
 
@@ -126,7 +129,7 @@ public:
 
     FluidSimType selectedSimulationType = STABLE;
 
-    FLOWFIELD_TYPE flowfieldUsed = FLUID_SIMULATION; //FLOWFIELD_TYPE::BASIC;
+    FLOWFIELD_TYPE flowfieldUsed = FLOWFIELD_TYPE::BASIC;
     DENSITY_TYPE densityUsed = DENSITY_TYPE::NATIVE;
 
     std::map<PARTICLE_INITIAL_LOCATION, std::vector<std::vector<std::pair<Vector3, Vector3>>>> initialPositionsAndDirections;

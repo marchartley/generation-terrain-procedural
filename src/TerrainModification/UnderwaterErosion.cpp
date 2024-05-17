@@ -264,6 +264,12 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     ImplicitPatch* asImplicit = dynamic_cast<ImplicitPatch*>(terrain);
     LayerBasedGrid* asLayers = dynamic_cast<LayerBasedGrid*>(terrain);
 
+    bool appliedOnLayers = asLayers != nullptr;
+    if (appliedOnLayers) {
+        asVoxels = new VoxelGrid;
+        asVoxels->fromLayerBased(*asLayers);
+    }
+
     Vector3 terrainSize = voxelGrid->getDimensions(); //terrain->getDimensions();
     float starting_distance = pow(terrainSize.maxComp()/2.f, 2);
     starting_distance = sqrt(3 * starting_distance); // same as sqrt(x+y+z)
@@ -574,7 +580,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         }
 
     //    float summary = 0.f;
-        if (asLayers) {
+        if (false && asLayers) {
             for (size_t i = 0; i < allErosions.size(); i++) {
                 const auto& erosionValuesAndPositions = allErosions[i];
                 Vector3 previousPos(false);
@@ -604,7 +610,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 }
             }
         } else {
-            bool parallel = false;
+            bool parallel = true;
             if (parallel) {
                 std::vector<GridF> submodifications(rockAmount, GridF(modifications.getDimensions()));
                 #pragma omp parallel for
@@ -707,11 +713,11 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 for (int y = 0; y < modifications.sizeY; y++)
                     for (int z = 0; z < 2; z++)
                         modifications.at(x, y, z) = 0;
-            asVoxels->applyModification(modifications * 0.5f);
+            asVoxels->applyModification(modifications.gaussianSmooth(1.f) * 0.5f);
             asVoxels->limitVoxelValues(2.f, false);
             asVoxels->saveState();
         } else if (asHeightmap) {
-            asHeightmap->heights += modifications * 0.5f;
+            asHeightmap->heights += modifications.gaussianSmooth(1.f) * 0.5f;
             asHeightmap->heights.iterateParallel([&](size_t i) {
                 asHeightmap->heights[i] = std::max(asHeightmap->heights[i], 0.f);
             });
@@ -729,6 +735,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
             // ...
         }
     });
+    if (appliedOnLayers) {
+        asLayers->fromVoxelGrid(*asVoxels);
+    }
     return {tunnels, positions, erosions, allErosions};
 
 }
