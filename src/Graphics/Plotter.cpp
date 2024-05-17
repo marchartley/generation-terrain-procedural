@@ -56,9 +56,9 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
     auto mousePos = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
     auto prevPos = this->getRelativeMousePositionInImage(Vector3(previousMousePos.x(), previousMousePos.y()));
 
-    Q_EMIT this->mouseMoved(mousePos, prevPos, event);
 
     this->previousMousePos = event->pos();
+    Q_EMIT this->mouseMoved(mousePos, prevPos, event);
     return QChartView::mouseMoveEvent(event);
 }
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
