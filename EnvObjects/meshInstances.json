@@ -23,7 +23,7 @@
 		"maxInstances": 20,
 		"minSize": 5.0,
 		"maxSize": 5.0,
-		"radius": 10.0
+		"radius": 5.0
 	},
 	{
 		"name": "coralpolypflat",

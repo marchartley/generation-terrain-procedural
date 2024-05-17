@@ -10,7 +10,7 @@
 		"name": "polyp",
 		"diffusionSpeed": 2.0,
 		"waterTransport": 1.0,
-		"mass": 0.0,
+		"mass": 0.5,
 		"decay": 0.9
 	},
 	{

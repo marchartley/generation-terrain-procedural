@@ -23,25 +23,25 @@
   {
     "name": "Reef",
     "type": "curve",
-    "rule": "((-0.5 + (deadcoral > 0) * (deadcoral < 10.5)) * deadcoral * (d((reef - pos) ? {10 0 0}) > 5)) max 0",
+    "rule": "((((depth > 0) * (deadcoral)^2 * (d((reef - pos) ? {10 0 0}) > 5)) - (depth < 0)) min 0.1) max 0.0",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
       "binormal": 0.0
     },
     "depositionRate" : {
-    	"polyp": 0.2,
+    	"polyp": 0.01,
     	"pebbles": 0.1,
-    	"deadcoral": 0.1
+    	"deadcoral": 0.0
     },
     "absorptionRate" : {
-    	"polyp": 0.2,
-    	"deadcoral": 0.1
+    	"polyp": 0.0,
+    	"deadcoral": 0.01
     },
     "dimensions": {
       "x": 10,
-      "y": 50,
-      "z": 10
+      "y": 30,
+      "z": 5
     },
     "follows": "skeleton",
     "geometry": "ParametricTunnel",
@@ -50,8 +50,8 @@
   {
     "name": "CoralPolyp",
     "type": "point",
-    "rule": "(polyp + 1) * (normal((depth + 8) / 2.0) * (depth > -8) * (depth < 0)) / (current.vel * 100 + 1.0)",
-    "flow": 1.0,
+    "rule": "(polyp * 1000 + 1) * (normal((depth - 3) / 3.0) * (depth > 0)) / (current.vel * 100 + 1.0)",
+    "flow": 0.10,
     "dimensions": {
       "x": 10.0,
       "y": 10.0,
@@ -102,7 +102,7 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "(((random((pos - {50 0 0}) + ({1 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "rule": "e^(1 / (depth + 0.1)) * (((random((pos - {50 0 0}) + ({1.0 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
     "--rule": "(((random((pos - {50 0 0}) * {1 1 0}) * (x(pos)/100) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside)) / ((currenttime - spawntime) / 200 + 1)) max 0",
     "flow": {
       "direction": 0.10,
@@ -117,7 +117,7 @@
     },
     "dimensions": {
       "x": 50,
-      "y": 10,
+      "y": 40,
       "z": 20
     },
     "geometry": "DistanceMap",
@@ -134,14 +134,14 @@
       "z": 0.50
     },
     "needs": {
-      "age": 10.0,
-      "sand": 300.0
+      "age": 0.0,
+      "sand": 0.0
     },
     "depositionRate" : {
     	"sand": 1.0
     },
     "absorptionRate" : {
-    	"sand": 0.50
+    	"sand": 1.50
     },
     "geometry": "Mountain",
     "material": "Sand"
@@ -149,7 +149,8 @@
   {
     "name": "Fault",
     "type": "curve",
-    "rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
+    "rule": "((random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * 0.5) * (depth max 0)^0.5) max 0",
+    "--rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,
@@ -209,7 +210,7 @@
   {
     "name": "Canyon",
     "type": "curve",
-    "rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
+    "rule": "((random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * 0.5) * (depth max 0)^0.5) max 0",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,
@@ -217,7 +218,7 @@
     },
     "sand": 0.0,
     "dimensions": {
-      "x": 10,
+      "x": 30,
       "y": 200,
       "z": 10
     },
@@ -257,6 +258,7 @@
       "z": 1
     },
     "depositionRate" : {
+	"sand": 1.0
     },
     "absorptionRate" : {
 	"pebbles": 2.0

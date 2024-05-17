@@ -358,8 +358,6 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.normal"] = Vector3::invalid();
     variables["current.dir"] = Vector3::invalid();
     variables["current.vel"] = float();
-//    variables["sand"] = float();
-//    variables["polyp"] = float();
     variables["depth"] = float();
     for (auto& [matName, material] : EnvObject::materials)
         variables[matName] = float();
@@ -718,7 +716,7 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
         EnvObject::allScalarProperties[matName] = material.currentState;
 //        std::cout << "Total of " << matName << ": " << material.currentState.sum() << std::endl;
     }
-    EnvObject::allScalarProperties["depth"] = (heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights;
+    EnvObject::allScalarProperties["depth"] = ((heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights.gaussianSmooth(1.f, true));
 }
 
 void EnvObject::reset()
@@ -808,6 +806,9 @@ ScenariosObject Scenario::nextObject()
 
 bool Scenario::finished() const
 {
+    if (duration > 0 && EnvObject::currentTime >= startTime + duration)
+        return true;
+
     for (auto& requiredObjects : objects) {
         if (requiredObjects.amountRequired < 0) continue;
         int objCount = 0;
@@ -820,4 +821,15 @@ bool Scenario::finished() const
         }
     }
     return true;
+}
+
+
+ScenarioEvent::ScenarioEvent(std::string typeName, float amount, float startTime, float endTime)
+    : typeName(toLower(typeName)), amount(amount), startTime(startTime), endTime(endTime)
+{
+    if (typeName == "waterlevel") {
+        type = WATER_LEVEL;
+    } else if (typeName == "material_deposition") {
+        type = MATERIAL_DEPOSITION;
+    }
 }

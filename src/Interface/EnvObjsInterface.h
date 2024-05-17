@@ -56,6 +56,7 @@ public Q_SLOTS:
     void recomputeErosionValues();
 
     void runNextStep();
+    void runScenario();
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
     void onlyUpdateFlowAndSandFromEnvObjects();

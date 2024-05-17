@@ -86,6 +86,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         if (!leftPressed && !rightPressed) return;
 
         Vector3 brushDir = (mousePos - prevPos).normalize() * .2f;
+        // std::cout << prevPos << " " << brushDir << std::endl;
         this->previewFlowEdition(mousePos, brushDir);
 
         Q_EMIT this->updated();
@@ -207,9 +208,12 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* nextStepButton = new ButtonElement("Step", [&]() {
         this->runNextStep();
     });
+    ButtonElement* runButton = new ButtonElement("Run", [&]() {
+        this->runScenario();
+    });
 
     layout->addWidget(newObjectCreationBox->get());
-    layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton})->get());
+    layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton})->get());
     layout->addWidget(waitAtEachFrameButton->get());
     layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
 //    layout->addWidget(showFlowfieldButton->get());
@@ -442,13 +446,18 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
             return nullptr;
         }
 
-        position = initialCurve[0]; // The optimisation process might have moved the evaluation position greatly
-        ShapeCurve curve = initialCurve.resamplePoints();
+        position = initialCurve.centroid(); //initialCurve[0]; // The optimisation process might have moved the evaluation position greatly
+        ShapeCurve curve = initialCurve.close().resamplePoints();
         curve.translate(-position);
-        objAsArea->curve = curve.resamplePoints(10);
+        objAsArea->curve = curve.resamplePoints(20);
     }
 
     newObject->translate(position.xy());
+    if (!Vector3::isInBox(newObject->evaluationPosition, Vector3(), score.getDimensions())) {
+        log("Object is outside...");
+        this->destroyEnvObject(newObject, false);
+        return nullptr;
+    }
     newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
     newObject->spawnTime = EnvObject::currentTime;
     if (newObject->fittingScoreAtCreation <= 0) {
@@ -586,7 +595,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPosition, score);
             if (!newObject) {
                 this->log("Object not created");
-                return nullptr;
+                return;
             }
             newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
             auto implicit = newObject->createImplicitPatch(heightmap->heights);
@@ -604,7 +613,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
                 maxIterations--;
                 if (maxIterations < 0) break;
                 if (!isIn(newObject, EnvObject::instantiatedObjects)) {
-                    return nullptr; // Object died in this process, stop this function now
+                    return; // Object died in this process, stop this function now
                 }
             }
             this->currentSelections = {newObject};
@@ -612,8 +621,10 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
             this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
             result = newObject;
             this->materialSimulationStable = false; // We have to compute the simulation again
+            return;
         } else {
             std::cout << "Nope, impossible to instantiate..." << std::endl;
+            return;
         }
     }, verbose);
     updateObjectsList();
@@ -649,10 +660,21 @@ void EnvObjsInterface::recomputeErosionValues()
 void EnvObjsInterface::runNextStep()
 {
     EnvObject* createdObject = nullptr;
-    while (!createdObject) {
+    int maxTries = 100;
+    while (!createdObject && maxTries > 0) {
         auto nextObject = EnvObject::scenario.nextObject();
         std::cout << "Generating " << nextObject.objectName << "?" << std::endl;
         createdObject = this->instantiateSpecific(nextObject.objectName, true);
+        maxTries --;
+    }
+    updateEnvironmentFromEnvObjects(false, false, false);
+}
+
+void EnvObjsInterface::runScenario()
+{
+    EnvObject::scenario.startTime = EnvObject::currentTime;
+    while (!EnvObject::scenario.finished()) {
+        runNextStep();
     }
 }
 
@@ -709,7 +731,6 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
         }, verbose);
     }
-
     if (updateImplicitTerrain) {
 
         for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
@@ -727,12 +748,14 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         EnvObject::recomputeFlowAndSandProperties(*heightmap);
     }
+
     for (auto& obj : immatureObjects) {
         if (obj->computeGrowingState() >= 1.f) {
             // Got mature during this process -> now let's save the fitting score
             obj->fittingScoreAtCreation = obj->evaluate(obj->evaluationPosition);
         }
     }
+
     if (emitUpdateSignal) {
         Q_EMIT this->updated();
         updateObjectsList();

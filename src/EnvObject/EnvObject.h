@@ -39,6 +39,22 @@ struct ScenariosObject {
     float normalizedProba;
 };
 
+struct ScenarioEvent {
+    enum Type {
+        WATER_LEVEL,
+        SUBSIDENCE,
+        MATERIAL_DEPOSITION
+    };
+
+    ScenarioEvent(std::string typeName, float amount, float startTime, float endTime);
+
+    Type type;
+    std::string typeName;
+    float amount;
+    float startTime;
+    float endTime;
+};
+
 class Scenario {
 public:
     void addObject(std::string name, float proba, int amount = -1);

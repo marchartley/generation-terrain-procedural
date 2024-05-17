@@ -111,6 +111,7 @@ void EnvCurve::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
+    if (this->flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
 //    return {GridV3(EnvObject::flowfield.getDimensions()), GridF(EnvObject::flowfield.getDimensions())};
     Vector3 objectWidth = Vector3(width, width, 0);
     Vector3 halfWidth = objectWidth * .5f;
