@@ -494,7 +494,7 @@ QLayout* TerrainGenerationInterface::createGUI()
     QDoubleSpinBox* depthEdit = new QDoubleSpinBox(); //(QString::fromStdString(std::to_string(int(voxelGrid->getSizeY()))));
     QDoubleSpinBox* heightEdit = new QDoubleSpinBox(); // (QString::fromStdString(std::to_string(int(voxelGrid->getSizeZ()))));
 
-    FancySlider* noiseStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 1.f, 0.01f);
+    FancySlider* noiseStrengthSlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 2.f, 0.01f);
     FancySlider* noiseLacunaritySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 4.f, 0.01f);
     FancySlider* noiseFrequencySlider = new FancySlider(Qt::Orientation::Horizontal, 0.f, 3.f, 0.01f);
     QPushButton* createFromNoiseButton = new QPushButton("Noise");
@@ -508,16 +508,17 @@ QLayout* TerrainGenerationInterface::createGUI()
                                               createHorizontalGroup({
                                                   widthEdit, new QLabel("x"), depthEdit, new QLabel("x"), heightEdit
                                               }),
-
+                                             createFromNoiseButton,
+                                            noiseStrengthSlider
+/*
                                               createMultipleSliderGroup({
 //                                                  {"strength", noiseStrengthSlider},
                                                   {"frequency", noiseFrequencySlider},
                                                   {"lacunarity", noiseLacunaritySlider}
                                               }),
-//                                              createFromNoiseButton
                                               createHorizontalGroup({
                                                   noise2D, noise3D
-                                              })
+                                              })*/
                                           }));
     widthEdit->setDecimals(0);
     depthEdit->setDecimals(0);
@@ -527,17 +528,17 @@ QLayout* TerrainGenerationInterface::createGUI()
     depthEdit->setValue(voxelGrid->getSizeX());
     heightEdit->setValue(voxelGrid->getSizeX());
 
-    noiseStrengthSlider->setfValue(1.f);
-    noiseLacunaritySlider->setfValue(2.f);
-    noiseFrequencySlider->setfValue(1.f);
+    noiseStrengthSlider->setfValue(2.f);
+    noiseLacunaritySlider->setfValue(.3f);
+    noiseFrequencySlider->setfValue(.3f);
 
-    noise2D->setChecked(false);
-    noise3D->setChecked(true);
+    noise2D->setChecked(true);
+    noise3D->setChecked(false);
 
     QObject::connect(loadHeightmapButton, &QPushButton::pressed, this, [=]() { this->openMapUI(); });
     QObject::connect(reloadButton, &QPushButton::pressed, this, [=]() { this->reloadTerrain(this->actionInterfaces); });
     QObject::connect(saveHeightmapButton, &QPushButton::pressed, this, [=]() { this->saveMapUI(); });
-//    QObject::connect(createFromNoiseButton, &QPushButton::pressed, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
+    QObject::connect(createFromNoiseButton, &QPushButton::pressed, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), true, noiseStrengthSlider->getfValue(), .3f, .3f); });
     QObject::connect(widthEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
     QObject::connect(depthEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
     QObject::connect(heightEdit, &QDoubleSpinBox::editingFinished, this, [=]() { this->createTerrainFromNoise(widthEdit->text().toInt(), depthEdit->text().toInt(), heightEdit->text().toInt(), noise2D->isChecked(), noiseStrengthSlider->getfValue(), noiseFrequencySlider->getfValue(), noiseLacunaritySlider->getfValue()); });
