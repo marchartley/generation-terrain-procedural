@@ -8,6 +8,7 @@
 #include "EnvObject/ExpressionParser.h"
 #include "Utils/Voronoi.h"
 #include "Interface/MeshInstanceAmplificationInterface.h"
+#include "Interface/TerrainGenerationInterface.h"
 
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
@@ -1431,6 +1432,10 @@ void EnvObjsInterface::loadScene(std::string filename)
         std::string flowStr = json["initialflow"];
         EnvObject::initialFlowfield = loadGridV3(flowStr, false);
     }
+    if (json.contains("waterlevel")) {
+        float waterLevel = json["waterlevel"];
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->setWaterLevel(waterLevel);
+    }
 
     for (auto mat : allMaterials) {
         EnvObject::materials[mat["name"]].fromJSON(mat);
@@ -1485,7 +1490,7 @@ void EnvObjsInterface::saveScene(std::string filename)
     mainJson["objects"] = allObjects;
     mainJson["materials"] = allMaterials;
     mainJson["initialflow"] = stringifyGridV3(EnvObject::initialFlowfield, false); //VectorFieldDataFile(EnvObject::initialFlowfield).stringify();
-
+    mainJson["waterlevel"] = heightmap->properties->waterLevel;
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
     out.close();
