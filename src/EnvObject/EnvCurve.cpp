@@ -112,68 +112,52 @@ void EnvCurve::applyDepositionOnDeath()
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
     if (this->flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
-//    return {GridV3(EnvObject::flowfield.getDimensions()), GridF(EnvObject::flowfield.getDimensions())};
-    Vector3 objectWidth = Vector3(width, width, 0);
-    Vector3 halfWidth = objectWidth * .5f;
-    BSpline translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p.z = 0;
-    AABBox box = AABBox(translatedCurve.points);
-    box.expand({box.min() - halfWidth, box.max() + halfWidth});
+
+    float growingState = computeGrowingState2();
+
+    if (this->_cachedFlowModif.empty()) {
+        Vector3 objectWidth = Vector3(width, width, 0);
+        Vector3 halfWidth = objectWidth * .5f;
+        BSpline translatedCurve = this->curve;
+        for (auto& p : translatedCurve)
+            p.z = 0;
+        AABBox box = AABBox(translatedCurve.points);
+        box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
 
-    /*
-    PinchKelvinletCurve k;
-    k.radialScale = width * .05f;
-    k.force = 10.f;
-    */
-    /*
-    ScaleKelvinletCurve k2;
-    k2.radialScale = width * .1f;
-    k2.force = -10.f;
-    k2.mu = .9f;
-    k2.v = 0;
-    k2.curve = translatedCurve;
-    */
-    TranslateKelvinletCurve k;
-    k.radialScale = width * .05f;
-    k.force = 10.f;
+        /*
+        PinchKelvinletCurve k;
+        k.radialScale = width * .05f;
+        k.force = 10.f;
+        */
+        /*
+        ScaleKelvinletCurve k2;
+        k2.radialScale = width * .1f;
+        k2.force = -10.f;
+        k2.mu = .9f;
+        k2.v = 0;
+        k2.curve = translatedCurve;
+        */
+        TranslateKelvinletCurve k;
+        k.radialScale = width * .05f;
+        k.force = 10.f;
 
-    /*
-    TwistKelvinletCurve k;
-    k.radialScale = width * .05f;
-    k.force = 10.f;
-    */
+        /*
+        TwistKelvinletCurve k;
+        k.radialScale = width * .05f;
+        k.force = 10.f;
+        */
 
-    k.curve = translatedCurve;
+        k.curve = translatedCurve;
 
-    GridV3 flow = EnvObject::flowfield;
-    flow.iterateParallel([&](const Vector3& p) {
-        Vector3 displacement = k.evaluate(p);
-        flow(p) += displacement.xy();
-    });
-    return {flow, GridF(flow.getDimensions(), 1.f)};
-
-    /*
-    GridV3 flow(EnvObject::flowfield.getDimensions());
-    GridF occupancy(flow.getDimensions());
-
-    flow.iterateParallel([&] (const Vector3& pos) {
-        auto initialFlow = EnvObject::flowfield(pos).normalized();
-        float closestTime = translatedCurve.estimateClosestTime(pos);
-        Vector3 closestPos = translatedCurve.getPoint(closestTime);
-        float sqrDist = (closestPos - pos).norm2();
-        if (sqrDist > (width * .5f) * (width * .5f)) return;
-        float gauss = 1.f; // normalizedGaussian(width * .1f, sqrDist);
-        Vector3 impact = this->flowEffect * gauss;
-        auto [direction, normal, binormal] = translatedCurve.getFrenetFrame(closestTime);
-        direction *= direction.dot(initialFlow);
-        normal *= -normal.dot(initialFlow);
-        binormal *= binormal.dot(initialFlow);
-        flow(pos) = impact.changedBasis(direction, normal, binormal);
-        occupancy(pos) = 1.f;
-    });
-    return {flow, occupancy};*/
+        GridV3 flow = EnvObject::flowfield;
+        flow.iterateParallel([&](const Vector3& p) {
+            Vector3 displacement = k.evaluate(p);
+            flow(p) += displacement.xy();
+        });
+        this->_cachedFlowModif = flow;
+    }
+    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
 }
 
 

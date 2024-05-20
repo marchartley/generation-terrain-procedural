@@ -82,14 +82,15 @@ void EnvPoint::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
+    if (flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
+    float growingState = this->computeGrowingState2();
     if (_cachedFlowModif.size() == 0) {
-        float growingState = this->computeGrowingState2();
         // float growingState = this->computeGrowingState();
 
         ScaleKelvinlet k;
         k.pos = this->position;
         k.radialScale = this->radius * .2f;
-        k.scale = 10.f * growingState * this->flowEffect.x;
+        k.scale = 10.f * /*growingState * */this->flowEffect.x;
         k.mu = .9f;
         k.v = 0.f;
 
@@ -118,7 +119,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         });
         return {flow, occupancy};*/
     }
-    return {EnvObject::flowfield.add(_cachedFlowModif, Vector3()), GridF(EnvObject::flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
+    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF(EnvObject::flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)

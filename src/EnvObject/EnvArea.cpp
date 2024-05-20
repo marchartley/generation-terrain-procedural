@@ -86,60 +86,67 @@ void EnvArea::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
-    Vector3 objectWidth = Vector3(width, width, 0);
-    Vector3 halfWidth = objectWidth * .5f;
-    ShapeCurve translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p.z = 0;
-    AABBox box = AABBox(translatedCurve.points);
-    box.expand({box.min() - halfWidth, box.max() + halfWidth});
+    if (flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
+
+    float growingState = computeGrowingState2();
+
+    if (_cachedFlowModif.empty()) {
+        Vector3 objectWidth = Vector3(width, width, 0);
+        Vector3 halfWidth = objectWidth * .5f;
+        ShapeCurve translatedCurve = this->curve;
+        for (auto& p : translatedCurve)
+            p.z = 0;
+        AABBox box = AABBox(translatedCurve.points);
+        box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
 
-    GridV3 flow = EnvObject::flowfield; //(EnvObject::flowfield.getDimensions());
-    GridF occupancy(EnvObject::flowfield.getDimensions());
+        GridV3 flow = GridV3(EnvObject::flowfield.getDimensions());
 
-    GridF dist(flow.getDimensions());
-    flow.iterateParallel([&] (const Vector3& pos) {
-        dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, true) ? 1.f : 0.f);
-    });
-    dist = dist.toDistanceMap(true, false);
-    GridV3 grad = dist.gradient() * -1.f;
-    for (auto& v : grad)
-        v.normalize();
-
-    float timePrepare = 0.f;
-    float timeApply = 0.f;
-
-    flow.iterateParallel([&] (const Vector3& pos) {
-        if (!box.contains(pos) || !translatedCurve.contains(pos, true))
-            return;
-
-        Vector3 impact, direction, normal, binormal;
-
-        timePrepare += timeIt([&]() {
-            float closestTime = translatedCurve.estimateClosestTime(pos);
-            Vector3 closestPos = translatedCurve.getPoint(closestTime);
-
-            float distanceToBorder = (pos - closestPos).norm();
-            float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
-            Vector3 previousFlow = EnvObject::flowfield(pos);
-            // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
-    //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
-            // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
-            direction = grad(pos);
-            binormal = Vector3(0, 0, 1);
-            normal = direction.cross(binormal); // Direction and binormal are normalized.
-            if (normal.dot(previousFlow) > 0) {
-                normal *= -1.f;
-            }
-            impact = this->flowEffect;// * distFactor;
+        GridF dist(flow.getDimensions());
+        flow.iterateParallel([&] (const Vector3& pos) {
+            dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, true) ? 1.f : 0.f);
         });
-        timeApply += timeIt([&]() {
-            flow.at(pos) += impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
-            occupancy.at(pos) = 1.f;
+        dist = dist.toDistanceMap(true, false);
+        GridV3 grad = dist.gradient() * -1.f;
+        for (auto& v : grad)
+            v.normalize();
+
+        float timePrepare = 0.f;
+        float timeApply = 0.f;
+
+        flow.iterateParallel([&] (const Vector3& pos) {
+            if (!box.contains(pos) || !translatedCurve.contains(pos, true))
+                return;
+
+            Vector3 impact, direction, normal, binormal;
+
+            timePrepare += timeIt([&]() {
+                float closestTime = translatedCurve.estimateClosestTime(pos);
+                Vector3 closestPos = translatedCurve.getPoint(closestTime);
+
+                float distanceToBorder = (pos - closestPos).norm();
+                float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
+                Vector3 previousFlow = EnvObject::flowfield(pos);
+                // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
+        //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
+                // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
+                direction = grad(pos);
+                binormal = Vector3(0, 0, 1);
+                normal = direction.cross(binormal); // Direction and binormal are normalized.
+                if (normal.dot(previousFlow) > 0) {
+                    normal *= -1.f;
+                }
+                impact = this->flowEffect;// * distFactor;
+            });
+            timeApply += timeIt([&]() {
+                flow.at(pos) += impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;
+                // occupancy.at(pos) = 1.f;
+            });
         });
-    });
-    return {flow, occupancy};
+        // return {flow, occupancy};
+        this->_cachedFlowModif = flow;
+    }
+    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()};
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
