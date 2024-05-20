@@ -83,6 +83,7 @@ SOURCES += \
 #        src/FastWFC/wave.cpp \
 #        src/FastWFC/wfc.cpp \
     src/EnvObject/EnvPoint.cpp \
+    src/EnvObject/EnvScenario.cpp \
     src/EnvObject/ExpressionParser.cpp \
 #    src/FluidSimulation/FLIPSimulation_copy.cpp \
     src/EnvObject/PositionOptimizer.cpp \
@@ -270,6 +271,7 @@ HEADERS += \
 #    src/FastWFC/wave.hpp \
 #    src/FastWFC/wfc.hpp \
     src/EnvObject/EnvPoint.h \
+    src/EnvObject/EnvScenario.h \
     src/EnvObject/ExpressionParser.h \
 #    src/FluidSimulation/FLIPSimulation_copy.h \
     src/EnvObject/PositionOptimizer.h \

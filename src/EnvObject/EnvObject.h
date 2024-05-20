@@ -17,6 +17,7 @@
 #include "DataStructure/Kelvinlet.h"
 
 #include "EnvObject/PositionOptimizer.h"
+#include "EnvObject/EnvScenario.h"
 
 class EnvPoint;
 class EnvCurve;
@@ -28,46 +29,6 @@ typedef GraphTemplate<EnvObject*> GraphObj;
 typedef GraphNodeTemplate<EnvObject*> GraphNodeObj;
 
 typedef std::pair<std::map<std::string, float>, std::map<std::string, float>> MaterialsTransformation;
-
-struct ScenariosObject {
-    ScenariosObject(std::string objectName, float proba, int amount = -1) : objectName(objectName), probabilityPerStep(proba), amountRequired(amount)
-    {}
-    std::string objectName;
-    float probabilityPerStep;
-    int amountRequired;
-
-    float normalizedProba;
-};
-
-struct ScenarioEvent {
-    enum Type {
-        WATER_LEVEL,
-        SUBSIDENCE,
-        MATERIAL_DEPOSITION
-    };
-
-    ScenarioEvent(std::string typeName, float amount, float startTime, float endTime);
-
-    Type type;
-    std::string typeName;
-    float amount;
-    float startTime;
-    float endTime;
-};
-
-class Scenario {
-public:
-    void addObject(std::string name, float proba, int amount = -1);
-    std::vector<ScenariosObject> objects;
-    ScenariosObject nextObject();
-
-
-    float duration;
-    float dt = 1.f;
-    float startTime = 0;
-
-    bool finished() const;
-};
 
 
 class EnvObject
