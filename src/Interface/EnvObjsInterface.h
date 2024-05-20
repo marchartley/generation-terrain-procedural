@@ -168,6 +168,8 @@ public:
 
     BSpline objectSkeletonCreation;
     bool manuallyCreatingObject = false;
+
+    bool forceScenarioInterruption = true;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

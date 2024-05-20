@@ -55,7 +55,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     EnvObject::precomputeTerrainProperties(*heightmap);
 
     this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
-    this->loadScene("testEnvObjects.json");
+    this->loadScene("EnvObjects/testEnvObjects.json");
 
 
     // QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
@@ -143,7 +143,7 @@ QLayout *EnvObjsInterface::createGUI()
     });
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
 //    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
-    ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("testEnvObjects.json"); });
+    ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
     TextEditElement* testingFormula = new TextEditElement("", "Try: ");
     testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
@@ -188,6 +188,8 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
     ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
+    ButtonElement* saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
+
     SliderElement* flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
     flowErosionSlider->setOnValueChanged([&](float newValue) {
         this->flowErosionFactor = newValue;
@@ -206,10 +208,16 @@ QLayout *EnvObjsInterface::createGUI()
     });
 
     ButtonElement* nextStepButton = new ButtonElement("Step", [&]() {
+        forceScenarioInterruption = true;
         this->runNextStep();
     });
     ButtonElement* runButton = new ButtonElement("Run", [&]() {
-        this->runScenario();
+        if (!this->forceScenarioInterruption) {
+            std::cout << "Stopping scenario" << std::endl;
+            this->forceScenarioInterruption = true;
+        } else {
+            this->runScenario();
+        }
     });
 
     layout->addWidget(newObjectCreationBox->get());
@@ -226,7 +234,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
     layout->addWidget(testingFormula->get());
     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
-    layout->addWidget(createHorizontalGroup({label, createFromFile->get()}));
+    layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get()}));
 
     return layout;
 }
@@ -623,7 +631,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
             this->materialSimulationStable = false; // We have to compute the simulation again
             return;
         } else {
-            std::cout << "Nope, impossible to instantiate..." << std::endl;
+            // std::cout << "Nope, impossible to instantiate..." << std::endl;
             return;
         }
     }, verbose);
@@ -663,7 +671,7 @@ void EnvObjsInterface::runNextStep()
     int maxTries = 100;
     while (!createdObject && maxTries > 0) {
         auto nextObject = EnvObject::scenario.nextObject();
-        std::cout << "Generating " << nextObject.objectName << "?" << std::endl;
+        // std::cout << "Generating " << nextObject.objectName << "?" << std::endl;
         createdObject = this->instantiateSpecific(nextObject.objectName, true);
         maxTries --;
     }
@@ -672,10 +680,12 @@ void EnvObjsInterface::runNextStep()
 
 void EnvObjsInterface::runScenario()
 {
+    this->forceScenarioInterruption = false;
     EnvObject::scenario.startTime = EnvObject::currentTime;
-    while (!EnvObject::scenario.finished()) {
+    while (!EnvObject::scenario.finished() && !forceScenarioInterruption) {
         runNextStep();
     }
+    this->forceScenarioInterruption = true;
 }
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
@@ -719,16 +729,21 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     }, verbose);
 
     if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
-        // Get original flowfield, do not accumulate effects (for now).
-        displayProcessTime("Get velocity... ", [&]() {
-            EnvObject::flowfield = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
-        }, verbose);
         displayProcessTime("Apply effects... ", [&]() {
             bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
             //this->materialSimulationStable = !bigChangesInMaterials;
         }, verbose);
         displayProcessTime("Recompute properties... ", [&]() {
             EnvObject::recomputeFlowAndSandProperties(*heightmap);
+        }, verbose);
+        // Get original flowfield, do not accumulate effects (for now).
+        displayProcessTime("Get velocity... ", [&]() {
+            GridV3 simulatedPart = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
+            simulatedPart *= .1f;
+            dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->setObstacles(voxelGrid->getVoxelValues());
+            dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->recomputeVelocities();
+            EnvObject::flowfield = EnvObject::initialFlowfield + simulatedPart;
+            // std::cout << EnvObject::initialFlowfield.max() << " -- " << simulatedPart.max() << std::endl;
         }, verbose);
     }
     if (updateImplicitTerrain) {
@@ -1412,6 +1427,10 @@ void EnvObjsInterface::loadScene(std::string filename)
 
     std::vector<nlohmann::json> allObjects = json["objects"];
     std::vector<nlohmann::json> allMaterials = json["materials"];
+    if (json.contains("initialflow")) {
+        std::string flowStr = json["initialflow"];
+        EnvObject::initialFlowfield = loadGridV3(flowStr, false);
+    }
 
     for (auto mat : allMaterials) {
         EnvObject::materials[mat["name"]].fromJSON(mat);
@@ -1465,6 +1484,7 @@ void EnvObjsInterface::saveScene(std::string filename)
 
     mainJson["objects"] = allObjects;
     mainJson["materials"] = allMaterials;
+    mainJson["initialflow"] = stringifyGridV3(EnvObject::initialFlowfield, false); //VectorFieldDataFile(EnvObject::initialFlowfield).stringify();
 
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
