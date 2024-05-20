@@ -500,9 +500,9 @@ void EnvObject::removeAllObjects()
     EnvObject::instantiatedObjects.clear();
 }
 
-bool EnvObject::applyEffects(const GridF& heights)
+bool EnvObject::applyEffects(const GridF& heights, const GridV3& userFlow)
 {
-    EnvObject::updateFlowfield();
+    EnvObject::updateFlowfield(userFlow);
     return EnvObject::updateSedimentation(heights);
 //    EnvObject::applyMaterialsTransformations();
     // return false;
@@ -604,20 +604,15 @@ void EnvObject::applyMaterialsTransformations()
     }, false);
 }
 
-void EnvObject::updateFlowfield()
+void EnvObject::updateFlowfield(const GridV3 &userFlow)
 {
     EnvObject::flowfield = EnvObject::initialFlowfield;
-//    for (int i = int(EnvObject::instantiatedObjects.size()) - 1; i >= 0; i--) {
+    if (!userFlow.empty())
+        EnvObject::flowfield += userFlow;
     for (int i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
         auto& object = EnvObject::instantiatedObjects[i];
         auto [flow, occupancy] = object->computeFlowModification();
-//        float currentGrowth = object->computeGrowingState();
-//        occupancy *= currentGrowth;
-
         EnvObject::flowfield = flow;
-//        EnvObject::flowfield += flow * EnvObject::flowImpactFactor;
-//        flow = flow * occupancy + EnvObject::flowfield * (1.f - occupancy);
-//        EnvObject::flowfield = EnvObject::flowfield * (1.f - EnvObject::flowImpactFactor) + flow * EnvObject::flowImpactFactor;
     }
     EnvObject::flowfield = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
 }

@@ -56,6 +56,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     EnvObject::precomputeTerrainProperties(*heightmap);
 
     this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
+    this->userFlowField = GridV3(heightmap->heights.getDimensions());
+    this->simulationFlowField = GridV3(heightmap->heights.getDimensions());
     this->loadScene("EnvObjects/testEnvObjects.json");
 
 
@@ -105,8 +107,10 @@ void EnvObjsInterface::display(const Vector3 &camPos)
     if (this->waitAtEachFrame)
         this->updateEnvironmentFromEnvObjects(true, false);
 
-    velocitiesMesh.shader->setVector("color", std::vector<float>{.2f, .2f, .8f, .5f});
-    velocitiesMesh.display(GL_LINES, 5.f);
+    if (displayFlow) {
+        velocitiesMesh.shader->setVector("color", std::vector<float>{.2f, .2f, .8f, .5f});
+        velocitiesMesh.display(GL_LINES, 3.f);
+    }
 
     if (displayHighErosions) {
         highErosionsMesh.shader->setVector("color", std::vector<float>{.8f, .2f, .2f, .5f});
@@ -221,6 +225,8 @@ QLayout *EnvObjsInterface::createGUI()
         }
     });
 
+    CheckboxElement* displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
+
     layout->addWidget(newObjectCreationBox->get());
     layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton})->get());
     layout->addWidget(waitAtEachFrameButton->get());
@@ -235,7 +241,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
     layout->addWidget(testingFormula->get());
     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
-    layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get()}));
+    layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get(), displayCurrentsButton->get()}));
 
     return layout;
 }
@@ -731,7 +737,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
     if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
         displayProcessTime("Apply effects... ", [&]() {
-            bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights);
+            bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights, userFlowField + simulationFlowField);
             //this->materialSimulationStable = !bigChangesInMaterials;
         }, verbose);
         displayProcessTime("Recompute properties... ", [&]() {
@@ -739,13 +745,16 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         }, verbose);
         // Get original flowfield, do not accumulate effects (for now).
         displayProcessTime("Get velocity... ", [&]() {
-            GridV3 simulatedPart = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
-            simulatedPart *= .1f;
             dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->setObstacles(voxelGrid->getVoxelValues());
             dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->recomputeVelocities();
-            EnvObject::flowfield = EnvObject::initialFlowfield + simulatedPart;
-            // std::cout << EnvObject::initialFlowfield.max() << " -- " << simulatedPart.max() << std::endl;
+            this->simulationFlowField = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
+            this->simulationFlowField *= .1f;
+            // EnvObject::flowfield = EnvObject::initialFlowfield + simulatedPart;
+
+            updateVectorFieldVisu();
         }, verbose);
+
+
     }
     if (updateImplicitTerrain) {
 
@@ -785,7 +794,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
-    EnvObject::applyEffects(heightmap->heights);
+    EnvObject::applyEffects(heightmap->heights, userFlowField + simulationFlowField);
 }
 
 void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying)
@@ -929,11 +938,11 @@ void EnvObjsInterface::updateSelectionMesh()
 {
     if (currentSelections.empty()) {
         selectedObjectsMesh.clear();
-        velocitiesMesh.clear();
+        // velocitiesMesh.clear();
         return;
     }
 
-    this->velocitiesMesh.fromArray(std::vector<float>{});
+    // this->velocitiesMesh.fromArray(std::vector<float>{});
     this->selectedObjectsMesh.fromArray(std::vector<float>{});
     Vector3 selectionPos;
     std::vector<Vector3> lines;
@@ -1432,6 +1441,10 @@ void EnvObjsInterface::loadScene(std::string filename)
         std::string flowStr = json["initialflow"];
         EnvObject::initialFlowfield = loadGridV3(flowStr, false);
     }
+    if (json.contains("userflow")) {
+        this->userFlowField = loadGridV3(json["userflow"]);
+    }
+
     if (json.contains("waterlevel")) {
         float waterLevel = json["waterlevel"];
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->setWaterLevel(waterLevel);
@@ -1489,7 +1502,8 @@ void EnvObjsInterface::saveScene(std::string filename)
 
     mainJson["objects"] = allObjects;
     mainJson["materials"] = allMaterials;
-    mainJson["initialflow"] = stringifyGridV3(EnvObject::initialFlowfield, false); //VectorFieldDataFile(EnvObject::initialFlowfield).stringify();
+    mainJson["initialflow"] = stringifyGridV3(EnvObject::initialFlowfield, false);
+    mainJson["userflow"] = stringifyGridV3(this->userFlowField, false);
     mainJson["waterlevel"] = heightmap->properties->waterLevel;
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
@@ -1508,7 +1522,7 @@ GridV3 EnvObjsInterface::renderFocusArea() const
 
 GridV3 EnvObjsInterface::renderFlowfield() const
 {
-    EnvObject::updateFlowfield();
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField);
     GridV3& flow = EnvObject::flowfield;
     // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
     return Plotter::get()->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
@@ -1595,8 +1609,10 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
     brush.iterateParallel([&](const Vector3& p) {
         brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
     });
-    EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    EnvObject::updateFlowfield();
+    // EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
+    this->userFlowField.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField);
+    this->updateVectorFieldVisu();
 
     this->flowErosionSimulation();
 
@@ -1856,6 +1872,12 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
 std::string EnvObjsInterface::getCurrentObjectName() const
 {
     return objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label;
+}
+
+void EnvObjsInterface::updateVectorFieldVisu()
+{
+    GridV3 velocities = EnvObject::flowfield.resize(Vector3(50, 50, 1));
+    Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
 }
 
 void EnvObjsInterface::fromGanUI()

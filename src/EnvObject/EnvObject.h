@@ -112,10 +112,10 @@ public:
     static EnvObject* instantiate(std::string objectName);
     static void removeObject(EnvObject* obj);
     static void removeAllObjects();
-    static bool applyEffects(const GridF& heights);
+    static bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
     static bool updateSedimentation(const GridF& heights);
     static void applyMaterialsTransformations();
-    static void updateFlowfield();
+    static void updateFlowfield(const GridV3& userFlow = GridV3());
     static void beImpactedByEvents();
 
     static int currentMaxID;

@@ -115,12 +115,18 @@ public Q_SLOTS:
 
     std::string getCurrentObjectName() const;
 
+    void updateVectorFieldVisu();
+
 public:
     Mesh velocitiesMesh;
     Mesh highErosionsMesh;
     Mesh highDepositionMesh;
     Mesh selectedObjectsMesh;
     Mesh newObjectMesh;
+
+    GridV3 userFlowField;
+    GridV3 simulationFlowField;
+    bool displayFlow = false;
 
     HierarchicalListWidget* objectsListWidget = nullptr;
 
