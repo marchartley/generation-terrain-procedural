@@ -189,6 +189,7 @@ EnvArea &EnvArea::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
     this->evaluationPosition.translate(translation);
+    this->_cachedFlowModif.clear();
     return *this;
 }
 
@@ -198,6 +199,7 @@ void EnvArea::updateCurve(const BSpline &newCurve)
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->curve = newCurve;
     this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
+    this->_cachedFlowModif.clear();
 }
 
 nlohmann::json EnvArea::toJSON() const

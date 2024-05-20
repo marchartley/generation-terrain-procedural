@@ -157,6 +157,7 @@ EnvPoint &EnvPoint::translate(const Vector3 &translation)
 {
     this->position.translate(translation);
     this->evaluationPosition.translate(translation);
+    this->_cachedFlowModif.clear();
     return *this;
 }
 
