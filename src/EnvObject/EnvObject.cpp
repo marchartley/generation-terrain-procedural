@@ -358,9 +358,13 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.normal"] = Vector3::invalid();
     variables["current.dir"] = Vector3::invalid();
     variables["current.vel"] = float();
+    variables["current.gradient"] = Vector3::invalid();
     variables["depth"] = float();
-    for (auto& [matName, material] : EnvObject::materials)
+    variables["depth.gradient"] = Vector3::invalid();
+    for (auto& [matName, material] : EnvObject::materials) {
         variables[matName] = float();
+        variables[matName + ".gradient"] = Vector3::invalid();
+    }
 
     ExpressionParser parser;
     variables["currenttime"] = float();
@@ -657,11 +661,14 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties["current"] = initialVectorPropertyMap;
         EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
         EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
-//        EnvObject::allScalarProperties["sand"] = initialScalarPropertyMap;
-//        EnvObject::allScalarProperties["polyp"] = initialScalarPropertyMap;
+        EnvObject::allVectorProperties["current.gradient"] = initialVectorPropertyMap;
+
         EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
+        EnvObject::allVectorProperties["depth.gradient"] = initialVectorPropertyMap;
+
         for (const auto& [matName, material] : EnvObject::materials) {
             EnvObject::allScalarProperties[matName] = initialScalarPropertyMap;
+            EnvObject::allVectorProperties[matName + ".gradient"] = initialVectorPropertyMap;
         }
 
 
@@ -712,11 +719,13 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
         EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
         EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
     });
+    EnvObject::allVectorProperties["current.gradient"] = EnvObject::allScalarProperties["current.vel"].gradient();
     for (auto& [matName, material] : EnvObject::materials) {
         EnvObject::allScalarProperties[matName] = material.currentState;
-//        std::cout << "Total of " << matName << ": " << material.currentState.sum() << std::endl;
+        EnvObject::allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
     }
     EnvObject::allScalarProperties["depth"] = ((heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights.gaussianSmooth(1.f, true));
+    EnvObject::allVectorProperties["depth.gradient"] = EnvObject::allScalarProperties["depth"].gradient();
 }
 
 void EnvObject::reset()

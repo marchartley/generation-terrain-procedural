@@ -41,7 +41,6 @@ ScenariosObject Scenario::nextObject()
 
     float isNextObject = random_gen::generate(sumProbas);
     for (auto& [i, proba] : probas) {
-        // std::cout << objects[i].objectName << " -> " << isNextObject << " .. " << std::flush;
         isNextObject -= proba;
 
         if (isNextObject <= 0) return objects[i];
