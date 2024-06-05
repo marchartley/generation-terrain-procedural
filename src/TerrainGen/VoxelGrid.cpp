@@ -23,7 +23,9 @@ VoxelGrid::~VoxelGrid()
 }
 void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
     float zScale = 1.f;
-    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), grid.getSizeZ() * zScale);
+    float height = this->getSizeZ();
+    // std::cout << "Voxels height: " << height << std::endl;
+    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), height/*grid.getSizeZ() * zScale*/);
     this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
@@ -39,7 +41,8 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
         subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
         subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
+    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, height, 0.f);
+    // this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
     this->initMap();
 
     GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
@@ -53,6 +56,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
     for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             float grid_height = gridHeights.at(x, y) * (sizeZ / gridMaxHeight);
+            if (gridMaxHeight < 1e-5) grid_height = 0;
             int z = int(std::max(grid_height, 2.f));
             // Positive values
             for (int i = 0; i < int(z); i++) {

@@ -17,6 +17,8 @@
 #include "Interface/TerrainComparatorInterface.h"
 #include "TerrainModification/UnderwaterErosion.h"
 
+#include "Interface/EnvObjsInterface.h"
+
 TerrainGenerationInterface::TerrainGenerationInterface(QWidget *parent)
     : ActionInterface("terraingeneration", "Terrain generation", "model", "Terrain generation management", "terrain_generation_manager_button.png", parent)
 {
@@ -292,6 +294,10 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         displayProcessTime("Generatign voxels... ", [&]() { voxelGrid->from2DGrid(*heightmap); });
         displayProcessTime("Generating layers... ", [&]() { layerGrid->from2DGrid(*heightmap); });
 
+        if (auto envObjInterface = dynamic_cast<EnvObjsInterface*>(viewer->interfaces["envobjects"].get())) {
+            envObjInterface->initialHeightmap = heightmap->heights;
+        }
+
     } else if (ext == "JSON") {
         // The JSON file contains the list of actions made on a map
         std::ifstream file(filename);
@@ -528,7 +534,7 @@ QLayout* TerrainGenerationInterface::createGUI()
     depthEdit->setValue(voxelGrid->getSizeX());
     heightEdit->setValue(voxelGrid->getSizeX());
 
-    noiseStrengthSlider->setfValue(2.f);
+    noiseStrengthSlider->setfValue(1.f);
     noiseLacunaritySlider->setfValue(.3f);
     noiseFrequencySlider->setfValue(.3f);
 
@@ -714,6 +720,11 @@ void TerrainGenerationInterface::prepareShader(bool reload)
 
     marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions()));
     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions().x, voxelGrid->getVoxelValues().getDimensions().y, 1));
+    // heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 4, GridF(1, 1, 1, 0.5f));
+    // marchingCubeMesh.shader->setInt("scalarFieldToDisplay", 4);
+    // layersMesh.shader->setInt("scalarFieldToDisplay", 4);
+    // implicitMesh.shader->setInt("scalarFieldToDisplay", 4);
+
 
 
     GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
@@ -751,8 +762,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-    GL_RGBA, GL_FLOAT, heightmapData);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0, GL_RGBA, GL_FLOAT, heightmapData);
     delete[] heightmapData;
 
 
@@ -892,8 +902,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allColorTextures.sizeX, allColorTextures.sizeY, 0,
-    GL_RGBA, GL_FLOAT, allTexturesColors);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allColorTextures.sizeX, allColorTextures.sizeY, 0, GL_RGBA, GL_FLOAT, allTexturesColors);
     delete[] allTexturesColors;
     heightmapMesh.shader->setInt("allBiomesColorTextures", 5);
     marchingCubeMesh.shader->setInt("allBiomesColorTextures", 5);
@@ -914,8 +923,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allNormalTextures.sizeX, allNormalTextures.sizeY, 0,
-    GL_RGBA, GL_FLOAT, allTexturesNormal);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allNormalTextures.sizeX, allNormalTextures.sizeY, 0, GL_RGBA, GL_FLOAT, allTexturesNormal);
     delete[] allTexturesNormal;
     heightmapMesh.shader->setInt("allBiomesNormalTextures", 6);
     marchingCubeMesh.shader->setInt("allBiomesNormalTextures", 6);
@@ -936,8 +944,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allDisplacementTextures.sizeX, allDisplacementTextures.sizeY, 0,
-    GL_RGBA, GL_FLOAT, allTexturesDisplacement);
+    glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, allDisplacementTextures.sizeX, allDisplacementTextures.sizeY, 0, GL_RGBA, GL_FLOAT, allTexturesDisplacement);
     delete[] allTexturesDisplacement;
     heightmapMesh.shader->setInt("allBiomesDisplacementTextures", 7);
     marchingCubeMesh.shader->setInt("allBiomesDisplacementTextures", 7);
@@ -1003,17 +1010,17 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
 //        heights += EnvObject::materials["sand"].currentState * 1.f;
         maxHeight = heights.max();
         float *heightmapData = new float[heights.size() * 4];
-        GridV3 gradients = heights.gradient();
+        // GridV3 gradients = heights.gradient();
         int maxColorTextureIndex = 0;
-        for (auto biome : colorTexturesIndex) {
+        for (const auto& biome : colorTexturesIndex) {
             maxColorTextureIndex = std::max(maxColorTextureIndex, biome.second + 1);
         }
         int maxNormalTextureIndex = 0;
-        for (auto biome : normalTexturesIndex) {
+        for (const auto& biome : normalTexturesIndex) {
             maxNormalTextureIndex = std::max(maxNormalTextureIndex, biome.second + 1);
         }
         int maxDisplacementTextureIndex = 0;
-        for (auto biome : displacementTexturesIndex) {
+        for (const auto& biome : displacementTexturesIndex) {
             maxDisplacementTextureIndex = std::max(maxDisplacementTextureIndex, biome.second + 1);
         }
         int maxBiomeID = 0; //std::max(1, heightmap->getBiomeIndices().max());
@@ -1035,15 +1042,14 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                         displacementTextureOffset = displacementTexturesIndex[biome->getTextureName()] / (float)(maxDisplacementTextureIndex);
                 }
             }
-            gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
+            // gradients[i] = (gradients[i].normalized().abs());// + Vector3(1, 1, 1)) / 2.f;
             heightmapData[i * 4 + 0] = colorTextureOffset;
             heightmapData[i * 4 + 1] = normalTextureOffset; // gradients[i].y;
             heightmapData[i * 4 + 2] = displacementTextureOffset; // gradients[i].z;
             heightmapData[i * 4 + 3] = heights[i] / maxHeight; //1.0; //heightmap->heights[i] / maxHeight;
         }
 
-        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, heightmap->getSizeX(), heightmap->getSizeY(), 0,
-        GL_RGBA, GL_FLOAT, heightmapData);//heightData.data.data());
+        glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA32F, heightmap->getSizeX(), heightmap->getSizeY(), 0, GL_RGBA, GL_FLOAT, heightmapData);
         delete[] heightmapData;
     }, verbose);
 
@@ -1052,6 +1058,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
             if (this->heightmap == nullptr) {
                 std::cerr << "No grid to display" << std::endl;
             } else {
+                heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
                 GridF heightData(this->heightmap->getSizeX(), this->heightmap->getSizeY());
                 std::vector<Vector3> positions(heightData.size());
                 for (size_t i = 0; i < positions.size(); i++) {
@@ -1096,6 +1103,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                     }
                 });
                 GLcallTime = timeIt([&]() {
+                    marchingCubeMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
                     marchingCubeMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
         //            marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, getVoxelChanges(voxelGrid, initialTerrainValues) + 2.f);
 //                    marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 3, (EnvObject::sandDeposit * 10.f + 2.f).resize(values.getDimensions().xy() + Vector3(0, 0, 1)));
@@ -1155,6 +1163,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                     GridI materials;
                     GridF matHeights;
                     std::tie(materials, matHeights) = layerGrid->getMaterialAndHeightsGrid();
+                    layersMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
                     layersMesh.shader->setTexture3D("matIndicesTex", 1, materials);
                     layersMesh.shader->setTexture3D("matHeightsTex", 2, matHeights);
 
@@ -1174,6 +1183,7 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 GridF values;
                 values = implicitTerrain->getVoxelized(voxelGrid->getDimensions());
     //            std::cout << values.sum() << std::endl;
+                implicitMesh.shader->setTexture3D("scalarFieldToDisplay", 10, this->scalarFieldToDisplay);
                 implicitMesh.shader->setTexture3D("dataFieldTex", 0, values + .5f);
                 implicitMesh.shader->setBool("useMarchingCubes", smoothingAlgorithm == SmoothingAlgorithm::MARCHING_CUBES);
                 implicitMesh.shader->setFloat("min_isolevel", this->minIsoLevel/3.f);
@@ -1296,4 +1306,22 @@ void TerrainGenerationInterface::changeDisplayShadowsMode(bool display)
 {
     this->displayShadows = display;
     Q_EMIT updated();
+}
+
+void TerrainGenerationInterface::updateScalarFieldToDisplay(const GridF &scalarField, float min, float max)
+{
+    /*if (heightmapMesh.shader) {
+        std::cout << "Scalar field updated" << std::endl;
+        heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 4, scalarField);
+    }*/
+    scalarFieldToDisplay = scalarField;
+    float mini = scalarField.min(), maxi = scalarField.max();
+    if (abs(mini - maxi) < 1e-5) {
+        scalarFieldToDisplay.reset(0.5f); // Force it to 0.5 to become neutral
+        return;
+    }
+
+    scalarFieldToDisplay.iterateParallel([&] (size_t i) {
+        scalarFieldToDisplay[i] = (scalarFieldToDisplay[i] < 0 ? (1.f - scalarFieldToDisplay[i] / mini) * .5f : (scalarFieldToDisplay[i] / maxi) * .5f + .5f);
+    });
 }

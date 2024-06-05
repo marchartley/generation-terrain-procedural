@@ -13,7 +13,7 @@ BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
     // float realTarget = targetLength;
     // float minTargetLength = realTarget * .5f;
 
-    float stepSize = .1f;
+    float stepSize = .5f;
 
     int iter = 0;
     for (iter = 0; iter < maxIterations; ++iter) {
@@ -24,6 +24,7 @@ BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
         }
         currentContour.resamplePoints();
         contour = currentContour;
+        // std::cout << "Step " << iter + 1 << ": Area = " << ShapeCurve(contour).computeArea() << " / " << targetArea << std::endl;
     }
 
     contour = currentContour;
@@ -145,7 +146,7 @@ Vector3 SnakeSegmentation::computeInternalEnergyGradient(const BSpline &contour,
         float up = shape.setPoint(i, initial + Vector3(0, 1, 0)).computeArea();
 
         // areaVector = Vector3(right - left, up - down) * sign(area - targetArea);
-        areaVector = Vector3(right - area, up - area) * sign(area - targetArea);
+        areaVector = Vector3(right - area, up - area).normalize() * sign(area - targetArea);
         internalEnergyGradient += areaCost * areaVector;
     }
 
@@ -169,6 +170,8 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
     // Initialize a new contour to be updated
     BSpline newContour = currentContour;
 
+    Vector3 centroid = newContour.center();
+
     std::vector<Vector3> gradients(currentContour.size());
 
     // Iterate over each control point of the contour
@@ -186,16 +189,19 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
     }
 
     for (int i = 0; i < numPoints; ++i) {
+        // if (image(newContour[i]) < 1e-5) {
+            // gradients[i] = (gradients[i] + (newContour[i] - centroid).normalize() * .1f).normalize();
+        // }
         newContour[i] -= gradients[i] * stepSize;
     }
 
-    /*auto autointersections = newContour.checkAutointersections();
+    auto autointersections = newContour.checkAutointersections();
     for (auto [i0, i1] : autointersections) {
         newContour[i0] = currentContour[i0];
         newContour[i0 + 1] = currentContour[i0 + 1];
         newContour[i1] = currentContour[i1];
         newContour[i1 + 1] = currentContour[i1 + 1];
-    }*/
+    }
     return newContour;
 }
 

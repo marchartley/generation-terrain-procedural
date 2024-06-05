@@ -46,8 +46,9 @@ public Q_SLOTS:
     virtual void mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     virtual void keyPressEvent(QKeyEvent* event);
 
-    EnvObject *instantiateObject(bool waitForFullyGrown = true);
-    EnvObject *instantiateSpecific(std::string objectName, bool waitForFullyGrown = true);
+public:
+    EnvObject* instantiateSpecific(std::string objectName, GridF score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
+    EnvObject* fakeInstantiate(std::string objectName, GridF score = GridF());
 
     bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
 
@@ -60,7 +61,7 @@ public Q_SLOTS:
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
     void onlyUpdateFlowAndSandFromEnvObjects();
-    void destroyEnvObject(EnvObject* object, bool applyDying = true);
+    void destroyEnvObject(EnvObject* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
 
     void displayProbas(std::string objectName);
     void displayMaterialDistrib(std::string materialName);
@@ -80,7 +81,7 @@ public Q_SLOTS:
     void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
     void updateScenarioDefinition(const std::string& newDefinition);
 
-    void evaluateAndDisplayCustomCostFormula(std::string formula) const;
+    void evaluateAndDisplayCustomCostFormula(std::string formula);
 
     BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
@@ -103,6 +104,7 @@ public Q_SLOTS:
 
     void showAllElementsOnPlotter() const;
 
+    void addObjectsHeightmaps();
     void flowErosionSimulation();
 
     void startNewObjectCreation();
@@ -116,6 +118,8 @@ public Q_SLOTS:
     std::string getCurrentObjectName() const;
 
     void updateVectorFieldVisu();
+
+    StatsValues displayStatsForObjectCreation(std::string objectName, int nbSamples = 10);
 
 public:
     Mesh velocitiesMesh;
@@ -157,6 +161,7 @@ public:
 
     std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
+    // Implicit2DNary* rootPatch;
 
     std::vector<EnvObject*> currentSelections;
 
@@ -176,6 +181,13 @@ public:
     bool manuallyCreatingObject = false;
 
     bool forceScenarioInterruption = true;
+
+    bool fluidSimulationIsStable = false;
+
+    GridF initialHeightmap;
+    GridF subsidedHeightmap;
+
+    bool displayDepositionOnHeightmap = true;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

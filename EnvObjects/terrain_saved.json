@@ -1,0 +1,32 @@
+{
+  	"assets": {
+  		"arch": "/home/marc/generation-terrain-procedural/src/assets/models/arche",
+  		"coral": "/home/marc/generation-terrain-procedural/src/assets/models/corals"
+	},
+	"instances": {
+		"arch": [
+			{
+				"position": [4, 10, 2],
+				"rotation": [1, 0, 0],
+				"scale": [1, 1, 1]
+			},
+			{
+				"position": [10, 15, 2],
+				"rotation": [1, 0, 0],
+				"scale": [1, 1, 5]
+			}
+		],
+		"coral": [
+			{
+				"position": [4, 10, 0],
+				"rotation": [1, 0, 0],
+				"scale": [1, 1, 1]
+			},
+			{
+				"position": [10, 15, 0],
+				"rotation": [1, 0, 0],
+				"scale": [1, 1, 5]
+			}
+		]
+	}
+}

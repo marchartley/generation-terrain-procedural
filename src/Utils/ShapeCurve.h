@@ -60,4 +60,9 @@ struct ClipVertex {
 int getIndex(int index, size_t size);
 int markEntriesExits(std::vector<ClipVertex*>& poly, bool currentlyInside, int shapeID);
 
+
+
+std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon);
+Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon);
+
 #endif // SHAPECURVE_H

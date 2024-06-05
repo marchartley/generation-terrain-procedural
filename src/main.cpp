@@ -1785,6 +1785,129 @@ int main(int argc, char *argv[])
     return Plotter::get()->exec();
     */
 
+    /*
+     * Unit test: Added a random Fbm function
+    GridF img(1000, 1000, 1);
+    int octaves = 5;
+    float lacunarity = 2.0;
+    float gain = 0.5;
+    displayProcessTime("Time : ", [&]() {
+        img.iterateParallel([&](const Vector3& p) {
+            img(p) = random_gen::generate_fbm(p.x, p.y, 0, octaves, gain, lacunarity);
+        });
+    });
+    Plotter::get()->addImage(img);
+    return Plotter::get()->exec();
+    */
+    // auto computeGreenCoordinates = [&](const Vector3& p, const ShapeCurve& polygon) -> std::vector<float> {
+    //     std::vector<float> greenCoords;
+
+    //     for (size_t i = 0; i < polygon.size(); i += 3) {
+    //         const Vector3& a = polygon[i];
+    //         const Vector3& b = polygon[i + 1];
+    //         const Vector3& c = polygon[i + 2];
+
+    //         // Check if the point is inside the triangle formed by a, b, and c
+    //         if (Collision::pointInPolygon(p, {a, b, c})) {
+    //             // Compute the barycentric coordinates of the point with respect to triangle abc
+    //             Vector3 v0 = c - a;
+    //             Vector3 v1 = b - a;
+    //             Vector3 v2 = p - a;
+
+    //             float dot00 = v0.dot(v0);
+    //             float dot01 = v0.dot(v1);
+    //             float dot02 = v0.dot(v2);
+    //             float dot11 = v1.dot(v1);
+    //             float dot12 = v1.dot(v2);
+
+    //             float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+    //             float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+    //             float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+    //             float w = 1.0f - u - v;
+
+    //             // Store the barycentric coordinates
+    //             greenCoords.push_back(w);
+    //             greenCoords.push_back(v);
+    //             greenCoords.push_back(u);
+
+    //             // Assuming the polygon is simple, return the green coordinates once found
+    //             // return greenCoords;
+    //         } else {
+    //             greenCoords.push_back(0);
+    //             greenCoords.push_back(0);
+    //             greenCoords.push_back(0);
+    //         }
+    //     }
+
+    //     // Point is outside the polygon
+    //     return greenCoords;
+    // };
+
+    // auto computePointFromGreenCoordinates = [&](const std::vector<float>& greenCoords, const ShapeCurve& polygon) -> Vector3 {
+    //     Vector3 p(0.0, 0.0, 0.0); // Initialize point P
+
+    //     // Interpolate the position of the point based on the barycentric coordinates
+    //     for (size_t i = 0; i < polygon.size(); i += 3) {
+    //         const Vector3& a = polygon[i];
+    //         const Vector3& b = polygon[i + 1];
+    //         const Vector3& c = polygon[i + 2];
+
+    //         // Extract barycentric coordinates for triangle abc
+    //         float u = greenCoords[i];
+    //         float v = greenCoords[i + 1];
+    //         float w = greenCoords[i + 2];
+
+    //         // Compute the interpolated position of the point P using barycentric coordinates
+    //         p += (u * a + v * b + w * c);
+    //     }
+
+    //     return p;
+    // };
+
+    // ShapeCurve initial({
+    //                   Vector3(10, 10, 0),
+    //                   Vector3(91, 10, 0),
+    //                   Vector3(90, 91, 0),
+    //                   Vector3(51, 51, 0),
+    //                   Vector3(10, 91, 0)
+    // });
+    // Voronoi voro(initial.points, Vector3(-100, -100, 0), Vector3(200, 200, 0));
+    // std::vector<Vector3> points = initial.randomPointsInside(20);
+    // Delaunay delaunay;
+    // delaunay.fromVoronoi(voro);
+    // auto triangles = delaunay.getTriangles();
+    // ShapeCurve shape(flattenArray(triangles));
+    // // points.insert(points.begin(), shape.points.begin(), shape.points.end());
+
+    // GridV3 img(100, 100, 1);
+    // for (int i = 0; i < initial.size(); i++) {
+    //     for (auto& p : BSpline({initial[i], initial[i + 1]}).getPath(100))
+    //         img(p) = Vector3(.5f, .5f, .5f);
+    // }
+
+    // std::vector<std::vector<float>> initialPos;
+    // for (int i = 0; i < points.size(); i++) {
+    //     auto& p = points[i];
+    //     auto coord = computeGreenCoordinates(p, shape);
+    //     initialPos.push_back(coord);
+    // }
+
+    // delaunay.graph.nodes[3]->pos += Vector3(0, 50, 0);
+    // triangles = delaunay.getTriangles();
+    // shape = ShapeCurve(flattenArray(triangles));
+
+    // for (int i = 0; i < points.size(); i++) {
+    //     auto& coord = initialPos[i];
+    //     auto q = computePointFromGreenCoordinates(coord, shape);
+    //     for (auto& pp : BSpline({points[i], q}).getPath(100))
+    //         img(pp) = Vector3(1, 1, 1);
+    // }
+
+    // Plotter::get()->addImage(img);
+    // return Plotter::get()->exec();
+    // return 0;
+
+
     EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
     EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
 

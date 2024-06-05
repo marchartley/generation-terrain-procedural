@@ -12,6 +12,8 @@ public:
 
     Delaunay& fromVoronoi(const Voronoi& voronoi);
 
+    std::vector<std::vector<Vector3>> getTriangles() const;
+
 
     std::vector<Vector3> points;
     Graph graph;

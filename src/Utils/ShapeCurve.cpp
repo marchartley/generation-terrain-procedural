@@ -525,3 +525,71 @@ std::vector<Vector3> ShapeCurve::closedPath() const
         res.push_back(this->points[0]);
     return res;
 }
+
+
+
+
+std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon) {
+    std::vector<float> greenCoords;
+
+    for (size_t i = 0; i < polygon.size(); i += 3) {
+        const Vector3& a = polygon[i];
+        const Vector3& b = polygon[i + 1];
+        const Vector3& c = polygon[i + 2];
+
+        // Check if the point is inside the triangle formed by a, b, and c
+        if (Collision::pointInPolygon(p, {a, b, c})) {
+            // Compute the barycentric coordinates of the point with respect to triangle abc
+            Vector3 v0 = c - a;
+            Vector3 v1 = b - a;
+            Vector3 v2 = p - a;
+
+            float dot00 = v0.dot(v0);
+            float dot01 = v0.dot(v1);
+            float dot02 = v0.dot(v2);
+            float dot11 = v1.dot(v1);
+            float dot12 = v1.dot(v2);
+
+            float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+            float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+            float w = 1.0f - u - v;
+
+            // Store the barycentric coordinates
+            greenCoords.push_back(w);
+            greenCoords.push_back(v);
+            greenCoords.push_back(u);
+
+            // Assuming the polygon is simple, return the green coordinates once found
+            // return greenCoords;
+        } else {
+            greenCoords.push_back(0);
+            greenCoords.push_back(0);
+            greenCoords.push_back(0);
+        }
+    }
+
+    // Point is outside the polygon
+    return greenCoords;
+}
+
+Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon) {
+    Vector3 p(0.0, 0.0, 0.0); // Initialize point P
+
+    // Interpolate the position of the point based on the barycentric coordinates
+    for (size_t i = 0; i < polygon.size(); i += 3) {
+        const Vector3& a = polygon[i];
+        const Vector3& b = polygon[i + 1];
+        const Vector3& c = polygon[i + 2];
+
+        // Extract barycentric coordinates for triangle abc
+        float u = greenCoords[i];
+        float v = greenCoords[i + 1];
+        float w = greenCoords[i + 2];
+
+        // Compute the interpolated position of the point P using barycentric coordinates
+        p += (u * a + v * b + w * c);
+    }
+
+    return p;
+}

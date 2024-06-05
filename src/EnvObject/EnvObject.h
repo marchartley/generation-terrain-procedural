@@ -53,6 +53,8 @@ public:
 
     virtual nlohmann::json toJSON() const;
 
+    float height;
+
 
     std::string name;
     std::string s_FittingFunction;
@@ -66,7 +68,9 @@ public:
     std::map<std::string, float> needsForGrowth;
     std::map<std::string, float> currentSatisfaction;
     float fittingScoreAtCreation = -1.f;
-    Vector3 evaluationPosition;
+    std::vector<Vector3> evaluationPositions;
+    float minScore = 0.f;
+    // Vector3 evaluationPosition;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
@@ -76,6 +80,8 @@ public:
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
 
+    virtual void recomputeEvaluationPoints() = 0;
+
     virtual EnvObject* clone() = 0;
     virtual float computeGrowingState();
     virtual float computeGrowingState2();
@@ -84,13 +90,19 @@ public:
     virtual void applyDepositionOnDeath() = 0;
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
     virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
-    virtual GridF createHeightfield() const = 0;
+    virtual GridF createHeightfield();
     virtual EnvObject& translate(const Vector3& translation) = 0;
     float evaluate(const Vector3& position);
+    float evaluate();
 
     void die();
 
     bool createdManually = false;
+
+    enum HeightmapFrom {
+        SURFACE, GROUND, WATER
+    };
+    HeightmapFrom heightFrom = SURFACE;
 
 
     static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
@@ -122,9 +134,9 @@ public:
 
     static std::map<std::string, GridV3> allVectorProperties;
     static std::map<std::string, GridF> allScalarProperties;
-    static void precomputeTerrainProperties(const Heightmap& heightmap);
+    static void precomputeTerrainProperties(const GridF &heightmap, float waterLevel, float maxHeight);
     static void recomputeTerrainPropertiesForObject(std::string objectName);
-    static void recomputeFlowAndSandProperties(const Heightmap &heightmap);
+    static void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
 
     static void reset();
 
@@ -135,6 +147,12 @@ public:
     static int currentTime;
 
     GridV3 _cachedFlowModif;
+    ImplicitPatch* _patch = nullptr;
+    GridF _cachedHeightfield;
+
+    GridF _cachedAbsorptionDepositionField;
+
+    Vector3 storedOrientation = Vector3(false);
 
     static Scenario scenario;
 };

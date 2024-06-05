@@ -43,6 +43,11 @@ EnvCurve *EnvCurve::instantiate(std::string objectName)
     return dynamic_cast<EnvCurve*>(EnvObject::instantiate(objectName));
 }
 
+void EnvCurve::recomputeEvaluationPoints()
+{
+    this->evaluationPositions = curve.points;
+}
+
 void EnvCurve::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
@@ -51,38 +56,40 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
     BSpline translatedCurve = BSpline(this->curve.getPath(100));
     for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-    sand.iterateParallel([&] (const Vector3& pos) {
-        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
-        float amount = normalizedGaussian(width * .25f, distToCurve) * this->materialDepositionRate[material.name];
+    if (_cachedAbsorptionDepositionField.empty()) {
+        _cachedAbsorptionDepositionField = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-        sand.at(pos) = amount;
-    });
-    material.currentState.add(sand, box.min().xy() - Vector3(width, width));
+        _cachedAbsorptionDepositionField.iterateParallel([&] (const Vector3& pos) {
+            float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+            float amount = normalizedGaussian(width * .25f, distToCurve);
+
+            _cachedAbsorptionDepositionField.at(pos) = amount;
+        });
+    }
+    material.currentState.add(_cachedAbsorptionDepositionField * this->materialDepositionRate[material.name], box.min().xy() - Vector3(width, width));
 }
 
 void EnvCurve::applyAbsorption(EnvMaterial& material)
 {
     if (this->materialAbsorptionRate[material.name] == 0) return;
     displayProcessTime("Absorption... ", [&]() {
-        AABBox box;
-        BSpline translatedCurve;
-        GridF sand;
-
-        box = AABBox(this->curve.points);
-        translatedCurve = BSpline(this->curve.getPath(100));
+        AABBox box = AABBox(this->curve.points);
+        BSpline translatedCurve = BSpline(this->curve.getPath(100));
         for (auto& p : translatedCurve)
             p = p + Vector3(width, width, 0) - box.min();
-        sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-        sand.iterateParallel([&] (const Vector3& pos) {
-            float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
-            float amount = normalizedGaussian(width * .25f, distToCurve) * this->materialAbsorptionRate[material.name];
-            sand.at(pos) = amount;
-        });
+        if (_cachedAbsorptionDepositionField.empty()) {
+            _cachedAbsorptionDepositionField = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
 
-        material.currentState.add(-sand, box.min().xy() - Vector3(width, width));
+            _cachedAbsorptionDepositionField.iterateParallel([&] (const Vector3& pos) {
+                float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+                float amount = normalizedGaussian(width * .25f, distToCurve);
+
+                _cachedAbsorptionDepositionField.at(pos) = amount;
+            });
+        }
+        material.currentState.add(_cachedAbsorptionDepositionField * this->materialAbsorptionRate[material.name], box.min().xy() - Vector3(width, width));
 
         material.currentState.iterateParallel([&] (size_t i) {
             material.currentState[i] = std::max(material.currentState[i], 0.f);
@@ -218,10 +225,11 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         return nullptr;
     }
     AABBox box(this->curve.points);
-    float growingState = this->computeGrowingState2();
+    float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    float height = this->height * growingState;
-    Vector3 offset(this->width, this->width, height * .5f);
+    float height = this->height;
+    float radius = this->width * growingState;
+    Vector3 offset(this->width, this->width, radius * .5f);
 
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
@@ -238,14 +246,14 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
             p.z = heights(p.xy());
             maxHeight = std::max(maxHeight, p.z);
         }
-        if (height == 0){
+        if (radius == 0){
             box = AABBox({box.center()});
             offset = Vector3();
         }
         box = AABBox(translatedCurve.points);
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
-        *patch = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
+        *patch = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
         patch->position = (box.min() - offset.xy() * .5f).xy();
         patch->supportDimensions = box.dimensions() + offset;
 
@@ -259,43 +267,49 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
             p.z = heights(p.xy());
             maxHeight = std::max(maxHeight, p.z);
         }
-        if (height == 0){
+        if (radius == 0){
             box = AABBox({box.center()});
             offset = Vector3();
         }
         box = AABBox(translatedCurve.points);
         box.expand({box.min(), box.max() + offset * 1.f + Vector3(0, 0, maxHeight + 10)});
         translatedCurve.translate(-(box.min() - offset * .5f));
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, radius, translatedCurve, false);
         patch->position = (box.min() - offset.xy() * .5f).xy();
         patch->supportDimensions = box.dimensions() + offset;
     }
     patch->material = this->material;
     patch->name = this->name;
+    this->_patch = patch;
     return patch;
 }
 
-GridF EnvCurve::createHeightfield() const
+/*GridF EnvCurve::createHeightfield()
 {
     return GridF();
-}
+}*/
 
 EnvCurve &EnvCurve::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
-    this->evaluationPosition.translate(translation);
+    for (auto& evaluationPosition : evaluationPositions)
+        evaluationPosition.translate(translation);
     this->_cachedFlowModif.clear();
+    this->_cachedHeightfield.clear();
     return *this;
 }
 
 
 void EnvCurve::updateCurve(const BSpline &newCurve)
 {
+    /*
     float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
+    this->evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;*/
+    this->evaluationPositions = newCurve.points;
     this->curve = newCurve;
-    this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
     this->_cachedFlowModif.clear();
+    this->_cachedHeightfield.clear();
 }
 
 nlohmann::json EnvCurve::toJSON() const

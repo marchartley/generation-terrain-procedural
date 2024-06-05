@@ -353,11 +353,15 @@ void Viewer::reloadAllShaders()
 
 void Viewer::setupViewFromFile(std::string filename)
 {
-//    std::cout << "Using view from file " << filename << std::endl;
-    this->setStateFileName(QString::fromStdString(filename));
-    this->restoreStateFromFile();
-    this->setStateFileName("");
-//    this->saveStateToFile();
+    try {
+       std::cout << "Using view from file " << filename << std::endl;
+        this->setStateFileName(QString::fromStdString(filename));
+        this->restoreStateFromFile();
+        this->setStateFileName("");
+    //    this->saveStateToFile();
+    } catch (std::exception& e) {
+        std::cout << "Error: " << e.what() << std::endl;
+    }
 }
 
 void Viewer::saveViewToFile(std::string filename)

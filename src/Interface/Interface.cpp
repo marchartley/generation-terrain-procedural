@@ -127,7 +127,7 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
         terrainGenerationInterface->waterLevel = .05f;
-        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.f);
+        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
         terrainGenerationInterface->waterLevel = .0f;
 
 //        terrainGenerationInterface->prepareShader();
@@ -363,7 +363,7 @@ void ViewerInterface::setupUi()
         displayOptionUI->add(createHorizontalGroupUI({viewerSetupExperimental, viewerSetupExperimental_save}));
     }
 
-    CheckboxElement* displayAsComparisonTerrainButton = new CheckboxElement("Comparison terrain");
+    CheckboxElement* displayAsComparisonTerrainButton = new CheckboxElement("Comp.");
     displayAsComparisonTerrainButton->setChecked(terrainGenerationInterface->displayAsComparativeMode);
     displayAsComparisonTerrainButton->setOnChecked([=](bool check) { terrainGenerationInterface->changeDisplayToComparativeMode(check);});
 
@@ -390,7 +390,7 @@ void ViewerInterface::setupUi()
                                                     //}),
                                                     waterLevelSlider,
                                                     ambiantOcclusionSlider,
-                                                    heightFactorSlider
+                                                    heightFactorSlider,
                                                 }),
                                                 //reloadShadersButton,
                                                    createHorizontalGroupUI({

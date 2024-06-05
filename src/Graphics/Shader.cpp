@@ -375,6 +375,7 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture3D(std::string pname, int index, GridF texture)
 {
+    if (!this->use()) return;
     for (auto& val : texture)
         val = std::max(val, 0.f);
     glEnable(GL_TEXTURE_3D);
@@ -382,7 +383,7 @@ void Shader::setTexture3D(std::string pname, int index, GridF texture)
 
     GLuint texIndex;
     bool justUpdateTexture = false; // true;
-    if (!this->use()) return;
+    // if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;

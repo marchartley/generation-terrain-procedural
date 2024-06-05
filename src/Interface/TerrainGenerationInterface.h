@@ -76,6 +76,8 @@ public Q_SLOTS:
     void changeDisplayDepthMode(bool display);
     void changeDisplayShadowsMode(bool display);
 
+    void updateScalarFieldToDisplay(const GridF& scalarField, float min = 0.f, float max = 1.f);
+
 public:
     float minIsoLevel = -1000.0;
     float maxIsoLevel =  1000.0;
@@ -130,6 +132,8 @@ public:
     float heightFactor = 1.f;
     bool displayDepth = false;
     bool displayShadows = false;
+
+    GridF scalarFieldToDisplay = GridF(1, 1, 1, 0.5f); // Default to "nothing interesting"
 };
 
 #endif // TERRAINGENERATIONINTERFACE_H

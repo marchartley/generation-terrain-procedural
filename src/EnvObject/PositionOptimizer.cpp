@@ -174,6 +174,9 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const Grid
         s.contour.resamplePoints(s.contour.size() + 1);
     }
     initialCurve = s.runSegmentation(50);
+    if (initialCurve.size() > 1 && (initialCurve[0] - initialCurve[-1]).norm2() < std::pow(targetLength * .3f, 2)) {
+        initialCurve = BSpline();
+    }
     return initialCurve;
 }
 
@@ -295,21 +298,33 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
     Vector3 pos = seedPosition;
 
     while (maxTries > 0) {
-        ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients).resamplePoints(20);
+        ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients).resamplePoints(50);
         SnakeSegmentation s = SnakeSegmentation(curve, score, gradients);
         s.convergenceThreshold = 1e-3;
         s.curvatureCost = 0.01f;
         s.lengthCost = 0.0f;
-        s.areaCost = 1.f;
-        s.imageCost = 0.f;
+        s.areaCost = 10.f;
+        s.imageCost = .0f;
         s.targetLength = 0;
         float fakeRadius = std::sqrt(targetArea) * .5f;
-        s.targetArea = PI * fakeRadius * fakeRadius;
+        float fakeArea = PI * fakeRadius * fakeRadius;
+        s.targetArea = fakeArea;
         s.contour = curve;
         s.collapseFirstAndLastPoint = true;
+
+        /*int nbIterations = 10;
+        for (int i = 0; i < nbIterations; i++) {
+            int nbCatapillars = 3;
+            float a = 0.5f + 0.5f * std::cos(float(nbCatapillars) * float(nbIterations) * 2.f * PI * float(i) / float(nbIterations - 1));
+            s.targetArea = interpolation::inv_linear(a, fakeArea * .5f, fakeArea);
+            // initialCurve = s.runSegmentation(40);
+            s.contour.resamplePoints(s.contour.size() + 1);
+        }*/
+
         curve = s.runSegmentation(100);
 
         if (curve.size() > 0) {
+            // std::cout << "Shape area: " << curve.computeArea() << " - Target: " << s.targetArea << " (" << fakeRadius << "x" << fakeRadius << ")" << std::endl;
             return curve;
         }
 

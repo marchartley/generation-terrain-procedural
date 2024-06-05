@@ -18,13 +18,15 @@ public:
     virtual EnvPoint* clone();
     static EnvPoint* instantiate(std::string objectName);
 
+    virtual void recomputeEvaluationPoints();
+
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
+    // virtual GridF createHeightfield();
 
     virtual EnvPoint& translate(const Vector3& translation);
 

@@ -14,16 +14,29 @@
 	},
 	{
 		"name": "coralpolyp",
-		"foldername": "corals",
+		"foldername": "coral",
 		"colors": [
 			{"r": 1.0, "g": 0.5, "b": 0.5, "a": 1.0}
 		],
 		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
 		"minInstances": 5,
-		"maxInstances": 20,
-		"minSize": 5.0,
-		"maxSize": 5.0,
-		"radius": 5.0
+		"maxInstances": 10,
+		"minSize": 1.0,
+		"maxSize": 2.0,
+		"radius": 3.0
+	},
+	{
+		"name": "coralpolypstrong",
+		"foldername": "corals",
+		"colors": [
+			{"r": 0.8, "g": 0.5, "b": 0.8, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 5,
+		"maxInstances": 10,
+		"minSize": 2.0,
+		"maxSize": 3.0,
+		"radius": 3.0
 	},
 	{
 		"name": "coralpolypflat",
@@ -32,11 +45,11 @@
 			{"r": 1.0, "g": 0.5, "b": 0.5, "a": 1.0}
 		],
 		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
-		"minInstances": 5,
-		"maxInstances": 20,
+		"minInstances": 3,
+		"maxInstances": 5,
 		"minSize": 5.0,
 		"maxSize": 5.0,
-		"radius": 10.0
+		"radius": 5.0
 	},
 	{
 		"name": "tree",
@@ -57,10 +70,10 @@
 		"colors": [
 			{"r": 0.8, "g": 0.8, "b": 0.6, "a": 1.0}
 		],
-		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.5},
 		"minInstances": 1,
 		"maxInstances": 1,
-		"minSize": 20.0,
+		"minSize": 30.0,
 		"maxSize": 40.0,
 		"radius": 0.0
 	},
@@ -73,8 +86,8 @@
 		"translation": {"x": 0.0, "y": 0.0, "z": 0.5},
 		"minInstances": 1,
 		"maxInstances": 1,
-		"minSize": 20.0,
-		"maxSize": 40.0,
+		"minSize": 5.0,
+		"maxSize": 10.0,
 		"radius": 0.0
 	},
 	{

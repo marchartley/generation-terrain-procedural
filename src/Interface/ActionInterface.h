@@ -40,8 +40,8 @@ public:
 
     bool isConcerned(nlohmann::json& action);
 
-    void log(const std::string& message);
-    void error(const std::string& message);
+    void log(const std::string& message, bool verbose = true);
+    void error(const std::string& message, bool verbose = true);
 
     virtual void replay(nlohmann::json action) = 0;
 

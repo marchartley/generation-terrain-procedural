@@ -43,6 +43,11 @@ EnvPoint *EnvPoint::instantiate(std::string objectName)
     return dynamic_cast<EnvPoint*>(EnvObject::instantiate(objectName));
 }
 
+void EnvPoint::recomputeEvaluationPoints()
+{
+    this->evaluationPositions = {position};
+}
+
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
@@ -129,7 +134,7 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
         return nullptr;
     }
     ImplicitPrimitive* patch;
-    float growingState = this->computeGrowingState2();
+    float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
     Vector3 dimensions = Vector3(radius * growingState, radius * growingState, radius * growingState* this->height);
     Vector3 patchPosition = this->position.xy() - Vector3(radius, radius) * .5f;
@@ -145,18 +150,21 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
     patch->supportDimensions = dimensions;
     patch->material = this->material;
     patch->name = this->name;
+    this->_patch = patch;
     return patch;
 }
 
-GridF EnvPoint::createHeightfield() const
+/*GridF EnvPoint::createHeightfield()
 {
     return GridF();
-}
+}*/
 
 EnvPoint &EnvPoint::translate(const Vector3 &translation)
 {
     this->position.translate(translation);
-    this->evaluationPosition.translate(translation);
+    // this->evaluationPosition.translate(translation);
+    for (auto& p : evaluationPositions)
+        p.translate(translation);
     this->_cachedFlowModif.clear();
     return *this;
 }

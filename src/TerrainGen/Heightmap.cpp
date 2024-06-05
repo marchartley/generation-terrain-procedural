@@ -586,7 +586,7 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
 {
     float stepSize = .1f;
 
-    AABBox myAABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
+    AABBox myAABBox(Vector3::max(minPos, Vector3(0, 0, this->heights.min())), Vector3::min(maxPos, this->getDimensions()));
     Vector3 currPos = origin;
     Vector3 dir = _dir.normalized();
 

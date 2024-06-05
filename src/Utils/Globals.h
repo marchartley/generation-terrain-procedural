@@ -60,6 +60,21 @@ public:
     static float generate_perlin(float x, float y = 0, float z = 0) {
         return perlinNoise.GetNoise(x, y, z);
     }
+
+    static float generate_fbm(float x, float y = 0, float z = 0, int octaves = 8, float gain = .5f, float lacunarity = 2.f) {
+        float value = 0;
+        float amplitude = 1.f;
+        float frequency = 1.;
+        float divisor = 0;
+        for (int i = 0; i < octaves; i++) {
+            value += random_gen::generate_perlin(x * frequency, y * frequency, z * frequency) * amplitude;
+            divisor += amplitude;
+            frequency *= lacunarity;
+            amplitude *= gain;
+        }
+        // float divisor = (gain != 0 ? )
+        return value / divisor;
+    }
 };
 
 class GlobalsGL {

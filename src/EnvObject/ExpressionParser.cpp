@@ -37,7 +37,7 @@ ExpressionParser::ExpressionParser() {
     unaryVectorOperators["abs"] = [](const Vector3& a) { return std::abs(a); };
     unaryVectorOperators["norm2"] = [](const Vector3& a) { return a.norm2(); };
     unaryVectorOperators["d2"] = [](const Vector3& a) { return a.norm2(); };
-    unaryVectorOperators["norm"] = [](const Vector3& a) { return a.norm(); };
+    unaryVectorOperators["normalize"] = [](const Vector3& a) { return a.normalized(); };
     unaryVectorOperators["d"] = [](const Vector3& a) { return a.norm(); };
     unaryVectorOperators["random"] = [](const Vector3& a) { return random_gen::generate_perlin(a.x, a.y, a.z); };
     unaryVectorOperators["x"] = [](const Vector3& a) { return a.x; };

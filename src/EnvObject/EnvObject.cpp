@@ -109,6 +109,7 @@ void EnvObject::readEnvMaterialsFileContent(std::string content)
         float waterTransport = mat["watertransport"];
         float mass = mat["mass"];
         float decay = mat["decay"];
+        float virtualHeight = mat["virtualheight"];
 
         EnvMaterial material;
         material.name = matName;
@@ -116,6 +117,7 @@ void EnvObject::readEnvMaterialsFileContent(std::string content)
         material.waterTransport = waterTransport;
         material.mass = mass;
         material.decay = decay;
+        material.virtualHeight = virtualHeight;
 
         if (EnvObject::materials.count(matName) != 0) {
             material.currentState = EnvObject::materials[matName].currentState;
@@ -192,12 +194,43 @@ void EnvObject::readScenarioFileContent(std::string content)
         scenario.addObject(name, proba, amount);
     }
 
+    auto events = json["events"];
+    for (auto& event : events) {
+        std::string type = toLower(event["type"]);
+        float startTime = event["start"];
+        float endTime = event["end"];
+
+        if (type == "waterlevel") {
+            float amount = event["amount"];
+            scenario.waterLevelEvents.push_back(WaterLevelEvent(amount, startTime, endTime));
+        } else if (type == "storm") {
+            Vector3 position = json_to_vec3(event["position"]);
+            Vector3 direction = json_to_vec3(event["direction"]);
+            float sigma = event["sigma"];
+            scenario.stormEvents.push_back(StormEvent(position, direction, sigma, startTime, endTime));
+        } else if (type == "subsidence") {
+            Vector3 position = json_to_vec3(event["position"]);
+            float amount = event["amount"];
+            float sigma = event["sigma"];
+            scenario.subsidenceEvents.push_back(SubsidenceEvent(position, amount, sigma, startTime, endTime));
+        } else if (type == "tectonic") {
+            Vector3 direction = json_to_vec3(event["direction"]);
+            float sigma = event["sigma"];
+            scenario.tectonicEvents.push_back(TectonicEvent(direction, sigma, startTime, endTime));
+        } else {
+            std::cerr << "The event " << type << " is not recognized..." << std::endl;
+        }
+    }
+
     auto parameters = json["simulation"];
     float duration = parameters["end"];
     float dt = parameters["dt"];
+    float waterLevel = parameters["waterlevel"];
 
     scenario.duration = duration;
     scenario.dt = dt;
+    scenario.waterLevel = waterLevel;
+
 }
 
 EnvObject *EnvObject::fromJSON(nlohmann::json content)
@@ -211,6 +244,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     TerrainTypes material = materialFromString(content["material"]);
     ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
     Vector3 dimensions = json_to_vec3(content["dimensions"]);
+    HeightmapFrom heightFrom = (!content.contains("heightfrom") || content["heightfrom"] == "surface" ? SURFACE : (content["heightfrom"] == "water" ? WATER : GROUND));
+    float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
     Vector3 flowEffect;
     if (objType == "point") {
@@ -279,6 +314,9 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
+    obj->recomputeEvaluationPoints();
+    obj->heightFrom = heightFrom;
+    obj->minScore = minScore;
     if (dimensions.z == 0) obj->inputDimensions = Vector3();
     return obj;
 }
@@ -291,7 +329,11 @@ nlohmann::json EnvObject::toJSON() const
     json["ID"] = this->ID;
     json["age"] = this->age;
     json["needs"] = this->currentSatisfaction;
-    json["evaluationPosition"] = vec3_to_json(this->evaluationPosition);
+    // json["evaluationPosition"] = vec3_to_json(this->evaluationPosition);
+    /*std::vector<nlohmann::json> positions;
+    for (auto& p : this->evaluationPositions)
+        positions.push_back(vec3_to_json(p));
+    json["evaluationPositions"] = positions;*/
     json["fittingScoreAtCreation"] = this->fittingScoreAtCreation;
 
     return json;
@@ -326,11 +368,34 @@ float EnvObject::computeGrowingState2()
 {
     if (this->createdManually) return 1.f;
 
-    float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
+    // float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
+    float newFitnessEvaluation = this->evaluate();
     // std::cout << this->fittingScoreAtCreation << " / " << newFitnessEvaluation << std::endl;
     // if (newFitnessEvaluation <= 0) return 0;
-    if (this->fittingScoreAtCreation == 0) return 0; // This is a problem...
+    if (this->fittingScoreAtCreation <= 1e-6) return 0; // This is a problem...
     return std::clamp(newFitnessEvaluation / this->fittingScoreAtCreation, 0.f, 1.f);
+}
+
+GridF EnvObject::createHeightfield()
+{
+    if (_patch) {
+        if (auto patch = dynamic_cast<ImplicitPrimitive*>(_patch)) {
+            if (_cachedHeightfield.empty() && patch && patch->predefinedShape != ImplicitPatch::NONE) {
+                auto previousMaterial = patch->material;
+                patch->material = SAND; // Temporarly be solid to get some height (which is then depth...)
+                GridF heights(patch->getDimensions().x, patch->getDimensions().y, 1);
+                heights.iterateParallel([&] (const Vector3& p) {
+                    float resolution = .5f;
+                    for (float z = 1; z < patch->getDimensions().z * 1.f; z += resolution) {
+                        heights(p) += (patch->evaluate(p.xy() + patch->position.xy() + Vector3(0, 0, z)) > 0 ? resolution : 0.f);
+                    }
+                });
+                patch->material = previousMaterial;
+                _cachedHeightfield = heights;
+            }
+        }
+    }
+    return _cachedHeightfield;
 }
 
 std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances, EnvObject *myObject)
@@ -361,6 +426,8 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
     variables["current.gradient"] = Vector3::invalid();
     variables["depth"] = float();
     variables["depth.gradient"] = Vector3::invalid();
+    variables["fracture"] = float();
+    variables["fracture.gradient"] = Vector3::invalid();
     for (auto& [matName, material] : EnvObject::materials) {
         variables[matName] = float();
         variables[matName + ".gradient"] = Vector3::invalid();
@@ -391,6 +458,13 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
             } else {
                 vars[prop] = map(pos);
             }
+        }
+        if (myObject && myObject->_patch) {
+            // if (auto patch = dynamic_cast<ImplicitPrimitive*>(myObject->_patch)) {
+            vars["depth"] = std::get<float>(vars["depth"]) + (myObject->createHeightfield().at(pos)); //.at(pos - patch->position.xy()));
+            // } else {
+                // std::cout << "NO" << std::endl;
+            // }
         }
         vars["pos"] = pos;
         vars["currenttime"] = float(EnvObject::currentTime);
@@ -521,34 +595,41 @@ bool EnvObject::updateSedimentation(const GridF& heights)
     #pragma omp parallel for
     for(int i = 0; i < names.size(); i++) {
         auto& material = materials[names[i]];
-        float startingAmount = material.currentState.sum();
-        if (material.diffusionSpeed < 1.f) {
-            if (random_gen::generate() < material.diffusionSpeed) {
-                material.currentState = material.currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
-            }
+        if (material.isStable) {
+            // std::cout << material.name << " is stable" << std::endl;
+            // continue;
         } else {
-            material.currentState = material.currentState.meanSmooth(material.diffusionSpeed * 2 + 1, material.diffusionSpeed * 2 + 1, 1, false); // Diffuse
+            // std::cout << material.name << " NOT stable" << std::endl;
         }
+
+        float startingAmount = material.currentState.sum();
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
-            #pragma omp critical
-            object->applyAbsorption(material);
+            // if (object->materialAbsorptionRate[material.name] != 0) {
+                #pragma omp critical
+                object->applyAbsorption(material);
+            // }
         }
-        material.currentState = material.currentState.warpWith((smoothFluids * material.waterTransport) - (heightsGradients * material.mass));
 
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
-            #pragma omp critical
-            object->applyDeposition(material);
+            // if (object->materialDepositionRate[material.name] != 0) {
+                #pragma omp critical
+                object->applyDeposition(material);
+            // }
         }
 
-        material.currentState *= material.decay;
+        material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
+        // material.currentState *= material.decay;
 
         float endingAmount = material.currentState.sum();
 
         if (std::abs(endingAmount - startingAmount) > 1e-3) {
             #pragma omp critical
             bigChangesInAtLeastOneMaterialDistribution = true;
+        } else {
+            // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
+            material.isStable = true;
         }
     }
     return bigChangesInAtLeastOneMaterialDistribution;
@@ -629,16 +710,34 @@ float EnvObject::evaluate(const Vector3 &position)
     return this->fittingFunction(position.xy());
 }
 
+float EnvObject::evaluate()
+{
+    if (evaluationPositions.empty()) {
+        std::cerr << "Object " << name << " has no evaluation point..." << std::endl;
+        return 0;
+    }
+    float totalScore = 0;
+    for (auto& p : evaluationPositions) {
+        float score = evaluate(p);
+        if (score != score) {
+            std::cerr << "NaN found while evaluating " << this->name << " at " << p << std::endl;
+        } else {
+            totalScore += score;
+        }
+    }
+    return totalScore / float(evaluationPositions.size());
+}
+
 void EnvObject::die()
 {
     this->applyDepositionOnDeath();
 }
 
-void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
+void EnvObject::precomputeTerrainProperties(const GridF& heightmap, float waterLevel, float maxHeight)
 {
 
     displayProcessTime("Computing terrain properties... ", [&]() {
-        Vector3 terrainDimensions = Vector3(heightmap.getDimensions().x, heightmap.getDimensions().y, 1);
+        Vector3 terrainDimensions = heightmap.getDimensions();
         GridF initialScalarPropertyMap(terrainDimensions, 0.f);
         GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid());
 
@@ -661,6 +760,9 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
         EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
         EnvObject::allVectorProperties["depth.gradient"] = initialVectorPropertyMap;
 
+        EnvObject::allScalarProperties["fracture"] = initialScalarPropertyMap;
+        EnvObject::allVectorProperties["fracture.gradient"] = initialVectorPropertyMap;
+
         for (const auto& [matName, material] : EnvObject::materials) {
             EnvObject::allScalarProperties[matName] = initialScalarPropertyMap;
             EnvObject::allVectorProperties[matName + ".gradient"] = initialVectorPropertyMap;
@@ -673,7 +775,7 @@ void EnvObject::precomputeTerrainProperties(const Heightmap &heightmap)
                 EnvObject::recomputeTerrainPropertiesForObject(name);
             }, false);
         }
-        EnvObject::recomputeFlowAndSandProperties(heightmap);
+        EnvObject::recomputeFlowAndSandProperties(heightmap, waterLevel, maxHeight);
     });
 }
 
@@ -706,7 +808,7 @@ void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
     });
 }
 
-void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
+void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float waterLevel, float maxHeight)
 {
     EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
         Vector3 waterFlow = EnvObject::flowfield(pos);
@@ -719,8 +821,11 @@ void EnvObject::recomputeFlowAndSandProperties(const Heightmap &heightmap)
         EnvObject::allScalarProperties[matName] = material.currentState;
         EnvObject::allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
     }
-    EnvObject::allScalarProperties["depth"] = ((heightmap.properties->waterLevel * heightmap.getSizeZ()) - heightmap.heights.gaussianSmooth(1.f, true));
+    EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.gaussianSmooth(1.f, true));
     EnvObject::allVectorProperties["depth.gradient"] = EnvObject::allScalarProperties["depth"].gradient();
+
+    EnvObject::allScalarProperties["fracture"] = EnvObject::scenario.computeTectonic(EnvObject::allScalarProperties["fracture"].getDimensions());
+    EnvObject::allVectorProperties["fracture.gradient"] = EnvObject::allScalarProperties["fracture"].gradient();
 }
 
 void EnvObject::reset()
@@ -730,10 +835,10 @@ void EnvObject::reset()
         destroyedObjects.insert(obj->name);
         delete obj;
     }
+    EnvObject::instantiatedObjects.clear();
     for (auto name : destroyedObjects) {
         EnvObject::recomputeTerrainPropertiesForObject(name);
     }
-    EnvObject::instantiatedObjects.clear();
     initFlow(true);
     for (auto& [matName, mat] : materials) {
         mat.currentState.reset();

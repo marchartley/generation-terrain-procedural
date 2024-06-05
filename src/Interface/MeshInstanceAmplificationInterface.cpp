@@ -26,35 +26,6 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
 
 void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
 {
-//    if (!this->isVisible())
-//        return;
-
-    /*
-    if (this->displayRocks || this->displayCorals) {
-        if (displayRocks) {
-            for (size_t i = 0; i < rocksIndicesAndPositionAndSize.size(); i++) {
-                int iRock;
-                Vector3 pos;
-                float size;
-                std::tie(iRock, pos, size) = rocksIndicesAndPositionAndSize[i];
-                possibleRocks[iRock].shader->setVector("instanceOffset", pos);
-                possibleRocks[iRock].shader->setFloat("sizeFactor", size);
-                possibleRocks[iRock].display();
-            }
-        }
-        if (displayCorals) {
-            for (size_t i = 0; i < coralsIndicesAndPositionAndSize.size(); i++) {
-                int iCoral;
-                Vector3 pos;
-                float size;
-                std::tie(iCoral, pos, size) = coralsIndicesAndPositionAndSize[i];
-                possibleCorals[iCoral].shader->setVector("instanceOffset", pos);
-                possibleCorals[iCoral].shader->setFloat("sizeFactor", size);
-                possibleCorals[iCoral].display();
-            }
-        }
-    }*/
-
     if (displayEnvObjects) {
 
         if (autoUpdateEnvObjLocations) {
@@ -76,7 +47,7 @@ void MeshInstanceAmplificationInterface::display(const Vector3& camPos)
                 rotMatrix[2][2] *= -1.f;
                 auto values = rotMatrix.toStdVector();
 //                std::tie(iMesh, pos, size) = meshType.indicesAndPositionsAndSizes[i];
-                meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", (pos + Vector3(0, 0, 1.f)) * Vector3(1, 1, terrainHeightFactor) - meshType.requiredTranslation * size);
+                meshType.possibleMeshes[iMesh].shader->setVector("instanceOffset", (pos + Vector3(0, 0, 2.f)) * Vector3(1, 1, terrainHeightFactor) - meshType.requiredTranslation * size);
                 meshType.possibleMeshes[iMesh].shader->setFloat("sizeFactor", size);
                 meshType.possibleMeshes[iMesh].shader->setMatrix("instanceRotation", values.data(), 4, 4);
 //                meshType.possibleMeshes[iMesh].displayWithOutlines(meshType.color);
@@ -110,7 +81,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
 //    std::vector<QString> algaePaths;
 
     displayProcessTime("Loading 3D models... ", [&]() {
-
+        /*
         QDirIterator itCorals("src/assets/models/coral/", QDir::Files, QDirIterator::Subdirectories);
         std::shared_ptr<Shader> coralsShader = std::make_shared<Shader>(vRockShader, fRockShader);
         while (itCorals.hasNext()) {
@@ -144,6 +115,7 @@ void MeshInstanceAmplificationInterface::reloadShaders()
             // Normalize it and move it upward so the anchor is on the ground
             possibleRocks[i] = Mesh(rocksShader).fromStl(dir.toStdString()).normalize();
         }
+        */
 
         /*
         meshesOptions.push_back(InstantiationMeshOption("boulder", {3.f, 8.f}, {.2f, 1.f, .5f, 1.f}));
@@ -208,6 +180,20 @@ QLayout* MeshInstanceAmplificationInterface::createGUI()
 
 //    layout->addWidget(displayCoralsCheckbox);
 //    layout->addWidget(displayRocksCheckbox);
+
+    ButtonElement* exportButton = new ButtonElement("Export", [&]() {
+        QString q_folder = QFileDialog::getExistingDirectory(this, QString("Save current mesh"), QString("EnvObjects/"));
+        if (q_folder.isEmpty()) return;
+
+        std::string folder = q_folder.toStdString();
+        this->exportJSONFile(folder + "/terrain_saved.json");
+        heightmap->saveHeightmap(folder + "/heightmap.png");
+        // QString q_filename = QFileDialog::getSaveFileName(this, QString("Save current meshes as JSON"), QString("EnvObjects/saved"));
+        // if (q_filename.isEmpty()) return;
+
+        // this->exportJSONFile(q_filename.toStdString());
+    });
+    layout->addWidget(exportButton->get());
 
     ButtonElement* recomputePositionsButton = new ButtonElement("Recompute positions");
     recomputePositionsButton->setOnClick([&]() { this->afterTerrainUpdated(); }); // Should be modified in the future
@@ -352,11 +338,12 @@ void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string 
         meshType.displayed = true;
 
         QDirIterator it(QString::fromStdString("src/assets/models/" + meshType.folderName + "/"), QDir::Files, QDirIterator::Subdirectories);
+        meshType.folderPath = QDir(it.path()).absolutePath().toStdString();
         std::shared_ptr<Shader> shader = std::make_shared<Shader>(vTreeShader, fTreeShader);
         std::vector<QString> paths;
         while (it.hasNext()) {
             QString dir = it.next();
-            if (endsWith(dir.toStdString(), ".ignore")) continue;
+            if (endsWith(dir.toStdString(), ".ignore") || !(endsWith(dir.toStdString(), "stl") || endsWith(dir.toStdString(), "fbx"))) continue;
             paths.push_back(dir);
         }
         size_t nbElements = paths.size();
@@ -487,6 +474,21 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
     }*/
 }
 
+void MeshInstanceAmplificationInterface::exportJSONFile(std::string filename)
+{
+    nlohmann::json json;
+    for (auto& meshType : meshesOptions) {
+        json["assets"][meshType.name] = meshType.folderPath;
+        if (meshType.positions.empty()) continue;
+
+        json["instances"][meshType.name] = meshType.currentInstancesToJSON();
+    }
+
+    std::ofstream out(filename);
+    out << json.dump(1, '\t');
+    out.close();
+}
+
 void InstantiationMeshOption::clear()
 {
     this->indices.clear();
@@ -501,4 +503,27 @@ void InstantiationMeshOption::add(int index, const Vector3 &position, float size
     this->positions.push_back(position);
     this->sizes.push_back(size);
     this->orientations.push_back(orientation);
+}
+
+
+nlohmann::json InstantiationMeshOption::currentInstancesToJSON()
+{
+    nlohmann::json main;
+    for (int i = 0; i < this->positions.size(); i++) {
+
+        // int iMesh = indices[i];
+        Vector3& pos = positions[i];
+        float size = sizes[i];
+        Vector3& orientation = orientations[i];
+
+        nlohmann::json json;
+        json["position"] = std::vector<float>({pos.x, pos.y, pos.z});
+        json["scale"] = std::vector<float>({size, size, size});
+
+        Vector3 angle = Vector3(0, 0, -(orientation.getAngleWith(Vector3(0, 1, 0))));
+        json["rotation"] = std::vector<float>({angle.x, angle.y, angle.z});
+
+        main.push_back(json);
+    }
+    return main;
 }

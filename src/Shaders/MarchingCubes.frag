@@ -96,6 +96,7 @@ uniform vec3 max_vertice_positions;
 
 uniform sampler3D dataFieldTex;
 uniform sampler3D dataChangesFieldTex;
+uniform sampler3D scalarFieldToDisplay;
 
 uniform float fogNear;
 uniform float fogFar;
@@ -519,5 +520,11 @@ void main(void)
         fragColor.rgb = fragColor.brg;
     }
 //    fragColor.xyz = vec3(length(varyingNormal));
+
+    vec3 scalarSize = textureSize(scalarFieldToDisplay, 0);
+    float scalar = clamp(texture(scalarFieldToDisplay, vec3(ginitialVertPos.xy, 0) / scalarSize).a, 0.0, 1.0);
+    vec3 scalarDisplayedColor = (scalar < 0.5 ? (vec3(1, 0, 0) * (1.0 - (scalar * 2.0)) + vec3(1, 1, 1) * scalar * 2.0) : (vec3(1, 1, 1) * (1.0 - (scalar - 0.5) * 2.0) + vec3(0, 1, 0) * (scalar - 0.5) * 2.0));
+    fragColor *= vec4(scalarDisplayedColor, 1.0);
+
     return;
 }

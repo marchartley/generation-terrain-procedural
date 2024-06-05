@@ -548,3 +548,22 @@ Vector3 colorPalette(float t, const std::vector<Vector3> &colors, const std::vec
     float interpol = std::clamp(interpolation::linear(t, previousKey, nextKey), 0.f, 1.f);
     return colorPalette(interpol, colors[iKey - 1], colors[iKey]);
 }
+
+StatsValues getStats(std::vector<float> values)
+{
+    StatsValues stats;
+    std::sort(values.begin(), values.end());
+    stats.min = values.front();
+    stats.max = values.back();
+    float sum = 0;
+    float sqrSum = 0;
+    for (auto& x : values) {
+        sum += x;
+        sqrSum += x * x;
+    }
+    stats.mean = sum / float(values.size());
+    stats.median = (values.size() % 2 == 0 ? (values[values.size() / 2 - 1] + values[values.size() / 2]) * 0.5f : values[values.size() / 2]);
+    stats.variance = (sqrSum / float(values.size())) - stats.mean * stats.mean;
+    stats.stdev = std::sqrt(stats.variance);
+    return stats;
+}

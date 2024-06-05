@@ -42,6 +42,12 @@ std::string simplify(std::string s);
 
 std::vector<std::string> getAllFiles(std::string folderName);
 
+
+struct StatsValues {
+    float min, max, median, mean, variance, stdev;
+};
+StatsValues getStats(std::vector<float> values);
+
 int runCommand(std::string command);
 
 float rad2deg(float rad);

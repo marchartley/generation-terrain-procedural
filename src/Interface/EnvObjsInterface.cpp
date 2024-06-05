@@ -9,6 +9,7 @@
 #include "Utils/Voronoi.h"
 #include "Interface/MeshInstanceAmplificationInterface.h"
 #include "Interface/TerrainGenerationInterface.h"
+#include "Utils/Delaunay.h"
 
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
@@ -51,14 +52,16 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     this->newObjectMesh.useIndices = false;
 
     this->rootPatch = new ImplicitNaryOperator;
+    // this->rootPatch = new Implicit2DNary;
     this->implicitTerrain->addChild(rootPatch);
 
-    EnvObject::precomputeTerrainProperties(*heightmap);
 
-    this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
-    this->userFlowField = GridV3(heightmap->heights.getDimensions());
-    this->simulationFlowField = GridV3(heightmap->heights.getDimensions());
-    this->loadScene("EnvObjects/testEnvObjects.json");
+    this->initialHeightmap = heightmap->heights;
+    this->subsidedHeightmap = initialHeightmap;
+    this->focusedArea = GridF(initialHeightmap.getDimensions(), 1.f);
+    this->userFlowField = GridV3(initialHeightmap.getDimensions());
+    this->simulationFlowField = GridV3(initialHeightmap.getDimensions());
+    EnvObject::precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 
 
     // QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
@@ -94,6 +97,63 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
         Q_EMIT this->updated();
     });
+
+
+    /*QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+
+        ShapeCurve initial({
+            Vector3(30, 30, 0),
+            Vector3(70, 30, 0),
+            Vector3(70, 70, 0),
+            Vector3(50, 70),
+            Vector3(30, 70, 0)
+        });
+        Voronoi voro(initial.points, Vector3(-100, -100, 0), Vector3(200, 200, 0));
+        random_gen::random_generator.seed(0);
+        std::vector<Vector3> points = initial.randomPointsInside(20);
+        random_gen::random_generator.seed();
+        Delaunay delaunay;
+        delaunay.fromVoronoi(voro);
+        auto triangles = delaunay.getTriangles();
+        ShapeCurve shape(flattenArray(triangles));
+        // points.insert(points.begin(), shape.points.begin(), shape.points.end());
+
+        GridV3 img(100, 100, 1);
+        for (int i = 0; i < initial.size(); i++) {
+            for (auto& p : BSpline({initial[i], initial[i + 1]}).getPath(100))
+                img(p) = Vector3(.5f, .5f, .5f);
+        }
+
+        std::vector<std::vector<float>> initialPos;
+        for (int i = 0; i < points.size(); i++) {
+            auto& p = points[i];
+            auto coord = computeGreenCoordinates(p, shape);
+            initialPos.push_back(coord);
+        }
+
+        for (int i = 0; i < initial.size(); i++) {
+            for (auto& p : BSpline({initial[i], initial[i + 1]}).getPath(100))
+                img(p) = Vector3(.5f, .5f, .5f);
+        }
+
+        delaunay.graph.nodes[3]->pos = mousePos;
+
+        // for (auto& n : delaunay.graph.nodes)
+            // if ((n->pos - mousePos).norm() < 10)
+                // n->pos += mousePos - prevPos;
+        triangles = delaunay.getTriangles();
+        shape = ShapeCurve(flattenArray(triangles));
+
+        for (int i = 0; i < points.size(); i++) {
+            auto& coord = initialPos[i];
+            auto q = computePointFromGreenCoordinates(coord, shape);
+            for (auto& pp : BSpline({points[i], q}).getPath(100))
+                img(pp) = Vector3(1, 1, 1);
+        }
+
+        Plotter::get()->addImage(img);
+        Plotter::get()->show();
+    });*/
 }
 
 void EnvObjsInterface::display(const Vector3 &camPos)
@@ -155,9 +215,9 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
 
     ButtonElement* instantiaABCbutton = new ButtonElement("Instantiate ABC", [&]() {
-        this->instantiateSpecific("CoralPolypFlatA", false);
-        this->instantiateSpecific("CoralPolypFlatB", false);
-        this->instantiateSpecific("CoralPolypFlatC", false);
+        this->instantiateSpecific("CoralPolypFlatA", GridF(), false);
+        this->instantiateSpecific("CoralPolypFlatB", GridF(), false);
+        this->instantiateSpecific("CoralPolypFlatC", GridF(), false);
     });
 
     QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
@@ -176,8 +236,8 @@ QLayout *EnvObjsInterface::createGUI()
         this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
     });
     ButtonElement* forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
-        this->updateSelectionMesh();
+        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), true);
+        // this->updateSelectionMesh();
 
         Q_EMIT this->updated();
     });
@@ -198,6 +258,7 @@ QLayout *EnvObjsInterface::createGUI()
     SliderElement* flowErosionSlider = new SliderElement("Erode", -10.f, 10.f, .1f);
     flowErosionSlider->setOnValueChanged([&](float newValue) {
         this->flowErosionFactor = newValue;
+        this->addObjectsHeightmaps();
         this->flowErosionSimulation();
 
         Q_EMIT this->updated();
@@ -326,8 +387,8 @@ void EnvObjsInterface::hide()
 {
 //    updateObjectsListSelection(nullptr); // Hide single object's data
     this->manuallyCreatingObject = false;
-    this->flowfieldEditing = false;
     this->focusAreaEditing = false;
+    this->flowfieldEditing = false;
     ActionInterface::hide();
 }
 
@@ -338,7 +399,7 @@ void EnvObjsInterface::afterTerrainUpdated()
 
 void EnvObjsInterface::afterWaterLevelChanged()
 {
-    EnvObject::recomputeFlowAndSandProperties(*heightmap);
+    EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 }
 
 void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition, bool mouseInMap, QMouseEvent *event, TerrainModel *model)
@@ -391,7 +452,7 @@ GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& p
     score.iterateParallel([&](const Vector3& pos) {
         score(pos) = std::max(obj->evaluate(pos), 0.f);
     });
-    if (abs(score.min() - score.max()) > 1e-5) {
+    if (score.max() > 1e-5) {
         possible = true;
         if (applyNormalization)
             score.normalizeUsing(NORMALIZE_METHOD::NORMALIZE_MINMAX);
@@ -425,6 +486,7 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
 }
 
 EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score) {
+    bool verbose = false;
     EnvObject* newObject = EnvObject::instantiate(objectName);
 
     auto objAsPoint = dynamic_cast<EnvPoint*>(newObject);
@@ -436,8 +498,8 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
     if (objAsPoint) {
-        position = PositionOptimizer::getHighestPosition(position, score, gradients);
-        if (!position.isValid())
+        // position = PositionOptimizer::getHighestPosition(position, score, gradients);
+        if (!position.isValid() || position == Vector3())
             return nullptr;
     } else if (objAsCurve) {
         BSpline initialCurve;
@@ -447,6 +509,11 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
             initialCurve = CurveOptimizer::followIsolevel(position, score, gradients, objAsCurve->length);
         } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
             initialCurve = CurveOptimizer::getExactLengthCurveFollowingGradients(position, score, gradients, objAsCurve->length);
+        }
+        if (initialCurve.size() == 0) {
+            EnvObject::removeObject(newObject);
+            delete newObject;
+            return nullptr;
         }
         BSpline curve = initialCurve;
         curve.resamplePoints(10);
@@ -464,23 +531,32 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
         position = initialCurve.centroid(); //initialCurve[0]; // The optimisation process might have moved the evaluation position greatly
         ShapeCurve curve = initialCurve.close().resamplePoints();
         curve.translate(-position);
-        objAsArea->curve = curve.resamplePoints(20);
+        objAsArea->curve = curve.resamplePoints(10);
     }
 
     newObject->translate(position.xy());
-    if (!Vector3::isInBox(newObject->evaluationPosition, Vector3(), score.getDimensions())) {
-        log("Object is outside...");
-        this->destroyEnvObject(newObject, false);
+    newObject->recomputeEvaluationPoints();
+    int nbOutside = 0;
+    for (auto& p : newObject->evaluationPositions) {
+        if (!Vector3::isInBox(p, Vector3(), score.getDimensions())) {
+            nbOutside++;
+        }
+    }
+    if (nbOutside > newObject->evaluationPositions.size() / 2) {
+    // if (!Vector3::isInBox(newObject->evaluationPosition, Vector3(), score.getDimensions())) {
+        log("Object is outside...", verbose);
+        this->destroyEnvObject(newObject, false, false);
         return nullptr;
     }
-    newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    // newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->fittingScoreAtCreation = newObject->evaluate();
     newObject->spawnTime = EnvObject::currentTime;
-    if (newObject->fittingScoreAtCreation <= 0) {
-        log("Object has score of 0...");
-        this->destroyEnvObject(newObject, false);
+    if (newObject->fittingScoreAtCreation <= newObject->minScore) {
+        log("Object has score of 0...", verbose);
+        this->destroyEnvObject(newObject, false, false);
         return nullptr;
     } else {
-        std::cout << "Creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
+        this->log("Creation of obj at score = " + std::to_string(newObject->fittingScoreAtCreation), verbose);
         return newObject;
     }
 }
@@ -510,74 +586,14 @@ EnvObject *EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName
     }
 
     newObject->translate(position.xy());
-    newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    // newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->fittingScoreAtCreation = newObject->evaluate();
     newObject->spawnTime = EnvObject::currentTime;
     std::cout << "Manual creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateObject(bool waitForFullyGrown)
-{
-    EnvObject* result = nullptr;
-    displayProcessTime("Instantiate new object... ", [&]() {
-        GridF heights = heightmap->getHeights();
-        std::map<std::string, GridF> scores;
-        std::map<std::string, bool> possible;
-        for (auto& [name, obj] : EnvObject::availableObjects) {
-            auto& score = scores[name];
-            score = computeScoreMap(name, heights.getDimensions(), possible[name]);
-            score.raiseErrorOnBadCoord = false;
-            score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-        }
-
-        std::vector<std::string> possibleObjects;
-        for (auto& [name, isPossible] : possible)
-            if (isPossible)
-                possibleObjects.push_back(name);
-
-        if (possibleObjects.size() > 0) {
-            this->materialSimulationStable = false; // We have to compute the simulation again
-            std::shuffle(possibleObjects.begin(), possibleObjects.end(), random_gen::random_generator);
-            std::string name = possibleObjects[0];
-            auto& score = scores[name];
-
-            Vector3 bestPos = bestPositionForInstantiation(name, score * focusedArea);
-            EnvObject* newObject = instantiateObjectAtBestPosition(name, bestPos, score);
-            if (!newObject) {
-                this->log("Object not created");
-                return nullptr;
-            }
-            auto implicit = newObject->createImplicitPatch(heightmap->heights);
-//            dynamic_cast<ImplicitPrimitive*>(implicit)->position.z = heightmap->getHeight(bestPos);
-            this->implicitPatchesFromObjects[newObject] = implicit;
-            if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
-                this->implicitTerrain->addChild(this->rootPatch);
-
-            if (implicit != nullptr) {
-                rootPatch->addChild(implicit);
-            }
-            std::cout << "Instantiating " << name << " at position " << bestPos << std::endl;
-            // Wait until the object is 100% grown:
-            int maxIterations = 100;
-            while (waitForFullyGrown && newObject->computeGrowingState() < 1.f) {
-                this->updateEnvironmentFromEnvObjects(false, true);
-                maxIterations--;
-                if (maxIterations < 0) break;
-            }
-            EnvObject::recomputeTerrainPropertiesForObject(name);
-            EnvObject::recomputeFlowAndSandProperties(*heightmap);
-            updateEnvironmentFromEnvObjects(implicit != nullptr, true);
-            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
-            result = newObject;
-        } else {
-            std::cout << "No object to instantiate..." << std::endl;
-        }
-    });
-    updateObjectsList();
-    return result;
-}
-
-EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool waitForFullyGrown)
+EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF score, bool waitForFullyGrown, bool updateScreen)
 {
     EnvObject* result = nullptr;
     objectName = toLower(objectName);
@@ -589,8 +605,9 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
         GridF heights = heightmap->getHeights();
 
-        bool possible;
-        GridF score = computeScoreMap(objectName, heights.getDimensions(), possible) * focusedArea;
+        bool possible = true;
+        if (score.empty())
+            score = computeScoreMap(objectName, heights.getDimensions(), possible) * focusedArea;
         score.raiseErrorOnBadCoord = false;
         score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
@@ -605,15 +622,19 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
                     bestPosition = bestPos;
                     bestScore = newObject->fittingScoreAtCreation;
                 }
-                this->destroyEnvObject(newObject, false);
+                this->destroyEnvObject(newObject, false, false);
+            }
+            if (!bestPosition.isValid()) {
+                this->log("No valid position for object" + objectName, verbose);
+                return;
             }
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPosition, score);
             if (!newObject) {
-                this->log("Object not created");
+                this->log("Object not created", verbose);
                 return;
             }
+            auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
             newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
-            auto implicit = newObject->createImplicitPatch(heightmap->heights);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
@@ -642,18 +663,44 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, bool wa
             return;
         }
     }, verbose);
-    updateObjectsList();
-    // updateSelectionMesh();
+    if (updateScreen)
+        updateObjectsList();
+    return result;
+}
+
+EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, GridF score)
+{
+    EnvObject* result = nullptr;
+    objectName = toLower(objectName);
+    if (EnvObject::availableObjects.count(objectName) == 0) {
+        this->error("No object " + objectName + " in database!");
+        return result;
+    }
+    GridF heights = heightmap->getHeights();
+
+    bool possible = !score.empty();
+    if (score.empty())
+        score = computeScoreMap(objectName, heights.getDimensions(), possible) * focusedArea;
+    score.raiseErrorOnBadCoord = false;
+    score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+
+    if (possible) {
+        Vector3 bestPosition = bestPositionForInstantiation(objectName, score);
+        EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPosition, score);
+        if (!newObject) {
+            return nullptr;
+        }
+        newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+        destroyEnvObject(newObject, false, false);
+        result = newObject;
+    }
     return result;
 }
 
 bool EnvObjsInterface::checkIfObjectShouldDie(EnvObject *obj, float limitFactorForDying)
 {
     if (obj->createdManually) return false;
-    Vector3 evaluationPosition = obj->evaluationPosition;
-    float score = obj->evaluate(evaluationPosition);
-
-    return (score == 0 || score <= obj->fittingScoreAtCreation * limitFactorForDying);
+    return (obj->computeGrowingState2() <= limitFactorForDying);
 }
 
 void EnvObjsInterface::recomputeErosionValues()
@@ -674,22 +721,54 @@ void EnvObjsInterface::recomputeErosionValues()
 
 void EnvObjsInterface::runNextStep()
 {
+    bool verbose = false;
     EnvObject* createdObject = nullptr;
-    int maxTries = 100;
-    while (!createdObject && maxTries > 0) {
-        auto nextObject = EnvObject::scenario.nextObject();
-        // std::cout << "Generating " << nextObject.objectName << "?" << std::endl;
-        createdObject = this->instantiateSpecific(nextObject.objectName, true);
-        maxTries --;
+    Scenario& scenario = EnvObject::scenario;
+
+    for (auto& nextObject : scenario.nextObjects()) {
+        bool possible;
+        GridF score = computeScoreMap(nextObject.objectName, subsidedHeightmap.getDimensions(), possible) * focusedArea;
+        if (possible) {
+            createdObject = this->instantiateSpecific(nextObject.objectName, score, false);
+        }
     }
+    /*
+    int maxTries = 1;
+    auto nextObject = scenario.nextObject();
+    bool possible;
+    GridF score;
+    displayProcessTime("Compute score... ", [&]() {
+        score = computeScoreMap(nextObject.objectName, subsidedHeightmap.getDimensions(), possible) * focusedArea;
+    }, verbose);
+    if (possible) {
+        while (!createdObject && maxTries > 0) {
+            displayProcessTime("Instantiate " + nextObject.objectName + "... ", [&]() {
+                createdObject = this->instantiateSpecific(nextObject.objectName, score, false);
+            }, verbose);
+            maxTries --;
+        }
+    }*/
     updateEnvironmentFromEnvObjects(false, false, false);
+    EnvObject::currentTime += scenario.dt;
+    std::cout << "Step: " << EnvObject::scenario.currentTime() << std::endl;
 }
 
 void EnvObjsInterface::runScenario()
 {
+    updateEnvironmentFromEnvObjects(true, false, false);
+    Scenario& scenario = EnvObject::scenario;
     this->forceScenarioInterruption = false;
-    EnvObject::scenario.startTime = EnvObject::currentTime;
-    while (!EnvObject::scenario.finished() && !forceScenarioInterruption) {
+    if (scenario.waterLevel >= 0) {
+        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(scenario.waterLevel);
+    } else {
+        scenario.waterLevel = heightmap->properties->waterLevel;
+    }
+    scenario.startTime = EnvObject::currentTime;
+    while (!scenario.finished() && !forceScenarioInterruption) {
+        float time = scenario.currentTime();
+        float waterLevel = scenario.computeWaterLevel();
+        (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(waterLevel);
+        this->log("Step: " + std::to_string(time) + (scenario.duration > 0 ? " / " + std::to_string(scenario.duration) : ""), false);
         runNextStep();
     }
     this->forceScenarioInterruption = true;
@@ -697,8 +776,10 @@ void EnvObjsInterface::runScenario()
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
 {
-    bool verbose = true;
+    bool verbose = false;
 
+    GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
+    subsidedHeightmap = initialHeightmap * subsidenceFactor;
 
     std::vector<EnvObject*> immatureObjects;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -717,8 +798,9 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             atLeastOneDeath |= shouldDie;
             if (shouldDie) {
                 float startingScore = obj->fittingScoreAtCreation;
-                float endingScore = obj->evaluate(obj->evaluationPosition);
-                std::cout << "Object went from " << startingScore << " to " << endingScore << " -> " << std::round(100.f * endingScore / startingScore) << "%" << std::endl;
+                // float endingScore = obj->evaluate(obj->evaluationPosition);
+                float endingScore = obj->evaluate();
+                this->log(obj->name + " went from " + std::to_string(startingScore) + " to " + std::to_string(endingScore) + " -> " + std::to_string(std::round(100.f * endingScore / startingScore)) + "%");
                 this->destroyEnvObject(obj);
                 deadObjects.insert(obj->name);
             }
@@ -737,47 +819,76 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
     if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
         displayProcessTime("Apply effects... ", [&]() {
-            bool bigChangesInMaterials = EnvObject::applyEffects(heightmap->heights, userFlowField + simulationFlowField);
+            bool bigChangesInMaterials = EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField);
             //this->materialSimulationStable = !bigChangesInMaterials;
         }, verbose);
         displayProcessTime("Recompute properties... ", [&]() {
-            EnvObject::recomputeFlowAndSandProperties(*heightmap);
+            EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
         }, verbose);
         // Get original flowfield, do not accumulate effects (for now).
         displayProcessTime("Get velocity... ", [&]() {
-            dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->setObstacles(voxelGrid->getVoxelValues());
-            dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->recomputeVelocities();
-            this->simulationFlowField = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
-            this->simulationFlowField *= .1f;
-            // EnvObject::flowfield = EnvObject::initialFlowfield + simulatedPart;
+            if (!this->fluidSimulationIsStable) {
+                dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->mainDirection = Vector3();
+                dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->setObstacles(voxelGrid->getVoxelValues());
+                dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->recomputeVelocities();
+                this->simulationFlowField = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
+                this->simulationFlowField *= .1f;
+                this->fluidSimulationIsStable = true;
+            }
 
             updateVectorFieldVisu();
         }, verbose);
 
 
     }
-    if (updateImplicitTerrain) {
-
-        for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
-            obj->createImplicitPatch(heightmap->heights, dynamic_cast<ImplicitPrimitive*>(implicit));
+    for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
+        obj->createImplicitPatch(subsidedHeightmap, dynamic_cast<ImplicitPrimitive*>(implicit));
+    }
+    displayProcessTime("Update heightmap... ", [&]() {
+        // heightmap->fromVoxelGrid(*voxelGrid.get());
+            this->addObjectsHeightmaps();
+        this->flowErosionSimulation();
+        // this->heightmap->heights = subsidedHeightmap.gaussianSmooth(1.f, true);
+        if (displayDepositionOnHeightmap) {
+            for (auto& [name, material] : EnvObject::materials) {
+                this->heightmap->heights += material.currentState * material.virtualHeight;
+            }
         }
+    }, verbose);
+    EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
+
+    if (updateImplicitTerrain) {
+        /*
+        this->fluidSimulationIsStable = true; // Consider that the surface will change here
+        for (auto& [obj, implicit] : this->implicitPatchesFromObjects) {
+            obj->createImplicitPatch(subsidedHeightmap, dynamic_cast<ImplicitPrimitive*>(implicit));
+        }
+        // dynamic_cast<ImplicitPrimitive*>(implicitTerrain->composables[0])->cachedHeightmap *= .99f;
+        // rootPatch->composables[0]->update();
         rootPatch->reevaluateAll();
+        for (auto& patch : implicitTerrain->composables) {
+            if (auto asHeightmap = dynamic_cast<ImplicitPrimitive*>(patch)) {
+                if (asHeightmap->predefinedShape == ImplicitPatch::PredefinedShapes::ImplicitHeightmap) {
+                    asHeightmap->cachedHeightmap = subsidedHeightmap * 1.f;
+                }
+            }
+        }
         implicitTerrain->updateCache();
         implicitTerrain->update();
         displayProcessTime("Update voxels from implicit terrain... ", [&]() {
-            voxelGrid->fromImplicit(implicitTerrain.get(), 20);
+            // voxelGrid->fromImplicit(implicitTerrain.get(), 20);
         }, verbose);
-        displayProcessTime("Update heightmap from implicit terrain... ", [&]() {
-            heightmap->fromVoxelGrid(*voxelGrid.get());
-            this->flowErosionSimulation();
-        }, verbose);
-        EnvObject::recomputeFlowAndSandProperties(*heightmap);
+        */
+        displayProcessTime("Update voxels from heightmap... ", [&]() {
+                voxelGrid->from2DGrid(*heightmap);
+            }, verbose);
     }
 
     for (auto& obj : immatureObjects) {
         if (obj->computeGrowingState() >= 1.f) {
             // Got mature during this process -> now let's save the fitting score
-            obj->fittingScoreAtCreation = obj->evaluate(obj->evaluationPosition);
+            // obj->fittingScoreAtCreation = obj->evaluate(obj->evaluationPosition);
+            obj->fittingScoreAtCreation = obj->evaluate();
         }
     }
 
@@ -785,20 +896,17 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         Q_EMIT this->updated();
         updateObjectsList();
     }
-
-    // auto meshInstancer = std::static_pointer_cast<MeshInstanceAmplificationInterface>(this->viewer->interfaces["meshinstance"]);
-    // meshInstancer->regenerateAllTypePositions();
-
-    EnvObject::currentTime++;
 }
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
-    EnvObject::applyEffects(heightmap->heights, userFlowField + simulationFlowField);
+    EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField);
 }
 
-void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying)
+void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying, bool recomputeTerrainPropertiesForObject)
 {
+    if (!object) return;
+
     if (applyDying)
         object->die();
     for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
@@ -814,14 +922,16 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying)
         }
         this->implicitPatchesFromObjects.erase(object);
     }
-    EnvObject::recomputeTerrainPropertiesForObject(object->name);
+    if (recomputeTerrainPropertiesForObject)
+        EnvObject::recomputeTerrainPropertiesForObject(object->name);
 }
 
 void EnvObjsInterface::displayProbas(std::string objectName)
 {
     focusAreaEditing = false;
+    flowfieldEditing = false;
     // currentlyPreviewedObject = objectName;
-    Vector3 dimensions = Vector3(heightmap->getSizeX(), heightmap->getSizeY(), 1);
+    Vector3 dimensions = initialHeightmap.getDimensions();
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
     if (!possible) {
@@ -838,6 +948,8 @@ void EnvObjsInterface::displayProbas(std::string objectName)
         Plotter::get()->addImage(score);
     }
     Plotter::get()->show();
+    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(score);
+    Q_EMIT updated();
 }
 
 void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
@@ -845,6 +957,8 @@ void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
     GridF distribution = EnvObject::materials[materialName].currentState;
     Plotter::get()->addImage(distribution);
     Plotter::get()->show();
+    dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(distribution);
+    Q_EMIT updated();
 }
 
 /*void EnvObjsInterface::displaySedimentsDistrib()
@@ -902,7 +1016,7 @@ void EnvObjsInterface::updateObjectsList()
         if (obj->createdManually)
             text += " [*]";
         else
-            text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "%)";
+            text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "% -- " + std::to_string(obj->evaluate()) + "/" + std::to_string(obj->fittingScoreAtCreation) + ")";
         objectsListWidget->addItem(new HierarchicalListWidgetItem(text, obj->ID, 0));
         if (isIn(obj->ID, currentSelectionsIDs))
             currentSelections.push_back(obj);
@@ -928,7 +1042,6 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *__newSelectio
             }
         }
         currentSelections.push_back(selection);
-        this->checkIfObjectShouldDie(selection);
     }
 
     this->updateSelectionMesh();
@@ -949,16 +1062,19 @@ void EnvObjsInterface::updateSelectionMesh()
     std::vector<Vector3> colors;
     float offsetAbove = 5.f;
     for (auto currentSelection : currentSelections) {
-        Vector3 evalPos = currentSelection->evaluationPosition;
-        evalPos.z = heightmap->getHeight(evalPos.x, evalPos.y) + offsetAbove;
-        std::vector<Vector3> evalLines = {evalPos - Vector3(2, 2, 0), evalPos + Vector3(2, 2, 0), evalPos - Vector3(-2, 2, 0), evalPos + Vector3(-2, 2, 0)};
-        lines.insert(lines.end(), evalLines.begin(), evalLines.end());
-        std::vector<Vector3> evalColors = std::vector<Vector3>(evalLines.size(), Vector3(0.5, 0.5, 1));
-        colors.insert(colors.end(), evalColors.begin(), evalColors.end());
+        // Vector3 evalPos = currentSelection->evaluationPosition;
+        for (auto evalPos : currentSelection->evaluationPositions) {
+            evalPos.z = subsidedHeightmap.interpolate(evalPos.x, evalPos.y) + offsetAbove;
+            std::vector<Vector3> evalLines = {evalPos - Vector3(2, 2, 0), evalPos + Vector3(2, 2, 0), evalPos - Vector3(-2, 2, 0), evalPos + Vector3(-2, 2, 0)};
+            lines.insert(lines.end(), evalLines.begin(), evalLines.end());
+            std::vector<Vector3> evalColors = std::vector<Vector3>(evalLines.size(), Vector3(0.5, 0.5, 1));
+            colors.insert(colors.end(), evalColors.begin(), evalColors.end());
+        }
 
         if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
+            continue; // Do not display the points!!
             selectionPos = asPoint->position;
-            selectionPos.z = heightmap->getHeight(selectionPos.x, selectionPos.y) + offsetAbove;
+            selectionPos.z = subsidedHeightmap.interpolate(selectionPos.x, selectionPos.y) + offsetAbove;
             std::vector<Vector3> meshPoints = Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos);
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
@@ -970,15 +1086,15 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
-                Vector3 p2leveled = p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
+                Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + offsetAbove);
                 meshPoints.push_back(p1leveled);
                 meshPoints.push_back(p2leveled);
             }
             for (int i = 0; i < asCurve->curve.size(); i++) {
                 auto& p1 = asCurve->curve[i];
                 auto& p2 = asCurve->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -993,13 +1109,13 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                meshPoints.push_back(p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + 5.f));
-                meshPoints.push_back(p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + 5.f));
+                meshPoints.push_back(p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + 5.f));
+                meshPoints.push_back(p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + 5.f));
             }
             for (int i = 0; i < asArea->curve.size(); i++) {
                 auto& p1 = asArea->curve[i];
                 auto& p2 = asArea->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -1046,15 +1162,15 @@ void EnvObjsInterface::updateNewObjectMesh()
     for (size_t i = 0; i < path.size() - 1; i++) {
         auto p1 = path[i];
         auto p2 = path[i + 1];
-        Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
-        Vector3 p2leveled = p2 + Vector3(0, 0, heightmap->getHeight(p2.x, p2.y) + offsetAbove);
+        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
+        Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + offsetAbove);
         meshPoints.push_back(p1leveled);
         meshPoints.push_back(p2leveled);
     }
     for (int i = 0; i < objectSkeletonCreation.size(); i++) {
         auto& p1 = objectSkeletonCreation[i];
         auto& p2 = objectSkeletonCreation[std::abs(i - 1)];
-        Vector3 p1leveled = p1 + Vector3(0, 0, heightmap->getHeight(p1.x, p1.y) + offsetAbove);
+        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
         Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
         meshPoints.push_back(p1leveled + perpendicular);
         meshPoints.push_back(p1leveled - perpendicular);
@@ -1115,7 +1231,7 @@ void EnvObjsInterface::updateScenarioDefinition(const std::string &newDefinition
     }
 }
 
-void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) const
+void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula)
 {
     EnvPoint fake;
     fake.s_FittingFunction = formula;
@@ -1128,6 +1244,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula) 
         });
         Plotter::get()->addImage(eval);
         Plotter::get()->show();
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        Q_EMIT updated();
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
     }
@@ -1415,6 +1533,8 @@ void EnvObjsInterface::runPerformanceTest()
 void EnvObjsInterface::resetScene()
 {
     EnvObject::reset();
+    this->simulationFlowField.reset();
+    this->userFlowField.reset();
     this->materialSimulationStable = false; // We have to compute the simulation again
     for (auto& [obj, patch] : implicitPatchesFromObjects)
         delete patch;
@@ -1425,7 +1545,7 @@ void EnvObjsInterface::resetScene()
 
     this->updateEnvironmentFromEnvObjects(true);
 
-    this->focusedArea = GridF(heightmap->heights.getDimensions(), 1.f);
+    this->focusedArea = GridF(initialHeightmap.getDimensions(), 1.f);
 
     Q_EMIT this->updated();
 }
@@ -1442,12 +1562,15 @@ void EnvObjsInterface::loadScene(std::string filename)
         EnvObject::initialFlowfield = loadGridV3(flowStr, false);
     }
     if (json.contains("userflow")) {
-        this->userFlowField = loadGridV3(json["userflow"]);
+        this->userFlowField = loadGridV3(json["userflow"], false);
     }
 
     if (json.contains("waterlevel")) {
         float waterLevel = json["waterlevel"];
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->setWaterLevel(waterLevel);
+    }
+    if (json.contains("heightmap")) {
+        initialHeightmap = loadGridF(json["heightmap"], false);
     }
 
     for (auto mat : allMaterials) {
@@ -1459,7 +1582,11 @@ void EnvObjsInterface::loadScene(std::string filename)
         EnvObject* newObject = EnvObject::instantiate(objectName);
         newObject->age = obj["age"];
         newObject->fittingScoreAtCreation = obj["fittingScoreAtCreation"];
-        newObject->evaluationPosition = json_to_vec3(obj["evaluationPosition"]);
+        // newObject->evaluationPosition = json_to_vec3(obj["evaluationPosition"]);
+        /*std::vector<nlohmann::json> positions = obj["evaluationPositions"];
+        for (auto position : positions) {
+
+        }*/
 
         if (auto asPoint = dynamic_cast<EnvPoint*>(newObject)) {
             asPoint->position = json_to_vec3(obj["position"]);
@@ -1468,7 +1595,8 @@ void EnvObjsInterface::loadScene(std::string filename)
         } else if (auto asArea = dynamic_cast<EnvArea*>(newObject)) {
             asArea->curve = json_to_bspline(obj["curve"]);
         }
-        auto implicit = newObject->createImplicitPatch(heightmap->heights);
+        newObject->recomputeEvaluationPoints();
+        auto implicit = newObject->createImplicitPatch(initialHeightmap);
         this->implicitPatchesFromObjects[newObject] = implicit;
         if (implicit != nullptr) {
             rootPatch->addChild(implicit);
@@ -1476,7 +1604,7 @@ void EnvObjsInterface::loadScene(std::string filename)
         this->currentSelections = {};
         EnvObject::recomputeTerrainPropertiesForObject(objectName);
     }
-    EnvObject::recomputeFlowAndSandProperties(*heightmap);
+    EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
     updateEnvironmentFromEnvObjects(true, true, false);
     updateObjectsList();
     updateSelectionMesh();
@@ -1505,6 +1633,7 @@ void EnvObjsInterface::saveScene(std::string filename)
     mainJson["initialflow"] = stringifyGridV3(EnvObject::initialFlowfield, false);
     mainJson["userflow"] = stringifyGridV3(this->userFlowField, false);
     mainJson["waterlevel"] = heightmap->properties->waterLevel;
+    mainJson["heightmap"] = stringifyGridF(initialHeightmap, false);
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
     out.close();
@@ -1522,7 +1651,7 @@ GridV3 EnvObjsInterface::renderFocusArea() const
 
 GridV3 EnvObjsInterface::renderFlowfield() const
 {
-    EnvObject::updateFlowfield(userFlowField + simulationFlowField);
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
     GridV3& flow = EnvObject::flowfield;
     // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
     return Plotter::get()->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
@@ -1550,7 +1679,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
     if (auto objAsPoint = dynamic_cast<EnvPoint*>(obj)) {
-        position = PositionOptimizer::getHighestPosition(position, score, gradients);
+        //position = PositionOptimizer::getHighestPosition(position, score, gradients);
         isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
     } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
         BSpline initialCurve;
@@ -1611,9 +1740,10 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
     });
     // EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
     this->userFlowField.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    EnvObject::updateFlowfield(userFlowField + simulationFlowField);
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
     this->updateVectorFieldVisu();
 
+    this->addObjectsHeightmaps();
     this->flowErosionSimulation();
 
     Plotter::get()->addImage(renderFlowfield());
@@ -1657,10 +1787,85 @@ void EnvObjsInterface::showAllElementsOnPlotter() const
     Plotter::get()->show();
 }
 
+void EnvObjsInterface::addObjectsHeightmaps()
+{
+    GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
+    subsidedHeightmap = initialHeightmap * subsidenceFactor;
+
+    float absoluteWaterLevel = voxelGrid->getSizeZ() * voxelGrid->properties->waterLevel;
+
+    GridF groundConstraintedHeights(subsidedHeightmap.getDimensions()); // Heightmaps from the ground
+    GridF waterConstraintedHeights(subsidedHeightmap.getDimensions(), -100000.f); // Heightmaps from the water level
+    GridF surfaceHeights(subsidedHeightmap.getDimensions());
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
+            GridF grid = GridF(subsidedHeightmap.getDimensions(), 0.f);
+            grid = grid.paste(obj->createHeightfield() * obj->computeGrowingState2(), patch->position.xy());
+            if (flowErosionFactor != 0 && EnvObject::materials.count(toLower(stringFromMaterial(obj->material)))) {
+                grid = grid.warpWith(EnvObject::flowfield * flowErosionFactor * EnvObject::materials[toLower(stringFromMaterial(obj->material))].waterTransport, 10);
+            }
+            if (obj->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
+                surfaceHeights += grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+            } else if (obj->heightFrom == EnvObject::HeightmapFrom::GROUND) {
+                groundConstraintedHeights = groundConstraintedHeights.max(grid * subsidenceFactor, Vector3());
+            } else if (obj->heightFrom == EnvObject::HeightmapFrom::WATER) {
+                grid.iterateParallel([&] (size_t i) {
+                    grid[i] = (std::abs(grid[i]) < 1e-4 ? -10000.f : grid[i]);
+                });
+                // std::cout << "Max height for " << obj->name << ": " << grid.max() << " while height = " << obj->height << "(grow = " <<  obj->computeGrowingState2() << ")" << std::endl;
+                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - 1.f, Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
+            }
+        }
+    }
+    // if (flowErosionFactor != 0) {
+        // groundConstraintedHeights = groundConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+        // waterConstraintedHeights = waterConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+        // surfaceHeights = surfaceHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    // }
+    // Dirty, remove when you understand why lagoon get over the water...
+    waterConstraintedHeights.iterateParallel([&](size_t i) {
+        waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
+    });
+    waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights) + surfaceHeights;
+    subsidedHeightmap = subsidedHeightmap.max(-15.f);
+    /*
+    std::map<std::string, GridF> perTypeHeightmap;
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
+            if (perTypeHeightmap.count(obj->name) == 0) {
+                perTypeHeightmap[obj->name] = GridF(subsidedHeightmap.getDimensions());
+            }
+            auto grid = obj->createHeightfield() * obj->computeGrowingState2();
+            perTypeHeightmap[obj->name].max(grid, patch->position.xy());
+        }
+    }
+    std::vector<std::pair<std::string, float>> supperposedGridsOrder;
+    for (auto& [name, grid] : perTypeHeightmap) {
+        supperposedGridsOrder.push_back({name, LayerBasedGrid::densityFromMaterial(EnvObject::availableObjects[name]->material)});
+    }
+    std::sort(supperposedGridsOrder.begin(), supperposedGridsOrder.end(), [&](const std::pair<std::string, float>& A, const std::pair<std::string, float>& B) {
+        return A.second > B.second;
+    });
+    // for (auto& [name, grid] : perTypeHeightmap) {
+    for (int i = 0; i < supperposedGridsOrder.size(); i++) {
+        auto& name = supperposedGridsOrder[i].first;
+        auto& density = supperposedGridsOrder[i].second;
+        auto& grid = perTypeHeightmap[name];
+        // std::cout << "For " << name << ", max is " << grid.max() << std::endl;
+        subsidedHeightmap += grid * (isIn(EnvObject::availableObjects[name]->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+    }
+    */
+}
+
 void EnvObjsInterface::flowErosionSimulation()
 {
-    this->heightmap->fromVoxelGrid(*this->voxelGrid);
-    this->heightmap->heights = this->heightmap->heights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    // this->heightmap->fromVoxelGrid(*this->voxelGrid);
+    if (flowErosionFactor != 0) {
+        // this->subsidedHeightmap = (this->initialHeightmap * EnvObject::scenario.computeSubsidence()).warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+        //this->subsidedHeightmap = (this->subsidedHeightmap).warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    }
+    this->heightmap->heights = subsidedHeightmap.gaussianSmooth(.5f, true) - 1.f;
 }
 
 void EnvObjsInterface::startNewObjectCreation()
@@ -1703,8 +1908,9 @@ void EnvObjsInterface::endNewObjectCreation()
         this->log("Object not created");
         return;
     }
+    newObject->recomputeEvaluationPoints();
     newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
-    auto implicit = newObject->createImplicitPatch(heightmap->heights);
+    auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
     this->implicitPatchesFromObjects[newObject] = implicit;
     if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
         this->implicitTerrain->addChild(this->rootPatch);
@@ -1848,10 +2054,10 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
             for (auto currentSelection : currentSelections) {
                 currentSelection->age = 0.f;
                 if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
-                    auto newPatch = currentSelection->createImplicitPatch(heightmap->heights);
+                    auto newPatch = currentSelection->createImplicitPatch(subsidedHeightmap/*, dynamic_cast<ImplicitPrimitive*>(currentSelection->_patch)*/);
                     if (newPatch) {
                         *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
-                        delete newPatch;
+                        // delete newPatch;
                     }
                 }
                 EnvObject::recomputeTerrainPropertiesForObject(currentSelection->name);
@@ -1880,6 +2086,26 @@ void EnvObjsInterface::updateVectorFieldVisu()
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
 }
 
+StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectName, int nbSamples)
+{
+    std::vector<float> values(nbSamples);
+    bool isPossible;
+    GridF score = computeScoreMap(objectName, subsidedHeightmap.getDimensions(), isPossible) * focusedArea;
+    if (isPossible) {
+        // #pragma omp parallel for
+        for (int i = 0; i < nbSamples; i++) {
+            auto obj = fakeInstantiate(objectName, score);
+            if (obj) {
+                values[i] = obj->fittingScoreAtCreation;
+            }
+        }
+    }
+    StatsValues stats = getStats(values);
+    std::cout << objectName << ": " << stats.mean << " (" << stats.stdev << ")" << std::endl;
+    return stats;
+
+}
+
 void EnvObjsInterface::fromGanUI()
 {
     this->resetScene();
@@ -1896,7 +2122,7 @@ void EnvObjsInterface::fromGanUI()
         auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
         rootPatch->deleteAllChildren();
         for (auto& newObject : envObjects) {
-            auto implicit = newObject->createImplicitPatch(heightmap->heights);
+            auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (implicit != nullptr) {
                 rootPatch->addChild(implicit);
@@ -1917,11 +2143,11 @@ void EnvObjsInterface::fromGanUI()
             heightmap->fromVoxelGrid(*voxelGrid.get());
         })) << std::endl;*/
 
-        EnvObject::precomputeTerrainProperties(*heightmap);
+        EnvObject::precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
         this->updateEnvironmentFromEnvObjects(true, true);
-        std::cout << "Update: " << showTime(timeIt([&]() {
+        displayProcessTime("Update object list... ", [&]() {
             updateObjectsList();
-        })) << std::endl;
+        });
     }
 }
 

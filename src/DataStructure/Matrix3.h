@@ -1134,8 +1134,12 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
 }
 template<class T>
 Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const {
-    Matrix3<T> tempResult(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<T> tempResult = *this; //(this->sizeX, this->sizeY, this->sizeZ);
+    tempResult.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    tempResult.raiseErrorOnBadCoord = false;
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
+    result.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    result.raiseErrorOnBadCoord = false;
     float divisor = (sizeOnX * sizeOnY * sizeOnZ);
 
     // Perform 1D convolution along x-axis
@@ -1143,7 +1147,7 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ig
         T neighboringSum = T();
         for (int dx = -(sizeOnX / 2); dx <= (sizeOnX / 2); ++dx) {
             if (x + dx >= 0 && x + dx < this->sizeX) {
-                neighboringSum += this->at(x + dx, y, z);
+                neighboringSum += tempResult.at(x + dx, y, z);
             }
         }
         result.at(x, y, z) = neighboringSum;

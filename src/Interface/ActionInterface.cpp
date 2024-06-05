@@ -74,15 +74,15 @@ void ActionInterface::saveAllActions(std::string filename) {
 
 bool ActionInterface::isConcerned(nlohmann::json &action) { return action.contains("type") && action.at("type").get<std::string>() == this->actionType; }
 
-void ActionInterface::log(const std::string &message) {
-    if (this->viewer) {
+void ActionInterface::log(const std::string &message, bool verbose) {
+    if (verbose && this->viewer) {
         std::cout << "[INFO " << this->interfaceName << "]  " << message << std::endl;
 //        this->viewer->displayMessage(QString::fromStdString("[INFO]  " + message));
     }
 }
 
-void ActionInterface::error(const std::string &message) {
-    if (this->viewer) {
+void ActionInterface::error(const std::string &message, bool verbose) {
+    if (verbose && this->viewer) {
         std::cerr << "[ERROR " << this->interfaceName << "]  " << message << std::endl;
 //        this->viewer->displayMessage(QString::fromStdString("[ERROR] " + message));
     }

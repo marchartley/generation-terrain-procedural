@@ -43,6 +43,15 @@ EnvArea *EnvArea::instantiate(std::string objectName)
     return dynamic_cast<EnvArea*>(EnvObject::instantiate(objectName));
 }
 
+void EnvArea::recomputeEvaluationPoints()
+{
+    if (evaluateInside) {
+        this->evaluationPositions = curve.randomPointsInside(curve.size());
+    } else {
+        this->evaluationPositions = curve.points;
+    }
+}
+
 void EnvArea::applyDeposition(EnvMaterial& material)
 {
     if (this->materialDepositionRate[material.name] == 0) return;
@@ -160,46 +169,68 @@ ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimit
         p.z = heights(p.xy());
     }
     AABBox box(translatedCurve.points);
-    float growingState = this->computeGrowingState2();
+    float growingState = 1.f; //this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
     Vector3 offset(this->width, this->width, this->height * growingState);
     translatedCurve.translate(-(box.min() - offset * .5f));
+    box.expand(box.max() + Vector3(0, 0, this->height * growingState));
     ImplicitPrimitive* patch;
     if (previousPrimitive != nullptr) {
         patch = previousPrimitive;
         translatedCurve = previousPrimitive->optionalCurve;
-        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, false);
+        *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
     } else {
-        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, false);
+        patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
-    patch->position.z += heights(patch->position.xy());
+    // patch->position.z += heights(patch->position.xy());
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;
+    this->_patch = patch;
     return patch;
 }
-
-GridF EnvArea::createHeightfield() const
+/*
+GridF EnvArea::createHeightfield()
 {
-    return GridF();
+    if (_cachedHeightfield.empty()) {
+        auto patch = dynamic_cast<ImplicitPrimitive*>(_patch);
+        GridF heights(patch->getDimensions().x, patch->getDimensions().y, 1);
+        heights.iterateParallel([&] (const Vector3& p) {
+            for (int i = 1; i < height; i++) {
+                heights(p) += (patch->evaluate(p.xy() + patch->position.xy() + Vector3(0, 0, i)) > 0 ? 1.f : 0.f);
+            }
+        });
+        _cachedHeightfield = heights;
+    }
+    return _cachedHeightfield;
 }
-
+*/
 EnvArea &EnvArea::translate(const Vector3 &translation)
 {
     this->curve.translate(translation);
-    this->evaluationPosition.translate(translation);
+    for (auto& p : evaluationPositions)
+        p.translate(translation);
     this->_cachedFlowModif.clear();
+    this->_cachedHeightfield.clear();
     return *this;
 }
 
 void EnvArea::updateCurve(const BSpline &newCurve)
 {
-    float evaluationPointClosestTime = this->curve.estimateClosestTime(this->evaluationPosition);
-    Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
+    if (evaluateInside) {
+        std::cerr << "Need to implement 'updateCurve' for inside...!" << std::endl;
+        for (auto& evaluationPosition : this->evaluationPositions) {
+            float evaluationPointClosestTime = this->curve.estimateClosestTime(evaluationPosition);
+            Vector3 relativeDisplacementFromEvaluationToCurve = (evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
+            evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
+        }
+    } else {
+        this->evaluationPositions = newCurve.points;
+    }
     this->curve = newCurve;
-    this->evaluationPosition = this->curve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;
     this->_cachedFlowModif.clear();
+    this->_cachedHeightfield.clear();
 }
 
 nlohmann::json EnvArea::toJSON() const

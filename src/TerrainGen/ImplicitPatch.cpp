@@ -259,7 +259,55 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    auto myAABBox = this->getBBox();
+    AABBox myAABBox = AABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
+    //    if (!minPos.isValid()) minPos = Vector3();
+    //    if (!maxPos.isValid()) maxPos = this->getDimensions();
+
+    Vector3 currentPosition = origin;
+    if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
+        currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
+    if (!currentPosition.isValid())
+        return Vector3::invalid();
+
+    Vector3 normalizedDir = dir.normalized();
+
+    // auto values = this->getVoxelValues();
+    // values.raiseErrorOnBadCoord = false;
+
+    Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
+    float tMaxX = (dir.x > 0) ? (std::ceil(currentPosition.x) - currentPosition.x) / dir.x :
+                      (currentPosition.x - std::floor(currentPosition.x)) / (-dir.x);
+    float tMaxY = (dir.y > 0) ? (std::ceil(currentPosition.y) - currentPosition.y) / dir.y :
+                      (currentPosition.y - std::floor(currentPosition.y)) / (-dir.y);
+    float tMaxZ = (dir.z > 0) ? (std::ceil(currentPosition.z) - currentPosition.z) / dir.z :
+                      (currentPosition.z - std::floor(currentPosition.z)) / (-dir.z);
+
+    // Calculate steps in each axis based on stepSizes
+    float tDeltaX = std::abs(stepSizes.x * dir.x);
+    float tDeltaY = std::abs(stepSizes.y * dir.y);
+    float tDeltaZ = std::abs(stepSizes.z * dir.z);
+
+    while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
+        if (checkIsInGround(currentPosition) > 0) {
+            return currentPosition;
+        }
+
+        if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+            currentPosition.x += dir.x;
+            tMaxX += tDeltaX;
+        } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
+            currentPosition.y += dir.y;
+            tMaxY += tDeltaY;
+        } else {
+            currentPosition.z += dir.z;
+            tMaxZ += tDeltaZ;
+        }
+    }
+    if (currentPosition.z <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
+    return Vector3::invalid();
+    /*auto myAABBox = this->getBBox();
     myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
     myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
 
@@ -284,7 +332,7 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
 
     if (currPos.z <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3(false);
+    return Vector3(false);*/
 
 }
 
@@ -1786,6 +1834,9 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
 
 std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
+    random_gen::random_generator.seed((path.points[0] + path.points[1]).divergence());
+    int nbPoints = 50;
+    int nbPaths = 50;
     ShapeCurve polygon(path.points);
     for (auto& p : polygon)
         p.z = 0;
@@ -1793,9 +1844,9 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
     Vector3 size = bbox.dimensions();
     polygon.translate(-bbox.min());//(-(bbox.min()));
     // auto points = ShapeCurve(path).randomPointsInside(50);
-    int maxTries = 1000 * 50;
+    int maxTries = 1000 * nbPoints;
     std::vector<Vector3> points;
-    while(points.size() < 50 && maxTries > 0) {
+    while(points.size() < nbPoints && maxTries > 0) {
         Vector3 newPoint = Vector3::random(Vector3(size.xy()));
         if (polygon.containsXY(newPoint)) points.push_back(newPoint);
         else maxTries--;
@@ -1804,7 +1855,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
 
     GridF heights(size.x, size.y, 1);
 
-    std::vector<BSpline> randomPaths(50);
+    std::vector<BSpline> randomPaths(nbPaths);
     for (int i = 0; i < randomPaths.size(); i++) {
         auto& path = randomPaths[i];
         int i0 = int(random_gen::generate(0, points.size()));
@@ -1823,6 +1874,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
             auto closestPoint = path.estimateClosestPos(pos, true);
             heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
         }
+        heights(pos) += random_gen::generate_fbm(pos.x, pos.y) * (.1f * std::abs(heights(pos)));
     });
     heights = heights.gaussianSmooth(2.f).normalized();
     heights.iterateParallel([&] (const Vector3& pos) {
@@ -1836,9 +1888,11 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
     Vector3 offsets = Vector3(width - size.x, depth - size.y) * .5f;
 
     std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
-        return sigma * std::clamp(heights(pos.xy() - offsets), 0.f, 1.f);
+        float finalHeight = sigma * std::clamp(heights(pos.xy() - offsets), 0.f, 1.f);
+        return finalHeight;
     };
-    if (in2D) {
+
+    if (!in2D) {
         return distFunc;
     } else {
         return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);

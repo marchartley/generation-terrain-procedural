@@ -12,12 +12,13 @@ public:
     BSpline curve;
     float width;
     float length;
-    float height;
 
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
     static EnvCurve* instantiate(std::string objectName);
+
+    virtual void recomputeEvaluationPoints();
 
     virtual void applyDeposition(EnvMaterial& material);
     virtual void applyAbsorption(EnvMaterial& material);
@@ -25,7 +26,7 @@ public:
 
     virtual std::pair<GridV3, GridF> computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
+    // virtual GridF createHeightfield();
 
     virtual EnvCurve& translate(const Vector3& translation);
     void updateCurve(const BSpline &newCurve);

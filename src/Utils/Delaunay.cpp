@@ -33,3 +33,37 @@ Delaunay& Delaunay::fromVoronoi(const Voronoi& voronoi)
 
     return *this;
 }
+
+std::vector<std::vector<Vector3> > Delaunay::getTriangles() const
+{
+    std::set<std::set<GraphNode*>> triangles;
+    std::map<GraphNode*, std::set<GraphNode*>> neighborhoods;
+    for (int iNode = 0; iNode < graph.size(); iNode++) {
+        auto& n = graph.nodes[iNode];
+        for (auto& [nn, dist] : n->neighbors) {
+            //if (nn->index < n->index)
+                neighborhoods[n].insert(nn);
+        }
+    }
+
+    for (int iNode = 0; iNode < graph.size(); iNode++) {
+        auto& n = graph.nodes[iNode];
+        for (auto& nn : neighborhoods[n]) {
+            for (auto& nnn : neighborhoods[nn]) {
+                if (neighborhoods[n].count(nnn)) {
+                    triangles.insert({n, nn, nnn});
+                }
+            }
+        }
+    }
+
+    std::vector<std::vector<Vector3>> spatialTriangles;
+    for (auto& triangle : triangles) {
+        std::vector<Vector3> points;
+        for (auto& n : triangle) {
+            points.push_back(n->pos);
+        }
+        spatialTriangles.push_back(points);
+    }
+    return spatialTriangles;
+}

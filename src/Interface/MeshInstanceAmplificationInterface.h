@@ -13,6 +13,7 @@ struct InstantiationMeshOption {
     {}
     std::string name;
     std::string folderName;
+    std::string folderPath;
     bool displayed = false;
     int numberDisplayed = 10000;
     int numberOfLoadedMesh = -1;
@@ -30,6 +31,8 @@ struct InstantiationMeshOption {
 
     void clear();
     void add(int index, const Vector3& position, float size, const Vector3& orientation);
+
+    nlohmann::json currentInstancesToJSON();
 
 };
 
@@ -62,6 +65,8 @@ public Q_SLOTS:
     void regenerateRocksPositions();
     void regenerateAllTypePositions();
 
+    void exportJSONFile(std::string filename);
+
 public:
     std::vector<InstantiationMeshOption> meshesOptions;
 
@@ -81,6 +86,8 @@ public:
     std::vector<std::tuple<int, Vector3, float>> rocksIndicesAndPositionAndSize;
     std::vector<Mesh> possibleCorals;
     std::vector<std::tuple<int, Vector3, float>> coralsIndicesAndPositionAndSize;
+
+    std::map<int, Vector3> precomputedOrientations;
 
     size_t previousHistoryIndex = 0;
 
