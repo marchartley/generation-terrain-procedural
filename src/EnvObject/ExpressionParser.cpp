@@ -16,7 +16,7 @@ ExpressionParser::ExpressionParser() {
     unaryFloatOperators["abs"] = [](float a) { return std::abs(a); };
     unaryFloatOperators["sqrt"] = [](float a) { return std::sqrt(a); };
     unaryFloatOperators["pow2"] = [](float a) { return a * a; };
-    unaryFloatOperators["normal"] = [](float a) { return 2.506628275f * std::pow(M_E, -(a*a)*.5f); }; // standard normal:  1/sqrt(2 pi) * e^[-x^2/2]
+    unaryFloatOperators["normal"] = [](float a) -> float { return 2.506628275f * std::pow(M_E, -(a*a)*.5f); }; // standard normal:  1/sqrt(2 pi) * e^[-x^2/2]
     // For any other normal(x, mu, sigma), consider calling "normal((x - mu)/sigma)"
 
     // Comparator operators

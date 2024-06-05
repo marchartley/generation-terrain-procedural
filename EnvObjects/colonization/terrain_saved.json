@@ -1,0 +1,15 @@
+{
+	"assets": {
+		"arch": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/arche",
+		"bigrock": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/rocks",
+		"boulder": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/boulder",
+		"coralpolyp": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflat": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/corals",
+		"coralpolypflata": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/corals",
+		"coralpolypflatb": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/corals",
+		"coralpolypflatc": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/corals",
+		"coralpolypstrong": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/corals",
+		"smallrock": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/rocks",
+		"tree": "/home/simulateurrsm/Documents/Qt_prog/generation-terrain-procedural/src/assets/models/tree"
+	}
+}
