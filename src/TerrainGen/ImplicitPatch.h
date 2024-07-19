@@ -138,7 +138,7 @@ public:
     static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
     static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
     static float isovalue;
-    static float zResolution;
+    static const float zResolution;
 
 
     static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height, bool in2D = false);

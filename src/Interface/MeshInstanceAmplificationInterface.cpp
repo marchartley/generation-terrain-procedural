@@ -187,7 +187,7 @@ QLayout* MeshInstanceAmplificationInterface::createGUI()
 
         std::string folder = q_folder.toStdString();
         this->exportJSONFile(folder + "/terrain_saved.json");
-        heightmap->saveHeightmap(folder + "/heightmap.png");
+        heightmap->saveHeightmap(folder + "/heightmap.png", Vector3::invalid(), true);
         // QString q_filename = QFileDialog::getSaveFileName(this, QString("Save current meshes as JSON"), QString("EnvObjects/saved"));
         // if (q_filename.isEmpty()) return;
 

@@ -121,14 +121,14 @@ ViewerInterface::ViewerInterface() {
 
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
+       terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_noise_with_obstacle.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        terrainGenerationInterface->waterLevel = .05f;
-        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
-        terrainGenerationInterface->waterLevel = .0f;
+        // terrainGenerationInterface->waterLevel = .05f;
+        // terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
+        // terrainGenerationInterface->waterLevel = .0f;
 
 //        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
@@ -379,7 +379,7 @@ void ViewerInterface::setupUi()
     waterLevelSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setWaterLevel(newValue); });
     SliderElement* ambiantOcclusionSlider = new SliderElement("AO", 0.f, 1.f, 0.01f, terrainGenerationInterface->ambiantOcclusionFactor);
     ambiantOcclusionSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setAmbiantOcclusion(newValue); });
-    SliderElement* heightFactorSlider = new SliderElement("Height", 0.f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
+    SliderElement* heightFactorSlider = new SliderElement("Height", 0.01f, 4.f, 0.01f, terrainGenerationInterface->heightFactor);
     heightFactorSlider->setOnValueChanged([=](float newValue) { terrainGenerationInterface->setHeightFactor(newValue); });
 
     displayOptionUI->add(displayModeLayout);

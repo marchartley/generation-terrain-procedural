@@ -81,29 +81,29 @@ public:
     static Plotter* get() { return Plotter::getInstance(); }
     static Plotter* init(ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
-    void addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
-    void addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
+    Plotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
+    Plotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
 
-    void addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-    void addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    Plotter* addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    Plotter* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    void addImage(GridV3 image);
-    void addImage(const GridF& image);
-    void addImage(const Matrix3<double>& image);
-    void addImage(const GridI& image);
+    Plotter* addImage(GridV3 image);
+    Plotter* addImage(const GridF& image);
+    Plotter* addImage(const Matrix3<double>& image);
+    Plotter* addImage(const GridI& image);
 
     GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
-    void addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
+    Plotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
     GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
-    void addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
+    Plotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
 
     int exec();
-    void saveFig(std::string filename);
-    void copyToClipboard();
+    Plotter* saveFig(std::string filename);
+    Plotter* copyToClipboard();
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
 
-    void reset();
+    Plotter* reset();
 
     bool normalizedMode = false;
     bool absoluteMode = false;
@@ -139,16 +139,16 @@ private:
 //    QValueAxis* m_axisX;
 //    QValueAxis* m_axisY;
 public Q_SLOTS:
-    void updateLabelsPositions();
-    void selectData(const Vector3& pos);
-    void displayInfoUnderMouse(const Vector3& relativeMousePos);
-    void draw();
-    void show();
-    void updateUI();
+    Plotter* updateLabelsPositions();
+    Plotter* selectData(const Vector3& pos);
+    Plotter* displayInfoUnderMouse(const Vector3& relativeMousePos);
+    Plotter* draw();
+    Plotter* show();
+    Plotter* updateUI();
 
-    void setNormalizedModeImage(bool normalize);
-    void setAbsoluteModeImage(bool absolute);
-    void setFilteredValuesImage(bool filtered);
+    Plotter* setNormalizedModeImage(bool normalize);
+    Plotter* setAbsoluteModeImage(bool absolute);
+    Plotter* setFilteredValuesImage(bool filtered);
 
 Q_SIGNALS:
     void clickedOnImage(const Vector3& pos, Vector3 value);

@@ -274,8 +274,8 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
 
-//    Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
-    Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
+   Vector3 terrainSize = Vector3(100, 100, 30); //Vector3(128, 128, 64);
+    // Vector3 terrainSize = Vector3(200, 200, 50); //Vector3(128, 128, 64);
     if (this->voxelGrid)
         terrainSize = voxelGrid->getDimensions();
 
@@ -291,7 +291,7 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
         displayProcessTime("Opening heightmap... ", [&]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); });
-        displayProcessTime("Generatign voxels... ", [&]() { voxelGrid->from2DGrid(*heightmap); });
+        displayProcessTime("Generating voxels... ", [&]() { voxelGrid->from2DGrid(*heightmap); });
         displayProcessTime("Generating layers... ", [&]() { layerGrid->from2DGrid(*heightmap); });
 
         if (auto envObjInterface = dynamic_cast<EnvObjsInterface*>(viewer->interfaces["envobjects"].get())) {

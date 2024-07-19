@@ -412,4 +412,24 @@ Image &Image::setImage(const GridV3& img)
     return *this;
 }
 
+GridF Image::getBwImage() const
+{
+    if (!isColor) return this->bwImage;
+    GridF img(colorImage.getDimensions());
+    img.iterateParallel([&](size_t i) {
+        img[i] = (colorImage[i].x + colorImage[i].y + colorImage[i].z) / 3.f;
+    });
+    return img;
+}
+
+GridV3 Image::getColorImage() const
+{
+    if (isColor) return this->colorImage;
+    GridV3 img(bwImage.getDimensions());
+    img.iterateParallel([&](size_t i) {
+        img[i] = Vector3(1, 1, 1) * bwImage[i];
+    });
+    return img;
+}
+
 

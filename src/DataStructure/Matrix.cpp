@@ -1,5 +1,7 @@
 #include "DataStructure/Matrix.h"
 
+
+#include <cmath>
 #include <sstream>
 
 Matrix::Matrix()
@@ -140,6 +142,69 @@ float Matrix::trace() const
     return trace;
 }
 
+Matrix Matrix::col(int colIndex) const
+{
+    Matrix res(1, this->rows());
+    for (int i = 0; i < this->rows(); i++) {
+        res[0][i] = (*this)[colIndex][i];
+    }
+    return res;
+}
+
+Matrix Matrix::row(int rowIndex) const
+{
+    Matrix res(this->cols(), 1);
+    for (int i = 0; i < this->cols(); i++) {
+        res[i][0] = (*this)[i][rowIndex];
+    }
+    return res;
+}
+
+Matrix Matrix::abs() const
+{
+    Matrix res = *this;
+    for (int i = 0; i < res.size(); i++) {
+        for (int j = 0; j < res[i].size(); j++) {
+            res[i][j] = std::abs(res[i][j]);
+        }
+    }
+    return res;
+}
+
+float Matrix::maxCoeff() const
+{
+    float max = std::numeric_limits<float>::lowest();
+
+    for (int i = 0; i < (*this).size(); i++) {
+        for (int j = 0; j < (*this)[i].size(); j++) {
+            max = std::max(max, (*this)[i][j]);
+        }
+    }
+    return max;
+}
+
+Matrix Matrix::leftCols(int nbCols) const
+{
+    Matrix res(this->rows(), nbCols);
+    for (int i = 0; i < res.size(); i++) {
+        for (int j = 0; j < res[i].size(); j++) {
+            res[i][j] = (*this)[i][j];
+        }
+    }
+    return res;
+}
+
+Matrix Matrix::rightCols(int nbCols) const
+{
+    Matrix res(this->cols() - nbCols, this->rows());
+    for (int i = 0; i < res.size(); i++) {
+        for (int j = 0; j < res[i].size(); j++) {
+            res[i][j] = (*this)[i + nbCols][j];
+        }
+    }
+    return res;
+}
+
 Matrix Matrix::identity(int size)
 {
     Matrix m(size, size);
@@ -256,6 +321,86 @@ Matrix Matrix::toHomogeneous() const
     res[3][3] = 1;
     return res;
 }
+
+std::pair<Matrix, Matrix> Matrix::gramSchmidtQR(const Matrix &A)
+{
+    size_t rows = A.rows();
+    size_t cols = A.cols();
+    Matrix Q(rows, cols);
+    Matrix R(cols, cols);
+
+    for (size_t k = 0; k < cols; ++k) {
+        for (size_t i = 0; i < rows; ++i) {
+            Q[i][k] = A[i][k];
+        }
+
+        for (size_t j = 0; j < k; ++j) {
+            float dot_product = 0;
+            for (size_t i = 0; i < rows; ++i) {
+                dot_product += Q[i][j] * A[i][k];
+            }
+            R[j][k] = dot_product;
+
+            for (size_t i = 0; i < rows; ++i) {
+                Q[i][k] -= dot_product * Q[i][j];
+            }
+        }
+
+        float norm = 0;
+        for (size_t i = 0; i < rows; ++i) {
+            norm += Q[i][k] * Q[i][k];
+        }
+        norm = std::sqrt(norm);
+        R[k][k] = norm;
+
+        for (size_t i = 0; i < rows; ++i) {
+            Q[i][k] /= norm;
+        }
+    }
+
+    return {Q, R};
+}
+
+std::vector<float> Matrix::backSubstitution(const Matrix &R, const vector<float> &b)
+{
+    size_t n = R.rows();
+    vector<float> x(n);
+
+    for (int i = n - 1; i >= 0; --i) {
+        x[i] = b[i];
+        for (size_t j = i + 1; j < n; ++j) {
+            x[i] -= R[i][j] * x[j];
+        }
+        x[i] /= R[i][i];
+    }
+
+    return x;
+}
+
+std::vector<float> Matrix::solve(const Matrix &A, const Matrix &b)
+{
+    auto [Q, R] = Matrix::gramSchmidtQR(A);
+    Matrix Qt = Q.transpose();
+    vector<float> Qt_b(b.size());
+
+    for (size_t i = 0; i < Qt.rows(); ++i) {
+        for (size_t j = 0; j < Qt.cols(); ++j) {
+            Qt_b[i] += Qt[i][j] * b[j][0];
+        }
+    }
+
+    return backSubstitution(R, Qt_b);
+}
+
+std::vector<float> Matrix::solve(const Matrix &A, const std::vector<float> &b)
+{
+    Matrix B(b.size(), 1);
+    for (int i = 0; i < b.size(); i++) {
+        B[i][0] = b[i];
+    }
+    return Matrix::solve(A, B);
+}
+
 Matrix operator*(const Matrix& a, const Matrix& o)
 {
     Matrix temp = a;

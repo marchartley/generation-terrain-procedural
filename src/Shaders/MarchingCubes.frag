@@ -331,6 +331,10 @@ float computeShadowOcclusion(vec3 pos) {
 
 void main(void)
 {
+    /*fragColor = vec4(vec3(texture(heightmapFieldTex, ginitialVertPos.xy / vec2(textureSize(heightmapFieldTex, 0))).a), 1.0);
+    return;*/
+
+
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
             discard;

@@ -19,22 +19,22 @@
 	"nodes":[
 		{
 			"mesh":0,
-			"name":"coral",
+			"name":"coral.362",
 			"rotation":[
 				0.999912679195404,
 				0,
 				0,
-				0.01321570947766304
+				0.013215710408985615
 			],
 			"scale":[
-				0.009999999776482582,
-				0.009999999776482582,
-				0.009999999776482582
+				0.03231577202677727,
+				0.03231577202677727,
+				0.03231577202677727
 			],
 			"translation":[
-				0,
-				0.6560491323471069,
-				0
+				78.2413330078125,
+				-0.2648875415325165,
+				-55.667484283447266
 			]
 		}
 	],
@@ -53,7 +53,7 @@
 					"ior":1.4499999284744263
 				}
 			},
-			"name":"MI_Beach_Coral_vmilehcn_2K.011",
+			"name":"MI_Beach_Coral_vmilehcn_2K.040",
 			"pbrMetallicRoughness":{
 				"baseColorTexture":{
 					"index":0
@@ -64,7 +64,7 @@
 	],
 	"meshes":[
 		{
-			"name":"coral.003",
+			"name":"coral.573",
 			"primitives":[
 				{
 					"attributes":{
@@ -86,7 +86,7 @@
 	"images":[
 		{
 			"mimeType":"image/png",
-			"name":"coral.EXR",
+			"name":"coral_EXR",
 			"uri":"coral_EXR.png"
 		}
 	],
@@ -94,23 +94,23 @@
 		{
 			"bufferView":0,
 			"componentType":5126,
-			"count":58354,
+			"count":58490,
 			"max":[
 				77.1072006225586,
-				63.87764358520508,
-				53.124534606933594
+				8.973397254943848,
+				51.67295455932617
 			],
 			"min":[
 				-77.61602020263672,
-				-62.08262252807617,
-				-56.79167938232422
+				-116.98686218261719,
+				-58.24325942993164
 			],
 			"type":"VEC3"
 		},
 		{
 			"bufferView":1,
 			"componentType":5126,
-			"count":58354,
+			"count":58490,
 			"type":"VEC3"
 		},
 		{
@@ -123,20 +123,20 @@
 	"bufferViews":[
 		{
 			"buffer":0,
-			"byteLength":700248,
+			"byteLength":701880,
 			"byteOffset":0,
 			"target":34962
 		},
 		{
 			"buffer":0,
-			"byteLength":700248,
-			"byteOffset":700248,
+			"byteLength":701880,
+			"byteOffset":701880,
 			"target":34962
 		},
 		{
 			"buffer":0,
 			"byteLength":175104,
-			"byteOffset":1400496,
+			"byteOffset":1403760,
 			"target":34963
 		}
 	],
@@ -148,7 +148,7 @@
 	],
 	"buffers":[
 		{
-			"byteLength":1575600,
+			"byteLength":1578864,
 			"uri":"coral%20bouquet.bin"
 		}
 	]

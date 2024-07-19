@@ -53,15 +53,28 @@
 	},
 	{
 		"name": "tree",
-		"foldername": "",
+		"foldername": "tree",
 		"colors": [
 			{"r": 0.1, "g": 1.0, "b": 0.1, "a": 1.0}
 		],
 		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
 		"minInstances": 1,
 		"maxInstances": 1,
-		"minSize": 20.0,
-		"maxSize": 40.0,
+		"minSize": 5.0,
+		"maxSize": 7.0,
+		"radius": 0.0
+	},
+	{
+		"name": "algae",
+		"foldername": "algae",
+		"colors": [
+			{"r": 0.1, "g": 1.0, "b": 0.1, "a": 1.0}
+		],
+		"translation": {"x": 0.0, "y": 0.0, "z": 0.25},
+		"minInstances": 1,
+		"maxInstances": 1,
+		"minSize": 0.5,
+		"maxSize": 1.0,
 		"radius": 0.0
 	},
 	{

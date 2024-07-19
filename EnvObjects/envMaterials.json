@@ -17,8 +17,8 @@
 	},
 	{
 		"name": "pebbles",
-		"diffusionSpeed": 0.5,
-		"waterTransport": 0.5,
+		"diffusionSpeed": 2,
+		"waterTransport":  1,
 		"mass": 1.0,
 		"decay": 0.9,
 		"virtualheight": 0.0

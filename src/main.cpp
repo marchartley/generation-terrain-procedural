@@ -70,14 +70,197 @@ std::map<std::string, std::string> getAllEnvironmentVariables() {
     return results;
 }
 
+typedef Matrix MatrixXd;
+typedef Matrix VectorXd;
+
+// Orthogonal Matching Pursuit (OMP) function
+MatrixXd omp(const MatrixXd& D, const MatrixXd& X, const int sparsity) {
+    size_t numAtoms = D.cols();
+    size_t numSignals = X.cols();
+    Matrix coefficients(numAtoms, numSignals);
+
+    for (size_t k = 0; k < numSignals; ++k) {
+        vector<float> x(X.rows());
+        for (size_t i = 0; i < X.rows(); ++i) {
+            x[i] = X[i][k];
+        }
+
+        vector<float> residual = x;
+        vector<int> selectedAtoms;
+        Matrix A(X.rows(), sparsity);
+
+        vector<float> subCoefficients(sparsity, 0);
+        for (int j = 0; j < sparsity; ++j) {
+            // Compute correlations
+            vector<float> correlations(numAtoms, 0);
+            #pragma omp parallel for
+            for (size_t i = 0; i < numAtoms; ++i) {
+                if (isIn(int(i), selectedAtoms)) continue;
+                #pragma omp parallel for
+                for (size_t r = 0; r < residual.size(); ++r) {
+                    correlations[i] += D[r][i] * residual[r];
+                }
+            }
+
+            // Find the index of the atom with the maximum correlation
+            int maxIndex = distance(correlations.begin(), max_element(correlations.begin(), correlations.end()));
+            if (std::abs(correlations[maxIndex]) < 1e-5) break;
+            selectedAtoms.push_back(maxIndex);
+
+            // Update the matrix A with the selected atom
+            for (size_t i = 0; i < A.rows(); ++i) {
+                A[i][j] = D[i][maxIndex];
+            }
+
+            // Solve for the coefficients
+            subCoefficients = Matrix::solve(A.leftCols(j + 1), x);
+
+            // Update the residual
+            residual = x;
+            float sum = 0;
+            #pragma omp parallel for collapse(2)
+            for (size_t i = 0; i < A.rows(); ++i) {
+                for (int l = 0; l <= j; ++l) {
+                    residual[i] -= A[i][l] * subCoefficients[l];
+                    sum += residual[i];
+                }
+            }
+            // x = residual;
+            // if (std::abs(sum/float(residual.size())) < 1e-5) break;
+        }
+
+        // Fill the coefficients matrix
+        for (size_t i = 0; i < selectedAtoms.size(); ++i) {
+            coefficients[selectedAtoms[i]][k] = subCoefficients[i];
+        }
+    }
+
+    return coefficients;
+}
+
+std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionary(int nbSamples, int highResSize, int lowResSize) {
+    std::vector<GridF> images(nbSamples);
+
+    for (int i = 0; i < nbSamples; i++) {
+        float angle = 2.f * PI / float(nbSamples);
+        float size = highResSize;
+        GridF img(size, size);
+        Vector3 start = Vector3(-cos(angle), -sin(angle)) * size * .5f + Vector3(size, size) * .5f;
+        Vector3 end = Vector3(cos(angle), sin(angle)) * size * .5f + Vector3(size, size) * .5f;
+        img.iterateParallel([&] (const Vector3& p) {
+            Vector3 startToPoint = p - start;
+            Vector3 segment = end - start;
+            img(p) = 1.f - startToPoint.dot(segment) / segment.norm2();
+        });
+        images[i] = img;
+    }
+    images.push_back(GridF(1, 1, 1, 1.f));
+
+    std::vector<Matrix> bigDico(images.size());
+    std::vector<Matrix> smallDico(images.size());
+    #pragma omp parallel for
+    for (int i = 0; i < images.size(); i++) {
+        bigDico[i] = Matrix(highResSize, highResSize);
+        images[i].iterateParallel([&](int x, int y, int z) {
+            bigDico[i][y][x] = images[i](x, y);
+        });
+        smallDico[i] = Matrix(lowResSize, lowResSize);
+        images[i] = images[i].resize(lowResSize, lowResSize, 1);
+        images[i].iterateParallel([&](int x, int y, int z) {
+            smallDico[i][y][x] = images[i](x, y);
+        });
+    }
+
+    return {smallDico, bigDico};
+}
+
+std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(std::string filename, int highResSize, int lowResSize) {
+    Image initialImage;
+    displayProcessTime("Reading... ", [&]() {
+        initialImage = Image::readFromFile(filename);
+    });
+    GridF data(initialImage.colorImage.getDimensions());
+    data.iterateParallel([&](size_t i) {
+        data[i] = initialImage.colorImage[i].x;
+    });
+    std::vector<GridF> images;
+    // int nbX = 200;
+    // int nbY = 100;
+
+    // int w = data.sizeX / nbX;
+    // int h = data.sizeY / nbY;
+
+    int w = highResSize, h = highResSize;
+    int nbX = data.sizeX / w, nbY = data.sizeY / h;
+
+    displayProcessTime("Splitting... ", [&]() {
+        #pragma omp parallel for collapse(2)
+        for (int i = 0; i < nbX; i++) {
+            for (int j = 0; j < nbY; j++) {
+                if (random_gen::generate() < .5f) continue;
+
+                GridF img = data.subset(i * w, (i+1) * w, j * h, (j+1) * h).resize(highResSize, highResSize, 1).normalized();
+                // if (img.sum() / float(highResSize * highResSize) < 0.5f) continue;
+                // Plotter::get()->addImage(img)->exec();
+
+                #pragma omp critical
+                images.push_back(img);
+            }
+        }
+    });
+
+    std::vector<Matrix> bigDico(images.size());
+    std::vector<Matrix> smallDico(images.size());
+    displayProcessTime("To dictionary (" + std::to_string(images.size()) + "... ", [&]() {
+        #pragma omp parallel for
+        for (int i = 0; i < images.size(); i++) {
+            bigDico[i] = Matrix(highResSize, highResSize);
+            images[i].iterateParallel([&](int x, int y, int z) {
+                bigDico[i][y][x] = images[i](x, y);
+            });
+            smallDico[i] = Matrix(lowResSize, lowResSize);
+            images[i] = images[i].resize(lowResSize, lowResSize, 1);
+            images[i].iterateParallel([&](int x, int y, int z) {
+                smallDico[i][y][x] = images[i](x, y);
+            });
+        }
+    });
+    return {bigDico, smallDico};
+}
+
+
+Matrix flattenDictionary(const std::vector<Matrix>& dictionaries) {
+    Matrix res = Matrix(dictionaries.size(), dictionaries[0].rows() * dictionaries[0].cols());
+
+    for (int i = 0; i < dictionaries.size(); i++) {
+        std::vector<float> flat = dictionaries[i].toStdVector();
+        res[i] = flat;
+    }
+    return res;
+}
+
+Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imageHeight, size_t imageWidth, size_t patchSize) {
+    Matrix reconstructed(imageHeight, imageWidth);
+
+    auto prod = Matrix::matprod(D, coefficients).toStdVector();
+    for (int i = 0; i < reconstructed.size(); i++) {
+        for (int j = 0; j < reconstructed[i].size(); j++) {
+            reconstructed[j][i] = prod[j * imageHeight + i];
+        }
+    }
+    return reconstructed;
+}
+
+
+
 int main(int argc, char *argv[])
 {
     auto allVars = getAllEnvironmentVariables();
     for (auto& [key, val] : allVars) {
-        auto lowerKey = toLower(key);
+        // auto lowerKey = toLower(key);
 //        if (lowerKey == "path" || lowerKey == "ld_library_path" || lowerKey.find("foam") != lowerKey.npos) {
-            std::string s_cmd = key + "=" + val;
-            auto cmd = const_cast<char*>(s_cmd.c_str());
+            // std::string s_cmd = key + "=" + val;
+            // auto cmd = const_cast<char*>(s_cmd.c_str());
             setenv(key.c_str(), val.c_str(), 1);
 //        }
     }
@@ -107,8 +290,167 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+/*
+    int size = 60;
+    int nbSamples = 100;
+    auto dico = createDictionary(size, nbSamples);
+    int sparsity = 4;
 
-    //((d((island - pos)?{0 0 0}) min 20 max 10) - 10
+    Matrix used = dico[0] * 0.f;
+    float sumCoef = 0.f;
+    for (int i = 0; i < 3; i++) {
+        float coef = random_gen::generate();
+        used += dico[i] * coef;
+        sumCoef += coef;
+    }
+    // used /= 2.f;
+    used /= sumCoef;
+    for (int i = 0; i < used.size(); i++) {
+        for (int j = 0; j < used[i].size(); j++) {
+            used[i][j] = std::pow(used[i][j] + 0.3f, 2.f) + 4.f;
+        }
+    }
+    Matrix D = flattenDictionary(dico).transpose();
+
+
+    Matrix X = Matrix(std::vector<std::vector<float>>{used.toStdVector()}).transpose();
+
+    Matrix coefficients;
+    displayProcessTime("Time to compute: ", [&]() {
+        coefficients = omp(D, X, sparsity);
+    });
+
+    // Print the coefficients
+    for (size_t i = 0; i < coefficients.rows(); ++i) {
+        for (size_t j = 0; j < coefficients.cols(); ++j) {
+            cout << coefficients[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
+
+    int maxDisplayedImages = 4;
+    GridF img((size + 2) * (std::min(nbSamples, maxDisplayedImages) + 2), size);
+    for (int i = 0; i < std::min(nbSamples, maxDisplayedImages); i++) {
+        img.paste(GridF(dico[i]), Vector3((size + 2) * (i + 2), 0));
+    }
+    img.paste(GridF(used) - GridF(reconstructImage(coefficients, D, size, size, sparsity)));
+    img.paste(GridF(used), Vector3((size+2), 0));
+    Plotter::get()->addImage(img);
+    Plotter::get()->setAbsoluteModeImage(true);
+    return Plotter::get()->exec();
+
+
+    */
+
+    int bigSize = 100;
+    int smallSize = 100;
+    int sparsity = 25;
+
+    Matrix bigD, smallD;
+    displayProcessTime("Preparation... ", [&]() {
+        auto [bigDico, smallDico] = createDictionary(500, bigSize, smallSize);
+        // auto [bigDico, smallDico] = createDictionaryFromFile("/home/marc/generation-terrain-procedural/Python_tests/sketch-to-terrain/ImagesAsPNG/gebco_08_rev_elev_C1_grey_geo.png", bigSize, smallSize);
+        bigD = flattenDictionary(bigDico).transpose();
+        smallD = flattenDictionary(smallDico).transpose();
+    });
+
+    Vector3 fullDim = Vector3(bigSize, bigSize, 1);
+    // Vector3 dim = fullDim * Vector3(0.5, 1, 1);
+    // GridF input(fullDim);
+    GridF input = (Image::readFromFile("/home/marc/generation-terrain-procedural/saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png").getBwImage().normalized()).resize(fullDim);
+    input.raiseErrorOnBadCoord = false;
+    input.returned_value_on_outside = DEFAULT_VALUE;
+
+    /*QObject::connect(Plotter::get(), &Plotter::movedOnImage, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _e) {
+        // if (clickPos.x < dim.x) {
+            Vector3 brushSize = Vector3(30, 30);
+            GridF gauss = GridF::gaussian(brushSize.x, brushSize.y, 1, 5.f);
+            gauss /= gauss.max();
+            input.add(gauss * (_e->buttons().testFlag(Qt::LeftButton) ? -1.f : 1.f), clickPos - brushSize * .5f);
+        // }
+        input.iterateParallel([&](size_t i) {
+            input[i] = std::clamp(input[i], 0.f, 1.f);
+        });*/
+
+        GridF fullImage(input.getDimensions());
+        GridF allMasks(fullImage.getDimensions());
+        int nbSub = 50;
+        Vector3 subImgSize = (input.getDimensions() / float(nbSub)).ceil();
+        subImgSize.z = 1;
+        Matrix3 mask(subImgSize, 0.f);
+        Vector3 maskCenter = (mask.getDimensions() / 2.f).xy();
+        auto distFunc = [&](const Vector3& pos, const Vector3& center) -> float {
+            float d = (center - (pos - Vector3(.5f, .5f))).norm() / (subImgSize.x);
+            // return (d * .5f <= .5f ? 1.f : std::max(1.f - (d * .5f - .5f), 0.f));
+            return std::clamp(1.f - d, 0.f, 1.f);
+        };
+        mask.iterateParallel([&] (const Vector3& p) {
+            float allDistancesSum = 0.f;
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    Vector3 neighborCenter = maskCenter + Vector3(x, y) * subImgSize.xy();
+                    float neighborDistFunc = distFunc(p, neighborCenter);
+                    allDistancesSum += neighborDistFunc;
+                }
+            }
+
+            mask(p) = distFunc(p, maskCenter) / allDistancesSum;
+            // mask(p) = allDistancesSum;
+        });
+        mask = mask.resize(mask.getDimensions() * Vector3(2.f, 2.f, 1.f));
+        // Plotter::get()->addImage(mask)->exec();
+        // return 0;
+
+        displayProcessTime("Time to compute: ", [&]() {
+            for (int x = 0; x < nbSub; x++) {
+                for (int y = 0; y < nbSub; y++) {
+                    if (x % 2 != 0 || y % 2 != 0) continue;
+                    GridF img = input.subset(Vector3(x - .5f, y - .5f) * subImgSize, Vector3(x + 1.5f, y + 1.5f) * subImgSize);
+
+                    Matrix X(subImgSize.x, subImgSize.y);
+                    GridF resizedInput = img.resize(subImgSize);
+                    resizedInput.iterateParallel([&] (int x, int y, int z) {
+                        X[y][x] = resizedInput(x, y);
+                    });
+                    X = Matrix(std::vector<std::vector<float>>{X.toStdVector()}).transpose();
+                    Matrix coefficients;
+                    coefficients = omp(smallD, X, sparsity);
+                    // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
+                    // coefficients = Matrix(smallD[0].size(), 1);
+                    // coefficients[0][0] = 1;
+                    // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
+                    // return 0;
+
+                    // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
+                    // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
+                    GridF reconstruction = reconstructImage(coefficients, bigD, bigSize, bigSize, 1);
+                    reconstruction = reconstruction.resize(subImgSize * Vector3(2.f, 2.f, 1.f));
+                    // fullImage.add(reconstruction * mask, Vector3(x - .5f, y - .5f) * subImgSize);
+                    fullImage.add(reconstruction, Vector3(x - .5f, y - .5f) * subImgSize);
+                    // fullImage.add(img, Vector3(x - .5f, y - .5f) * subImgSize);
+                    allMasks.add(mask, Vector3(x - .5f, y - .5f) * subImgSize);
+                }
+            }
+            // fullImage.iterateParallel([&](size_t i) {
+            //     fullImage[i] = fullImage[i] / (allMasks[i] < 1e-5 ? 1.f : allMasks[i]);
+            // });
+        });
+
+
+        GridF displayed(fullImage.sizeX * 2.f, fullImage.sizeY, 1.f);
+        displayed.paste(input.resize(fullImage.getDimensions()), Vector3(0, 0, 0));
+        displayed.paste(fullImage, Vector3(fullImage.sizeX, 0, 0));
+        // GridF fullImage = reconstruction.resize(fullDim);
+
+
+        Plotter::get()->addImage(displayed);
+        /*Plotter::get()->show();
+
+    });
+    Plotter::get()->addImage(input);*/
+    return Plotter::get()->exec();
+
+
     /*
      * Unit test: BSpline with duplicate values such that it doesn't return any NaN
     GridV3 vals(200, 200);
@@ -1704,6 +2046,7 @@ int main(int argc, char *argv[])
         }
     }
 
+
     Plotter::get()->setNormalizedModeImage(true);
 
     displayProcessTime("1) ", [&]() {
@@ -1779,12 +2122,19 @@ int main(int argc, char *argv[])
                 path.scale(2.f);
             heights = heights.resize(2.f);
         }
+        heights.normalize();
+        heights.iterateParallel([&] (size_t i) {
+            heights[i] = std::exp(heights[i] * 5.f);
+        });
+        heights.normalize();
     });
+
+
 
     Plotter::get()->addImage(heights);
     return Plotter::get()->exec();
-    */
 
+    */
     /*
      * Unit test: Added a random Fbm function
     GridF img(1000, 1000, 1);

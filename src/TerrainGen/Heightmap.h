@@ -64,7 +64,7 @@ public:
     void saveMap(std::string filename) { return this->saveHeightmap(filename); }
     void retrieveMap(std::string filename) { this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
     Heightmap& loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
-    void saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions = Vector3(false));
+    void saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions = Vector3(false), bool useRelativeHeight = false);
 
     Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
     Vector3 findSurfaceBetween(const Vector3& start, const Vector3& end);

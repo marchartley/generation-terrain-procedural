@@ -1596,12 +1596,17 @@ void EnvObjsInterface::loadScene(std::string filename)
             asArea->curve = json_to_bspline(obj["curve"]);
         }
         newObject->recomputeEvaluationPoints();
+        newObject->createdManually = true;
         auto implicit = newObject->createImplicitPatch(initialHeightmap);
         this->implicitPatchesFromObjects[newObject] = implicit;
         if (implicit != nullptr) {
             rootPatch->addChild(implicit);
         }
         this->currentSelections = {};
+    }
+    this->addObjectsHeightmaps();
+    this->flowErosionSimulation();
+    for (auto& [objectName, obj] : EnvObject::availableObjects) {
         EnvObject::recomputeTerrainPropertiesForObject(objectName);
     }
     EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
@@ -1805,7 +1810,7 @@ void EnvObjsInterface::addObjectsHeightmaps()
                 grid = grid.warpWith(EnvObject::flowfield * flowErosionFactor * EnvObject::materials[toLower(stringFromMaterial(obj->material))].waterTransport, 10);
             }
             if (obj->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
-                surfaceHeights += grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
+                surfaceHeights = (surfaceHeights + grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f)).max(-15.f);
             } else if (obj->heightFrom == EnvObject::HeightmapFrom::GROUND) {
                 groundConstraintedHeights = groundConstraintedHeights.max(grid * subsidenceFactor, Vector3());
             } else if (obj->heightFrom == EnvObject::HeightmapFrom::WATER) {
@@ -1813,7 +1818,7 @@ void EnvObjsInterface::addObjectsHeightmaps()
                     grid[i] = (std::abs(grid[i]) < 1e-4 ? -10000.f : grid[i]);
                 });
                 // std::cout << "Max height for " << obj->name << ": " << grid.max() << " while height = " << obj->height << "(grow = " <<  obj->computeGrowingState2() << ")" << std::endl;
-                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - 1.f, Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
+                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - (obj->name == "lagoon" || obj->name == "smalllagoon" ? 3.f : 1.f), Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
             }
         }
     }
@@ -1827,8 +1832,8 @@ void EnvObjsInterface::addObjectsHeightmaps()
         waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
     });
     waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
-    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights) + surfaceHeights;
-    subsidedHeightmap = subsidedHeightmap.max(-15.f);
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights);
+    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).max(-15.f);
     /*
     std::map<std::string, GridF> perTypeHeightmap;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -1952,7 +1957,7 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
         draggingHasBeenApplied.setValid(true);
         Vector3 translation = (position.xy() - draggingHasBeenApplied.xy());
         draggingHasBeenApplied = position.xy();
-        float maxDistToPointSqr = 10.f * 10.f;
+        float maxDistToPointSqr = 20.f * 20.f;
 
         for (auto currentSelection : currentSelections) {
             if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {

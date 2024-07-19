@@ -83,6 +83,10 @@ public:
     int width() const;
     int depth() const;
     int height() const;
+
+    int rows() const;
+    int cols() const;
+
     int getIndex(size_t x, size_t y, size_t z) const;
     int getIndex(const Vector3& coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
@@ -90,6 +94,9 @@ public:
     bool checkCoord(int x, int y, int z = 0) const;
     bool checkCoord(const Vector3& pos) const;
     bool checkIndex(size_t i) const;
+
+    Matrix3<T> col(int colIndex, int depthIndex = 0);
+    Matrix3<T> row(int rowIndex, int depthIndex = 0);
 
     template<class Func>
     void iterate(Func function) const;
@@ -477,6 +484,26 @@ template<class T>
 bool Matrix3<T>::checkIndex(size_t i) const
 {
     return (0 <= i && i < sizeX * sizeY * sizeZ);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::col(int colIndex, int depthIndex)
+{
+    Matrix3<T> res(1, this->sizeY, 1);
+    for (int y = 0; y < this->sizeY; y++) {
+        res(0, y, 0) = this->at(colIndex, y, depthIndex);
+    }
+    return res;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
+{
+    Matrix3<T> res(this->sizeX, 1, 1);
+    for (int x = 0; x < this->sizeX; x++) {
+        res(x, 0, 0) = this->at(x, rowIndex, depthIndex);
+    }
+    return res;
 }
 
 template<class T>
@@ -2888,6 +2915,17 @@ int Matrix3<T>::depth() const {
 template<class T>
 int Matrix3<T>::height() const {
     return this->sizeZ;
+}
+
+template<class T>
+int Matrix3<T>::rows() const
+{
+    return this->sizeY;
+}
+template<class T>
+int Matrix3<T>::cols() const
+{
+    return this->sizeX;
 }
 
 template<class T>

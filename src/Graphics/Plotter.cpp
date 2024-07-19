@@ -225,32 +225,35 @@ Plotter *Plotter::init(ChartView *chartView, QWidget *parent)
     return Plotter::getInstance();
 }
 
-void Plotter::addPlot(std::vector<float> data, std::string name, QColor color)
+Plotter* Plotter::addPlot(std::vector<float> data, std::string name, QColor color)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
         _data.push_back(Vector3(i, data[i]));
     }
     this->addPlot(_data, name, color);
+    return Plotter::getInstance();
 }
 
-void Plotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
+Plotter* Plotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
 {
     this->plot_data.push_back(data);
     this->plot_names.push_back(name);
     this->plot_colors.push_back(color);
+    return Plotter::getInstance();
 }
 
-void Plotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+Plotter* Plotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     std::vector<Vector3> _data;
     for (unsigned int i = 0; i < data.size(); i++) {
         _data.push_back(Vector3(i, data[i]));
     }
     this->addScatter(_data, name, labels, colors);
+    return Plotter::getInstance();
 }
 
-void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+Plotter* Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     if (colors.size() == 0) {
         colors = std::vector<QColor>({Qt::blue});
@@ -262,13 +265,14 @@ void Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vecto
     this->scatter_names.push_back(name);
     this->scatter_labels.push_back(labels);
     this->scatter_colors.push_back(colors);
+    return Plotter::getInstance();
 }
 
-void Plotter::addImage(GridV3 image)
+Plotter* Plotter::addImage(GridV3 image)
 {
     this->displayedImage = image;
 //    image = image.flip(false, true);
-    if (image.empty()) return;
+    if (image.empty()) return Plotter::getInstance();
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::lowest();
@@ -318,9 +322,10 @@ void Plotter::addImage(GridV3 image)
     }
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 //    *(this->backImage) = this->backImage->mirrored();
+    return Plotter::getInstance();
 }
 
-void Plotter::addImage(const GridF &image)
+Plotter* Plotter::addImage(const GridF &image)
 {
     GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
@@ -330,12 +335,12 @@ void Plotter::addImage(const GridF &image)
     return this->addImage(copy);
 }
 
-void Plotter::addImage(const Matrix3<double> &image)
+Plotter* Plotter::addImage(const Matrix3<double> &image)
 {
     return this->addImage((GridF)image);
 }
 
-void Plotter::addImage(const GridI &image)
+Plotter* Plotter::addImage(const GridI &image)
 {
     return this->addImage((GridF)image);
 }
@@ -385,7 +390,7 @@ GridV3 Plotter::computeVectorFieldRendering(const GridV3 &field, float reduction
     return img;
 }
 
-void Plotter::addVectorField(const GridV3 &field, float reductionFactor, Vector3 imgSize, float opacity)
+Plotter* Plotter::addVectorField(const GridV3 &field, float reductionFactor, Vector3 imgSize, float opacity)
 {
     GridV3 img = this->computeVectorFieldRendering(field, reductionFactor, imgSize);
     if (this->displayedImage.size() > 0) {
@@ -426,7 +431,7 @@ GridV3 Plotter::computeStreamLinesRendering(const GridV3 &field, Vector3 imgSize
     return img;
 }
 
-void Plotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
+Plotter* Plotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity)
 {
     GridV3 img = computeStreamLinesRendering(field, imgSize);
     if (this->displayedImage.size() > 0) {
@@ -435,7 +440,7 @@ void Plotter::addStreamLines(const GridV3 &field, Vector3 imgSize, float opacity
     return this->addImage(img);
 }
 
-void Plotter::draw()
+Plotter* Plotter::draw()
 {
     this->chartView->chart()->removeAllSeries();
 //    while (!this->chartView->chart()->axes().empty()) {
@@ -529,15 +534,17 @@ void Plotter::draw()
     this->chartView->chart()->createDefaultAxes();
 //    this->chartView->chart()->zoomOut();
     //    this->chartView->update();
+    return Plotter::getInstance();
 }
 
-void Plotter::show()
+Plotter* Plotter::show()
 {
     this->draw();
     QDialog::show();
+    return Plotter::getInstance();
 }
 
-void Plotter::updateUI()
+Plotter* Plotter::updateUI()
 {
     blockSignals(true);
     /*for (auto& child : this->children()) {
@@ -552,27 +559,28 @@ void Plotter::updateUI()
         }
     }*/
     blockSignals(false);
+    return Plotter::getInstance();
 }
 
-void Plotter::setNormalizedModeImage(bool normalize)
+Plotter* Plotter::setNormalizedModeImage(bool normalize)
 {
     this->normalizedMode = normalize;
     this->addImage(this->displayedImage);
-    updateUI();
+    return updateUI();
 }
 
-void Plotter::setAbsoluteModeImage(bool absolute)
+Plotter* Plotter::setAbsoluteModeImage(bool absolute)
 {
     this->absoluteMode = absolute;
     this->addImage(this->displayedImage);
-    updateUI();
+    return updateUI();
 }
 
-void Plotter::setFilteredValuesImage(bool filtered)
+Plotter *Plotter::setFilteredValuesImage(bool filtered)
 {
     this->clampValues = filtered;
     this->addImage(this->displayedImage);
-    updateUI();
+    return updateUI();
 }
 
 int Plotter::exec()
@@ -583,18 +591,20 @@ int Plotter::exec()
 
 }
 
-void Plotter::saveFig(std::string filename)
+Plotter* Plotter::saveFig(std::string filename)
 {
     QPixmap p = this->chartView->grab();
     if (this->backImage)
         p = QPixmap::fromImage(*backImage);
     p.save(QString::fromStdString(filename), "PNG");
+    return Plotter::getInstance();
 }
 
-void Plotter::copyToClipboard()
+Plotter* Plotter::copyToClipboard()
 {
     QPixmap p = this->chartView->grab();
     QApplication::clipboard()->setPixmap(p, QClipboard::Clipboard);
+    return Plotter::getInstance();
 }
 
 void Plotter::resizeEvent(QResizeEvent *event)
@@ -609,7 +619,7 @@ void Plotter::showEvent(QShowEvent *event)
     this->draw();
 }
 
-void Plotter::reset()
+Plotter* Plotter::reset()
 {
     auto prevState = this->chartView->chart()->transformations();
     this->chartView->chart()->removeAllSeries();
@@ -640,9 +650,10 @@ void Plotter::reset()
     selectedScatterData.clear();
     selectedPlotData.clear();
 
+    return Plotter::getInstance();
 }
 
-void Plotter::updateLabelsPositions()
+Plotter* Plotter::updateLabelsPositions()
 {
 //    this->blockSignals(true);
     if (!this->selectedPlotData.empty() || !this->selectedScatterData.empty()) {
@@ -664,11 +675,12 @@ void Plotter::updateLabelsPositions()
         this->draw();
     }
 //    this->blockSignals(false);
+    return Plotter::getInstance();
 }
 
-void Plotter::selectData(const Vector3& pos)
+Plotter* Plotter::selectData(const Vector3& pos)
 {
-    if (!pos.isValid()) return;
+    if (!pos.isValid()) return Plotter::getInstance();
 
     float minDist = 0.05f;
     this->selectedScatterData.clear();
@@ -698,18 +710,20 @@ void Plotter::selectData(const Vector3& pos)
     if (!this->displayedImage.empty()) {
         Q_EMIT clickedOnImage(pos * displayedImage.getDimensions(), this->displayedImage(pos * displayedImage.getDimensions()));
     }
+    return Plotter::getInstance();
 }
 
-void Plotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
+Plotter* Plotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
 {
     if (this->displayedImage.empty() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
-        return;
+        return Plotter::getInstance();
     std::ostringstream oss;
     Vector3 size = displayedImage.getDimensions();
     Vector3 position = relativeMousePos * size;
     Vector3 value = this->displayedImage(position);
     oss << "Mouse pos: " << int(position.x) << ", " << int(position.y) << " -- Value : (" << value.x << ", " << value.y << ", " << value.z << ") ";
     this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
+    return Plotter::getInstance();
 }
 
 

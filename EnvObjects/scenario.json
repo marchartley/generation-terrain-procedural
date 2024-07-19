@@ -1,5 +1,5 @@
 {
-"objects": {
+"--objects": {
 		"island": {
 			"proba": 0.1,
 			"amount": 0
@@ -16,21 +16,27 @@
 			"proba": 0.91,
 			"amount": 0
 		},
-		"lagoon": {
-			"proba": 0.01,
-			"amount": 0
+		"smalllagoon": {
+			"proba": 0.05,
+			"amount": 2
+		}
+	},
+"objects": {
+		"coralpolyp": {
+			"proba": 0.91,
+			"amount": -1
 		}
 	},
 
 "simulation": {
 		"dt": 1,
-		"end": -1,
+		"end": 1000,
 		"waterlevel": 0.4
 	},
 
 "events": [
 		{
-			"type": "storm",
+			"type": "--storm",
 			"position": {
 				"x": 50,
 				"y": 50,
@@ -69,19 +75,31 @@
 			"end": 30
 		},
 		{
-			"type": "subsidence",
+			"type": "--subsidence",
 			"amount": 0.50,
-			"sigma": 20.0,
+			"sigma": 5.0,
 			"position": {
-				"x": 70,
-				"y": 50,
+				"x": 30,
+				"y": 60,
 				"z": 0
 			},
 			"start": 5,
 			"end": 30
 		},
 		{
-			"type": "subsidence",
+			"type": "--subsidence",
+			"amount": 1.0,
+			"sigma": 10.0,
+			"position": {
+				"x": 30,
+				"y": 20,
+				"z": 0
+			},
+			"start": 5,
+			"end": 30
+		},
+		{
+			"type": "--subsidence",
 			"amount": -1.0,
 			"sigma": -1.0,
 			"position": {
@@ -93,7 +111,7 @@
 			"end": 50
 		},
 		{
-			"type": "subsidence",
+			"type": "--subsidence",
 			"amount": 1.5,
 			"sigma": -1.0,
 			"position": {

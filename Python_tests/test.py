@@ -1,34 +1,47 @@
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 
-def sediment_concentration(x, y, x0, y0, ux, uy, D, t):
-    """
-    Calculate the concentration of sediments at point (x, y) after time t.
-    """
-    return (1 / (4 * np.pi * D * t)) * np.exp(-((x - x0 - ux * t)**2 + (y - y0 - uy * t)**2) / (4 * D * t))
 
-# Parameters
-x0, y0 = 0.0, 0.0   # Initial point
-ux, uy = 1.0, 0.5   # Velocity field
-D = 1.0             # Diffusion coefficient
-t = 1.0             # Time
+T_implicit = np.zeros((100, 100, 100))
+T_voxels = np.zeros((100, 100, 100))
+T_heightmap = np.zeros((100, 100))
 
-# Grid definition
-x = np.linspace(-10, 10, 400)
-y = np.linspace(-10, 10, 400)
-X, Y = np.meshgrid(x, y)
+Q = 1.0
+C = np.array([50, 50, 50])
+R = 10
 
-# Compute concentration
-Z = sediment_concentration(X, Y, x0, y0, ux, uy, D, t)
+for x in range(T_implicit.shape[0]):
+    for y in range(T_implicit.shape[1]):
+        p = np.array([x, y, 50])
+        d = np.linalg.norm(p - C)
+        if d < R:
+            T_heightmap[x, y] = (Q / (R ** 3 * math.pi * 2 / 3)) * math.sqrt(R ** 2 - d ** 2)
+        for z in range(T_implicit.shape[2]):
+            p = np.array([x, y, z])
+            d = np.linalg.norm(p - C)
+            if d < R:
+                T_implicit[x, y, z] = (3.0 / (math.pi * R**3)) * Q * (1 - (d/R))
+                T_voxels[x, y, z] = (1 - (d/R))
 
-# Plotting
-plt.figure(figsize=(8, 6))
-plt.contourf(X, Y, Z, levels=50, cmap='viridis')
-plt.colorbar(label='Concentration')
-plt.title(f'Sediment Concentration at t={t}')
-plt.xlabel('x')
-plt.ylabel('y')
-plt.scatter([x0 + ux * t], [y0 + uy * t], color='red')  # Indicate the advected source position
-plt.annotate('Source Position', (x0 + ux * t, y0 + uy * t), textcoords="offset points", xytext=(5,-10), ha='center', color='red')
-plt.grid(True)
+T_voxels = T_voxels * Q / np.sum(T_voxels)
+print(np.sum(T_implicit))
+print(np.sum(T_voxels))
+print(np.sum(T_heightmap))
+
+
+plt.imshow(T_implicit[:, :, 50])
+plt.show()
+plt.imshow(T_voxels[:, :, 50])
+plt.show()
+plt.imshow(T_heightmap)
+plt.show()
+
+
+for x in range(T_implicit.shape[0]):
+    for y in range(T_implicit.shape[1]):
+        for z in range(T_implicit.shape[2]):
+            T_implicit[x, y, 0] += T_implicit[x, y, z]
+print(np.sum(T_implicit[:, :, 0]))
+plt.imshow(T_implicit[:, :, 0])
 plt.show()

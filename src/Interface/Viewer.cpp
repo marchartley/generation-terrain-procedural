@@ -150,7 +150,7 @@ void Viewer::draw() {
 
 void Viewer::saveScreenshotPNG(std::string filename)
 {
-    QImage img = this->grabFramebuffer();
+    QImage img = this->grabFrameBuffer();
     img.save(QString::fromStdString(filename));
     return;
     int w = this->camera()->screenWidth();

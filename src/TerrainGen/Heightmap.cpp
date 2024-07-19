@@ -427,11 +427,11 @@ Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
                 if (voxels.at(x, y, z) > 0.f) {
-//                    float current = voxels.at(x, y, z); // Is > 0.f
-//                    float above = voxels.at(x, y, z + 1); // can be == 0.f
-//                    if (above == 0.f) this->heights.at(x, y) = z;
-//                    else this->heights.at(x, y) = z + std::min(current / above, above / current);
-                    this->heights.at(x, y) = z;
+                   float current = voxels.at(x, y, z); // Is > 0.f
+                   float above = voxels.at(x, y, z + 1); // can be == 0.f
+                   if (std::abs(above) <= 1e-5) this->heights.at(x, y) = z;
+                   else this->heights.at(x, y) = z + current / (current - above);
+                    // this->heights.at(x, y) = z + std::min(current / above, above / current);
                     break;
                 }
         }
@@ -543,15 +543,16 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     return *this;
 }
 
-void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions)
+void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions, bool useRelativeHeight)
 {
     if (!imageDimensions.isValid())
         imageDimensions = this->heights.getDimensions();
 
     std::string ext = toUpper(getExtension(heightmap_filename));
-    int width = imageDimensions.x;
-    int height = imageDimensions.y;
     auto resizedHeights = heights.resize(imageDimensions);
+    if (useRelativeHeight) {
+        resizedHeights = resizedHeights.normalize() * 100.f;
+    }
     Image(resizedHeights / 100.f).writeToFile(heightmap_filename);
     /*
     // To heightmap

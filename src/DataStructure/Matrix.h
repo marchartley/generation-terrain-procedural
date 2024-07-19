@@ -25,6 +25,16 @@ public:
     int rows() const { return this->size(); }
     int cols() const { return (*this)[0].size(); }
 
+    Matrix col(int colIndex) const;
+    Matrix row(int rowIndex) const;
+
+    Matrix abs() const;
+
+    float maxCoeff() const;
+
+    Matrix leftCols(int nbCols) const;
+    Matrix rightCols(int nbCols) const;
+
     static Matrix identity(int size);
 
     std::string displayValues() const;
@@ -59,6 +69,11 @@ public:
 
     friend std::ostream& operator<<(std::ostream& io, const Matrix& m);
     friend std::ostream& operator<<(std::ostream& io, Matrix* m);
+
+    static std::pair<Matrix, Matrix> gramSchmidtQR(const Matrix& A);
+    static std::vector<float> backSubstitution(const Matrix& R, const vector<float>& b);
+    static std::vector<float> solve(const Matrix& A, const Matrix& b);
+    static std::vector<float> solve(const Matrix& A, const std::vector<float>& b);
 };
 
 #endif // MATRIX_H

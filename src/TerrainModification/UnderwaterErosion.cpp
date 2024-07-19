@@ -183,7 +183,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          bool applyTheErosion,
                          int maxCollisions)
 {
-    /*
+
     ParticleErosion erosionProcess;
 
     erosionProcess.applyOn = applyOn;
@@ -255,7 +255,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         }
     }
     return {tunnels, positions, erosions, allErosions};
-    */
+/*
 
 
     matterDensity = std::max(matterDensity, 1e-1f);
@@ -338,10 +338,6 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
     }
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-
-    /*flowfieldValues.iterateParallel([&](const Vector3& pos) {
-        flowfieldValues(pos) = Vector3(1.f, std::cos(pos.x * .08f), 0.f).normalized() * 1.f * airForce;
-    });*/
 
     std::vector<BSpline> tunnels(rockAmount);
     std::vector<int> nbPos(rockAmount), nbErosions(rockAmount);
@@ -610,7 +606,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 }
             }
         } else {
-            bool parallel = true;
+            const bool parallel = true;
             if (parallel) {
                 std::vector<GridF> submodifications(rockAmount, GridF(modifications.getDimensions()));
                 #pragma omp parallel for
@@ -672,13 +668,13 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 //                            if (previousPos.isValid() && (pos - previousPos).norm2() < 2*2) continue;
                             countRocks++;
                             rocks(pos) += val;
-                            previousPos = pos;/*
-                            auto sphere = dynamic_cast<ImplicitPrimitive*>(ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(particleSize, particleSize, particleSize), std::abs(val)*.01f));
-                            sphere->material = (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT);
-                            sphere->dimensions = Vector3(particleSize, particleSize, particleSize);
-                            sphere->supportDimensions = sphere->dimensions;
-                            sphere->position = pos - sphere->dimensions * .5f;
-                            allNary[i]->composables.push_back(sphere);*/
+                            previousPos = pos;
+                            // auto sphere = dynamic_cast<ImplicitPrimitive*>(ImplicitPatch::createPredefinedShape(ImplicitPatch::Sphere, Vector3(particleSize, particleSize, particleSize), std::abs(val)*.01f));
+                            // sphere->material = (val > 0 ? TerrainTypes::AIR : TerrainTypes::DIRT);
+                            // sphere->dimensions = Vector3(particleSize, particleSize, particleSize);
+                            // sphere->supportDimensions = sphere->dimensions;
+                            // sphere->position = pos - sphere->dimensions * .5f;
+                            // allNary[i]->composables.push_back(sphere);
                         }
                     }
                 }
@@ -739,6 +735,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         asLayers->fromVoxelGrid(*asVoxels);
     }
     return {tunnels, positions, erosions, allErosions};
+*/
 
 }
 

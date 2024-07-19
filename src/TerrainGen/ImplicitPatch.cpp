@@ -8,7 +8,7 @@
 #include "TerrainGen/LayerBasedGrid.h"
 
 float ImplicitPatch::isovalue = .5f;
-float ImplicitPatch::zResolution = .1f;
+const float ImplicitPatch::zResolution = .1f;
 int ImplicitPatch::currentMaxIndex = -1;
 std::string ImplicitPatch::json_identifier = "implicitPatches";
 
@@ -408,7 +408,7 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
         #pragma omp parallel for collapse(3)
         for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
             for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
-                for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
+                for (int z = 0; z < _cachedVoxelized.sizeZ; z += 1) {
                     Vector3 pos = Vector3(x, y, z) * scale;
                     std::vector<Vector3> evaluationPoses = {
                         pos + Vector3(0, 0, 0)/*,
@@ -1875,6 +1875,11 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
             heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
         }
         heights(pos) += random_gen::generate_fbm(pos.x, pos.y) * (.1f * std::abs(heights(pos)));
+    });
+
+    heights.normalize();
+    heights.iterateParallel([&] (size_t i) {
+        heights[i] = std::exp(heights[i] * 3.f);
     });
     heights = heights.gaussianSmooth(2.f).normalized();
     heights.iterateParallel([&] (const Vector3& pos) {
