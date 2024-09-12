@@ -491,6 +491,11 @@ Vector3& Vector3::applyTransform(Matrix transformMatrix)
     return *this;
 }
 
+Vector3 Vector3::rotated90XY() const
+{
+    return Vector3(y, -x);
+}
+
 Vector3 &Vector3::changeBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ)
 {
     Vector3 newVec = this->changedBasis(newX, newY, newZ);

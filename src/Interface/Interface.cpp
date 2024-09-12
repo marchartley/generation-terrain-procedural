@@ -92,7 +92,7 @@ ViewerInterface::ViewerInterface() {
         envObjectsInterface->setDefinitionFile("EnvObjects/primitives.json");
         envObjectsInterface->setScenarioFile("EnvObjects/scenario.json");
 
-//        terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
+       // terrainGenerationInterface->createTerrainFromNoise(3, 3, 2, 1.0, 0.3);
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/biomes/mayotte.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/rock_begin.data");
@@ -121,14 +121,14 @@ ViewerInterface::ViewerInterface() {
 
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/heightmap.png");
-       terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_noise_with_obstacle.png");
+       // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope_noise_with_obstacle.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/river.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        // terrainGenerationInterface->waterLevel = .05f;
-        // terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
-        // terrainGenerationInterface->waterLevel = .0f;
+        terrainGenerationInterface->waterLevel = .05f;
+        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
+        terrainGenerationInterface->waterLevel = .0f;
 
 //        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;

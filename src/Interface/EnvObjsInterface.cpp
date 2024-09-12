@@ -209,8 +209,8 @@ QLayout *EnvObjsInterface::createGUI()
     CheckboxElement* waitAtEachFrameButton = new CheckboxElement("Auto wait", this->waitAtEachFrame);
 //    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
-    TextEditElement* testingFormula = new TextEditElement("", "Try: ");
-    testingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomCostFormula(expression); });
+    TextEditElement* testingFittingFormula = new TextEditElement("", "Fitting func: ");
+    testingFittingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
 
@@ -300,7 +300,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton})->get());
     layout->addWidget(showElementsOnCanvasButton->get());
     layout->addWidget(objectsListWidget);
-    layout->addWidget(testingFormula->get());
+    layout->addWidget(testingFittingFormula->get());
     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
     layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get(), displayCurrentsButton->get()}));
 
@@ -466,6 +466,22 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     GridV3 gradients = score.gradient();
     if (std::abs(score.max() - score.min()) < 1e-5)
         return Vector3::random(Vector3(score.sizeX, score.sizeY, 0));
+
+    Vector3 bestPos(false);
+    float bestScore = std::numeric_limits<float>::lowest();
+    for (int tries = 0; tries < 20; tries++) {
+        Vector3 p = Vector3::random(Vector3(), score.getDimensions().xy());
+        for (int iter = 0; iter < 50; iter++) {
+            p += gradients(p).normalize();
+        }
+        float currentScore = score(p);
+        if (currentScore > bestScore) {
+            bestScore = currentScore;
+            bestPos = p;
+        }
+    }
+    return bestPos;
+    /*
     float scoreToObtain = random_gen::generate(score.sum() / 100.f);
     float bestScore = 10000;
     Vector3 bestPos = Vector3::invalid();
@@ -473,20 +489,18 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
     int nbIterationsToFindBestPos = 0;
     while (scoreToObtain > 0) {
         Vector3 p = Vector3::random(Vector3(), score.getDimensions().xy());
-        /*for (int iter = 0; iter < 50; iter++) {
-            p += gradients(p).normalize();
-        }*/
         float scoreObtained = score(p);
         if (scoreObtained < 1e-6) continue;
         scoreToObtain -= scoreObtained;
         bestPos = p;
         nbIterationsToFindBestPos++;
     }
-    return bestPos;
+    return bestPos;*/
 }
 
 EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score) {
     bool verbose = false;
+    Vector3 initialPosition = position;
     EnvObject* newObject = EnvObject::instantiate(objectName);
 
     auto objAsPoint = dynamic_cast<EnvPoint*>(newObject);
@@ -535,7 +549,8 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     }
 
     newObject->translate(position.xy());
-    newObject->recomputeEvaluationPoints();
+    // newObject->recomputeEvaluationPoints();
+    newObject->evaluationPositions = {initialPosition};
     int nbOutside = 0;
     for (auto& p : newObject->evaluationPositions) {
         if (!Vector3::isInBox(p, Vector3(), score.getDimensions())) {
@@ -548,15 +563,15 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
         this->destroyEnvObject(newObject, false, false);
         return nullptr;
     }
-    // newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
-    newObject->fittingScoreAtCreation = newObject->evaluate();
+    // newObject->fitnessScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->fitnessScoreAtCreation = newObject->evaluate();
     newObject->spawnTime = EnvObject::currentTime;
-    if (newObject->fittingScoreAtCreation <= newObject->minScore) {
+    if (newObject->fitnessScoreAtCreation <= newObject->minScore) {
         log("Object has score of 0...", verbose);
         this->destroyEnvObject(newObject, false, false);
         return nullptr;
     } else {
-        this->log("Creation of obj at score = " + std::to_string(newObject->fittingScoreAtCreation), verbose);
+        this->log("Creation of obj at score = " + std::to_string(newObject->fitnessScoreAtCreation), verbose);
         return newObject;
     }
 }
@@ -586,10 +601,10 @@ EnvObject *EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName
     }
 
     newObject->translate(position.xy());
-    // newObject->fittingScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
-    newObject->fittingScoreAtCreation = newObject->evaluate();
+    // newObject->fitnessScoreAtCreation = newObject->evaluate(newObject->evaluationPosition);
+    newObject->fitnessScoreAtCreation = newObject->evaluate();
     newObject->spawnTime = EnvObject::currentTime;
-    std::cout << "Manual creation of obj at score = " << newObject->fittingScoreAtCreation << std::endl;
+    std::cout << "Manual creation of obj at score = " << newObject->fitnessScoreAtCreation << std::endl;
     return newObject;
 }
 
@@ -601,7 +616,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
         std::cerr << "No object " << objectName << " in database!" << std::endl;
         return result;
     }
-    bool verbose = false;
+    bool verbose = true;
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
         GridF heights = heightmap->getHeights();
 
@@ -614,18 +629,18 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
         if (possible) {
             Vector3 bestPosition(false);
             float bestScore = -1;
-            for (int iteration = 0; iteration < 10; iteration++) {
+            for (int iteration = 0; iteration < 2; iteration++) {
                 Vector3 bestPos = bestPositionForInstantiation(objectName, score);
                 EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
                 if (!newObject) continue;
-                if (newObject->fittingScoreAtCreation > bestScore) {
+                if (newObject->fitnessScoreAtCreation > bestScore) {
                     bestPosition = bestPos;
-                    bestScore = newObject->fittingScoreAtCreation;
+                    bestScore = newObject->fitnessScoreAtCreation;
                 }
                 this->destroyEnvObject(newObject, false, false);
             }
             if (!bestPosition.isValid()) {
-                this->log("No valid position for object" + objectName, verbose);
+                this->log("No valid position for object " + objectName, verbose);
                 return;
             }
             EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPosition, score);
@@ -635,6 +650,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
             }
             auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
             newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+            newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
             this->implicitPatchesFromObjects[newObject] = implicit;
             if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
                 this->implicitTerrain->addChild(this->rootPatch);
@@ -691,6 +707,7 @@ EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, GridF score
             return nullptr;
         }
         newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+        newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
         destroyEnvObject(newObject, false, false);
         result = newObject;
     }
@@ -797,7 +814,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             bool shouldDie = this->checkIfObjectShouldDie(obj, .1f);
             atLeastOneDeath |= shouldDie;
             if (shouldDie) {
-                float startingScore = obj->fittingScoreAtCreation;
+                float startingScore = obj->fitnessScoreAtCreation;
                 // float endingScore = obj->evaluate(obj->evaluationPosition);
                 float endingScore = obj->evaluate();
                 this->log(obj->name + " went from " + std::to_string(startingScore) + " to " + std::to_string(endingScore) + " -> " + std::to_string(std::round(100.f * endingScore / startingScore)) + "%");
@@ -887,8 +904,8 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     for (auto& obj : immatureObjects) {
         if (obj->computeGrowingState() >= 1.f) {
             // Got mature during this process -> now let's save the fitting score
-            // obj->fittingScoreAtCreation = obj->evaluate(obj->evaluationPosition);
-            obj->fittingScoreAtCreation = obj->evaluate();
+            // obj->fitnessScoreAtCreation = obj->evaluate(obj->evaluationPosition);
+            obj->fitnessScoreAtCreation = obj->evaluate();
         }
     }
 
@@ -1009,14 +1026,14 @@ void EnvObjsInterface::updateObjectsList()
 
     for (auto& obj : list) {
 
-        // float startingScore = obj->fittingScoreAtCreation;
+        // float startingScore = obj->fitnessScoreAtCreation;
         // float endingScore = obj->evaluate(obj->evaluationPosition);
 
         std::string text = obj->name;
         if (obj->createdManually)
             text += " [*]";
         else
-            text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "% -- " + std::to_string(obj->evaluate()) + "/" + std::to_string(obj->fittingScoreAtCreation) + ")";
+            text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "% -- " + std::to_string(obj->evaluate()) + "/" + std::to_string(obj->fitnessScoreAtCreation) + ")";
         objectsListWidget->addItem(new HierarchicalListWidgetItem(text, obj->ID, 0));
         if (isIn(obj->ID, currentSelectionsIDs))
             currentSelections.push_back(obj);
@@ -1231,12 +1248,36 @@ void EnvObjsInterface::updateScenarioDefinition(const std::string &newDefinition
     }
 }
 
-void EnvObjsInterface::evaluateAndDisplayCustomCostFormula(std::string formula)
+void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formula)
 {
     EnvPoint fake;
     fake.s_FittingFunction = formula;
+    fake.s_FitnessFunction = formula;
     try {
         fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
+        fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
+
+        GridF eval(EnvObject::flowfield.getDimensions());
+        eval.iterateParallel([&](const Vector3& p) {
+            eval(p) = fake.evaluate(p);
+        });
+        Plotter::get()->addImage(eval);
+        Plotter::get()->show();
+        dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        Q_EMIT updated();
+    } catch (std::exception e) {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formula)
+{
+    EnvPoint fake;
+    fake.s_FittingFunction = formula;
+    fake.s_FitnessFunction = formula;
+    try {
+        fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
+        fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
 
         GridF eval(EnvObject::flowfield.getDimensions());
         eval.iterateParallel([&](const Vector3& p) {
@@ -1581,7 +1622,7 @@ void EnvObjsInterface::loadScene(std::string filename)
         std::string objectName = obj["name"];
         EnvObject* newObject = EnvObject::instantiate(objectName);
         newObject->age = obj["age"];
-        newObject->fittingScoreAtCreation = obj["fittingScoreAtCreation"];
+        newObject->fitnessScoreAtCreation = obj["fitnessScoreAtCreation"];
         // newObject->evaluationPosition = json_to_vec3(obj["evaluationPosition"]);
         /*std::vector<nlohmann::json> positions = obj["evaluationPositions"];
         for (auto position : positions) {
@@ -1714,9 +1755,9 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     for (size_t i = 0; i < path.size(); i++) {
         result(path[i]) = Vector3(1.f, 0, 0); //colorPalette(float(i) / float(path.size() - 1));
     }
-    // for (size_t i = 0; i < isoline.size(); i++) {
-    //     result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
-    // }
+    for (size_t i = 0; i < isoline.size(); i++) {
+        result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
+    }
     Plotter::get()->addImage(result);
     Plotter::get()->show();
     Plotter::get()->addImage(data);
@@ -1915,6 +1956,7 @@ void EnvObjsInterface::endNewObjectCreation()
     }
     newObject->recomputeEvaluationPoints();
     newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+    newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
     auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
     this->implicitPatchesFromObjects[newObject] = implicit;
     if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
@@ -2101,7 +2143,7 @@ StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectNa
         for (int i = 0; i < nbSamples; i++) {
             auto obj = fakeInstantiate(objectName, score);
             if (obj) {
-                values[i] = obj->fittingScoreAtCreation;
+                values[i] = obj->fitnessScoreAtCreation;
             }
         }
     }

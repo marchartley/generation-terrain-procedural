@@ -59,6 +59,8 @@ public:
     std::string name;
     std::string s_FittingFunction;
     std::function<float(Vector3)> fittingFunction;
+    std::string s_FitnessFunction;
+    std::function<float(Vector3)> fitnessFunction;
     Vector3 flowEffect;
     std::map<std::string, float> materialDepositionRate;
     std::map<std::string, float> materialAbsorptionRate;
@@ -67,7 +69,7 @@ public:
     float age = 0.f;
     std::map<std::string, float> needsForGrowth;
     std::map<std::string, float> currentSatisfaction;
-    float fittingScoreAtCreation = -1.f;
+    float fitnessScoreAtCreation = -1.f;
     std::vector<Vector3> evaluationPositions;
     float minScore = 0.f;
     // Vector3 evaluationPosition;

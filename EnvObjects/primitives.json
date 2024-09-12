@@ -184,7 +184,7 @@
     },
     "dimensions": {
       "x": 50,
-      "y": 40,
+      "y": 50,
       "z": 20
     },
     "minScore": 0.10,
@@ -283,7 +283,7 @@
     },
     "dimensions": {
       "x": 2,
-      "y": 40,
+      "y": 10,
       "z": 4
     },
     "depositionRate" : {
@@ -478,7 +478,7 @@
       "binormal": 0.0
      },
     "dimensions": {
-      "x": 40.0,
+      "x": 20.0,
       "y": 40.0,
       "z": 2.0
     },
@@ -597,5 +597,32 @@
     "heightfrom": "surface",
     "geometry": "parametrictunnel",
     "material": "sand"
+  },
+  {
+    "name": "Lake shore",
+    "type": "curve",
+    "rule": "depth",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 1.0,
+      "y": 100.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "follows": "isovalue",
+    "heightfrom": "surface",
+    "geometry": "parametrictunnel",
+    "material": "water"
   }
 ]

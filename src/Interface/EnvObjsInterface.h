@@ -81,7 +81,8 @@ public:
     void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
     void updateScenarioDefinition(const std::string& newDefinition);
 
-    void evaluateAndDisplayCustomCostFormula(std::string formula);
+    void evaluateAndDisplayCustomFitnessFormula(std::string formula);
+    void evaluateAndDisplayCustomFittingFormula(std::string formula);
 
     BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);

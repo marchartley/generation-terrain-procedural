@@ -53,6 +53,23 @@ Vector3 PositionOptimizer::followGradient(const Vector3 &seedPosition, const Gri
 
 BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float minLength)
 {
+    const Vector3 p = seedPosition;
+    SnakeSegmentation s;
+    s.contour = BSpline({p - gradients(p).rotated90XY() * minLength * .5f, p + gradients(p).rotated90XY() * minLength * .5f}).resamplePoints(20);
+    s.targetLength = minLength;
+    s.gradientField = gradients;
+    s.image = score;
+
+    s.areaCost = 0;
+    s.collapseFirstAndLastPoint = false;
+    s.curvatureCost = 0.01f;
+    s.imageCost = 1.f;
+    s.lengthCost = 1.f;
+    s.slopeCost = 0.f; // Don't follow the slope
+
+    return s.runSegmentation(1000);
+
+    /*
     int maxTries = 5;
 
     Vector3 pos = seedPosition;
@@ -107,11 +124,27 @@ BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3 &seedPo
     }
 
     curve = CurveOptimizer::followIsolevel((bestDiffDownhill < bestDiffUphill ? bestPosDownhill : bestPosUphill), score, gradients, minLength);
-    return curve;
+    return curve;*/
 }
 
 BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float targetLength)
 {
+    const Vector3 p = seedPosition;
+    SnakeSegmentation s;
+    s.contour = BSpline({p - gradients(p).rotated90XY() * targetLength * .5f, p + gradients(p).rotated90XY() * targetLength * .5f}).resamplePoints(20);
+    s.targetLength = targetLength;
+    s.gradientField = gradients;
+    s.image = score;
+
+    s.areaCost = 0;
+    s.collapseFirstAndLastPoint = false;
+    s.curvatureCost = 0.1f;
+    s.imageCost = 1.f;
+    s.lengthCost = 10.f;
+    s.slopeCost = 10.f; // Follow the slope
+
+    return s.runSegmentation(1000);
+    /*
     int maxTries = 2.f * targetLength;
     int tries = 0;
 
@@ -147,7 +180,7 @@ BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3 &see
         length = curve.length();
         tries++;
     }
-    return curve.resamplePoints();
+    return curve.resamplePoints();*/
 }
 
 BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float targetLength)
@@ -158,8 +191,11 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const Grid
     Vector3 dir = gradientsSmoothed(pos).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
     BSpline initialCurve = BSpline({pos - dir, pos + dir}).getPath(3);
 
-    SnakeSegmentation s = SnakeSegmentation(initialCurve, score, gradients);
-    s.convergenceThreshold = 1e-3;
+    SnakeSegmentation s; // = SnakeSegmentation(initialCurve, score, gradients);
+    s.contour = initialCurve;
+    s.image = score;
+    s.gradientField = gradients;
+    // s.convergenceThreshold = 1e-3;
     s.curvatureCost = 0.01f;
     s.lengthCost = 1.0f;
     s.imageCost = 1.f;
@@ -287,6 +323,34 @@ ShapeCurve AreaOptimizer::getInitialShape(const Vector3 &seedPosition, const Gri
 
 ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float targetArea)
 {
+    float fakeRadius = std::sqrt(targetArea) * .5f;
+    float fakeArea = PI * fakeRadius * fakeRadius;
+
+    ShapeCurve curve = ShapeCurve::circle(fakeRadius * .15f, seedPosition, 20);
+    SnakeSegmentation s; // = SnakeSegmentation(curve, score, gradients);
+    s.contour = curve;
+    s.image = score;
+    s.gradientField = gradients;
+    // s.convergenceThreshold = 1e-3;
+
+    s.connectivityCost = 0.01f;
+    s.curvatureCost = 0.0f;
+    s.lengthCost = 0.0f;
+    s.areaCost = 1.f;
+    s.imageCost = 1000.0f;
+    s.targetLength = 0;
+    s.targetArea = fakeArea;
+    s.collapseFirstAndLastPoint = true;
+    s.imageInsideCoef = 1.f;
+    s.imageBordersCoef = 0.f;
+
+    BSpline result = s.runSegmentation(200);
+    std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << s.targetArea << std::endl;
+    return result;
+
+    /*
+
+
     Vector3 currentSeedPos = seedPosition;
     float maxError = 5.f;
     int maxTries = 100;
@@ -299,8 +363,11 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
 
     while (maxTries > 0) {
         ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients).resamplePoints(50);
-        SnakeSegmentation s = SnakeSegmentation(curve, score, gradients);
-        s.convergenceThreshold = 1e-3;
+        SnakeSegmentation s; // = SnakeSegmentation(curve, score, gradients);
+        s.contour = curve;
+        s.image = score;
+        s.gradientField = gradients;
+        // s.convergenceThreshold = 1e-3;
         s.curvatureCost = 0.01f;
         s.lengthCost = 0.0f;
         s.areaCost = 10.f;
@@ -311,15 +378,6 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
         s.targetArea = fakeArea;
         s.contour = curve;
         s.collapseFirstAndLastPoint = true;
-
-        /*int nbIterations = 10;
-        for (int i = 0; i < nbIterations; i++) {
-            int nbCatapillars = 3;
-            float a = 0.5f + 0.5f * std::cos(float(nbCatapillars) * float(nbIterations) * 2.f * PI * float(i) / float(nbIterations - 1));
-            s.targetArea = interpolation::inv_linear(a, fakeArea * .5f, fakeArea);
-            // initialCurve = s.runSegmentation(40);
-            s.contour.resamplePoints(s.contour.size() + 1);
-        }*/
 
         curve = s.runSegmentation(100);
 
@@ -335,6 +393,7 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
 
     }
     return ShapeCurve();
+    */
 /*
     // We will move only in the direction of the gradient, since we want to optimize the isolevel.
     // And we know that higher isolevel => lower area while lower isolevel => higher area.

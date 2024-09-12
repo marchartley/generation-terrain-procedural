@@ -79,6 +79,7 @@ void EnvObject::readEnvObjectsFileContent(std::string content)
 
     for (auto& [name, obj] : EnvObject::availableObjects) {
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name);
+        obj->fitnessFunction = EnvObject::parseFittingFunction(obj->s_FitnessFunction, obj->name);
     }
 
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -311,6 +312,11 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->materialDepositionRate = materialDepositionRate;
     obj->materialDepositionOnDeath = materialDepositionOnDeath;
     obj->s_FittingFunction = content["rule"];
+    if (content.contains("fitness")) {
+        obj->s_FitnessFunction = content["fitness"];
+    } else {
+        obj->s_FitnessFunction = obj->s_FittingFunction;
+    }
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
@@ -334,7 +340,7 @@ nlohmann::json EnvObject::toJSON() const
     for (auto& p : this->evaluationPositions)
         positions.push_back(vec3_to_json(p));
     json["evaluationPositions"] = positions;*/
-    json["fittingScoreAtCreation"] = this->fittingScoreAtCreation;
+    json["fitnessScoreAtCreation"] = this->fitnessScoreAtCreation;
 
     return json;
 }
@@ -370,10 +376,10 @@ float EnvObject::computeGrowingState2()
 
     // float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
     float newFitnessEvaluation = this->evaluate();
-    // std::cout << this->fittingScoreAtCreation << " / " << newFitnessEvaluation << std::endl;
+    // std::cout << this->fitnessScoreAtCreation << " / " << newFitnessEvaluation << std::endl;
     // if (newFitnessEvaluation <= 0) return 0;
-    if (this->fittingScoreAtCreation <= 1e-6) return 0; // This is a problem...
-    return std::clamp(newFitnessEvaluation / this->fittingScoreAtCreation, 0.f, 1.f);
+    if (this->fitnessScoreAtCreation <= 1e-6) return 0; // This is a problem...
+    return std::clamp(newFitnessEvaluation / this->fitnessScoreAtCreation, 0.f, 1.f);
 }
 
 GridF EnvObject::createHeightfield()
@@ -707,11 +713,13 @@ void EnvObject::beImpactedByEvents()
 
 float EnvObject::evaluate(const Vector3 &position)
 {
-    return this->fittingFunction(position.xy());
+    return this->fitnessFunction(position.xy());
 }
 
 float EnvObject::evaluate()
 {
+    // Should only be at one point...
+
     if (evaluationPositions.empty()) {
         std::cerr << "Object " << name << " has no evaluation point..." << std::endl;
         return 0;

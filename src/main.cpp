@@ -342,6 +342,148 @@ int main(int argc, char *argv[])
 
     */
 
+    /*
+
+    ShapeCurve a = ShapeCurve({Vector3(.1, .1, 0), Vector3(.2, .5, 0), Vector3(.1, .9, 0), Vector3(.5, 1., 0), Vector3(.9, .9, 0), Vector3(.9, .1, 0), Vector3(.5, .7, 0)});
+
+
+
+    auto getPoint = [&](const Vector3& mousePos) {
+
+        Vector3 randomPoint = mousePos; //Vector3(.250, .250, 0);
+
+        std::vector<float> greenCoord = computeGreenCoordinates(randomPoint, a);
+        Vector3 point = computePointFromGreenCoordinates(greenCoord, a);
+        std::cout << "Input: " << randomPoint << "\nOutput: " << point << std::endl;
+
+        GridV3 img(200, 200, 1, Vector3(1, 1, 1));
+        for (int i = 0; i < a.size(); i++) {
+            for (auto& p : BSpline({a[i], a[i+1]}).resamplePoints(500)) {
+                img(p * img.getDimensions()) = Vector3(0, 0, 0);
+            }
+        }
+        img(randomPoint * img.getDimensions()) = Vector3(1, 0, 0);
+        img(point * img.getDimensions()) = Vector3(0, 1, 0);
+
+        Plotter::get()->addImage(img)->show();
+    };
+
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, getPoint);
+    getPoint(Vector3(.5, .5, 0));
+    return Plotter::get()->exec();
+
+    */
+
+    /*
+
+
+    Vector3 dim(100, 100, 1);
+    GridF score = GridF::perlin(dim, Vector3(5, 5, 1)); //Image::readFromFile("slope_like_deussen.png").getBwImage().normalize().resize(dim);
+    GridV3 gradients = score.grad();
+
+    float targetArea = dim.x * dim.y;
+
+    auto h = [=](const Vector3& p) { return score(p); };
+    auto hh = [=](const Vector3& p) { return gradients(p).norm(); };
+
+    GridF newScore = score;
+    newScore.iterateParallel([&](const Vector3& p) { newScore(p) = h(p); });
+    // newScore = newScore.gaussianSmooth(2.f, true, true);
+    GridV3 newGradients = newScore.grad();
+
+    // auto fake = ShapeCurve::circle(20.f, Vector3(0.5, 0.5, 0) * dim, 50);
+    // std::vector<Vector3> randomPointsInit = fake.randomPointsInside(100);
+    // std::vector<std::vector<float>> randomGreenCoords(randomPointsInit.size());
+    // for (int i = 0; i < randomGreenCoords.size(); i++) {
+    //     randomGreenCoords[i] = computeGreenCoordinates(randomPointsInit[i], fake);
+    //     float sum = 0;
+    //     for (int j = 0; j < randomGreenCoords[i].size(); j++) {
+    //         std::cout << randomGreenCoords[i][j] << " ";
+    //         sum += randomGreenCoords[i][j];
+    //     }
+    //     std::cout << " = " << sum << "\n";
+    // }
+
+    auto findCurve = [&](const Vector3& mousePos) {
+        BSpline curve = ShapeCurve::circle(20.f, mousePos * dim, 50); //BSpline({Vector3(0.25f, .01f, 0) * dim, Vector3(.75f, 0.99f, 0) * dim}).resamplePoints(200);
+        // BSpline curve = BSpline({mousePos * dim + Vector3(25, 0, 0), mousePos * dim - Vector3(25, 0, 0)}).resamplePoints(200);
+        for (auto& p : curve) {
+            p.y += random_gen::generate() * 5.f;
+        }
+        // ShapeCurve curve = ShapeCurve::circle(dim.x * .5f, mousePos * dim, 50);
+        SnakeSegmentation s; // = SnakeSegmentation(curve, newScore, newGradients);
+        s.contour = curve;
+        s.image = newScore;
+        s.gradientField = newGradients;
+        // s.convergenceThreshold = 1e-3;
+        s.connectivityCost = 1.f;
+        s.curvatureCost = 1.f;
+        // s.lengthCost = 100.0f;
+        s.targetArea = 1000;
+        s.areaCost = 10.0f;
+        s.imageCost = 10.0f;
+        // float initialLengthTarget = 200;
+        // s.targetLength = initialLengthTarget;
+        s.slopeCost = .0f;
+        s.positionCost = 0.f;
+        s.position = mousePos * dim;
+
+        s.imageInsideCoef = 1.0f;
+        s.imageBordersCoef = 0.f;
+        // float fakeRadius = std::sqrt(targetArea) * .5f;
+        // float fakeArea = PI * fakeRadius * fakeRadius;
+        // s.targetArea = fakeArea;
+        s.collapseFirstAndLastPoint = true;
+
+        // s.randomGreenCoords = randomGreenCoords;
+
+
+
+        curve = s.runSegmentation(50);
+
+        // int nbIterations = 10;
+        // for (int i = 0; i < nbIterations; i++) {
+        //     int nbCatapillars = 3;
+        //     float a = 0.5f + 0.5f * std::cos(float(nbCatapillars) * float(nbIterations) * 2.f * PI * float(i) / float(nbIterations - 1));
+        //     s.targetLength = interpolation::inv_linear(a, initialLengthTarget * .15f, initialLengthTarget * 2.f);
+        //     curve = s.runSegmentation(40);
+        //     s.contour.resamplePoints(s.contour.size() + 1);
+        //     curve = curve.smooth();
+        // }
+
+
+        GridV3 img(score.getDimensions());
+        img.iterateParallel([&](size_t i){
+            img[i] = score[i] * Vector3(1, 1, 1);
+        });
+        auto initialImage = img;
+        // curve = s.runSegmentation(1000).resamplePoints();
+        for (int iter = 0; iter < 1; iter++) {
+            int nbPoints = curve.size() * 5;
+            for (int i = 0; i < nbPoints; i++) {
+                // curve = s.runSegmentation(1).resamplePoints();
+                float t = float(i) / float(nbPoints - 1);
+                img(curve.getPoint(t)) = colorPalette(t);
+                // img(curve.getPoint(t)) = colorPalette(float(iter) / (100.f - 1)); //Vector3(1, 0, 0);
+            }
+        }
+
+        for (auto& v : s.randomGreenCoords) {
+            Vector3 p = computePointFromGreenCoordinates(v, ShapeCurve(s.contour));
+            img(p) = Vector3(0, 0, 1);
+        }
+        // std::cout << curve.length() << " / " << s.targetLength << std::endl;
+        std::cout << ShapeCurve(curve).computeArea() << " / " << s.targetArea << std::endl;
+        Plotter::get()->addImage(img)->show();
+        Plotter::get()->addImage(initialImage);
+        return curve;
+    };
+
+    QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, findCurve);
+    return Plotter::get()->addImage(score)->exec();
+
+    */
+    /*
     int bigSize = 100;
     int smallSize = 100;
     int sparsity = 25;
@@ -361,94 +503,77 @@ int main(int argc, char *argv[])
     input.raiseErrorOnBadCoord = false;
     input.returned_value_on_outside = DEFAULT_VALUE;
 
-    /*QObject::connect(Plotter::get(), &Plotter::movedOnImage, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _e) {
-        // if (clickPos.x < dim.x) {
-            Vector3 brushSize = Vector3(30, 30);
-            GridF gauss = GridF::gaussian(brushSize.x, brushSize.y, 1, 5.f);
-            gauss /= gauss.max();
-            input.add(gauss * (_e->buttons().testFlag(Qt::LeftButton) ? -1.f : 1.f), clickPos - brushSize * .5f);
-        // }
-        input.iterateParallel([&](size_t i) {
-            input[i] = std::clamp(input[i], 0.f, 1.f);
-        });*/
-
-        GridF fullImage(input.getDimensions());
-        GridF allMasks(fullImage.getDimensions());
-        int nbSub = 50;
-        Vector3 subImgSize = (input.getDimensions() / float(nbSub)).ceil();
-        subImgSize.z = 1;
-        Matrix3 mask(subImgSize, 0.f);
-        Vector3 maskCenter = (mask.getDimensions() / 2.f).xy();
-        auto distFunc = [&](const Vector3& pos, const Vector3& center) -> float {
-            float d = (center - (pos - Vector3(.5f, .5f))).norm() / (subImgSize.x);
-            // return (d * .5f <= .5f ? 1.f : std::max(1.f - (d * .5f - .5f), 0.f));
-            return std::clamp(1.f - d, 0.f, 1.f);
-        };
-        mask.iterateParallel([&] (const Vector3& p) {
-            float allDistancesSum = 0.f;
-            for (int x = -1; x <= 1; x++) {
-                for (int y = -1; y <= 1; y++) {
-                    Vector3 neighborCenter = maskCenter + Vector3(x, y) * subImgSize.xy();
-                    float neighborDistFunc = distFunc(p, neighborCenter);
-                    allDistancesSum += neighborDistFunc;
-                }
+    GridF fullImage(input.getDimensions());
+    GridF allMasks(fullImage.getDimensions());
+    int nbSub = 50;
+    Vector3 subImgSize = (input.getDimensions() / float(nbSub)).ceil();
+    subImgSize.z = 1;
+    Matrix3 mask(subImgSize, 0.f);
+    Vector3 maskCenter = (mask.getDimensions() / 2.f).xy();
+    auto distFunc = [&](const Vector3& pos, const Vector3& center) -> float {
+        float d = (center - (pos - Vector3(.5f, .5f))).norm() / (subImgSize.x);
+        // return (d * .5f <= .5f ? 1.f : std::max(1.f - (d * .5f - .5f), 0.f));
+        return std::clamp(1.f - d, 0.f, 1.f);
+    };
+    mask.iterateParallel([&] (const Vector3& p) {
+        float allDistancesSum = 0.f;
+        for (int x = -1; x <= 1; x++) {
+            for (int y = -1; y <= 1; y++) {
+                Vector3 neighborCenter = maskCenter + Vector3(x, y) * subImgSize.xy();
+                float neighborDistFunc = distFunc(p, neighborCenter);
+                allDistancesSum += neighborDistFunc;
             }
+        }
 
-            mask(p) = distFunc(p, maskCenter) / allDistancesSum;
-            // mask(p) = allDistancesSum;
-        });
-        mask = mask.resize(mask.getDimensions() * Vector3(2.f, 2.f, 1.f));
-        // Plotter::get()->addImage(mask)->exec();
-        // return 0;
-
-        displayProcessTime("Time to compute: ", [&]() {
-            for (int x = 0; x < nbSub; x++) {
-                for (int y = 0; y < nbSub; y++) {
-                    if (x % 2 != 0 || y % 2 != 0) continue;
-                    GridF img = input.subset(Vector3(x - .5f, y - .5f) * subImgSize, Vector3(x + 1.5f, y + 1.5f) * subImgSize);
-
-                    Matrix X(subImgSize.x, subImgSize.y);
-                    GridF resizedInput = img.resize(subImgSize);
-                    resizedInput.iterateParallel([&] (int x, int y, int z) {
-                        X[y][x] = resizedInput(x, y);
-                    });
-                    X = Matrix(std::vector<std::vector<float>>{X.toStdVector()}).transpose();
-                    Matrix coefficients;
-                    coefficients = omp(smallD, X, sparsity);
-                    // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
-                    // coefficients = Matrix(smallD[0].size(), 1);
-                    // coefficients[0][0] = 1;
-                    // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
-                    // return 0;
-
-                    // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
-                    // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
-                    GridF reconstruction = reconstructImage(coefficients, bigD, bigSize, bigSize, 1);
-                    reconstruction = reconstruction.resize(subImgSize * Vector3(2.f, 2.f, 1.f));
-                    // fullImage.add(reconstruction * mask, Vector3(x - .5f, y - .5f) * subImgSize);
-                    fullImage.add(reconstruction, Vector3(x - .5f, y - .5f) * subImgSize);
-                    // fullImage.add(img, Vector3(x - .5f, y - .5f) * subImgSize);
-                    allMasks.add(mask, Vector3(x - .5f, y - .5f) * subImgSize);
-                }
-            }
-            // fullImage.iterateParallel([&](size_t i) {
-            //     fullImage[i] = fullImage[i] / (allMasks[i] < 1e-5 ? 1.f : allMasks[i]);
-            // });
-        });
-
-
-        GridF displayed(fullImage.sizeX * 2.f, fullImage.sizeY, 1.f);
-        displayed.paste(input.resize(fullImage.getDimensions()), Vector3(0, 0, 0));
-        displayed.paste(fullImage, Vector3(fullImage.sizeX, 0, 0));
-        // GridF fullImage = reconstruction.resize(fullDim);
-
-
-        Plotter::get()->addImage(displayed);
-        /*Plotter::get()->show();
-
+        mask(p) = distFunc(p, maskCenter) / allDistancesSum;
+        // mask(p) = allDistancesSum;
     });
-    Plotter::get()->addImage(input);*/
+    mask = mask.resize(mask.getDimensions() * Vector3(2.f, 2.f, 1.f));
+    // Plotter::get()->addImage(mask)->exec();
+    // return 0;
+
+    displayProcessTime("Time to compute: ", [&]() {
+        for (int x = 0; x < nbSub; x++) {
+            for (int y = 0; y < nbSub; y++) {
+                if (x % 2 != 0 || y % 2 != 0) continue;
+                GridF img = input.subset(Vector3(x - .5f, y - .5f) * subImgSize, Vector3(x + 1.5f, y + 1.5f) * subImgSize);
+
+                Matrix X(subImgSize.x, subImgSize.y);
+                GridF resizedInput = img.resize(subImgSize);
+                resizedInput.iterateParallel([&] (int x, int y, int z) {
+                    X[y][x] = resizedInput(x, y);
+                });
+                X = Matrix(std::vector<std::vector<float>>{X.toStdVector()}).transpose();
+                Matrix coefficients;
+                coefficients = omp(smallD, X, sparsity);
+                // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
+                // coefficients = Matrix(smallD[0].size(), 1);
+                // coefficients[0][0] = 1;
+                // std::cout << coefficients.size() << "x" << coefficients[0].size() << std::endl;
+                // return 0;
+
+                // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
+                // GridF reconstruction = reconstructImage(coefficients, smallD, smallSize, smallSize, 1);
+                GridF reconstruction = reconstructImage(coefficients, bigD, bigSize, bigSize, 1);
+                reconstruction = reconstruction.resize(subImgSize * Vector3(2.f, 2.f, 1.f));
+                // fullImage.add(reconstruction * mask, Vector3(x - .5f, y - .5f) * subImgSize);
+                fullImage.add(reconstruction, Vector3(x - .5f, y - .5f) * subImgSize);
+                // fullImage.add(img, Vector3(x - .5f, y - .5f) * subImgSize);
+                allMasks.add(mask, Vector3(x - .5f, y - .5f) * subImgSize);
+            }
+        }
+        });
+
+
+    GridF displayed(fullImage.sizeX * 2.f, fullImage.sizeY, 1.f);
+    displayed.paste(input.resize(fullImage.getDimensions()), Vector3(0, 0, 0));
+    displayed.paste(fullImage, Vector3(fullImage.sizeX, 0, 0));
+    // GridF fullImage = reconstruction.resize(fullDim);
+
+
+    Plotter::get()->addImage(displayed);
     return Plotter::get()->exec();
+    */
 
 
     /*

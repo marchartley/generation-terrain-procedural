@@ -74,6 +74,7 @@ public:
     Vector3 translated(const Vector3& move);
     Vector3& applyTransform(Matrix transformMatrix);
 //    Vector3& setDirection(const Vector3& dir, const Vector3& upVector = Vector3(0, 0, 1));
+    Vector3 rotated90XY() const;
 
     Vector3& changeBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ);
     Vector3 changedBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ);

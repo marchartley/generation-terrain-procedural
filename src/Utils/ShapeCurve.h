@@ -65,4 +65,6 @@ int markEntriesExits(std::vector<ClipVertex*>& poly, bool currentlyInside, int s
 std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon);
 Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon);
 
+Vector3 randomPointInTriangle(const Vector3& A, const Vector3& B, const Vector3& C);
+
 #endif // SHAPECURVE_H

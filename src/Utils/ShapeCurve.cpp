@@ -281,9 +281,17 @@ Vector3 ShapeCurve::planeNormal()
 
 std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 {
-    if (this->points.empty()) return std::vector<Vector3>();
-    int maxFailures = 10000 * numberOfPoints;
     std::vector<Vector3> returnedPoints;
+    if (this->points.size() < 3) return std::vector<Vector3>();
+
+    if (this->points.size() == 3) {
+        for (int i = 0; i < numberOfPoints; i++) {
+            returnedPoints.push_back(randomPointInTriangle(points[0], points[1], points[2]));
+        }
+        return returnedPoints;
+    }
+
+    int maxFailures = 10000 * numberOfPoints;
     Vector3 minVec, maxVec;
     std::tie(minVec, maxVec) = this->AABBox();
     minVec.z = -1;
@@ -530,9 +538,47 @@ std::vector<Vector3> ShapeCurve::closedPath() const
 
 
 std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon) {
-    std::vector<float> greenCoords;
+    auto& vertices = polygon;
+    size_t n = vertices.size();
+    std::vector<float> weights(n, 0.0);
+    std::vector<float> tans(n, 0.0);
 
-    for (size_t i = 0; i < polygon.size(); i += 3) {
+    for (size_t i = 0; i < n; i++) {
+        Vector3 v1 = vertices[i] - p;
+        Vector3 v2 = vertices[(i + 1) % n] - p;
+
+        float dist1 = v1.magnitude();
+        float dist2 = v2.magnitude();
+
+        // Avoid division by zero by ensuring no zero-length vectors
+        if (dist1 == 0 || dist2 == 0) return {};
+
+        float cosine = v1.dot(v2) / (dist1 * dist2);
+        float sine = v1.cross(v2).norm() / (dist1 * dist2);
+
+        // Calculate tan of half the angle between v1 and v2
+        float angle = atan2(sine, cosine);
+        tans[i] = tan(angle / 2);
+    }
+
+    float totalWeight = 0.0;
+    for (size_t i = 0; i < n; i++) {
+        size_t prev = (i + n - 1) % n;
+        float weight = (tans[prev] + tans[i]) / (vertices[i] - p).magnitude();
+        weights[i] = weight;
+        totalWeight += weight;
+    }
+
+    // Normalize weights
+    for (float& weight : weights) {
+        weight /= totalWeight;
+    }
+
+    return weights;
+
+    /*std::vector<float> greenCoords;
+
+    for (size_t i = 0; i < polygon.size(); i ++) {
         const Vector3& a = polygon[i];
         const Vector3& b = polygon[i + 1];
         const Vector3& c = polygon[i + 2];
@@ -570,14 +616,24 @@ std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& p
     }
 
     // Point is outside the polygon
-    return greenCoords;
+    return greenCoords;*/
 }
 
 Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon) {
+    const auto& vertices = polygon;
+    const auto& weights = greenCoords;
+    Vector3 p;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        p.x += vertices[i].x * weights[i];
+        p.y += vertices[i].y * weights[i];
+    }
+    return p;
+
+    /*
     Vector3 p(0.0, 0.0, 0.0); // Initialize point P
 
     // Interpolate the position of the point based on the barycentric coordinates
-    for (size_t i = 0; i < polygon.size(); i += 3) {
+    for (size_t i = 0; i < polygon.size(); i ++) {
         const Vector3& a = polygon[i];
         const Vector3& b = polygon[i + 1];
         const Vector3& c = polygon[i + 2];
@@ -591,5 +647,13 @@ Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, 
         p += (u * a + v * b + w * c);
     }
 
-    return p;
+    return p;*/
+}
+
+Vector3 randomPointInTriangle(const Vector3 &A, const Vector3 &B, const Vector3 &C)
+{
+    float s = random_gen::generate();
+    float t = random_gen::generate();
+
+    return A + (s + t <= 1 ? s * (B - A) + t * (C - A) : (1 - s) * (B - A) + (1 - t) * (C - A));
 }

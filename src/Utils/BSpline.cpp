@@ -383,6 +383,31 @@ float BSpline::length() const
     return length;
 }
 
+BSpline BSpline::smooth(float factor) const
+{
+    BSpline newCurve = *this;
+    for (int i = 0; i < this->size(); i++) {
+        if (i == 0 || i == this->size() - 1) continue;
+
+        newCurve[i] = (*this)[i] - factor * ((*this)[i] - ((*this)[i+1] + (*this)[i-1]) * .5f);
+    }
+    return newCurve;
+}
+
+BSpline BSpline::taubinSmooth(float factor) const
+{
+    auto initCurve = *this;
+    auto newCurve = *this;
+    for (int i = 1; i < initCurve.size() - 1; i++) {
+        newCurve[i] = initCurve[i] - factor * (initCurve[i] - (initCurve[i+1] + initCurve[i-1]) * .5f).normalized();
+    }
+    initCurve = newCurve;
+    for (int i = 1; i < newCurve.size() - 1; i++) {
+        initCurve[i] = newCurve[i] + factor * (newCurve[i] - (newCurve[i+1] + newCurve[i-1]) * .5f).normalized();
+    }
+    return initCurve;
+}
+
 BSpline& BSpline::setPoint(int i, const Vector3 &newPos)
 {
     this->points[(i + this->size()) % this->size()] = newPos;
