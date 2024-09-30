@@ -11,6 +11,7 @@ ExpressionParser::ExpressionParser() {
     binaryFloatOperators["^"] = [](float a, float b) { return std::pow(a, b); };
     binaryFloatOperators["max"] = [](float a, float b) { return std::max(a, b); };
     binaryFloatOperators["min"] = [](float a, float b) { return std::min(a, b); };
+    binaryFloatOperators["%"] = [](float a, float b) { return std::fmod(a, b); };
 
     // Default unary operators
     unaryFloatOperators["abs"] = [](float a) { return std::abs(a); };

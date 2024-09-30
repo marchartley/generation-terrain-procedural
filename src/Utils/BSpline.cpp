@@ -867,6 +867,10 @@ std::pair<Vector3, Vector3> BSpline::pointAndDerivative(float x, float alpha) co
     size_t lastPointIndex = displayedPoints.size() - 1;
     size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
 
+    if (nbPoints == 0) return {Vector3::invalid(), Vector3::invalid()};
+    else if (nbPoints == 1) return {displayedPoints[0], Vector3::invalid()};
+    else if (nbPoints == 2) return {displayedPoints[0] * (1.f - x) + displayedPoints[1] * x, displayedPoints[1] - displayedPoints[0]};
+
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);
     int iCeil = int(x / res) + 1;
@@ -921,6 +925,10 @@ std::tuple<Vector3, Vector3, Vector3> BSpline::pointAndDerivativeAndSecondDeriva
 
     size_t lastPointIndex = displayedPoints.size() - 1;
     size_t nbPoints = displayedPoints.size(); // + (this->closed ? 1 : 0);
+
+    if (nbPoints == 0) return {Vector3::invalid(), Vector3::invalid(), Vector3::invalid()};
+    else if (nbPoints == 1) return {displayedPoints[0], Vector3::invalid(), Vector3::invalid()};
+    else if (nbPoints == 2) return {displayedPoints[0] * (1.f - x) + displayedPoints[1] * x, displayedPoints[1] - displayedPoints[0], Vector3(0, 0, 0)};
 
     float res = 1 / (float)(nbPoints - 1);
     int iFloor = int(x / res);

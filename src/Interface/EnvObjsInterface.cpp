@@ -213,6 +213,7 @@ QLayout *EnvObjsInterface::createGUI()
     testingFittingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
+    CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
 
     ButtonElement* instantiaABCbutton = new ButtonElement("Instantiate ABC", [&]() {
         this->instantiateSpecific("CoralPolypFlatA", GridF(), false);
@@ -302,6 +303,7 @@ QLayout *EnvObjsInterface::createGUI()
     layout->addWidget(objectsListWidget);
     layout->addWidget(testingFittingFormula->get());
     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
+    layout->addWidget(addGroovesButton->get());
     layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get(), displayCurrentsButton->get()}));
 
     return layout;
@@ -616,21 +618,22 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
         std::cerr << "No object " << objectName << " in database!" << std::endl;
         return result;
     }
-    bool verbose = true;
+    bool verbose = false;
     displayProcessTime("Instantiate new " + objectName + " (forced)... ", [&]() {
-        GridF heights = heightmap->getHeights();
+        // GridF heights = heightmap->getHeights();
 
         bool possible = true;
         if (score.empty())
-            score = computeScoreMap(objectName, heights.getDimensions(), possible) * focusedArea;
+            score = computeScoreMap(objectName, EnvObject::flowfield.getDimensions(), possible) * focusedArea;
         score.raiseErrorOnBadCoord = false;
         score.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
         if (possible) {
             Vector3 bestPosition(false);
             float bestScore = -1;
-            for (int iteration = 0; iteration < 2; iteration++) {
+            for (int iteration = 0; iteration < 1; iteration++) {
                 Vector3 bestPos = bestPositionForInstantiation(objectName, score);
+                if (!bestPos.isValid()) continue;
                 EnvObject* newObject = instantiateObjectAtBestPosition(objectName, bestPos, score);
                 if (!newObject) continue;
                 if (newObject->fitnessScoreAtCreation > bestScore) {
@@ -767,7 +770,7 @@ void EnvObjsInterface::runNextStep()
     }*/
     updateEnvironmentFromEnvObjects(false, false, false);
     EnvObject::currentTime += scenario.dt;
-    std::cout << "Step: " << EnvObject::scenario.currentTime() << std::endl;
+    this->log("Step: " + std::to_string(EnvObject::scenario.currentTime()));
 }
 
 void EnvObjsInterface::runScenario()
@@ -785,7 +788,7 @@ void EnvObjsInterface::runScenario()
         float time = scenario.currentTime();
         float waterLevel = scenario.computeWaterLevel();
         (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(waterLevel);
-        this->log("Step: " + std::to_string(time) + (scenario.duration > 0 ? " / " + std::to_string(scenario.duration) : ""), false);
+        // this->log("Step: " + std::to_string(time) + (scenario.duration > 0 ? " / " + std::to_string(scenario.duration) : ""));
         runNextStep();
     }
     this->forceScenarioInterruption = true;
@@ -1873,8 +1876,42 @@ void EnvObjsInterface::addObjectsHeightmaps()
         waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
     });
     waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
-    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights);
-    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).max(-15.f);
+
+    bool modificationsAppliedToSurface = false;
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (displayGrooves) {
+            if (endsWith(toLower(obj->name), "reef")) {
+                auto objAsEnvCurve = dynamic_cast<EnvCurve*>(obj);
+                BSpline path = objAsEnvCurve->curve;
+                float nbGrooves = path.length() / 10.f;
+                float sigma = objAsEnvCurve->width;
+                surfaceHeights.iterateParallel([&](const Vector3& pos) {
+                    float closestT = path.estimateClosestTime(pos);
+                    float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
+                    auto [closestPoint, direction, normal] = path.pointAndDerivativeAndSecondDerivative(closestT);
+                    auto closestGrooveStartPoint = path.getPoint(closestGrooveStartT);
+                    if (direction.norm2() == 0) return;
+                    direction.normalize();
+                    auto fakeNormal = direction.rotated90XY(); // (normal.norm2() > 0 ? normal.normalize() : direction.rotated90XY());
+                    Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, fakeNormal, Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
+                    float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/(sigma * 1.f);
+                    // float initialDistance = std::clamp(1.f - (pos - closestPoint).norm() / sigma, 0.f, 1.f);
+                    float grooves = std::max(0.f, 1.f - (sizeX * std::abs(newSpace.x - 1.f/sizeX) + std::pow(sizeY * newSpace.y, 2.f)));
+                    // return std::max(grooves, initialDistance);
+                    const Vector3& flow = EnvObject::flowfield(pos);
+                    surfaceHeights(pos) += 2.f * grooves * std::max(abs(flow.dot(fakeNormal)), 0.f);
+                });
+                modificationsAppliedToSurface = true;
+            }
+        }
+    }
+
+    if (modificationsAppliedToSurface) {
+        surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
+    }
+
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
+    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
     /*
     std::map<std::string, GridF> perTypeHeightmap;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -2101,6 +2138,7 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
             for (auto currentSelection : currentSelections) {
                 currentSelection->age = 0.f;
                 if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
+                    currentSelection->geometryNeedsUpdate = true;
                     auto newPatch = currentSelection->createImplicitPatch(subsidedHeightmap/*, dynamic_cast<ImplicitPrimitive*>(currentSelection->_patch)*/);
                     if (newPatch) {
                         *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;

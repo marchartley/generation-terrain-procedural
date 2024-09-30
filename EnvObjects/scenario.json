@@ -1,15 +1,15 @@
 {
-"--objects": {
+"objects": {
 		"island": {
 			"proba": 0.1,
-			"amount": 0
+			"amount": 2
 		},
 		"greatreef": {
 			"proba": 0.1,
 			"amount": -1
 		},
 		"coralpolyp": {
-			"proba": 0.91,
+			"proba": 1.0,
 			"amount": 100
 		},
 		"coralpolypstrong": {
@@ -21,12 +21,6 @@
 			"amount": 2
 		}
 	},
-"objects": {
-		"coralpolyp": {
-			"proba": 0.91,
-			"amount": -1
-		}
-	},
 
 "simulation": {
 		"dt": 1,
@@ -36,7 +30,7 @@
 
 "events": [
 		{
-			"type": "--storm",
+			"type": "storm",
 			"position": {
 				"x": 50,
 				"y": 50,
@@ -63,19 +57,19 @@
 			"end": 1
 		},
 		{
-			"type": "--waterlevel",
+			"type": "waterlevel",
 			"amount": -0.15,
 			"start": 0,
 			"end": 10
 		},
 		{
-			"type": "--waterlevel",
+			"type": "waterlevel",
 			"amount": 0.15,
 			"start": 10,
 			"end": 30
 		},
 		{
-			"type": "--subsidence",
+			"type": "subsidence",
 			"amount": 0.50,
 			"sigma": 5.0,
 			"position": {
@@ -87,7 +81,7 @@
 			"end": 30
 		},
 		{
-			"type": "--subsidence",
+			"type": "subsidence",
 			"amount": 1.0,
 			"sigma": 10.0,
 			"position": {
@@ -99,7 +93,7 @@
 			"end": 30
 		},
 		{
-			"type": "--subsidence",
+			"type": "subsidence",
 			"amount": -1.0,
 			"sigma": -1.0,
 			"position": {
@@ -111,7 +105,7 @@
 			"end": 50
 		},
 		{
-			"type": "--subsidence",
+			"type": "subsidence",
 			"amount": 1.5,
 			"sigma": -1.0,
 			"position": {

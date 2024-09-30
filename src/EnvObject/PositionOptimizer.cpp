@@ -196,7 +196,7 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const Grid
     s.image = score;
     s.gradientField = gradients;
     // s.convergenceThreshold = 1e-3;
-    s.curvatureCost = 0.01f;
+    s.curvatureCost = 0.0f;
     s.lengthCost = 1.0f;
     s.imageCost = 1.f;
     s.targetLength = targetLength;

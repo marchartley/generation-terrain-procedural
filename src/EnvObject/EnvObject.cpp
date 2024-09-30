@@ -348,6 +348,7 @@ nlohmann::json EnvObject::toJSON() const
 float EnvObject::computeGrowingState()
 {
     if (this->createdManually) return 1.f;
+    return 1.f; // Yep, let's say that it is always mature....
 
     bool verbose = false;
     std::ostringstream oss;
@@ -373,6 +374,7 @@ float EnvObject::computeGrowingState()
 float EnvObject::computeGrowingState2()
 {
     if (this->createdManually) return 1.f;
+    return (this->evaluate() > 0.f ? 1.f : 0.f); // Let's say that it is either dead or alive...
 
     // float newFitnessEvaluation = this->evaluate(this->evaluationPosition);
     float newFitnessEvaluation = this->evaluate();

@@ -144,6 +144,7 @@ public:
     bool displaySediments = true;
     bool displayHighCurrents = true;
     bool waitAtEachFrame = false;
+    bool displayGrooves = false;
 
     float flowErosionFactor = 0.f;
 

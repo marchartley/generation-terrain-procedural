@@ -1934,6 +1934,9 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     float epsilon = 1e-1;
+    float length = path.length();
+    float nbGrooves = length * 0.1f;
+
     if (in2D) {
         auto flatPath = path;
         for (auto & p : flatPath)
@@ -1946,11 +1949,9 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
         };
     } else {
         return [=] (const Vector3& pos) -> float {
-            auto closestPoint = path.estimateClosestPos(pos, true, epsilon);
+            float closestT = path.estimateClosestTime(pos);
+            auto closestPoint = path.getPoint(closestT);
             float distance = (pos - closestPoint).norm();
-            if (distance < sigma / 2.f) {
-                int a = 0;
-            }
             return 1.f - (distance / (sigma));
         };
     }

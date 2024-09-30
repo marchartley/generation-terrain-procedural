@@ -129,6 +129,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
 {
+    if (!geometryNeedsUpdate) return this->_patch;
     if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
         previousPrimitive = nullptr;
         return nullptr;
@@ -151,6 +152,7 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
     patch->material = this->material;
     patch->name = this->name;
     this->_patch = patch;
+    this->geometryNeedsUpdate = false;
     return patch;
 }
 
@@ -166,6 +168,7 @@ EnvPoint &EnvPoint::translate(const Vector3 &translation)
     for (auto& p : evaluationPositions)
         p.translate(translation);
     this->_cachedFlowModif.clear();
+    this->geometryNeedsUpdate = true;
     return *this;
 }
 

@@ -100,6 +100,7 @@ public:
     void die();
 
     bool createdManually = false;
+    bool geometryNeedsUpdate = true;
 
     enum HeightmapFrom {
         SURFACE, GROUND, WATER

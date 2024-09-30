@@ -56,8 +56,7 @@
   {
     "name": "GreatReef",
     "type": "curve",
-    "rule": "(normal((spawntime - currenttime) / 20)) * (deadcoral * ((depth > 0) * (d((greatreef - pos) ? {10 0 0}) > 5))) - 0.01",
-    "--rule": "((((depth > -2) * (5 - d(lagoon - pos)) * (d((greatreef - pos) ? {10 0 0}) > 5)) - (depth < 0)) min 10.0) max 0.0",
+    "rule": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1)))",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
@@ -82,7 +81,7 @@
     "name": "CoralPolyp",
     "type": "point",
     "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3)",
-    "rule": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) / (current.vel * 100 + 1.0)",
+    "rule": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) / (current.vel * 10 + 1.0)",
     "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
     "flow": 0.10,
     "dimensions": {
@@ -145,7 +144,7 @@
     "name": "CoralPolypFlat",
     "type": "point",
     "--rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (abs(currenttime - spawntime) < 20) * (d2(coralpolypflat - pos) > 2) * (depth > 0)",
-    "rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (abs(currenttime - spawntime) < 20) * (d2(coralpolypflat - pos) > 2) * (depth > 0) * d(depth.gradient)",
+    "rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (1 - (normal(d(coralpolypflat - pos) - 2)/4)) * (depth > 0) * d(depth.gradient)",
     "flow": 1.0,
     "dimensions": {
       "x": 10.0,
@@ -172,7 +171,7 @@
     "type": "area",
     "rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
     "flow": {
-      "direction": 0.10,
+      "direction": 1.0,
       "normal": 0.0,
       "binormal": 0.0
     },
@@ -274,7 +273,7 @@
   {
     "name": "River",
     "type": "curve",
-    "rule": "10 - depth",
+    "rule": "(10 - depth) * (1 - (normal((d(river - pos))/2) min 1))",
     "--rule": "(20 - abs(depth)) * (depth < 0)",
     "flow": {
       "direction": 1.0,
@@ -320,7 +319,7 @@
   {
     "name": "BigRock",
     "type": "point",
-    "rule": "pebbles",
+    "rule": "pebbles * (1 - (normal(d(bigrock - pos) - 1) min 1))",
     "flow": 0.00,
     "dimensions": {
       "x": 10,
@@ -340,9 +339,9 @@
   {
     "name": "SmallRock",
     "type": "point",
-    "rule": "(10 - d(bigRock - pos)) / current.vel",
+    "rule": "((10 - d(bigRock - pos)) / (current.vel + 1))",
     "--rule": "((20 - d(bigRock - (pos + current * {5 5 0})) max 0) * ((5 - d(canyon - pos)) max 0)) max 0",
-    "rule": "pebbles / (d(canyon - pos) + 1)",
+    "rule": "pebbles * (1 - (normal(d(smallrock - pos) - 1) min 1))",
     "flow": 0.0,
     "dimensions": {
       "x": 10,
@@ -500,16 +499,16 @@
   {
     "name": "Beach",
     "type": "area",
-    "rule": "sand * (depth > 0) * (1 - beach.inside) / current.vel",
+    "rule": "sand * (depth > 0) * (1 - beach.inside) / (current.vel + 1)",
     "flow": {
       "direction": 0.10,
       "normal": 0.0,
       "binormal": 0.0
      },
     "dimensions": {
-      "x": 40.0,
-      "y": 10.0,
-      "z": 5.0
+      "x": 10.0,
+      "y": 40.0,
+      "z": 6.0
     },
     "needs": {
       "age": 1.0
@@ -574,7 +573,7 @@
     "name": "Ripple",
     "type": "curve",
     "--rule": "(sand > 0.2) * sand * (d((smallrock - current * 0) - pos) > 4) * (d(ripple - pos) > 2)",
-    "rule": "current.vel * canyon.inside * d(smallrock - pos - current * -2) / (d(canyon - pos) max 1.0)",
+    "rule": "(current.vel + 1) * (canyon.inside + fault.inside) * d(smallrock - pos - current * -2) / (d(canyon - pos) max 1.0)",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,

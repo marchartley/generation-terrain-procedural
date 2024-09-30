@@ -413,13 +413,13 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
         newContour[i] -= gradients[i] * stepSize;
     }
 
-    // auto autointersections = newContour.checkAutointersections();
-    // for (auto [i0, i1] : autointersections) {
-    //     newContour[i0] = currentContour[i0];
-    //     newContour[i0 + 1] = currentContour[i0 + 1];
-    //     newContour[i1] = currentContour[i1];
-    //     newContour[i1 + 1] = currentContour[i1 + 1];
-    // }
+    auto autointersections = newContour.checkAutointersections();
+    for (auto [i0, i1] : autointersections) {
+        newContour[i0] = currentContour[i0];
+        newContour[i0 + 1] = currentContour[i0 + 1];
+        newContour[i1] = currentContour[i1];
+        newContour[i1 + 1] = currentContour[i1 + 1];
+    }
     return newContour;
 }
 

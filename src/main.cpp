@@ -255,6 +255,42 @@ Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imag
 
 int main(int argc, char *argv[])
 {
+    /*
+    float prec = 1000;
+    float div = std::pow(prec, .1f);
+    // std::cout << std::pow(1000, 0.1f) << " " << std::pow((1000 * prec), .1f) / div << std::endl;
+    // return 0;
+    for (int i = 0; i < 10; i++) {
+        std::cout << "Iter " << i+1 << std::endl;
+        displayProcessTime("Square float: ", [&]() {
+            int a = 0;
+            for(float i = 0; i < 100000; i++) {
+                a = std::pow(i, .5f);
+            }
+        });
+        displayProcessTime("Square: ", [&]() {
+            int a = 0;
+            for(float i = 0; i < 100000; i++) {
+                a = std::sqrt(i);
+            }
+        });
+        displayProcessTime("Square tenth float: ", [&]() {
+            int a = 0;
+            for(float i = 0; i < 100000; i++) {
+                a = std::pow(i, .1f);
+            }
+        });
+        displayProcessTime("Square tenth int: ", [&]() {
+            int a = 0;
+            for(float i = 0; i < 100000; i++) {
+                a = std::pow(int(i*prec), .1f)/div;
+            }
+        });
+    }
+    return 0;
+    */
+
+
     auto allVars = getAllEnvironmentVariables();
     for (auto& [key, val] : allVars) {
         // auto lowerKey = toLower(key);
@@ -289,6 +325,32 @@ int main(int argc, char *argv[])
     qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+
+/*
+    GridV3 img(100, 100, 1);
+    BSpline path = BSpline({Vector3(0, 10, 0), Vector3(50, 20, 0), Vector3(100, 90, 0)});
+    float nbGrooves = path.length() * 0.1f;
+    float sigma = 20.f;
+
+    img.iterate([&](const Vector3& pos) {
+        float nbGrooves = path.length() * 0.1f;
+        float closestT = path.estimateClosestTime(pos);
+        float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
+        auto [closestPoint, direction] = path.pointAndDerivative(closestT);
+        auto closestGrooveStartPoint = path.getPoint(closestGrooveStartT);
+        direction.normalize();
+        Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, direction.rotated90XY(), Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
+        float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/sigma;
+        float distance = (sizeX * std::abs(newSpace.x - 1.f/sizeX) + std::pow(sizeY * newSpace.y, 4.f));
+        img(pos) = Vector3(1, 1, 1) * std::clamp(1.f - (distance), 0.f, 1.f);
+    });
+
+    Plotter::get()->addImage(img);
+    // Plotter::get()->setAbsoluteModeImage(true);
+    return Plotter::get()->exec();*/
+
+
 
 /*
     int size = 60;

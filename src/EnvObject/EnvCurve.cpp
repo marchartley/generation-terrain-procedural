@@ -220,6 +220,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
 }*/
 ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrimitive *previousPrimitive)
 {
+    if (!geometryNeedsUpdate) return this->_patch;
     if (this->implicitShape == ImplicitPatch::PredefinedShapes::None) {
         previousPrimitive = nullptr;
         return nullptr;
@@ -281,6 +282,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
     patch->material = this->material;
     patch->name = this->name;
     this->_patch = patch;
+    this->geometryNeedsUpdate = false;
     return patch;
 }
 
@@ -296,6 +298,7 @@ EnvCurve &EnvCurve::translate(const Vector3 &translation)
         evaluationPosition.translate(translation);
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
+    this->geometryNeedsUpdate = true;
     return *this;
 }
 

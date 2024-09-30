@@ -39,11 +39,11 @@ public:
 
     Vector3 position; // Initial position, attracting the whole curve
 
-    float connectivityCost = 0.1f;
-    float curvatureCost = 0.5f;
-    float imageCost = 0.5f;
+    float connectivityCost = 0.0f;
+    float curvatureCost = 0.0f;
+    float imageCost = 0.0f;
     float areaCost = 0.f;
-    float lengthCost = 0.5f;
+    float lengthCost = 0.0f;
     float slopeCost = 0.f;
     float positionCost = 0.f;
 
