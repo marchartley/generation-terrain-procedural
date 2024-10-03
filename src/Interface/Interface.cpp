@@ -32,7 +32,7 @@
 #include "FluidSimulation/OpenFoamParser.h"
 
 ViewerInterface::ViewerInterface() {
-    Plotter::init(nullptr, nullptr);
+    // Plotter::init(nullptr, nullptr);
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);

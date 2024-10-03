@@ -60,12 +60,12 @@ public:
     void runScenario();
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
+    void updateUntilStabilization();
     void onlyUpdateFlowAndSandFromEnvObjects();
     void destroyEnvObject(EnvObject* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
 
     void displayProbas(std::string objectName);
     void displayMaterialDistrib(std::string materialName);
-    void displayFlowfieldAsImage();
 
     void manualModificationOfFocusArea();
     void manualModificationOfFlowfield();
@@ -83,6 +83,7 @@ public:
 
     void evaluateAndDisplayCustomFitnessFormula(std::string formula);
     void evaluateAndDisplayCustomFittingFormula(std::string formula);
+    void evaluateAndDisplayCustomFitnessAndFittingFormula(std::string fitnessFuncFormula, std::string fittingFuncFormula);
 
     BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
@@ -103,7 +104,7 @@ public:
     void previewFocusAreaEdition(Vector3 mousePos, bool addingFocus);
     void previewFlowEdition(Vector3 mousePos, Vector3 brushDir);
 
-    void showAllElementsOnPlotter() const;
+    void showAllElementsOnPlotter();
 
     void addObjectsHeightmaps();
     void flowErosionSimulation();
@@ -133,7 +134,7 @@ public:
     GridV3 simulationFlowField;
     bool displayFlow = false;
 
-    HierarchicalListWidget* objectsListWidget = nullptr;
+    HierarchicalListUI* objectsListWidget = nullptr;
 
     Vector3 draggingPoint = Vector3(false);
     Vector3 draggingFullObject = Vector3(false);
@@ -181,6 +182,7 @@ public:
 
     BSpline objectSkeletonCreation;
     bool manuallyCreatingObject = false;
+    bool previewingObjectInPlotter = false;
 
     bool forceScenarioInterruption = true;
 
@@ -190,6 +192,9 @@ public:
     GridF subsidedHeightmap;
 
     bool displayDepositionOnHeightmap = true;
+
+    std::string testedFitnessFunction = "";
+    std::string testedFittingFunction = "";
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

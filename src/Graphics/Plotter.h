@@ -12,6 +12,7 @@
 //#include <QButton>
 
 #include "Interface/CommonInterface.h"
+#include "Utils/Utils.h"
 
 enum PlotColor {
     WHITE, GRAY, BLACK, RED, GREEN, BLUE, RANDOM
@@ -73,13 +74,13 @@ protected:
 class Plotter : public QDialog {
     Q_OBJECT
 private: // Singleton
-    Plotter(QWidget* parent = nullptr);
-    Plotter(ChartView* chartView, QWidget* parent = nullptr);
+    Plotter(std::string name, QWidget* parent = nullptr);
+    Plotter(std::string name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    static Plotter* getInstance();
-    static Plotter* get() { return Plotter::getInstance(); }
-    static Plotter* init(ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    static Plotter* getInstance(std::string name = "");
+    static Plotter* get(std::string name = "") { return Plotter::getInstance(toLower(name)); }
+    static Plotter* init(std::string name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     Plotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
     Plotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
@@ -111,6 +112,10 @@ public:
     float maxValueToDisplay = 10000.f;
     bool clampValues = false;
 
+    bool displayR = true;
+    bool displayG = true;
+    bool displayB = true;
+
     RangeSliderElement* rangeValuesWidget;
 //    ButtonElement* saveButton;
     ChartView* chartView;
@@ -134,8 +139,11 @@ public:
 
     InterfaceUI* interfaceButtons;
 
+    std::string name;
+
 private:
-    static Plotter* instance;
+    static std::string defaultName;
+    static std::map<std::string, Plotter*> instances;
 //    QValueAxis* m_axisX;
 //    QValueAxis* m_axisY;
 public Q_SLOTS:

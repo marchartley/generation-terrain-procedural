@@ -43,6 +43,26 @@ const std::string &UIElement::getName() const
 }
 
 
+LabelElement::LabelElement(std::string text)
+    : UIElement(new QLabel(QString::fromStdString(text)))
+{}
+
+QLabel *LabelElement::label()
+{
+    return static_cast<QLabel*>(getWidget());
+}
+
+LabelElement *LabelElement::setText(std::string newText)
+{
+    this->label()->setText(QString::fromStdString(newText));
+    return this;
+}
+
+std::string LabelElement::getText()
+{
+    return this->label()->text().toStdString();
+}
+
 
 
 ButtonElement::ButtonElement(std::string label)
@@ -144,9 +164,13 @@ void CheckboxElement::update()
     checkBox()->setChecked(*this->boundVariable);
 }
 
-InterfaceUI::InterfaceUI(QLayout *layout, std::string title)
+InterfaceUI::InterfaceUI(QLayout *layout, bool tight, std::string title)
     : UIElement(new QGroupBox), title(title)
 {
+    if (tight) {
+        layout->setSpacing(0);
+        layout->setContentsMargins(0, 0, 0, 0);
+    }
     getWidget()->setLayout(layout);
 }
 
@@ -190,7 +214,7 @@ std::vector<UIElement*> InterfaceUI::add(std::vector<std::pair<UIElement *, std:
 
 UIElement *InterfaceUI::add(QLayout *layout, std::string name)
 {
-    InterfaceUI* interface = new InterfaceUI(layout, name);
+    InterfaceUI* interface = new InterfaceUI(layout, true, name);
     return this->add(interface, name);
 }
 
@@ -244,20 +268,39 @@ void RadioButtonElement::update()
     radioButton()->setChecked(*this->boundVariable);
 }
 
-InterfaceUI *createHorizontalGroupUI(std::vector<UIElement *> widgets)
+InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
 {
     InterfaceUI* interface = new InterfaceUI(new QHBoxLayout);
-    for (UIElement*& w : widgets)
+    for (UIElement*& w : widgets) {
         interface->add(w);
+    }
     return interface;
 }
 
-InterfaceUI *createVerticalGroupUI(std::vector<UIElement *> widgets)
+InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets)
 {
     InterfaceUI* interface = new InterfaceUI(new QVBoxLayout);
-    for (UIElement*& w : widgets)
+    for (UIElement*& w : widgets) {
         interface->add(w);
+    }
     return interface;
+}
+
+InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns)
+{
+    QGridLayout* layout = new QGridLayout;
+    // QGroupBox* group = new QGroupBox;
+    //    for (QWidget*& w : widgets)
+    for (size_t i = 0; i < widgets.size(); i++) {
+        auto& w = widgets[i];
+        int row = int (i / nbColumns);
+        int col = i % nbColumns;
+
+        layout->addWidget(w->get(), row, col);
+        // layout->addWidget(w->get(), row, col);
+    }
+    // group->setLayout(layout);
+    return new InterfaceUI(layout); // group;
 }
 
 TextEditElement::TextEditElement(std::string text, std::string label)
@@ -457,3 +500,43 @@ void ComboboxElement::bindTo(std::vector<std::string> &values)
         }
     }
 }*/
+
+
+HierarchicalListUI::HierarchicalListUI()
+    : UIElement(new HierarchicalListWidget())
+{}
+
+HierarchicalListWidget *HierarchicalListUI::hierarchicalList()
+{
+    return static_cast<HierarchicalListWidget*>(this->getWidget());
+}
+
+HierarchicalListUI *HierarchicalListUI::setSelectionMode(QAbstractItemView::SelectionMode mode)
+{
+    this->hierarchicalList()->setSelectionMode(mode);
+    return this;
+}
+
+
+HierarchicalListUI *HierarchicalListUI::clear()
+{
+    this->hierarchicalList()->clear();
+    return this;
+}
+
+HierarchicalListUI *HierarchicalListUI::addItem(HierarchicalListWidgetItem* item)
+{
+    this->hierarchicalList()->addItem(item);
+    return this;
+}
+
+HierarchicalListUI *HierarchicalListUI::setCurrentItems(std::vector<int> selectedIDs)
+{
+    this->hierarchicalList()->setCurrentItems(selectedIDs);
+    return this;
+}
+
+QList<QListWidgetItem*> HierarchicalListUI::selectedItems()
+{
+    return this->hierarchicalList()->selectedItems();
+}

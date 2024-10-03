@@ -13,24 +13,26 @@ SnakeSegmentation::SnakeSegmentation()
 
 BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
     BSpline currentContour = contour;
-    // float realTarget = targetLength;
-    // float minTargetLength = realTarget * .5f;
 
     float stepSize = .5f;
 
-    int iter = 0;
-    for (iter = 0; iter < maxIterations; ++iter) {
-        // stepSize = random_gen::generate(2.f);
+    float initialTargetLength = this->targetLength;
+    float initialTargetArea = this->targetArea;
+
+    for (int iter = 0; iter < maxIterations; ++iter) {
+        float a = 0.5f + 0.5f * std::cos(float(nbCatapillars) * float(maxIterations) * 2.f * PI * float(iter) / float(maxIterations - 1));
+        this->targetLength = interpolation::inv_linear(a, initialTargetLength * .15f, initialTargetLength * 2.f);
+        this->targetArea = interpolation::inv_linear(a, initialTargetArea * .15f, initialTargetArea * 2.f);
+
         currentContour = updateContour(currentContour, stepSize);
-        if (this->collapseFirstAndLastPoint && currentContour.size() > 1) {
-            // currentContour.points.back() = currentContour.points.front();
-        }
+
         currentContour.resamplePoints();
-        contour = currentContour;
-        // std::cout << "Step " << iter + 1 << ": Area = " << ShapeCurve(contour).computeArea() << " / " << targetArea << std::endl;
     }
 
     contour = currentContour;
+
+    this->targetArea = initialTargetArea;
+    this->targetLength = initialTargetLength;
 
     return currentContour;
 }

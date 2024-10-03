@@ -21,6 +21,7 @@ bool isIn(T elem, std::set<T> arr) {
 void displayProgress(float percent, bool displayPercent = true, int consoleWidth = 20, std::string progressSign = "=");
 
 std::string replaceInString(std::string initial, std::string toReplace, std::string replacing);
+std::string trim(std::string initial, std::string ws = " ");
 
 bool startsWith(std::string text, std::string needle);
 bool endsWith(std::string text, std::string needle);

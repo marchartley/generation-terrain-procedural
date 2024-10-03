@@ -123,7 +123,7 @@ void Viewer::init() {
 
 
     this->main_screenshotFolder = "screenshots/";
-    this->screenshotFolder = main_screenshotFolder;
+    this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
     this->mapSavingFolder = "saved_maps/";
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
@@ -133,9 +133,9 @@ void Viewer::init() {
         std::cerr << "Not possible to create folder " << this->mapSavingFolder << std::endl;
         exit(-1);
     }
-    if (this->voxelGrid != nullptr) {
-        this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-    }
+    // if (this->voxelGrid != nullptr) {
+    //     this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
+    // }
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
@@ -612,7 +612,17 @@ bool Viewer::stopRecording()
             std::cerr << "Oups, the command `" << command2 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
-    this->screenshotFolder += "__next-take/";
+    // this->screenshotFolder += "__next-take/";
+
+    // New folder to save next recording
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+
+
+    this->main_screenshotFolder = "screenshots/";
+    this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
     this->screenshotIndex = 0;
 
     this->isTakingScreenshots = false;

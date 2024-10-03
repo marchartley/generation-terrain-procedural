@@ -248,6 +248,21 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     HeightmapFrom heightFrom = (!content.contains("heightfrom") || content["heightfrom"] == "surface" ? SURFACE : (content["heightfrom"] == "water" ? WATER : GROUND));
     float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
+    bool snakeDefined = false;
+    SnakeSegmentation snakeParameters;
+    if (content.contains("snake")) {
+        auto snakeParamsJSON = content["snake"];
+        snakeParameters.connectivityCost = snakeParamsJSON["connectivity"];
+        snakeParameters.curvatureCost = snakeParamsJSON["curvature"];
+        snakeParameters.lengthCost = snakeParamsJSON["length"];
+        snakeParameters.areaCost = snakeParamsJSON["area"];
+        snakeParameters.imageCost = snakeParamsJSON["image"];
+        snakeParameters.imageInsideCoef = snakeParamsJSON["imageinside"];
+        snakeParameters.imageBordersCoef = snakeParamsJSON["imageborders"];
+        snakeParameters.nbCatapillars = snakeParamsJSON["catapillars"];
+        snakeDefined = true;
+    }
+
     Vector3 flowEffect;
     if (objType == "point") {
         auto asPoint = new EnvPoint;
@@ -317,6 +332,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     } else {
         obj->s_FitnessFunction = obj->s_FittingFunction;
     }
+    obj->snake = snakeParameters;
+    obj->snakeDefined = snakeDefined;
     obj->material = material;
     obj->implicitShape = shape;
     obj->inputDimensions = dimensions;
@@ -600,7 +617,7 @@ bool EnvObject::updateSedimentation(const GridF& heights)
     for (auto& [name, material] : EnvObject::materials) {
         names.push_back(name);
     }
-    #pragma omp parallel for
+#pragma omp parallel for
     for(int i = 0; i < names.size(); i++) {
         auto& material = materials[names[i]];
         if (material.isStable) {
@@ -610,37 +627,111 @@ bool EnvObject::updateSedimentation(const GridF& heights)
             // std::cout << material.name << " NOT stable" << std::endl;
         }
 
-        float startingAmount = material.currentState.sum();
+        bool needToBeUpdated = false;
+        // float startingAmount = material.currentState.sum();
+        auto startState = material.currentState;
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
-            // if (object->materialAbsorptionRate[material.name] != 0) {
-                #pragma omp critical
+            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
+                // #pragma omp critical
                 object->applyAbsorption(material);
-            // }
+                needToBeUpdated = true;
+            }
         }
 
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
             auto& object = EnvObject::instantiatedObjects[i];
-            // if (object->materialDepositionRate[material.name] != 0) {
-                #pragma omp critical
+            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
+                // #pragma omp critical
                 object->applyDeposition(material);
-            // }
+                needToBeUpdated = true;
+            }
         }
 
-        material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
-        // material.currentState *= material.decay;
+        if (needToBeUpdated) {
+            material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
+            // material.currentState *= material.decay;
 
-        float endingAmount = material.currentState.sum();
+            // float endingAmount = material.currentState.sum();
+            float diff = (material.currentState - startState).abs().sum();
 
-        if (std::abs(endingAmount - startingAmount) > 1e-3) {
-            #pragma omp critical
-            bigChangesInAtLeastOneMaterialDistribution = true;
+            // #pragma omp critical
+            // {
+            //     std::cout << material.name << ": " << diff << std::endl;
+            // }
+
+            if (diff > 1e-3) {
+#pragma omp critical
+                {
+                    bigChangesInAtLeastOneMaterialDistribution = true;
+                }
+            } else {
+                // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
+                material.isStable = true;
+            }
         } else {
-            // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
             material.isStable = true;
         }
     }
     return bigChangesInAtLeastOneMaterialDistribution;
+}
+
+std::vector<std::string> EnvObject::updateSedimentationKnowingFluidsAndGradients(const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials)
+{
+    std::vector<std::string> stillUnstable;
+    std::vector<std::string> names = unstableMaterials;
+
+    #pragma omp parallel for
+    for(int i = 0; i < names.size(); i++) {
+        auto& material = materials[names[i]];
+
+        bool needToBeUpdated = false;
+        auto startState = material.currentState;
+        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
+            auto& object = EnvObject::instantiatedObjects[i];
+            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
+                object->applyAbsorption(material);
+                needToBeUpdated = true;
+            }
+        }
+
+        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
+            auto& object = EnvObject::instantiatedObjects[i];
+            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
+                object->applyDeposition(material);
+                needToBeUpdated = true;
+            }
+        }
+
+        // if (needToBeUpdated) {
+        material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
+        float diff = (material.currentState - startState).abs().sum();
+        if (diff > 1e-3) {
+            #pragma omp critical
+            {
+                stillUnstable.push_back(material.name);
+            }
+        }
+        // }
+    }
+    return stillUnstable;
+}
+
+void EnvObject::stabilizeMaterials(const GridF &heights, int maxIterations)
+{
+    GridV3 heightsGradients = heights.gradient();
+    auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
+    std::vector<std::string> unstableMaterials;
+    for (auto& [name, material] : EnvObject::materials) {
+        unstableMaterials.push_back(name);
+    }
+
+    for (int iteration = 0; iteration < maxIterations; iteration++) {
+        unstableMaterials = EnvObject::updateSedimentationKnowingFluidsAndGradients(heights, heightsGradients, smoothFluids, unstableMaterials);
+        if (unstableMaterials.empty()) {
+            break;
+        }
+    }
 }
 
 void EnvObject::applyMaterialsTransformations()
@@ -720,6 +811,7 @@ float EnvObject::evaluate(const Vector3 &position)
 
 float EnvObject::evaluate()
 {
+    if (this->premature) return 1.f;
     // Should only be at one point...
 
     if (evaluationPositions.empty()) {

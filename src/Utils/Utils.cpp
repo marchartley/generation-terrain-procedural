@@ -567,3 +567,16 @@ StatsValues getStats(std::vector<float> values)
     stats.stdev = std::sqrt(stats.variance);
     return stats;
 }
+
+std::string trim(std::string initial, std::string ws)
+{
+    std::string str = initial;
+    size_t found;
+    found = str.find_last_not_of(ws);
+    if (found != std::string::npos)
+        str.erase(found+1);
+    else
+        str.clear();            // str is all whitespace
+
+    return str;
+}

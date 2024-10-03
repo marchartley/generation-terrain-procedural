@@ -313,6 +313,7 @@ void EnvCurve::updateCurve(const BSpline &newCurve)
     this->curve = newCurve;
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
+    this->_cachedAbsorptionDepositionField.clear();
 }
 
 nlohmann::json EnvCurve::toJSON() const

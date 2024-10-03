@@ -45,7 +45,9 @@ public:
     float areaCost = 0.f;
     float lengthCost = 0.0f;
     float slopeCost = 0.f;
+
     float positionCost = 0.f;
+    int nbCatapillars = 0;
 
     float imageBordersCoef = 1.f;
     float imageInsideCoef = 0.f;

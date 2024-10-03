@@ -50,6 +50,7 @@ void EnvPoint::recomputeEvaluationPoints()
 
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
+    // if (toLower(this->name) == "coralpolyp") std::cout << "Deposing " << material.name << "? " << (this->materialDepositionRate[material.name] == 0 ? "No" : "Yes") << std::endl;
     if (this->materialDepositionRate[material.name] == 0) return;
     float growingState = this->computeGrowingState2();
     // float growingState = this->computeGrowingState();

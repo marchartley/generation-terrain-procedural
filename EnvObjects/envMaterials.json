@@ -54,12 +54,20 @@
 		"waterTransport": 0.0,
 		"mass": 0.0,
 		"decay": 0.8,
-		"virtualheight": 1.0
+		"virtualheight": 0.0
 	},
 	{
 		"name": "freshWater",
 		"diffusionSpeed": 1.0,
 		"waterTransport": 0.1,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtualheight": 0.0
+	},
+	{
+		"name": "shade",
+		"diffusionSpeed": 1.0,
+		"waterTransport": 0.0,
 		"mass": 0.0,
 		"decay": 0.9,
 		"virtualheight": 0.0

@@ -122,13 +122,14 @@ bool Chart::gestureEvent(QGestureEvent *event)
 //    QChart::scroll(scroll.x(), scroll.y());
 //    return QChart::wheelEvent(event);
 //}
-Plotter* Plotter::instance = nullptr;
+std::map<std::string, Plotter*> Plotter::instances = std::map<std::string, Plotter*>();
+std::string Plotter::defaultName = "default";
 
-Plotter::Plotter(QWidget *parent) : Plotter(new ChartView(new Chart()), parent)
+Plotter::Plotter(std::string name, QWidget *parent) : Plotter(name, new ChartView(new Chart()), parent)
 {
 }
 
-Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView)
+Plotter::Plotter(std::string name, ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
 {
     if (this->chartView == nullptr)
         this->chartView = new ChartView(new Chart());
@@ -178,6 +179,20 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
         this->draw();
     });
 
+    CheckboxElement* displayRButton = new CheckboxElement("R", this->displayR);
+    CheckboxElement* displayGButton = new CheckboxElement("G", this->displayG);
+    CheckboxElement* displayBButton = new CheckboxElement("B", this->displayB);
+
+    displayRButton->setOnChecked([&](bool toggled) { this->addImage(displayedImage); this->draw(); });
+    displayGButton->setOnChecked([&](bool toggled) { this->addImage(displayedImage); this->draw(); });
+    displayBButton->setOnChecked([&](bool toggled) { this->addImage(displayedImage); this->draw(); });
+
+    InterfaceUI* RGBSelection = new InterfaceUI(new QHBoxLayout);
+    RGBSelection->add({displayRButton, displayGButton, displayBButton});
+    RGBSelection->get()->layout()->setSpacing(0);
+    RGBSelection->get()->layout()->setContentsMargins(0, 0, 0, 0);
+
+    left->addWidget(RGBSelection->get());
     left->addWidget(this->chartView);
     left->addWidget(this->mouseInfoLabel);
     interfaceButtons->add(normalizeModeButton);
@@ -197,6 +212,8 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     this->resize(800, 600);
     this->updateGeometry();
 
+    this->setWindowTitle(QString::fromStdString(toCapitalize(this->name)));
+
     QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &Plotter::selectData);
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::updateLabelsPositions);
     QObject::connect(this->chartView->chart(), &QChart::plotAreaChanged, this, &Plotter::updateLabelsPositions);
@@ -210,19 +227,22 @@ Plotter::Plotter(ChartView *chartView, QWidget *parent) : QDialog(parent), chart
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &Plotter::draw);
 }
 
-Plotter *Plotter::getInstance()
+Plotter *Plotter::getInstance(std::string name)
 {
-    if (Plotter::instance == nullptr) {
+    if (name == "") name = Plotter::defaultName;
+    if (Plotter::instances.count(name) == 0) {
 //        std::cerr << "Plotter has not been initialized with function Plotter::init()" << std::endl;
-        Plotter::init();
+        Plotter::instances[name] = Plotter::init(name);
     }
-    return Plotter::instance;
+    return Plotter::instances[name];
 }
 
-Plotter *Plotter::init(ChartView *chartView, QWidget *parent)
+Plotter *Plotter::init(std::string name, ChartView *chartView, QWidget *parent)
 {
-    Plotter::instance = new Plotter(chartView, parent);
-    return Plotter::getInstance();
+    if (Plotter::instances.count(name))
+        delete Plotter::instances[name];
+    Plotter::instances[name] = new Plotter(name, chartView, parent);
+    return Plotter::getInstance(name);
 }
 
 Plotter* Plotter::addPlot(std::vector<float> data, std::string name, QColor color)
@@ -232,7 +252,7 @@ Plotter* Plotter::addPlot(std::vector<float> data, std::string name, QColor colo
         _data.push_back(Vector3(i, data[i]));
     }
     this->addPlot(_data, name, color);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::addPlot(std::vector<Vector3> data, std::string name, QColor color)
@@ -240,7 +260,7 @@ Plotter* Plotter::addPlot(std::vector<Vector3> data, std::string name, QColor co
     this->plot_data.push_back(data);
     this->plot_names.push_back(name);
     this->plot_colors.push_back(color);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
@@ -250,7 +270,7 @@ Plotter* Plotter::addScatter(std::vector<float> data, std::string name, std::vec
         _data.push_back(Vector3(i, data[i]));
     }
     this->addScatter(_data, name, labels, colors);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
@@ -265,14 +285,14 @@ Plotter* Plotter::addScatter(std::vector<Vector3> data, std::string name, std::v
     this->scatter_names.push_back(name);
     this->scatter_labels.push_back(labels);
     this->scatter_colors.push_back(colors);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::addImage(GridV3 image)
 {
     this->displayedImage = image;
 //    image = image.flip(false, true);
-    if (image.empty()) return Plotter::getInstance();
+    if (image.empty()) return this;
     if (this->clampValues) {
         float min = std::numeric_limits<float>::max();
         float max = std::numeric_limits<float>::lowest();
@@ -302,12 +322,20 @@ Plotter* Plotter::addImage(GridV3 image)
                 max = std::max(image[i][c], max);
             });
             float d = max - min;
-            image.iterateParallel([&](size_t i) {
-                image[i][c] = (image[i][c] - min) / d;
-            });
+            if (d == 0) {
+                image *= 0.f;
+            } else {
+                image.iterateParallel([&](size_t i) {
+                    image[i][c] = (image[i][c] - min) / d;
+                });
+            }
         }
 //        image.normalize();
     }
+    Vector3 colorFilter = Vector3((displayR ? 1.f : 0.f), (displayG ? 1.f : 0.f), (displayB ? 1.f : 0.f));
+    image.iterateParallel([&](size_t i) {
+        image[i] *= colorFilter;
+    });
     unsigned char* data = new unsigned char[image.size() * 4];
 
     for (size_t i = 0; i < image.size(); ++i) {
@@ -322,7 +350,7 @@ Plotter* Plotter::addImage(GridV3 image)
     }
     this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
 //    *(this->backImage) = this->backImage->mirrored();
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::addImage(const GridF &image)
@@ -534,14 +562,14 @@ Plotter* Plotter::draw()
     this->chartView->chart()->createDefaultAxes();
 //    this->chartView->chart()->zoomOut();
     //    this->chartView->update();
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::show()
 {
     this->draw();
     QDialog::show();
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::updateUI()
@@ -559,7 +587,7 @@ Plotter* Plotter::updateUI()
         }
     }*/
     blockSignals(false);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::setNormalizedModeImage(bool normalize)
@@ -597,14 +625,14 @@ Plotter* Plotter::saveFig(std::string filename)
     if (this->backImage)
         p = QPixmap::fromImage(*backImage);
     p.save(QString::fromStdString(filename), "PNG");
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::copyToClipboard()
 {
     QPixmap p = this->chartView->grab();
     QApplication::clipboard()->setPixmap(p, QClipboard::Clipboard);
-    return Plotter::getInstance();
+    return this;
 }
 
 void Plotter::resizeEvent(QResizeEvent *event)
@@ -650,7 +678,7 @@ Plotter* Plotter::reset()
     selectedScatterData.clear();
     selectedPlotData.clear();
 
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::updateLabelsPositions()
@@ -675,12 +703,12 @@ Plotter* Plotter::updateLabelsPositions()
         this->draw();
     }
 //    this->blockSignals(false);
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::selectData(const Vector3& pos)
 {
-    if (!pos.isValid()) return Plotter::getInstance();
+    if (!pos.isValid()) return this;
 
     float minDist = 0.05f;
     this->selectedScatterData.clear();
@@ -710,20 +738,20 @@ Plotter* Plotter::selectData(const Vector3& pos)
     if (!this->displayedImage.empty()) {
         Q_EMIT clickedOnImage(pos * displayedImage.getDimensions(), this->displayedImage(pos * displayedImage.getDimensions()));
     }
-    return Plotter::getInstance();
+    return this;
 }
 
 Plotter* Plotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
 {
     if (this->displayedImage.empty() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
-        return Plotter::getInstance();
+        return this;
     std::ostringstream oss;
     Vector3 size = displayedImage.getDimensions();
     Vector3 position = relativeMousePos * size;
     Vector3 value = this->displayedImage(position);
     oss << "Mouse pos: " << int(position.x) << ", " << int(position.y) << " -- Value : (" << value.x << ", " << value.y << ", " << value.z << ") ";
     this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
-    return Plotter::getInstance();
+    return this;
 }
 
 

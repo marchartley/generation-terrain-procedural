@@ -2,7 +2,7 @@
   {
     "name": "Passe",
     "type": "curve",
-    "rule": "((5 - d(reef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(reef - pos) < 5) max 0",
+    "rule": "((5 - d(greatreef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(greatreef - pos) < 5) max 0",
     "flow": {
       "direction": 10.0,
       "normal": 0.1,
@@ -56,7 +56,7 @@
   {
     "name": "GreatReef",
     "type": "curve",
-    "rule": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1)))",
+    "rule": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1))) * ((currenttime - spawntime) < 50)",
     "flow": {
       "direction": 0.0,
       "normal": 0.0,
@@ -81,7 +81,7 @@
     "name": "CoralPolyp",
     "type": "point",
     "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3)",
-    "rule": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) / (current.vel * 10 + 1.0)",
+    "rule": "(1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 10)",
     "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
     "flow": 0.10,
     "dimensions": {
@@ -102,7 +102,7 @@
     	"sand": 0.1,
     	"polyp": 0.1
     },
-    "minScore": 0.1,
+    "minScore": 1.0,
     "heightfrom": "surface",
     "geometry": "None",
     "material": "coral",
@@ -171,20 +171,30 @@
     "type": "area",
     "rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
     "flow": {
-      "direction": 1.0,
+      "direction": 0.3,
       "normal": 0.0,
       "binormal": 0.0
     },
     "depositionRate" : {
-    	"--sand": 0.01
+    	"sand": 0.01
     },
     "absorptionRate" : {
     	"--sand": 0.01
     },
     "dimensions": {
-      "x": 50,
-      "y": 50,
+      "x": 20,
+      "y": 20,
       "z": 20
+    },
+    "snake": {
+		"connectivity": 0.0,
+		"curvature": 0.0,
+		"length": 0.0,
+		"area": 0.0,
+		"image": 0.010,
+		"imageinside": 1.0,
+		"imageborders": 0.0,
+		"catapillars": 4
     },
     "minScore": 0.10,
     "heightfrom": "ground",
@@ -273,8 +283,9 @@
   {
     "name": "River",
     "type": "curve",
-    "rule": "(10 - depth) * (1 - (normal((d(river - pos))/2) min 1))",
+    "rule": "(depth) * (1 - (normal((d(river - pos))/2) min 1))",
     "--rule": "(20 - abs(depth)) * (depth < 0)",
+    "fitness": "normal((depth + 20)/20) * (depth < 0) * (1 - (normal((d(river.start - pos))/2) min 1)) * (1 - (normal((d(river - pos))/2) min 1))",
     "flow": {
       "direction": 1.0,
       "normal": 0.1,
@@ -282,7 +293,7 @@
     },
     "dimensions": {
       "x": 2,
-      "y": 10,
+      "y": 40,
       "z": 4
     },
     "depositionRate" : {
@@ -293,7 +304,8 @@
     "minScore": 0,
     "heightfrom": "surface",
     "geometry": "ParametricTunnel",
-    "material": "water"
+    "material": "water",
+    "follows": "gradients"
   },
   {
     "name": "Canyon",
@@ -445,8 +457,8 @@
       "binormal": 0.0
      },
     "dimensions": {
-      "x": 50.0,
-      "y": 50.0,
+      "x": 60.0,
+      "y": 60.0,
       "z": 2.0
     },
     "needs": {
@@ -467,7 +479,7 @@
   {
     "name": "SmallLagoon",
     "type": "area",
-    "rule": "normal(depth - 2) * (d(pos - (smalllagoon ? {1000 0 0})) > 3) * (1 - smalllagoon.inside)",
+    "rule": "normal(depth - 2) * (depth > -1) * (d(pos - (smalllagoon ? {1000 0 0})) > 3) * (1 - smalllagoon.inside)",
     "----rule": "sand * (1 - island.inside)",
     "-rule": "50 - d(reef - pos)",
     "--rule": "island.curvature * (1 - island.inside) * ((10 - d(island - pos)))",
@@ -477,8 +489,8 @@
       "binormal": 0.0
      },
     "dimensions": {
-      "x": 20.0,
-      "y": 40.0,
+      "x": 60.0,
+      "y": 60.0,
       "z": 2.0
     },
     "needs": {
@@ -499,7 +511,8 @@
   {
     "name": "Beach",
     "type": "area",
-    "rule": "sand * (depth > 0) * (1 - beach.inside) / (current.vel + 1)",
+    "rule": "(sand + 1) * (1 - beach.inside) * normal(d(depth.gradient) / 10) * normal(depth / 1.5) * (depth > -2) / (current.vel + 1)",
+    "--rule": "sand * (depth > 0) * (1 - beach.inside) / (current.vel + 1)",
     "flow": {
       "direction": 0.10,
       "normal": 0.0,
@@ -508,27 +521,28 @@
     "dimensions": {
       "x": 10.0,
       "y": 40.0,
-      "z": 6.0
+      "z": 1.0
     },
     "needs": {
       "age": 1.0
     },
     "depositionRate": {
+    	"sand": 1.0
     },
     "absorptionRate": {
       "sand": 0.0
     },
-    "minScore": 0,
+    "minScore": 0.5,
     "heightfrom": "ground",
     "evaluation": "borders",
-    "geometry": "mountain",
+    "geometry": "none",
     "material": "sand"
      
    },
   {
     "name": "Tree",
     "type": "point",
-    "rule": "(beach.inside) * (depth < 0)",
+    "rule": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10)",
     "flow": 0.0,
     "dimensions": {
       "x": 1.0,
@@ -539,6 +553,7 @@
       "age": 0.0
     },
     "depositionRate": {
+    	"shade": 1.0
     },
     "absorptionRate": {
     },
@@ -550,17 +565,18 @@
   {
     "name": "Algae",
     "type": "point",
-    "rule": "(beach.inside) * (depth < 0)",
+    "rule": "(freshwater + sand) * smalllagoon.inside * (random(pos * 100))",
     "flow": 0.0,
     "dimensions": {
-      "x": 1.0,
-      "y": 1.0,
+      "x": 10.0,
+      "y": 10.0,
       "z": 1.0
     },
     "needs": {
       "age": 0.0
     },
     "depositionRate": {
+    	"sand": 1000.0
     },
     "absorptionRate": {
     },
@@ -623,5 +639,49 @@
     "heightfrom": "surface",
     "geometry": "parametrictunnel",
     "material": "water"
+  },
+  {
+    "name": "Palm",
+    "type": "point",
+    "rule": "sand * (depth < 1) * normal((depth + 0.5) * 2) * (1 - (normal(d(palm - pos)/4) min 1))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0.1,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "sand"
+  },
+  {
+    "name": "Bush",
+    "type": "point",
+    "rule": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 10)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 5.0,
+      "y": 5.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0.5,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "rock"
   }
 ]

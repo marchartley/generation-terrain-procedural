@@ -39,6 +39,7 @@
 
 using namespace std;
 
+
 std::map<std::string, std::string> getAllEnvironmentVariables() {
     std::string cmd = "/bin/bash -i -c 'source ~/.bashrc && env'";
     FILE* pipe = popen(cmd.c_str(), "r");
@@ -251,10 +252,32 @@ Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imag
     return reconstructed;
 }
 
-
-
 int main(int argc, char *argv[])
 {
+    #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+    #endif
+    QApplication app(argc, argv);
+
+    QGLFormat glFormat;
+    glFormat.setVersion(4, 5);
+    glFormat.setProfile(QGLFormat::CompatibilityProfile);
+    glFormat.setSampleBuffers(true);
+    glFormat.setDefaultFormat(glFormat);
+    glFormat.setSwapInterval(1);
+    QGLWidget widget(glFormat);
+    widget.makeCurrent();
+
+    const QOpenGLContext *context = GlobalsGL::context();
+
+    qDebug() << "Context valid: " << context->isValid();
+    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
+    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
+    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
+    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
     /*
     float prec = 1000;
     float div = std::pow(prec, .1f);
@@ -302,55 +325,6 @@ int main(int argc, char *argv[])
     }
     //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
     //return 0;
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
-#endif
-    QApplication app(argc, argv);
-
-    QGLFormat glFormat;
-    glFormat.setVersion(4, 5);
-    glFormat.setProfile(QGLFormat::CompatibilityProfile);
-    glFormat.setSampleBuffers(true);
-    glFormat.setDefaultFormat(glFormat);
-    glFormat.setSwapInterval(1);
-    QGLWidget widget(glFormat);
-    widget.makeCurrent();
-
-    const QOpenGLContext *context = GlobalsGL::context();
-
-    qDebug() << "Context valid: " << context->isValid();
-    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
-    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
-    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
-    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
-    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-
-
-/*
-    GridV3 img(100, 100, 1);
-    BSpline path = BSpline({Vector3(0, 10, 0), Vector3(50, 20, 0), Vector3(100, 90, 0)});
-    float nbGrooves = path.length() * 0.1f;
-    float sigma = 20.f;
-
-    img.iterate([&](const Vector3& pos) {
-        float nbGrooves = path.length() * 0.1f;
-        float closestT = path.estimateClosestTime(pos);
-        float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
-        auto [closestPoint, direction] = path.pointAndDerivative(closestT);
-        auto closestGrooveStartPoint = path.getPoint(closestGrooveStartT);
-        direction.normalize();
-        Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, direction.rotated90XY(), Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
-        float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/sigma;
-        float distance = (sizeX * std::abs(newSpace.x - 1.f/sizeX) + std::pow(sizeY * newSpace.y, 4.f));
-        img(pos) = Vector3(1, 1, 1) * std::clamp(1.f - (distance), 0.f, 1.f);
-    });
-
-    Plotter::get()->addImage(img);
-    // Plotter::get()->setAbsoluteModeImage(true);
-    return Plotter::get()->exec();*/
-
-
 
 /*
     int size = 60;
@@ -405,7 +379,6 @@ int main(int argc, char *argv[])
     */
 
     /*
-
     ShapeCurve a = ShapeCurve({Vector3(.1, .1, 0), Vector3(.2, .5, 0), Vector3(.1, .9, 0), Vector3(.5, 1., 0), Vector3(.9, .9, 0), Vector3(.9, .1, 0), Vector3(.5, .7, 0)});
 
 
@@ -433,12 +406,9 @@ int main(int argc, char *argv[])
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, getPoint);
     getPoint(Vector3(.5, .5, 0));
     return Plotter::get()->exec();
-
     */
 
     /*
-
-
     Vector3 dim(100, 100, 1);
     GridF score = GridF::perlin(dim, Vector3(5, 5, 1)); //Image::readFromFile("slope_like_deussen.png").getBwImage().normalize().resize(dim);
     GridV3 gradients = score.grad();
@@ -543,8 +513,8 @@ int main(int argc, char *argv[])
 
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, findCurve);
     return Plotter::get()->addImage(score)->exec();
-
     */
+
     /*
     int bigSize = 100;
     int smallSize = 100;

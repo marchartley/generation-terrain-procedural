@@ -326,7 +326,7 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
     float fakeRadius = std::sqrt(targetArea) * .5f;
     float fakeArea = PI * fakeRadius * fakeRadius;
 
-    ShapeCurve curve = ShapeCurve::circle(fakeRadius * .15f, seedPosition, 20);
+    ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, seedPosition, 20);
     SnakeSegmentation s; // = SnakeSegmentation(curve, score, gradients);
     s.contour = curve;
     s.image = score;
@@ -337,7 +337,7 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
     s.curvatureCost = 0.0f;
     s.lengthCost = 0.0f;
     s.areaCost = 1.f;
-    s.imageCost = 1000.0f;
+    s.imageCost = 10.0f;
     s.targetLength = 0;
     s.targetArea = fakeArea;
     s.collapseFirstAndLastPoint = true;

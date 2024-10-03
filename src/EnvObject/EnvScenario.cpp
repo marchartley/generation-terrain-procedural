@@ -62,11 +62,15 @@ std::vector<ScenariosObject> Scenario::nextObjects()
             if (obj->name == possibleObj.objectName)
                 objCount ++;
         }
+        // if (possibleObj.amountRequired >= 0) {
+        //     proba = std::min(proba, float(possibleObj.amountRequired - objCount));
+        // }
         for (int i = 0; i < dt && (objCount < possibleObj.amountRequired || possibleObj.amountRequired < 0); i++) {
             // std::cout << "Generate " << possibleObj.objectName << "? " << possibleObj.amountRequired << " / " << objCount << std::endl;
             if (random_gen::generate() < proba) {
                 results.push_back(possibleObj);
                 objCount ++;
+                // proba -= 1; // If I asked for multiple at once
             }
         }
     }

@@ -1934,8 +1934,6 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     float epsilon = 1e-1;
-    float length = path.length();
-    float nbGrooves = length * 0.1f;
 
     if (in2D) {
         auto flatPath = path;

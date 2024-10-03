@@ -79,6 +79,9 @@ public:
     int ID = -1;
     int spawnTime = 0;
 
+    SnakeSegmentation snake;
+    bool snakeDefined = false;
+
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
 
@@ -98,6 +101,8 @@ public:
     float evaluate();
 
     void die();
+
+    bool premature = false;
 
     bool createdManually = false;
     bool geometryNeedsUpdate = true;
@@ -129,6 +134,8 @@ public:
     static void removeAllObjects();
     static bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
     static bool updateSedimentation(const GridF& heights);
+    static std::vector<std::string> updateSedimentationKnowingFluidsAndGradients(const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials);
+    static void stabilizeMaterials(const GridF& heights, int maxIterations = 40); // 40 is enough iterations to find a good stability usually, without taking too much time
     static void applyMaterialsTransformations();
     static void updateFlowfield(const GridV3& userFlow = GridV3());
     static void beImpactedByEvents();

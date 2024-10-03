@@ -65,16 +65,16 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
 
     // QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
-    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
-        if (!this->isVisible()) return;
-        if (focusAreaEditing || flowfieldEditing) return;
+    QObject::connect(Plotter::get("Object Preview"), &Plotter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
+        // if (!this->isVisible()) return;
+        // if (!previewingObjectInPlotter) return;
 
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
-        if (!this->isVisible()) return;
-        if (!this->focusAreaEditing) return;
+    QObject::connect(Plotter::get("Focus"), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+        // if (!this->isVisible()) return;
+        // if (!this->focusAreaEditing) return;
 
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
@@ -83,9 +83,9 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->previewFocusAreaEdition(mousePos, leftPressed);
     });
 
-    QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
-        if (!this->isVisible()) return;
-        if (!this->flowfieldEditing) return;
+    QObject::connect(Plotter::get("Flowfield"), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+        // if (!this->isVisible()) return;
+        // if (!this->flowfieldEditing) return;
 
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
@@ -197,10 +197,13 @@ QLayout *EnvObjsInterface::createGUI()
 {
     QLayout* layout = new QVBoxLayout;
 
+    InterfaceUI* ui = new InterfaceUI(layout);
+
     // ButtonElement* instantiateButton = new ButtonElement("Instantiate", [&]() { this->instantiateObject(); });
     // ButtonElement* recomputeErosionButton = new ButtonElement("Erosion values", [&]() { this->recomputeErosionValues(); });
     ButtonElement* spendTimeButton = new ButtonElement("Wait", [&]() {
-        this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */);
+        this->updateUntilStabilization();
+        // this->updateEnvironmentFromEnvObjects(/* meh... I don't know if I should update the terrain or not */);
         this->updateSelectionMesh();
 
         Q_EMIT this->updated();
@@ -210,7 +213,11 @@ QLayout *EnvObjsInterface::createGUI()
 //    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
     TextEditElement* testingFittingFormula = new TextEditElement("", "Fitting func: ");
-    testingFittingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
+    // testingFittingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
+    TextEditElement* testingFitnessFormula = new TextEditElement("", "Fitness func: ");
+    // testingFitnessFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFitnessFormula(expression); });
+    testingFitnessFormula->setOnTextChange([&](std::string expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
+    testingFittingFormula->setOnTextChange([&](std::string expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
     CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
@@ -221,12 +228,14 @@ QLayout *EnvObjsInterface::createGUI()
         this->instantiateSpecific("CoralPolypFlatC", GridF(), false);
     });
 
-    QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
+    // QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
+    LabelElement* label = new LabelElement("Objects: " + std::to_string(EnvObject::instantiatedObjects.size()));
 
-    objectsListWidget = new HierarchicalListWidget;
+    objectsListWidget = new HierarchicalListUI;
     objectsListWidget->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     updateObjectsList();
-    QObject::connect(objectsListWidget, &HierarchicalListWidget::itemSelectionChanged, this, [&]() { this->updateObjectsListSelection(); });
+    objectsListWidget->setOnItemSelectionChanged([&]() { this->updateObjectsListSelection(); });
+    // QObject::connect(objectsListWidget, &HierarchicalListWidget::itemSelectionChanged, this, [&]() { this->updateObjectsListSelection(); });
 
 
     std::vector<ComboboxLineElement> objectsChoices;
@@ -237,17 +246,23 @@ QLayout *EnvObjsInterface::createGUI()
         this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
     });
     ButtonElement* forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), true);
+        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), true, true);
         // this->updateSelectionMesh();
 
         Q_EMIT this->updated();
     });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
 
-    std::vector<QWidget*> materialsButtons;
+    // std::vector<QWidget*> materialsButtons;
+    // for (auto& [name, material] : EnvObject::materials) {
+    //     ButtonElement* showButton = new ButtonElement("Show " + toCapitalize(name), [&](){ this->displayMaterialDistrib(name); });
+    //     materialsButtons.push_back(showButton->get());
+    // }
+
+    std::vector<UIElement*> materialsButtons;
     for (auto& [name, material] : EnvObject::materials) {
         ButtonElement* showButton = new ButtonElement("Show " + toCapitalize(name), [&](){ this->displayMaterialDistrib(name); });
-        materialsButtons.push_back(showButton->get());
+        materialsButtons.push_back(showButton);
     }
 
     ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
@@ -289,24 +304,41 @@ QLayout *EnvObjsInterface::createGUI()
 
     CheckboxElement* displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
 
-    layout->addWidget(newObjectCreationBox->get());
-    layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton})->get());
-    layout->addWidget(waitAtEachFrameButton->get());
-    layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
-//    layout->addWidget(showFlowfieldButton->get());
-//    layout->addWidget(createFromGAN->get());
-    layout->addWidget(flowErosionSlider->get());
-    layout->addWidget(objectCombobox->get());
-    layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
-    layout->addWidget(createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton})->get());
-    layout->addWidget(showElementsOnCanvasButton->get());
-    layout->addWidget(objectsListWidget);
-    layout->addWidget(testingFittingFormula->get());
-    layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
-    layout->addWidget(addGroovesButton->get());
-    layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get(), displayCurrentsButton->get()}));
+//     layout->addWidget(newObjectCreationBox->get());
+//     layout->addWidget(createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton})->get());
+//     layout->addWidget(waitAtEachFrameButton->get());
+//     layout->addWidget(createMultiColumnGroup(materialsButtons, 2));
+// //    layout->addWidget(showFlowfieldButton->get());
+// //    layout->addWidget(createFromGAN->get());
+//     layout->addWidget(flowErosionSlider->get());
+//     layout->addWidget(objectCombobox->get());
+//     layout->addWidget(createMultiColumnGroup({showButton->get(), forceButton->get()}, 2));
+//     layout->addWidget(createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton})->get());
+//     layout->addWidget(showElementsOnCanvasButton->get());
+//     layout->addWidget(objectsListWidget);
+//     layout->addWidget(testingFittingFormula->get());
+//     layout->addWidget(createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton})->get());
+//     layout->addWidget(addGroovesButton->get());
+//     layout->addWidget(createHorizontalGroup({label, createFromFile->get(), saveButton->get(), displayCurrentsButton->get()}));
 
-    return layout;
+    ui->add({
+             createHorizontalGroupUI({newObjectCreationBox, waitAtEachFrameButton}),
+             createHorizontalGroupUI({spendTimeButton, nextStepButton, runButton}),
+             createMultiColumnGroupUI(materialsButtons, 2),
+             flowErosionSlider,
+             objectCombobox,
+             createMultiColumnGroupUI({showButton, forceButton}, 2),
+             createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton}),
+             showElementsOnCanvasButton,
+             objectsListWidget,
+             createVerticalGroupUI({testingFitnessFormula, testingFittingFormula}),
+             createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton}),
+             addGroovesButton,
+             createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton})
+    });
+
+    return ui->get()->layout();
+    // return layout;
 }
 
 void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
@@ -664,7 +696,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
             // Wait until the object is 100% grown:
             int maxIterations = 100;
             while (waitForFullyGrown && newObject && newObject->computeGrowingState() < 1.f) {
-                this->updateEnvironmentFromEnvObjects(false, true);
+                this->updateEnvironmentFromEnvObjects(false, updateScreen);
                 maxIterations--;
                 if (maxIterations < 0) break;
                 if (!isIn(newObject, EnvObject::instantiatedObjects)) {
@@ -673,7 +705,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
             }
             this->currentSelections = {newObject};
             EnvObject::recomputeTerrainPropertiesForObject(objectName);
-            this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
+            this->updateEnvironmentFromEnvObjects(implicit != nullptr, updateScreen); // If implicit is null, don't update the map
             result = newObject;
             this->materialSimulationStable = false; // We have to compute the simulation again
             return;
@@ -802,14 +834,14 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     subsidedHeightmap = initialHeightmap * subsidenceFactor;
 
     std::vector<EnvObject*> immatureObjects;
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        if (obj->computeGrowingState() < 1.f) {
-            materialSimulationStable = false;
-            immatureObjects.push_back(obj);
-        }
-    }
-
     if (killObjectsIfPossible) {
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (obj->computeGrowingState() < 1.f) {
+                materialSimulationStable = false;
+                immatureObjects.push_back(obj);
+            }
+        }
+
         bool atLeastOneDeath = false;
         std::set<std::string> deadObjects;
         for (auto& obj : EnvObject::instantiatedObjects) {
@@ -866,7 +898,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     }
     displayProcessTime("Update heightmap... ", [&]() {
         // heightmap->fromVoxelGrid(*voxelGrid.get());
-            this->addObjectsHeightmaps();
+        this->addObjectsHeightmaps();
         this->flowErosionSimulation();
         // this->heightmap->heights = subsidedHeightmap.gaussianSmooth(1.f, true);
         if (displayDepositionOnHeightmap) {
@@ -918,6 +950,12 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     }
 }
 
+void EnvObjsInterface::updateUntilStabilization()
+{
+    auto heights = heightmap->getHeights();
+    EnvObject::stabilizeMaterials(heights);
+}
+
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
     EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField);
@@ -950,12 +988,13 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 {
     focusAreaEditing = false;
     flowfieldEditing = false;
+    previewingObjectInPlotter = true;
     // currentlyPreviewedObject = objectName;
     Vector3 dimensions = initialHeightmap.getDimensions();
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
     if (!possible) {
-        Plotter::get()->addImage(score * 0.f);
+        Plotter::get("Object Preview")->addImage(score * 0.f);
     } else {
         float smallestPositive = score.max();
         score.iterate([&](size_t i) {
@@ -965,9 +1004,9 @@ void EnvObjsInterface::displayProbas(std::string objectName)
         score.iterateParallel([&](size_t i) {
             score[i] = std::max(score[i], smallestPositive);
         });
-        Plotter::get()->addImage(score);
+        Plotter::get("Object Preview")->addImage(score);
     }
-    Plotter::get()->show();
+    Plotter::get("Object Preview")->show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(score);
     Q_EMIT updated();
 }
@@ -975,8 +1014,8 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
 {
     GridF distribution = EnvObject::materials[materialName].currentState;
-    Plotter::get()->addImage(distribution);
-    Plotter::get()->show();
+    Plotter::get("Material")->addImage(distribution);
+    Plotter::get("Material")->show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(distribution);
     Q_EMIT updated();
 }
@@ -995,27 +1034,22 @@ void EnvObjsInterface::displayPolypDistrib()
     Plotter::get()->show();
 }*/
 
-void EnvObjsInterface::displayFlowfieldAsImage()
-{
-    GridV3 flow = EnvObject::flowfield;
-    Plotter::get()->addImage(flow);
-    Plotter::get()->show();
-}
-
 void EnvObjsInterface::manualModificationOfFocusArea()
 {
     this->focusAreaEditing = true;
     this->flowfieldEditing = false;
-    Plotter::get()->addImage(this->renderFocusArea());
-    Plotter::get()->show();
+    this->previewingObjectInPlotter = false;
+    Plotter::get("Focus")->addImage(this->renderFocusArea());
+    Plotter::get("Focus")->show();
 }
 
 void EnvObjsInterface::manualModificationOfFlowfield()
 {
     this->focusAreaEditing = false;
     this->flowfieldEditing = true;
-    Plotter::get()->addImage(this->renderFlowfield());
-    Plotter::get()->show();
+    this->previewingObjectInPlotter = false;
+    Plotter::get("Flowfield")->addImage(this->renderFlowfield());
+    Plotter::get("Flowfield")->show();
 }
 
 void EnvObjsInterface::updateObjectsList()
@@ -1254,18 +1288,18 @@ void EnvObjsInterface::updateScenarioDefinition(const std::string &newDefinition
 void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formula)
 {
     EnvPoint fake;
-    fake.s_FittingFunction = formula;
+    // fake.s_FittingFunction = formula;
     fake.s_FitnessFunction = formula;
     try {
-        fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
+        // fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
         fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
 
         GridF eval(EnvObject::flowfield.getDimensions());
         eval.iterateParallel([&](const Vector3& p) {
-            eval(p) = fake.evaluate(p);
+            eval(p) = fake.fitnessFunction(p);
         });
-        Plotter::get()->addImage(eval);
-        Plotter::get()->show();
+        Plotter::get("Fitness Function")->addImage(eval);
+        Plotter::get("Fitness Function")->show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1275,20 +1309,51 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formul
 
 void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formula)
 {
+    this->focusAreaEditing = false;
+    this->flowfieldEditing = false;
+    this->previewingObjectInPlotter = true;
+
     EnvPoint fake;
     fake.s_FittingFunction = formula;
-    fake.s_FitnessFunction = formula;
+    // fake.s_FitnessFunction = formula;
     try {
         fake.fittingFunction = EnvObject::parseFittingFunction(formula, "");
-        fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
+        // fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
 
         GridF eval(EnvObject::flowfield.getDimensions());
         eval.iterateParallel([&](const Vector3& p) {
-            eval(p) = fake.evaluate(p);
+            eval(p) = fake.fittingFunction(p);
         });
-        Plotter::get()->addImage(eval);
-        Plotter::get()->show();
+        Plotter::get("Fitting Function")->addImage(eval);
+        Plotter::get("Fitting Function")->show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
+        Q_EMIT updated();
+    } catch (std::exception e) {
+        std::cerr << e.what() << std::endl;
+    }
+}
+
+void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::string fitnessFuncFormula, std::string fittingFuncFormula)
+{
+    this->focusAreaEditing = false;
+    this->flowfieldEditing = false;
+    this->previewingObjectInPlotter = true;
+
+    EnvPoint fake;
+    fake.s_FittingFunction = (trim(fittingFuncFormula) == "" ? EnvObject::availableObjects[objectCombobox->getSelection().label]->s_FittingFunction : fittingFuncFormula);
+    fake.s_FitnessFunction = (trim(fitnessFuncFormula) == "" ? EnvObject::availableObjects[objectCombobox->getSelection().label]->s_FitnessFunction : fitnessFuncFormula);
+    try {
+        fake.fittingFunction = EnvObject::parseFittingFunction(fake.s_FittingFunction, "");
+        fake.fitnessFunction = EnvObject::parseFittingFunction(fake.s_FitnessFunction, "");
+
+        GridV3 eval(EnvObject::flowfield.getDimensions());
+        eval.iterateParallel([&](const Vector3& p) {
+            eval(p).x = fake.fittingFunction(p);
+            eval(p).y = fake.fitnessFunction(p);
+        });
+        Plotter::get("Object Preview")->addImage(eval);
+        Plotter::get("Object Preview")->show();
+        // dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
         std::cerr << e.what() << std::endl;
@@ -1636,11 +1701,14 @@ void EnvObjsInterface::loadScene(std::string filename)
             asPoint->position = json_to_vec3(obj["position"]);
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(newObject)) {
             asCurve->curve = json_to_bspline(obj["curve"]);
+            newObject->createdManually = true;
         } else if (auto asArea = dynamic_cast<EnvArea*>(newObject)) {
             asArea->curve = json_to_bspline(obj["curve"]);
+            newObject->createdManually = true;
         }
         newObject->recomputeEvaluationPoints();
-        newObject->createdManually = true;
+        // newObject->createdManually = false;
+        newObject->premature = true;
         auto implicit = newObject->createImplicitPatch(initialHeightmap);
         this->implicitPatchesFromObjects[newObject] = implicit;
         if (implicit != nullptr) {
@@ -1654,9 +1722,18 @@ void EnvObjsInterface::loadScene(std::string filename)
         EnvObject::recomputeTerrainPropertiesForObject(objectName);
     }
     EnvObject::recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
-    updateEnvironmentFromEnvObjects(true, true, false);
+    updateEnvironmentFromEnvObjects(true, false, false);
+    for (int i = 0; i < 20; i++)
+        updateEnvironmentFromEnvObjects(false, false, false);
+    updateEnvironmentFromEnvObjects(false, true, false);
     updateObjectsList();
     updateSelectionMesh();
+
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        obj->premature = false;
+        // newObject->createdManually = false;
+    }
+    updateEnvironmentFromEnvObjects(false, true, false);
 
     Q_EMIT this->updated();
 }
@@ -1703,27 +1780,30 @@ GridV3 EnvObjsInterface::renderFlowfield() const
     EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
     GridV3& flow = EnvObject::flowfield;
     // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
-    return Plotter::get()->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
+    return Plotter::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
 }
 
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
 {
-    GridV3 dataV3 = Plotter::get()->displayedImage;
-    GridF data(dataV3.getDimensions());
+    GridV3 dataV3 = Plotter::get("Object Preview")->displayedImage;
+    GridF fitnessScoreGrid(dataV3.getDimensions());
+    GridF fittingScoreGrid(dataV3.getDimensions());
     dataV3.iterateParallel([&](size_t i) {
-        data[i] = dataV3[i].x;
+        fitnessScoreGrid[i] = dataV3[i].x;
+        fittingScoreGrid[i] = dataV3[i].y;
     });
 
     auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
 
-    GridV3 result(data.getDimensions());
+    GridV3 result(fitnessScoreGrid.getDimensions());
     ShapeCurve isoline;
     // auto position = clickPos;
-    auto score = data;
+    auto score = fittingScoreGrid;
+    // auto score = fitnessScoreGrid;
     // score = score.gaussianSmooth(5.f, true, true, -1);
     GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
-    data.raiseErrorOnBadCoord = false;
-    data.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    fitnessScoreGrid.raiseErrorOnBadCoord = false;
+    fitnessScoreGrid.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     gradients.raiseErrorOnBadCoord = false;
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
@@ -1743,7 +1823,24 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         isoline = initialCurve;
         isoline.closed = false;
     } else if (auto objAsArea = dynamic_cast<EnvArea*>(obj)) {
-        ShapeCurve initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
+        ShapeCurve initialCurve;
+        if (obj->snakeDefined) {
+            float fakeRadius = std::sqrt(objAsArea->length * objAsArea->width) * .5f;
+            float fakeArea = PI * fakeRadius * fakeRadius;
+
+            ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, position, 20);
+            SnakeSegmentation s = obj->snake;
+            s.contour = curve;
+            s.image = score;
+            s.gradientField = gradients;
+            s.targetLength = 0;
+            s.targetArea = fakeArea;
+            s.collapseFirstAndLastPoint = true;
+
+            initialCurve = s.runSegmentation(200);
+        } else {
+            initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
+        }
         isoline = initialCurve;
     }
 
@@ -1756,14 +1853,14 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     int nbSamples = 500;
     auto path = isoline.getPath(nbSamples); // .resamplePoints(nbSamples).points;
     for (size_t i = 0; i < path.size(); i++) {
-        result(path[i]) = Vector3(1.f, 0, 0); //colorPalette(float(i) / float(path.size() - 1));
+        result(path[i]) = Vector3(0, 0, 1.f); //colorPalette(float(i) / float(path.size() - 1));
     }
-    for (size_t i = 0; i < isoline.size(); i++) {
-        result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
-    }
-    Plotter::get()->addImage(result);
-    Plotter::get()->show();
-    Plotter::get()->addImage(data);
+    // for (size_t i = 0; i < isoline.size(); i++) {
+    //     result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
+    // }
+    Plotter::get("Object Preview")->addImage(result);
+    Plotter::get("Object Preview")->show();
+    Plotter::get("Object Preview")->addImage(dataV3);
 }
 
 void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocus)
@@ -1775,8 +1872,8 @@ void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocu
     focusedArea.iterateParallel([&](size_t i) {
         focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
     });
-    Plotter::get()->addImage(renderFocusArea());
-    Plotter::get()->show();
+    Plotter::get("Focus")->addImage(renderFocusArea());
+    Plotter::get("Focus")->show();
 }
 
 void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
@@ -1795,12 +1892,16 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
 
-    Plotter::get()->addImage(renderFlowfield());
-    Plotter::get()->show();
+    Plotter::get("Flowfield")->addImage(renderFlowfield());
+    Plotter::get("Flowfield")->show();
 }
 
-void EnvObjsInterface::showAllElementsOnPlotter() const
+void EnvObjsInterface::showAllElementsOnPlotter()
 {
+    this->focusAreaEditing = false;
+    this->flowfieldEditing = false;
+    this->previewingObjectInPlotter = false;
+
     std::map<TerrainTypes, Vector3> materialToColor = {
         {WATER, Vector3(0, 0, 1)},
         {AIR,   Vector3(0.4, 0.4, 1)},
@@ -1832,8 +1933,8 @@ void EnvObjsInterface::showAllElementsOnPlotter() const
         }
     }
 
-    Plotter::get()->addImage(img);
-    Plotter::get()->show();
+    Plotter::get("Topography")->addImage(img);
+    Plotter::get("Topography")->show();
 }
 
 void EnvObjsInterface::addObjectsHeightmaps()
@@ -1982,6 +2083,9 @@ void EnvObjsInterface::endNewObjectCreation()
     // Creation of an object
     auto objectModel = EnvObject::availableObjects[getCurrentObjectName()];
 
+    if ((dynamic_cast<EnvCurve*>(objectModel) || dynamic_cast<EnvArea*>(objectModel)) && this->objectSkeletonCreation.empty())
+        return;
+
     auto newObject = this->instantiateObjectUsingSpline(objectModel->name, this->objectSkeletonCreation);
     this->objectSkeletonCreation = BSpline();
     if (newObject) {
@@ -2124,7 +2228,6 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
 
 void EnvObjsInterface::endDraggingObject(bool destroyObjects)
 {
-
     if (draggingFullObject.isValid() && destroyObjects) {
         for (auto currentSelection : currentSelections) {
             this->destroyEnvObject(currentSelection);
@@ -2139,7 +2242,7 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
                 currentSelection->age = 0.f;
                 if (this->implicitPatchesFromObjects.count(currentSelection) != 0) {
                     currentSelection->geometryNeedsUpdate = true;
-                    auto newPatch = currentSelection->createImplicitPatch(subsidedHeightmap/*, dynamic_cast<ImplicitPrimitive*>(currentSelection->_patch)*/);
+                    auto newPatch = currentSelection->createImplicitPatch(subsidedHeightmap * 0.f/*, dynamic_cast<ImplicitPrimitive*>(currentSelection->_patch)*/);
                     if (newPatch) {
                         *(this->implicitPatchesFromObjects[currentSelection]) = *newPatch;
                         // delete newPatch;

@@ -6,19 +6,24 @@
 #include <vector>
 #include "Interface/InterfaceUtils.h"
 #include "Interface/FancySlider.h"
+#include "Interface/HierarchicalListWidget.h"
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QLineEdit>
 #include <QComboBox>
 #include <optional>
+#include <variant>
+
+class UIElement;
+
+
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
     template <typename Callable, typename... Args> \
     void FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
     }
-
 
 class UIElement : public QObject {
     Q_OBJECT
@@ -55,6 +60,16 @@ protected:
     std::vector<QMetaObject::Connection> connections;
     unsigned int ID;
     std::string name;
+};
+
+class LabelElement : public UIElement {
+public:
+    LabelElement(std::string text);
+
+    QLabel* label();
+
+    LabelElement* setText(std::string newText);
+    std::string getText();
 };
 
 class ButtonElement : public UIElement {
@@ -242,10 +257,26 @@ public:
 //    bool itemsAreImages = false;
 };
 
+class HierarchicalListUI : public UIElement {
+public:
+    HierarchicalListUI();
+
+    HierarchicalListWidget* hierarchicalList();
+
+    HierarchicalListUI* setSelectionMode(QAbstractItemView::SelectionMode mode);
+
+    DEFINE_SET_ON_FUNCTION(setOnItemSelectionChanged, HierarchicalListWidget, itemSelectionChanged);
+
+    HierarchicalListUI* clear();
+    HierarchicalListUI* addItem(HierarchicalListWidgetItem* item);
+    HierarchicalListUI* setCurrentItems(std::vector<int> selectedIDs);
+    QList<QListWidgetItem *> selectedItems();
+};
+
 class InterfaceUI : public UIElement {
     Q_OBJECT
 public:
-    InterfaceUI(QLayout* layout, std::string title = "");
+    InterfaceUI(QLayout* layout, bool tight = true, std::string title = "");
     ~InterfaceUI();
 
     QGroupBox* box() const;
@@ -266,6 +297,7 @@ public Q_SLOTS:
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets);
 InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets);
+InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns = 2);
 
 #undef DEFINE_SET_ON_FUNCTION
 
