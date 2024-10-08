@@ -183,18 +183,18 @@
     },
     "dimensions": {
       "x": 20,
-      "y": 20,
+      "y": 90,
       "z": 20
     },
     "snake": {
 		"connectivity": 0.0,
 		"curvature": 0.0,
 		"length": 0.0,
-		"area": 0.0,
-		"image": 0.010,
+		"area": 200.0,
+		"image": 0.00001,
 		"imageinside": 1.0,
 		"imageborders": 0.0,
-		"catapillars": 4
+		"catapillars": 0
     },
     "minScore": 0.10,
     "heightfrom": "ground",

@@ -240,6 +240,9 @@ QLayout *EnvObjsInterface::createGUI()
 
     std::vector<ComboboxLineElement> objectsChoices;
     for (auto& [name, obj] : EnvObject::availableObjects) {
+        if (toLower(name) != "island") {
+            continue;
+        }
         objectsChoices.push_back(ComboboxLineElement{name, 0});
     }
     ButtonElement* showButton = new ButtonElement("Show", [&](){
@@ -1348,8 +1351,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::str
 
         GridV3 eval(EnvObject::flowfield.getDimensions());
         eval.iterateParallel([&](const Vector3& p) {
-            eval(p).x = fake.fittingFunction(p);
-            eval(p).y = fake.fitnessFunction(p);
+            eval(p).x = fake.fitnessFunction(p);
+            eval(p).y = fake.fittingFunction(p);
         });
         Plotter::get("Object Preview")->addImage(eval);
         Plotter::get("Object Preview")->show();
@@ -1794,11 +1797,11 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     });
 
     auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
+    auto score = fittingScoreGrid;
 
-    GridV3 result(fitnessScoreGrid.getDimensions());
+    GridV3 result = GridV3(score.getDimensions(), Vector3(1, 1, 1)) * score;
     ShapeCurve isoline;
     // auto position = clickPos;
-    auto score = fittingScoreGrid;
     // auto score = fitnessScoreGrid;
     // score = score.gaussianSmooth(5.f, true, true, -1);
     GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
@@ -1828,7 +1831,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
             float fakeRadius = std::sqrt(objAsArea->length * objAsArea->width) * .5f;
             float fakeArea = PI * fakeRadius * fakeRadius;
 
-            ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, position, 20);
+            ShapeCurve curve = ShapeCurve::circle(fakeRadius, position, 20);
             SnakeSegmentation s = obj->snake;
             s.contour = curve;
             s.image = score;
@@ -1837,15 +1840,30 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
             s.targetArea = fakeArea;
             s.collapseFirstAndLastPoint = true;
 
-            initialCurve = s.runSegmentation(200);
+            int maxIterations = 10;
+            for (int iteration = 0; iteration < maxIterations; iteration++) {
+                initialCurve = s.runSegmentation(50);
+                ShapeCurve display = initialCurve;
+                display.points.push_back(display[0]);
+                display.resamplePoints(100);
+                if (iteration == 9) {
+                    for (size_t i = 0; i < display.size(); i++) {
+                        result(display[i]) = colorPalette(float(iteration) / float(maxIterations - 1));
+                    }
+                }
+                if (iteration == 9) {
+                    for (const auto& v : s.randomGreenCoords) {
+                        result(computePointFromGreenCoordinates(v, ShapeCurve(s.contour))).z = 1;
+                    }
+                }
+            }
         } else {
             initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
         }
         isoline = initialCurve;
     }
 
-    result += dataV3;
-    if (isoline.closed) {
+    /*if (isoline.closed) {
         dataV3.iterateParallel([&](const Vector3& pos) {
             result(pos) += Vector3(.5f, .5f, .5f) * (isoline.containsXY(pos, false) ? 1.f : 0.f);
         });
@@ -1855,9 +1873,9 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     for (size_t i = 0; i < path.size(); i++) {
         result(path[i]) = Vector3(0, 0, 1.f); //colorPalette(float(i) / float(path.size() - 1));
     }
-    // for (size_t i = 0; i < isoline.size(); i++) {
-    //     result(isoline[i]) = Vector3(0.f, 0, 1); //colorPalette(float(i) / float(path.size() - 1));
-    // }
+    for (size_t i = 0; i < isoline.size(); i++) {
+        result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
+    }*/
     Plotter::get("Object Preview")->addImage(result);
     Plotter::get("Object Preview")->show();
     Plotter::get("Object Preview")->addImage(dataV3);
