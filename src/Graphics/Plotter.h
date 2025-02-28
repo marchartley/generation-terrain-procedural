@@ -84,6 +84,7 @@ public:
 
     Plotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
     Plotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
+    Plotter* addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
 
     Plotter* addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     Plotter* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
@@ -103,6 +104,8 @@ public:
     Plotter* copyToClipboard();
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
+
+    QTimer *animate(std::function<void()> callback, int interval_ms = 30);
 
     Plotter* reset();
 

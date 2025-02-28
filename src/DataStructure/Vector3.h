@@ -81,6 +81,9 @@ public:
 
     Vector3 reflexion(const Vector3& normal);
 
+    Vector3 toPolar();
+    Vector3 fromPolar();
+
     float divergence() { return x + y + z; }
 
     static Vector3 fromMatrix(Matrix mat);

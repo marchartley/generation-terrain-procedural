@@ -1125,7 +1125,7 @@ QLayout *ErosionInterface::createGUI()
 
 
 //    erosionLayout->addWidget(createVerticalGroup({displayTrajectoriesButton})););
-
+/*
     erosionLayout->addWidget(createVerticalGroup({
                                                      thermalButton->get(),
                                                      hydraulicButton->get(),
@@ -1164,8 +1164,8 @@ QLayout *ErosionInterface::createGUI()
                                                         displayTrajectoriesButton,
                                                         displayBoundariesButton
     }));
+*/
 
-/*
     erosionLayout->addWidget(createVerticalGroup({
                                                      thermalButton->get(),
                                                      hydraulicButton->get(),
@@ -1248,7 +1248,7 @@ QLayout *ErosionInterface::createGUI()
                                                          useNativeDensity,
                                                          useRandomDensity
                                                      })
-                                                 }));*/
+                                                 }));
 
     /*
     erosionLayout->addWidget(createVerticalGroup({

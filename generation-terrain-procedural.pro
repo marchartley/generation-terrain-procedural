@@ -144,6 +144,7 @@ SOURCES += \
     src/Interface/PrimitivePatchesInterface.cpp \
         src/Interface/RangeSlider.cpp \
     src/Interface/SPHSimulationInterface.cpp \
+    src/Interface/ScreenshotInterface.cpp \
         src/Interface/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
@@ -187,6 +188,7 @@ SOURCES += \
         src/Utils/Globals.cpp \
     src/Utils/HotreloadFile.cpp \
     src/Utils/PbmReader.cpp \
+    src/Utils/RadialShape.cpp \
         src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
     src/Utils/Skeletonize.cpp \
@@ -332,6 +334,7 @@ HEADERS += \
     src/Interface/PrimitivePatchesInterface.h \
     src/Interface/RangeSlider.h \
     src/Interface/SPHSimulationInterface.h \
+    src/Interface/ScreenshotInterface.h \
     src/Interface/Slider3D.h \
     src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
@@ -376,6 +379,7 @@ HEADERS += \
     src/Karst/KarstPathsGeneration.h \
     src/Utils/HotreloadFile.h \
     src/Utils/PbmReader.h \
+    src/Utils/RadialShape.h \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \
     src/Utils/Skeletonize.h \

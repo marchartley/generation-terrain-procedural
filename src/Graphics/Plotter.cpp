@@ -263,6 +263,11 @@ Plotter* Plotter::addPlot(std::vector<Vector3> data, std::string name, QColor co
     return this;
 }
 
+Plotter *Plotter::addPlot(const BSpline &data, std::string name, QColor color)
+{
+    return this->addPlot(data.points, name, color);
+}
+
 Plotter* Plotter::addScatter(std::vector<float> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
 {
     std::vector<Vector3> _data;
@@ -323,7 +328,9 @@ Plotter* Plotter::addImage(GridV3 image)
             });
             float d = max - min;
             if (d == 0) {
-                image *= 0.f;
+                image.iterateParallel([&](size_t i) {
+                    image[i][c] = 0.f;
+                });
             } else {
                 image.iterateParallel([&](size_t i) {
                     image[i][c] = (image[i][c] - min) / d;
@@ -645,6 +652,19 @@ void Plotter::showEvent(QShowEvent *event)
 {
     QDialog::showEvent(event);
     this->draw();
+}
+
+QTimer *Plotter::animate(std::function<void ()> callback, int interval_ms)
+{
+    QTimer* t = new QTimer(this);
+    t->setInterval(interval_ms);
+    t->setSingleShot(true);
+    QObject::connect(t, &QTimer::timeout, [t, callback, interval_ms]() {
+        callback();
+        t->start(interval_ms);
+    });
+    t->start();
+    return t;
 }
 
 Plotter* Plotter::reset()

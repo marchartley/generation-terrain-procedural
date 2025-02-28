@@ -356,12 +356,68 @@ void Viewer::setupViewFromFile(std::string filename)
     try {
        std::cout << "Using view from file " << filename << std::endl;
         this->setStateFileName(QString::fromStdString(filename));
-        this->restoreStateFromFile();
+        // this->restoreStateFromFile();
+        this->correctedFunctionForCameraRepositioning();
         this->setStateFileName("");
     //    this->saveStateToFile();
     } catch (std::exception& e) {
         std::cout << "Error: " << e.what() << std::endl;
     }
+}
+
+bool Viewer::correctedFunctionForCameraRepositioning()
+{
+    QString name = stateFileName();
+
+    if (name.isEmpty())
+        return false;
+
+    QFileInfo fileInfo(name);
+
+    if (!fileInfo.isFile())
+        // No warning since it would be displayed at first start.
+        return false;
+
+    if (!fileInfo.isReadable()) {
+        std::cerr << "Problem in state restoration: File " << name.toStdString() << " is not readable." << std::endl;
+        return false;
+    }
+
+    // Read the DOM tree form file
+    QFile f(name);
+    if (f.open(QIODevice::ReadOnly)) {
+        QDomDocument doc;
+        doc.setContent(&f);
+        f.close();
+        QDomElement element = doc.documentElement();
+
+        const QString version = element.attribute("version");
+        // if (version != QGLViewerVersionString())
+        if (version[0] != '2') {
+            // Patches for previous versions should go here when the state file syntax
+            // is modified.
+            std::cerr << "State file created using QGLViewer version " << version.toStdString() << " may not be correctly read." << std::endl;
+        }
+
+        QDomElement child = element.firstChild().toElement();
+        while (!child.isNull()) {
+            if (child.tagName() == "Camera") {
+                // connectAllCameraKFIInterpolatedSignals(false);
+                camera()->initFromDOMElement(child);
+                // connectAllCameraKFIInterpolatedSignals();
+            }
+
+            if ((child.tagName() == "ManipulatedFrame") && (manipulatedFrame()))
+                manipulatedFrame()->initFromDOMElement(child);
+
+            child = child.nextSibling().toElement();
+        }
+    } else {
+        std::cerr << "Unable to open file " << name.toStdString() << ": " << f.errorString().toStdString() << std::endl;
+        return false;
+    }
+    this->update();
+    return true;
 }
 
 void Viewer::saveViewToFile(std::string filename)
@@ -569,7 +625,9 @@ bool Viewer::checkMouseOnVoxel()
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos;
-        this->mainGrabber->move(currPos);
+        if (this->mainGrabber) {
+            this->mainGrabber->move(currPos);
+        }
     }
     return found;
 }

@@ -74,6 +74,11 @@ public:
 
     std::vector<std::pair<size_t, size_t>> checkAutointersections() const;
 
+    BSpline& displacePointsRandomly(float maxDistance);
+    BSpline& displacePointsRandomly(const Vector3& maxDistance);
+    BSpline& displacePointsRandomlyPerlin(float maxDistance, float scale = 1.f, bool loop = false);
+    BSpline& displacePointsRandomlyPerlin(const Vector3 &maxDistance, float scale = 1.f, bool loop = false);
+
     virtual BSpline& removeDuplicates();
 
     std::string toString() const;

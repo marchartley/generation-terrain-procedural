@@ -537,7 +537,8 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     if (data != nullptr)
         delete[] data;
 
-    map = (map / map.max()).resize(nx, ny, 1);
+    // map = (map / map.max()).resize(nx, ny, 1);
+    map = (map / 255.f).resize(nx, ny, 1);
     map *= heightFactor;
     this->heights = map;
     return *this;

@@ -82,6 +82,7 @@ public Q_SLOTS:
     void reloadAllShaders();
 
     void setupViewFromFile(std::string filename);
+    bool correctedFunctionForCameraRepositioning();
     void saveViewToFile(std::string filename);
 
     void screenshot();

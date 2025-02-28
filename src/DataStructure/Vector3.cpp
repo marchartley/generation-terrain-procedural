@@ -519,6 +519,16 @@ Vector3 Vector3::reflexion(const Vector3& normal)
     return *this - n2d;
 }
 
+Vector3 Vector3::toPolar()
+{
+    return Vector3(this->getAngleWith(Vector3(1, 0)) / (2.f * M_PI), this->norm());
+}
+
+Vector3 Vector3::fromPolar()
+{
+    return Vector3(1, 0).rotate(0, 0, this->x * (2.f * M_PI)) * this->y;
+}
+
 Vector3 Vector3::fromMatrix(Matrix mat)
 {
     if (mat.size() == 1) {

@@ -36,6 +36,7 @@
 #include "EnvObject/ExpressionParser.h"
 #include "Utils/HotreloadFile.h"
 #include "EnvObject/PositionOptimizer.h"
+#include "Utils/RadialShape.h"
 
 using namespace std;
 
@@ -278,6 +279,218 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+
+    auto smax = [&](float a, float b, float k) {
+        //return a + ((b - a) / (1 + exp(-(1.f/k) * (b - a))));
+        return a + (1.f/k) * ((b - a) * k) / (1 - exp(-k * (b - a)));
+    };
+    auto smoothstep = [&](float a, float b, float x_a, float x_b, float x) -> float {
+        float _x = (x - x_a) / (x_b - x_a);
+        return a + (b - a) * (3 * _x * _x - 2 * _x * _x * _x);
+    };
+
+
+    int iteration = 0;
+    auto createCoralIsland = [&]() {
+        GridF finalHeight;
+        bool verbose = false;
+        RadialShape profileCurve;
+        RadialShape resistanceCurve;
+        std::vector<float> profileData = {0.9627757352941178, 0.897671568627451, 0.8425245098039216, 0.775888480392157,
+                                           0.6893382352941178, 0.6479779411764706, 0.5974264705882353, 0.5606617647058822,
+                                           0.5392156862745099, 0.508578431372549, 0.4986213235294116, 0.48406862745098034,
+                                           0.4810049019607843, 0.4779411764705883, 0.4756433823529411, 0.47411151960784303,
+                                           0.4595588235294117, 0.4564950980392156, 0.44117647058823517, 0.431985294117647,
+                                           0.42585784313725483, 0.315563725490196, 0.2481617647058823, 0.015318627450980338,
+                                           0.015318627450980338, 0.015, 0.01, 0.001, 0.0, 0.0};
+        std::vector<float> resistanceData = {0.7429534313725492, 0.7153799019607845, 0.6755514705882353, 0.626531862745098,
+                                               0.5821078431372548, 0.5238970588235294, 0.42585784313725483, 0.27037377450980393,
+                                               0.1470588235294117, 0.0850183823529411, 0.036764705882352866, 0.03063725490196073,
+                                               0.027573529411764608, 0.027573529411764608, 0.027573529411764608, 0.039828431372548934,
+                                               0.06127450980392152, 0.08272058823529405, 0.10569852941176466, 0.15624999999999994,
+                                               0.22212009803921565, 0.3117340686274509, 0.4840686274509804, 0.6441482843137254,
+                                               0.7467830882352942, 0.8620689655172414, 0.04901960784313719, 0.0337009803921568,
+                                             0.021446078431372473, 0.003063725490196012};
+        for (int i = 0; i < profileData.size(); i++) {
+            profileCurve.points.push_back(Vector3(float(i)/float(profileData.size() + 1), profileData[i]));
+        }
+        for (int i = 0; i < resistanceData.size(); i++) {
+            resistanceCurve.points.push_back(Vector3(float(i)/float(resistanceData.size() + 1), resistanceData[i]));
+        }
+
+
+        int w = 256;
+        Vector3 dims(w, w, 1);
+        Vector3 center = dims.xy() / 2;
+
+        std::vector<RadialShape> regions(5);
+        std::vector<float> distancesForRegions = {0.4f, 0.5f, 0.7f, 0.8f, 1.f};
+
+        for (int i = 0; i < regions.size(); i++) {
+            float y = distancesForRegions[i] * .5f * w;
+            regions[i] = RadialShape(y, 20);
+            for (auto& p : regions[i]) {
+                p.y = std::max(p.y + random_gen::generate_fbm(cos(p.x * 2.f * M_PI) * 100.f, sin(p.x * 2.f * M_PI) * 100.f, p.y * 100.f) * 10.f, 0.f);
+            }
+        }
+
+
+        GridV3 displacementMap(dims);
+        displacementMap.iterateParallel([&](const Vector3& p) {
+            Vector3 pp = p * 0.1f;
+            // pp.z = iteration;
+            displacementMap.at(p) = Vector3(random_gen::generate_fbm(pp.x, pp.y, pp.z), random_gen::generate_fbm(pp.x + 100.f, pp.y + 100.f, pp.z)) * random_gen::generate_fbm(pp.x + 200.f, pp.y, pp.z) * 40.f;
+        });
+
+        GridF distances(dims, regions.size());
+        displayProcessTime("Compute distances... ", [&]() {
+            distances.iterateParallel([&](const Vector3& p) {
+                Vector3 polar = (p - center).toPolar();
+                distances.at(p) = (regions.size());
+                for (int i = 0; i < regions.size(); i++) {
+                    if (regions[i].containsXY(polar)) {
+                        if (i > 0) {
+                            float dist0 = regions[i].estimateDistanceFrom(polar);
+                            float dist1 = regions[i - 1].estimateDistanceFrom(polar);
+                            distances.at(p) = (i) + (dist1/(dist0 + dist1));
+                        } else {
+                            // distances.at(p) = 0;
+                            float dist0 = regions[i].estimateDistanceFrom(polar);
+                            float dist1 = polar.y;
+                            distances.at(p) = (dist1/(dist0 + dist1));
+                        }
+                        break;
+                    }
+                }
+            });
+        }, verbose);
+
+        GridF resistanceMap(dims);
+        displayProcessTime("Compute resistance... ", [&]() {
+            resistanceMap.iterateParallel([&](const Vector3& p) {
+                float resistance = resistanceCurve.estimateDistanceFrom(Vector3(distances.at(p) / float(regions.size() - 1), 0));
+                resistanceMap.at(p) = resistance;
+                displacementMap.at(p) *= 1.f - resistance;
+            });
+        }, verbose);
+
+        displayProcessTime("Recompute distances... ", [&]() {
+            distances = distances.warpWithoutInterpolation(displacementMap);
+        }, verbose);
+
+        GridF heightMap(dims);
+        displayProcessTime("Compute heights... ", [&]() {
+            heightMap.iterateParallel([&](const Vector3& p) {
+                heightMap.at(p) = profileCurve.estimateDistanceFrom(Vector3(distances.at(p) / float(regions.size() - 1), 0));
+            });
+            heightMap = heightMap.warpWithoutInterpolation(displacementMap);
+        }, verbose);
+
+        GridF labelMap(dims);
+        displayProcessTime("Compute labels... ", [&]() {
+            labelMap.iterateParallel([&](const Vector3& p) {
+                labelMap.at(p) = std::floor(distances.at(p));
+            });
+            labelMap = labelMap.warpWithoutInterpolation(displacementMap);
+        }, verbose);
+
+        auto subside = [&](float waterLevel, float minCoralHeight, float maxCoralHeight, float subsidence, GridF heights, GridF distances) -> GridF {
+            heights *= subsidence;
+
+            float x_begin_lagoon = 0.f;
+            float x_end_lagoon = 0.25f;
+            float h_lagoon = waterLevel - 0.2f;
+
+            float x_begin_crest = 0.75f;
+            float x_end_crest   = 0.85f;
+            float h_crest = waterLevel - 0.05f;
+
+            float x_begin_abyss       = 1.f;
+            float h_abyss = 0.f;
+
+            GridF distanceInReef = (distances - 2.f) * .5f;
+            distanceInReef.iterateParallel([&](const Vector3& p) {
+                distanceInReef.at(p) = (distanceInReef.at(p) > 1.f ? 1.f : distanceInReef.at(p) < 0 ? 0.f : distanceInReef.at(p));
+            });
+
+            GridF coralHeight(heights.getDimensions());
+            GridF finalHeight(heights.getDimensions());
+            coralHeight.iterateParallel([&](const Vector3& p) {
+                float d = distanceInReef.at(p);
+                float initialHeight = heights.at(p);
+                float h = 0.f;
+                if (d < x_end_lagoon) {
+                    h = h_lagoon;
+                } else if (d < x_begin_crest) {
+                    h = smoothstep(h_lagoon, h_crest, x_end_lagoon, x_begin_crest, d);
+                } else if (d < x_end_crest) {
+                    h = h_crest;
+                } else if (d < x_begin_abyss) {
+                    h = smoothstep(h_crest, h_abyss, x_end_crest, x_begin_abyss, d);
+                } else {
+                    h = h_abyss;
+                }
+                coralHeight.at(p) = h;
+
+                finalHeight.at(p) = smax(initialHeight, h, 100.f);
+            });
+
+            return finalHeight;
+        };
+
+        // Plotter::get("Distances")->addImage(distances);
+        // return Plotter::get("Distances")->exec();
+
+        displayProcessTime("Compute subduction... ", [&]() {
+                finalHeight = subside(0.4, 0.3, 0.4, 0.7, heightMap, distances);
+        }, verbose);
+        return finalHeight;
+    };
+
+    // Plotter::get()->animate([&]() {
+        GridF result;
+        displayProcessTime("Full time... ", [&]() {
+            result = createCoralIsland();
+        }, true);
+        Plotter::get()->addImage(result)->show();
+        iteration++;
+    // });
+    return Plotter::get()->exec();
+
+
+    // Plotter::get("Distances")->addImage(distances);
+    // return Plotter::get("Distances")->exec();
+    // Plotter::get("Labels")->addImage(labelMap);
+    // return Plotter::get("Labels")->exec();
+    // Plotter::get("Resistance")->addImage(resistanceMap);
+    // return Plotter::get("Resistance")->exec();
+    // Plotter::get("Heights")->addImage(heightMap);
+    // return Plotter::get("Heights")->exec();
+
+
+    /*Vector3 dims(200, 200, 1);
+    GridF map = GridF::perlin(dims).abs();
+    GridF tmp = map;
+    auto gradients = map.gradient();
+    Vector3 wind = Vector3(0.5f, 0.f, 0.f);
+
+    for (int iter = 0; iter < 100; iter++) {
+        gradients = map.gradient();
+        map.iterate([&](const Vector3& pos) {
+            float g = gradients(pos).norm();
+            if (map(pos) > 0.f && g > 0.01f) {
+                float modif = min(g * 1.f, tmp(pos));
+                tmp(pos) -= modif;
+                tmp = tmp.addValueAt(modif, pos + gradients(pos) + wind);
+            }
+        });
+        map = tmp;
+    }
+    Plotter::get()->addImage(map)->setNormalizedModeImage(true)->exec();
+
+    return 0;*/
+
+
     /*
     float prec = 1000;
     float div = std::pow(prec, .1f);
@@ -312,6 +525,7 @@ int main(int argc, char *argv[])
     }
     return 0;
     */
+
 
 
     auto allVars = getAllEnvironmentVariables();
@@ -2418,7 +2632,28 @@ int main(int argc, char *argv[])
     EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
     EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
 
-    ViewerInterface vi;
+    std::string preload_heightmap = "";
+    MapMode displayMode = MapMode::VOXEL_MODE;
+    if (argc > 1) {
+        preload_heightmap = std::string(argv[1]);
+    }
+    if (argc > 2) {
+        auto mode = toLower(std::string(argv[2]));
+        if (mode == "v" || mode == "voxel") {
+            displayMode = MapMode::VOXEL_MODE;
+        } else if (mode == "h" || mode == "height" || mode == "heightmap") {
+            displayMode = MapMode::GRID_MODE;
+        } else if (mode == "l" || mode == "layer") {
+            displayMode = MapMode::LAYER_MODE;
+        } else if (mode == "i" || mode == "implicit") {
+            displayMode = MapMode::IMPLICIT_MODE;
+        } else {
+            std::cerr << "Did not understand argument 2 (map mode): " << mode << std::endl;
+            return 0;
+        }
+    }
+
+    ViewerInterface vi(preload_heightmap, displayMode);
     vi.show();
 
     return app.exec();

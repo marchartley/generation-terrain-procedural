@@ -1,0 +1,20 @@
+sudo rmmod nvidia_uvm
+sudo modprobe nvidia_uvm
+cd/media/marc/Data/NN\ Datasets/1
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingle.py --input ./input_label.png --output_texture ./result_texture.png --output_height ./result_height.png --L2H pretrained_terrains_labelsToHeights --H2T heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB
+
+
+python mergedIslandGeneration.py
+python dataAugmentationIslandGeneration.py
+python arrange_dataset_for_pix2pix.py
+cd pytorch-CycleGAN-and-pix2pix
+python ./datasets/combine_A_and_B.py --fold_A ../new_synthetic_terrains_dataset/features/ --fold_B ../new_synthetic_terrains_dataset/heightmaps/ --fold_AB ../new_synthetic_terrains_dataset/AB
+python train.py --dataroot ../new_synthetic_terrains_dataset/AB/ --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingle.py --input ../new_synthetic_terrains_dataset/testimg.png --output ../new_synthetic_terrains_dataset/result.png --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB
+
+
+
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/arrange_dataset_for_pix2pix.py
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A ./foldA/ --fold_B ./foldB/ --fold_AB ./foldAB
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot ./foldAB/ --name heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingle.py --input ./testimg.png --output ./result.png --name heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB

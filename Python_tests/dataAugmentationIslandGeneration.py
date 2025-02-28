@@ -55,12 +55,12 @@ def nbToAlpha(x: int, nbChars: int = 4):
     return ret
 
 def main():
-    dataset_folder = ("./correct_synthetic_terrains_dataset/" if os.name == "nt" else "/data/correct_synthetic_terrains_dataset/")
+    dataset_folder = "new_synthetic_terrains_dataset/"
     heightmaps_folder = dataset_folder + "heightmaps/"
     features_folder = dataset_folder + "features/"
     distortions_folder = dataset_folder + "distortions/"
 
-    allHeightmaps = glob.glob(heightmaps_folder + "[0-9]*.png")
+    allHeightmaps = glob.glob(heightmaps_folder + "*.png")
     for iFile, fullpath in enumerate(allHeightmaps):
         print(f"{iFile + 1}/{len(allHeightmaps)}")
         original_filename = os.path.basename(fullpath)

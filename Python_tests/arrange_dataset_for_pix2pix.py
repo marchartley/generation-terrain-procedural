@@ -60,11 +60,7 @@ def moveToFolders(path):
 
 
 def main():
-    mainPath = ""
-    if os.name == 'nt':
-        mainPath = "./correct_synthetic_terrains_dataset/"
-    else:
-        mainPath = "/data/correct_synthetic_terrains_dataset/"
+    mainPath = "new_synthetic_terrains_dataset/"
     pathHeightmap = mainPath + "heightmaps/"
     pathFeatures = mainPath + "features/"
     pathDistortions = mainPath + "distortions/"

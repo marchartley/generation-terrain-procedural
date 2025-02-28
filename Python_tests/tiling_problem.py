@@ -24,20 +24,21 @@ def hat_tile_vertices(base_length, height):
 
     return np.array([top_vertex, bottom_left_vertex, bottom_right_vertex, apex_vertex])
 
-# Define parameters for the hat tile
-base_length = 4.0
-height = 3.0
+if __name__ == "__main__":
+    # Define parameters for the hat tile
+    base_length = 4.0
+    height = 3.0
 
-# Compute vertex positions
-vertices = hat_tile_vertices(base_length, height)
+    # Compute vertex positions
+    vertices = hat_tile_vertices(base_length, height)
 
-# Plot the hat tile
-plt.figure(figsize=(6, 4))
-plt.plot(vertices[:, 0], vertices[:, 1], 'b-')
-plt.plot(vertices[:, 0], vertices[:, 1], 'ro')
-plt.title('Vertices of Hat Tile')
-plt.xlabel('X')
-plt.ylabel('Y')
-plt.axis('equal')
-plt.grid(True)
-plt.show()
+    # Plot the hat tile
+    plt.figure(figsize=(6, 4))
+    plt.plot(vertices[:, 0], vertices[:, 1], 'b-')
+    plt.plot(vertices[:, 0], vertices[:, 1], 'ro')
+    plt.title('Vertices of Hat Tile')
+    plt.xlabel('X')
+    plt.ylabel('Y')
+    plt.axis('equal')
+    plt.grid(True)
+    plt.show()

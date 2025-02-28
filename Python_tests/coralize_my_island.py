@@ -1,5 +1,9 @@
 import matplotlib
 import skimage.morphology
+from jupyterlab.semver import outside
+from scipy.ndimage import convolve
+from scipy.signal import convolve2d
+
 from heightmap_from_skeleton import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,6 +25,12 @@ def plot3D(grid: np.ndarray, ax = None, cmap='viridis'):
     if callShow:
         plt.show()
 
+def bw2rgb(bw: np.ndarray) -> np.ndarray:
+    rgb = np.zeros((bw.shape[0], bw.shape[1], 3))
+    rgb[:, :, 0] = bw
+    rgb[:, :, 1] = bw
+    rgb[:, :, 2] = bw
+    return np.clip(rgb, 0.0, 1.0)
 
 def normalizeImage(img: np.ndarray) -> np.ndarray:
     mini, maxi = scipy.ndimage.minimum(img), scipy.ndimage.maximum(img)
@@ -140,9 +150,22 @@ Might be useful at one point :
     gradient = (gradientFromIsland[0]**2 + gradientFromIsland[1]**2)**.5
     distanceFromIsland = distanceMap(1 - surfaceIsland)
 """
-def method1Create(heights: np.ndarray, subsidence: float) -> np.ndarray:
-    waterLevel: float = .7
-    minCoralHeight, maxCoralHeight = waterLevel - .1, waterLevel
+
+def smin(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
+    k *= 6.0
+    h = np.maximum( k-np.abs(a-b), 0.0 )/k
+    return np.minimum(a,b) - h*h*h*k*(1.0/6.0)
+
+def smax(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
+    return -smin(-a, -b, k)
+
+def method1Create(heights: np.ndarray, subsidence: float, waterLevel: float = 0.5, maxCoralHeight:float = None, minCoralHeight: float = None, outsideSlopeFactor: float = 3.0) -> np.ndarray:
+    # waterLevel: float = .7
+    if maxCoralHeight is None:
+        maxCoralHeight = waterLevel
+    if minCoralHeight is None:
+        minCoralHeight = maxCoralHeight - 0.1
+    # minCoralHeight, maxCoralHeight = waterLevel - .1, waterLevel
 
     verticalScale = 1.0 / 1000.0
     horizontalScale = 1.0 / 1.0
@@ -167,8 +190,10 @@ def method1Create(heights: np.ndarray, subsidence: float) -> np.ndarray:
 
     outsideCorals = np.zeros_like(heights)
     outsideCorals[distanceFromLowerCorals >= distanceWhenLowerCoralTouchesWater] = 1
-    outsideCorals *= waterLevel + (distanceWhenLowerCoralTouchesWater - distanceFromLowerCorals) / (distanceWhenLowerCoralTouchesWater * 5.)
-    finalMap = np.maximum(np.maximum(insideCorals, outsideCorals) * clamp((1-subsidence)**0.5 + .8, 0, 1), heights * subsidence)
+    outsideCorals *= waterLevel + (distanceWhenLowerCoralTouchesWater - distanceFromLowerCorals) * (outsideSlopeFactor / 3.0) / distanceWhenLowerCoralTouchesWater
+
+    insideOutsideCorals = smax(insideCorals, outsideCorals, 0.01) * clamp((1-subsidence)**0.5 + .8, 0, 1)
+    finalMap = smax(insideOutsideCorals, heights * subsidence, 0.05)
     return finalMap
 
 
@@ -176,10 +201,7 @@ def method1(heights: np.ndarray, subsidenceBetweenFrames: float = 0.05):
     """Find initial seeds and grow a cone from it"""
     currentSubsidence = .85
     finalMap = method1Create(heights, currentSubsidence)
-    rgb = np.zeros((finalMap.shape[0], finalMap.shape[1], 3))
-    rgb[:, :, 0] = finalMap
-    rgb[:, :, 1] = finalMap
-    rgb[:, :, 2] = finalMap
+    rgb = bw2rgb(finalMap)
     # plt.imsave("map.png", rgb)
 
     results = [2, 2]
@@ -207,10 +229,7 @@ def method3(heights: np.ndarray, subsidenceBetweenFrames: float = 0.05):
     plotNumber = 0
     currentSubsidence = 0.85
     finalMap = createRandomIslandFromHeightmap(heights, subsidence=currentSubsidence)
-    rgb = np.zeros((finalMap.shape[0], finalMap.shape[1], 3))
-    rgb[:, :, 0] = finalMap
-    rgb[:, :, 1] = finalMap
-    rgb[:, :, 2] = finalMap
+    rgb = bw2rgb(finalMap)
     plt.imsave("map_type3.png", rgb)
     for i in range(results[0]):
         for j in range(results[1]):
@@ -241,6 +260,185 @@ def main():
     # method2(heights, subsidenceBetweenFrames)
     # method3(heights, subsidenceBetweenFrames)
 
+
+def apply_thermal_erosion(heightmap, resistanceMap, iterations=10, talus_angle=0.5, erosion_factor=0.1):
+    """
+    Apply thermal erosion to a heightmap.
+
+    Parameters:
+        heightmap (numpy.ndarray): 2D array representing the heightmap.
+        iterations (int): Number of erosion iterations.
+        talus_angle (float): Maximum allowable slope angle before erosion occurs.
+        erosion_factor (float): Proportion of height difference to erode.
+
+    Returns:
+        numpy.ndarray: Eroded heightmap.
+    """
+    # Ensure the heightmap is a NumPy array
+    heightmap = np.array(heightmap, dtype=float) * 100.0
+    rows, cols = heightmap.shape
+
+    for _ in range(iterations):
+        # Pad heightmap for neighbor calculations
+        padded_heightmap = np.pad(heightmap, 1, mode='edge')
+        neighbors = [
+            padded_heightmap[:-2, 1:-1],  # Up
+            padded_heightmap[2:, 1:-1],  # Down
+            padded_heightmap[1:-1, :-2],  # Left
+            padded_heightmap[1:-1, 2:]  # Right
+        ]
+
+        # Calculate height differences and transfer amounts
+        delta_height = np.zeros_like(heightmap)
+        for neighbor in neighbors:
+            height_diff = heightmap - neighbor
+            transfer = np.where(height_diff > talus_angle, erosion_factor * (height_diff - talus_angle) * (1 - resistanceMap), 0)
+            delta_height -= transfer
+            neighbor += transfer
+
+        # Apply calculated changes
+        heightmap += delta_height
+
+    return heightmap / 100.0
+
+
+# def apply_hydraulic_erosion(heightmap, iterations=100, water=1.0, solubility=0.1, evaporation=0.1, capacity=1.0):
+#     """
+#     Apply simple hydraulic erosion to a heightmap.
+#
+#     Parameters:
+#         heightmap (numpy.ndarray): 2D array representing the heightmap.
+#         iterations (int): Number of erosion iterations.
+#         water (float): Initial amount of water at each cell.
+#         solubility (float): Proportion of material dissolved into the water.
+#         evaporation (float): Proportion of water that evaporates per iteration.
+#         capacity (float): Maximum sediment a unit of water can carry.
+#
+#     Returns:
+#         numpy.ndarray: Eroded heightmap.
+#     """
+#     # Ensure the heightmap is a NumPy array
+#     heightmap = np.array(heightmap, dtype=float) * 100.0
+#     rows, cols = heightmap.shape
+#
+#     # Initialize water and sediment arrays
+#     water_map = np.full_like(heightmap, water, dtype=float)
+#     sediment_map = np.zeros_like(heightmap)
+#
+#     for _ in range(iterations):
+#         # Create temporary arrays for changes
+#         delta_height = np.zeros_like(heightmap)
+#         delta_sediment = np.zeros_like(heightmap)
+#
+#         for i in range(1, rows - 1):
+#             for j in range(1, cols - 1):
+#                 # Get neighbors
+#                 neighbors = [
+#                     (i - 1, j),  # Up
+#                     (i + 1, j),  # Down
+#                     (i, j - 1),  # Left
+#                     (i, j + 1),  # Right
+#                 ]
+#
+#                 # Distribute water flow and sediment
+#                 total_outflow = 0
+#                 flows = []
+#                 for ni, nj in neighbors:
+#                     height_diff = (heightmap[i, j] + water_map[i, j]) - (heightmap[ni, nj] + water_map[ni, nj])
+#                     flow = max(0, height_diff) / 4  # Divide by 4 for even distribution
+#                     flows.append((ni, nj, flow))
+#                     total_outflow += flow
+#
+#                 if total_outflow > 0:
+#                     for ni, nj, flow in flows:
+#                         # Proportion of outflow to each neighbor
+#                         proportion = flow / total_outflow
+#
+#                         # Transfer water
+#                         delta_height[ni, nj] += proportion * water_map[i, j]
+#                         delta_height[i, j] -= proportion * water_map[i, j]
+#
+#                         # Transfer sediment
+#                         delta_sediment[ni, nj] += proportion * sediment_map[i, j]
+#                         delta_sediment[i, j] -= proportion * sediment_map[i, j]
+#
+#                 # Dissolve material
+#                 dissolved = solubility * water_map[i, j]
+#                 sediment_map[i, j] += dissolved
+#                 heightmap[i, j] -= dissolved
+#
+#         # Update water and sediment maps
+#         water_map += delta_height
+#         sediment_map += delta_sediment
+#
+#         # Evaporate water and deposit sediment
+#         water_map *= (1 - evaporation)
+#         excess_sediment = sediment_map - (water_map * capacity)
+#         sediment_map = np.maximum(sediment_map - excess_sediment, 0)
+#         heightmap += np.maximum(excess_sediment, 0)
+#
+#     return heightmap / 100.0
+
+def apply_hydraulic_erosion(heightmap, resistanceMap, iterations=100, water=1.0, solubility=0.8, evaporation=0.1, capacity=1.0):
+    """
+    Optimized hydraulic erosion function with fixed numerical stability.
+
+    Parameters:
+        heightmap (numpy.ndarray): 2D array representing the heightmap.
+        iterations (int): Number of erosion iterations.
+        water (float): Initial amount of water at each cell.
+        solubility (float): Proportion of material dissolved into the water.
+        evaporation (float): Proportion of water that evaporates per iteration.
+        capacity (float): Maximum sediment a unit of water can carry.
+
+    Returns:
+        numpy.ndarray: Eroded heightmap.
+    """
+    heightmap = np.array(heightmap, dtype=float) * 100.0
+    rows, cols = heightmap.shape
+
+    water_map = np.full_like(heightmap, water, dtype=float)
+    sediment_map = np.zeros_like(heightmap)
+
+    for _ in range(iterations):
+        # Calculate slopes and flow direction
+        height_plus_water = heightmap + water_map
+        padded = np.pad(height_plus_water, 1, mode='edge')
+        neighbors = [
+            padded[:-2, 1:-1],  # Up
+            padded[2:, 1:-1],   # Down
+            padded[1:-1, :-2],  # Left
+            padded[1:-1, 2:]    # Right
+        ]
+        diffs = [height_plus_water - neighbor for neighbor in neighbors]
+        flows = [np.maximum(0, diff) for diff in diffs]
+
+        total_outflow = sum(flows)
+        total_outflow = np.maximum(total_outflow, 1e-8)  # Prevent division by zero
+
+        # Distribute water and sediment based on flow
+        for flow, neighbor in zip(flows, neighbors):
+            proportion = flow / total_outflow
+            transfer = proportion * water_map
+            water_map -= transfer
+
+            # Handle sediment safely with water_map > 0
+            valid_mask = water_map > 1e-8
+            sediment_map[valid_mask] -= transfer[valid_mask] * (sediment_map[valid_mask] / water_map[valid_mask])
+            water_map += np.pad(transfer, 1, mode='constant')[1:-1, 1:-1]
+
+        # Dissolve material
+        dissolved = solubility * water_map * (1.0 - resistanceMap)
+        sediment_map += dissolved
+        heightmap -= dissolved
+
+        # Evaporation and sediment deposition
+        water_map *= (1 - evaporation)
+        excess_sediment = sediment_map - (water_map * capacity)
+        sediment_map = np.maximum(sediment_map - excess_sediment, 0)
+        heightmap += np.maximum(excess_sediment, 0)
+
+    return heightmap / 100.0
 
 if __name__ == "__main__":
     main()

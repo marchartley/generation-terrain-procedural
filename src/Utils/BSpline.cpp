@@ -747,6 +747,52 @@ std::vector<std::pair<size_t, size_t> > BSpline::checkAutointersections() const
     return results;
 }
 
+BSpline &BSpline::displacePointsRandomly(float maxDistance)
+{
+    /*std::vector<Vector3> newPoints(this->size());
+    for (int i = 0; i < this->size(); i++) {
+        newPoints[i] = points[i] + this->getNormal(float(i) / float(this->size())) * random_gen::generate(-maxDistance, maxDistance);
+    }
+    this->points = newPoints;
+    return *this;*/
+    return this->displacePointsRandomly(Vector3(maxDistance, maxDistance, maxDistance));
+}
+
+BSpline &BSpline::displacePointsRandomly(const Vector3 &maxDistance)
+{
+    std::vector<Vector3> newPoints(this->size());
+    for (int i = 0; i < this->size(); i++) {
+        float x = float(i) / float(this->size());
+        auto [pos, dir, normal] = this->pointAndDerivativeAndSecondDerivative(x);
+        Vector3 binormal = this->getBinormal(x).normalized();
+        dir.normalize();
+        normal.normalize();
+        newPoints[i] = points[i] + (dir * random_gen::generate(-1, 1) * maxDistance.x) + (normal * random_gen::generate(-1, 1) * maxDistance.y) + (binormal * random_gen::generate(-1, 1) * maxDistance.z);
+    }
+    this->points = newPoints;
+    return *this;
+}
+
+BSpline &BSpline::displacePointsRandomlyPerlin(float maxDistance, float scale, bool loop)
+{
+    return this->displacePointsRandomlyPerlin(Vector3(maxDistance, maxDistance, maxDistance), scale, loop);
+}
+
+BSpline &BSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float scale, bool loop)
+{
+    std::vector<Vector3> newPoints(this->size());
+    for (int i = 0; i < this->size(); i++) {
+        float x = float(i) / float(this->size());
+        auto [pos, dir, normal] = this->pointAndDerivativeAndSecondDerivative(x);
+        Vector3 binormal = this->getBinormal(x).normalized();
+        dir.normalize();
+        normal.normalize();
+        newPoints[i] = points[i] + (dir * random_gen::generate_perlin(points[i].x * scale, points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.x) + (normal * random_gen::generate_perlin(100 + points[i].x * scale, points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.y) + (binormal * random_gen::generate_perlin(points[i].x * scale, 100 + points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.z);
+    }
+    this->points = newPoints;
+    return *this;
+}
+
 BSpline& BSpline::removeDuplicates()
 {
     std::vector<Vector3> newPoints;

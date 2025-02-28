@@ -26,16 +26,18 @@
 #include "Interface/EnvObjsInterface.h"
 #include "Interface/EnvObjectFluidSimulation.h"
 #include "Interface/TerrainComparatorInterface.h"
+#include "Interface/ScreenshotInterface.h"
 
 #include "Interface/CommonInterface.h"
 
 #include "FluidSimulation/OpenFoamParser.h"
 
-ViewerInterface::ViewerInterface() {
+ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displayMode) {
     // Plotter::init(nullptr, nullptr);
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);
     this->viewer = new Viewer(this);
+    this->viewer->mapMode = displayMode;
 
     this->actionsOnMap = std::make_shared<std::vector<nlohmann::json>>();
     std::string historyFilename = "MyChanges.json";
@@ -67,7 +69,8 @@ ViewerInterface::ViewerInterface() {
 //        std::make_shared<SpheroidalErosionInterface>(this),
         std::make_shared<EnvObjsInterface>(this),
         std::make_shared<EnvObjectFluidSimulation>(this),
-        std::make_shared<TerrainComparatorInterface>(this)
+        std::make_shared<TerrainComparatorInterface>(this),
+        std::make_shared<ScreenshotInterface>(this)
     };
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>();
@@ -100,7 +103,11 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
-//        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+        if (preloaded_heightmap == "") {
+           terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+        } else {
+            terrainGenerationInterface->createTerrainFromFile(preloaded_heightmap);
+        }
 
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmap2.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxels/slope_with_hole.data");
@@ -126,9 +133,9 @@ ViewerInterface::ViewerInterface() {
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/voxel_grids/overhang.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/vase.data");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/trench.json");
-        terrainGenerationInterface->waterLevel = .05f;
-        terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
-        terrainGenerationInterface->waterLevel = .0f;
+        // terrainGenerationInterface->waterLevel = .05f;
+        // terrainGenerationInterface->createTerrainFromNoise(100, 100, 40, true, 0.f, 0.3f, 0.3f);
+        // terrainGenerationInterface->waterLevel = .0f;
 
 //        terrainGenerationInterface->prepareShader();
         this->viewer->voxelGrid = terrainGenerationInterface->voxelGrid;
@@ -184,7 +191,7 @@ ViewerInterface::ViewerInterface() {
 
         QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
 
-        this->openInterface(envObjectsInterface);
+        // this->openInterface(envObjectsInterface);
     });
     viewer->installEventFilter(this);
     setupUi();
@@ -217,6 +224,7 @@ void ViewerInterface::setupUi()
     auto smoothInterface = std::static_pointer_cast<SmoothInterface>(actionInterfaces["smooth"]);
     auto terrainGenerationInterface = std::static_pointer_cast<TerrainGenerationInterface>(actionInterfaces["terraingeneration"]);
     auto erosionInterface = std::static_pointer_cast<ErosionInterface>(actionInterfaces["erosion"]);
+    auto screenshotInterface = std::static_pointer_cast<ScreenshotInterface>(actionInterfaces["screenshot"]);
 
     std::vector<std::tuple<std::shared_ptr<ActionInterface>, std::string, std::string, std::string, std::function<void(void)>>> actionsToUse = {
 //         Main interface     Button image                        Description                         Menu            Function to call
@@ -243,7 +251,8 @@ void ViewerInterface::setupUi()
         {nullptr,                       "",                                 "Erosion tests",                    "edit",       [=]() { this->erosionsTests(); } },
         {nullptr,                       "save_erod_depo_button.png",        "Save depo/erod",                   "model",      [=]() { terrainGenerationInterface->saveErosionDepositionTextureMasksOnMultiple(); }},
         {erosionInterface,              "",                                 "Erosion Coast Paris 2019",         "digging",    [=]() { erosionInterface->ErosionParis2019SeaErosion(); }},
-        {erosionInterface,              "",                                 "Erosion Perco Paris 2019",         "digging",    [=]() { erosionInterface->ErosionParis2019InvasionPercolation(); }}
+        {erosionInterface,              "",                                 "Erosion Perco Paris 2019",         "digging",    [=]() { erosionInterface->ErosionParis2019InvasionPercolation(); }},
+        {screenshotInterface,           "",                                 "Screenshot multiple",              "view",       [=]() { screenshotInterface->takeScreenshots(); }},
     };
 
     for (auto& [action, logo, descr, menuName, function] : actionsToUse) {
