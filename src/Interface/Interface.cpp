@@ -104,7 +104,8 @@ ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displa
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
 //        terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/new_one_slope.png");
         if (preloaded_heightmap == "") {
-           terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+           // terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/map1.png");
+            terrainGenerationInterface->createTerrainFromFile("saved_maps/heightmaps/flat.png");
         } else {
             terrainGenerationInterface->createTerrainFromFile(preloaded_heightmap);
         }

@@ -240,9 +240,6 @@ QLayout *EnvObjsInterface::createGUI()
 
     std::vector<ComboboxLineElement> objectsChoices;
     for (auto& [name, obj] : EnvObject::availableObjects) {
-        if (toLower(name) != "island") {
-            continue;
-        }
         objectsChoices.push_back(ComboboxLineElement{name, 0});
     }
     ButtonElement* showButton = new ButtonElement("Show", [&](){
@@ -335,7 +332,7 @@ QLayout *EnvObjsInterface::createGUI()
              showElementsOnCanvasButton,
              objectsListWidget,
              createVerticalGroupUI({testingFitnessFormula, testingFittingFormula}),
-             createHorizontalGroupUI({instantiaABCbutton, testPerformancesButton, resetButton}),
+             createHorizontalGroupUI({/*instantiaABCbutton, testPerformancesButton, */resetButton}),
              addGroovesButton,
              createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton})
     });
@@ -1788,6 +1785,7 @@ GridV3 EnvObjsInterface::renderFlowfield() const
 
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
 {
+    std::cout << "Preview... " << std::endl;
     GridV3 dataV3 = Plotter::get("Object Preview")->displayedImage;
     GridF fitnessScoreGrid(dataV3.getDimensions());
     GridF fittingScoreGrid(dataV3.getDimensions());
@@ -1862,8 +1860,9 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         }
         isoline = initialCurve;
     }
+    std::cout << isoline.toString() << std::endl;
 
-    /*if (isoline.closed) {
+    if (isoline.closed) {
         dataV3.iterateParallel([&](const Vector3& pos) {
             result(pos) += Vector3(.5f, .5f, .5f) * (isoline.containsXY(pos, false) ? 1.f : 0.f);
         });
@@ -1875,7 +1874,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     }
     for (size_t i = 0; i < isoline.size(); i++) {
         result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
-    }*/
+    }
     Plotter::get("Object Preview")->addImage(result);
     Plotter::get("Object Preview")->show();
     Plotter::get("Object Preview")->addImage(dataV3);

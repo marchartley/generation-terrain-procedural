@@ -25,7 +25,7 @@ BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
         this->targetArea = interpolation::inv_linear(a, initialTargetArea * .15f, initialTargetArea * 2.f);*/
 
         contour = updateContour(contour, stepSize);
-        std::cout << "Area: " << ShapeCurve(contour).computeArea() << "/" << targetArea << std::endl;
+        // std::cout << "Area: " << ShapeCurve(contour).computeArea() << "/" << targetArea << std::endl;
 
         // if (collapseFirstAndLastPoint) {
         //     currentContour.points.pop_back();
@@ -280,7 +280,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
         totalGradientsNorm += gradients[index].norm();
     }
 
-    std::cout << "Total energy gradient = " << totalGradientsNorm << std::endl;
+    // std::cout << "Total energy gradient = " << totalGradientsNorm << std::endl;
 
     for (int i = 0; i < numPoints; ++i) {
         float normalizedStepSize = stepSize / (1.f + gradients[i].norm());

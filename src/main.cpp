@@ -280,6 +280,9 @@ int main(int argc, char *argv[])
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 
+    /*
+     * C++ implementation of island from curves
+     *
     auto smax = [&](float a, float b, float k) {
         //return a + ((b - a) / (1 + exp(-(1.f/k) * (b - a))));
         return a + (1.f/k) * ((b - a) * k) / (1 - exp(-k * (b - a)));
@@ -466,7 +469,7 @@ int main(int argc, char *argv[])
     // return Plotter::get("Resistance")->exec();
     // Plotter::get("Heights")->addImage(heightMap);
     // return Plotter::get("Heights")->exec();
-
+    */
 
     /*Vector3 dims(200, 200, 1);
     GridF map = GridF::perlin(dims).abs();
