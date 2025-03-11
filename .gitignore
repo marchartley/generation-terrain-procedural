@@ -26,6 +26,9 @@ doc/
 saved_maps/onlyVoxels/
 saved_maps/onlyVoxels/*
 
+.qtc_clangd
+.idea
+
 
 src/third-party/
 */.idea/
@@ -110,3 +113,4 @@ usersmarchappdata*
 .qglviewer.xml
 .tmp/screenshots/screen.png
 .tmp/screenshots/screen.png
+src/assets/models/FBX/coralRestorationSite.fbx
