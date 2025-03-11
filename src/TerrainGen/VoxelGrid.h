@@ -22,7 +22,7 @@ class VoxelGrid;
 
 struct NoiseMinMax {
     float min = std::numeric_limits<float>::max();
-    float max = std::numeric_limits<float>::min();
+    float max = std::numeric_limits<float>::lowest();
 
     void update(float val) {
         min = std::min(min, val);

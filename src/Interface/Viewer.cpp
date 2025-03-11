@@ -23,7 +23,7 @@ Viewer::Viewer(QWidget *parent): Viewer(
         std::make_shared<VoxelGrid>(),
         std::make_shared<LayerBasedGrid>(),
         nullptr, // std::make_shared<ImplicitPatch>(new ImplicitPrimitive()),
-        VOXEL_MODE,
+        GRID_MODE, //VOXEL_MODE,
         FILL_MODE,
         parent
         )
@@ -79,6 +79,7 @@ void Viewer::init() {
 
     setTextIsEnabled(true);
     setMouseTracking(true);
+    setAutoFillBackground(true);
 
     std::string pathToShaders = "src/Shaders/";
 
@@ -122,7 +123,7 @@ void Viewer::init() {
 
 
     this->main_screenshotFolder = "screenshots/";
-    this->screenshotFolder = main_screenshotFolder;
+    this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
     this->mapSavingFolder = "saved_maps/";
     if(!makedir(this->screenshotFolder)) {
         std::cerr << "Not possible to create folder " << this->screenshotFolder << std::endl;
@@ -132,13 +133,14 @@ void Viewer::init() {
         std::cerr << "Not possible to create folder " << this->mapSavingFolder << std::endl;
         exit(-1);
     }
-    if (this->voxelGrid != nullptr) {
-        this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
-    }
+    // if (this->voxelGrid != nullptr) {
+    //     this->screenshotFolder += std::string(s_time) + "__" + voxelGrid->toShortString() + "/";
+    // }
 
     this->camera()->setViewDirection(qglviewer::Vec(-0.334813, -0.802757, -0.493438));
     this->camera()->setPosition(qglviewer::Vec(58.6367, 126.525002, 80.349899));
-//    QGLViewer::init();
+
+    this->setUpdatesEnabled(true);
 }
 
 void Viewer::draw() {
@@ -148,6 +150,9 @@ void Viewer::draw() {
 
 void Viewer::saveScreenshotPNG(std::string filename)
 {
+    QImage img = this->grabFrameBuffer();
+    img.save(QString::fromStdString(filename));
+    return;
     int w = this->camera()->screenWidth();
     int h = this->camera()->screenHeight();
     int nbComp = 4;
@@ -213,9 +218,10 @@ TerrainModel *Viewer::getCurrentTerrainModel()
     return nullptr;
 }
 void Viewer::drawingProcess() {
+    bool displayTiming = false;
+    this->makeCurrent();
     this->frame_num ++;
     current_frame ++;
-    bool displayTiming = false;
     std::map<std::shared_ptr<ActionInterface>, float> interfacesTimings;
     float GLUniformsTime;
     float screenSavingTiming;
@@ -240,7 +246,7 @@ void Viewer::drawingProcess() {
             camera()->getProjectionMatrix(pMatrix);
             camera()->getModelViewMatrix(mvMatrix);
 
-            this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f);
+            this->light.position = voxelGrid->getDimensions() * Vector3(.5f, .5f, 1.5f) * 1000.f;
             Material ground_material(
                             {220/255.f, 210/255.f, 110/255.f, 1.f},
                             { 70/255.f,  80/255.f,  70/255.f, 1.f},
@@ -267,28 +273,24 @@ void Viewer::drawingProcess() {
                 } else {
                     shader->setVector("light.position", this->light.position); //(this->light.position + Vector3(this->camera()->position())) / 2.f);
                 }
-//                shader->setBool("display_light_source", true);
                 shader->setVector("min_vertice_positions", minVoxelsShown());
                 shader->setVector("max_vertice_positions", maxVoxelsShown());
                 shader->setInt("voxels_displayed_on_borders", voxelsSmoothedOnBorders);
-//                shader->setFloat("fogNear", this->fogNear);
-//                shader->setFloat("fogFar", this->fogFar);
-//                shader->setBool("wireframeMode", !displayFill);
 
 
                 Vector3 terrainMid = this->getCurrentTerrainModel()->getDimensions() * .5f;
                 shader->setPositionalLight("lights[0]", this->light);
-                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200));
+                shader->setVector("lights[0].position", terrainMid + Vector3(-100, 100, 200) * 1000.f);
                 shader->setPositionalLight("lights[1]", this->light);
-                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0));
+                shader->setVector("lights[1].position", terrainMid + Vector3(100, 100, 0) * 1000.f);
                 shader->setPositionalLight("lights[2]", this->light);
-                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200));
+                shader->setVector("lights[2].position", terrainMid + Vector3(0, 100, 200) * 1000.f);
                 shader->setPositionalLight("lights[3]", this->light);
-                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100));
+                shader->setVector("lights[3].position", terrainMid + Vector3(0, -100, 100) * 1000.f);
                 shader->setPositionalLight("lights[4]", this->light);
-                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200));
+                shader->setVector("lights[4].position", terrainMid + Vector3(100, -100, 200) * 1000.f);
                 shader->setPositionalLight("lights[5]", this->light);
-                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10));
+                shader->setVector("lights[5].position", terrainMid + Vector3(-100, -100, -10) * 1000.f);
             });
         });
 
@@ -312,8 +314,8 @@ void Viewer::drawingProcess() {
         }
 
         screenSavingTiming = timeIt([&]() {
-            auto startScreenSaving = std::chrono::system_clock::now();
             if (this->isTakingScreenshots) {
+                glFlush();
                 if (makedir(".tmp/screenshots")) {
                     this->saveScreenshotPNG(".tmp/screenshots/screen.png");
                 }
@@ -335,6 +337,8 @@ void Viewer::drawingProcess() {
         std::cout << "\tScreen saving : " << showTime(screenSavingTiming) << "\n";
         std::cout << "\tOpenGL uniforms : " << showTime(GLUniformsTime) << std::endl;
     }
+    glFlush();
+    this->doneCurrent();
 }
 
 void Viewer::reloadAllShaders()
@@ -349,11 +353,71 @@ void Viewer::reloadAllShaders()
 
 void Viewer::setupViewFromFile(std::string filename)
 {
-//    std::cout << "Using view from file " << filename << std::endl;
-    this->setStateFileName(QString::fromStdString(filename));
-    this->restoreStateFromFile();
-    this->setStateFileName("");
-//    this->saveStateToFile();
+    try {
+       std::cout << "Using view from file " << filename << std::endl;
+        this->setStateFileName(QString::fromStdString(filename));
+        // this->restoreStateFromFile();
+        this->correctedFunctionForCameraRepositioning();
+        this->setStateFileName("");
+    //    this->saveStateToFile();
+    } catch (std::exception& e) {
+        std::cout << "Error: " << e.what() << std::endl;
+    }
+}
+
+bool Viewer::correctedFunctionForCameraRepositioning()
+{
+    QString name = stateFileName();
+
+    if (name.isEmpty())
+        return false;
+
+    QFileInfo fileInfo(name);
+
+    if (!fileInfo.isFile())
+        // No warning since it would be displayed at first start.
+        return false;
+
+    if (!fileInfo.isReadable()) {
+        std::cerr << "Problem in state restoration: File " << name.toStdString() << " is not readable." << std::endl;
+        return false;
+    }
+
+    // Read the DOM tree form file
+    QFile f(name);
+    if (f.open(QIODevice::ReadOnly)) {
+        QDomDocument doc;
+        doc.setContent(&f);
+        f.close();
+        QDomElement element = doc.documentElement();
+
+        const QString version = element.attribute("version");
+        // if (version != QGLViewerVersionString())
+        if (version[0] != '2') {
+            // Patches for previous versions should go here when the state file syntax
+            // is modified.
+            std::cerr << "State file created using QGLViewer version " << version.toStdString() << " may not be correctly read." << std::endl;
+        }
+
+        QDomElement child = element.firstChild().toElement();
+        while (!child.isNull()) {
+            if (child.tagName() == "Camera") {
+                // connectAllCameraKFIInterpolatedSignals(false);
+                camera()->initFromDOMElement(child);
+                // connectAllCameraKFIInterpolatedSignals();
+            }
+
+            if ((child.tagName() == "ManipulatedFrame") && (manipulatedFrame()))
+                manipulatedFrame()->initFromDOMElement(child);
+
+            child = child.nextSibling().toElement();
+        }
+    } else {
+        std::cerr << "Unable to open file " << name.toStdString() << ": " << f.errorString().toStdString() << std::endl;
+        return false;
+    }
+    this->update();
+    return true;
 }
 
 void Viewer::saveViewToFile(std::string filename)
@@ -428,6 +492,9 @@ void Viewer::mouseReleaseEvent(QMouseEvent *e)
 {
     QGLViewer::mouseReleaseEvent(e);
     this->mouseDown = false;
+
+    checkMouseOnVoxel(); // To remove?
+    Q_EMIT this->mouseReleasedOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());
 }
 
 void Viewer::keyPressEvent(QKeyEvent *e)
@@ -455,12 +522,12 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
 
         Vector3 terrainScale = this->getCurrentTerrainModel()->scaling;
         Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
-        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(-10000, -10000, -10000)), this->getCurrentTerrainModel());
         try {
             QGLViewer::mouseMoveEvent(e);
         }  catch (std::exception) {
             std::cout << "Catched this f***ing exception!" << std::endl;
         }
+        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3(false)), this->getCurrentTerrainModel());
 
         update();
     });
@@ -555,11 +622,12 @@ bool Viewer::checkMouseOnVoxel()
         currPos = implicitTerrain->getIntersection(Vector3(orig.x, orig.y, orig.z), Vector3(dir.x, dir.y, dir.z), this->minVoxelsShown(), this->maxVoxelsShown());
     }
     bool found = currPos.isValid();
-//    std::cout << found << std::endl;
     this->mouseInWorld = found;
     if (found) {
         this->mousePosWorld = currPos;
-        this->mainGrabber->move(currPos);
+        if (this->mainGrabber) {
+            this->mainGrabber->move(currPos);
+        }
     }
     return found;
 }
@@ -589,14 +657,30 @@ bool Viewer::stopRecording()
 {
     std::string command = "ffmpeg -f image2 -i ";
 //    command += this->screenshotFolder + "%d.png -framerate 10 " + this->screenshotFolder + "0.gif";
-    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
+//    command += this->screenshotFolder + "%d.png  -c:v libx264 -preset ultrafast -qp 0 " + this->screenshotFolder + "out.mp4";
     if (this->screenshotIndex > 0) {
-        int result = std::system(command.c_str());
+        std::string command1 = command + this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.mp4";
+        std::string command2 = command + this->screenshotFolder + "%d.png " + this->screenshotFolder + "out.gif";
+        int result = std::system(command1.c_str());
         if (result != 0) {
-            std::cerr << "Oups, the command `" << command << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+            std::cerr << "Oups, the command `" << command1 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
+        }
+        result = std::system(command2.c_str());
+        if (result != 0) {
+            std::cerr << "Oups, the command `" << command2 << "` didn't finished as expected... maybe ffmpeg is not installed?" << std::endl;
         }
     }
-    this->screenshotFolder += "__next-take/";
+    // this->screenshotFolder += "__next-take/";
+
+    // New folder to save next recording
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+
+
+    this->main_screenshotFolder = "screenshots/";
+    this->screenshotFolder = main_screenshotFolder + "/" + std::string(s_time) + "/";
     this->screenshotIndex = 0;
 
     this->isTakingScreenshots = false;

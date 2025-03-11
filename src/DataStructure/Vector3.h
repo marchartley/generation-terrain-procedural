@@ -46,6 +46,7 @@ public:
 
     float magnitude() const;
     float length() const;
+    float lengthSquared() const;
     float norm() const;
     float norm2() const;
     Vector3& normalize();
@@ -73,11 +74,15 @@ public:
     Vector3 translated(const Vector3& move);
     Vector3& applyTransform(Matrix transformMatrix);
 //    Vector3& setDirection(const Vector3& dir, const Vector3& upVector = Vector3(0, 0, 1));
+    Vector3 rotated90XY() const;
 
     Vector3& changeBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ);
     Vector3 changedBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ);
 
     Vector3 reflexion(const Vector3& normal);
+
+    Vector3 toPolar();
+    Vector3 fromPolar();
 
     float divergence() { return x + y + z; }
 
@@ -230,6 +235,7 @@ class AABBox { //: public std::pair<Vector3, Vector3> {
 public:
     AABBox();
     AABBox(const Vector3& mini, const Vector3& maxi);
+    AABBox(std::tuple<Vector3, Vector3> minMax);
     AABBox(std::vector<Vector3> allPointsToContain);
     Vector3 min() const { return this->mini; }
     Vector3 max() const { return this->maxi; }
@@ -241,6 +247,8 @@ public:
 
     AABBox& expand(const Vector3& newPoint);
     AABBox& expand(const std::vector<Vector3>& newPoints);
+
+    float distanceTo(const Vector3& p);
 
     Vector3 mini;
     Vector3 maxi;
@@ -257,5 +265,9 @@ public:
 #include "Utils/json.h"
 nlohmann::json vec3_to_json(const Vector3& vec);
 Vector3 json_to_vec3(nlohmann::json json);
+
+std::vector<float> json_to_color(nlohmann::json json);
+nlohmann::json color_to_json(const std::vector<float>& color);
+nlohmann::json color_to_json(const Vector3& color);
 
 #endif // VECTOR3_H

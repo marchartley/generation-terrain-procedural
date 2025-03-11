@@ -78,43 +78,34 @@ std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(std::string
     float timing = 0;
     std::vector<std::string> filenames;
     if (this->saveHeightmap) {
-        timing = timeIt([&]() {
+        displayProcessTime("Saving heightmap geometry... ", [&]() {
             m = this->heightmap->getGeometry();
             file.open(filename + "-heightmap" + ".stl");
             filenames.push_back(filename + "-heightmap" + ".stl");
             file << m.toSTL();
             file.close();
-        });
-        if (verbose)
-            std::cout << "Heightmap in " << showTime(timing) << std::endl;
+        }, verbose);
     }
 
     if (this->saveVoxels) {
-        timing = timeIt([&]() {
+        displayProcessTime("Saving voxel grid geometry... ", [&]() {
             m = this->voxelGrid->getGeometry();
             file.open(filename + "-voxels" + ".stl");
             filenames.push_back(filename + "-voxels" + ".stl");
             file << m.toSTL();
             file.close();
-        });
-        if (verbose)
-            std::cout << "Voxels in " << showTime(timing) << std::endl;
+        }, verbose);
     }
 
     if (this->saveLayers) {
-        timing = timeIt([&]() {
+        displayProcessTime("Saving layers geometry... ", [&]() {
             m = this->layerGrid->getGeometry();
             file.open(filename + "-layers" + ".stl");
             filenames.push_back(filename + "-layers" + ".stl");
             file << m.toSTL();
             file.close();
-        });
-        if (verbose)
-            std::cout << "Layers in " << showTime(timing) << std::endl;
+        }, verbose);
     }
-
-    if (verbose)
-        std::cout << "Done." << std::endl;
     return filenames;
 }
 

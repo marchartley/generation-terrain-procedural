@@ -5,7 +5,7 @@
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
 
-class Matrix3Graph : public Graph<int>
+class Matrix3Graph : public Graph
 {
 public:
     Matrix3Graph();

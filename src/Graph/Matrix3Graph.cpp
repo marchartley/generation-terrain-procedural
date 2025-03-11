@@ -23,8 +23,9 @@ Matrix3Graph& Matrix3Graph::initFromBinary(GridI matrix)
     this->originalMatrix = matrix; // Save it for later use
     this->nodes.clear();
     for (size_t i = 0; i < matrix.size(); i++) {
-        GraphNode<int> node(matrix[i], matrix.getCoordAsVector3(i),i);
-        this->nodes.push_back(std::make_shared<GraphNode<int>>(node));
+        GraphNodeTemplate<int> node(matrix[i], matrix.getCoordAsVector3(i),i);
+//        this->nodes.push_back(std::make_shared<GraphNode<int>>(node));
+        this->nodes[node.index] = new GraphNode(node);
     }
     // this->connectionMatrix = GridI(this->nodes.size(), this->nodes.size());
     // this->adjencyMatrix = GridF(this->nodes.size(), this->nodes.size(), 1, std::numeric_limits<float>::max());
@@ -137,7 +138,7 @@ std::vector<Vector3> Matrix3Graph::shortestPath(const Vector3& start, const Vect
     float totalDistance;
     std::vector<int> path;
     std::tie(totalDistance, path) = Pathfinding::ShortestPathFrom(this->originalMatrix.getIndex(newStart), this->originalMatrix.getIndex(newEnd),
-                                  this->nodes/*, [&](int index) -> float {
+                                  /*this->nodes*/ /*this->adjencyMatrix*/ *this /*, [&](int index) -> float {
         return (this->nodes[index]->pos - newEnd).norm2();
     }*/);
 

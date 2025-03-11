@@ -29,6 +29,9 @@ public:
     Image& setImage(const GridF& img);
     Image& setImage(const GridV3 &img);
 
+    GridF getBwImage() const;
+    GridV3 getColorImage() const;
+
     GridV3 colorImage;
     GridF bwImage;
 };

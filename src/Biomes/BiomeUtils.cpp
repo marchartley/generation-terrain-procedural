@@ -11,23 +11,23 @@ std::string biomeName(int ID) {
     return biomesNames[ID];
 }
 
-FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph<int> adjencyGraph) {
+FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph adjencyGraph) {
     GridI available(100, 100, 1, 1); // All available
     int maxNeighbors = 6;
     int maxNeighboringTries = 20;
     FastPoissonGraph<int> graph(available);
-    for (size_t iNode = 0; iNode < graph.nodes.size(); iNode++) {
-        graph.nodes[iNode]->value = -1;
-    }
-    if (graph.nodes.empty()) return graph;
 
-    std::set<std::shared_ptr<GraphNode<int>>> pendingNodes;
+    if (graph.empty()) return graph;
+    graph.initAllNodesValues(-1);
+
+    std::set<GraphNode*> pendingNodes;
+//    pendingNodes.insert(graph.nodes.begin());
     pendingNodes.insert(graph.nodes.front());
     while (!pendingNodes.empty()) {
         auto& current = *pendingNodes.begin();
         pendingNodes.erase(pendingNodes.begin());
 
-        std::set<std::shared_ptr<GraphNode<int>>> nodesToAddToPending;
+        std::set<GraphNode*> nodesToAddToPending;
 
         // If it's an unknown node type, give it a type
         if (current->value == -1) {
@@ -83,9 +83,9 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     return graph;
 }
 
-Graph<int> subsetToFitMostBiomes(Graph<int> graph, std::vector<std::string> biomesNames)
+Graph subsetToFitMostBiomes(Graph graph, std::vector<std::string> biomesNames)
 {
-    Graph<int> returnedGraph;
+    Graph returnedGraph;
 
     ShapeCurve biomesHull;
     for (size_t iNode = 0; iNode < graph.nodes.size(); iNode++) {
@@ -100,7 +100,8 @@ Graph<int> subsetToFitMostBiomes(Graph<int> graph, std::vector<std::string> biom
     for (size_t iNode = 0; iNode < graph.nodes.size(); iNode++) {
         Vector3 pos = graph.nodes[iNode]->pos;
         if (desiredAABBoxMin.x < pos.x && pos.x < desiredAABBoxMax.x && desiredAABBoxMin.y < pos.y && pos.y < desiredAABBoxMax.y)
-            returnedGraph.nodes.push_back(graph.nodes[iNode]);
+//            returnedGraph.nodes.push_back(graph.nodes[iNode]);
+            returnedGraph.nodes[iNode] = graph.nodes[iNode];
     }
     return returnedGraph;
 }
@@ -113,7 +114,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json jso
     instance->area = area;
     auto children = json_content.at("children");
     Voronoi diagram(children.size(), area);
-    std::vector<BSpline> subarea_borders = diagram.solve();
+    std::vector<ShapeCurve> subarea_borders = diagram.solve();
     for (size_t i = 0; i < children.size(); i++) {
         std::shared_ptr<BiomeInstance> childBiome = recursivelyCreateBiomeInstance(children[i], diagram.pointset[i], subarea_borders[i]);
         childBiome->parent = instance;
@@ -122,7 +123,7 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json jso
     return instance;
 }
 
-std::shared_ptr<BiomeInstance> generateBiome(Graph<int> biomeGraph)
+std::shared_ptr<BiomeInstance> generateBiome(Graph biomeGraph)
 {
 
 }

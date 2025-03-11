@@ -184,10 +184,11 @@ void CoralIslandGeneratorInterface::fromGanUI()
         std::string file = q_filename.toStdString();
         GridV3 img = Image::readFromFile(file).colorImage;
 
+        GridF heights(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
         auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
         implicitTerrain->deleteAllChildren();
         for (auto& obj : envObjects)
-            implicitTerrain->addChild(obj->createImplicitPatch());
+            implicitTerrain->addChild(obj->createImplicitPatch(heights));
         implicitTerrain->_cached = false;
         voxelGrid->fromImplicit(implicitTerrain.get());
     }

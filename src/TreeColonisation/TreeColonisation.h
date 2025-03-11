@@ -22,7 +22,7 @@ namespace TreeColonisationAlgo {
     public:
         TreeColonisation();
         TreeColonisation(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength = 1.f, float randomness = 0.f);
-        TreeColonisation(Graph<NODE_TYPE> graph, const Vector3& startPos, float segmentLength = 1.f, float randomness = 0.f);
+        TreeColonisation(GraphTemplate<NODE_TYPE> graph, const Vector3& startPos, float segmentLength = 1.f, float randomness = 0.f);
         ~TreeColonisation();
 
         void init(std::vector<Vector3> nodes, const Vector3& startPos, float segmentLength, float randomness);

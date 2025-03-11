@@ -39,6 +39,7 @@ public:
     void display(GLenum shape = -1, float lineWeight = 1);
     void displayWithOutlines(std::vector<float> faceColor, GLenum shape = -1, float lineWeight = 1);
     void displayNormals();
+    void displayStrips(std::vector<int> counts, float lineWeight = 1);
 
     void displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
     Mesh &fromVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMagnitude = -1, bool normalize = false, bool displayArrow = true);

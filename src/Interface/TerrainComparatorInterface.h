@@ -26,6 +26,8 @@ public:
 
     QLayout* createGUI();
 
+    GridV3 extractDifferencesAsImage();
+
 public Q_SLOTS:
     void hide();
     void show();

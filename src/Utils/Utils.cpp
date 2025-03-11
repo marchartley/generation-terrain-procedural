@@ -4,6 +4,8 @@
 #include <thread>
 #include <chrono>
 
+#include "Utils/BSpline.h"
+
 std::vector<std::string> split(std::string str, std::string c)
 {
     std::vector<std::string> result;
@@ -124,8 +126,7 @@ float cubic(float _x, float _min, float _max) {
 }
 float cosine(float _x, float _min, float _max) {
     float x = linear(_x, _min, _max);
-    float pi = 3.141592;
-    return inv_linear((std::cos(x * pi + pi) / 2.f) + 0.5, _min, _max);
+    return inv_linear((std::cos(x * PI + PI) / 2.f) + 0.5, _min, _max);
 }
 float binary(float _x, float _min, float _max) {
     float x = linear(_x, _min, _max);
@@ -201,7 +202,7 @@ float deg2rad(float deg)
 }
 
 float gaussian(float sigma, float sqrDist) {
-    float oneOverSqrt2Pi = 1.f/(2 * M_PI * sigma * sigma);
+    float oneOverSqrt2Pi = 1.f/(2 * PI * sigma * sigma);
     float sqrSigma = 2 * sigma * sigma;
     return std::exp(-sqrDist/sqrSigma) * oneOverSqrt2Pi;
 }
@@ -233,7 +234,7 @@ float normalizedGaussian(const Vector3& size, const Vector3& position, float sig
 
 float normalDistribution(const Vector3& size, const Vector3& position, float sigma)
 {
-    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
+    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * PI);
     float sqrSigma = 2 * sigma * sigma;
 //    position -= (size * .5f);
     float normal = std::exp(-(position - size * .5f).norm2()/(sqrSigma)) * oneOverSqrt2Pi;
@@ -304,12 +305,13 @@ std::string simplify(std::string s)
 
 
 
-double timeIt(std::function<void ()> func)
+double timeIt(std::function<void ()> func, int repetitions)
 {
     auto start = std::chrono::system_clock::now();
-    func();
+    for (int _ = 0; _ < repetitions; _++)
+        func();
     auto end = std::chrono::system_clock::now();
-    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    return (std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count()) / double(repetitions);
 }
 
 void sleep(int milliseconds)
@@ -319,18 +321,26 @@ void sleep(int milliseconds)
 
 std::string showTime(double nanoseconds)
 {
-    std::ostringstream oss;
-    nanoseconds /= 1000000.f;
-    if (nanoseconds < 10) { // < 10ms
-        oss << std::setprecision(3) << nanoseconds << "ms";
-    } else if (nanoseconds < 1000 * 10) { // < 10 sec
-        oss << int(nanoseconds) << "ms";
-    } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
-        oss << int(nanoseconds / 1000) << "s";
-    } else { // > 10 min
-        oss << int(nanoseconds / (1000 * 60)) << "min" << int(nanoseconds) % (1000 * 60) << "s (" + int(nanoseconds / 1000) << "s)";
+    if (std::isinf(nanoseconds)) return "inf";
+    else if (std::isnan(nanoseconds)) return "NaN";
+    try {
+        std::ostringstream oss;
+        nanoseconds /= 1000000.f;
+        if (nanoseconds != nanoseconds) // NaN
+            oss << "0ms";
+        else if (nanoseconds < 10) { // < 10ms
+            oss << std::setprecision(3) << nanoseconds << "ms";
+        } else if (nanoseconds < 1000 * 10) { // < 10 sec
+            oss << int(nanoseconds) << "ms";
+        } else if (nanoseconds < 1000 * 60 * 10) { // < 10 min
+            oss << int(nanoseconds / 1000) << "s";
+        } else { // > 10 min
+            oss << int(nanoseconds / (1000 * 60)) << "min" << int(nanoseconds) % (1000 * 60) << "s (" + int(nanoseconds / 1000) << "s)";
+        }
+        return oss.str();
+    } catch (std::exception& e) {
+        return e.what();
     }
-    return oss.str();
 }
 
 /*
@@ -446,7 +456,7 @@ std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, 
 
     for (size_t s = 1; s <= logN; ++s) {
         size_t m = 1 << s;
-        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(M_PI) / float(m));
+        std::complex<float> wm = std::polar(1.0f, (inverse ? -2.0f : 2.0f) * float(PI) / float(m));
         for (size_t k = 0; k < N; k += m) {
             std::complex<float> w = 1.0f;
             for (size_t j = 0; j < m / 2; ++j) {
@@ -495,4 +505,78 @@ std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float
 bool isPowerOf2(int n)
 {
     return n > 0 &&  (n & (n-1)) == 0;
+}
+
+int runCommand(std::string command)
+{
+    command = "/bin/bash -c 'source ~/.bashrc && " + command + "'";
+    return std::system(command.c_str());
+}
+
+Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor)
+{
+    return Vector3::slerp(t, startColor, endColor);
+}
+
+float displayProcessTime(std::string textToDisplay, std::function<void ()> func, bool print)
+{
+    if (print) std::cout << textToDisplay << std::flush;
+    float time = timeIt(func);
+    if (print) std::cout << " " << showTime(time) << std::endl;
+    return time;
+}
+
+Vector3 colorPalette(float t, const std::vector<Vector3> &colors)
+{
+    return BSpline(colors).getPoint(t);
+}
+
+Vector3 colorPalette(float t, const std::vector<Vector3> &colors, const std::vector<float> &keypoints)
+{
+    float previousKey = 0.f, nextKey = keypoints.front();
+    int iKey = -1;
+    for (int i = 0; i < keypoints.size(); i++) {
+        iKey = i;
+        if (t < keypoints[i]) {
+            break;
+        }
+    }
+    if (iKey <= 0)
+        return colors.front();
+    previousKey = keypoints[iKey - 1];
+    nextKey = keypoints[iKey];
+    float interpol = std::clamp(interpolation::linear(t, previousKey, nextKey), 0.f, 1.f);
+    return colorPalette(interpol, colors[iKey - 1], colors[iKey]);
+}
+
+StatsValues getStats(std::vector<float> values)
+{
+    StatsValues stats;
+    std::sort(values.begin(), values.end());
+    stats.min = values.front();
+    stats.max = values.back();
+    float sum = 0;
+    float sqrSum = 0;
+    for (auto& x : values) {
+        sum += x;
+        sqrSum += x * x;
+    }
+    stats.mean = sum / float(values.size());
+    stats.median = (values.size() % 2 == 0 ? (values[values.size() / 2 - 1] + values[values.size() / 2]) * 0.5f : values[values.size() / 2]);
+    stats.variance = (sqrSum / float(values.size())) - stats.mean * stats.mean;
+    stats.stdev = std::sqrt(stats.variance);
+    return stats;
+}
+
+std::string trim(std::string initial, std::string ws)
+{
+    std::string str = initial;
+    size_t found;
+    found = str.find_last_not_of(ws);
+    if (found != std::string::npos)
+        str.erase(found+1);
+    else
+        str.clear();            // str is all whitespace
+
+    return str;
 }

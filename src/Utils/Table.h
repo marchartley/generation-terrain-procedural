@@ -25,6 +25,10 @@ public:
           const std::vector<std::string>& colNames,
           const std::vector<std::string>& rowNames);
 
+    Table(const std::vector<std::vector<std::string>>& data,
+          const std::vector<std::string>& colNames,
+          const std::vector<std::string>& rowNames);
+
     template<typename... Ts>
     Table(const std::vector<TableRow<Ts...>>& tableRows,
           const std::vector<std::string>& colNames,

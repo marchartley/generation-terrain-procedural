@@ -257,6 +257,7 @@ void main(void) {
     vec3 dataSize = vec3(textureSize(dataFieldTex, 0));
     vec3 center = dataSize * 0.5;
 
+
     vec3 changeSize = vec3(textureSize(dataChangesFieldTex, 0));
     vec3 evalPos = (changeSize.z > 1 ? voxPos / changeSize : vec3(voxPos.xy, 0.5) / changeSize);
     float changeVal = texture(dataChangesFieldTex, evalPos).a - 2.0;

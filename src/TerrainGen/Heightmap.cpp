@@ -269,7 +269,7 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
         pos.setValid(false);
         for (int placementTry = 0; placementTry < 10; placementTry ++) {
             pos.setValid(false);
-            float rnd = random_gen::generate(0, 3.141592 * 2.f);
+            float rnd = random_gen::generate(0, M_PI * 2.f);
             Vector3 posInLine = Vector3(getSizeX()/2, getSizeY()/2) + Vector3(std::cos(rnd), std::sin(rnd)) * terrainDiagonal;//Vector3::lerp(random_gen::generate(), availableStart, availableEnd);
             Vector3 possiblePosX0 = Collision::intersectionBetweenTwoSegments(posInLine, posInLine + windDirection * terrainDiagonal,
                                                                               Vector3(0, 0, 0), Vector3(getSizeX(), 0, 0));
@@ -400,7 +400,7 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
     }
 
     GridF faultsImpact(getSizeX(), getSizeY());
-    float time = timeIt([&]() {
+    displayProcessTime("Generating faults in terrain... ", [&]() {
         for (int x = 0; x < getSizeX(); x++) {
             for (int y = 0; y < getSizeY(); y++) {
                 Vector3 pos(x, y);
@@ -414,7 +414,6 @@ void Heightmap::randomFaultTerrainGeneration(int numberOfFaults, int maxNumberOf
             }
         }
     });
-    std::cout << "Faulting terrain in " << showTime(time) << std::endl;
     this->heights += (faultsImpact.normalized() * faultHeight);
 }
 Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
@@ -428,17 +427,18 @@ Heightmap& Heightmap::fromVoxelGrid(VoxelGrid &voxelGrid) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = voxelGrid.getSizeZ() - 1; z >= 0; z--)
                 if (voxels.at(x, y, z) > 0.f) {
-//                    float current = voxels.at(x, y, z); // Is > 0.f
-//                    float above = voxels.at(x, y, z + 1); // can be == 0.f
-//                    if (above == 0.f) this->heights.at(x, y) = z;
-//                    else this->heights.at(x, y) = z + std::min(current / above, above / current);
-                    this->heights.at(x, y) = z;
+                   float current = voxels.at(x, y, z); // Is > 0.f
+                   float above = voxels.at(x, y, z + 1); // can be == 0.f
+                   if (std::abs(above) <= 1e-5) this->heights.at(x, y) = z;
+                   else this->heights.at(x, y) = z + current / (current - above);
+                    // this->heights.at(x, y) = z + std::min(current / above, above / current);
                     break;
                 }
         }
     }
 //    this->computeNormals();
 //    this->createMesh();
+//    this->heights = this->heights.meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true).meanSmooth(5, 5, 1, true);
     return *this;
 }
 
@@ -537,21 +537,23 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     if (data != nullptr)
         delete[] data;
 
-    map = (map / map.max()).resize(nx, ny, 1);
+    // map = (map / map.max()).resize(nx, ny, 1);
+    map = (map / 255.f).resize(nx, ny, 1);
     map *= heightFactor;
     this->heights = map;
     return *this;
 }
 
-void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions)
+void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions, bool useRelativeHeight)
 {
     if (!imageDimensions.isValid())
         imageDimensions = this->heights.getDimensions();
 
     std::string ext = toUpper(getExtension(heightmap_filename));
-    int width = imageDimensions.x;
-    int height = imageDimensions.y;
     auto resizedHeights = heights.resize(imageDimensions);
+    if (useRelativeHeight) {
+        resizedHeights = resizedHeights.normalize() * 100.f;
+    }
     Image(resizedHeights / 100.f).writeToFile(heightmap_filename);
     /*
     // To heightmap
@@ -582,15 +584,30 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
     */
 }
 
-Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
+Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    AABBox myAABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
-//    if (!minPos.isValid()) minPos = Vector3();
-//    if (!maxPos.isValid()) maxPos = this->getDimensions();
+    float stepSize = .1f;
 
+    AABBox myAABBox(Vector3::max(minPos, Vector3(0, 0, this->heights.min())), Vector3::min(maxPos, this->getDimensions()));
     Vector3 currPos = origin;
-//    auto values = this->getVoxelValues();
-//    values.raiseErrorOnBadCoord = false;
+    Vector3 dir = _dir.normalized();
+
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
+
+    currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox.min(), myAABBox.max());
+    if (!currPos.isValid()) return Vector3(false);
+
+    dir *= stepSize;
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
+
+    while (myAABBox.contains(currPos)) {
+        if (this->checkIsInGround(currPos) != this->checkIsInGround(currPos + dir))
+            return currPos;
+        currPos += dir;
+    }
+//    std::cout << currPos << " is in the ground? " << this->checkIsInGround(currPos) << " -> " << myAABBox << std::endl;
+    return Vector3(false);
+/*
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
@@ -607,11 +624,12 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& dir, co
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
     return Vector3(false);
+    */
 }
 
 Vector3 Heightmap::findSurfaceBetween(const Vector3& start, const Vector3& end)
 {
-
+    return this->getIntersection(start, (end - start));
 }
 
 Mesh Heightmap::getGeometry(const Vector3& dimensions)

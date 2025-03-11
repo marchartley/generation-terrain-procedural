@@ -38,7 +38,7 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
 //        if (!this->points.empty())
 //            pointsUsed.insert(pointsUsed.end(), this->points.front());
     } else {
-        pointsUsed = this->getPath(10);
+        pointsUsed = this->getPath(200);
     }
     return Collision::pointInPolygon(pos, pointsUsed);
     /*
@@ -78,8 +78,9 @@ bool ShapeCurve::contains(const Vector3& pos, bool useNativeShape) const
     return (nb_intersections % 2) == 1;*/
 }
 
-bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
+bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape, int increaseAccuracy) const
 {
+    if (this->size() == 0) return false;
     std::vector<Vector3> pointsUsed;
     if (useNativeShape) {
         pointsUsed = this->points;
@@ -88,18 +89,25 @@ bool ShapeCurve::containsXY(const Vector3 &pos, bool useNativeShape) const
     }
     for (auto& p :  pointsUsed)
         p = p.xy();
-    return Collision::pointInPolygon(pos.xy(), pointsUsed);
+    if (increaseAccuracy <= 0)
+        return Collision::pointInPolygon(pos.xy(), pointsUsed);
+
+    int nbTests = increaseAccuracy * 2 + 1;
+    int positiveCounts = 0;
+    for (int i = 0; i < nbTests; i++)
+        positiveCounts += (Collision::pointInPolygon(pos.xy() + Vector3::random().xy() * .1f, pointsUsed) ? 1 : 0);
+    return positiveCounts > increaseAccuracy;
 }
 
 float ShapeCurve::estimateDistanceFrom(const Vector3& pos) const
 {
-    float dist = BSpline(this->closedPath()).estimateDistanceFrom(pos);
-    return dist * (contains(pos) ? -1.f : 1.f); // Negative distance if it's currently inside
+    float dist = /*BSpline(this->closedPath()).*/BSpline::estimateDistanceFrom(pos);
+    return dist * (contains(pos, false) ? -1.f : 1.f); // Negative distance if it's currently inside
 }
 
 float ShapeCurve::estimateSignedDistanceFrom(const Vector3& pos, float epsilon) const
 {
-    return BSpline(this->closedPath()).estimateSignedDistanceFrom(pos, epsilon);
+    return /*BSpline(this->closedPath()).*/BSpline::estimateSignedDistanceFrom(pos, epsilon);
 }
 
 float ShapeCurve::computeArea()
@@ -116,10 +124,21 @@ float ShapeCurve::computeSignedArea()
     return area / 2.f;
 }
 
-ShapeCurve &ShapeCurve::reverseVertices()
+Vector3 ShapeCurve::centroid() const
 {
-    std::reverse(this->points.begin(), this->points.end());
-    return *this;
+    Vector3 centroid;
+    float totalArea = 0;
+    ShapeCurve copy = *this;
+    copy.removeDuplicates();
+    for (int i = 0; i < copy.points.size(); i++) {
+        int j = (i + 1) % (copy.points.size());
+        int k = (i - 1 + copy.points.size()) % (copy.points.size());
+
+        float triangleArea = 0.5f * (copy.points[i] - copy.points[j]).cross(copy.points[i] - copy.points[k]).norm();
+        centroid += triangleArea * copy.points[i];
+        totalArea += triangleArea;
+    }
+    return centroid / totalArea;
 }
 
 int getIndex(int index, size_t size) {
@@ -262,9 +281,17 @@ Vector3 ShapeCurve::planeNormal()
 
 std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
 {
-    if (this->points.empty()) return std::vector<Vector3>();
-    int maxFailures = 10000 * numberOfPoints;
     std::vector<Vector3> returnedPoints;
+    if (this->points.size() < 3) return std::vector<Vector3>();
+
+    if (this->points.size() == 3) {
+        for (int i = 0; i < numberOfPoints; i++) {
+            returnedPoints.push_back(randomPointInTriangle(points[0], points[1], points[2]));
+        }
+        return returnedPoints;
+    }
+
+    int maxFailures = 10000 * numberOfPoints;
     Vector3 minVec, maxVec;
     std::tie(minVec, maxVec) = this->AABBox();
     minVec.z = -1;
@@ -413,6 +440,21 @@ ShapeCurve ShapeCurve::merge(ShapeCurve other) {
     return (res1.computeArea() > res2.computeArea() ? res1 : res2);
 }
 
+ShapeCurve &ShapeCurve::resamplePoints(int newNbPoints)
+{
+    BSpline::resamplePoints(newNbPoints);
+    if (this->points.size() > 0) {
+        this->points.pop_back(); // Remove last point (as it should be also the first one)
+    }
+    return *this;
+}
+
+ShapeCurve &ShapeCurve::setPoint(int i, const Vector3 &newPos)
+{
+    BSpline::setPoint(i, newPos);
+    return *this;
+}
+
 ShapeCurve ShapeCurve::circle(float radius, const Vector3 &center, int nbPoints)
 {
     std::vector<Vector3> points;
@@ -490,4 +532,128 @@ std::vector<Vector3> ShapeCurve::closedPath() const
     if (!this->points.empty())
         res.push_back(this->points[0]);
     return res;
+}
+
+
+
+
+std::vector<float> computeGreenCoordinates(const Vector3& p, const ShapeCurve& polygon) {
+    auto& vertices = polygon;
+    size_t n = vertices.size();
+    std::vector<float> weights(n, 0.0);
+    std::vector<float> tans(n, 0.0);
+
+    for (size_t i = 0; i < n; i++) {
+        Vector3 v1 = vertices[i] - p;
+        Vector3 v2 = vertices[(i + 1) % n] - p;
+
+        float dist1 = v1.magnitude();
+        float dist2 = v2.magnitude();
+
+        // Avoid division by zero by ensuring no zero-length vectors
+        if (dist1 == 0 || dist2 == 0) return {};
+
+        float cosine = v1.dot(v2) / (dist1 * dist2);
+        float sine = v1.cross(v2).norm() / (dist1 * dist2);
+
+        // Calculate tan of half the angle between v1 and v2
+        float angle = atan2(sine, cosine);
+        tans[i] = tan(angle / 2);
+    }
+
+    float totalWeight = 0.0;
+    for (size_t i = 0; i < n; i++) {
+        size_t prev = (i + n - 1) % n;
+        float weight = (tans[prev] + tans[i]) / (vertices[i] - p).magnitude();
+        weights[i] = weight;
+        totalWeight += weight;
+    }
+
+    // Normalize weights
+    for (float& weight : weights) {
+        weight /= totalWeight;
+    }
+
+    return weights;
+
+    /*std::vector<float> greenCoords;
+
+    for (size_t i = 0; i < polygon.size(); i ++) {
+        const Vector3& a = polygon[i];
+        const Vector3& b = polygon[i + 1];
+        const Vector3& c = polygon[i + 2];
+
+        // Check if the point is inside the triangle formed by a, b, and c
+        if (Collision::pointInPolygon(p, {a, b, c})) {
+            // Compute the barycentric coordinates of the point with respect to triangle abc
+            Vector3 v0 = c - a;
+            Vector3 v1 = b - a;
+            Vector3 v2 = p - a;
+
+            float dot00 = v0.dot(v0);
+            float dot01 = v0.dot(v1);
+            float dot02 = v0.dot(v2);
+            float dot11 = v1.dot(v1);
+            float dot12 = v1.dot(v2);
+
+            float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+            float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+            float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+            float w = 1.0f - u - v;
+
+            // Store the barycentric coordinates
+            greenCoords.push_back(w);
+            greenCoords.push_back(v);
+            greenCoords.push_back(u);
+
+            // Assuming the polygon is simple, return the green coordinates once found
+            // return greenCoords;
+        } else {
+            greenCoords.push_back(0);
+            greenCoords.push_back(0);
+            greenCoords.push_back(0);
+        }
+    }
+
+    // Point is outside the polygon
+    return greenCoords;*/
+}
+
+Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, const ShapeCurve& polygon) {
+    const auto& vertices = polygon;
+    const auto& weights = greenCoords;
+    Vector3 p;
+    for (size_t i = 0; i < vertices.size(); i++) {
+        p.x += vertices[i].x * weights[i];
+        p.y += vertices[i].y * weights[i];
+    }
+    return p;
+
+    /*
+    Vector3 p(0.0, 0.0, 0.0); // Initialize point P
+
+    // Interpolate the position of the point based on the barycentric coordinates
+    for (size_t i = 0; i < polygon.size(); i ++) {
+        const Vector3& a = polygon[i];
+        const Vector3& b = polygon[i + 1];
+        const Vector3& c = polygon[i + 2];
+
+        // Extract barycentric coordinates for triangle abc
+        float u = greenCoords[i];
+        float v = greenCoords[i + 1];
+        float w = greenCoords[i + 2];
+
+        // Compute the interpolated position of the point P using barycentric coordinates
+        p += (u * a + v * b + w * c);
+    }
+
+    return p;*/
+}
+
+Vector3 randomPointInTriangle(const Vector3 &A, const Vector3 &B, const Vector3 &C)
+{
+    float s = random_gen::generate();
+    float t = random_gen::generate();
+
+    return A + (s + t <= 1 ? s * (B - A) + t * (C - A) : (1 - s) * (B - A) + (1 - t) * (C - A));
 }

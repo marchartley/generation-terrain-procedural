@@ -1,4 +1,5 @@
 import math
+import numpy as np
 import timeit
 from typing import Tuple, List, Callable, Union, Optional, Any
 from matplotlib import pyplot as plt
@@ -26,15 +27,40 @@ def resizeArray(initialCurve: List[Any], desiredLength: int):
     if initialLength == desiredLength or initialLength == 0:
         return initialCurve
 
-    finalCurve: List[Vector2D] = []
-    ratio = (initialLength - 1) / (desiredLength - 1)
+    # Convert to NumPy array for vectorized operations
+    initialCurve = np.array(initialCurve)
 
-    for i in range(desiredLength):
-        ii = i * ratio
-        t = ii - int(ii)
-        finalCurve.append(initialCurve[math.floor(ii)] * (1 - t) + initialCurve[min(math.ceil(ii), initialLength - 1)] * t)
+    # Compute the indices for the resampled array
+    indices = np.linspace(0, initialLength - 1, desiredLength)
 
-    return finalCurve
+    # Get the integer parts (floor) and fractional parts of the indices
+    lower_indices = np.floor(indices).astype(int)
+    upper_indices = np.ceil(indices).astype(int)
+    upper_indices = np.clip(upper_indices, 0, initialLength - 1)  # Clip to avoid out-of-bound indexing
+    fractional_parts = indices - lower_indices
+
+    # Perform linear interpolation
+    finalCurve = (
+        initialCurve[lower_indices] * (1 - fractional_parts) +
+        initialCurve[upper_indices] * fractional_parts
+    )
+
+    return finalCurve.tolist()
+
+# def resizeArray(initialCurve: List[Any], desiredLength: int):
+#     initialLength = len(initialCurve)
+#     if initialLength == desiredLength or initialLength == 0:
+#         return initialCurve
+#
+#     finalCurve: List[Vector2D] = []
+#     ratio = (initialLength - 1) / (desiredLength - 1)
+#
+#     for i in range(desiredLength):
+#         ii = i * ratio
+#         t = ii - int(ii)
+#         finalCurve.append(initialCurve[math.floor(ii)] * (1 - t) + initialCurve[min(math.ceil(ii), initialLength - 1)] * t)
+#
+#     return finalCurve
 
 
 class LineBuilder:
@@ -116,16 +142,37 @@ class LineBuilder:
         return self
 
     def intersection(self, limitA: Vector2D, limitB: Vector2D) -> List[Vector2D]:
-        intersections: List[Vector2D] = []
+        # Retrieve and resample the curve to reduce complexity
         curve = self.getCurve()
-        curve = resizeArray(curve, 30)  # Just to gain in time... should be removed later
-        for i in range(1, len(curve)):
-            p1, p2 = curve[i - 1], curve[i]
-            intersect = line_intersection(limitA, limitB, p1, p2)
-            if intersect is None or intersect in intersections:
-                continue
-            intersections.append(intersect)
+        if len(curve) < 2:
+            return []
+        if len(curve) > 30:  # Avoid redundant resizing if curve is already small
+            curve = resizeArray(curve, 30)
+
+        # Preallocate list size conservatively to reduce dynamic resizing
+        intersections = []
+
+        # Iterate through curve segments
+        previous_point = curve[0]
+        for current_point in curve[1:]:
+            # Check for intersection between the line segment and the curve segment
+            intersect = line_intersection(limitA, limitB, previous_point, current_point)
+            if intersect and intersect not in intersections:  # Avoid duplicates
+                intersections.append(intersect)
+            previous_point = current_point  # Update for next segment
+
         return intersections
+    # def intersection(self, limitA: Vector2D, limitB: Vector2D) -> List[Vector2D]:
+    #     intersections: List[Vector2D] = []
+    #     curve = self.getCurve()
+    #     curve = resizeArray(curve, 30)  # Just to gain in time... should be removed later
+    #     for i in range(1, len(curve)):
+    #         p1, p2 = curve[i - 1], curve[i]
+    #         intersect = line_intersection(limitA, limitB, p1, p2)
+    #         if intersect is None or intersect in intersections:
+    #             continue
+    #         intersections.append(intersect)
+    #     return intersections
 
     def addCallbackOnChange(self, function: Callable):
         self.callbacksOnChange.append(function)
@@ -133,14 +180,16 @@ class LineBuilder:
     def addCallbackOnChangeEnded(self, function: Callable):
         self.callbacksOnChangeEnded.append(function)
 
-    def draw(self):
+    def draw(self, forceRedraw = True):
         curve = self.getCurve()
         c1 = curve
         c2 = curve  # self.points
         self.line.set_data([v.x for v in c1], [v.y for v in c1])
+        self.line.set_linewidth(3.0 if self.active else 2.0)
         # ax: plt.Axes = self.line.axes
         # ax.scatter([p.x for p in c2], [p.y for p in c2], marker="x")
-        self.line.figure.canvas.draw()
+        if forceRedraw:
+            self.line.figure.canvas.draw()
 
     def computeCachedCurve(self):
         self.drawableCurve = resizeArray(curves.catmull_rom_chain(self.points, num_points=5), 30)
@@ -207,8 +256,8 @@ class LineBuilder1D(LineBuilder):
     def close(self) -> 'LineBuilder1D':
         raise NotImplementedError("Cannot close a 1D line")
 
-    def draw(self):
-        return super().draw()
+    def draw(self, forceRedraw = True):
+        return super().draw(forceRedraw)
 
 
 class LineBuilder2D(LineBuilder):
@@ -314,8 +363,8 @@ class LineBuilderRadial(LineBuilder1D):
         t = (angle - closestBefore.x) / ((closestAfter.x if closestBeforeID+1 < len(self.points) else 2*math.pi) - closestBefore.x)
         return closestBefore.y + t * (closestAfter.y - closestBefore.y)
 
-    def draw(self):
-        return super().draw()
+    def draw(self, forceRedraw = True):
+        return super().draw(forceRedraw)
 
 class SketchManagement:
     def __init__(self, ax):
@@ -342,9 +391,9 @@ class SketchManagement:
         for line in self.lineBuilders:
             line.addCallbackOnChangeEnded(function)
 
-    def draw(self):
+    def draw(self, forceRedraw = True):
         for line in self.lineBuilders:
-            line.draw()
+            line.draw(forceRedraw)
 
     def addSketchs(self, sketches: List[LineBuilder]):
         for sketch in sketches:

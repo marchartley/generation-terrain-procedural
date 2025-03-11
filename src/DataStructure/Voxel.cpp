@@ -6,7 +6,7 @@
 VoxelDataFile::VoxelDataFile()
 {}
 
-VoxelDataFile::VoxelDataFile(const GridF&dVec)
+VoxelDataFile::VoxelDataFile(const GridF& dVec)
     : data(dVec) {}
 
 void VoxelDataFile::write(const std::string &filename) {
@@ -19,7 +19,7 @@ void VoxelDataFile::write(const std::string &filename) {
 
         size_t dataSize = data.size();
         outFile.write(reinterpret_cast<const char*>(&dataSize), sizeof(dataSize));
-        outFile.write(reinterpret_cast<const char*>(data.data.data()), dataSize * sizeof(float));
+        outFile.write(reinterpret_cast<const char*>(((Matrix3<char>)data).data.data()), dataSize * sizeof(float));
 
         outFile.close();
         std::cout << "Data written to file successfully." << std::endl;
@@ -55,8 +55,13 @@ void VoxelDataFile::load(const std::string &filename) {
 
         if (potentialWidth > 0 && potentialHeight > 0 && potentialDepth > 0) {
             // Assume it's the new binary format
-            inFile.seekg(0, std::ios::beg);
-            loadFromFileBinary(filename);
+            try {
+                inFile.seekg(0, std::ios::beg);
+                loadFromFileBinary(filename);
+            } catch(std::exception e) {
+                inFile.seekg(0, std::ios::beg);
+                loadFromFileOld(filename);
+            }
         } else {
             std::cerr << "Unable to determine the file format." << std::endl;
         }

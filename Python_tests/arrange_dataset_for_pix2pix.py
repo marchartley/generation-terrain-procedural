@@ -57,16 +57,10 @@ def moveToFolders(path):
         newFilename = path + ("train" if i < trainLimit else "val" if i < valLimit else "test") + "/" + str(
             fileID) + ".png"
         shutil.move(previous_filename, newFilename)
-        # print(previous_filename + " -> " + newFilename)
 
-    # print(path + "train")
 
 def main():
-    mainPath = ""
-    # if os.name == 'nt':
-    mainPath = "./correct_synthetic_terrains_dataset_older/"
-    # else:
-    #     mainPath = "/data/correct_synthetic_terrains_dataset/"
+    mainPath = "new_synthetic_terrains_dataset/"
     pathHeightmap = mainPath + "heightmaps/"
     pathFeatures = mainPath + "features/"
     pathDistortions = mainPath + "distortions/"

@@ -54,7 +54,7 @@ protected:
     bool displayParticles = false;
     bool computeAtEachFrame = false;
 
-    bool displayOnlyAtSurface = true;
+    bool displayOnlyAtSurface = false;
 
     int nbComputationsPerFrame = 1;
 };

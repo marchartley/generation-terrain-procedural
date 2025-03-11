@@ -1,0 +1,687 @@
+[
+  {
+    "name": "Passe",
+    "type": "curve",
+    "rule": "((5 - d(greatreef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(greatreef - pos) < 5) max 0",
+    "flow": {
+      "direction": 10.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    },
+    "absorptionRate" : {
+    },
+    "dimensions": {
+      "x": 1,
+      "y": 30,
+      "z": 2
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "Reef",
+    "type": "curve",
+    "rule": "normal(d(lagoon - pos)) * (depth > 0)  * (d((reef - pos) ? {10 0 0}) > 5)",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    	"polyp": 0.0,
+    	"pebbles": 0.1,
+    	"deadcoral": 0.005,
+    	"sand": 0.10
+    },
+    "absorptionRate" : {
+    	"polyp": 0.0,
+    	"deadcoral": 0.01,
+    	"sand": 0.10
+    },
+    "dimensions": {
+      "x": 10,
+      "y": 30,
+      "z": 2
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "sand"
+  },
+  {
+    "name": "GreatReef",
+    "type": "curve",
+    "rule": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1))) * ((currenttime - spawntime) < 50)",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    },
+    "absorptionRate" : {
+    },
+    "dimensions": {
+      "x": 6,
+      "y": 30,
+      "z": 6
+    },
+    "minScore": 0.02,
+    "heightfrom": "water",
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "sand"
+  },
+  {
+    "name": "CoralPolyp",
+    "type": "point",
+    "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3)",
+    "rule": "(1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 30)",
+    "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
+    "flow": 0.10,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 10.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 0.01,
+    	"deadCoral": 0.5
+    },
+    "minScore": 0.0,
+    "absorptionRate": {
+    	"sand": 0.1,
+    	"polyp": 0.1
+    },
+    "minScore": 1.0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral",
+    "onDeath": {
+    }
+  },
+  {
+    "name": "CoralPolypStrong",
+    "type": "point",
+    "rule": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 3) / 1.0) * (depth > 0)) * (current.vel * 100 + 1.0)",
+    "flow": 0.10,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 10.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 0.01,
+    	"deadCoral": 0.1
+    },
+    "minScore": 0.1,
+    "absorptionRate": {
+    	"sand": 0.1,
+    	"polyp": 0.1
+    },
+    "minScore": 0.1,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral",
+    "onDeath": {
+    }
+  },
+  
+  {
+    "name": "CoralPolypFlat",
+    "type": "point",
+    "--rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (abs(currenttime - spawntime) < 20) * (d2(coralpolypflat - pos) > 2) * (depth > 0)",
+    "rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (1 - (normal(d(coralpolypflat - pos) - 2)/4)) * (depth > 0) * d(depth.gradient)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "Island",
+    "type": "area",
+    "rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "flow": {
+      "direction": 0.3,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    	"sand": 0.01
+    },
+    "absorptionRate" : {
+    	"--sand": 0.01
+    },
+    "dimensions": {
+      "x": 20,
+      "y": 90,
+      "z": 20
+    },
+    "snake": {
+		"connectivity": 0.0,
+		"curvature": 0.0,
+		"length": 0.0,
+		"area": 200.0,
+		"image": 0.00001,
+		"imageinside": 1.0,
+		"imageborders": 0.0,
+		"catapillars": 0
+    },
+    "minScore": 0.10,
+    "heightfrom": "ground",
+    "evaluation": "borders",
+    "geometry": "DistanceMap",
+    "material": "SAND"
+  },
+  {
+    "name": "Motu",
+    "type": "area",
+    "rule": "lagoon.curvature * normal(d(lagoon - pos)) * normal(depth - 3)",
+    "--rule": "((d((Passe - pos) ? {5 0 0}) - 5)  + (sand * 10000)) + 1000 * (10 - d((reef - pos) ? {10 0 0}))",
+    "flow": {
+      "direction": 0.10,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 20.0,
+      "y": 20.0,
+      "z": 10
+    },
+    "needs": {
+      "age": 0.0,
+      "sand": 0.0
+    },
+    "depositionRate" : {
+    	"sand": 1.0
+    },
+    "absorptionRate" : {
+    	"sand": 1.50
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "DistanceMap",
+    "material": "Sand"
+  },
+  {
+    "name": "Fault",
+    "type": "curve",
+    "rule": "(fracture * (depth > 5)) max 0",
+    "---rule": "fracture * ((random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * 0.5) * (depth max 0)^0.5) max 0",
+    "--rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
+    "flow": {
+      "direction": 10.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "depositionRate" : {
+    },
+    "absorptionRate" : {
+    },
+    "dimensions": {
+      "x": 10,
+      "y": 70,
+      "z": 3
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "Arch",
+    "type": "point",
+    "rule": "z((depth.gradient + {0 0 1}) / d(depth.gradient + {0 0 1})) * depth^3",
+    "-rule": "(5 - d((fault - pos) ? {5 0 0})) max 0",
+    "--rule": "(10 - (d(fault.center - pos) - abs(d(fault.start - pos) - d(fault.end - pos))^2)) max 0 * (5 - d(fault - pos)) max 0",
+    "flow": 1.0,
+    "depositionRate" : {
+    	"pebbles": 0.1
+    },
+    "absorptionRate" : {
+    },
+    "dimensions": {
+      "x": 10,
+      "y": 10,
+      "z": 1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "Sand"
+  },
+  {
+    "name": "River",
+    "type": "curve",
+    "rule": "(depth) * (1 - (normal((d(river - pos))/2) min 1))",
+    "--rule": "(20 - abs(depth)) * (depth < 0)",
+    "fitness": "normal((depth + 20)/20) * (depth < 0) * (1 - (normal((d(river.start - pos))/2) min 1)) * (1 - (normal((d(river - pos))/2) min 1))",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 2,
+      "y": 40,
+      "z": 4
+    },
+    "depositionRate" : {
+	"freshwater": 10.0
+    },
+    "absorptionRate" : {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "ParametricTunnel",
+    "material": "water",
+    "follows": "gradients"
+  },
+  {
+    "name": "Canyon",
+    "type": "curve",
+    "rule": "fracture * ((depth max 0)^0.5) max 0",
+    "flow": {
+      "direction": 1.0,
+      "normal": 0.1,
+      "binormal": 0.0
+    },
+    "sand": 0.0,
+    "dimensions": {
+      "x": 15,
+      "y": 200,
+      "z": 5
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "follows": "skeleton",
+    "geometry": "ParametricTunnel",
+    "material": "water"
+  },
+  {
+    "name": "BigRock",
+    "type": "point",
+    "rule": "pebbles * (1 - (normal(d(bigrock - pos) - 1) min 1))",
+    "flow": 0.00,
+    "dimensions": {
+      "x": 10,
+      "y": 10,
+      "z": 1
+    },
+    "depositionRate" : {
+	"pebbles": 10.0
+    },
+    "absorptionRate" : {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "Sand"
+  },
+  {
+    "name": "SmallRock",
+    "type": "point",
+    "rule": "((10 - d(bigRock - pos)) / (current.vel + 1))",
+    "--rule": "((20 - d(bigRock - (pos + current * {5 5 0})) max 0) * ((5 - d(canyon - pos)) max 0)) max 0",
+    "rule": "pebbles * (1 - (normal(d(smallrock - pos) - 1) min 1))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10,
+      "y": 10,
+      "z": 1
+    },
+    "depositionRate" : {
+	"sand": 1.0
+    },
+    "absorptionRate" : {
+	"pebbles": 2.0
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "Sand"
+  },
+  
+  {
+    "name": "CoralPolypFlatA",
+    "type": "point",
+    "rule": "(10 * (2 * polypA - polyp) * (d((CoralPolypFlatA - pos) ? {1 0 0}) + (1 * d((CoralPolypFlatA - pos) ? {1 0 0}) < 0.01)) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypA": 1.0
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypFlatB",
+    "type": "point",
+    "rule": "(10 * (2 * polypB - polyp) * (d((CoralPolypFlatB - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypB": 1.0
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypFlatC",
+    "type": "point",
+    "rule": "(10 * (2 * polypC - polyp) * (d((CoralPolypFlatC - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+    "flow": 1.0,
+    "dimensions": {
+      "x": 3.0,
+      "y": 3.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"polyp": 1.0,
+    	"polypC": 1.0
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "Lagoon",
+    "type": "area",
+    "rule": "(polyp) max (sand) ",
+    "---rule": "((20 - d(island - pos)) * (1 - island.inside)) max 0",
+    "-rule": "sand",
+    "--rule": "(normal((depth - 10)/0.5)) *  (d(lagoon - pos) > 5) + (d(lagoon.center - pos) < 10)",
+    "flow": {
+      "direction": 0.10,
+      "normal": 0.0,
+      "binormal": 0.0
+     },
+    "dimensions": {
+      "x": 60.0,
+      "y": 60.0,
+      "z": 2.0
+    },
+    "needs": {
+      "age": 1.0
+    },
+    "depositionRate": {
+      "sand": 0.1
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0.0,
+    "heightfrom": "water",
+    "evaluation": "inside",
+    "geometry": "Polygon",
+    "material": "sand"
+     
+   },
+  {
+    "name": "SmallLagoon",
+    "type": "area",
+    "rule": "normal(depth - 2) * (depth > -1) * (d(pos - (smalllagoon ? {1000 0 0})) > 3) * (1 - smalllagoon.inside)",
+    "----rule": "sand * (1 - island.inside)",
+    "-rule": "50 - d(reef - pos)",
+    "--rule": "island.curvature * (1 - island.inside) * ((10 - d(island - pos)))",
+    "flow": {
+      "direction": 0.10,
+      "normal": 0.0,
+      "binormal": 0.0
+     },
+    "dimensions": {
+      "x": 60.0,
+      "y": 60.0,
+      "z": 2.0
+    },
+    "needs": {
+      "age": 1.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+      "sand": 100.0
+    },
+    "minScore": 0,
+    "heightfrom": "water",
+    "evaluation": "borders",
+    "geometry": "Polygon",
+    "material": "sand"
+     
+   },
+  {
+    "name": "Beach",
+    "type": "area",
+    "rule": "(sand + 1) * (1 - beach.inside) * normal(d(depth.gradient) / 10) * normal(depth / 1.5) * (depth > -2) / (current.vel + 1)",
+    "--rule": "sand * (depth > 0) * (1 - beach.inside) / (current.vel + 1)",
+    "flow": {
+      "direction": 0.10,
+      "normal": 0.0,
+      "binormal": 0.0
+     },
+    "dimensions": {
+      "x": 10.0,
+      "y": 40.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 1.0
+    },
+    "depositionRate": {
+    	"sand": 1.0
+    },
+    "absorptionRate": {
+      "sand": 0.0
+    },
+    "minScore": 0.5,
+    "heightfrom": "ground",
+    "evaluation": "borders",
+    "geometry": "none",
+    "material": "sand"
+     
+   },
+  {
+    "name": "Tree",
+    "type": "point",
+    "rule": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    	"shade": 1.0
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "sand"
+  },
+  {
+    "name": "Algae",
+    "type": "point",
+    "rule": "(freshwater + sand) * smalllagoon.inside * (random(pos * 100))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    	"sand": 1000.0
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "sand"
+  },
+  {
+    "name": "Ripple",
+    "type": "curve",
+    "--rule": "(sand > 0.2) * sand * (d((smallrock - current * 0) - pos) > 4) * (d(ripple - pos) > 2)",
+    "rule": "(current.vel + 1) * (canyon.inside + fault.inside) * d(smallrock - pos - current * -2) / (d(canyon - pos) max 1.0)",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 1.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "follows": "isovalue",
+    "heightfrom": "surface",
+    "geometry": "parametrictunnel",
+    "material": "sand"
+  },
+  {
+    "name": "Lake shore",
+    "type": "curve",
+    "rule": "depth",
+    "flow": {
+      "direction": 0.0,
+      "normal": 0.0,
+      "binormal": 0.0
+    },
+    "dimensions": {
+      "x": 1.0,
+      "y": 100.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0,
+    "follows": "isovalue",
+    "heightfrom": "surface",
+    "geometry": "parametrictunnel",
+    "material": "water"
+  },
+  {
+    "name": "Palm",
+    "type": "point",
+    "rule": "sand * (depth < 1) * normal((depth + 0.5) * 2) * (1 - (normal(d(palm - pos)/4) min 1))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 1.0,
+      "y": 1.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0.1,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "sand"
+  },
+  {
+    "name": "Bush",
+    "type": "point",
+    "rule": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 10)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 5.0,
+      "y": 5.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 0.0
+    },
+    "depositionRate": {
+    },
+    "absorptionRate": {
+    },
+    "minScore": 0.5,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "rock"
+  }
+]

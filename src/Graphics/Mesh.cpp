@@ -192,7 +192,7 @@ Mesh &Mesh::fromFBX(std::string filename)
 Mesh& Mesh::normalize()
 {
     Vector3 minAABBox(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-    Vector3 maxAABBox(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+    Vector3 maxAABBox(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
     Vector3 center;
 
     for (const auto& p : this->vertexArray) {
@@ -577,6 +577,49 @@ void Mesh::displayNormals()
     glEnd();
 }
 
+void Mesh::displayStrips(std::vector<int> counts, float lineWeight)
+{
+    if (!isDisplayed)
+        return;
+
+    std::vector<GLint> firstIndices(counts.size());
+    std::vector<GLint> counts_gl(counts.size());
+    int currentIndex = 0;
+    for (size_t i = 0; i < counts.size(); i++) {
+        firstIndices[i] = currentIndex;
+        counts_gl[i] = counts[i];
+        currentIndex += counts[i];
+    }
+
+    this->update();
+    if(this->shader != nullptr) {
+        this->shader->use();
+        this->shader->setBool("cullFace", this->cullFace);
+    }
+    if(!this->shader->use()) return;
+    GLfloat previousLineWidth[1];
+    glGetFloatv(GL_LINE_WIDTH, previousLineWidth);
+    glLineWidth(lineWeight);
+    if (this->shader != nullptr) {
+        if (this->shader->vShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->vShader);
+        if (this->shader->fShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->fShader);
+        if (this->shader->gShader != -1)
+            GlobalsGL::printShaderErrors(this->shader->gShader);
+        GlobalsGL::printProgramErrors(this->shader->programID);
+        GlobalsGL::checkOpenGLError();
+    }
+
+    GlobalsGL::f()->glBindVertexArray(this->vao);
+    GlobalsGL::checkOpenGLError();
+
+    GlobalsGL::f()->glMultiDrawArrays(GL_LINE_STRIP, firstIndices.data(), counts_gl.data(), counts.size());
+
+    glLineWidth(previousLineWidth[0]);
+
+}
+
 void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues)
 {
     std::vector<Vector3> positions(field.size());
@@ -908,7 +951,8 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
     Mesh marched;
     marched.vertexArray.reserve(100000);
 
-//    #pragma omp parallel for
+//    std::vector<Vector3> triangles(values.size(), Vector3(false));
+    #pragma omp parallel for
     for (int z = 0; z < values.sizeZ; z++) {
         for (int y = 0; y < values.sizeY; y++) {
             for (int x = 0; x < values.sizeX; x++) {
@@ -943,7 +987,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
 
                 int i = 0;
                 while(triTable[cubeindex][i] != -1){
-//                    #pragma omp critical
+                    #pragma omp critical
                     {
                         marched.vertexArray.push_back(vertlist[triTable[cubeindex][i]]);
                         marched.vertexArray.push_back(vertlist[triTable[cubeindex][i+1]]);
@@ -1076,41 +1120,71 @@ std::vector<Vector3> Mesh::getPointsForArrow(const Vector3 &from, const Vector3 
 
 Mesh Mesh::createVectorField(GridV3 field, const Vector3& finalDimensions, Mesh* mesh, float maxMagnitude, bool normalize, bool displayArrow)
 {
+    std::vector<Vector3> colorScale = {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)};
+    GridF sqrMagnitudeField(field.getDimensions());
+    sqrMagnitudeField.iterateParallel([&](size_t i) { sqrMagnitudeField[i] = field[i].norm(); });
+    float minMag = sqrMagnitudeField.min(); //std::sqrt(sqrMagnitudeField.min());
+    float maxMag = sqrMagnitudeField.max(); //std::sqrt(sqrMagnitudeField.max());
+    if (maxMag < 1e-7)
+        return Mesh();
+
+    if (normalize && maxMag > 0) {
+        if (minMag == maxMag) {
+            field.iterateParallel([&](size_t i) {
+                field[i] /= sqrMagnitudeField[i];
+            });
+        } else {
+            field.iterateParallel([&](size_t i) {
+                float relativeMag = (sqrMagnitudeField[i] - minMag) / (maxMag - minMag);
+                field[i] = (field[i] / sqrMagnitudeField[i]) * relativeMag;
+
+            });
+        }
+    }
     if (maxMagnitude > 0.f) {
         for (auto& v : field)
             v.maxMagnitude(maxMagnitude);
     }
-    if (normalize) {
-        field.normalize();
-    }
 
     Vector3 offsetToCenter(.5f, .5f, .5f);
-    std::vector<Vector3> normals;
+    std::vector<Vector3> positions;
+    std::vector<Vector3> colors;
     for (int x = 0; x < field.sizeX; x++) {
         for (int y = 0; y < field.sizeY; y++) {
             for (int z = 0; z < field.sizeZ; z++) {
                 Vector3 pos(x, y, z);
-                Vector3 value = field.at(x, y, z);
+                Vector3 value = field.at(pos);
+                float mag = 0.f, relativeMag = .5f; // Default values
+                if (minMag != maxMag) {
+                    mag = sqrMagnitudeField(pos);
+                    relativeMag = (mag - minMag) / (maxMag - minMag);
+                }
                 if (displayArrow) {
                     auto arrowPoints = Mesh::getPointsForArrow(pos + offsetToCenter, pos + offsetToCenter + value);
-                    normals.insert(normals.end(), arrowPoints.begin(), arrowPoints.end());
+                    positions.insert(positions.end(), arrowPoints.begin(), arrowPoints.end());
+                    std::vector<Vector3> colorArray(arrowPoints.size(), colorPalette(relativeMag, colorScale));
+                    colors.insert(colors.end(), colorArray.begin(), colorArray.end());
                 } else {
-                    normals.push_back(pos + offsetToCenter);
-                    normals.push_back(pos + offsetToCenter + value);
+                    positions.push_back(pos + offsetToCenter);
+                    positions.push_back(pos + offsetToCenter + value);
+                    std::vector<Vector3> colorArray(2, colorPalette(relativeMag, colorScale));
+                    colors.insert(colors.end(), colorArray.begin(), colorArray.end());
                 }
             }
         }
     }
     if (finalDimensions.isValid()) {
         Vector3 ratio = finalDimensions / field.getDimensions();
-        for (auto& n : normals) {
+        for (auto& n : positions) {
             n *= ratio;
         }
     }
     if (mesh == nullptr)
-        return Mesh(normals, nullptr, true, GL_LINES);
+        return Mesh(positions, nullptr, true, GL_LINES);
     else {
-        return mesh->fromArray(normals);
+        mesh->colorsArray = colors;
+        mesh->fromArray(positions);
+        return *mesh;
     }
 }
 

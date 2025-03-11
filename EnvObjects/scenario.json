@@ -1,0 +1,106 @@
+{
+"objects": {
+		"island": {
+			"proba": 0.1,
+			"amount": 2
+		},
+		"greatreef": {
+			"proba": 0.1,
+			"amount": -1
+		},
+		"coralpolyp": {
+			"proba": 10.0,
+			"amount": 100
+		},
+		"tree": {
+			"proba": 5.0,
+			"amount": 50
+		},
+		"bush": {
+			"proba": 2.0,
+			"amount": 50
+		},
+		"smalllagoon": {
+			"proba": 0.05,
+			"amount": 2
+		}
+	},
+
+"simulation": {
+		"dt": 1,
+		"end": 1000,
+		"waterlevel": 0.3
+	},
+
+"events": [
+		{
+			"type": "storm",
+			"position": {
+				"x": 50,
+				"y": 50,
+				"z": 0
+			},
+			"direction": {
+				"x": 10,
+				"y": 10,
+				"z": 0
+			},
+			"sigma": 10.0,
+			"start": 30,
+			"end": 31
+		},
+		{
+			"type": "tectonic",
+			"sigma": 1,
+			"direction": {
+				"x": 0,
+				"y": 10,
+				"z": 0
+			},
+			"start": 0,
+			"end": 1
+		},
+		{
+			"type": "waterlevel",
+			"amount": -0.15,
+			"start": 0,
+			"end": 10
+		},
+		{
+			"type": "waterlevel",
+			"amount": 0.15,
+			"start": 10,
+			"end": 30
+		},
+		{
+			"type": "subsidence",
+			"amount": 0.50,
+			"sigma": -1.0,
+			"position": {
+				"x": 30,
+				"y": 60,
+				"z": 0
+			},
+			"start": 40,
+			"end": 60
+		},
+		{
+			"type": "subsidence",
+			"amount": -0.5,
+			"sigma": -1.0,
+			"position": {
+				"x": 70,
+				"y": 50,
+				"z": 0
+			},
+			"start": 60,
+			"end": 100
+		},
+		{
+			"type": "waterlevel",
+			"amount": -0.15,
+			"start": 60,
+			"end": 100
+		}
+	]
+} 

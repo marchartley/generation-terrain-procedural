@@ -118,7 +118,7 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
     this->cylinders.clear();
 
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-    Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+    Vector3 maxVec = Vector3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
 
     std::vector<float> v_times;
     float intervals = 1.f / (float)(int(this->path.points.size()) - 1);
@@ -232,7 +232,7 @@ std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vecto
         triangles = this->generateMesh();
 
     Vector3 minVec = Vector3(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-    Vector3 maxVec = Vector3(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+    Vector3 maxVec = Vector3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
     for (const auto& triangle : triangles) {
         for (const Vector3& pos : triangle) {
             minVec.x = std::min(minVec.x, pos.x);

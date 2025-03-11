@@ -58,7 +58,7 @@ std::shared_ptr<BiomeInstance> BiomeInstance::clone(ShapeCurve newArea, const Ve
     cloneBiome->instances.clear();
 
     Voronoi diagram(this->instances.size(), newArea);
-    std::vector<BSpline> subareas = diagram.solve();
+    std::vector<ShapeCurve> subareas = diagram.solve();
 
     for (size_t i = 0; i < this->instances.size() && i < subareas.size(); i++) {
         std::shared_ptr<BiomeInstance> newChild = this->instances[i]->clone(subareas[i], diagram.pointset[i]);
@@ -173,7 +173,7 @@ void BiomeInstance::addInstance(std::shared_ptr<BiomeInstance> newInstance)
         this->instances.push_back(newInstance);
         newInstance->parent = this->shared_from_this();
         Voronoi diagram(this->instances.size(), this->area);
-        std::vector<BSpline> subareas = diagram.solve();
+        std::vector<ShapeCurve> subareas = diagram.solve();
         for (size_t i = 0; i < this->instances.size() && i < subareas.size(); i++) {
             this->instances[i]->area = subareas[i];
             this->instances[i]->position = diagram.pointset[i];
@@ -196,7 +196,7 @@ void BiomeInstance::updateSubInstances()
                 newPositions.push_back(Vector3(-1000, -1000));
         }
     }
-    std::vector<BSpline> subareas(this->instances.size());
+    std::vector<ShapeCurve> subareas(this->instances.size());
     Voronoi diagram(newPositions, this->area);
     if (this->area.computeArea() > 0) {
         subareas = diagram.solve();
@@ -256,7 +256,7 @@ void BiomeInstance::completeArch()
     int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
-    std::vector<BSpline> areas = diagram.solve();
+    std::vector<ShapeCurve> areas = diagram.solve();
     size_t i = 0;
     // Re-place older children
     for (i = 0; i < this->instances.size(); i++) {
@@ -280,7 +280,7 @@ void BiomeInstance::completeTrench()
     int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
-    std::vector<BSpline> areas = diagram.solve();
+    std::vector<ShapeCurve> areas = diagram.solve();
     size_t i = 0;
     // Re-place older children
     for (i = 0; i < this->instances.size(); i++) {
@@ -304,7 +304,7 @@ void BiomeInstance::completeArea()
     int numberOfGeneratedPoints = std::max(0, neededPointsAmount - getNumberOfPoints());
 
     Voronoi diagram(numberOfGeneratedPoints + this->instances.size(), this->area);
-    std::vector<BSpline> areas = diagram.solve();
+    std::vector<ShapeCurve> areas = diagram.solve();
     size_t i = 0;
     // Re-place older children
     for (i = 0; i < this->instances.size(); i++) {

@@ -6,44 +6,12 @@ INCLUDEPATH *= src/
 QMAKE_CXXFLAGS += -fopenmp
 LIBS += -fopenmp
 
-#LIBS *= -L"C:\Program Files\ESI-OpenCFD\OpenFOAM\v2112\msys64\home\ofuser\OpenFOAM\OpenFOAM-v2112\platforms\win64MingwDPInt32Opt\bin"
-#INCLUDEPATH *= src/third-party/openFoam/inInclude
-
-#DEFINES += "WM_LINK_LANGUAGE=c++"
-#DEFINES += "WM_ARCH=linux64"
-#DEFINES += "WM_COMPILER_TYPE=system"
-#DEFINES += "WM_OSTYPE=POSIX"
-#DEFINES += "WM_THIRD_PARTY_DIR=/home/marzieh/ThirdParty-7"
-#DEFINES += "WM_CXXFLAGS=-m64 -fPIC -std=c++0x"
-#DEFINES += "WM_CFLAGS=-m64 -fPIC"
-#DEFINES += "WM_PROJECT_VERSION=7"
-#DEFINES += "WM_COMPILER_LIB_ARCH=64"
-#DEFINES += "WM_PROJECT_INST_DIR=/home/marzieh"
-#DEFINES += "WM_CXX=g++"
-#DEFINES += "WM_PROJECT_DIR=/home/marzieh/OpenFOAM-7"
-#DEFINES += "WM_LABEL_OPTION=Int32"
-#DEFINES += "WM_PROJECT=OpenFOAM"
-#DEFINES += "WM_LDFLAGS=-m64"
-#DEFINES += "WM_COMPILER=Gcc"
-#DEFINES += "WM_MPLIB=SYSTEMOPENMPI"
-#DEFINES += "WM_CC=gcc"
-#DEFINES += "WM_COMPILE_OPTION=Opt"
-#DEFINES += "WM_DIR=/home/marzieh/OpenFOAM-7/wmake"
 DEFINES += "WM_LABEL_SIZE=32"
-#DEFINES += "WM_PROJECT_USER_DIR=/home/marzieh/OpenFOAM/marzieh-7"
-#DEFINES += "WM_OPTIONS=linux64GccDPInt32Opt"
-#DEFINES += "WM_PRECISION_OPTION=DP"
-#DEFINES += "WM_ARCH_OPTION=64"
 
 unix {
-#    INCLUDEPATH *= /export/home/scharf/mhartley/codes/libQGLViewer-2.9.1 #/home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
-    #INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-#    LIBS *= -L/export/home/scharf/mhartley/codes/libQGLViewer-2.9.1/QGLViewer
-    LIBS *= -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+    LIBS *= -lQGLViewer-qt5
     LIBS *= -lpng
-#    INCLUDEPATH *= /home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2 /home/simulateurrsm/Documents/eigen #"/home/simulateurrsm/Documents/App downloads/tbb/include"
-#    INCLUDEPATH *= src/third-party/boost_1_79_0/boost
-#    LIBS *= -L/home/simulateurrsm/Documents/libqglviewer/libQGLViewer-2.7.2/QGLViewer -lQGLViewer-qt5 #-ltbb -ltbbmalloc
+
     INCLUDEPATH *= src/third-party/glad/include
     INCLUDEPATH *= src/third-party/glfw/include
     INCLUDEPATH *= src/third-party/glm
@@ -57,7 +25,6 @@ win32 {
     # Boost and TBB are installed by VCPKG (https://github.com/microsoft/vcpkg) at the location C:\Programs_installations\vcpkg
     # For TBB on Windows, do everything on Release...
     INCLUDEPATH *= "C:\codes\CPP\boost_1_66_0"
-#    INCLUDEPATH *= "C:\Program Files\Python39\include"
     INCLUDEPATH *= "C:\codes\CPP\glew-2.1.0\include"
     INCLUDEPATH *= "D:\code\Qt\libQGLViewer-2.7.2"
     INCLUDEPATH *= "src\third-party\glad\include"
@@ -67,10 +34,6 @@ win32 {
     INCLUDEPATH *= "src\third-party"
 
     INCLUDEPATH *= "C:\Users\Marc\Downloads\libpng-1.2.37-lib\include"
-#    INCLUDEPATH *= C:\codes\CPP\eigen
-#    INCLUDEPATH *= "C:/Program Files/OpenVDB/include"
-    # INCLUDEPATH *= C:\Programs_installations\vcpkg\installed\x64-windows\include
-#    LIBS *= -L"C:\Program Files\Python39\libs\python3.lib"
     LIBS *= -L"C:\codes\CPP\glew-2.1.0\lib\Release\x64\glew32.lib"
     LIBS *= -L"C:\Qt\libQGLViewer-2.7.2\QGLViewer"
 
@@ -98,6 +61,7 @@ SOURCES += \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
+    src/DataStructure/Kelvinlet.cpp \
         src/DataStructure/Matrix.cpp \
         src/DataStructure/Matrix3.cpp \
     src/DataStructure/MemoryPool.cpp \
@@ -111,12 +75,19 @@ SOURCES += \
     src/DataStructure/Vector4.cpp \
         src/DataStructure/Vertex.cpp \
         src/DataStructure/Voxel.cpp \
+    src/EnvObject/EnvArea.cpp \
+    src/EnvObject/EnvCurve.cpp \
+    src/EnvObject/EnvMaterial.cpp \
     src/EnvObject/EnvObject.cpp \
 #        src/FastWFC/propagator.cpp \
 #        src/FastWFC/wave.cpp \
 #        src/FastWFC/wfc.cpp \
+    src/EnvObject/EnvPoint.cpp \
+    src/EnvObject/EnvScenario.cpp \
     src/EnvObject/ExpressionParser.cpp \
 #    src/FluidSimulation/FLIPSimulation_copy.cpp \
+    src/EnvObject/PositionOptimizer.cpp \
+    src/EnvObject/SnakeSegmentation.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -130,14 +101,15 @@ SOURCES += \
         src/Graph/GraphNode.cpp \
         src/Graph/Matrix3Graph.cpp \
         src/Graph/Pathfinding.cpp \
+    src/Graph/PathfindingGraph.cpp \
     src/Graph/RegularSimplicialComplex.cpp \
     src/Graph/TopoMap.cpp \
         src/Graph/WaveFunctionCollapse.cpp \
     src/Graphics/ComputeShader.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
-    src/Graphics/DisplayGraphics.cpp \
         src/Graphics/MarchingCubes.cpp \
+    src/Graphics/Plotter.cpp \
     src/Graphics/RayMarching.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
@@ -158,7 +130,6 @@ SOURCES += \
     src/Interface/FLIPSimulationInterface.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
-        src/Interface/FlowFieldInterface.cpp \
         src/Interface/GravityInterface.cpp \
         src/Interface/HeightmapErosionInterface.cpp \
     src/Interface/HierarchicalListWidget.cpp \
@@ -173,11 +144,13 @@ SOURCES += \
     src/Interface/PrimitivePatchesInterface.cpp \
         src/Interface/RangeSlider.cpp \
     src/Interface/SPHSimulationInterface.cpp \
+    src/Interface/ScreenshotInterface.cpp \
         src/Interface/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
     src/Interface/SpheroidalErosionInterface.cpp \
         src/Interface/Spoiler.cpp \
+    src/Interface/StableFluidSimulationInterface.cpp \
         src/Interface/StickyFrame.cpp \
     src/Interface/TerrainComparatorInterface.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
@@ -200,19 +173,22 @@ SOURCES += \
     src/TerrainModification/CoralGrowth.cpp \
     src/TerrainModification/CoralIslandGenerator.cpp \
         src/TerrainModification/FaultSlip.cpp \
+    src/TerrainModification/ParticleErosion.cpp \
         src/TerrainModification/RockErosion.cpp \
     src/TerrainModification/SpheroidalWeathering.cpp \
         src/TerrainModification/TerrainAction.cpp \
         src/TerrainModification/UnderwaterErosion.cpp \
-    src/TerrainModification/particleErosion.cpp \
         src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
         src/Utils/BSpline.cpp \
         src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
     src/Utils/Curve1D.cpp \
+    src/Utils/Delaunay.cpp \
         src/Utils/Globals.cpp \
+    src/Utils/HotreloadFile.cpp \
     src/Utils/PbmReader.cpp \
+    src/Utils/RadialShape.cpp \
         src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
     src/Utils/Skeletonize.cpp \
@@ -265,6 +241,7 @@ HEADERS += \
     src/DataStructure/BVH.h \
     src/DataStructure/Image.h \
     src/DataStructure/KDTree.h \
+    src/DataStructure/Kelvinlet.h \
     src/DataStructure/Matrix.h \
     src/DataStructure/Matrix3.h \
     src/DataStructure/MemoryPool.h \
@@ -278,6 +255,9 @@ HEADERS += \
     src/DataStructure/Vector4.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
+    src/EnvObject/EnvArea.h \
+    src/EnvObject/EnvCurve.h \
+    src/EnvObject/EnvMaterial.h \
     src/EnvObject/EnvObject.h \
 #    src/FastWFC/color.hpp \
 #    src/FastWFC/direction.hpp \
@@ -292,8 +272,12 @@ HEADERS += \
 #    src/FastWFC/utils/array3D.hpp \
 #    src/FastWFC/wave.hpp \
 #    src/FastWFC/wfc.hpp \
+    src/EnvObject/EnvPoint.h \
+    src/EnvObject/EnvScenario.h \
     src/EnvObject/ExpressionParser.h \
 #    src/FluidSimulation/FLIPSimulation_copy.h \
+    src/EnvObject/PositionOptimizer.h \
+    src/EnvObject/SnakeSegmentation.h \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \
@@ -307,15 +291,16 @@ HEADERS += \
     src/Graph/GraphNode.h \
     src/Graph/Matrix3Graph.h \
     src/Graph/Pathfinding.h \
+    src/Graph/PathfindingGraph.h \
     src/Graph/RegularSimplicialComplex.h \
     src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \
     src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
-    src/Graphics/DisplayGraphics.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
+    src/Graphics/Plotter.h \
     src/Graphics/RayMarching.h \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
@@ -335,7 +320,6 @@ HEADERS += \
     src/Interface/FLIPSimulationInterface.h \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
-    src/Interface/FlowFieldInterface.h \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
     src/Interface/HierarchicalListWidget.h \
@@ -350,11 +334,13 @@ HEADERS += \
     src/Interface/PrimitivePatchesInterface.h \
     src/Interface/RangeSlider.h \
     src/Interface/SPHSimulationInterface.h \
+    src/Interface/ScreenshotInterface.h \
     src/Interface/Slider3D.h \
     src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/SpheroidalErosionInterface.h \
     src/Interface/Spoiler.h \
+    src/Interface/StableFluidSimulationInterface.h \
     src/Interface/StickyFrame.h \
     src/Interface/TerrainComparatorInterface.h \
     src/Interface/TerrainGenerationInterface.h \
@@ -376,21 +362,24 @@ HEADERS += \
     src/TerrainModification/CoralGrowth.h \
     src/TerrainModification/CoralIslandGenerator.h \
     src/TerrainModification/FaultSlip.h \
+    src/TerrainModification/ParticleErosion.h \
     src/TerrainModification/RockErosion.h \
     src/TerrainModification/SpheroidalWeathering.h \
     src/TerrainModification/TerrainAction.h \
     src/TerrainModification/UnderwaterErosion.h \
-    src/TerrainModification/particleErosion.h \
     src/TreeColonisation/TreeColonisation.h \
     src/Utils/AdjencySolver.h \
     src/Utils/BSpline.h \
     src/Utils/Collisions.h \
     src/Utils/ConstraintsSolver.h \
     src/Utils/Curve1D.h \
+    src/Utils/Delaunay.h \
     src/Utils/FastNoiseLit.h \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
+    src/Utils/HotreloadFile.h \
     src/Utils/PbmReader.h \
+    src/Utils/RadialShape.h \
     src/Utils/RewritableFile.h \
     src/Utils/ShapeCurve.h \
     src/Utils/Skeletonize.h \

@@ -8,7 +8,7 @@
 #include "TerrainGen/LayerBasedGrid.h"
 
 float ImplicitPatch::isovalue = .5f;
-float ImplicitPatch::zResolution = .1f;
+const float ImplicitPatch::zResolution = .1f;
 int ImplicitPatch::currentMaxIndex = -1;
 std::string ImplicitPatch::json_identifier = "implicitPatches";
 
@@ -33,7 +33,6 @@ float ImplicitPatch::getMaxHeight(const Vector3& pos)
         float maxHeight = AABBox.max().z;
 
         this->_cachedMaxHeight.at((pos - AABBox.min()).xy()) = 0;
-//        for (float z = minHeight; z < maxHeight; z += ImplicitPatch::zResolution) {
         for (float z = maxHeight; z > minHeight; z -= ImplicitPatch::zResolution) {
 //            float eval = this->evaluate(pos.xy() + Vector3(0, 0, z));
             auto [totalEval, materials] = this->getMaterialsAndTotalEvaluation(pos.xy() + Vector3(0, 0, z));
@@ -138,6 +137,9 @@ std::pair<float, std::map<TerrainTypes, float> > ImplicitPatch::getBinaryMateria
     for (const auto& [mat, val] : materials)
         totalValue += val * (isIn(mat, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f);
 
+    if (totalValue < 0) {
+        return {-totalValue, {{WATER, -totalValue}}};
+    }
     return {totalValue, {{SAND, totalValue}}};
 }
 
@@ -250,17 +252,69 @@ Mesh ImplicitPatch::getGeometry(const Vector3& dimensions)
     if (!dimensions.isValid())
         finalDimensions = this->getDimensions();
     VoxelGrid voxels;
+    voxels._cachedVoxelValues = GridF(finalDimensions);
     voxels.fromImplicit(this);
-    return voxels.getGeometry(finalDimensions);
+    return voxels.getGeometry(finalDimensions); // * Vector3(.5f, .5f, .25f));
 }
 
 Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)
 {
-    auto myAABBox = this->getBBox();
+    AABBox myAABBox = AABBox(Vector3::max(minPos, Vector3()), Vector3::min(maxPos, this->getDimensions()));
+    //    if (!minPos.isValid()) minPos = Vector3();
+    //    if (!maxPos.isValid()) maxPos = this->getDimensions();
+
+    Vector3 currentPosition = origin;
+    if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
+        currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
+    if (!currentPosition.isValid())
+        return Vector3::invalid();
+
+    Vector3 normalizedDir = dir.normalized();
+
+    // auto values = this->getVoxelValues();
+    // values.raiseErrorOnBadCoord = false;
+
+    Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
+    float tMaxX = (dir.x > 0) ? (std::ceil(currentPosition.x) - currentPosition.x) / dir.x :
+                      (currentPosition.x - std::floor(currentPosition.x)) / (-dir.x);
+    float tMaxY = (dir.y > 0) ? (std::ceil(currentPosition.y) - currentPosition.y) / dir.y :
+                      (currentPosition.y - std::floor(currentPosition.y)) / (-dir.y);
+    float tMaxZ = (dir.z > 0) ? (std::ceil(currentPosition.z) - currentPosition.z) / dir.z :
+                      (currentPosition.z - std::floor(currentPosition.z)) / (-dir.z);
+
+    // Calculate steps in each axis based on stepSizes
+    float tDeltaX = std::abs(stepSizes.x * dir.x);
+    float tDeltaY = std::abs(stepSizes.y * dir.y);
+    float tDeltaZ = std::abs(stepSizes.z * dir.z);
+
+    while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
+        if (checkIsInGround(currentPosition) > 0) {
+            return currentPosition;
+        }
+
+        if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+            currentPosition.x += dir.x;
+            tMaxX += tDeltaX;
+        } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
+            currentPosition.y += dir.y;
+            tMaxY += tDeltaY;
+        } else {
+            currentPosition.z += dir.z;
+            tMaxZ += tDeltaZ;
+        }
+    }
+    if (currentPosition.z <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
+    return Vector3::invalid();
+    /*auto myAABBox = this->getBBox();
     myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
     myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);
 
     Vector3 currPos = origin;
+    if (!Vector3::isInBox(currPos, myAABBox.min(), myAABBox.max()))
+        currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1), myAABBox.max() + Vector3(1, 1, 1)});
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     // Continue while we are in the grid or we are heading towards the grid
@@ -275,7 +329,10 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
-    return Vector3(false);
+
+    if (currPos.z <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
+    return Vector3(false);*/
 
 }
 
@@ -335,6 +392,7 @@ Vector3 ImplicitPatch::getLocalPositionOf(const Vector3& globalPosition)
 
 GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scale)
 {
+    bool verbose = false;
     Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
         finalDimensions = this->getBBox().max();
@@ -346,11 +404,11 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
 
     this->_cachedVoxelized = GridF(finalDimensions * scale, -1.f); //LayerBasedGrid::densityFromMaterial(AIR));
 
-    std::cout << "Time for evaluating " << this->_cachedVoxelized.size() << " cells: " << showTime(timeIt([&]() {
+    displayProcessTime("Evaluating " + std::to_string(this->_cachedVoxelized.size()) + " cells (" + this->_cachedVoxelized.getDimensions().toString() + ")... ", [&]() {
         #pragma omp parallel for collapse(3)
         for (int x = 0; x < _cachedVoxelized.sizeX; x++) {
             for (int y = 0; y < _cachedVoxelized.sizeY; y++) {
-                for (int z = 0; z < _cachedVoxelized.sizeZ; z++) {
+                for (int z = 0; z < _cachedVoxelized.sizeZ; z += 1) {
                     Vector3 pos = Vector3(x, y, z) * scale;
                     std::vector<Vector3> evaluationPoses = {
                         pos + Vector3(0, 0, 0)/*,
@@ -399,10 +457,8 @@ GridF ImplicitPatch::getVoxelized(const Vector3& dimensions, const Vector3& scal
                 }
             }
         }
-    })) << std::endl;
-//    this->_cachedVoxelized.meanSmooth(3, 3, 3, true);
+    }, verbose);
     _cached = true;
-//    auto mini = _cachedVoxelized.resize(Vector3(10, 10, 10));
     return _cachedVoxelized.subset(Vector3(), finalDimensions);
 }
 
@@ -510,12 +566,6 @@ float ImplicitPrimitive::evaluate(const Vector3& pos) const
         return 0.f;
     Vector3 supportWidth = maxSupportPos - minSupportPos;
     Vector3 width = maxPos - minPos;
-//    if (this->optionalCurve.points.size() > 2) {
-//        ShapeCurve area = this->optionalCurve.points;
-//        if (!area.inside(pos)) {
-//            return 0.f;
-//        }
-//    }
 
     float evaluation = 0.f;
 
@@ -576,7 +626,7 @@ void ImplicitPrimitive::update()
         } else {
             if (this->cachedHeightmap.getDimensions().xy() != this->getDimensions().xy())
                 this->cachedHeightmap.resize(this->getDimensions().xy() + Vector3(0, 0, 1.f));
-            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
+//            this->cachedHeightmap = this->cachedHeightmap.normalize() * this->getDimensions().z;
     //        auto cacheCopy = cachedHeightmap;
             this->evalFunction = ImplicitPrimitive::convert2DfunctionTo3Dfunction([=](const Vector3& pos) -> float {
     //            auto heightmap = cachedHeightmap;
@@ -1784,25 +1834,107 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
 
 std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
+    random_gen::random_generator.seed((path.points[0] + path.points[1]).divergence());
+    int nbPoints = 50;
+    int nbPaths = 50;
     ShapeCurve polygon(path.points);
-    Vector3 center = polygon.center().xy();
+    for (auto& p : polygon)
+        p.z = 0;
+    AABBox bbox(polygon.AABBox());
+    Vector3 size = bbox.dimensions();
+    polygon.translate(-bbox.min());//(-(bbox.min()));
+    // auto points = ShapeCurve(path).randomPointsInside(50);
+    int maxTries = 1000 * nbPoints;
+    std::vector<Vector3> points;
+    while(points.size() < nbPoints && maxTries > 0) {
+        Vector3 newPoint = Vector3::random(Vector3(size.xy()));
+        if (polygon.containsXY(newPoint)) points.push_back(newPoint);
+        else maxTries--;
+    }
+    if (points.size() == 0) return [](Vector3) {return 0.f;};
+
+    GridF heights(size.x, size.y, 1);
+
+    std::vector<BSpline> randomPaths(nbPaths);
+    for (int i = 0; i < randomPaths.size(); i++) {
+        auto& path = randomPaths[i];
+        int i0 = int(random_gen::generate(0, points.size()));
+        int i1 = int(random_gen::generate(0, points.size()));
+        // while (i0 == i1)
+        // i1 = int(random_gen::generate(0, points.size()));
+        path = BSpline({points[i0], points[i1]}).resamplePoints(4);
+        float length = (path[-1] - path[0]).norm();
+        for (auto& p : path) {
+            p += Vector3::random().xy() * (length / 10.f);
+        }
+    }
+    heights.iterateParallel([&] (const Vector3& pos) {
+        for (int i = 0; i < randomPaths.size(); i++) {
+            auto& path = randomPaths[i];
+            auto closestPoint = path.estimateClosestPos(pos, true);
+            heights(pos) += std::exp(-(pos - closestPoint).norm2() * i);
+        }
+        heights(pos) += random_gen::generate_fbm(pos.x, pos.y) * (.1f * std::abs(heights(pos)));
+    });
+
+    heights.normalize();
+    heights.iterateParallel([&] (size_t i) {
+        heights[i] = std::exp(heights[i] * 3.f);
+    });
+    heights = heights.gaussianSmooth(2.f).normalized();
+    heights.iterateParallel([&] (const Vector3& pos) {
+        // heights(pos) -= 2.f;
+        if (!polygon.containsXY(pos)) heights(pos) = 0;
+    });
+    heights = heights.gaussianSmooth(2.f).normalize();
+    heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    heights.defaultValueOnBadCoord = 0.f;
+
+    Vector3 offsets = Vector3(width - size.x, depth - size.y) * .5f;
+
+    std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
+        float finalHeight = sigma * std::clamp(heights(pos.xy() - offsets), 0.f, 1.f);
+        return finalHeight;
+    };
+
+    if (!in2D) {
+        return distFunc;
+    } else {
+        return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
+    }
+
+    /*
+    ShapeCurve polygon(path.points);
+    Vector3 center = polygon.centroid().xy();
+    std::vector<Vector3> randomPoints = polygon.randomPointsInside(10);
     std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
         if (!polygon.containsXY(pos.xy(), false))
             return 0.f;
         Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
-        float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
+        Vector3 closestCenter;
+        float closestDist = std::numeric_limits<float>::max();
+        for (auto& p : randomPoints) {
+            float dist = (p - pos).norm2();
+            if (dist < closestDist) {
+                closestDist = dist;
+                closestCenter = p;
+            }
+        }
+        float dist = (closest - pos.xy()).norm() / (closestCenter - closest).norm(); // Take the closest point and use only the "xy" components!
+        // float dist = (closest - pos.xy()).norm() / (center - closest).norm(); // Take the closest point and use only the "xy" components!
         return height * std::clamp(dist, 0.f, 1.f);
     };
     if (in2D) {
         return distFunc;
     } else {
         return ImplicitPatch::convert2DfunctionTo3Dfunction(distFunc);
-    }
+    }*/
 }
 
 std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     float epsilon = 1e-1;
+
     if (in2D) {
         auto flatPath = path;
         for (auto & p : flatPath)
@@ -1815,7 +1947,10 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
         };
     } else {
         return [=] (const Vector3& pos) -> float {
-            return 1.f - (path.estimateDistanceFrom(pos, epsilon) / (sigma));
+            float closestT = path.estimateClosestTime(pos);
+            auto closestPoint = path.getPoint(closestT);
+            float distance = (pos - closestPoint).norm();
+            return 1.f - (distance / (sigma));
         };
     }
 }
@@ -2300,9 +2435,21 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
 {
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
+    for (int i = composables.size() - 1; i >= 0; i--) {
+        auto& compo = composables[i];
+        auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
+        if (total > ImplicitPatch::isovalue) {
+            for (auto& [mat, val] : evaluation) {
+                if (bestReturn.count(mat) == 0)
+                    bestReturn[mat] = 0;
+                bestReturn[mat] += val;
+            }
+            return bestReturn;
+        }
+    }
+    return bestReturn;
+    /*
     for (auto& compo : this->composables) {
-        if (auto as2DNary = dynamic_cast<Implicit2DNary*>(compo))
-            as2DNary->reevaluateAll();
         auto [total, evaluation] = compo->getMaterialsAndTotalEvaluation(pos);
         for (auto& [mat, val] : evaluation) {
             if (bestReturn.count(mat) == 0)
@@ -2310,7 +2457,7 @@ std::map<TerrainTypes, float> ImplicitNaryOperator::getMaterials(const Vector3& 
             bestReturn[mat] += val;
         }
     }
-    return bestReturn;
+    return bestReturn;*/
     /*
     float maxVal = 0.f;
     std::map<TerrainTypes, float> bestReturn;
@@ -2463,7 +2610,8 @@ void ImplicitNaryOperator::addChild(ImplicitPatch *newChild, int index)
 void ImplicitNaryOperator::deleteAllChildren()
 {
     for (auto& child : composables) {
-        delete child;
+        if (child)
+            delete child;
     }
     this->composables.clear();
 }
@@ -2561,7 +2709,7 @@ float Implicit2DNary::evaluate(const Vector3 &pos) const
 {
     if (_cached)
         return _cachedMaxHeight(pos.xy());
-    float res = (pos.z < computeHeight(pos) ? 1.f : -1.f);
+    float res = (pos.z < computeHeight(pos) ? 1.f : 0.f);
     return res;
 }
 
@@ -2636,8 +2784,8 @@ float Implicit2DNary::getMaximalHeight(const Vector3 &minBox, const Vector3 &max
 void Implicit2DNary::reevaluateAll()
 {
     auto dims = this->getSupportBBox().max();
-    int dimX = dims.x;
-    int dimY = dims.y;
+    int dimX = std::max(0.f, dims.x);
+    int dimY = std::max(0.f, dims.y);
     if (dimX == 0 && dimY == 0) {
         dimX = 100;
         dimY = 100;

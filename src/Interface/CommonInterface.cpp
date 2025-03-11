@@ -1,5 +1,6 @@
 #include "CommonInterface.h"
 
+#include <iostream>
 #include <QBoxLayout>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -41,6 +42,26 @@ const std::string &UIElement::getName() const
     return name;
 }
 
+
+LabelElement::LabelElement(std::string text)
+    : UIElement(new QLabel(QString::fromStdString(text)))
+{}
+
+QLabel *LabelElement::label()
+{
+    return static_cast<QLabel*>(getWidget());
+}
+
+LabelElement *LabelElement::setText(std::string newText)
+{
+    this->label()->setText(QString::fromStdString(newText));
+    return this;
+}
+
+std::string LabelElement::getText()
+{
+    return this->label()->text().toStdString();
+}
 
 
 
@@ -143,9 +164,13 @@ void CheckboxElement::update()
     checkBox()->setChecked(*this->boundVariable);
 }
 
-InterfaceUI::InterfaceUI(QLayout *layout, std::string title)
+InterfaceUI::InterfaceUI(QLayout *layout, bool tight, std::string title)
     : UIElement(new QGroupBox), title(title)
 {
+    if (tight) {
+        layout->setSpacing(0);
+        layout->setContentsMargins(0, 0, 0, 0);
+    }
     getWidget()->setLayout(layout);
 }
 
@@ -189,7 +214,7 @@ std::vector<UIElement*> InterfaceUI::add(std::vector<std::pair<UIElement *, std:
 
 UIElement *InterfaceUI::add(QLayout *layout, std::string name)
 {
-    InterfaceUI* interface = new InterfaceUI(layout, name);
+    InterfaceUI* interface = new InterfaceUI(layout, true, name);
     return this->add(interface, name);
 }
 
@@ -203,7 +228,7 @@ UIElement *InterfaceUI::find(std::string name)
 
 void InterfaceUI::update()
 {
-    for (auto& child : box()->children()) {
+    for (auto& child : this->elements) {// box()->children()) {
         if (auto asUIElement = dynamic_cast<UIElement*>(child)) {
             asUIElement->update();
         }
@@ -243,20 +268,39 @@ void RadioButtonElement::update()
     radioButton()->setChecked(*this->boundVariable);
 }
 
-InterfaceUI *createHorizontalGroupUI(std::vector<UIElement *> widgets)
+InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
 {
     InterfaceUI* interface = new InterfaceUI(new QHBoxLayout);
-    for (UIElement*& w : widgets)
+    for (UIElement*& w : widgets) {
         interface->add(w);
+    }
     return interface;
 }
 
-InterfaceUI *createVerticalGroupUI(std::vector<UIElement *> widgets)
+InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets)
 {
     InterfaceUI* interface = new InterfaceUI(new QVBoxLayout);
-    for (UIElement*& w : widgets)
+    for (UIElement*& w : widgets) {
         interface->add(w);
+    }
     return interface;
+}
+
+InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns)
+{
+    QGridLayout* layout = new QGridLayout;
+    // QGroupBox* group = new QGroupBox;
+    //    for (QWidget*& w : widgets)
+    for (size_t i = 0; i < widgets.size(); i++) {
+        auto& w = widgets[i];
+        int row = int (i / nbColumns);
+        int col = i % nbColumns;
+
+        layout->addWidget(w->get(), row, col);
+        // layout->addWidget(w->get(), row, col);
+    }
+    // group->setLayout(layout);
+    return new InterfaceUI(layout); // group;
 }
 
 TextEditElement::TextEditElement(std::string text, std::string label)
@@ -357,4 +401,142 @@ void RangeSliderElement::update()
 {
     slider()->setMinValue(*this->boundVariableMin);
     slider()->setMaxValue(*this->boundVariableMax);
+}
+
+ComboboxElement::ComboboxElement(std::string label)
+    : UIElement(new QGroupBox)
+{
+    this->_combobox = new QComboBox();
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_combobox);
+    getWidget()->setLayout(layout);
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices)
+    : ComboboxElement(label)
+{
+    this->choices = choices;
+    for (auto& c : choices) {
+        if (c.iconPath != "") {
+            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
+        } else {
+            combobox()->addItem(QString::fromStdString(c.label), c.value);
+        }
+    }
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int &currentSelection)
+    : ComboboxElement(label, choices)
+{
+    this->bindTo(currentSelection);
+}
+/*
+ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex)
+    : ComboboxElement(label)
+{
+    bindTo(bindedTexts);
+    bindTo(bindedIndex);
+}
+
+ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex, bool interpretAsImages)
+    : ComboboxElement(label, bindedTexts, bindedIndex), itemsAreImages(interpretAsImages)
+{
+
+}
+*/
+QComboBox *ComboboxElement::combobox() const
+{
+    return _combobox;
+}
+
+void ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
+{
+    QObject::connect(_combobox, &QComboBox::currentTextChanged, this, [=](QString text) {
+        int index = _combobox->currentIndex();
+        func(index);
+    });
+}
+
+void ComboboxElement::bindTo(int &indexSelected)
+{
+    boundIndex = indexSelected;
+    combobox()->setCurrentIndex(indexSelected);
+    this->setOnSelectionChanged([&](int index) {
+        this->boundIndex->get() = index;
+    });
+}
+
+ComboboxLineElement ComboboxElement::getSelection() const
+{
+    return this->choices.at(combobox()->currentIndex());
+}
+
+void ComboboxElement::update()
+{
+    combobox()->clear();
+    for (auto& c : choices) {
+        if (c.iconPath != "") {
+            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
+        } else {
+            combobox()->addItem(QString::fromStdString(c.label), c.value);
+        }
+    }
+    combobox()->setCurrentIndex(*this->boundIndex);
+}
+/*
+void ComboboxElement::bindTo(std::vector<std::string> &values)
+{
+    boundValues = values;
+    for (auto& text : boundValues) {
+        if (itemsAreImages) {
+            combobox()->addItem(QIcon(QString::fromStdString(text)));
+        } else {
+            combobox()->addItem(QString::fromStdString(text));
+        }
+    }
+}*/
+
+
+HierarchicalListUI::HierarchicalListUI()
+    : UIElement(new HierarchicalListWidget())
+{}
+
+HierarchicalListWidget *HierarchicalListUI::hierarchicalList()
+{
+    return static_cast<HierarchicalListWidget*>(this->getWidget());
+}
+
+HierarchicalListUI *HierarchicalListUI::setSelectionMode(QAbstractItemView::SelectionMode mode)
+{
+    this->hierarchicalList()->setSelectionMode(mode);
+    return this;
+}
+
+
+HierarchicalListUI *HierarchicalListUI::clear()
+{
+    this->hierarchicalList()->clear();
+    return this;
+}
+
+HierarchicalListUI *HierarchicalListUI::addItem(HierarchicalListWidgetItem* item)
+{
+    this->hierarchicalList()->addItem(item);
+    return this;
+}
+
+HierarchicalListUI *HierarchicalListUI::setCurrentItems(std::vector<int> selectedIDs)
+{
+    this->hierarchicalList()->setCurrentItems(selectedIDs);
+    return this;
+}
+
+QList<QListWidgetItem*> HierarchicalListUI::selectedItems()
+{
+    return this->hierarchicalList()->selectedItems();
 }

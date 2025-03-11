@@ -1,0 +1,1 @@
+# 1.0 polyp + 1.0 sand = 0.2 polyp + 1.0 sand

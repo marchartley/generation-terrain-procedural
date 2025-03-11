@@ -22,8 +22,8 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
     this->density = density;
     this->fNum = Vector3(std::floor(width / spacing) + 1, std::floor(depth / spacing) + 1, std::floor(height / spacing) + 1);
 
-    this->cellSize = height / fNum.z; // std::max(width / this->fNum.x, height / this->fNum.y);
-    this->fInvSpacing = 1.0 / spacing; //this->h;
+    this->cellSize = height / fNum.z;
+    this->fInvSpacing = 1.0 / spacing;
 
     int nbCells = fNum.x * fNum.y * fNum.z;
     this->u = GridF(fNum);
@@ -58,6 +58,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
 
     this->particles.resize(maxParticles);
     for (int i = 0; i < maxParticles; i++) {
+        particles[i] = Particle();
         Vector3 newPos(false);
         while (!newPos.isValid() || (!this->obstacleGrid.empty() && this->obstacleGrid(newPos) > 0)) {
             newPos = this->dimensions * Vector3::random(Vector3(.1f, .1f, 1.f), Vector3(.9f, .9f, 1.1f));
@@ -66,6 +67,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
         particles[i].position = newPos;
     }
     this->savedState = particles;
+    this->velocitiesHistory.clear();
 }
 
 void FLIPSimulation::integrateParticles(double dt, const Vector3& gravity) {
@@ -165,7 +167,7 @@ void FLIPSimulation::updateParticleDensity() {
         if (numFluidCells > 0)
             particleRestDensity = sum / numFluidCells;
     }
-    std::cout << "Total density: " << particleDensity.sum() << " (out of " << numParticles << " particles)\nMin/max density: " << particleDensity.min() << "/" << particleDensity.max() << std::endl;
+//    std::cout << "Total density: " << particleDensity.sum() << " (out of " << numParticles << " particles)\nMin/max density: " << particleDensity.min() << "/" << particleDensity.max() << std::endl;
 }
 
 void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
@@ -217,7 +219,7 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
         });
 
         // restore solid cells
-        cellType.iterateParallel([&](const Vector3& pos) {
+        /*cellType.iterateParallel([&](const Vector3& pos) {
             bool solid = cellType(pos) == SOLID_CELL;
             if (solid || cellType(pos - Vector3(1, 0, 0)) == SOLID_CELL)
                 u(pos) = prevU(pos);
@@ -225,15 +227,15 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
                 v(pos) = prevV(pos);
             if (solid || cellType(pos - Vector3(0, 0, 1)) == SOLID_CELL)
                 w(pos) = prevW(pos);
-        });
+        });*/
     } else {
 #pragma omp parallel for
         for (size_t i = 0; i < numParticles; i++) {
             auto& p = particles[i];
 
             Vector3 vel = p.velocity;
-            Vector3 picV = Vector3(u.interpolate(p.position), v.interpolate(p.position), w.interpolate(p.position)); //Vector3(getU(p.position, u), getV(p.position, v), getW(p.position, w));
-            Vector3 corr = picV - Vector3(prevU.interpolate(p.position), prevV.interpolate(p.position), prevW.interpolate(p.position)); //Vector3(getU(p.position, prevU), getV(p.position, prevV), getW(p.position, prevW));
+            Vector3 picV = Vector3(getU(p.position, u), getV(p.position, v), getW(p.position, w));
+            Vector3 corr = picV - Vector3(getU(p.position, prevU), getV(p.position, prevV), getW(p.position, prevW));
             Vector3 flipV = vel + corr;
 
             p.velocity = (1.f - flipRatio) * picV + flipRatio * flipV;
@@ -247,25 +249,29 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
 void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRelaxation, bool compensateDrift) {
 
     const float cp = density * cellSize / dt;
+//    const float cp = 1.f;
 
+    s.reset();
+    s.iterateParallel([&](int x, int y, int z) {
+        if (obstacleGrid(x, y, z) > 0)
+            s(x, y, z) = 0;
+        else //if (x == 0 || y == 0 || z == 0 || x == s.sizeX - 1 || y == s.sizeY - 1 || z == s.sizeZ - 1)
+            s(x, y, z) = 1; //s.getNumberNeighbors(x, y, z, false);
+    });
     for (int iter = 0; iter < numIters; iter++) {
         p.reset();
-        s.reset();
-        s.iterateParallel([&](int x, int y, int z) {
-            if (obstacleGrid(x, y, z) > 0)
-                s(x, y, z) = 0;
-            else //if (x == 0 || y == 0 || z == 0 || x == s.sizeX - 1 || y == s.sizeY - 1 || z == s.sizeZ - 1)
-                s(x, y, z) = 1; //s.getNumberNeighbors(x, y, z, false);
-        });
         GridV3 velocities(u.getDimensions());
-        velocities.iterateParallel([&](size_t i) {
-            velocities[i] = Vector3(u[i], v[i], w[i]);
+        velocities.iterateParallel([&](const Vector3& pos) {
+            float _u = u.interpolate(pos - Vector3(.5f, .0f, .0f));
+            float _v = v.interpolate(pos - Vector3(.0f, .5f, .0f));
+            float _w = w.interpolate(pos - Vector3(.0f, .0f, .5f));
+            velocities(pos) = Vector3(_u, _v, _w);
         });
         GridF divergences = velocities.divergence();
 
         cellType.iterateParallel([&](const Vector3& pos) {
-            if (cellType(pos) != FLUID_CELL)
-                return;
+//            if (cellType(pos) != FLUID_CELL)
+//                return;
 
             Vector3 center = pos;
             Vector3 left = pos - Vector3(1, 0, 0);
@@ -286,23 +292,22 @@ void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRe
             float div = divergences(pos);
 
             if (particleRestDensity > 0.0 && compensateDrift) {
-                const float k = 1.0;
+                const float k = 1.0f;
                 float compression = particleDensity(center) - particleRestDensity;
                 if (compression > 0.0)
                     div -= k * compression;
             }
 
-            const float pressure = -div / sumS * overRelaxation;
+            const float pressure = -(div / sumS) * overRelaxation;
             p(center) += cp * pressure;
 
-            u(center) -= (this->s(left) * pressure);
+            u(left) -= (this->s(left) * pressure);
             u(right) += (this->s(right) * pressure);
-            v(center) -= (this->s(bottom) * pressure);
+            v(bottom) -= (this->s(bottom) * pressure);
             v(top) += (this->s(top) * pressure);
-            w(center) -= (this->s(back) * pressure);
+            w(back) -= (this->s(back) * pressure);
             w(front) += (this->s(front) * pressure);
         });
-//        std::cout << "Step " << iter << "\nTotal pressure: " << p.sum() << "\nMin/max pressure: " << p.min() << "/" << p.max() << std::endl;
     }
 }
 
@@ -336,10 +341,15 @@ void FLIPSimulation::step()
         pushingTime = timeIt([&](){ pushParticlesApart(numIterations); });
         collisionTime1 = timeIt([&](){ handleCollisions(); });
         densityTime = timeIt([&](){ updateParticleDensity(); });
+        std::cout << "Max U (1): " << w.abs().max() << "\n";
         transferTime = timeIt([&](){ transferVelocities(true, flipRatio); });
+        std::cout << "Max U (2): " << w.abs().max() << "\n";
         solvingTime = timeIt([&](){ solveIncompressibility(numIterations, dt, overRelaxation, compensateDrift); });
+        std::cout << "Max U (3): " << w.abs().max() << "\n";
         collisionTime2 = timeIt([&](){ handleCollisions(); });
+        std::cout << "Max U (4): " << w.abs().max() << "\n";
         transfer2Time = timeIt([&](){ transferVelocities(false, flipRatio); });
+        std::cout << "Max U (5): " << w.abs().max() << "\n\n" << std::endl;
         respawnTime = timeIt([&](){ respawnLostParticles(); });
         storingTime = timeIt([&]() { storeVelocities(); });
     });
@@ -379,9 +389,9 @@ void FLIPSimulation::respawnLostParticles()
             Vector3 previousPos = p.position;
             p.position = this->dimensions * Vector3::random(Vector3(.0f, .0f, .0f), Vector3(.0f, 1.f, 1.0f));// + Vector3(0, 0, 5.1f);
             if (this->savedState.size() > i) {
-                savedState[i].position = p.position - Vector3(1, 0, 0);
-                p.velocity = Vector3(1, 0, 0);
-                p.isGhost = 20; // countdown to the "locked" state
+                savedState[i].position = p.position - Vector3(3, 0, 0);
+                p.velocity = Vector3(3, 0, 0);
+                p.isGhost = 2; // countdown to the "locked" state
             }
         }
     }

@@ -111,18 +111,16 @@ QLayout *EnvObjectFluidSimulation::createGUI()
 
 void EnvObjectFluidSimulation::updateVectorsMesh()
 {
-    GridV3 velocities = EnvObject::flowfield.resize(Vector3(20, 20, 1));
+    GridV3 velocities = EnvObject::flowfield.resize(Vector3(50, 50, 1));
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 1.f, false, true);
 }
 
 void EnvObjectFluidSimulation::updateSimulationMeshes()
 {
-    float renderTime = timeIt([=]() {
+    displayProcessTime("Render EnvObj fluid sim... ", [&]() {
         this->updateVectorsMesh();
         this->updateParticlesMesh();
-//        this->updateBoundariesMesh();
-    });
-//    std::cout << showTime(renderTime) << std::endl;
+    }, false);
 }
 
 void EnvObjectFluidSimulation::show()

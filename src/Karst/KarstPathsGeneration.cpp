@@ -136,10 +136,11 @@ void KarstPathsGeneration::addPorosityMap(GridF porosity)
 void KarstPathsGeneration::createEdges(int maxNumberNeighbors, float maxNeighboringDistance)
 {
     this->graph.createEdges(maxNumberNeighbors, maxNeighboringDistance, true); // The "true" means the cost are not precomputed, just the connection matrix
-    for (int i = 0; i < this->graph.connectionMatrix.sizeX; i++) {
-        for (int j = 0; j < this->graph.connectionMatrix.sizeY; j++) {
-            if (this->graph.connectionMatrix.at(i, j)) {
-                this->graph.adjencyMatrix.at(i, j) = std::pow(this->computeCost(i, j), this->gamma);
+    for (int i = 0; i < this->graph.size(); i++) {
+        for (int j = 0; j < this->graph.size(); j++) {
+            if (this->graph.connected(i, j)) {
+                this->graph.setConnection(i, j, std::pow(this->computeCost(i, j), this->gamma));
+                this->graph.setConnection(j, i, std::pow(this->computeCost(i, j), this->gamma));
             }
         }
     }
@@ -167,12 +168,12 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
     std::vector<float> distances;
     std::vector<int> prec;
     for(size_t i = 0; i < specialNodesToCompute.size(); i++) {
-        std::cout << 100 * i / (float)(specialNodesToCompute.size() - 1) << "%" << std::flush;
+//        std::cout << 100 * i / (float)(specialNodesToCompute.size() - 1) << "%" << std::flush;
         if (std::get<1>(specialNodesToCompute[i]) == KARST_NODE_TYPE::DEAD_END)
             continue;
         int nodeA = std::get<0>(specialNodesToCompute[i]);
         auto start = std::chrono::system_clock::now();
-        std::tie(distances, prec) = Pathfinding::ShortestPathFrom(nodeA, this->graph.adjencyMatrix);
+        std::tie(distances, prec) = Pathfinding::ShortestPathFrom(nodeA, this->graph/*.adjencyMatrix*/);
 
         for(size_t j = 0; j < this->specialNodes.size(); j++) {
 //            if (i == j) continue;
@@ -186,7 +187,7 @@ void KarstPathsGeneration::computeAllPathsBetweenSpecialNodes(int uniqueNodeToRe
                 pathDistances.at(j, i) = distances[nodeB]; //(float)path.size();
             }
         }
-        std::cout << " (" << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << "s)" << std::endl;
+//        std::cout << " (" << std::chrono::duration<float>(std::chrono::system_clock::now() - start).count() << "s)" << std::endl;
     }
 
     float min = pathDistances.min(), max = pathDistances.max();

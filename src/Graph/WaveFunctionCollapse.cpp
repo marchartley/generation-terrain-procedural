@@ -1,5 +1,6 @@
 #include "WaveFunctionCollapse.h"
 
+#include "Utils/Utils.h"
 #include <set>
 
 WaveFunctionCollapse::WaveFunctionCollapse()
@@ -29,7 +30,7 @@ void WaveFunctionCollapse::run(int sizeX, int sizeY, int sizeZ)
         for (size_t i = 0; i < finalMap.size(); i++) {
             Vector3 pos = finalMap.getCoordAsVector3(i);
             if (pos.x == 0 || pos.x == finalMap.sizeX - 1 || pos.y == 0 || pos.y == finalMap.sizeY - 1) {
-                finalMap.at(pos) = 0;
+                finalMap.at(pos) = int(pos.x) % 2; //0;
             }
         }
 
@@ -50,9 +51,9 @@ bool WaveFunctionCollapse::step()
     if (!lowEntroIndex.isValid() || availablePatternsOnCell.at(lowEntroIndex).size() <= 1)
         return false; // Either all done or it has failed
 
-//    this->finalMap.at(lowEntroIndex) = constraints[availablePatternsOnCell.at(lowEntroIndex)[int(random_gen::generate(0, availablePatternsOnCell.at(lowEntroIndex).size()))]].at(tilesAnchor);
+    this->finalMap.at(lowEntroIndex) = constraints[availablePatternsOnCell.at(lowEntroIndex)[int(random_gen::generate(0, availablePatternsOnCell.at(lowEntroIndex).size()))]].at(tilesAnchor);
 
-    return this->propagate(lowEntroIndex, true);
+    return this->propagate(lowEntroIndex, false);
 }
 
 Vector3 WaveFunctionCollapse::getLowestEntropyCellIndex()
@@ -76,13 +77,13 @@ Vector3 WaveFunctionCollapse::getLowestEntropyCellIndex()
     return availablePatternsOnCell.getCoordAsVector3(minEntropyIndex);
 }
 
-std::set<int> convertToSet(std::vector<int> v)
+/*std::set<int> convertToSet(std::vector<int> v)
 {
     return std::set<int>(v.begin(), v.end());
 }
 std::vector<int> convertToVector(std::set<int> s) {
     return std::vector<int>(s.begin(), s.end());
-}
+}*/
 bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPropagation)
 {
     if (!finalMap.checkCoord(from)) return true;
@@ -92,7 +93,7 @@ bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPro
 
     bool cellChanged = forceNeighborsPropagation;
     if (myLabel == -1) {
-        std::set<int> possibleStates = convertToSet(availablePatternsOnCell.at(from));
+        std::set<int> possibleStates = convertVectorToSet(availablePatternsOnCell.at(from));
 
         for (int x = from.x - 1; x <= from.x + 1; x++) {
             for (int y = from.y - 1; y <= from.y + 1; y++) {
@@ -123,7 +124,7 @@ bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPro
                     if (tmpStates.size() != possibleStates.size())
                     {
                         this->modifiedCell.at(from) = 1;
-                        this->availablePatternsOnCell.at(from) = convertToVector(possibleStates);
+                        this->availablePatternsOnCell.at(from) = convertSetToVector(possibleStates);
                         cellChanged = true;
                     }
                 }

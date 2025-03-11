@@ -83,6 +83,10 @@ public:
     int width() const;
     int depth() const;
     int height() const;
+
+    int rows() const;
+    int cols() const;
+
     int getIndex(size_t x, size_t y, size_t z) const;
     int getIndex(const Vector3& coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
@@ -90,6 +94,9 @@ public:
     bool checkCoord(int x, int y, int z = 0) const;
     bool checkCoord(const Vector3& pos) const;
     bool checkIndex(size_t i) const;
+
+    Matrix3<T> col(int colIndex, int depthIndex = 0);
+    Matrix3<T> row(int rowIndex, int depthIndex = 0);
 
     template<class Func>
     void iterate(Func function) const;
@@ -136,6 +143,9 @@ public:
     T min() const;
     T max() const;
 
+    Matrix3<T>& min(const T& minVal);
+    Matrix3<T>& max(const T& maxVal);
+
     Matrix3<T>& max(const Matrix3<T> &otherMatrix, const Vector3& upperLeftFrontCorner);
     Matrix3<T>& max(const Matrix3<T>& otherMatrix, int left, int up, int front);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
@@ -161,7 +171,7 @@ public:
     Matrix3<Vector3> grad() const;
     Matrix3<float> divergence() const;
     Matrix3<float> div() const;
-    Matrix3<T> curl() const;
+    Matrix3<T> curl(float radius = 1.f) const;
     Matrix3<T> rot() const;
     Matrix3<T> laplacian() const;
     Vector3 gradient(const Vector3& position) const;
@@ -178,7 +188,7 @@ public:
 
     T trace() const;
 
-    Matrix3<T> warpWith(const Matrix3<Vector3>& warper) const;
+    Matrix3<T> warpWith(const Matrix3<Vector3>& warper, int precision = 1) const;
     Matrix3<T> warpWith(const BSpline& original, const BSpline& warperCurve) const;
 
     Matrix3<T> warpWithoutInterpolation(const Matrix3<Vector3>& warper) const;
@@ -189,8 +199,10 @@ public:
     static Matrix3<Vector3> fbmNoise3D(FastNoiseLite noise, int sizeX, int sizeY, int sizeZ = 1);
 
     static Matrix3<float> gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
+    static Matrix3<float> normalizedGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3& offset = Vector3());
     Matrix3<T> LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma) const;
     Matrix3<T> meanSmooth(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
+    Matrix3<T> gaussianSmooth(float sigma, bool ignoreZ = false, bool ignoreBorders = false, float limitFactor = 4.f) const;
     Matrix3<T> medianBlur(int sizeOnX = 3, int sizeOnY = 3, int sizeOnZ = 3, bool ignoreBorders = false) const;
 
     Matrix3<T>& insertRow(size_t indexToInsert, int affectedDimension, T newData = T());
@@ -201,6 +213,11 @@ public:
     Matrix3<int> binarize(T limitValue = T(), bool greaterValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> binarizeBetween(T minValue, T maxValue, bool insideValuesAreSetToOne = true, bool useAlsoTheEqualSign = false) const;
     Matrix3<int> isosurface(T isovalue = T(), bool ignoreZtopBorder = false, bool ignoreBorders = true) const;
+
+    Matrix3<T> slice(int index, int axis) const;
+    Matrix3<T> sliceXY(int index) const;
+    Matrix3<T> sliceYZ(int index) const;
+    Matrix3<T> sliceXZ(int index) const;
 
     template<typename U>
     operator Matrix3<U>() const {
@@ -238,6 +255,7 @@ public:
     Matrix3<T>& operator-=(U o);
     template<typename U>
     bool operator==(Matrix3<U> o) const;
+
 
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
 
@@ -466,6 +484,26 @@ template<class T>
 bool Matrix3<T>::checkIndex(size_t i) const
 {
     return (0 <= i && i < sizeX * sizeY * sizeZ);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::col(int colIndex, int depthIndex)
+{
+    Matrix3<T> res(1, this->sizeY, 1);
+    for (int y = 0; y < this->sizeY; y++) {
+        res(0, y, 0) = this->at(colIndex, y, depthIndex);
+    }
+    return res;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
+{
+    Matrix3<T> res(this->sizeX, 1, 1);
+    for (int x = 0; x < this->sizeX; x++) {
+        res(x, 0, 0) = this->at(x, rowIndex, depthIndex);
+    }
+    return res;
 }
 
 template<class T>
@@ -856,7 +894,8 @@ Matrix3<T> Matrix3<T>::erode(bool use2D, float t) const
     while (t > 0.f) {
         Matrix3<T> copy = res;
         copy.raiseErrorOnBadCoord = false;
-        copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+//        copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+        copy.defaultValueOnBadCoord = 0;
         float dt = (t < 1.f ? t : 1.f);
         copy.iterateParallel([&](int x, int y, int z) {
             T minVal = res.at(x, y, z);
@@ -975,6 +1014,24 @@ T Matrix3<T>::max() const
     return max;
 }
 
+template<class T>
+Matrix3<T>& Matrix3<T>::min(const T &minVal)
+{
+    this->iterateParallel([&](size_t i) {
+        (*this)[i] = std::min((*this)[i], minVal);
+    });
+    return *this;
+}
+
+template<class T>
+Matrix3<T>& Matrix3<T>::max(const T &maxVal)
+{
+    this->iterateParallel([&](size_t i) {
+        (*this)[i] = std::max((*this)[i], maxVal);
+    });
+    return *this;
+}
+
 template <class T>
 Matrix3<T> Matrix3<T>::abs() const
 {
@@ -1076,21 +1133,22 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
     Matrix3<float> gaussian(sizeOnX, sizeOnY, sizeOnZ);
     Vector3 center = Vector3(sizeOnX/2.f, sizeOnY/2.f, sizeOnZ/2.f) + offset;
     center -= Vector3((sizeOnX > 1 ? .5 : 0), (sizeOnY > 1 ? .5 : 0), (sizeOnZ > 1 ? .5 : 0));
-    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * 3.141592);
+    float oneOverSqrt2Pi = 1.f/std::sqrt(2 * M_PI);
     float sqrSigma = sigma * sigma;
     gaussian.iterateParallel([&](const Vector3& pos) {
         gaussian(pos) = std::exp(-((pos - center).norm2())/(2*sqrSigma)) * oneOverSqrt2Pi;
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < gaussian.sizeX; x++) {
-        for (int y = 0; y < gaussian.sizeY; y++) {
-            for (int z = 0; z < gaussian.sizeZ; z++) {
-                Vector3 pos = Vector3(x, y, z) - center;
-                gaussian.at(x, y, z) = std::exp(-pos.norm2()/(2*sqrSigma)) * oneOverSqrt2Pi;
-            }
-        }
-    }*/
     return gaussian;
+}
+
+template<class T>
+Matrix3<float> Matrix3<T>::normalizedGaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float sigma, const Vector3 &offset)
+{
+    Matrix3<float> gauss = Matrix3<float>::gaussian(sizeOnX, sizeOnY, sizeOnZ, sigma, offset);
+    float sum = gauss.sum();
+    if (sum != 0) gauss /= sum;
+//    return gauss / (sum != 0 ? sum : 1.f);
+    return gauss;
 }
 
 template<class T>
@@ -1103,55 +1161,154 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
 }
 template<class T>
 Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const {
-//    Matrix3<float> meanMatrix(sizeOnX, sizeOnY, sizeOnZ, 1.f);
-//    return this->convolution(meanMatrix, (ignoreBorders ? CONVOLUTION_BORDERS::IGNORED : CONVOLUTION_BORDERS::ZERO_PAD));
-
-    Matrix3<T> tempResult(this->sizeX, this->sizeY, this->sizeZ);
+    Matrix3<T> tempResult = *this; //(this->sizeX, this->sizeY, this->sizeZ);
+    tempResult.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    tempResult.raiseErrorOnBadCoord = false;
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
+    result.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
+    result.raiseErrorOnBadCoord = false;
     float divisor = (sizeOnX * sizeOnY * sizeOnZ);
 
     // Perform 1D convolution along x-axis
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
-//        float outOfGrid = 0;
         for (int dx = -(sizeOnX / 2); dx <= (sizeOnX / 2); ++dx) {
             if (x + dx >= 0 && x + dx < this->sizeX) {
-                neighboringSum += this->at(x + dx, y, z);
+                neighboringSum += tempResult.at(x + dx, y, z);
             }
-//            else {
-//                outOfGrid++;
-//            }
         }
-        result.at(x, y, z) = neighboringSum; // / (divisor - outOfGrid);
+        result.at(x, y, z) = neighboringSum;
     });
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
-//        float outOfGrid = 0;
         for (int dx = -(sizeOnY / 2); dx <= (sizeOnY / 2); ++dx) {
             if (y + dx >= 0 && y + dx < this->sizeY) {
                 neighboringSum += result.at(x, y + dx, z);
             }
-//            else {
-//                outOfGrid++;
-//            }
         }
-        tempResult.at(x, y, z) = neighboringSum; // / (divisor - outOfGrid);
+        tempResult.at(x, y, z) = neighboringSum;
     });
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
-//        float outOfGrid = 0;
         for (int dx = -(sizeOnZ / 2); dx <= (sizeOnZ / 2); ++dx) {
             if (z + dx >= 0 && z + dx < this->sizeZ) {
                 neighboringSum += tempResult.at(x, y, z + dx);
             }
-//            else {
-//                outOfGrid++;
-//            }
         }
-        result.at(x, y, z) = neighboringSum;// / (divisor - outOfGrid);
+        result.at(x, y, z) = neighboringSum;
     });
 
     return result / divisor;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBorders, float limitFactor) const
+{
+    ignoreBorders = false;
+    int sizeX = this->sizeX;
+    int sizeY = this->sizeY;
+    int sizeZ = this->sizeZ;
+
+    Matrix3<T> result(sizeX, sizeY, sizeZ);
+    result.raiseErrorOnBadCoord = false;
+    result.returned_value_on_outside = this->returned_value_on_outside;
+    Matrix3<T> tempResult = *this; //(sizeX, sizeY, sizeZ);
+    tempResult.raiseErrorOnBadCoord = false;
+    tempResult.returned_value_on_outside = this->returned_value_on_outside;
+
+    auto gaussian = [](float x, float sigma) {
+        return exp(-(x * x) / (2 * sigma * sigma)) / (sqrt(2 * M_PI) * sigma);
+    };
+
+    float sumX = 0.0f;
+    float sumY = 0.0f;
+    float sumZ = 0.0f;
+
+    if (limitFactor < 0)
+        limitFactor = std::max({sizeX, sizeY, sizeZ}) / sigma;
+
+    int startX = std::floor(sizeX / 2 - sigma * limitFactor);
+    startX = (ignoreBorders ? startX : std::max(startX, 0));
+    int endX = std::ceil(sizeX / 2 + sigma * limitFactor);
+    endX = (ignoreBorders ? endX : std::min(endX, sizeX));
+
+    std::vector<float> kernelX(sizeX);
+
+    for (int i = 0; i < sizeX; ++i) {
+        float x = i - sizeX / 2;
+        if (std::abs(x) > limitFactor * sigma) continue;
+        kernelX[i] = gaussian(x, sigma);
+        sumX += kernelX[i];
+    }
+
+    // Convolve along x-axis
+    iterateParallel([&](int x, int y, int z) {
+        T sum = T();
+        for (int dx = startX; dx < endX; ++dx) {
+            int nx = x + dx - sizeX / 2;
+            sum += tempResult.at(nx, y, z) * kernelX[dx];
+        }
+        result.at(x, y, z) = sum / sumX;
+    });
+
+
+    int startY = std::floor(sizeY / 2 - sigma * limitFactor);
+    startY = (ignoreBorders ? startY : std::max(startY, 0));
+    int endY = std::ceil(sizeY / 2 + sigma * limitFactor);
+    endY = (ignoreBorders ? endY : std::min(endY, sizeY));
+
+    std::vector<float> kernelY(sizeY);
+
+    for (int i = 0; i < sizeY; ++i) {
+        float x = i - sizeY / 2;
+        if (std::abs(x) > limitFactor * sigma) continue;
+        kernelY[i] = gaussian(x, sigma);
+        sumY += kernelY[i];
+    }
+
+    // Convolve along y-axis
+    result.iterateParallel([&](int x, int y, int z) {
+        T sum = T();
+        for (int dy = startY; dy < endY; ++dy) {
+            int ny = y + dy - sizeY / 2;
+            // if (ny >= 0 && ny < sizeY) {
+                sum += result.at(x, ny, z) * kernelY[dy];
+            // }
+        }
+        tempResult.at(x, y, z) = sum / sumY;
+    });
+    result = tempResult;
+
+    if (!ignoreZ) {
+
+        int startZ = std::floor(sizeZ / 2 - sigma * limitFactor);
+        startZ = (ignoreBorders ? startZ : std::max(startZ, 0));
+        int endZ = std::ceil(sizeZ / 2 + sigma * limitFactor);
+        endZ = (ignoreBorders ? endZ : std::min(endZ, sizeZ));
+
+        std::vector<float> kernelZ(sizeZ);
+
+        for (int i = 0; i < sizeZ; ++i) {
+            float x = i - sizeZ / 2;
+            if (std::abs(x) > limitFactor * sigma) continue;
+            kernelZ[i] = gaussian(x, sigma);
+            sumZ += kernelZ[i];
+        }
+
+        // Convolve along z-axis
+        tempResult.iterateParallel([&](int x, int y, int z) {
+            T sum = T();
+            for (int dz = startZ; dz < endZ; ++dz) {
+                int nz = z + dz - sizeZ / 2;
+                // if (nz >= 0 && nz < sizeZ) {
+                    sum += tempResult.at(x, y, nz) * kernelZ[dz];
+                // }
+            }
+            result.at(x, y, z) = sum / sumZ;
+        });
+    }
+
+    return result;
 }
 
 template<class T>
@@ -1370,13 +1527,13 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
     bool useZ = (this->sizeZ > 1);
 
     iterateParallel([&](int x, int y, int z) {
-        if (!this->at(x, y, z)) return;
+        if (this->at(x, y, z) <= 0) return;
         if (ignoreBorders && (x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || (ignoreZtopBorder && z == sizeZ - 1))) return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
             for (int dy = -1; dy <= 1 && !isSurface; dy++) {
                 for (int dz = (useZ ? -1 : 0); dz <= (useZ ? 1 : 0); dz++) {
-                    if (!(this->at(x + dx, y + dy, z + dz) - isovalue))
+                    if ((this->at(x + dx, y + dy, z + dz) - isovalue) <= 0)
                         isSurface = true;
                 }
             }
@@ -1402,6 +1559,53 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
         }
     }*/
     return surface;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::slice(int index, int axis) const
+{
+    Matrix3<T> result;
+    if (axis == 0) { // YZ
+        result = Matrix3<T>(1, sizeY, sizeZ);
+        for (int y = 0; y < sizeY; y++) {
+            for (int z = 0; z < sizeZ; z++) {
+                result(0, y, z) = this->at(index, y, z);
+            }
+        }
+    } else if (axis == 1) { // XZ
+        result = Matrix3<T>(sizeX, 1, sizeZ);
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+                result(x, 0, z) = this->at(x, index, z);
+            }
+        }
+    } else if (axis == 2) { // XY
+        result = Matrix3<T>(sizeX, sizeY, 1);
+        for (int x = 0; x < sizeX; x++) {
+            for (int y = 0; y < sizeY; y++) {
+                result(x, y, 0) = this->at(x, y, index);
+            }
+        }
+    }
+    return result;
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceXY(int index) const
+{
+    return slice(index, 2);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceYZ(int index) const
+{
+    return slice(index, 0);
+}
+
+template<class T>
+Matrix3<T> Matrix3<T>::sliceXZ(int index) const
+{
+    return slice(index, 1);
 }
 
 template<class T>
@@ -1500,6 +1704,7 @@ template<typename T>
 Matrix3<T> Matrix3<T>::operator-() const {
     return *this * -1.f;
 }
+
 template<typename T> template<typename U>
 Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
@@ -2440,12 +2645,15 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
 template<class T>
 Vector3 Matrix3<T>::getMirrorPosition(const Vector3& pos)  const
 {
+    if (pos.x < -10000) {
+        int a = 0;
+    }
     float x = pos.x;
     float y = pos.y;
     float z = pos.z;
-    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? sizeX - (x - sizeX) -1 : x));
-    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? sizeY - (y - sizeY) -1 : y));
-    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? sizeZ - (z - sizeZ) -1 : z));
+    x = int(x < 0 ? std::abs(x) : (x >= sizeX ? (sizeX - 1) - (x - sizeX) : x));
+    y = int(y < 0 ? std::abs(y) : (y >= sizeY ? (sizeY - 1) - (y - sizeY) : y));
+    z = int(z < 0 ? std::abs(z) : (z >= sizeZ ? (sizeZ - 1) - (z - sizeZ) : z));
     return Vector3(x, y, z);
 }
 
@@ -2475,7 +2683,7 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
 }
 
 template <class T>
-Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper) const
+Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) const
 {
     // Warp definition : f(warp(p)) = f(p + warp vec)
     // But f(p) != f(p - warp vec), in the definition. I think it should create
@@ -2487,10 +2695,25 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper) const
     self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     result.raiseErrorOnBadCoord = false;
 
-    iterate([&](const Vector3& pos) {
-        const Vector3& warp = warper.at(pos);
-        result.addValueAt(self.at(pos), pos + warp);
-    });
+    if (precision > 1) {
+        Matrix3<Vector3> displacements(warper.getDimensions());
+        displacements.iterateParallel([&](const Vector3& p) {
+            auto& pos = displacements(p);
+            pos = p;
+            for (int iter = 0; iter < precision; iter++) {
+                pos -= warper.interpolate(pos) / float(precision);
+            }
+        });
+        self.iterate([&](const Vector3& pos) {
+            const auto& warp = displacements.at(pos);
+            result.at(pos) = self.interpolate(warp);
+        });
+    } else {
+        iterate([&](const Vector3& pos) {
+            const Vector3& warp = warper.at(pos);
+            result.addValueAt(self.at(pos), pos + warp);
+        });
+    }
     return result;
 }
 
@@ -2695,6 +2918,17 @@ int Matrix3<T>::height() const {
 }
 
 template<class T>
+int Matrix3<T>::rows() const
+{
+    return this->sizeY;
+}
+template<class T>
+int Matrix3<T>::cols() const
+{
+    return this->sizeX;
+}
+
+template<class T>
 Vector3 Matrix3<T>::getDimensions() const
 {
     return Vector3(this->sizeX, this->sizeY, this->sizeZ);
@@ -2704,5 +2938,12 @@ Vector3 Matrix3<T>::getDimensions() const
 typedef Matrix3<float> GridF;
 typedef Matrix3<int> GridI;
 typedef Matrix3<Vector3> GridV3;
+
+
+std::string stringifyGridF(const GridF& data, bool binaryMode = true);
+std::string stringifyGridV3(const GridV3& data, bool binaryMode = true);
+
+GridF loadGridF(const std::string& str, bool binaryMode = true);
+GridV3 loadGridV3(const std::string& str, bool binaryMode = true);
 
 #endif // MATRIX3_H

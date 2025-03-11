@@ -1,7 +1,9 @@
 import itertools
+import pstats
 import time
 from copy import deepcopy
 import random
+import cProfile
 
 import PIL
 import matplotlib.backend_bases
@@ -22,6 +24,7 @@ import Vectors
 from noise import perlin
 from sketch_maker import LineBuilder1D, LineBuilder2D, LineBuilderRadial, SketchManagement, LineBuilder, resizeArray
 from itertools import chain
+import coralize_my_island
 
 outputImageDims = [128, 128]
 distortionMaps: List[List[List[Vector2D]]] = []
@@ -76,19 +79,45 @@ def evaluatePosAfterDistortion(prevX: float, prevY: float) -> Tuple[float, float
     return pos.x, pos.y
 
 def numpyBilinearInterpolation(arr: np.ndarray, x: float, y: float) -> float:
-    sizeX, sizeY = arr.shape[0], arr.shape[1]
-    nbChannels = 0 if len(arr.shape) == 2 else arr.shape[2]
-    nullArray = 0 if nbChannels == 0 else np.zeros(nbChannels)
+    sizeX, sizeY = arr.shape[:2]
+    nbChannels = arr.shape[2] if arr.ndim == 3 else 0
+
+    # Convert to integer indices and fractional parts
     _x, _y = coordsToNumpyIndices(x, y, sizeX, sizeY)
     __x, __y = coordsToNumpyIndicesFloat(x, y, sizeX, sizeY)
-
     dx, dy = __x - _x, __y - _y
-    d00 = arr[_x  , _y  ] if _x >= 0 and _x < sizeX and _y >= 0 and _y < sizeY else nullArray
-    d01 = arr[_x  , _y+1] if _x >= 0 and _x < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else nullArray
-    d10 = arr[_x+1, _y  ] if (_x+1) >= 0 and (_x+1) < sizeX and _y >= 0 and _y < sizeY else nullArray
-    d11 = arr[_x+1, _y+1] if (_x+1) >= 0 and (_x+1) < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else nullArray
-    value = (d00 * (1 - dx) + d10 * dx) * (1 - dy) + (d01 * (1 - dx) + d11 * dx) * dy
-    return value
+
+    # Clip indices to be within array bounds
+    _x0 = np.clip(_x, 0, sizeX - 1)
+    _y0 = np.clip(_y, 0, sizeY - 1)
+    _x1 = np.clip(_x + 1, 0, sizeX - 1)
+    _y1 = np.clip(_y + 1, 0, sizeY - 1)
+
+    # Extract corner values efficiently
+    d00 = arr[_x0, _y0]
+    d10 = arr[_x1, _y0]
+    d01 = arr[_x0, _y1]
+    d11 = arr[_x1, _y1]
+
+    # Perform bilinear interpolation
+    interpolated_value = (d00 * (1 - dx) + d10 * dx) * (1 - dy) + (d01 * (1 - dx) + d11 * dx) * dy
+    return interpolated_value if nbChannels == 0 else np.clip(interpolated_value, 0, 1)
+
+
+# def numpyBilinearInterpolation(arr: np.ndarray, x: float, y: float) -> float:
+#     sizeX, sizeY = arr.shape[0], arr.shape[1]
+#     nbChannels = 0 if len(arr.shape) == 2 else arr.shape[2]
+#     nullArray = 0 if nbChannels == 0 else np.zeros(nbChannels)
+#     _x, _y = coordsToNumpyIndices(x, y, sizeX, sizeY)
+#     __x, __y = coordsToNumpyIndicesFloat(x, y, sizeX, sizeY)
+#
+#     dx, dy = __x - _x, __y - _y
+#     d00 = arr[_x  , _y  ] if _x >= 0 and _x < sizeX and _y >= 0 and _y < sizeY else nullArray
+#     d01 = arr[_x  , _y+1] if _x >= 0 and _x < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else nullArray
+#     d10 = arr[_x+1, _y  ] if (_x+1) >= 0 and (_x+1) < sizeX and _y >= 0 and _y < sizeY else nullArray
+#     d11 = arr[_x+1, _y+1] if (_x+1) >= 0 and (_x+1) < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else nullArray
+#     value = (d00 * (1 - dx) + d10 * dx) * (1 - dy) + (d01 * (1 - dx) + d11 * dx) * dy
+#     return value
 
 def bilinearInterpolation(arr: List[List[Vector2D]], x: float, y: float) -> Vector2D:
     sizeX, sizeY = len(arr[0]), len(arr)
@@ -182,7 +211,7 @@ def splitProfileOnMarkers(profileSketch: LineBuilder, islandSketches: SketchMana
     markers.append((0.0, centerMarker))
     markers.sort(key = lambda a: a[0])
 
-    profile = resizeArray(profileSketch.getCurve(), 200)
+    profile = resizeArray(profileSketch.getCurve(), 100)
     curves: List[Tuple[int, int, List[float]]] = []
     begin = (-1.0, borderMarker)  # markers.pop(0)
     ending = markers[0]
@@ -265,10 +294,11 @@ def getSequence(sequences: List[Tuple[int, int, List[float]]], distancesToCurves
     return marker1, marker2, interpolateOnCurve(curve, t), curve
 
 
-def heightmapFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> np.ndarray:
+def heightmapAndFeatureMapFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> Tuple[np.ndarray, np.ndarray]:
     sequences = splitProfileOnMarkers(profileSketch, islandSketches, sliceCut)
     dims = outputImageDims
     heights: np.ndarray = np.zeros((dims[0], dims[1]))
+    features: np.ndarray = np.zeros((dims[0], dims[1]))
 
     for _y in range(dims[1]):
         for _x in range(dims[0]):
@@ -281,49 +311,82 @@ def heightmapFromSketches(profileSketch: LineBuilder, islandSketches: SketchMana
             # if _x == 65 and _y == 55:
                 # a = 0
             marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
-            heights[_x, _y] = min(max(height, 0.0), 1.0)
-
-    # Distortion part :
-    distorted = np.zeros((dims[0], dims[1]))
-    for _x in range(dims[0]):
-        for _y in range(dims[1]):
-            x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
-            newX, newY = evaluatePosAfterDistortion(x, y)
-            val = numpyBilinearInterpolation(heights, newX, newY)
-            distorted[_x, _y] = val
-    return distorted
-
-
-def featuresFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> np.ndarray:
-    sequences = splitProfileOnMarkers(profileSketch, islandSketches, sliceCut)
-    dims = outputImageDims
-    features: np.ndarray = np.zeros((dims[0], dims[1]))
-
-    for _x in range(dims[0]):
-        for _y in range(dims[1]):
-            x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
-            pos = Vector2D(x, y)
-            distToCenter = pos.norm()
-            profileSlice = (pos.normalized() * 10 if distToCenter > 0.1 else Vector2D(10, 0))
-
-            if distToCenter == 0:
-                a = 0
-
-            distancesToCurves = getDistancesToCurves(x, y, islandSketches, profileSlice)
-            marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
             seqID = getSequenceID((marker1, marker2, None), sequences)
+            heights[_x, _y] = min(max(height, 0.0), 1.0)
             features[_x, _y] = seqID
 
     # Distortion part :
-    distorted = np.zeros((dims[0], dims[1], 3))
+    distortedHeight = np.zeros((dims[0], dims[1]))
+    distortedFeature = np.zeros((dims[0], dims[1], 3))
     for _x in range(dims[0]):
         for _y in range(dims[1]):
             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
             newX, newY = evaluatePosAfterDistortion(x, y)
-            val = numpyBilinearInterpolation(features, newX, newY)
-            distorted[_x, _y] = valueAsHSV(val, 0, len(sequences))
-    return distorted
-
+            height = numpyBilinearInterpolation(heights, newX, newY)
+            feature = numpyBilinearInterpolation(features, newX, newY)
+            distortedHeight[_x, _y] = height
+            distortedFeature[_x, _y] = valueAsHSV(feature, 0, len(sequences))
+    return distortedHeight, distortedFeature
+#
+# def heightmapFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> np.ndarray:
+#     sequences = splitProfileOnMarkers(profileSketch, islandSketches, sliceCut)
+#     dims = outputImageDims
+#     heights: np.ndarray = np.zeros((dims[0], dims[1]))
+#
+#     for _y in range(dims[1]):
+#         for _x in range(dims[0]):
+#             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
+#             pos = Vector2D(x, y)
+#             distToCenter = pos.norm()
+#             profileSlice = (pos.normalized() * 10 if distToCenter > 0.01 else Vector2D(10, 0))
+#
+#             distancesToCurves = getDistancesToCurves(x, y, islandSketches, profileSlice)
+#             # if _x == 65 and _y == 55:
+#                 # a = 0
+#             marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
+#             heights[_x, _y] = min(max(height, 0.0), 1.0)
+#
+#     # Distortion part :
+#     distorted = np.zeros((dims[0], dims[1]))
+#     for _x in range(dims[0]):
+#         for _y in range(dims[1]):
+#             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
+#             newX, newY = evaluatePosAfterDistortion(x, y)
+#             val = numpyBilinearInterpolation(heights, newX, newY)
+#             distorted[_x, _y] = val
+#     return distorted
+#
+#
+# def featuresFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> np.ndarray:
+#     sequences = splitProfileOnMarkers(profileSketch, islandSketches, sliceCut)
+#     dims = outputImageDims
+#     features: np.ndarray = np.zeros((dims[0], dims[1]))
+#
+#     for _x in range(dims[0]):
+#         for _y in range(dims[1]):
+#             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
+#             pos = Vector2D(x, y)
+#             distToCenter = pos.norm()
+#             profileSlice = (pos.normalized() * 10 if distToCenter > 0.1 else Vector2D(10, 0))
+#
+#             if distToCenter == 0:
+#                 a = 0
+#
+#             distancesToCurves = getDistancesToCurves(x, y, islandSketches, profileSlice)
+#             marker1, marker2, height, curve = getSequence(sequences, distancesToCurves, distToCenter)
+#             seqID = getSequenceID((marker1, marker2, None), sequences)
+#             features[_x, _y] = seqID
+#
+#     # Distortion part :
+#     distorted = np.zeros((dims[0], dims[1], 3))
+#     for _x in range(dims[0]):
+#         for _y in range(dims[1]):
+#             x, y = numpyIndicesToCoords(_x, _y, dims[0], dims[1])
+#             newX, newY = evaluatePosAfterDistortion(x, y)
+#             val = numpyBilinearInterpolation(features, newX, newY)
+#             distorted[_x, _y] = valueAsHSV(val, 0, len(sequences))
+#     return distorted
+#
 
 def distortionsFromSketches(profileSketch: LineBuilder, islandSketches: SketchManagement, sliceCut: Tuple[Vector2D, Vector2D]) -> np.ndarray:
     dims = outputImageDims
@@ -344,9 +407,32 @@ def genAndSaveHeightMap(profileSketch: LineBuilder, islandSketches: SketchManage
     os.makedirs(pathHeightmap, exist_ok=True)
     os.makedirs(pathFeatures, exist_ok=True)
     os.makedirs(pathDisto, exist_ok=True)
-    heightmap = heightmapFromSketches(profileSketch, islandSketches, sliceCut)
-    features = featuresFromSketches(profileSketch, islandSketches, sliceCut)
+    # displacementMap = computeDisplacementMap(profileSketch, islandSketches, sliceCut)
+    t0 = time.time()
+    heightmap, features = heightmapAndFeatureMapFromSketches(profileSketch, islandSketches, sliceCut)
+    t1 = time.time()
     distortions = distortionsFromSketches(profileSketch, islandSketches, sliceCut)
+    t2 = time.time()
+
+    currentSubsidence = .9
+    heightmap = coralize_my_island.method1Create(heightmap, currentSubsidence)
+    t3 = time.time()
+
+    print(t1 - t0, t2 - t1, t3 - t2)
+    # heightmap = coralize_my_island.bw2rgb(finalMap)
+    # plt.imsave("map.png", rgb)
+
+    # heightmap = []
+    # with cProfile.Profile() as profiler:
+    #     heightmap = heightmapFromSketches(profileSketch, islandSketches, sliceCut)
+    # stats = pstats.Stats(profiler)
+    # stats.sort_stats(pstats.SortKey.TIME)  # Sorts by time spent in each function
+    # stats.print_stats(20)  # Prints top 20 lines of profiling results
+    # s1 = time.time()
+    # features = featuresFromSketches(profileSketch, islandSketches, sliceCut)
+    # s2 = time.time()
+    # s3 = time.time()
+
     rgb = np.zeros((heightmap.shape[0], heightmap.shape[1], 3))
     rgb[:, :, 0] = rgb[:, :, 1] = rgb[:, :, 2] = heightmap
     plt.imsave(pathHeightmap + filePrefix + ".png", rgb)
@@ -482,7 +568,7 @@ def createDatasetOfRandomIslands(_profileSketch: LineBuilder1D, _islandSketches:
     islandSketches = _islandSketches  # deepcopy(_islandSketches)
 
     distortionMaps.append(initialDistoMap(20, 20))
-    folder = "correct_synthetic_terrains_dataset/"
+    folder = "new_synthetic_terrains_dataset/"
     if not os.path.exists(folder):
         os.makedirs(folder)
 
@@ -500,9 +586,11 @@ def createDatasetOfRandomIslands(_profileSketch: LineBuilder1D, _islandSketches:
         randomIslandCurve = centeredCircle(0.5 * getRandom(islandSizeMinRandomness, islandSizeMaxRandomness), randomness)
         islandSketches.lineBuilders[1].setCurve(randomIslandCurve)
 
-        _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.5, 0.1, 0.0]
+        # _randomProfileCurve = [1.0, 0.9, 0.7, 0.3, 0.3, 0.5, 0.5, 0.1, 0.0]
+        _randomProfileCurve = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.3, 0.1, 0.0]
         randomProfileCurve = [h * getRandom(profileMinRandomness, profileMaxRandomness) for h in _randomProfileCurve]
         profileSketch.setCurve(randomProfileCurve)
+
         genAndSaveHeightMap(profileSketch, islandSketches, sliceCut, folder, "features/", "distortions/", "heightmaps/", filePrefix + str(iSample))
         distortionMaps = distortionMaps[0:1]
     print("Finished!")
