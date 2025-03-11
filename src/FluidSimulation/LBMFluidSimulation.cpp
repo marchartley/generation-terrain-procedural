@@ -209,7 +209,7 @@ void LBMFluidSimulation::step() {
     handleCollisions();
 
 
-    float minVal = std::numeric_limits<float>::max(), maxVal = std::numeric_limits<float>::min();
+    float minVal = std::numeric_limits<float>::max(), maxVal = std::numeric_limits<float>::lowest();
     for (int i = 0; i < f.size(); i++) {
         for (int j = 0; j < f[i].size(); j++) {
             minVal = std::min(minVal, std::abs(f[i][j]));

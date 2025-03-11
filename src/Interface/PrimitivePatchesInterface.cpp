@@ -1,5 +1,5 @@
 #include "PrimitivePatchesInterface.h"
-#include "Graphics/DisplayGraphics.h"
+#include "Graphics/Plotter.h"
 #include "Interface/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"
@@ -422,6 +422,7 @@ void PrimitivePatchesInterface::hide()
 
 void PrimitivePatchesInterface::keyPressEvent(QKeyEvent *e)
 {
+    if (!this->isVisible()) return;
     if (constructionMode && e->key() == Qt::Key::Key_Q && (this->currentShapeSelected == ImplicitPatch::MountainChain || this->currentShapeSelected == ImplicitPatch::Polygon || this->currentShapeSelected == ImplicitPatch::ParametricTunnel)) {
         this->createPatchWithOperation(Vector3());
         this->parametricCurve.points.clear();
@@ -600,12 +601,12 @@ void PrimitivePatchesInterface::updateMapWithCurrentPatch()
     this->layerGrid->reset();
 //    this->implicitTerrain->cleanCache();
     this->layerGrid->add(this->implicitTerrain.get()/*, SAND, false*/);
-    //voxelGrid->fromImplicit(implicitTerrain.get());
+    voxelGrid->fromImplicit(implicitTerrain.get());
 //    voxelGrid->smoothVoxels();
 //    voxelGrid->fromCachedData();
     //heightmap->fromImplicit(implicitTerrain.get());
-    voxelGrid->fromLayerBased(*layerGrid);
-    heightmap->fromLayerGrid(*layerGrid);
+//    voxelGrid->fromLayerBased(*layerGrid);
+//    heightmap->fromLayerGrid(*layerGrid);
     this->savePatchesAsFile(this->mainFilename);
 
     Q_EMIT this->terrainUpdated();
@@ -1472,33 +1473,34 @@ void PrimitivePatchesInterface::findAllSubfiles()
 
 void PrimitivePatchesInterface::loadTransformationRules()
 {
-    std::cout << "Reading and interpreting file " << this->rulesFilename << "..." << std::endl;
-    std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> rules;
-    std::ifstream file(this->rulesFilename);
-    std::string sline;
-//    bool takesInputs = true;
-    while (std::getline(file, sline)) {
-        if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
-        std::istringstream line(sline);
-        std::map<TerrainTypes, float> inputs, outputs;
-        std::string value, word, operation;
-        // Get inputs
-        while (operation != "=") {
-            line >> value;
-            line >> word;
-            line >> operation;
-            inputs[materialFromString(word)] = std::stof(value);
+    displayProcessTime("Reading and interpreting file " + this->rulesFilename + "... ", [&]() {
+        std::vector<std::pair<std::map<TerrainTypes, float>, std::map<TerrainTypes, float>>> rules;
+        std::ifstream file(this->rulesFilename);
+        std::string sline;
+    //    bool takesInputs = true;
+        while (std::getline(file, sline)) {
+            if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
+            std::istringstream line(sline);
+            std::map<TerrainTypes, float> inputs, outputs;
+            std::string value, word, operation;
+            // Get inputs
+            while (operation != "=") {
+                line >> value;
+                line >> word;
+                line >> operation;
+                inputs[materialFromString(word)] = std::stof(value);
+            }
+            // Get outputs
+            while (true) {
+                line >> value;
+                line >> word;
+                outputs[materialFromString(word)] = std::stof(value);
+                if (!(line >> operation)) break;
+            }
+            rules.push_back({inputs, outputs});
         }
-        // Get outputs
-        while (true) {
-            line >> value;
-            line >> word;
-            outputs[materialFromString(word)] = std::stof(value);
-            if (!(line >> operation)) break;
-        }
-        rules.push_back({inputs, outputs});
-    }
-    this->layerGrid->transformationRules = rules;
+        this->layerGrid->transformationRules = rules;
+    });
 }
 
 void PrimitivePatchesInterface::addParametricPoint(const Vector3& point)

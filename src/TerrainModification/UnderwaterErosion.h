@@ -7,34 +7,7 @@
 #include "Utils/BSpline.h"
 #include "Karst/KarstHoleProfile.h"
 #include "Karst/KarstHole.h"
-
-struct ErosionParticle {
-    Vector3 pos;
-    Vector3 force;
-    Vector3 velocity;
-    Vector3 dir; // Normalized velocity
-
-    float density;
-    float radius;
-    float volume;
-    float mass;
-    float capacity;
-    float maxCapacity;
-};
-
-struct EnvironmentProperty {
-    Vector3 gravity;
-    Vector3 flowfield;
-    float density;
-    float viscosity;
-};
-
-struct MaterialProperty {
-    Vector3 normal;
-    float density;
-    float criticalShearStress;
-    float resistance;
-};
+#include "TerrainModification/ParticleErosion.h"
 
 class UnderwaterErosion
 {
@@ -42,11 +15,6 @@ public:
     UnderwaterErosion();
 //    UnderwaterErosion(std::shared_ptr<VoxelGrid> grid, int maxRockSize, float maxRockStrength, int rockAmount);
     UnderwaterErosion(VoxelGrid* grid, int maxRockSize, float maxRockStrength, int rockAmount);
-
-
-    enum FLOWFIELD_TYPE { FLUID_SIMULATION, FLOWFIELD_IMAGE, BASIC, FLOWFIELD_ENVOBJECTS };
-    enum DENSITY_TYPE { NATIVE, DENSITY_IMAGE, UNUSED, RANDOM_DENSITY, LAYERED_DENSITY};
-    enum EROSION_APPLIED { DENSITY_VOXELS, HEIGHTMAP, IMPLICIT_TERRAIN, LAYER_TERRAIN, BINARY_VOXELS};
 
 //    std::vector<std::vector<Vector3>> Apply(int avoidMatter = -1);
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
@@ -87,6 +55,8 @@ public:
                                                      bool wrapPositions = false,
                                                      bool applyTheErosion = true,
                                                      int maxCollisions = -1);
+
+    static std::tuple<GridF, GridF, GridF> flatteningErodedTerrain(const GridF& initialTerrain, const GridF& currentTerrain);
 
     std::vector<Vector3> CreateTunnel(int numberPoints = 2, bool addingMatter = false, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);
     std::vector<Vector3> CreateTunnel(BSpline path, bool addingMatter = false, bool usingSpheres = true, bool applyChanges = true, KarstHolePredefinedShapes startingShape = SOLUBLE_BED, KarstHolePredefinedShapes endingShape = KEYHOLE);

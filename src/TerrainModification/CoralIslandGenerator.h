@@ -2,7 +2,9 @@
 #define CORALISLANDGENERATOR_H
 
 #include "TerrainGen/Heightmap.h"
-#include "EnvObject/EnvObject.h"
+#include "EnvObject/EnvPoint.h"
+#include "EnvObject/EnvCurve.h"
+#include "EnvObject/EnvArea.h"
 
 class CoralIslandGenerator
 {

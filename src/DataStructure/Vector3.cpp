@@ -154,9 +154,9 @@ Vector3 Vector3::eulerAnglesWith(const Vector3& other)
             R21 = v1.y, R22 = v2.y, R23 = v3.y,
             R31 = v1.z, R32 = v2.z, R33 = v3.z;
     Vector3 result;
-    result.x = std::atan2(R32, R33) * (180.0 / 3.141592);
-    result.y = std::atan2(-1 * R31, std::sqrt(R32 * R32 + R33 * R33)) * (180.0 / 3.141592);
-    result.z = std::atan2(R21, R11) * (180.0 / 3.141592);
+    result.x = std::atan2(R32, R33) * (180.0 / M_PI);
+    result.y = std::atan2(-1 * R31, std::sqrt(R32 * R32 + R33 * R33)) * (180.0 / M_PI);
+    result.z = std::atan2(R21, R11) * (180.0 / M_PI);
     return result;*/
 }
 
@@ -312,6 +312,11 @@ float Vector3::length() const
     return this->norm();
 }
 
+float Vector3::lengthSquared() const
+{
+    return this->norm2();
+}
+
 Vector3 Vector3::random() {
     Vector3 v(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0));
     v.normalize();
@@ -356,9 +361,9 @@ std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
 
 Vector3 Vector3::min()
 {
-    return Vector3(std::numeric_limits<float>::min(),
-                   std::numeric_limits<float>::min(),
-                   std::numeric_limits<float>::min());
+    return Vector3(std::numeric_limits<float>::lowest(),
+                   std::numeric_limits<float>::lowest(),
+                   std::numeric_limits<float>::lowest());
 }
 
 Vector3 Vector3::max()
@@ -486,6 +491,11 @@ Vector3& Vector3::applyTransform(Matrix transformMatrix)
     return *this;
 }
 
+Vector3 Vector3::rotated90XY() const
+{
+    return Vector3(y, -x);
+}
+
 Vector3 &Vector3::changeBasis(const Vector3& newX, const Vector3& newY, const Vector3& newZ)
 {
     Vector3 newVec = this->changedBasis(newX, newY, newZ);
@@ -507,6 +517,16 @@ Vector3 Vector3::reflexion(const Vector3& normal)
     float dot = normal.dot(*this);
     Vector3 n2d = normal * 2.f * dot;
     return *this - n2d;
+}
+
+Vector3 Vector3::toPolar()
+{
+    return Vector3(this->getAngleWith(Vector3(1, 0)) / (2.f * M_PI), this->norm());
+}
+
+Vector3 Vector3::fromPolar()
+{
+    return Vector3(1, 0).rotate(0, 0, this->x * (2.f * M_PI)) * this->y;
 }
 
 Vector3 Vector3::fromMatrix(Matrix mat)
@@ -777,14 +797,6 @@ float Vector3::distanceToBoundaries(const Vector3& pos, const Vector3& minPos, c
 }
 
 
-nlohmann::json vec3_to_json(const Vector3& vec) {
-    return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});
-}
-
-Vector3 json_to_vec3(nlohmann::json json)
-{
-    return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
-}
 
 AABBox::AABBox()
     : AABBox(Vector3(0, 0, 0), Vector3(0, 0, 0))
@@ -793,6 +805,12 @@ AABBox::AABBox()
 }
 
 AABBox::AABBox(const Vector3& mini, const Vector3& maxi) : mini(mini), maxi(maxi)
+{
+
+}
+
+AABBox::AABBox(std::tuple<Vector3, Vector3> minMax)
+    : AABBox(std::get<0>(minMax), std::get<1>(minMax))
 {
 
 }
@@ -823,6 +841,11 @@ AABBox& AABBox::expand(const std::vector<Vector3>& newPoints)
     for (const auto& p : newPoints)
         this->expand(p);
     return *this;
+}
+
+float AABBox::distanceTo(const Vector3 &p)
+{
+    return Vector3::distanceToBoundaries(p, this->min(), this->max());
 }
 
 Vector3 AABBox::random(const Vector3& mini, const Vector3& maxi)
@@ -860,4 +883,32 @@ std::ostream& operator<<(std::ostream& io, const AABBox& bbox) {
 std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> bbox) {
     io << bbox->toString();
     return io;
+}
+
+
+
+
+
+nlohmann::json vec3_to_json(const Vector3& vec) {
+    return nlohmann::json({{"x", vec.x}, {"y", vec.y}, {"z", vec.z}});
+}
+
+Vector3 json_to_vec3(nlohmann::json json)
+{
+    return Vector3(json.at("x").get<float>(), json.at("y").get<float>(), json.at("z").get<float>());
+}
+
+std::vector<float> json_to_color(nlohmann::json json)
+{
+    return std::vector<float>({json.at("r").get<float>(), json.at("g").get<float>(), json.at("b").get<float>(), (json.contains("a") ? json.at("a").get<float>() : 1.f)});
+}
+
+nlohmann::json color_to_json(const std::vector<float> &color)
+{
+    return nlohmann::json({{"r", color[0]}, {"g", color[1]}, {"b", color[2]}, {"a", (color.size() > 3 ? color[3] : 1.f)}});
+}
+
+nlohmann::json color_to_json(const Vector3 &color)
+{
+    return color_to_json(std::vector<float>({color.x, color.y, color.z, 1.f}));
 }

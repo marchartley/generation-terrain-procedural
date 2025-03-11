@@ -1,5 +1,5 @@
 #include "Graph/Pathfinding.h"
-
+/*
 std::pair<float, std::vector<int> > Pathfinding::ShortestPathFrom(int source, int dest, GridF &adjencyMap, std::function<float (int)> heuristicFunction)
 {
     return AStar(adjencyMap, source, dest, heuristicFunction);
@@ -300,3 +300,4 @@ std::pair<GridF, GridI > Pathfinding::Johnson(GridF &adjencyMap)
     }
     return std::make_pair(W, prec);
 }
+*/

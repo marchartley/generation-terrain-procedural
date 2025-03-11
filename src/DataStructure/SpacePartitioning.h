@@ -30,4 +30,17 @@ public:
     std::vector<Triangle> triangles;
 };
 
+
+class NoPartitioning : public SpacePartitioning {
+public:
+    NoPartitioning();
+    NoPartitioning(std::vector<Triangle> triangles);
+
+    virtual SpacePartitioning &build(const std::vector<Triangle> &triangles) override;
+    virtual std::set<size_t> getAllStoredTrianglesIndices() const override;
+    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const override;
+    virtual std::pair<Vector3, size_t> getIntersectionAndTriangleIndex(const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const override;
+    virtual std::vector<std::pair<Vector3, size_t> > getAllIntersectionsAndTrianglesIndices(const Vector3 &rayStart, const Vector3 &rayEnd) const override;
+};
+
 #endif // SPACEPARTITIONING_H

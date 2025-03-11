@@ -51,7 +51,7 @@ class Viewer : public QGLViewer {
     Q_OBJECT
 public:
     Viewer(QWidget *parent = nullptr);
-    Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPath, MapMode map = VOXEL_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
+    Viewer(std::shared_ptr<Heightmap> grid, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPath, MapMode map = GRID_MODE, ViewerMode mode = FILL_MODE, QWidget *parent = nullptr);
     Viewer(std::shared_ptr<Heightmap> g, QWidget *parent = nullptr);
     Viewer(std::shared_ptr<VoxelGrid> g, QWidget *parent = nullptr);
     ~Viewer();
@@ -60,6 +60,7 @@ Q_SIGNALS:
     void mouseClickOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     void mouseDoubleClickedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
     void mouseMovedOnMap(const Vector3& mouseWorldPosition, TerrainModel* model);
+    void mouseReleasedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
 public Q_SLOTS:
     bool startRecording(std::string folderUsed = "");
@@ -81,6 +82,7 @@ public Q_SLOTS:
     void reloadAllShaders();
 
     void setupViewFromFile(std::string filename);
+    bool correctedFunctionForCameraRepositioning();
     void saveViewToFile(std::string filename);
 
     void screenshot();

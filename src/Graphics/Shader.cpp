@@ -91,6 +91,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->vShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->vShader);
             GlobalsGL::printShaderErrors(this->vShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             vertexShaderFilename = "";
         }
@@ -105,6 +106,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->fShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->fShader);
             GlobalsGL::printShaderErrors(this->fShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             fragmentShaderFilename = "";
         }
@@ -119,6 +121,7 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
             GlobalsGL::f()->glCompileShader(this->gShader);
             GlobalsGL::f()->glAttachShader(this->programID, this->gShader);
             GlobalsGL::printShaderErrors(this->gShader);
+            GlobalsGL::checkOpenGLError();
         } else {
             geometryShaderFilename = "";
         }
@@ -132,10 +135,15 @@ void Shader::compileShadersFromSource(std::map<std::string, std::string> addedDe
         GlobalsGL::f()->glTransformFeedbackVaryings(this->programID, feedbackValues.size(), variables, GL_INTERLEAVED_ATTRIBS);
     }
 
+    GlobalsGL::checkOpenGLError();
     GlobalsGL::f()->glLinkProgram(this->programID);
-    GlobalsGL::f()->glDeleteShader(this->vShader);
-    GlobalsGL::f()->glDeleteShader(this->fShader);
-    GlobalsGL::f()->glDeleteShader(this->gShader);
+    if (this->vShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->vShader);
+    if (this->fShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->fShader);
+    if (this->gShader > -1)
+        GlobalsGL::f()->glDeleteShader(this->gShader);
+    GlobalsGL::checkOpenGLError();
 
 #endif
 }
@@ -367,6 +375,7 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
 // Todo : change the integer type to a template (or select int or float)
 void Shader::setTexture3D(std::string pname, int index, GridF texture)
 {
+    if (!this->use()) return;
     for (auto& val : texture)
         val = std::max(val, 0.f);
     glEnable(GL_TEXTURE_3D);
@@ -374,7 +383,7 @@ void Shader::setTexture3D(std::string pname, int index, GridF texture)
 
     GLuint texIndex;
     bool justUpdateTexture = false; // true;
-    if (!this->use()) return;
+    // if (!this->use()) return;
     if (textureSlotIndices.count(textureSlot) == 0) {
         glGenTextures(1, &texIndex);
         textureSlotIndices[textureSlot] = texIndex;

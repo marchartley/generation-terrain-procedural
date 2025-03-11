@@ -631,11 +631,11 @@ std::string CombinMap::toString()
     return out;
 }
 
-Graph<int> CombinMap::toGraph()
+Graph CombinMap::toGraph()
 {
     auto unorientedEdges = this->getUnorientedEdges();
 //    std::vector<int> nodesIDs;
-    Graph<int> g;
+    Graph g;
     for (auto [startIndex, endIndex] : unorientedEdges) {
         if (g.findNodeByID((int)startIndex)) {
         } else {
@@ -646,6 +646,7 @@ Graph<int> CombinMap::toGraph()
             g.addNode(endIndex);
         }
         g.addConnection(startIndex, endIndex);
+        g.addConnection(endIndex, startIndex);
     }
     return g;
 }

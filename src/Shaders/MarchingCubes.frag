@@ -96,6 +96,7 @@ uniform vec3 max_vertice_positions;
 
 uniform sampler3D dataFieldTex;
 uniform sampler3D dataChangesFieldTex;
+uniform sampler3D scalarFieldToDisplay;
 
 uniform float fogNear;
 uniform float fogFar;
@@ -105,6 +106,7 @@ uniform vec3 clipPlanePosition;
 uniform vec3 clipPlaneDirection;
 
 uniform float waterRelativeHeight = 0.0;
+uniform float heightFactor;
 
 uniform vec3 subterrainOffset = vec3(0, 0, 0);
 uniform float subterrainScale = 1.0;
@@ -134,7 +136,6 @@ struct Material {
 };
 
 uniform vec4 globalAmbiant;
-//uniform PositionalLight light;
 const int nbLights = 6;
 uniform PositionalLight lights[nbLights];
 uniform bool isSpotlight;
@@ -158,6 +159,9 @@ uniform sampler2D allBiomesNormalTextures;
 uniform int maxBiomesNormalTextures;
 
 uniform bool displayAsComparisonTerrain = false;
+
+uniform bool displayShadows = false;
+uniform bool displayDepth = false;
 
 //vec4 sandColor = vec4(.761, .698, .502, 1.0);
 //vec4 mudColor = vec4(.430, .320, .250, 1.0);
@@ -268,8 +272,69 @@ vec3 getTriPlanarBlend(vec3 _wNorm){
 float wyvill(float x) {
     return pow((1 - pow(x, 2)), 3);
 }
+
+float computeShadowOcclusion(vec3 pos) {
+    vec3 texSize = vec3(textureSize(dataFieldTex, 0));
+
+    float occlusions = 0;
+    int evaluatingLights = 1;
+    int nbSamples = 10;
+    for (int iLight = 0; iLight < evaluatingLights; iLight++) {
+        for (int iSample = 0; iSample < nbSamples; iSample++) {
+            vec3 toLight = lights[iLight].position - pos;
+            vec3 dir = normalize(normalize(toLight * vec3(1, 1, 1.0/heightFactor)) + fbmToVec3(vec2(iSample)) * 0.10);
+            vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * (iSample + 1));
+            int try = 0;
+            vec3 offset = fbm3ToVec3(grealNormal + iSample + try);
+            if (dot(offset, grealNormal) <= 0) {
+                offset *= -1;
+            }
+            currentPosition += offset;
+            vec3 stepSizes = vec3(1) / dir;
+            float tMaxX = (dir.x > 0) ? (ceil(currentPosition.x) - currentPosition.x) / dir.x :
+                              (currentPosition.x - floor(currentPosition.x)) / (-dir.x);
+            float tMaxY = (dir.y > 0) ? (ceil(currentPosition.y) - currentPosition.y) / dir.y :
+                          (currentPosition.y - floor(currentPosition.y)) / (-dir.y);
+            float tMaxZ = (dir.z > 0) ? (ceil(currentPosition.z) - currentPosition.z) / dir.z :
+                          (currentPosition.z - floor(currentPosition.z)) / (-dir.z);
+
+            // Calculate steps in each axis based on stepSizes
+            float tDeltaX = abs(stepSizes.x * dir.x);
+            float tDeltaY = abs(stepSizes.y * dir.y);
+            float tDeltaZ = abs(stepSizes.z * dir.z);
+
+            while (0 <= currentPosition.x && currentPosition.x < texSize.x && 0 <= currentPosition.y && currentPosition.y < texSize.y && 0 <= currentPosition.z && currentPosition.z < texSize.z) {
+                if (texture(dataFieldTex, round(currentPosition) / texSize).a > 0.6) {
+                    occlusions += 1.0 * length(lights[iLight].diffuse);
+                    break;
+                }
+
+                if (tMaxX < tMaxY && tMaxX < tMaxZ) {
+                    currentPosition.x += dir.x;
+                    tMaxX += tDeltaX;
+                } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
+                    currentPosition.y += dir.y;
+                    tMaxY += tDeltaY;
+                } else {
+                    currentPosition.z += dir.z;
+                    tMaxZ += tDeltaZ;
+                }
+            }
+        }
+    }
+    float total = 0;
+    for (int i = 0; i < evaluatingLights; i++) {
+        total += nbSamples * length(lights[i].diffuse);
+    }
+    return occlusions / total;
+}
+
 void main(void)
 {
+    /*fragColor = vec4(vec3(texture(heightmapFieldTex, ginitialVertPos.xy / vec2(textureSize(heightmapFieldTex, 0))).a), 1.0);
+    return;*/
+
+
     if (clipPlaneActive) {
         if (dot((ginitialVertPos.xyz - clipPlanePosition), clipPlaneDirection) > 0) {
             discard;
@@ -277,6 +342,10 @@ void main(void)
     }
 
     if (wireframeMode && !gl_FrontFacing)
+        discard;
+
+
+    if (!gl_FrontFacing) //(dot(grealNormal, vec3(1, 1, 1)) < 0)
         discard;
 
 
@@ -361,10 +430,12 @@ void main(void)
     vec3 changeSize = vec3(textureSize(dataChangesFieldTex, 0));
     vec3 evalPos = (changeSize.z > 1 ? ginitialVertPos / changeSize : vec3(ginitialVertPos.xy, 0.5) / changeSize);
     float changeVal = texture(dataChangesFieldTex, evalPos).a - 2.0;
-    changeVal = 0.0;
+//    changeVal = (abs(changeVal) < 0.01 ? 0.0 : changeVal);
+//    changeVal = 0.0;
 
-    vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
-    col = mix(col, colorNull, 1.0 - abs(changeVal));
+    vec4 col = colorNull;
+//    vec4 col = mix(colorErod, colorDepo, (changeVal + 1.0) / 2.0);
+//    col = mix(col, colorNull, clamp(1.0 - abs(changeVal), 0.0, 1.0));
 
     for (int iLight = 0; iLight < nbLights; iLight++) {
 
@@ -409,7 +480,16 @@ void main(void)
         fragColor += vec4((col * 3.0 * (ambiant + diffuse + specular)).xyz, 1.0);
     }
     fragColor /= float(nbLights);
-    fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
+    float waterHeight = waterRelativeHeight * dataTexSize.z;
+//    float depth = waterHeight - realFragmentPosition.z;
+    vec3 blue = vec3(0.8, 1.1, 1.5);
+    vec3 green = vec3(0.5, 0.8, 0.5);
+    float relDepth = clamp(depth / 20.0, 0.0, 1.0);
+
+    if (displayDepth)
+        fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : mix(blue, green, clamp(pow(relDepth, (ambiantOcclusionFactor != 0.5 ? 1.0/(1 + ambiantOcclusionFactor-0.5) : 10.0)), 0.0, 1000.0))), 1.0);
+    else
+        fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : blue), 1.0);
 //    fragColor = vec4(vec3(abs(varyingNormal)), 1);
 
     /*
@@ -433,11 +513,22 @@ void main(void)
         fragColor = vec4(fragColor.xyz * (realFragmentPosition.z > waterRelativeHeight * dataTexSize.z ? vec3(1.0) : vec3(0.8, 1.1, 1.5)), 1.0);
     }
     */
+    float shadow = 0.0;
+    if (displayShadows) {
+        shadow = 1.0 - computeShadowOcclusion(realFragmentPosition);
+        fragColor = vec4((fragColor.xyz * mix(1.0, shadow, 0.50)), 1.0);
+    }
     fragColor = vec4((fragColor.xyz * mix(1.0, gambiantOcclusion, ambiantOcclusionFactor)), 1.0);
 
     if (displayAsComparisonTerrain) {
         fragColor.rgb = fragColor.brg;
     }
 //    fragColor.xyz = vec3(length(varyingNormal));
+
+    vec3 scalarSize = textureSize(scalarFieldToDisplay, 0);
+    float scalar = clamp(texture(scalarFieldToDisplay, vec3(ginitialVertPos.xy, 0) / scalarSize).a, 0.0, 1.0);
+    vec3 scalarDisplayedColor = (scalar < 0.5 ? (vec3(1, 0, 0) * (1.0 - (scalar * 2.0)) + vec3(1, 1, 1) * scalar * 2.0) : (vec3(1, 1, 1) * (1.0 - (scalar - 0.5) * 2.0) + vec3(0, 1, 0) * (scalar - 0.5) * 2.0));
+    fragColor *= vec4(scalarDisplayedColor, 1.0);
+
     return;
 }

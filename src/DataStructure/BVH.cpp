@@ -195,6 +195,47 @@ BVHNode *BVHTree::allocateNode() {
     }
 }
 
+void BVHTree::traverseBVH(BVHNode *node, const Vector3 &pos, float &minDistance, size_t &closestTriangleIndex, const std::vector<Triangle> &triangles) {
+    // If the current node is a leaf node
+    if (!node->left && !node->right) {
+        // Check distance to each triangle in the leaf node
+        for (size_t triangleIndex : node->trianglesIndices) {
+//            float dist = distanceToTriangle(pos, triangles[triangleIndex]);
+            const Triangle tri = triangles[triangleIndex];
+            float dist = std::sqrt(Collision::pointToTriangleDistanceSquared(tri[0], tri[1], tri[2], pos));
+            if (dist < minDistance) {
+                minDistance = dist;
+                closestTriangleIndex = triangleIndex;
+            }
+        }
+    } else {
+        // Check if the point is closer to the left or right child node
+        float leftDist = node->left->box.distanceTo(pos);
+        float rightDist = node->right->box.distanceTo(pos);
+        BVHNode* closerChild = (leftDist < rightDist) ? node->left : node->right;
+        BVHNode* fartherChild = (leftDist < rightDist) ? node->right : node->left;
+
+        // Recursively traverse the closer child node first
+        traverseBVH(closerChild, pos, minDistance, closestTriangleIndex, triangles);
+
+        // Check if the farther child node needs to be visited
+        if (rightDist < minDistance) {
+            traverseBVH(fartherChild, pos, minDistance, closestTriangleIndex, triangles);
+        }
+    }
+}
+
+size_t BVHTree::getClosestTriangle(const Vector3 &pos/*, const std::vector<Triangle> &triangles*/) {
+    // Initialize minimum distance and closest triangle index
+    float minDistance = std::numeric_limits<float>::max();
+    size_t closestTriangleIndex = 0;
+
+    // Start traversal from the root node
+    traverseBVH(root, pos, minDistance, closestTriangleIndex, triangles);
+
+    return closestTriangleIndex;
+}
+
 
 BVHNode *BVHTree::buildBVH(int start, int end)
 {

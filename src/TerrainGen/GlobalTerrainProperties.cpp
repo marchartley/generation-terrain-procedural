@@ -13,7 +13,8 @@ GlobalTerrainProperties::GlobalTerrainProperties()
     Vector3 fluidSimRescale = Vector3(2, 2, 2);
 
     Vector3 simulationSize = Vector3(100, 100, 40) / fluidSimRescale;
-    this->simulations[FluidSimType::FLIP] = new FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, .5f, 1.0f, 750, dt);
+    this->simulations[FluidSimType::FLIP] = new FLIPSimulation(density, 50, 50, 20, .1f, 1.0f, 5, dt);
+//    this->simulations[FluidSimType::FLIP] = new FLIPSimulation(density, simulationSize.x, simulationSize.y, simulationSize.z, .5f, 1.0f, 750, dt);
     this->simulations[FluidSimType::SPH] = new SPHSimulation();
     this->simulations[FluidSimType::LBM] = new LBMFluidSimulation(false);
 //    this->simulations[FluidSimType::SHALLOW] = new ShallowWaterSimulation();

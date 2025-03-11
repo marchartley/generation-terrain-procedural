@@ -62,8 +62,11 @@ protected:
     std::vector<std::unique_ptr<ControlPoint>> controlPoints;
     Mesh tunnelPreview;
 
-    QHBoxLayout* tunnelLayout;
-    QPushButton* addControlPointButton;
+    std::vector<ComboboxLineElement> shapes;
+    int startingShapeIndex;
+    int endingShapeIndex;
+//    QHBoxLayout* tunnelLayout;
+    /*QPushButton* addControlPointButton;
     QPushButton* tunnelClearControlPointButton;
     FancySlider* tunnelWidthSlider;
     FancySlider* tunnelHeightSlider;
@@ -74,7 +77,7 @@ protected:
     QCheckBox* tunnelDisplayButton;
 
     QComboBox* startingShapeCombobox;
-    QComboBox* endingShapeCombobox;
+    QComboBox* endingShapeCombobox;*/
 };
 
 #endif // TUNNELINTERFACE_H

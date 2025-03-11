@@ -22,8 +22,10 @@ VoxelGrid::~VoxelGrid()
 //    this->chunks.clear();
 }
 void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
-    float zScale = 2.f;
-    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), grid.getSizeZ() * zScale);
+    float zScale = 1.f;
+    float height = this->getSizeZ();
+    // std::cout << "Voxels height: " << height << std::endl;
+    this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), height/*grid.getSizeZ() * zScale*/);
     this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
@@ -39,14 +41,22 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
         subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
         subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, grid.getMaxHeight(), 0.f);
+    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, height, 0.f);
+    // this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
     this->initMap();
 
-    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions());
+    GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
     gridHeights.raiseErrorOnBadCoord = false;
-    for (int x = 0; x < this->getSizeX(); x++) {
-        for (int y = 0; y < this->getSizeY(); y++) {
-            float grid_height = gridHeights.at(x, y) * (this->getSizeZ() / (grid.getMaxHeight()));
+
+    int sizeX = this->getSizeX();
+    int sizeY = this->getSizeY();
+    int sizeZ = this->getSizeZ();
+    float gridMaxHeight = grid.getMaxHeight();
+    #pragma omp parallel for collapse(2)
+    for (int x = 0; x < sizeX; x++) {
+        for (int y = 0; y < sizeY; y++) {
+            float grid_height = gridHeights.at(x, y) * (sizeZ / gridMaxHeight);
+            if (gridMaxHeight < 1e-5) grid_height = 0;
             int z = int(std::max(grid_height, 2.f));
             // Positive values
             for (int i = 0; i < int(z); i++) {
@@ -60,13 +70,10 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
             }
         }
     }
-//    Vector3 miniDims(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 5);
-//    Vector3 maxiDims(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, _cachedVoxelValues.sizeZ);
-//    _cachedVoxelValues = _cachedVoxelValues.resize(miniDims);
-//    _cachedVoxelValues = _cachedVoxelValues.resize(maxiDims);
+    _cachedVoxelValues = _cachedVoxelValues.meanSmooth(3, 3, 3, true).meanSmooth(3, 3, 3, true);
     this->fromCachedData();
-    this->smoothVoxels();
-    this->smoothVoxels();
+//    this->smoothVoxels();
+//    this->smoothVoxels();
 }
 
 void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
@@ -78,7 +85,15 @@ void VoxelGrid::fromLayerBased(LayerBasedGrid layerBased, int fixedHeight)
 void VoxelGrid::fromImplicit(ImplicitPatch *implicitTerrain, int fixedHeight)
 {
 //    this->setVoxelValues(implicitTerrain->getVoxelized(/*implicitTerrain->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? 40.f : fixedHeight)*/).meanSmooth(3, 3, 3, true));
-    this->setVoxelValues(implicitTerrain->getVoxelized(this->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? getSizeZ() : fixedHeight)).meanSmooth(3, 3, 3, true));
+    auto voxels = implicitTerrain->getVoxelized(this->getDimensions().xy() + Vector3(0, 0, fixedHeight == -1 ? getSizeZ() : fixedHeight)).meanSmooth(3, 3, 3, true);
+#pragma omp parallel for collapse(2)
+    for (int x = 0; x < voxels.sizeX; x++) {
+        for (int y = 0; y < voxels.sizeY; y++) {
+//            voxels(x, y, 0) = .5f;
+//            voxels(x, y, 1) = .5f;
+        }
+    }
+    this->setVoxelValues(voxels);
 //    this->smoothVoxels();
 }
 
@@ -702,6 +717,7 @@ Mesh VoxelGrid::getGeometry(const Vector3& dimensions)
     for (int x = 0; x < values.sizeX; x++) {
         for (int y = 0; y < values.sizeY; y++) {
             values.at(x, y, 0) = 1.f;
+            values.at(x, y, 1) = 1.f;
         }
     }
     Mesh m = Mesh::applyMarchingCubes(values);
@@ -1039,17 +1055,19 @@ void VoxelGrid::saveState()
 
 void VoxelGrid::saveMap(std::string filename)
 {
+    /*
     GridF voxels = this->getVoxelValues();
     VoxelDataFile data(voxels);
     data.write(filename);
-    return;
-    /*std::ofstream out;
+    return;*/
+
+    std::ofstream out;
     out.open(filename);
     out << this->getSizeX() << " " << this->getSizeY() << " " << this->getSizeZ() << "\n";
     auto values = this->getVoxelValues();
     for (size_t i = 0; i < values.size(); i++)
         out << values[i] << " ";
-    out.close();*/
+    out.close();
 }
 
 void VoxelGrid::retrieveMap(std::string filename)
@@ -1121,6 +1139,7 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
     Vector3 currentPosition = origin;
     if (!Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max()))
         currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
+    myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
     if (!currentPosition.isValid())
         return Vector3::invalid();
 
@@ -1158,6 +1177,8 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
             tMaxZ += tDeltaZ;
         }
     }
+    if (currentPosition.z <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+        return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
     return Vector3::invalid();
 /*
 

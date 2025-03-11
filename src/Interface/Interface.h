@@ -13,7 +13,7 @@
 
 class ViewerInterface : public QMainWindow{
 public:
-    ViewerInterface();
+    ViewerInterface(std::string preloaded_heightmap = "", MapMode displayMode = MapMode::GRID_MODE);
     virtual ~ViewerInterface();
 
     void setupUi();

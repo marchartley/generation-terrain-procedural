@@ -7,7 +7,7 @@ RegularSimplicialComplex::RegularSimplicialComplex()
 }
 
 RegularSimplicialComplex::RegularSimplicialComplex(int sizeX, int sizeY)
-    : Graph(), sizeX(sizeX), sizeY(sizeY)
+    : GraphTemplate(), sizeX(sizeX), sizeY(sizeY)
 {
     std::vector<int> newNodes(sizeX * sizeY);
     for (int i = 0; i < sizeX * sizeY; i++) newNodes[i] = i;
@@ -26,26 +26,30 @@ RegularSimplicialComplex::RegularSimplicialComplex(int sizeX, int sizeY)
             auto node = this->getNode(x, y);
             node->value = -1;
             node->pos = Vector3(x, y);
-            if (x > 0)
+            if (x > 0) {
                 this->addConnection(this->getNode(x - 1, y), node);
+                this->addConnection(this->getNode(y, x - 1), node);
+            }
             if (y < sizeY - 1 && x > 0) {
                 this->addConnection(this->getNode(x - 1, y + 1), node);
+                this->addConnection(this->getNode(y + 1, x - 1), node);
             }
             if (y < sizeY - 1) {
                 this->addConnection(this->getNode(x, y + 1), node);
+                this->addConnection(this->getNode(y + 1, x), node);
             }
         }
     }
 }
 
-std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(int x, int y)
+GraphNode* RegularSimplicialComplex::getNode(int x, int y)
 {
     if (x < 0 || x >= this->sizeX || y < 0 || y >= this->sizeY)
         return nullptr;
     return this->findNodeByID(x * this->sizeX + y);
 }
 
-std::shared_ptr<GraphNode<int> > RegularSimplicialComplex::getNode(const Vector3& pos)
+GraphNode* RegularSimplicialComplex::getNode(const Vector3& pos)
 {
     return this->getNode(pos.x, pos.y);
 }
@@ -98,14 +102,13 @@ void RegularSimplicialComplex::display()
             }
         }
     }
-/*
-    Plotter plt;
+
+    Plotter::get()->reset();
     for (size_t iPlot = 0; iPlot < plots.size(); iPlot++)
-        plt.addPlot(plots[iPlot], "", plots_colors[iPlot]);
+        Plotter::get()->addPlot(plots[iPlot], "", plots_colors[iPlot]);
 //    plt.addScatter(scatter, "", scatter_labels, {PlotColor::GRAY});
 
-    plt.exec();
-    */
+    Plotter::get()->show();
 }
 
 int RegularSimplicialComplex::maxNodesValues()
@@ -126,7 +129,7 @@ bool RegularSimplicialComplex::checkConnection(const Vector3& posA, const Vector
         return this->checkConnection(nodeA, nodeB);
 }
 
-bool RegularSimplicialComplex::checkConnection(std::shared_ptr<GraphNode<int> > nodeA, std::shared_ptr<GraphNode<int> > nodeB)
+bool RegularSimplicialComplex::checkConnection(GraphNode* nodeA, GraphNode* nodeB)
 {
     return nodeA->hasNeighbor(nodeB);
 }

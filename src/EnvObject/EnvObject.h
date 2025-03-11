@@ -10,10 +10,25 @@
 #include "TerrainGen/LayerBasedGrid.h"
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/ImplicitPatch.h"
+#include "Graph/FastPoissonGraph.h"
+
+#include "EnvMaterial.h"
+
+#include "DataStructure/Kelvinlet.h"
+
+#include "EnvObject/PositionOptimizer.h"
+#include "EnvObject/EnvScenario.h"
 
 class EnvPoint;
 class EnvCurve;
 class EnvArea;
+
+class EnvObject;
+
+typedef GraphTemplate<EnvObject*> GraphObj;
+typedef GraphNodeTemplate<EnvObject*> GraphNodeObj;
+
+typedef std::pair<std::map<std::string, float>, std::map<std::string, float>> MaterialsTransformation;
 
 
 class EnvObject
@@ -22,151 +37,134 @@ public:
     EnvObject();
     virtual ~EnvObject();
 
-    static void readFile(std::string filename);
+    static void readEnvObjectsFile(std::string filename);
+    static void readEnvObjectsFileContent(std::string content);
+
+    static void readEnvMaterialsFile(std::string filename);
+    static void readEnvMaterialsFileContent(std::string content);
+
+    static void readEnvMaterialsTransformationsFile(std::string filename);
+    static void readEnvMaterialsTransformationsFileContent(std::string content);
+
+    static void readScenarioFile(std::string filename);
+    static void readScenarioFileContent(std::string content);
 
     static EnvObject* fromJSON(nlohmann::json content);
+
+    virtual nlohmann::json toJSON() const;
+
+    float height;
 
 
     std::string name;
     std::string s_FittingFunction;
     std::function<float(Vector3)> fittingFunction;
+    std::string s_FitnessFunction;
+    std::function<float(Vector3)> fitnessFunction;
     Vector3 flowEffect;
-    float sandEffect;
+    std::map<std::string, float> materialDepositionRate;
+    std::map<std::string, float> materialAbsorptionRate;
+    std::map<std::string, float> materialDepositionOnDeath;
     Vector3 inputDimensions;
+    float age = 0.f;
+    std::map<std::string, float> needsForGrowth;
+    std::map<std::string, float> currentSatisfaction;
+    float fitnessScoreAtCreation = -1.f;
+    std::vector<Vector3> evaluationPositions;
+    float minScore = 0.f;
+    // Vector3 evaluationPosition;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
     int ID = -1;
-    float growingState = 1.f;
+    int spawnTime = 0;
 
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "") = 0;
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "") = 0;
-    virtual Vector3 getNormal(const Vector3& position) = 0;
-    virtual Vector3 getDirection(const Vector3& position) = 0;
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const = 0;
+    SnakeSegmentation snake;
+    bool snakeDefined = false;
+
+    virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
+
+    virtual void recomputeEvaluationPoints() = 0;
+
     virtual EnvObject* clone() = 0;
-
-
-    virtual void applySandDeposit() = 0;
+    virtual float computeGrowingState();
+    virtual float computeGrowingState2();
+    virtual void applyDeposition(EnvMaterial& material) = 0;
+    virtual void applyAbsorption(EnvMaterial& material) = 0;
+    virtual void applyDepositionOnDeath() = 0;
     virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
+    virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
+    virtual GridF createHeightfield();
+    virtual EnvObject& translate(const Vector3& translation) = 0;
+    float evaluate(const Vector3& position);
+    float evaluate();
+
+    void die();
+
+    bool premature = false;
+
+    bool createdManually = false;
+    bool geometryNeedsUpdate = true;
+
+    enum HeightmapFrom {
+        SURFACE, GROUND, WATER
+    };
+    HeightmapFrom heightFrom = SURFACE;
 
 
-    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject);
+    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
 
     static GridV3 flowfield;
     static GridV3 initialFlowfield;
     static GridV3 terrainNormals;
-    static GridF sandDeposit;
+
+    static std::map<std::string, EnvMaterial> materials;
 
     static float flowImpactFactor;
 
     static std::map<std::string, EnvObject*> availableObjects;
     static std::vector<EnvObject*> instantiatedObjects;
 
-    static std::pair<std::string, std::string> extractNameAndComplement(std::string variable);
-    static std::pair<float, EnvObject*> getSqrDistanceTo(std::string objectName, const Vector3& position);
-    static std::pair<Vector3, EnvObject*> getVectorOf(std::string objectName, const Vector3& position);
+    static EnvObject* findClosest(std::string objectName, const Vector3& pos);
 
     static EnvObject* instantiate(std::string objectName);
+    static void removeObject(EnvObject* obj);
     static void removeAllObjects();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr) = 0;
-    virtual GridF createHeightfield() const = 0;
-
-    static void applyEffects();
-    static void updateSedimentation();
-    static void updateFlowfield();
+    static bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
+    static bool updateSedimentation(const GridF& heights);
+    static std::vector<std::string> updateSedimentationKnowingFluidsAndGradients(const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials);
+    static void stabilizeMaterials(const GridF& heights, int maxIterations = 40); // 40 is enough iterations to find a good stability usually, without taking too much time
+    static void applyMaterialsTransformations();
+    static void updateFlowfield(const GridV3& userFlow = GridV3());
     static void beImpactedByEvents();
-
-    float evaluate(const Vector3& position);
-
-    virtual EnvObject& translate(const Vector3& translation) {}
 
     static int currentMaxID;
 
     static std::map<std::string, GridV3> allVectorProperties;
     static std::map<std::string, GridF> allScalarProperties;
-    static void precomputeTerrainProperties(const Heightmap& heightmap);
-    static void recomputeTerrainPropertiesForObject(const Heightmap& heightmap, std::string objectName);
-    static void recomputeFlowAndSandProperties(const Heightmap &heightmap);
+    static void precomputeTerrainProperties(const GridF &heightmap, float waterLevel, float maxHeight);
+    static void recomputeTerrainPropertiesForObject(std::string objectName);
+    static void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
 
     static void reset();
-};
 
-class EnvPoint : public EnvObject {
-public:
-    EnvPoint();
+    static GraphObj sceneToGraph();
 
-    static EnvObject* fromJSON(nlohmann::json content);
+    static std::vector<MaterialsTransformation> transformationRules;
 
-    Vector3 position;
-    float radius;
+    static int currentTime;
 
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvPoint* clone();
-    virtual void applySandDeposit();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
+    GridV3 _cachedFlowModif;
+    ImplicitPatch* _patch = nullptr;
+    GridF _cachedHeightfield;
 
-    virtual EnvObject& translate(const Vector3& translation);
-};
+    GridF _cachedAbsorptionDepositionField;
 
-class EnvCurve : public EnvObject {
-public:
-    EnvCurve();
+    Vector3 storedOrientation = Vector3(false);
 
-    static EnvObject* fromJSON(nlohmann::json content);
-
-    BSpline curve;
-    float width;
-    float length;
-    float height;
-
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvCurve* clone();
-    virtual void applySandDeposit();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
-
-    virtual EnvObject& translate(const Vector3& translation);
-};
-
-class EnvArea : public EnvObject {
-public:
-    EnvArea();
-
-    static EnvObject* fromJSON(nlohmann::json content);
-
-    ShapeCurve area;
-    float width;
-    float height;
-
-    virtual float getSqrDistance(const Vector3& position, std::string complement = "");
-    virtual Vector3 getVector(const Vector3& position, std::string complement = "");
-    virtual Vector3 getNormal(const Vector3& position);
-    virtual Vector3 getDirection(const Vector3& position);
-    virtual Vector3 getProperty(const Vector3& position, std::string prop) const;
-    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
-    virtual EnvArea* clone();
-    virtual void applySandDeposit();
-    virtual std::pair<GridV3, GridF> computeFlowModification();
-    virtual ImplicitPatch* createImplicitPatch(ImplicitPrimitive *previousPrimitive = nullptr);
-    virtual GridF createHeightfield() const;
-
-    virtual EnvObject& translate(const Vector3& translation);
+    static Scenario scenario;
 };
 
 #endif // ENVOBJECT_H

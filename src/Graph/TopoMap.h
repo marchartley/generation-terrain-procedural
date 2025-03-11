@@ -85,7 +85,7 @@ public:
 
     std::string toString();
 
-    Graph<int> toGraph();
+    Graph toGraph();
 
 
 public:

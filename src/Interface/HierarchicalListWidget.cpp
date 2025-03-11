@@ -2,6 +2,8 @@
 #include <iostream>
 #include <QDropEvent>
 
+#include "Utils/Utils.h"
+
 HierarchicalListWidget::HierarchicalListWidget(QWidget *parent)
     : QListWidget(parent)
 {
@@ -23,6 +25,21 @@ void HierarchicalListWidget::setCurrentItem(int indexToSelect)
             }
         }
     }
+}
+
+void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
+{
+    QObject::blockSignals(true);
+    this->clearSelection();
+    for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
+        HierarchicalListWidgetItem* item = dynamic_cast<HierarchicalListWidgetItem*>(_child);
+        if (item != nullptr) {
+            if (isIn(item->ID, indicesToSelect)) {
+                item->setSelected(true);
+            }
+        }
+    }
+    QObject::blockSignals(false);
 }
 
 void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)

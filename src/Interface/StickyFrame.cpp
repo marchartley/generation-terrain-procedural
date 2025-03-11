@@ -10,7 +10,11 @@ StickyFrame::StickyFrame(QWidget* parent) : QWidget(parent)
 {
     QHBoxLayout* layout = new QHBoxLayout(this);
     content = new QFrame();
-    content->setAutoFillBackground(true);
+//    this->setAutoFillBackground(false);
+//    this->setAttribute(Qt::WA_OpaquePaintEvent, true);
+//    this->setAttribute(Qt::WA_NoBackground);
+    this->setAutoFillBackground(true);
+//    content->setAutoFillBackground(true);
     QPalette pal = QPalette();
 
     // set black background

@@ -3,7 +3,7 @@
 #include "DataStructure/Quaternion.h"
 
 // Source : http://paulbourke.net/geometry/pointlineplane/
-Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& p4)
+Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vector3& p2, const Vector3& p3, const Vector3& p4, float epsilon)
 {
     Vector3 l21 = (p1 - p2); // .normalized();
     Vector3 l13 = (p3 - p1); // .normalized();
@@ -16,7 +16,7 @@ Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vecto
     float d2121 = l21.dot(l21);
     float d2143 = l21.normalized().dot(l43.normalized());
 
-    if (std::abs(std::abs(d2143) - 1) < 0.001 || std::abs((d2121*d4343 - d4321*d4321)) < 0.001) return Vector3(false); // Parallel lines?
+    if (std::abs(std::abs(d2143) - 1) < epsilon || std::abs((d2121*d4343 - d4321*d4321)) < epsilon) return Vector3(false); // Parallel lines?
     float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
     float mu_b = (d1343 + mu_a*d4321) / d4343;
 
@@ -181,7 +181,7 @@ bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1,
 }
 
 std::tuple<float, float> project(std::vector<Vector3> vertices, const Vector3& _axis) {
-    float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::min();
+    float proj_min = std::numeric_limits<float>::max(), proj_max = std::numeric_limits<float>::lowest();
     float projection;
     Vector3 axis = _axis.normalized();
 
@@ -331,6 +331,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
     // Adjust the direction of the ray until it is not parallel to any edge of the polygon.
     float perturbation = 0.01f;
     bool isParallel;
+    int maxTries = 20;
     do {
         isParallel = false;
         for (size_t i = 0; i < _polygon.size(); i++) {
@@ -346,7 +347,7 @@ bool Collision::pointInPolygon(const Vector3& point, std::vector<Vector3> polygo
 //            Quaternion rotation = Quaternion::AxisAngle(normal, rotationAngle);
 //            direction = (rotation * Quaternion(0, direction.x, direction.y, direction.z) * rotation.conjugate()).toVector3();
         }
-    } while (isParallel);
+    } while (isParallel && (maxTries--) > 0);
 
     // Create the ray from the center towards the direction with a length greater than the maxDistance.
     Vector3 ray = center + direction.normalized() * maxDistance * 1.1f;

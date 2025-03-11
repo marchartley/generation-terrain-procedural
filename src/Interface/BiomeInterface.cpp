@@ -564,7 +564,7 @@ void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex,
         ShapeCurve biomeArea = BiomeInstance::instancedBiomes[biomeID]->area;
         biomeArea = biomeArea.shrink(level);
         std::vector<Vector3> upperPoints, lowerPoints;
-        float maxHeight = std::numeric_limits<float>::min(),
+        float maxHeight = std::numeric_limits<float>::lowest(),
                 minHeight = std::numeric_limits<float>::max();
         for (auto& point : biomeArea) {
             Vector3 surfacePoint = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(point));

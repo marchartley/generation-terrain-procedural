@@ -28,6 +28,8 @@ public:
     enum PARTICLE_INITIAL_LOCATION {SKY, RIVER, RANDOM, RIVER2, UNDERWATER, CENTER_TOP, FROM_X, FROM_BIG_X, EVERYWHERE, JUST_ABOVE_VOXELS, VOLCANO, VOLCANO2, VOLCANO3};
 
 public Q_SLOTS:
+//    void keyPressEvent(QKeyEvent *e);
+
     void show();
     void hide();
 
@@ -37,6 +39,10 @@ public Q_SLOTS:
     void desertErosionProcess();
     void coastalErosionProcess();
     void fluidSimErosionProcess();
+    void volcanoErosionProcess();
+    void implicitErosionProcess();
+    void heightmapErosionProcess();
+    void voxelsErosionProcess();
 
     void throwFromCam();
     void throwFromSky();
@@ -52,8 +58,9 @@ public Q_SLOTS:
     void browseDensityFieldFromFile();
 
     void computePredefinedRocksLocations();
-    void recomputeAboveVoxelRocksPositions(TerrainModel *terrain);
-    void recomputeRainingPositions(TerrainModel *terrain);
+    void recomputeAboveVoxelRocksPositions(TerrainModel *terrain, const SpacePartitioning &boundaries);
+    void recomputeUnderwaterRocksPositions(TerrainModel *terrain, const SpacePartitioning &boundaries);
+    void recomputeRainingPositions(TerrainModel *terrain, const SpacePartitioning &boundaries);
 
     std::tuple<float, float, float> computeTerrainBoundaries(TerrainModel *terrain, BVHTree *boundariesTree);
 
@@ -73,7 +80,7 @@ public:
     Mesh boundariesMesh;
 
     float erosionSize = 8.f;
-    float erosionStrength = 0.f; //.5; // .35f;
+    float erosionStrength = 0.5f; //.5; // .35f;
     int erosionQtt = 1000;
     float rockRandomness = .1f;
 
@@ -87,13 +94,13 @@ public:
     float maxCapacityFactor = 1.f;
     float erosionFactor = 1.f;
     float depositFactor = 1.f;
-    float matterDensity = -1.f; // 500.f;
+    float matterDensity = 500.f; // -1.f; // 500.f;
     float materialImpact = 1.f;
 
     float airFlowfieldRotation = 0.f; // 270.f;
     float waterFlowfieldRotation = 90.f;
-    float airForce = 1.f;
-    float waterForce = 1.f;
+    float airForce = 0.f;
+    float waterForce = 0.f;
 
     float dt = 1.f;
 
@@ -111,7 +118,7 @@ public:
 
     float initialCapacity = .0f;
 
-    UnderwaterErosion::EROSION_APPLIED applyOn = UnderwaterErosion::EROSION_APPLIED::DENSITY_VOXELS;
+    EROSION_APPLIED applyOn = EROSION_APPLIED::DENSITY_VOXELS;
 
     bool displayTrajectories = true;
     bool displayBoundaries = false;
@@ -120,10 +127,10 @@ public:
     std::string airFlowImagePath = "";
     std::string densityFieldImagePath = "";
 
-    FluidSimType selectedSimulationType = FLIP;
+    FluidSimType selectedSimulationType = STABLE;
 
-    UnderwaterErosion::FLOWFIELD_TYPE flowfieldUsed = UnderwaterErosion::FLUID_SIMULATION; //UnderwaterErosion::FLOWFIELD_TYPE::BASIC;
-    UnderwaterErosion::DENSITY_TYPE densityUsed = UnderwaterErosion::DENSITY_TYPE::NATIVE;
+    FLOWFIELD_TYPE flowfieldUsed = FLOWFIELD_TYPE::BASIC;
+    DENSITY_TYPE densityUsed = DENSITY_TYPE::NATIVE;
 
     std::map<PARTICLE_INITIAL_LOCATION, std::vector<std::vector<std::pair<Vector3, Vector3>>>> initialPositionsAndDirections;
 
@@ -133,6 +140,8 @@ public:
     bool currentlyModifyingTerrain = false;
 
     std::vector<std::pair<Vector3, float>> randomObstacles;
+
+    std::vector<int> countsTrajectories;
 };
 
 #endif // EROSIONINTERFACE_H

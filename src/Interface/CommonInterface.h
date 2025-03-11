@@ -6,18 +6,24 @@
 #include <vector>
 #include "Interface/InterfaceUtils.h"
 #include "Interface/FancySlider.h"
+#include "Interface/HierarchicalListWidget.h"
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
 #include <QLineEdit>
+#include <QComboBox>
 #include <optional>
+#include <variant>
+
+class UIElement;
+
+
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
     template <typename Callable, typename... Args> \
     void FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
     }
-
 
 class UIElement : public QObject {
     Q_OBJECT
@@ -56,6 +62,16 @@ protected:
     std::string name;
 };
 
+class LabelElement : public UIElement {
+public:
+    LabelElement(std::string text);
+
+    QLabel* label();
+
+    LabelElement* setText(std::string newText);
+    std::string getText();
+};
+
 class ButtonElement : public UIElement {
 public:
     ButtonElement(std::string label);
@@ -63,9 +79,9 @@ public:
 
     QPushButton* button();
 
-    DEFINE_SET_ON_FUNCTION(setOnClick, QPushButton, clicked);
-    DEFINE_SET_ON_FUNCTION(setOnPressed, QPushButton, pressed);
-    DEFINE_SET_ON_FUNCTION(setOnRelease, QPushButton, released);
+    DEFINE_SET_ON_FUNCTION(setOnClick, QPushButton, clicked)
+    DEFINE_SET_ON_FUNCTION(setOnPressed, QPushButton, pressed)
+    DEFINE_SET_ON_FUNCTION(setOnRelease, QPushButton, released)
 
 
 };
@@ -139,7 +155,7 @@ public:
 
     void setChecked(bool checked) { checkBox()->setChecked(checked); }
 
-    DEFINE_SET_ON_FUNCTION(setOnChecked, QCheckBox, toggled);
+    DEFINE_SET_ON_FUNCTION(setOnChecked, QCheckBox, toggled)
 
     void bindTo(bool& value);
 
@@ -158,7 +174,7 @@ public:
 
     QRadioButton* radioButton();
 
-    DEFINE_SET_ON_FUNCTION(setOnChecked, QRadioButton, toggled);
+    DEFINE_SET_ON_FUNCTION(setOnChecked, QRadioButton, toggled)
 
     void bindTo(bool& value);
 
@@ -200,10 +216,67 @@ protected:
     std::optional<std::reference_wrapper<std::string>> boundVariable;
 };
 
+
+struct ComboboxLineElement {
+//    ComboboxLineElement(std::string label) : label(label) {}
+//    ComboboxLineElement(std::string label, int value) : label(label), value(value) {}
+//    ComboboxLineElement(std::string label) : label(label) {}
+    std::string label;
+    int value;
+    std::string iconPath;
+    std::string otherParameters;
+};
+
+class ComboboxElement : public UIElement {
+    Q_OBJECT
+public:
+    ComboboxElement(std::string label);
+    ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices);
+    ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int& currentSelection);
+
+    QComboBox* combobox() const;
+
+    void setOnSelectionChanged(std::function<void(int)> func);
+
+    void bindTo(int& indexSelected);
+
+    ComboboxLineElement getSelection() const;
+
+public Q_SLOTS:
+    void update();
+
+//protected:
+public:
+    std::vector<ComboboxLineElement> choices;
+    std::optional<std::reference_wrapper<int>> boundIndex;
+//    std::optional<std::reference_wrapper<std::vector<std::string>>> boundValues;
+
+    QLabel* _label;
+    QComboBox* _combobox;
+
+//    bool itemsAreImages = false;
+};
+
+class HierarchicalListUI : public UIElement {
+public:
+    HierarchicalListUI();
+
+    HierarchicalListWidget* hierarchicalList();
+
+    HierarchicalListUI* setSelectionMode(QAbstractItemView::SelectionMode mode);
+
+    DEFINE_SET_ON_FUNCTION(setOnItemSelectionChanged, HierarchicalListWidget, itemSelectionChanged);
+
+    HierarchicalListUI* clear();
+    HierarchicalListUI* addItem(HierarchicalListWidgetItem* item);
+    HierarchicalListUI* setCurrentItems(std::vector<int> selectedIDs);
+    QList<QListWidgetItem *> selectedItems();
+};
+
 class InterfaceUI : public UIElement {
     Q_OBJECT
 public:
-    InterfaceUI(QLayout* layout, std::string title = "");
+    InterfaceUI(QLayout* layout, bool tight = true, std::string title = "");
     ~InterfaceUI();
 
     QGroupBox* box() const;
@@ -224,6 +297,7 @@ public Q_SLOTS:
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets);
 InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets);
+InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns = 2);
 
 #undef DEFINE_SET_ON_FUNCTION
 

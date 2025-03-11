@@ -703,11 +703,10 @@ void ControlPoint::allowAllAxisRotations(bool allow)
 
 std::vector<Vector3> ControlPoint::computeCircle(Axis axis)
 {
-    float pi = 3.141592;
     std::vector<Vector3> points;
     for (int i = 0; i <= 360; i += 5) {
-        float angle = i * pi / 180.f;
-        float nextAngle = (i + 5) * pi / 180.f;
+        float angle = i * PI / 180.f;
+        float nextAngle = (i + 5) * PI / 180.f;
         if (axis == X) {
             points.push_back(this->getPosition() + Vector3(0.0, 1.0, 0.0).rotate(angle, 0, 0) * this->circleRadius);
             points.push_back(this->getPosition() + Vector3(0.0, 1.0, 0.0).rotate(nextAngle, 0, 0) * this->circleRadius);

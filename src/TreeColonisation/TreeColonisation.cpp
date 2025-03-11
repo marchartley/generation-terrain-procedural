@@ -11,7 +11,7 @@ TreeColonisation::TreeColonisation(std::vector<Vector3> nodes, const Vector3& st
     init(nodes, startPos, segmentLength, randomness);
 }
 
-TreeColonisation::TreeColonisation(Graph<NODE_TYPE> graph, const Vector3& startPos, float segmentLength, float randomness)
+TreeColonisation::TreeColonisation(GraphTemplate<NODE_TYPE> graph, const Vector3& startPos, float segmentLength, float randomness)
 {
     std::vector<Vector3> pos;
     for (const auto& node : graph.nodes)

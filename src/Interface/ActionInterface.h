@@ -21,58 +21,27 @@ public:
                     QWidget* parent = nullptr);
 //    ~ActionInterface();
 
-    virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid) {
-        this->voxelGrid = voxelGrid;
-    }
-    virtual void affectHeightmap(std::shared_ptr<Heightmap> heightmap) {
-        this->heightmap = heightmap;
-    }
-    virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid) {
-        this->layerGrid = layerGrid;
-    }
-    virtual void affectImplicitTerrain(std::shared_ptr<ImplicitNaryOperator> implicitPatch) {
-        this->implicitTerrain = implicitPatch;
-    }
+    virtual void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
+    virtual void affectHeightmap(std::shared_ptr<Heightmap> heightmap);
+    virtual void affectLayerGrid(std::shared_ptr<LayerBasedGrid> layerGrid);
+    virtual void affectImplicitTerrain(std::shared_ptr<ImplicitNaryOperator> implicitPatch);
 
-    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr) {
-        this->affectHeightmap(heightmap);
-        this->affectVoxelGrid(voxelGrid);
-        this->affectLayerGrid(layerGrid);
-        this->affectImplicitTerrain(implicitPatch);
-    }
+    virtual void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
-    virtual QLayout* createGUI() {
-        return nullptr;
-    }
-    virtual void display(const Vector3& camPos = Vector3(false)) {
+    virtual QLayout* createGUI();
+    virtual void display(const Vector3& camPos = Vector3(false));
+    virtual void reloadShaders();
 
-    }
-    virtual void reloadShaders() {
+    void addTerrainAction(nlohmann::json actionParameters);
 
-    }
+    void affectSavingFile(std::shared_ptr<std::vector<nlohmann::json>> history, std::shared_ptr<std::fstream> file, std::string filename);
 
-    void addTerrainAction(nlohmann::json actionParameters) {
-        jsonActionsHistory->push_back(nlohmann::json({
-                                                         {"type", this->actionType},
-                                                         {"parameters", actionParameters}
-                                                     }));
-//        saveAllActions();
-    }
+    void saveAllActions(std::string filename = "");
 
-    void affectSavingFile(std::shared_ptr<std::vector<nlohmann::json>> history, std::shared_ptr<std::fstream> file, std::string filename) {
-        this->jsonActionsHistory = history;
-        this->savingFile = file;
-        this->savingFilename = filename;
-    }
+    bool isConcerned(nlohmann::json& action);
 
-    void saveAllActions(std::string filename = "") {
-        savingFile->close();
-        savingFile->open((filename.empty() ? savingFilename : filename), std::fstream::in | std::fstream::out | std::fstream::trunc);
-        *savingFile << nlohmann::json({{"actions", *jsonActionsHistory}}).dump(1, '\t');
-        savingFile->flush();
-    }
-
-    bool isConcerned(nlohmann::json& action) { return action.contains("type") && action.at("type").get<std::string>() == this->actionType; }
+    void log(const std::string& message, bool verbose = true);
+    void error(const std::string& message, bool verbose = true);
 
     virtual void replay(nlohmann::json action) = 0;
 
@@ -92,7 +61,9 @@ public:
     std::shared_ptr<LayerBasedGrid> layerGrid;
     std::shared_ptr<ImplicitNaryOperator> implicitTerrain = nullptr;
 
-    Viewer* viewer;
+    Viewer* viewer = nullptr;
+
+    std::shared_ptr<ActionInterface> findOtherInterface(std::string name) const;
 
 Q_SIGNALS:
     void updated();
@@ -100,21 +71,12 @@ Q_SIGNALS:
     void waterLevelChanged(float newLevel);
 
 public Q_SLOTS:
-    virtual void afterTerrainUpdated() {
-
-    }
-    virtual void afterWaterLevelChanged() {
-
-    }
-    virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model) {
-
-    }
-    virtual void mouseDoubleClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model) {
-
-    }
-    virtual void mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model) {
-
-    }
+    virtual void afterTerrainUpdated();
+    virtual void afterWaterLevelChanged();
+    virtual void mouseClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    virtual void mouseDoubleClickedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    virtual void mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
+    virtual void mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, TerrainModel* model);
 };
 
 #endif // ACTIONINTERFACE_H
