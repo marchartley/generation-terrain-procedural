@@ -179,6 +179,7 @@ public:
 
     Matrix3<int> skeletonize() const;
     std::vector<BSpline> skeletonizeToBSplines() const;
+    Matrix3<Vector3> fillWithBSplines(std::vector<BSpline> splines) const;
     Matrix3<T> dilate(bool use2D = false, float t = 1.f) const;
     Matrix3<T> erode(bool use2D = false, float t = 1.f) const;
     Matrix3<int> computeConnectedComponents(bool use4Connect = false) const;

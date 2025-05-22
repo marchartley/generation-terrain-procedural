@@ -161,7 +161,7 @@ def clamp(x:float, mini: float, maxi: float) -> float:
     return mini if x <= mini else maxi if x >= maxi else x
 
 def valueAsHSV(value: float, mini: float, maxi: float, L: float = 0.5, S: float = 1.0) -> Tuple[float, float, float]:
-    H = (360.0 * (value - mini) / (maxi - mini)) / 60
+    H = (360.0 * (math.fmod(value, maxi) - mini) / (maxi - mini)) / 60
     # L = 0.5
     # S = 1.0
 
@@ -517,6 +517,18 @@ class IslandSketch:
         coralMinHeight = self.coralMin
         coralMaxHeight = self.coralMax
         heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
+
+        heightmap = coralize_my_island.bw2rgb(np.clip(heightmap, 0.0, 1.0))
+        plt.imsave(f"{pathHeightmap}{filePrefix}.png", heightmap)
+        features = np.array(features)
+        for x in range(features.shape[0]):
+            for y in range(features.shape[1]):
+                features[x, y] = valueAsHSV(features[x, y, 0], features[x, y, 1], features[x, y, 2], L=1.0 * 0.5)
+        plt.imsave(f"{pathFeatures}{filePrefix}.png", features)
+        plt.imsave(f"{pathDisto}{filePrefix}.png", distortions)
+        print(f"Heightmap saved at {pathHeightmap}{filePrefix}.png")
+        return heightmap, features, distortions
+
         n = noise.perlin.SimplexNoise(1000)
         for i in range(1):
             # subsidence = 0.8 # getRandom(0.1, 1.0)
@@ -531,7 +543,8 @@ class IslandSketch:
             for x in range(features.shape[0]):
                 for y in range(features.shape[1]):
                     _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence * 0.5)
-            plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
+            # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
+            plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", _heightmap)
             plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
             plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
             # plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0)))
@@ -828,8 +841,10 @@ def main():
         buttons[-1].on_clicked(activationFunction(sketchID))
 
     # Add button for generating a distance map / heightmap
-    ax_button = fig.add_axes((0.0, 0.05, 0.09, 0.075))
+    ax_button = fig.add_axes((0.0, 0.05, 0.15, 0.075))
     distance_button = Button(ax_button, "Gen height map")
+    ax_button_dataset = fig.add_axes((0.16, 0.05, 0.15, 0.075))
+    dataset_button = Button(ax_button_dataset, "Gen dataset")
 
     def genIsland():
         sequences = getSequences(islandSketch.profileSketch)
@@ -841,7 +856,7 @@ def main():
         # print(coralMinHeight, coralMaxHeight, subsidence, lagoonSequence + reefSequence)
         # print("Profile:", [p.y for p in islandSketch.profileSketch.getCurve()])
         # print("Resistance", [p.y for p in islandSketch.resistanceSketch.getCurve()])
-        h, f, d = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="test")
+        h, f, d = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="result_height")
         axesResults[0].imshow(h)
         axesResults[1].imshow(f)
         axesResults[2].imshow(d)
@@ -850,8 +865,13 @@ def main():
         fig2.canvas.draw()
         fig2.canvas.flush_events()
 
+    def genDataset():
+        print(f"Generating dataset at {dataset_path}heightmaps/")
+        createDatasetOfRandomIslands(islandSketch, 500)
+
 
     distance_button.on_clicked(lambda e: genIsland()) # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))
+    dataset_button.on_clicked(lambda e: genDataset())
     # Add button for splitting sequences
     # ax_button = fig.add_axes((0.1, 0.05, 0.09, 0.075))
     # splitting_button = Button(ax_button, "Split profile")
