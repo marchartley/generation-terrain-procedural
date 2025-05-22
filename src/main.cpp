@@ -540,8 +540,78 @@ int main(int argc, char *argv[])
             setenv(key.c_str(), val.c_str(), 1);
 //        }
     }
+    /* Unit test skeletonizeToBSplines */
+    // Diagonal
+    const int imgSize = 500;
+    GridF testGrid(Vector3{imgSize, imgSize, 1}, 0.0f);
+    const int thickness = 10;
+    for (int i = 0; i < imgSize - 2*thickness; ++i) {
+        for (int dx = -thickness; dx <= thickness; ++dx) {
+            for (int dy = -thickness; dy <= thickness; ++dy) {
+                int x = i + dx;
+                int y = i + dy;
+                if (x >= 0 && x < imgSize && y >= 0 && y < imgSize) {
+                    testGrid.addValueAt(1.0f, x, y, 0.0f);
+                }
+            }
+        }
+    }
+
+    // for (int i = 0; i < imgSize - 2*thickness; ++i) {
+    //     for (int dx = -thickness; dx <= thickness; ++dx) {
+    //         for (int dy = -thickness; dy <= thickness; ++dy) {
+    //             int x = imgSize - (i + dx);
+    //             int y = i + dy;
+    //             if (x >= 0 && x < imgSize && y >= 0 && y < imgSize) {
+    //                 testGrid.addValueAt(1.0f, x, y, 0.0f);
+    //             }
+    //         }
+    //     }
+    // }
+
+    // testGrid.normalize();
+    // Circle
+    const int centerX = imgSize * (1. / 2.);
+    const int centerY = imgSize * (1. / 2.);
+    const int radius = 50;
+    const int circleThickness = 10;
+    for (int x = centerX - (radius + circleThickness); x <= centerX + (radius + circleThickness); ++x) {
+        for (int y = centerY - (radius + circleThickness); y <= centerY + (radius + circleThickness); ++y) {
+            if (x >= 0 && x < imgSize && y >= 0 && y < imgSize) {
+                float distance = std::sqrt((x - centerX) * (x - centerX) + (y - centerY) * (y - centerY));
+                if (std::abs(distance - radius) <= circleThickness) {
+                    testGrid.addValueAt(1.0f, x, y, 0.0f);
+                }
+            }
+        }
+    }
+    Plotter::get()->addImage(testGrid)->setNormalizedModeImage(true)->exec();
+    std::vector<BSpline> polylines = testGrid.binarize(0.1f).skeletonizeToBSplines();
+    std::cout<<"NUMBER OF GENERATED POLYLINES : "<<polylines.size()<<std::endl;
+    for (auto& s: polylines) {
+        s = s.simplifyByRamerDouglasPeucker(2.f);
+    }
+    auto testPolyline = testGrid.fillWithBSplines(polylines);
+    testPolyline.raiseErrorOnBadCoord = false;
+
+    int pointsize = 3;
+    for (auto& s : polylines) {
+        for (int i = 1; i < s.size() - 1; i++) {
+            if ((s[i] - s[i-1]).normalized().dot((s[i + 1] - s[i]).normalized()) < 0.5f) {
+                auto& point = s[i];
+                for (int x = point.x - pointsize; x < point.x + pointsize; x++) {
+                    for (int y = point.y - pointsize; y < point.y + pointsize; y++) {
+                        testPolyline.at(x, y) = Vector3(1, 1, 1);
+                    }
+                }
+            }
+        }
+    }
+    std::cout<<"SAVING TEST POLYLINES IMAGE"<<std::endl;
+    //testPolyline.toImageRGB("test_polylines.png");
+    Plotter::get()->addImage(testPolyline)->setNormalizedModeImage(true)->exec();
+    return 0;
     //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
-    //return 0;
 
 /*
     int size = 60;

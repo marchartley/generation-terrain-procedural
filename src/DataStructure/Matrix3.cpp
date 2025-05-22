@@ -181,6 +181,29 @@ std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
     }
     return splines;
 }
+template<>
+Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<BSpline> splines) const {
+    Matrix3<Vector3> newImage(this->getDimensions());
+    newImage.raiseErrorOnBadCoord = false;
+    int pointsize = 5;
+    int i = 0;
+    for (auto& spline : splines) {
+        for (auto& point : spline) {
+            for (int x = point.x - pointsize; x < point.x + pointsize; x++) {
+                for (int y = point.y - pointsize; y < point.y + pointsize; y++) {
+                    newImage.at(x, y) = HSVtoRGB((float)i / splines.size(), 1.0f, 0.5f);
+                }
+            }
+        }
+        for (auto& point : spline.resamplePoints(10000)) {
+            // newImage.at(point) = HSVtoRGB((float)i / 10000.f, 1.0f, 1.0f);
+            newImage.at(point) = HSVtoRGB((float)i / splines.size(), 1.0f, 1.0f);
+        }
+        i++;
+    }
+    newImage.raiseErrorOnBadCoord = true;
+    return newImage;
+}
 
 template<>
 Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
