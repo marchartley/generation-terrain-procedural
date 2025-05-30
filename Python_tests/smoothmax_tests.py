@@ -9,16 +9,38 @@ import numpy as np
 # Operator Definitions
 # ================================
 
+
+import numpy as np
+
+
 def smoothmax(a, b, k=10):
+    a = np.asarray(a)
+    b = np.asarray(b)
     delta = b - a
-    if a == b:
-        return a + 1 / (2 * k)
     exp_term = np.exp(-k * delta)
+
     denom1 = 1.0 + exp_term
-    denom2 = 1.0 - exp_term
+    denom2 = 1.0 - exp_term + 1e-12  # epsilon to avoid divide-by-zero
+
     term1 = 0.5 * (delta / denom1)
     term2 = 0.5 * (delta / denom2)
-    return a + term1 + term2
+
+    smooth = a + term1 + term2
+
+    # Use np.where to handle a == b case element-wise or for scalars
+    return np.where(a == b, a + 1.0 / (2 * k), smooth)
+
+
+#def smoothmax(a, b, k=10):
+#     delta = b - a
+#     if a == b:
+#         return a + 1 / (2 * k)
+#     exp_term = np.exp(-k * delta)
+#     denom1 = 1.0 + exp_term
+#     denom2 = 1.0 - exp_term
+#     term1 = 0.5 * (delta / denom1)
+#     term2 = 0.5 * (delta / denom2)
+#     return a + term1 + term2
 
 def softplus_max(a, b, k=10):
     delta = b - a
