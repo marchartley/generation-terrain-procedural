@@ -133,7 +133,7 @@ def addHeightmaps(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, positi
     # Apply smooth maximum (fifth root of sum of fifth powers)
     region = curr[y1:y2, x1:x2]
     paste_region = paste[py1:py2, px1:px2]
-    result = np.power(np.power(region, 5) + np.power(paste_region, 5), 1/5)
+    result = smoothmax(region, paste_region, 1) - (1/2) # np.power(np.power(region, 5) + np.power(paste_region, 5), 1/5)
 
     curr[y1:y2, x1:x2] = result
     currentImg.paste(PIL.Image.fromarray(np.clip(curr, 0, 255).astype(np.uint8)))
@@ -281,17 +281,17 @@ def main():
                 res.rotate(270).save(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
 
 
-                # os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
-                # os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
-                # os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
-                # os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
+                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
+                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
+                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
+                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
 
-            # plt.imshow(results[0], cmap="gray", vmin=0, vmax=255)
-            # plt.show()
-            # plt.imshow(results[1], cmap="gray", vmin=0, vmax=255)
-            # plt.show()
-            # plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
-            # plt.show()
+            plt.imshow(results[0], cmap="gray", vmin=0, vmax=255)
+            plt.show()
+            plt.imshow(results[1], cmap="gray", vmin=0, vmax=255)
+            plt.show()
+            plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
+            plt.show()
 
 
 if __name__ == "__main__":
