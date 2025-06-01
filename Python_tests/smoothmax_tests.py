@@ -20,7 +20,7 @@ def smoothmax(a, b, k=10):
     exp_term = np.exp(-k * delta)
 
     denom1 = 1.0 + exp_term
-    denom2 = 1.0 - exp_term + 1e-12  # epsilon to avoid divide-by-zero
+    denom2 = 1.0 - exp_term
 
     term1 = 0.5 * (delta / denom1)
     term2 = 0.5 * (delta / denom2)

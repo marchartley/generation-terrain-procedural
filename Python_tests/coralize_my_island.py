@@ -1,9 +1,12 @@
+from math import exp
+
 import matplotlib
 import skimage.morphology
 from jupyterlab.semver import outside
 from scipy.ndimage import convolve
 from scipy.signal import convolve2d
 
+from Python_tests.smoothmax_tests import smoothmax
 from heightmap_from_skeleton import *
 import numpy as np
 import matplotlib.pyplot as plt
@@ -157,7 +160,11 @@ def smin(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
     return np.minimum(a,b) - h*h*h*k*(1.0/6.0)
 
 def smax(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
-    return -smin(-a, -b, k)
+    # return -smin(-a, -b, k)
+    if a == b: return a + 0.5 * k
+    x = (b-a)
+    E = exp(2 * k * x)
+    return a + 0.5 * k * ((2 * E)/(E - 1)) # Equivalent to 1/(1-e^-kx)+1/(1+e^-kx)
 
 def method1Create(heights: np.ndarray, subsidence: float, waterLevel: float = 0.5, maxCoralHeight:float = None, minCoralHeight: float = None, outsideSlopeFactor: float = 3.0) -> np.ndarray:
     # waterLevel: float = .7
@@ -195,6 +202,60 @@ def method1Create(heights: np.ndarray, subsidence: float, waterLevel: float = 0.
     insideOutsideCorals = smax(insideCorals, outsideCorals, 0.01) * clamp((1-subsidence)**0.5 + .8, 0, 1)
     finalMap = smax(insideOutsideCorals, heights * subsidence, 0.05)
     return finalMap
+
+
+import numpy as np
+
+def method2Create(heights: np.ndarray, distancesToReef: np.array, subsidence: float, waterLevel: float = 0.5) -> np.ndarray:
+    # Coral region heights
+    h_back = waterLevel - 0.15
+    h_crest = waterLevel - 0.05
+    h_abyss = 0.0 # waterLevel - ...
+
+    # Reef subregion boundaries
+    x_back_0 = 0.1 # 0.5
+    x_crest_0, x_crest_1 = 0.5, 0.8 # 0.75, 0.8
+    x_abyss_0 = 1.0
+
+    def smoothstep(x):
+        return 3 * x**2 - 2 * x**3
+
+    def S(a, b, x0, x1, x):
+        t = np.clip((x - x0) / (x1 - x0), 0.0, 1.0)
+        return a + (b - a) * smoothstep(t)
+
+    # Start with a zero coral height array
+    coral_heights = np.zeros_like(distancesToReef, dtype=np.float32)
+
+    # Masks for each region
+    crest_mask = (distancesToReef >= x_crest_0) & (distancesToReef <= x_crest_1)
+    abyss_mask = (distancesToReef >= x_abyss_0) #& (distancesToReef < 1000)
+    back_mask = (distancesToReef < x_back_0) #& (distancesToReef > -1000)
+
+    # Transition regions
+    to_abyss_mask = (distancesToReef > x_crest_1) & (distancesToReef < x_abyss_0)
+    to_crest_mask = (distancesToReef > x_back_0) & (distancesToReef < x_crest_0)
+
+    # Assign fixed regions
+    coral_heights[crest_mask] = h_crest
+    coral_heights[abyss_mask] = h_abyss
+    coral_heights[back_mask] = h_back
+
+    # Assign interpolated regions
+    coral_heights[to_abyss_mask] = S(h_crest, h_abyss, x_crest_1, x_abyss_0, distancesToReef[to_abyss_mask])
+    coral_heights[to_crest_mask] = S(h_back, h_crest, x_back_0, x_crest_0, distancesToReef[to_crest_mask])
+
+    # Apply island subsidence
+    terrain = heights * subsidence
+
+    coral_heights = np.clip(coral_heights, 0.0, 1.0)
+    terrain = np.clip(terrain, 0.0, 1.0)
+    final_heights = smoothmax(terrain, coral_heights, k=10)
+
+    return final_heights
+
+
+
 
 
 def method1(heights: np.ndarray, subsidenceBetweenFrames: float = 0.05):

@@ -1,4 +1,6 @@
 # Imports
+import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
 import random, os, math
@@ -28,7 +30,7 @@ outputImageDims = [256, 256]
 # distortionMaps: List[List[List[Vector2D]]] = []
 singleDistortionMap: List[List[Vector2D]] = []
 fig, fig2 = None, None
-dataset_path = "./test_synthetic_terrains_dataset/"
+dataset_path = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
 
 
 def numpyIndicesToCoords(_x: int, _y: int, sizeX: int, sizeY: int) -> Tuple[float, float] :
@@ -56,7 +58,7 @@ def wyvill(x: float):
     return ((1.0 - x)**2)**3
 
 def initialDistoMap(sizeX: int, sizeY: int) -> List[List[Vector2D]]:
-    return [[Vector2D(0.1, 0) for _ in range(sizeY)] for _ in range(sizeX)]
+    return [[Vector2D(0, 0) for _ in range(sizeY)] for _ in range(sizeX)]
 
 def deform_image(image: np.ndarray, vector_field: np.ndarray) -> np.ndarray:
     # Check if image and vector_field have the same dimensions
@@ -158,24 +160,35 @@ def bilinearInterpolation(arr: List[List[Vector2D]], x: float, y: float) -> Vect
     return value
 
 def clamp(x:float, mini: float, maxi: float) -> float:
-    return mini if x <= mini else maxi if x >= maxi else x
+    return max(min(maxi, x), mini)
+
 
 def valueAsHSV(value: float, mini: float, maxi: float, L: float = 0.5, S: float = 1.0) -> Tuple[float, float, float]:
-    H = (360.0 * (math.fmod(value, maxi) - mini) / (maxi - mini)) / 60
-    # L = 0.5
-    # S = 1.0
+    H = 360.0 * (value - mini) / (maxi - mini)
+    H = H % 360.0
+    H /= 60.0
 
     C = (1 - abs(2 * L - 1)) * S
-    try:
-        X = C * (1 - abs(math.fmod(H, 2) - 1))
-    except Exception as e:
-        a = 0
-        raise e
+    X = C * (1 - abs(H % 2 - 1))
 
-    R1, G1, B1 = (C, X, 0) if 0 <= H < 1 else (X, C, 0) if 1 <= H < 2 else (0, C, X) if 2 <= H < 3 else (0, X, C) if 3 <= H < 4 else (X, 0, C) if 4 <= H < 5 else (C, 0, X)
-    m = L - C * .5
+    if 0 <= H < 1:
+        R1, G1, B1 = C, X, 0
+    elif 1 <= H < 2:
+        R1, G1, B1 = X, C, 0
+    elif 2 <= H < 3:
+        R1, G1, B1 = 0, C, X
+    elif 3 <= H < 4:
+        R1, G1, B1 = 0, X, C
+    elif 4 <= H < 5:
+        R1, G1, B1 = X, 0, C
+    elif 5 <= H < 6:
+        R1, G1, B1 = C, 0, X
+    else:
+        R1, G1, B1 = 0, 0, 0  # fallback
+
+    m = L - C * 0.5
     R, G, B = R1 + m, G1 + m, B1 + m
-    return clamp(R,0,1), clamp(G,0,1), clamp(B,0,1)
+    return clamp(R, 0, 1), clamp(G, 0, 1), clamp(B, 0, 1)
 
 
 def getSequences(profileSketch: LineBuilder):
@@ -518,31 +531,59 @@ class IslandSketch:
         coralMaxHeight = self.coralMax
         heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
 
-        heightmap = coralize_my_island.bw2rgb(np.clip(heightmap, 0.0, 1.0))
-        plt.imsave(f"{pathHeightmap}{filePrefix}.png", heightmap)
-        features = np.array(features)
-        for x in range(features.shape[0]):
-            for y in range(features.shape[1]):
-                features[x, y] = valueAsHSV(features[x, y, 0], features[x, y, 1], features[x, y, 2], L=1.0 * 0.5)
-        plt.imsave(f"{pathFeatures}{filePrefix}.png", features)
-        plt.imsave(f"{pathDisto}{filePrefix}.png", distortions)
-        print(f"Heightmap saved at {pathHeightmap}{filePrefix}.png")
-        return heightmap, features, distortions
+        def getReefDistances(features):
+            _distMap = np.zeros((features.shape[0], features.shape[1]))
+            # fullProfile = self.profileSketch.getCurve()
+            # fullResistance = self.resistanceSketch.getCurve()
+            for x in range(features.shape[0]):
+                for y in range(features.shape[1]):
+                    # sequenceID = features[x, y, 0] # self.getSequenceID(pos)
+                    # if sequenceID != 3.0: continue #We are just interested in the reef biome (=3)
+                    X = (2*y / float(features.shape[0]) - 1.0)
+                    Y = -(2*x / float(features.shape[0]) - 1.0)
+                    pos = Vector2D( X, Y)
+                    polar = pos.to_polar()
+                    distFromCenter = polar.y
+
+                    distMin = self.sketches[2].getValue(polar.x)
+                    distMax = self.sketches[3].getValue(polar.x)
+                    if distMin > distMax:
+                        distMin, distMax = distMax, distMin
+                    t = ((distFromCenter - distMin) / (distMax - distMin) if distMax - distMin > 0.01 else -10000 if distFromCenter < distMin else 10000)
+                    _distMap[x, y] = t
+            return _distMap
+
+        # heightmap = coralize_my_island.bw2rgb(np.clip(heightmap, 0.0, 1.0))
+        # plt.imsave(f"{pathHeightmap}{filePrefix}.png", heightmap)
+        # features = np.array(features)
+        # for x in range(features.shape[0]):
+        #     for y in range(features.shape[1]):
+        #         features[x, y] = valueAsHSV(features[x, y, 0], features[x, y, 1], features[x, y, 2], L=1.0 * 0.5)
+        # plt.imsave(f"{pathFeatures}{filePrefix}.png", features)
+        # plt.imsave(f"{pathDisto}{filePrefix}.png", distortions)
+        # print(f"Heightmap saved at {pathHeightmap}{filePrefix}.png")
+        # return heightmap, features, distortions
+
+        _distances = getReefDistances(features)
 
         n = noise.perlin.SimplexNoise(1000)
-        for i in range(1):
-            # subsidence = 0.8 # getRandom(0.1, 1.0)
-            subsidence = self.subsidenceFactor
+        for i in range(5):
+            subsidence = getRandom(0.1, 1.0)
+            # subsidence = self.subsidenceFactor
             _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in range(heightmap.shape[1])]), 0.0, 1.0)
-            _heightmap = coralize_my_island.method1Create(heightmap, subsidence, waterLevel, coralMaxHeight, coralMinHeight)
-            # _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=1.0, erosion_factor=0.2)
-            # _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
-            # _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
-            _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
+            _heightmap = np.array(heightmap)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=1.0, erosion_factor=0.2)
+            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
             _features = np.array(features)
             for x in range(features.shape[0]):
                 for y in range(features.shape[1]):
-                    _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence * 0.5)
+                    _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence*.5)
+
+            # _heightmap = coralize_my_island.method1Create(_heightmap, subsidence, waterLevel, coralMaxHeight, coralMinHeight)
+            _heightmap = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
+            _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
+
             # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", _heightmap)
             plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
@@ -551,7 +592,7 @@ class IslandSketch:
             # plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
             # plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
             print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
-            return _heightmap, _features, distortions
+        return heightmap, features, distortions
 
     def createMapsFromSketch_timing(self, path: str = "./", filePrefix: str = "result", coralMinHeight: float = 0.5,
                              coralMaxHeight: float = 0.6):
@@ -729,10 +770,18 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         lagoonBorders = centeredCircle(0.7 * radiusFactor, 1.2)
         reefBorders = centeredCircle(0.8 * radiusFactor, 1.2)
 
-        islandTranslate = Vectors.randomVec2() * 0.2
-        islandBorders = [p + islandTranslate for p in islandBorders]
-        beachTranslate = Vectors.randomVec2() * 0.2
-        beachBorders = [p + beachTranslate for p in beachBorders]
+        # islandTranslate = Vectors.randomVec2() * 0.2
+        # islandBorders = [p + islandTranslate for p in islandBorders]
+        # beachTranslate = Vectors.randomVec2() * 0.2
+        # beachBorders = [p + beachTranslate for p in beachBorders]
+
+        for i in range(len(islandBorders)):
+            if beachBorders[i].y < islandBorders[i].y:
+                beachBorders[i].y = islandBorders[i].y + 0.05
+            if lagoonBorders[i].y < beachBorders[i].y:
+                lagoonBorders[i].y = beachBorders[i].y + 0.05
+            if reefBorders[i].y < lagoonBorders[i].y:
+                reefBorders[i].y = lagoonBorders[i].y + 0.05
 
         islandSketch.sketches[0].setCurve(islandBorders)
         islandSketch.sketches[1].setCurve(beachBorders)
@@ -752,10 +801,11 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         coralMaxHeight = getSequences(islandSketch.profileSketch)[2][2][-1]
         coralMinHeight = getSequences(islandSketch.profileSketch)[3][2][0]
 
-        islandSketch.createMapsFromSketch(path="new_synthetic_terrains_dataset/", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
+        islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
 
         # distortionMaps = distortionMaps[:1]
         # singleDistortionMap = initialDistoMap(20, 20)
+
 
 
 
@@ -894,14 +944,29 @@ def main():
                               0.021446078431372473, 0.003063725490196012]
     islandSketch.profileSketch.setCurve(_randomProfileCurve)
     islandSketch.resistanceSketch.setCurve(_randomResistanceCurve)
-    for i in range(len(sketch_names)):
-        islandSketch.sketches[i].setCurve(centeredCircle(float(i + 1) / float(len(sketch_names) + 1), 1.1))
-    # createDatasetOfRandomIslands(islandSketch, 500)
+    # for i in range(len(sketch_names)):
+    #     islandSketch.sketches[i].setCurve(centeredCircle(float(i + 1) / float(len(sketch_names) + 1), 1.1))
+    islandSketch.sketches[0].setCurve(centeredCircle(0.25, 1.1))
+    islandSketch.sketches[1].setCurve(centeredCircle(0.30, 1.1))
+    islandSketch.sketches[2].setCurve(centeredCircle(0.35, 1.1))
+    islandSketch.sketches[3].setCurve(centeredCircle(0.80, 1.5))
+    # createDatasetOfRandomIslands(islandSketch, 100)
     islandSketch.update()
     plt.show()
 
+    # import dataAugmentationIslandGeneration
+    # dataAugmentationIslandGeneration.main()
+    # print("All done!!!")
 
 
 
 if __name__ == "__main__":
+    # parser = argparse.ArgumentParser(description="Program for the coral reef island dataset generation, either interactive or automatic")
+    # parser.add_argument('path', nargs='?', default='default/path/', help='Path to save the dataset')
+    # parser.add_argument('--auto', action='store_true', help='Creates dataset with random layout')
+    #
+    # args = parser.parse_args()
+    #
+    # my_path = args.path
+    # my_variable = args.test
     main()
