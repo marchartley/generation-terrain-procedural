@@ -133,7 +133,7 @@ def addHeightmaps(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, positi
     # Apply smooth maximum (fifth root of sum of fifth powers)
     region = curr[y1:y2, x1:x2]
     paste_region = paste[py1:py2, px1:px2]
-    result = smoothmax(region, paste_region, 1) - (1/2) # np.power(np.power(region, 5) + np.power(paste_region, 5), 1/5)
+    result = smoothmax(region, paste_region, k=5) # np.power(np.power(region, 5) + np.power(paste_region, 5), 1/5)
 
     curr[y1:y2, x1:x2] = result
     currentImg.paste(PIL.Image.fromarray(np.clip(curr, 0, 255).astype(np.uint8)))
@@ -191,25 +191,122 @@ def addDistortions(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, posit
 
 
 
-
-
+#
+#
+# def main():
+#     dataset_folder = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
+#     heightmaps_folder = dataset_folder + "heightmaps/"
+#     features_folder = dataset_folder + "features/"
+#     distortions_folder = dataset_folder + "distortions/"
+#
+#     allHeightmaps = glob.glob(heightmaps_folder + "*.png")
+#     for iFile, fullpath in enumerate(allHeightmaps):
+#         print(f"{iFile + 1}/{len(allHeightmaps)}")
+#         original_filename = os.path.basename(fullpath)
+#
+#         folders = [heightmaps_folder, features_folder, distortions_folder]
+#         filenames = [f + original_filename for f in folders]
+#         originals = [Image2(PIL.Image.open(filenames[0]).convert("L")), Image2(PIL.Image.open(filenames[1]).convert("RGB")), Image2(PIL.Image.open(filenames[2]).convert("RGB"))]
+#         defaultColors = [0, (255, 0, 0), (127, 127, 127)]
+#         for i in range(len(originals)):
+#             originals[i].fillColor = defaultColors[i]
+#
+#         def offset(img: Image2, dx: int, dy: int):
+#             return Image2(PIL.ImageChops.offset(img.img, dx, dy), img.fillColor)
+#
+#         def rotate(img: Image2, angle: float):
+#             return Image2(img.rotate(angle, fillcolor=img.fillColor), img.fillColor)
+#
+#         def resize(img: Image2, newSizeX: int, newSizeY: int):
+#             return Image2(img.resize((newSizeX, newSizeY), resample=PIL.Image.NEAREST), img.fillColor)
+#
+#         def getRandom(start, end):
+#             return start + random.random() * (end - start)
+#
+#         def copiesFunc(nb):
+#             usedBoxes = []
+#             allFunctions = []
+#             for _ in range(nb):
+#                 newSize = (int(getRandom(30, 128)), int(getRandom(30, 128)))
+#                 functions = [(rotate, getRandom(-180, 180)), (resize, newSize[0], newSize[1])]
+#                 for tries in range(10):
+#                     ok = True
+#                     box = [int(getRandom(0, 256)), int(getRandom(0, 256))]
+#                     box += [box[0] + newSize[0], box[1] + newSize[1]]
+#                     for otherBox in usedBoxes:
+#                         if bb_intersection_over_union(box, otherBox) > 0.1:
+#                             ok = False
+#                             break
+#                     if ok:
+#                         functions.append((box[0], box[1]))
+#                         usedBoxes.append(box)
+#                         allFunctions.append(functions)
+#                         break
+#             return allFunctions
+#
+#         transfos = [] + \
+#                    [[[(offset, int(getRandom(-100, 100)), int(getRandom(-100, 100)))]] for _ in range(4)] + \
+#                    [copiesFunc(5) for _ in range(4)]
+#
+#         for iTransfoCombi, combination in enumerate(transfos):
+#             results = [PIL.Image.new("L", originals[0].size, defaultColors[0]), PIL.Image.new("RGB", originals[1].size, originals[1].img.getpixel((0, 0))),
+#                        PIL.Image.new("RGB", originals[2].size, defaultColors[2])]
+#
+#             for iSubImg in range(len(combination)):
+#                 tmpOrig = [Image2(img.copy(), img.fillColor) for img in originals]
+#                 position = (0, 0)
+#                 for transfo in combination[iSubImg]:
+#                     allArgs = transfo
+#                     if isinstance(allArgs[0], Callable):
+#                         func, *args = allArgs
+#                         for i in range(len(tmpOrig)):
+#                             tmpOrig[i] = func(tmpOrig[i], *args)
+#                     else:
+#                         position = allArgs
+#
+#                 for i, (orig, res) in enumerate(zip(tmpOrig, results)):
+#                     # res.paste(orig.img, position)
+#                     if i == 0:
+#                         addHeightmaps(res, orig.img, position)
+#                     elif i == 1:
+#                         addFeatures(res, orig.img, position)
+#                     elif i == 2:
+#                         addDistortions(res, orig.img, position)
+#                     else:
+#                         print("Impossible case")
+#             for i, res in enumerate(results):
+#                 res.rotate(0).save  (folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
+#                 res.rotate(90).save (folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
+#                 res.rotate(180).save(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
+#                 res.rotate(270).save(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
+#
+#
+#             #     os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
+#             #     os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
+#             #     os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
+#             #     os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
+#             #
+#             # plt.imshow(results[0], cmap="gray", vmin=0, vmax=255)
+#             # plt.show()
+#             # plt.imshow(results[1], cmap="gray", vmin=0, vmax=255)
+#             # plt.show()
+#             # plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
+#             # plt.show()
 def main():
-    dataset_folder = "_new_synthetic_terrains_dataset/"
+    dataset_folder = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
     heightmaps_folder = dataset_folder + "heightmaps/"
     features_folder = dataset_folder + "features/"
     distortions_folder = dataset_folder + "distortions/"
 
     allHeightmaps = glob.glob(heightmaps_folder + "*.png")
+
+    folders = [heightmaps_folder, features_folder, distortions_folder]
+
+    defaultColors = [0, (255, 0, 0), (127, 127, 127)]
+
     for iFile, fullpath in enumerate(allHeightmaps):
         print(f"{iFile + 1}/{len(allHeightmaps)}")
         original_filename = os.path.basename(fullpath)
-
-        folders = [heightmaps_folder, features_folder, distortions_folder]
-        filenames = [f + original_filename for f in folders]
-        originals = [Image2(PIL.Image.open(filenames[0]).convert("L")), Image2(PIL.Image.open(filenames[1]).convert("RGB")), Image2(PIL.Image.open(filenames[2]).convert("RGB"))]
-        defaultColors = [0, (255, 0, 0), (127, 127, 127)]
-        for i in range(len(originals)):
-            originals[i].fillColor = defaultColors[i]
 
         def offset(img: Image2, dx: int, dy: int):
             return Image2(PIL.ImageChops.offset(img.img, dx, dy), img.fillColor)
@@ -249,23 +346,39 @@ def main():
                    [copiesFunc(5) for _ in range(4)]
 
         for iTransfoCombi, combination in enumerate(transfos):
-            results = [PIL.Image.new("L", originals[0].size, defaultColors[0]), PIL.Image.new("RGB", originals[1].size, originals[1].img.getpixel((0, 0))),
-                       PIL.Image.new("RGB", originals[2].size, defaultColors[2])]
+            results = [
+                PIL.Image.new("L", (256, 256), defaultColors[0]),
+                PIL.Image.new("RGB", (256, 256), defaultColors[1]),
+                PIL.Image.new("RGB", (256, 256), defaultColors[2])
+            ]
 
-            for iSubImg in range(len(combination)):
-                tmpOrig = [Image2(img.copy(), img.fillColor) for img in originals]
+            # Sample one image per transformation (e.g., 5 different images for 5 sub-transforms)
+            sampled_paths = random.sample(allHeightmaps, len(combination))
+            originals_list = []
+
+            for sp in sampled_paths:
+                fname = os.path.basename(sp)
+                originals = [
+                    Image2(PIL.Image.open(heightmaps_folder + fname).convert("L")),
+                    Image2(PIL.Image.open(features_folder + fname).convert("RGB")),
+                    Image2(PIL.Image.open(distortions_folder + fname).convert("RGB")),
+                ]
+                for i, img in enumerate(originals):
+                    img.fillColor = defaultColors[i]
+                originals_list.append(originals)
+
+            for iSubImg, (transfos_for_img, originals) in enumerate(zip(combination, originals_list)):
+                tmpOrig = [Image2(img.img.copy(), img.fillColor) for img in originals]
                 position = (0, 0)
-                for transfo in combination[iSubImg]:
-                    allArgs = transfo
-                    if isinstance(allArgs[0], Callable):
-                        func, *args = allArgs
+                for transfo in transfos_for_img:
+                    if isinstance(transfo[0], Callable):
+                        func, *args = transfo
                         for i in range(len(tmpOrig)):
                             tmpOrig[i] = func(tmpOrig[i], *args)
                     else:
-                        position = allArgs
+                        position = transfo
 
                 for i, (orig, res) in enumerate(zip(tmpOrig, results)):
-                    # res.paste(orig.img, position)
                     if i == 0:
                         addHeightmaps(res, orig.img, position)
                     elif i == 1:
@@ -274,29 +387,18 @@ def main():
                         addDistortions(res, orig.img, position)
                     else:
                         print("Impossible case")
+
             for i, res in enumerate(results):
-                res.rotate(0).save  (folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
-                res.rotate(90).save (folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
-                res.rotate(180).save(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
-                res.rotate(270).save(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
-
-
-                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "a_" + original_filename)
-                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "b_" + original_filename)
-                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "c_" + original_filename)
-                os.remove(folders[i] + nbToAlpha(iTransfoCombi) + "d_" + original_filename)
-
-            plt.imshow(results[0], cmap="gray", vmin=0, vmax=255)
-            plt.show()
-            plt.imshow(results[1], cmap="gray", vmin=0, vmax=255)
-            plt.show()
-            plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
-            plt.show()
+                base_name = nbToAlpha(iTransfoCombi) + "_" + original_filename
+                res.rotate(0).save(folders[i] + "a_" + base_name)
+                res.rotate(90).save(folders[i] + "b_" + base_name)
+                res.rotate(180).save(folders[i] + "c_" + base_name)
+                res.rotate(270).save(folders[i] + "d_" + base_name)
 
 
 if __name__ == "__main__":
     # with cProfile.Profile() as profiler:
-        main()
+    main()
     # stats = pstats.Stats(profiler)
     # stats.sort_stats(pstats.SortKey.TIME)  # Sorts by time spent in each function
     # stats.print_stats(20)  # Prints top 20 lines of profiling results

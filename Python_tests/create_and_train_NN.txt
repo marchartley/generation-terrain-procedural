@@ -1,7 +1,44 @@
+# Running the dataset generation:
+# 1. Manual method:
+python ~/generation-terrain-procedural/Python_tests/mergedIslandGeneration.py
+# 2. Full automatic
+python ~/generation-terrain-procedural/Python_tests/mergedIslandGeneration.py --auto "/path/to/saving/folder/"
+
+# Apply data augmentation:
+python ~/generation-terrain-procedural/Python_tests/dataAugmentationIslandGeneration.py "path/to/saving/folder/"
+
+# Start the visdom server for visualization:
+python -m visdom.start
+
+# Train the cGAN model:
+python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py "path/to/saving/folder/"
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A "path/to/saving/folder/features/" --fold_B "path/to/saving/folder/heightmaps/" --fold_AB "path/to/saving/folder/AB"
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot "path/to/saving/folder/AB/" --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
+
+# (With latest paths)
+python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py /media/marc/Data/test_synthetic_terrains_dataset_larger_reef/
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A /media/marc/Data/test_synthetic_terrains_dataset_larger_reef/features/ --fold_B /media/marc/Data/test_synthetic_terrains_dataset_larger_reef/heightmaps/ --fold_AB /media/marc/Data/test_synthetic_terrains_dataset_larger_reef/AB
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/test_synthetic_terrains_dataset_larger_reef/AB/ --name labels_to_terrain_pacific_graphics_2025_larger_reef --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --env_name "Training name" --continue_train
+
+sudo rmmod nvidia_uvm
+sudo modprobe nvidia_uvm
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input /media/marc/Data/NN\ Datasets/1/input_label.png --output /media/marc/Data/NN\ Datasets/1/result_height.png --name labels_to_terrain_pacific_graphics_2025 --model pix2pix --direction AtoB
+
+
+cd pytorch-CycleGAN-and-pix2pix
+python ./datasets/combine_A_and_B.py --fold_A ../new_synthetic_terrains_dataset/features/ --fold_B ../new_synthetic_terrains_dataset/heightmaps/ --fold_AB ../new_synthetic_terrains_dataset/AB
+python train.py --dataroot ../new_synthetic_terrains_dataset/AB/ --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input ../new_synthetic_terrains_dataset/testimg.png --output ../new_synthetic_terrains_dataset/result.png --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB
+
+
+# Run the inference model:
 sudo rmmod nvidia_uvm
 sudo modprobe nvidia_uvm
 cd /media/marc/Data/NN\ Datasets/1
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input ./input_label.png --output_texture ./result_texture.png --output_height ./result_height.png --L2H pretrained_terrains_labelsToHeights --H2T heightmap2textures_multiscale_A2B --model pix2pix --direction AtoB
+
+
+
 
 
 python mergedIslandGeneration.py

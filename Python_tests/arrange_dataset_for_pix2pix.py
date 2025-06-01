@@ -1,3 +1,4 @@
+import argparse
 import glob
 import math
 import os
@@ -60,7 +61,12 @@ def moveToFolders(path):
 
 
 def main():
-    mainPath = "new_synthetic_terrains_dataset/"
+    parser = argparse.ArgumentParser(description="Automatically create the splits for a dataset and creates the AB folder used for pix2pix")
+    parser.add_argument('dataset', nargs='?', default='default/path/', help='Path to the folder containing "heightmaps/", "features/", and "distortions/"')
+
+    args = parser.parse_args()
+
+    mainPath = args.dataset + "/" # "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
     pathHeightmap = mainPath + "heightmaps/"
     pathFeatures = mainPath + "features/"
     pathDistortions = mainPath + "distortions/"
