@@ -204,9 +204,7 @@ def method1Create(heights: np.ndarray, subsidence: float, waterLevel: float = 0.
     return finalMap
 
 
-import numpy as np
-
-def method2Create(heights: np.ndarray, distancesToReef: np.array, subsidence: float, waterLevel: float = 0.5) -> np.ndarray:
+def method2Create(heights: np.ndarray, distancesToReef: np.array, subsidence: float, waterLevel: float = 0.5) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     # Coral region heights
     h_back = waterLevel - 0.15
     h_crest = waterLevel - 0.05
@@ -252,7 +250,7 @@ def method2Create(heights: np.ndarray, distancesToReef: np.array, subsidence: fl
     terrain = np.clip(terrain, 0.0, 1.0)
     final_heights = smoothmax(terrain, coral_heights, k=10)
 
-    return final_heights
+    return final_heights, terrain, coral_heights
 
 
 
