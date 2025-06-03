@@ -1,5 +1,6 @@
 # Imports
 import argparse
+from collections.abc import Sequence
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -7,18 +8,12 @@ import random, os, math
 from functools import lru_cache
 from matplotlib.widgets import Button
 import curves
-from Python_tests.coralize_my_island import bw2rgb
-from Python_tests.heightmap_from_skeleton import readImage
-from Python_tests.islandFromSketch import heightmapAndFeatureMapFromSketches
-from Python_tests.sketch_maker import resizeArray
 from Vectors import Vector2D, Vector3D, line_intersection
 import Vectors
 from typing import Tuple, List, Callable, Union, Optional, Any
 from sketch_maker import LineBuilder, LineBuilder1D, LineBuilder2D, LineBuilderRadial, SketchManagement
 from noise import perlin
 import noise
-from noise.perlin import SimplexNoise
-import time
 import coralize_my_island
 from scipy.ndimage import map_coordinates
 from matplotlib.widgets import RangeSlider, Slider
@@ -30,6 +25,7 @@ outputImageDims = [256, 256]
 # distortionMaps: List[List[List[Vector2D]]] = []
 singleDistortionMap: List[List[Vector2D]] = []
 fig, fig2 = None, None
+axesResults = []
 dataset_path = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
 
 
@@ -60,18 +56,21 @@ def wyvill(x: float):
 def initialDistoMap(sizeX: int, sizeY: int) -> List[List[Vector2D]]:
     return [[Vector2D(0, 0) for _ in range(sizeY)] for _ in range(sizeX)]
 
-def deform_image(image: np.ndarray, vector_field: np.ndarray) -> np.ndarray:
+def deform_image(image: np.ndarray, vector_field: np.ndarray, scale: Union[float, Tuple[float, float]] = 1.0) -> np.ndarray:
     # Check if image and vector_field have the same dimensions
     assert image.shape == vector_field.shape[:2], "Image and vector field must have the same dimensions"
-
+    if isinstance(scale, Sequence):
+        scaleX, scaleY = scale[0], scale[1]
+    else:
+        scaleX, scaleY = scale, scale
     # Create a grid of coordinates in the original image
     coords = np.indices(image.shape)
 
     # Adjust the coordinates based on the vector field
     # Note that we need to invert the vector direction for proper mapping
     displaced_coords = np.array([
-        coords[0] - vector_field[..., 1],  # y-coordinates adjust
-        coords[1] - vector_field[..., 0]   # x-coordinates adjust
+        coords[0] - (vector_field[..., 1] * scaleY),  # y-coordinates adjust
+        coords[1] - (vector_field[..., 0] * scaleX)   # x-coordinates adjust
     ])
 
     # Perform the interpolation
@@ -309,15 +308,19 @@ def smoothCurve(curve: List[Vector2D]) -> List[Vector2D]:
     return res
 
 
-def centeredCircle(radius: float, randomness: float = 1.2) -> List[Vector2D]:
+def centeredCircle(radius: float, randomness: float = 1.2, seed=None, returnRadial: float = False) -> List[Vector2D]:
+    if seed is None:
+        seed = getRandom(0, 1000)
     perlin_noise = perlin.SimplexNoise(10)
     points: List[Vector2D] = []
     nbPoints = 30
     for i in range(nbPoints):
         angle = i * math.tau / (nbPoints - 1)
         vertexUnitPos = Vector2D(math.cos(angle), math.sin(angle))
-        noiseValue = 1.0 + perlin_noise.noise2(vertexUnitPos.x, vertexUnitPos.y) * (randomness - 1)
-        points.append(vertexUnitPos * (radius * noiseValue))
+        noiseValue = 1.0 + perlin_noise.noise2(vertexUnitPos.x + seed, vertexUnitPos.y + seed) * (randomness - 1)
+        p = vertexUnitPos * (radius * noiseValue)
+        if returnRadial: p = p.to_polar()
+        points.append(p)
     return points
 
 def randomDistortionCurve() -> List[Vector2D]:
@@ -513,7 +516,7 @@ class IslandSketch:
         t = (distFromCenter - distMin) / (distMax - distMin)
         return interpolateOnCurve(profile, t).y, interpolateOnCurve(resistance, t).y
 
-    def createMapsFromSketch(self, path: str = "./", filePrefix: str = "result"):
+    def createMapsFromSketch(self, path: str = "./", filePrefix: str = "result", randomize_parameters: bool = True):
         featuresFolder = "features/"
         distoFolder = "distortions/"
         heightFolder = "heightmaps/"
@@ -527,8 +530,8 @@ class IslandSketch:
 
         resistanceMap = self.computeResistanceMap()
         waterLevel = self.waterLevel
-        coralMinHeight = self.coralMin
-        coralMaxHeight = self.coralMax
+        # coralMinHeight = self.coralMin
+        # coralMaxHeight = self.coralMax
         heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
 
         def getReefDistances(features):
@@ -564,12 +567,22 @@ class IslandSketch:
         # print(f"Heightmap saved at {pathHeightmap}{filePrefix}.png")
         # return heightmap, features, distortions
 
-        _distances = getReefDistances(features)
+        distances = getReefDistances(features)
+        _singleDistortionMap = np.zeros((heightmap.shape[0], heightmap.shape[1], 2))
+        for _x in range(_singleDistortionMap.shape[0]):
+            for _y in range(_singleDistortionMap.shape[1]):
+                x, y = numpyIndicesToCoords(_x, _y, _singleDistortionMap.shape[0], _singleDistortionMap.shape[1])
+                d = getDisto(x, y)
+                _singleDistortionMap[_x, _y] = [d.x, d.y]
+
 
         n = noise.perlin.SimplexNoise(1000)
-        for i in range(5):
-            subsidence = getRandom(0.1, 1.0)
-            # subsidence = self.subsidenceFactor
+        nbSamples = 5 if randomize_parameters else 1
+        for i in range(nbSamples):
+            if randomize_parameters:
+                subsidence = getRandom(0.1, 1.0)
+            else:
+                subsidence = self.subsidenceFactor
             _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in range(heightmap.shape[1])]), 0.0, 1.0)
             _heightmap = np.array(heightmap)
             _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=1.0, erosion_factor=0.2)
@@ -580,9 +593,15 @@ class IslandSketch:
                 for y in range(features.shape[1]):
                     _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence*.5)
 
+            _distances = deform_image(distances, _singleDistortionMap * (1.0 - _resistanceMap).reshape((256, 256, 1)), scale = 128.0)
+
             # _heightmap = coralize_my_island.method1Create(_heightmap, subsidence, waterLevel, coralMaxHeight, coralMinHeight)
-            _heightmap = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
+            _heightmap, terrain, corals = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
+            _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(5.0, 15.0), randomnessStrength=getRandom(1.0, 3.0))
+            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
             _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
+            return _heightmap, _features, distortions
 
             # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", _heightmap)
@@ -592,47 +611,65 @@ class IslandSketch:
             # plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
             # plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
             print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
-        return heightmap, features, distortions
+        return _heightmap, _features, distortions #, coralize_my_island.bw2rgb(np.clip(terrain, 0.0, 1.0)), coralize_my_island.bw2rgb(np.clip(corals, 0.0, 1.0))
 
-    def createMapsFromSketch_timing(self, path: str = "./", filePrefix: str = "result", coralMinHeight: float = 0.5,
-                             coralMaxHeight: float = 0.6):
-        resistanceMap = self.computeResistanceMap()
-        waterLevel = coralMaxHeight
-        nTrials = 10
-        t0 = time.time()
-        for _ in range(nTrials):
-            heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
-        t1 = time.time()
-        print(f"{((t1 - t0) * 1000) / nTrials}ms")
-        return
-        n = noise.perlin.SimplexNoise(1000)
-        for i in range(5):
-            subsidence = getRandom(0.1, 1.0)
-            _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(
-                x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in
-                                                               range(heightmap.shape[1])]), 0.0, 1.0)
-            _heightmap = coralize_my_island.method1Create(heightmap, subsidence, waterLevel, coralMaxHeight,
-                                                          coralMinHeight)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap,
-                                                                  iterations=100, talus_angle=1.0,
-                                                                  erosion_factor=0.2)
-            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap,
-                                                                    iterations=50, water=1.0, solubility=0.99,
-                                                                    evaporation=0.05, capacity=1.0)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap,
-                                                                  iterations=100, talus_angle=0.5,
-                                                                  erosion_factor=0.1)
+    def fractal_erosion(self, heightmap: np.ndarray, resistance: np.ndarray, radialFreq: float = 5.0, strength: float = 10.0, randomnessStrength: float = 2.0) -> np.ndarray:
+        sX, sY = heightmap.shape[0], heightmap.shape[1] #20, 20
+        disto = np.zeros((heightmap.shape[0], heightmap.shape[1], 2))
+        center = Vector2D(sX / 2, sY / 2)
+        n = noise.perlin.SimplexNoise(400)
+        for x in range(sX):
+            for y in range(sY):
+                p = Vector2D(x, y) - center
+                polar = p.to_polar()
 
-            _features = np.array(features)
-            for x in range(features.shape[0]):
-                for y in range(features.shape[1]):
-                    _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2],
-                                                 L=subsidence * 0.5)
-            plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png",
-                       coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0)))
-            plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
-            plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
-            print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
+                v = n.noise3(polar.x * radialFreq, x / 100.0, y / 100.0) * (strength - randomnessStrength)
+                d = (p.normalized() * v + Vectors.randomVec2() * randomnessStrength) * (1 - resistance[x, y])
+                disto[x, y] = [d.x, d.y]
+        return deform_image(heightmap, disto)
+
+
+
+
+    # def createMapsFromSketch_timing(self, path: str = "./", filePrefix: str = "result", coralMinHeight: float = 0.5,
+    #                          coralMaxHeight: float = 0.6):
+    #     resistanceMap = self.computeResistanceMap()
+    #     waterLevel = coralMaxHeight
+    #     nTrials = 10
+    #     t0 = time.time()
+    #     for _ in range(nTrials):
+    #         heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
+    #     t1 = time.time()
+    #     print(f"{((t1 - t0) * 1000) / nTrials}ms")
+    #     return
+    #     n = noise.perlin.SimplexNoise(1000)
+    #     for i in range(5):
+    #         subsidence = getRandom(0.1, 1.0)
+    #         _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(
+    #             x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in
+    #                                                            range(heightmap.shape[1])]), 0.0, 1.0)
+    #         _heightmap = coralize_my_island.method1Create(heightmap, subsidence, waterLevel, coralMaxHeight,
+    #                                                       coralMinHeight)
+    #         _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap,
+    #                                                               iterations=100, talus_angle=1.0,
+    #                                                               erosion_factor=0.2)
+    #         _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap,
+    #                                                                 iterations=50, water=1.0, solubility=0.99,
+    #                                                                 evaporation=0.05, capacity=1.0)
+    #         _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap,
+    #                                                               iterations=100, talus_angle=0.5,
+    #                                                               erosion_factor=0.1)
+    #
+    #         _features = np.array(features)
+    #         for x in range(features.shape[0]):
+    #             for y in range(features.shape[1]):
+    #                 _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2],
+    #                                              L=subsidence * 0.5)
+    #         plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png",
+    #                    coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0)))
+    #         plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
+    #         plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
+    #         print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
 
     def computeResistanceMap(self) -> np.ndarray:
         dims = outputImageDims
@@ -743,16 +780,34 @@ def updateResultsFigure(images: List[np.ndarray], _axes: List[plt.Axes]):
         axes[i].imshow(img)
     fig2.canvas.draw()
 
+def randomizeUserCircle(previousOutlines, randomness, scaling: float = 1.0):
+    n = noise.perlin.SimplexNoise()
+    seed = getRandom(0, 1000)
+    newOutlines = []
+    for i in range(len(previousOutlines)):
+        t = math.tau * i / float(len(previousOutlines) + 1)
+        l = previousOutlines[i].x
+        p = Vector2D(l * (1 + n.noise2(math.cos(t), math.sin(t) + seed) * (randomness - 1)) * scaling, previousOutlines[i].y)
+        newOutlines.append(p)
+    return newOutlines
 
 
-def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 1000):
+def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 1000, use_user_input=False):
     global singleDistortionMap
     radiusRandomMin, radiusRandomMax = 0.8, 1.1
     nbCurvesMin, nbCurvesMax = 2, 6
-    distoStrengthMin, distoStrengthMax = 0.05, 0.8
-    distoWidthMin, distoWidthMax = 0.1, 0.8
+    distoStrengthMin, distoStrengthMax = 0.05, 0.3
+    distoWidthMin, distoWidthMax = 0.1, 0.3
     profileRandomMin, profileRandomMax = 0.0, 0.2
     resistanceRandomMin, resistanceRandomMax = 0.0, 0.2
+
+    original_islandBorders = islandSketch.sketches[0].getCurve()
+    original_beachBorders  = islandSketch.sketches[1].getCurve()
+    original_lagoonBorders = islandSketch.sketches[2].getCurve()
+    original_reefBorders   = islandSketch.sketches[3].getCurve()
+
+    original_profile = islandSketch.profileSketch.getCurve()
+    original_resistance = islandSketch.resistanceSketch.getCurve()
 
     for iSample in range(nbSamples):
         if os.path.exists(f"{dataset_path}heightmaps/{iSample}.png"):
@@ -760,15 +815,21 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         profileRandomness = getRandom(profileRandomMin, profileRandomMax)
         resistanceRandomness = getRandom(resistanceRandomMin, resistanceRandomMax)
         n = noise.perlin.SimplexNoise(1000)
+        singleDistortionMap = initialDistoMap(30, 30)
         for _ in range(int(getRandom(nbCurvesMin, nbCurvesMax))):
-            singleDistortionMap = initialDistoMap(30, 30)
-            addDistortionFromCurve(randomDistortionCurve(), getRandom(distoStrengthMin, distoStrengthMax),
-                                   getRandom(distoWidthMin, distoWidthMax))
+            addDistortionFromCurve(randomDistortionCurve(), getRandom(distoStrengthMin, distoStrengthMax), getRandom(distoWidthMin, distoWidthMax))
         radiusFactor = getRandom(radiusRandomMin, radiusRandomMax)
-        islandBorders = centeredCircle(0.4 * radiusFactor, 1.2)
-        beachBorders = centeredCircle(0.4 * radiusFactor, 1.2)
-        lagoonBorders = centeredCircle(0.7 * radiusFactor, 1.2)
-        reefBorders = centeredCircle(0.8 * radiusFactor, 1.2)
+
+        if use_user_input:
+            islandBorders = randomizeUserCircle(original_islandBorders, 1.2, radiusFactor)
+            beachBorders = randomizeUserCircle(original_beachBorders, 1.2, radiusFactor)
+            lagoonBorders  = randomizeUserCircle(original_lagoonBorders, 1.2, radiusFactor)
+            reefBorders = randomizeUserCircle(original_reefBorders, 1.2, radiusFactor)
+        else:
+            islandBorders = centeredCircle(0.4 * radiusFactor, 1.2)
+            beachBorders = centeredCircle(0.45 * radiusFactor, 1.2)
+            lagoonBorders = centeredCircle(0.7 * radiusFactor, 1.2)
+            reefBorders = centeredCircle(0.8 * radiusFactor, 1.2)
 
         # islandTranslate = Vectors.randomVec2() * 0.2
         # islandBorders = [p + islandTranslate for p in islandBorders]
@@ -776,12 +837,12 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         # beachBorders = [p + beachTranslate for p in beachBorders]
 
         for i in range(len(islandBorders)):
-            if beachBorders[i].y < islandBorders[i].y:
-                beachBorders[i].y = islandBorders[i].y + 0.05
-            if lagoonBorders[i].y < beachBorders[i].y:
-                lagoonBorders[i].y = beachBorders[i].y + 0.05
-            if reefBorders[i].y < lagoonBorders[i].y:
-                reefBorders[i].y = lagoonBorders[i].y + 0.05
+            if beachBorders[i].norm2() < islandBorders[i].norm2():
+                beachBorders[i] = islandBorders[i] + islandBorders[i].normalized() * 0.05
+            if lagoonBorders[i].norm2() < beachBorders[i].norm2():
+                lagoonBorders[i] = beachBorders[i] + beachBorders[i].normalized() * 0.05
+            if reefBorders[i].norm2() < lagoonBorders[i].norm2():
+                reefBorders[i] = lagoonBorders[i] + lagoonBorders[i].normalized() * 0.05
 
         islandSketch.sketches[0].setCurve(islandBorders)
         islandSketch.sketches[1].setCurve(beachBorders)
@@ -790,21 +851,29 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
 
         _randomProfileCurve = [0.9627757352941178, 0.897671568627451, 0.8425245098039216, 0.775888480392157, 0.6893382352941178, 0.6479779411764706, 0.5974264705882353, 0.5606617647058822, 0.5392156862745099, 0.508578431372549, 0.4986213235294116, 0.48406862745098034, 0.4810049019607843, 0.4779411764705883, 0.4756433823529411, 0.47411151960784303, 0.4595588235294117, 0.4564950980392156, 0.44117647058823517, 0.431985294117647, 0.42585784313725483, 0.315563725490196, 0.2481617647058823, 0.015318627450980338, 0.015318627450980338, 0.015, 0.01, 0.001, 0.0, 0.0] #resizeArray([1.0, 0.0], 10)
         _randomResistanceCurve = [0.7429534313725492, 0.7153799019607845, 0.6755514705882353, 0.626531862745098, 0.5821078431372548, 0.5238970588235294, 0.42585784313725483, 0.27037377450980393, 0.1470588235294117, 0.0850183823529411, 0.036764705882352866, 0.03063725490196073, 0.027573529411764608, 0.027573529411764608, 0.027573529411764608, 0.039828431372548934, 0.06127450980392152, 0.08272058823529405, 0.10569852941176466, 0.15624999999999994, 0.22212009803921565, 0.3117340686274509, 0.4840686274509804, 0.6441482843137254, 0.7467830882352942, 0.8620689655172414, 0.04901960784313719, 0.0337009803921568, 0.021446078431372473, 0.003063725490196012]
+        if use_user_input:
+            _randomProfileCurve = [p.y for p in original_profile]
+            _randomResistanceCurve = [p.y for p in original_resistance]
         randomProfileCurve = []
         randomResistanceCurve = []
         for i in range(len(_randomProfileCurve)):
-            randomProfileCurve.append(_randomProfileCurve[i] * (1.0 + n.noise2(i / 100, iSample * 10000) * profileRandomness))
-            randomResistanceCurve.append(_randomResistanceCurve[i] * (1.0 + n.noise2(i / 100, (iSample + 100) * 10000) * resistanceRandomness))
+            randomProfileCurve.append(_randomProfileCurve[i] * (1.0 + n.noise2(i / 15, iSample * 10000) * profileRandomness))
+            randomResistanceCurve.append(_randomResistanceCurve[i] * (1.0 + n.noise2(i / 15, (iSample + 100) * 10000) * resistanceRandomness))
+            # print(f"Diff {i}: {randomProfileCurve[-1] - _randomProfileCurve[i]} (rand: {profileRandomness}) => from {_randomProfileCurve[i]} to {randomProfileCurve[-1] }")
         islandSketch.profileSketch.setCurve(randomProfileCurve)
         islandSketch.resistanceSketch.setCurve(randomResistanceCurve)
 
-        coralMaxHeight = getSequences(islandSketch.profileSketch)[2][2][-1]
-        coralMinHeight = getSequences(islandSketch.profileSketch)[3][2][0]
 
-        islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
+        h, f, d = islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
 
-        # distortionMaps = distortionMaps[:1]
-        # singleDistortionMap = initialDistoMap(20, 20)
+    if use_user_input:
+        islandSketch.sketches[0].setCurve(original_islandBorders)
+        islandSketch.sketches[1].setCurve(original_beachBorders)
+        islandSketch.sketches[2].setCurve(original_lagoonBorders)
+        islandSketch.sketches[3].setCurve(original_reefBorders)
+        islandSketch.profileSketch.setCurve(original_profile)
+        islandSketch.resistanceSketch.setCurve(original_resistance)
+        islandSketch.update()
 
 
 
@@ -812,6 +881,7 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
 def main():
     # random.seed(42)
     global fig2
+    global axesResults
     # global distortionMaps
     global singleDistortionMap
     # fig2 = plt.figure()
@@ -906,7 +976,7 @@ def main():
         # print(coralMinHeight, coralMaxHeight, subsidence, lagoonSequence + reefSequence)
         # print("Profile:", [p.y for p in islandSketch.profileSketch.getCurve()])
         # print("Resistance", [p.y for p in islandSketch.resistanceSketch.getCurve()])
-        h, f, d = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="result_height")
+        h, f, d = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="result_height", randomize_parameters=False)
         axesResults[0].imshow(h)
         axesResults[1].imshow(f)
         axesResults[2].imshow(d)
@@ -917,7 +987,7 @@ def main():
 
     def genDataset():
         print(f"Generating dataset at {dataset_path}heightmaps/")
-        createDatasetOfRandomIslands(islandSketch, 500)
+        createDatasetOfRandomIslands(islandSketch, 2, use_user_input=True)
 
 
     distance_button.on_clicked(lambda e: genIsland()) # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))
