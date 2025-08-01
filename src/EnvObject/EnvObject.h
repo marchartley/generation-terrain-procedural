@@ -147,6 +147,7 @@ public:
     static void precomputeTerrainProperties(const GridF &heightmap, float waterLevel, float maxHeight);
     static void recomputeTerrainPropertiesForObject(std::string objectName);
     static void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
+    static void recomputeFlow();
 
     static void reset();
 

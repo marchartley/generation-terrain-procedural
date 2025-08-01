@@ -587,8 +587,11 @@ void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimen
 Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, const Vector3& minPos, const Vector3& maxPos)
 {
     float stepSize = .1f;
-
-    AABBox myAABBox(Vector3::max(minPos, Vector3(0, 0, this->heights.min())), Vector3::min(maxPos, this->getDimensions()));
+    // AABBox myAABBox(Vector3::max(minPos, Vector3(2.f * stepSize, 2.f * stepSize, this->heights.min() - 2.f * stepSize)), Vector3::min(maxPos, this->getDimensions() + Vector3(2.f) * stepSize));
+    Vector3 minBound = Vector3::max(minPos.xy(), Vector3(0, 0, 0));
+    minBound.z = this->heights.min();
+    Vector3 maxBound = Vector3::min(maxPos, this->getDimensions());
+    AABBox myAABBox(minBound, maxBound);
     Vector3 currPos = origin;
     Vector3 dir = _dir.normalized();
 
@@ -605,7 +608,6 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
             return currPos;
         currPos += dir;
     }
-//    std::cout << currPos << " is in the ground? " << this->checkIsInGround(currPos) << " -> " << myAABBox << std::endl;
     return Vector3(false);
 /*
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());

@@ -540,7 +540,7 @@ int main(int argc, char *argv[])
             setenv(key.c_str(), val.c_str(), 1);
 //        }
     }
-    /* Unit test skeletonizeToBSplines */
+    /* Unit test skeletonizeToBSplines
     // Diagonal
     const int imgSize = 500;
     GridF testGrid(Vector3{imgSize, imgSize, 1}, 0.0f);
@@ -612,7 +612,7 @@ int main(int argc, char *argv[])
     Plotter::get()->addImage(testPolyline)->setNormalizedModeImage(true)->exec();
     return 0;
     //OpenFoamParser::createSimulationFile("OpenFOAM/simple", GridF());
-
+    */
 /*
     int size = 60;
     int nbSamples = 100;

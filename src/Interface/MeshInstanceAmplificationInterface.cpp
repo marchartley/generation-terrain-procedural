@@ -7,6 +7,7 @@
 #include "EnvObject/EnvArea.h"
 
 #include "Interface/TerrainGenerationInterface.h"
+#include "Interface/EnvObjsInterface.h"
 
 MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* parent)
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
@@ -353,6 +354,8 @@ void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string 
 //            #pragma omp parallel for
         for (size_t i = 0; i < nbElements; i++) {
             QString& dir = paths[i];
+
+            std::cout << "Opening: " << dir.toStdString() << std::endl;
             // Normalize it and move it upward so the anchor is on the ground
             meshType.possibleMeshes[i] = Mesh(shader);
 
@@ -506,8 +509,16 @@ void InstantiationMeshOption::add(int index, const Vector3 &position, float size
 }
 
 
-nlohmann::json InstantiationMeshOption::currentInstancesToJSON()
+nlohmann::json InstantiationMeshOption::currentInstancesToJSON(GridF scoreMap)
 {
+    auto newObject = EnvObject::availableObjects[this->name];
+    auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
+    GridF scores(Vector3(100, 100, 1));
+    scores.iterateParallel([&](const Vector3& p) {
+        scores[p] = fitFunc(p);
+    });
+    scores.normalize();
+
     nlohmann::json main;
     for (int i = 0; i < this->positions.size(); i++) {
 
@@ -522,6 +533,9 @@ nlohmann::json InstantiationMeshOption::currentInstancesToJSON()
 
         Vector3 angle = Vector3(0, 0, -(orientation.getAngleWith(Vector3(0, 1, 0))));
         json["rotation"] = std::vector<float>({angle.x, angle.y, angle.z});
+
+        if (!scoreMap.empty())
+            json["score"] = scores.interpolate(pos.xy());
 
         main.push_back(json);
     }

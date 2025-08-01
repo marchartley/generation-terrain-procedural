@@ -32,7 +32,7 @@ struct InstantiationMeshOption {
     void clear();
     void add(int index, const Vector3& position, float size, const Vector3& orientation);
 
-    nlohmann::json currentInstancesToJSON();
+    nlohmann::json currentInstancesToJSON(GridF scoreMap = GridF());
 
 };
 

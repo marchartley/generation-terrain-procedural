@@ -194,7 +194,7 @@ def addDistortions(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, posit
 #
 #
 # def main():
-#     dataset_folder = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
+#     dataset_folder = "/media/marc/Data/synthetic_terrains_dataset/"
 #     heightmaps_folder = dataset_folder + "heightmaps/"
 #     features_folder = dataset_folder + "features/"
 #     distortions_folder = dataset_folder + "distortions/"
@@ -293,7 +293,7 @@ def addDistortions(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, posit
 #             # plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
 #             # plt.show()
 def main():
-    dataset_folder = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
+    dataset_folder = "/media/marc/Data/synthetic_terrains_dataset/"
     heightmaps_folder = dataset_folder + "heightmaps/"
     features_folder = dataset_folder + "features/"
     distortions_folder = dataset_folder + "distortions/"

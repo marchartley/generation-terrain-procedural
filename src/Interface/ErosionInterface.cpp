@@ -404,7 +404,9 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLUID_SIMULATION) {
 
                 } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-
+                    waterFlowfield = EnvObject::flowfield;
+                    airFlowfield = EnvObject::flowfield;
+                    std::cout << "Using ENVOBJS" << std::endl;
                 }
             });
 
@@ -994,6 +996,7 @@ std::function<Vector3 (Vector3)> ErosionInterface::computeFlowfieldFunction()
         };
     } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
         auto fluidSim = EnvObject::flowfield.resize(voxelGrid->getDimensions());
+        std::cout << fluidSim.toString() << std::endl;
 
         flowfieldFunction = [&](const Vector3& pos) {
             return fluidSim.at(pos);
@@ -1373,23 +1376,23 @@ QLayout *ErosionInterface::createGUI()
     QObject::connect(displayTrajectoriesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayTrajectories = checked; });
     QObject::connect(displayBoundariesButton, &QCheckBox::toggled, this, [&](bool checked) { this->displayBoundaries = checked; });
 
-    QObject::connect(applyOnVoxels, &QRadioButton::toggled, this, [&]() { this->applyOn = EROSION_APPLIED::DENSITY_VOXELS; });
-    QObject::connect(applyOnHeightmap, &QRadioButton::toggled, this, [&]() { this->applyOn = EROSION_APPLIED::HEIGHTMAP; });
-    QObject::connect(applyOnImplicit, &QRadioButton::toggled, this, [&]() { this->applyOn = EROSION_APPLIED::IMPLICIT_TERRAIN; });
-    QObject::connect(applyOnLayers, &QRadioButton::toggled, this, [&]() { this->applyOn = EROSION_APPLIED::LAYER_TERRAIN; });
+    QObject::connect(applyOnVoxels, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::DENSITY_VOXELS; });
+    QObject::connect(applyOnHeightmap, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::HEIGHTMAP; });
+    QObject::connect(applyOnImplicit, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::IMPLICIT_TERRAIN; });
+    QObject::connect(applyOnLayers, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->applyOn = EROSION_APPLIED::LAYER_TERRAIN; });
 
-    QObject::connect(useBasicFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = FLOWFIELD_TYPE::BASIC; });
-    QObject::connect(useImageFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_IMAGE; });
-    QObject::connect(useSimulatedFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = FLOWFIELD_TYPE::FLUID_SIMULATION; });
-    QObject::connect(useEnvObjFlowfield, &QRadioButton::toggled, this, [&]() { this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS; });
+    QObject::connect(useBasicFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::BASIC; });
+    QObject::connect(useImageFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_IMAGE; });
+    QObject::connect(useSimulatedFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLUID_SIMULATION; });
+    QObject::connect(useEnvObjFlowfield, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->flowfieldUsed = FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS; });
 
     QObject::connect(browseWaterFlow, &QPushButton::pressed, this, [=]() { this->browseWaterFlowFromFile(); labWater->setText("Water: " + QString::fromStdString(getFilename(this->waterFlowImagePath)));});
     QObject::connect(browseAirFlow, &QPushButton::pressed, this, [=]() { this->browseAirFlowFromFile(); labAir->setText("Air: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
 
-    QObject::connect(useRandomDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = DENSITY_TYPE::RANDOM_DENSITY; });
-    QObject::connect(useLayeredDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = DENSITY_TYPE::LAYERED_DENSITY; });
-    QObject::connect(useNativeDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = DENSITY_TYPE::NATIVE; });
-    QObject::connect(useImageDensity, &QRadioButton::toggled, this, [&]() { this->densityUsed = DENSITY_TYPE::DENSITY_IMAGE; });
+    QObject::connect(useRandomDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::RANDOM_DENSITY; });
+    QObject::connect(useLayeredDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::LAYERED_DENSITY; });
+    QObject::connect(useNativeDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::NATIVE; });
+    QObject::connect(useImageDensity, &QRadioButton::toggled, this, [&](bool checked) { if (!checked) return; this->densityUsed = DENSITY_TYPE::DENSITY_IMAGE; });
     QObject::connect(densityFieldFileChooser, &QPushButton::pressed, this, [=]() { this->browseDensityFieldFromFile(); labAir->setText("File: " + QString::fromStdString(getFilename(this->airFlowImagePath)));} );
 
     QObject::connect(lotsOfTestsButton, &QPushButton::pressed, this, &ErosionInterface::testManyManyErosionParameters);
