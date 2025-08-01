@@ -103,7 +103,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
 
     particle.capacity = particle.properties->maxCapacity * initialCapacity;
 
-    float flowfieldInfluence = 50.0;
+    float flowfieldInfluence = 1.0;
     int maxSteps = 500 / dt; // An estimation of how many step we need
     int steps = maxSteps;
     int maxBounces = (maxCollisions < 0 ? 10000 : maxCollisions);
@@ -130,7 +130,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
 
         particle.force *= 0.f;
         particle.addForce(justGravity);
-//        particle.addVelocity(justFlow * flowfieldInfluence * dt);
+       particle.addVelocity(justFlow * flowfieldInfluence * dt);
         std::vector<Vector3> positionsWithBounces = particle.bounce(dt, boundariesTree);
         Vector3 nextPos = positionsWithBounces.back();
         bool collisionsOccured = positionsWithBounces.size() > 1;

@@ -7,6 +7,7 @@ import threading
 import time
 
 import curves
+from Python_tests.curves import catmull_rom_spline
 from Vectors import Vector2D, Vector3D, line_intersection
 
 
@@ -123,6 +124,7 @@ class LineBuilder:
 
     def reset(self) -> 'LineBuilder':
         self.points = []
+        self.drawableCurve = []
         # self.draw()
         for callback in self.callbacksOnChange:
             callback()
@@ -183,7 +185,8 @@ class LineBuilder:
     def draw(self, forceRedraw = True):
         curve = self.getCurve()
         c1 = curve
-        c2 = curve  # self.points
+        # if len(curve) > 1:
+        #     c1 = curves.catmull_rom_chain(curve, 100, False)
         self.line.set_data([v.x for v in c1], [v.y for v in c1])
         self.line.set_linewidth(3.0 if self.active else 2.0)
         # ax: plt.Axes = self.line.axes

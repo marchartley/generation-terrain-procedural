@@ -221,6 +221,7 @@ QLayout *EnvObjsInterface::createGUI()
     ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
     CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
+    ButtonElement* saveForRendersButton = new ButtonElement("Save for render", [&]() { this->saveForRenders(); });
 
     ButtonElement* instantiaABCbutton = new ButtonElement("Instantiate ABC", [&]() {
         this->instantiateSpecific("CoralPolypFlatA", GridF(), false);
@@ -267,6 +268,7 @@ QLayout *EnvObjsInterface::createGUI()
 
     ButtonElement* editFocusAreaButton = new ButtonElement("Edit focus", [&]() { this->manualModificationOfFocusArea(); });
     ButtonElement* editFlowfieldButton = new ButtonElement("Edit flowfield", [&]() { this->manualModificationOfFlowfield(); });
+    ButtonElement* resetFlowfieldButton = new ButtonElement("Reset flow", [&]() { this->resetFlowfield(); });
     ButtonElement* showElementsOnCanvasButton = new ButtonElement("Show all", [&]() { this->showAllElementsOnPlotter(); });
 
     ButtonElement* saveButton = new ButtonElement("Save", [&]() {this->saveScene("EnvObjects/testEnvObjects.json");});
@@ -302,6 +304,15 @@ QLayout *EnvObjsInterface::createGUI()
         }
     });
 
+    RadioButtonElement* grabKelvinlet = new RadioButtonElement("Grab");
+    RadioButtonElement* scaleKelvinlet = new RadioButtonElement("Scale");
+    RadioButtonElement* pinchKelvinlet = new RadioButtonElement("Pinch");
+    RadioButtonElement* twistKelvinlet = new RadioButtonElement("Twist");
+    grabKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "grab"; } });
+    scaleKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "scale"; } });
+    pinchKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "pinch"; } });
+    twistKelvinlet->setOnChecked([&](bool checked) { if(checked) { this->KelvinletChoice = "twist"; } });
+
     CheckboxElement* displayCurrentsButton = new CheckboxElement("Flow", this->displayFlow);
 
 //     layout->addWidget(newObjectCreationBox->get());
@@ -328,13 +339,15 @@ QLayout *EnvObjsInterface::createGUI()
              flowErosionSlider,
              objectCombobox,
              createMultiColumnGroupUI({showButton, forceButton}, 2),
-             createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton}),
+             createHorizontalGroupUI({editFocusAreaButton, editFlowfieldButton, resetFlowfieldButton}),
              showElementsOnCanvasButton,
              objectsListWidget,
              createVerticalGroupUI({testingFitnessFormula, testingFittingFormula}),
              createHorizontalGroupUI({/*instantiaABCbutton, testPerformancesButton, */resetButton}),
              addGroovesButton,
-             createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton})
+             createVerticalGroupUI({grabKelvinlet, scaleKelvinlet, pinchKelvinlet, twistKelvinlet}),
+             createHorizontalGroupUI({label, createFromFile, saveButton, displayCurrentsButton}),
+             saveForRendersButton
     });
 
     return ui->get()->layout();
@@ -441,15 +454,39 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
     if (!this->isVisible()) return;
     if (!mouseInMap) return;
 
-    bool moveSingleVertex = event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier);
-    bool moveWholeObject = event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier);
+    if (event->button() == Qt::MouseButton::LeftButton) {
 
-    if (moveSingleVertex || moveWholeObject) {
-        this->startDraggingObject(mouseWorldPosition, moveSingleVertex);
-    }
-    else if (this->manuallyCreatingObject) {
-        bool addingPoint = event->buttons().testFlag(Qt::LeftButton);
-        this->addPointOnNewObjectCreation(mouseWorldPosition, addingPoint);
+        bool moveSingleVertex = event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier);
+        bool moveWholeObject = event->modifiers().testFlag(Qt::KeyboardModifier::ControlModifier);
+
+        if (moveSingleVertex || moveWholeObject) {
+            this->startDraggingObject(mouseWorldPosition, moveSingleVertex);
+        }
+        else if (this->manuallyCreatingObject) {
+            bool addingPoint = event->buttons().testFlag(Qt::LeftButton);
+            this->addPointOnNewObjectCreation(mouseWorldPosition, addingPoint);
+        }
+    } else if (event->button() == Qt::MouseButton::RightButton) {
+        if (event->modifiers().testFlag(Qt::KeyboardModifier::ShiftModifier)) {
+            kelvinletDraggingPoint = mouseWorldPosition.xy();
+
+            KelvinletPoint* _k;
+            if (this->KelvinletChoice == "grab") {
+                _k = new TranslateKelvinlet();
+            } else if (this->KelvinletChoice == "scale") {
+                _k = new ScaleKelvinlet();
+                _k->v = 0.1; // Don't keep the default value of 0.5 here!
+            } else if (this->KelvinletChoice == "pinch") {
+                _k = new PinchKelvinlet();
+            } else if (this->KelvinletChoice == "twist") {
+                _k = new TwistKelvinlet();
+            }
+
+            if (_k) {
+                _k->pos = mouseWorldPosition.xy();
+                this->userKelvinlets.push_back(_k);
+            }
+        }
     }
 }
 
@@ -459,6 +496,34 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
     if (!mouseWorldPosition.isValid()) return;
 
     this->moveDraggedObject(mouseWorldPosition);
+
+
+    if (this->kelvinletDraggingPoint.isValid()) {
+        KelvinletPoint* _k = dynamic_cast<KelvinletPoint*>(this->userKelvinlets.back());
+        Vector3 delta = mouseWorldPosition.xy() - _k->pos;
+
+        if (_k != nullptr) {
+            if (this->KelvinletChoice == "grab") {
+                TranslateKelvinlet* k = dynamic_cast<TranslateKelvinlet*>(_k);
+                k->force = delta;
+            } else if (this->KelvinletChoice == "scale") {
+                ScaleKelvinlet* k = dynamic_cast<ScaleKelvinlet*>(_k);
+                // k->radialScale = 5.f;
+                k->scale = delta.norm();
+            } else if (this->KelvinletChoice == "pinch") {
+                PinchKelvinlet* k = dynamic_cast<PinchKelvinlet*>(_k);
+                k->force = delta;
+            } else if (this->KelvinletChoice == "twist") {
+                TwistKelvinlet* k = dynamic_cast<TwistKelvinlet*>(_k);
+                k->force = Vector3(0, 0, delta.norm() * sign(delta.x));
+                // k->radialScale = delta.norm();
+            }
+
+            EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
+            this->updateVectorFieldVisu();
+            // Q_EMIT this->updated();
+        }
+    }
 }
 
 void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
@@ -468,6 +533,14 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
     bool destroyObjects = !mouseInMap;
 
     this->endDraggingObject(destroyObjects);
+
+    if (this->kelvinletDraggingPoint.isValid()) {
+        this->kelvinletDraggingPoint = Vector3::invalid();
+
+        this->updateVectorFieldVisu();
+        Q_EMIT this->updated();
+    }
+
 }
 
 void EnvObjsInterface::keyPressEvent(QKeyEvent *event)
@@ -482,6 +555,7 @@ void EnvObjsInterface::keyPressEvent(QKeyEvent *event)
 
 GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = false) {
     auto obj = EnvObject::availableObjects[objectName];
+    EnvObject::recomputeFlow();
     GridF score = GridF(dimensions);
     score.iterateParallel([&](const Vector3& pos) {
         score(pos) = std::max(obj->evaluate(pos), 0.f);
@@ -508,6 +582,8 @@ Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score)
         for (int iter = 0; iter < 50; iter++) {
             p += gradients(p).normalize();
         }
+        if (!p.isValid()) continue;
+
         float currentScore = score(p);
         if (currentScore > bestScore) {
             bestScore = currentScore;
@@ -871,7 +947,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
 
     if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
         displayProcessTime("Apply effects... ", [&]() {
-            bool bigChangesInMaterials = EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField);
+                bool bigChangesInMaterials = EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField + this->computeUserKelvinletField());
             //this->materialSimulationStable = !bigChangesInMaterials;
         }, verbose);
         displayProcessTime("Recompute properties... ", [&]() {
@@ -886,6 +962,8 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
                 this->simulationFlowField = dynamic_cast<WarpedFluidSimulation*>(GlobalTerrainProperties::get()->simulations[WARP])->getVelocities(EnvObject::flowfield.sizeX, EnvObject::flowfield.sizeY, EnvObject::flowfield.sizeZ);
                 this->simulationFlowField *= .1f;
                 this->fluidSimulationIsStable = true;
+
+                this->simulationFlowField *= 0.f; // WARNING TEMP !!! TO REMOVE FAST!!! FOR DEBUG ONLY
             }
 
             updateVectorFieldVisu();
@@ -958,7 +1036,7 @@ void EnvObjsInterface::updateUntilStabilization()
 
 void EnvObjsInterface::onlyUpdateFlowAndSandFromEnvObjects()
 {
-    EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField);
+    EnvObject::applyEffects(subsidedHeightmap, userFlowField + simulationFlowField + this->computeUserKelvinletField());
 }
 
 void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying, bool recomputeTerrainPropertiesForObject)
@@ -1050,6 +1128,21 @@ void EnvObjsInterface::manualModificationOfFlowfield()
     this->previewingObjectInPlotter = false;
     Plotter::get("Flowfield")->addImage(this->renderFlowfield());
     Plotter::get("Flowfield")->show();
+}
+
+void EnvObjsInterface::resetFlowfield()
+{
+    this->userFlowField.reset();
+    for (int i = 0; i < this->userKelvinlets.size(); i++)
+        delete this->userKelvinlets[i];
+    this->userKelvinlets.resize(0);
+
+    EnvObject::updateFlowfield(simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
+    this->addObjectsHeightmaps();
+    this->flowErosionSimulation();
+    this->updateVectorFieldVisu();
+    Plotter::get("Flowfield")->addImage(this->renderFlowfield());
+    Q_EMIT this->updated();
 }
 
 void EnvObjsInterface::updateObjectsList()
@@ -1644,6 +1737,9 @@ void EnvObjsInterface::resetScene()
     EnvObject::reset();
     this->simulationFlowField.reset();
     this->userFlowField.reset();
+    for (int i = 0; i < this->userKelvinlets.size(); i++)
+        delete this->userKelvinlets[i];
+    this->userKelvinlets.resize(0);
     this->materialSimulationStable = false; // We have to compute the simulation again
     for (auto& [obj, patch] : implicitPatchesFromObjects)
         delete patch;
@@ -1777,7 +1873,7 @@ GridV3 EnvObjsInterface::renderFocusArea() const
 
 GridV3 EnvObjsInterface::renderFlowfield() const
 {
-    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
     GridV3& flow = EnvObject::flowfield;
     // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
     return Plotter::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
@@ -1903,7 +1999,7 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
     });
     // EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
     this->userFlowField.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()));
+    EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
     this->updateVectorFieldVisu();
 
     this->addObjectsHeightmaps();
@@ -1961,9 +2057,9 @@ void EnvObjsInterface::addObjectsHeightmaps()
 
     float absoluteWaterLevel = voxelGrid->getSizeZ() * voxelGrid->properties->waterLevel;
 
-    GridF groundConstraintedHeights(subsidedHeightmap.getDimensions()); // Heightmaps from the ground
-    GridF waterConstraintedHeights(subsidedHeightmap.getDimensions(), -100000.f); // Heightmaps from the water level
-    GridF surfaceHeights(subsidedHeightmap.getDimensions());
+    groundConstraintedHeights = GridF(subsidedHeightmap.getDimensions()); // Heightmaps from the ground
+    waterConstraintedHeights = GridF(subsidedHeightmap.getDimensions(), -100000.f); // Heightmaps from the water level
+    surfaceHeights = GridF(subsidedHeightmap.getDimensions());
     for (auto& obj : EnvObject::instantiatedObjects) {
         if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
             GridF grid = GridF(subsidedHeightmap.getDimensions(), 0.f);
@@ -2291,6 +2387,177 @@ void EnvObjsInterface::updateVectorFieldVisu()
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &velocitiesMesh, 1.f, false, true);
 }
 
+
+
+
+
+void EnvObjsInterface::saveForRenders()
+{
+    Vector3 imageDimensions(256, 256, 1);
+    Vector3 ratio = imageDimensions / subsidedHeightmap.getDimensions();
+    float maxHeight = voxelGrid->getSizeZ();
+    GridF depthMap = (heightmap->properties->waterLevel * maxHeight) - subsidedHeightmap; // .gaussianSmooth(1.f, true));;
+
+    std::map<std::string, Vector3> featuresToColors = {
+        {"abyss", Vector3(255,   0,   0)},
+        {"reef", Vector3(  0,   0, 255)},
+        {"lagoon", Vector3(  0, 255, 255)},
+        {"coast", Vector3(  0, 255,   0)},
+        {"island", Vector3(255, 255,   0)}
+    };
+    GridV3 labels(imageDimensions, featuresToColors["abyss"]);
+    labels.iterateParallel([&](const Vector3& _p) {
+        Vector3 p = _p / ratio;
+        float depth = depthMap(p);
+
+        // Add colors for lagoons
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (toLower(obj->name) != "lagoon" && toLower(obj->name) != "smalllagoon") continue;
+            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (asArea->curve.containsXY(p, false)) {
+                labels(_p) = featuresToColors["lagoon"];
+            }
+        }
+
+        // Add colors for beaches
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (toLower(obj->name) != "beach") continue;
+            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (asArea->curve.containsXY(p, false)) {
+                labels(_p) = featuresToColors["coast"];
+            }
+        }
+
+
+        // Add colors for reefs
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (toLower(obj->name) != "reef" && toLower(obj->name) != "greatreef") continue;
+            EnvCurve* asCurve= dynamic_cast<EnvCurve*>(obj);
+            if (asCurve->curve.estimateDistanceFrom(p) < asCurve->width * .5f) {
+                labels(_p) = featuresToColors["reef"];
+            }
+        }
+
+        // Add colors for islands
+        for (auto& obj : EnvObject::instantiatedObjects) {
+            if (toLower(obj->name) != "island") continue;
+            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (asArea->curve.containsXY(p, false)) {
+                if (depth > 10)
+                    labels(_p) = featuresToColors["lagoon"];
+                else if (depthMap(p) > 0)
+                    labels(_p) = featuresToColors["coast"];
+                else
+                    labels(_p) = featuresToColors["island"];
+            }
+        }
+    });
+
+    auto flowToRGB = [&](const GridV3& flow) -> GridV3 {
+        GridV3 rgb = flow;
+        Vector3 mid(0.5, 0.5, 0.5), mini(-1, -1, -1), maxi(1, 1, 1), flowScale(0.2, 0.2, 0.2);
+        rgb.iterateParallel([&](size_t i) {
+            rgb[i] = mid + (Vector3::min(Vector3::max(rgb[i], mini), maxi) * flowScale);
+        });
+        return rgb;
+    };
+
+    auto heightmapScaling = [&](const GridF& height) -> GridF {
+        auto newHeights = (height / maxHeight);
+        newHeights.iterateParallel([&](size_t i) {
+            newHeights[i] = std::clamp(newHeights[i], 0.f, 1.f);
+        });
+        return newHeights;
+    };
+
+    std::map<std::string, GridF> objectsScores;
+    // Create all maps
+    for (auto& [name, obj] : EnvObject::availableObjects) {
+        objectsScores[name] = GridF(heightmap->getDimensions());
+    }
+    // Fill each maps
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        auto& grid = objectsScores[obj->name];
+        float evaluationScore = obj->evaluate();
+        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+            grid(asPoint->position) = std::max(grid(asPoint->position), evaluationScore);
+        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+            for (auto& p : asCurve->curve.getPath(500)){
+                grid(p) = std::max(grid(p), evaluationScore);
+            }
+        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+            grid.iterateParallel([&](const Vector3& p) {
+                if (asArea->curve.containsXY(p)) {
+                    grid(p) = std::max(grid(p), evaluationScore);
+                }
+            });
+        }
+    }
+    // Add blur + dilatation to maps
+    for (auto& [name, g] : objectsScores) {
+        GridF grid = g;
+        g = grid.dilate(true, 3.f);
+        grid = g.gaussianSmooth(2.f, true);
+        g.iterateParallel([&](size_t i) {
+            g[i] = std::max(g[i], grid[i]);
+        });
+        g.normalize();
+    }
+
+    auto saveEnvObjsToJSON = [&](std::string filename) {
+        auto meshInterface = std::static_pointer_cast<MeshInstanceAmplificationInterface>(this->findOtherInterface("meshinstance"));
+        nlohmann::json json;
+        for (auto& meshType : meshInterface->meshesOptions) {
+            json["assets"][meshType.name] = meshType.folderPath;
+            if (meshType.positions.empty()) continue;
+
+            bool ok = true;
+            auto scoreMap = computeScoreMap(meshType.name, EnvObject::flowfield.getDimensions(), ok, true);
+            json["instances"][meshType.name] = meshType.currentInstancesToJSON(scoreMap);
+        }
+
+        std::ofstream out(filename);
+        out << json.dump(1, '\t');
+        out.close();
+    };
+
+
+    // Make folder "EnvObjRendering/{time}/"
+    time_t now = std::time(0);
+    tm *gmtm = std::gmtime(&now);
+    char s_time[80];
+    std::strftime(s_time, 80, "%Y-%m-%d__%H-%M-%S", gmtm);
+    std::string folder = "EnvObjRendering/" + std::string(s_time) + "/";
+    makedir(folder);
+
+    Image(labels).writeToFile(folder + "/input_label.png");
+    Image(heightmapScaling(initialHeightmap)).writeToFile(folder + "heightmap_initial.png");
+    Image(heightmapScaling(subsidedHeightmap)).writeToFile(folder + "heightmap_subsided.png");
+    Image(heightmapScaling(groundConstraintedHeights)).writeToFile(folder + "heightmap_ground-constraint.png");
+    Image(heightmapScaling(waterConstraintedHeights)).writeToFile(folder + "heightmap_water-constraint.png");
+    Image(heightmapScaling(surfaceHeights + maxHeight * 0.5)).writeToFile(folder + "heightmap_surface-constraint.png");
+    Image(flowToRGB(userFlowField)).writeToFile(folder + "flowfield_user.png");
+    Image(flowToRGB(simulationFlowField)).writeToFile(folder + "flowfield_simu.png");
+    Image(flowToRGB(EnvObject::flowfield)).writeToFile(folder + "flowfield_total.png");
+    saveEnvObjsToJSON(folder + "terrain_saved.json");
+
+    for (auto& [name, g] : objectsScores) {
+        Image(g).writeToFile(folder + "obj_score_" + name + ".png");
+    }
+
+    for (auto& [name, material] : EnvObject::materials) {
+        Image(material.currentState.normalized()).writeToFile(folder + "material_" + name + ".png");
+    }
+    Image(EnvObject::allScalarProperties["current.vel"]).writeToFile(folder + "material_current.png");
+
+    log("Exported to '" + folder + "'.");
+}
+
+
+
+
+
+
 StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectName, int nbSamples)
 {
     std::vector<float> values(nbSamples);
@@ -2309,6 +2576,19 @@ StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectNa
     std::cout << objectName << ": " << stats.mean << " (" << stats.stdev << ")" << std::endl;
     return stats;
 
+}
+
+GridV3 EnvObjsInterface::computeUserKelvinletField() const
+{
+    GridV3 flow(this->userFlowField.getDimensions());
+    flow.iterateParallel([&](const Vector3& p) {
+        Vector3 v;
+        for (auto& kelvinlet : this->userKelvinlets) {
+            v += kelvinlet->evaluate(p);
+        }
+        flow(p) = v;
+    });
+    return flow;
 }
 
 void EnvObjsInterface::fromGanUI()

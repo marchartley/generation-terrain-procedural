@@ -1,5 +1,7 @@
 # Imports
 import argparse
+import datetime
+import time
 from collections.abc import Sequence
 
 import numpy as np
@@ -16,17 +18,17 @@ from noise import perlin
 import noise
 import coralize_my_island
 from scipy.ndimage import map_coordinates
-from matplotlib.widgets import RangeSlider, Slider
+from matplotlib.widgets import RangeSlider, Slider, CheckButtons
 import cProfile
 import pstats
 
 # Global Variables
 outputImageDims = [256, 256]
 # distortionMaps: List[List[List[Vector2D]]] = []
-singleDistortionMap: List[List[Vector2D]] = []
+singleDistortionMap = np.zeros((outputImageDims[0], outputImageDims[1], 2)) #: List[List[Vector2D]] = []
 fig, fig2 = None, None
 axesResults = []
-dataset_path = "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
+dataset_path = "/media/marc/Data/synthetic_terrains_dataset/"
 
 
 def numpyIndicesToCoords(_x: int, _y: int, sizeX: int, sizeY: int) -> Tuple[float, float] :
@@ -53,35 +55,141 @@ def coordsToFloats(x: float, y: float, sizeX: int, sizeY: int) -> Tuple[float, f
 def wyvill(x: float):
     return ((1.0 - x)**2)**3
 
-def initialDistoMap(sizeX: int, sizeY: int) -> List[List[Vector2D]]:
-    return [[Vector2D(0, 0) for _ in range(sizeY)] for _ in range(sizeX)]
+def initialDistoMap(sizeX: int, sizeY: int) -> np.ndarray: #List[List[Vector2D]]:
+    return np.zeros((sizeX, sizeY, 2)) # [[Vector2D(0, 0) for _ in range(sizeY)] for _ in range(sizeX)]
 
-def deform_image(image: np.ndarray, vector_field: np.ndarray, scale: Union[float, Tuple[float, float]] = 1.0) -> np.ndarray:
-    # Check if image and vector_field have the same dimensions
-    assert image.shape == vector_field.shape[:2], "Image and vector field must have the same dimensions"
+
+import numpy as np
+from typing import Union, Tuple, Sequence
+from scipy.ndimage import map_coordinates
+
+
+def deform_image(
+        image: np.ndarray,
+        vector_field: np.ndarray,
+        scale: Union[float, Tuple[float, float]] = 1.0,
+        interpolation: str = 'linear'
+) -> np.ndarray:
+    """
+    Deform an image using a displacement vector field.
+
+    Parameters:
+        image (np.ndarray): Input image. Can be 2D (scalar), 2D with channels (e.g., RGB), or label map.
+        vector_field (np.ndarray): Displacement field of shape (H, W, 2), containing (dx, dy) per pixel.
+        scale (float or Tuple[float, float]): Scaling for displacement vectors.
+        interpolation (str): 'linear' or 'nearest'
+
+    Returns:
+        np.ndarray: Deformed image.
+    """
+    assert interpolation in ('linear', 'nearest'), "Interpolation must be 'linear' or 'nearest'"
+    assert vector_field.shape[-1] == 2, "Vector field must have shape (H, W, 2)"
+
+    is_multichannel = image.ndim == 3 and image.shape[-1] == 3
+    is_integer_type = np.issubdtype(image.dtype, np.integer)
+
+    if interpolation == 'linear' and is_integer_type:
+        raise ValueError("Linear interpolation is not valid for integer-type data")
+
     if isinstance(scale, Sequence):
-        scaleX, scaleY = scale[0], scale[1]
+        scaleX, scaleY = scale
     else:
-        scaleX, scaleY = scale, scale
-    # Create a grid of coordinates in the original image
-    coords = np.indices(image.shape)
+        scaleX = scaleY = scale
 
-    # Adjust the coordinates based on the vector field
-    # Note that we need to invert the vector direction for proper mapping
-    displaced_coords = np.array([
-        coords[0] - (vector_field[..., 1] * scaleY),  # y-coordinates adjust
-        coords[1] - (vector_field[..., 0] * scaleX)   # x-coordinates adjust
-    ])
+    repeats = 4
+    scaleX /= repeats
+    scaleY /= repeats
+    deformed_image = np.array(image)
+    for _ in range(repeats):
+        image = np.array(deformed_image)
+        H, W = image.shape[:2]
+        coords = np.indices((H, W), dtype=np.float32)
 
-    # Perform the interpolation
-    deformed_image = map_coordinates(image, displaced_coords, order=1, mode='reflect')
+        # Invert and scale vector field
+        dx = vector_field[..., 0] * scaleX
+        dy = vector_field[..., 1] * scaleY
+        displaced_coords = np.array([
+            coords[0] - dy,  # y
+            coords[1] - dx  # x
+        ])
 
+        order = 1 if interpolation == 'linear' else 0
+        mode = 'reflect'
+
+        if is_multichannel:
+            channels = []
+            for c in range(3):
+                channel = image[..., c]
+                warped = map_coordinates(channel, displaced_coords, order=order, mode=mode)
+                channels.append(warped)
+            deformed_image = np.stack(channels, axis=-1)
+        else:
+            deformed_image = map_coordinates(image, displaced_coords, order=order, mode=mode)
+
+        if is_integer_type:
+            # Make sure to cast back to original integer type
+            deformed_image = np.rint(deformed_image).astype(image.dtype)
     return deformed_image
+#
+#
+# def deform_image(image: np.ndarray, vector_field: np.ndarray, scale: Union[float, Tuple[float, float]] = 1.0) -> np.ndarray:
+#     # Check if image and vector_field have the same dimensions
+#     assert image.shape == vector_field.shape[:2], "Image and vector field must have the same dimensions"
+#     if isinstance(scale, Sequence):
+#         scaleX, scaleY = scale[0], scale[1]
+#     else:
+#         scaleX, scaleY = scale, scale
+#     # Create a grid of coordinates in the original image
+#     coords = np.indices(image.shape)
+#
+#     # Adjust the coordinates based on the vector field
+#     # Note that we need to invert the vector direction for proper mapping
+#     displaced_coords = np.array([
+#         coords[0] - (vector_field[..., 1] * scaleY),  # y-coordinates adjust
+#         coords[1] - (vector_field[..., 0] * scaleX)   # x-coordinates adjust
+#     ])
+#
+#     # Perform the interpolation
+#     deformed_image = map_coordinates(image, displaced_coords, order=1, mode='reflect')
+#
+#     return deformed_image
 
-def getDisto(x: float, y: float, factor: float = 1.0) -> Vector2D:
+def resize_nearest_numpy(image: np.ndarray, new_shape: Tuple[int, int]) -> np.ndarray:
+    """
+    Resize a 2D or 3D image using nearest-neighbor interpolation in pure NumPy.
+
+    Parameters:
+        image (np.ndarray): Input image (H, W) or (H, W, C)
+        new_shape (Tuple[int, int]): Desired (new_height, new_width)
+
+    Returns:
+        np.ndarray: Resized image
+    """
+    orig_height, orig_width = image.shape[:2]
+    new_height, new_width = new_shape
+
+    # Calculate the ratio of old/new dimensions
+    row_scale = orig_height / new_height
+    col_scale = orig_width / new_width
+
+    # Compute source indices (nearest neighbor)
+    row_indices = (np.arange(new_height) * row_scale).astype(int)
+    col_indices = (np.arange(new_width) * col_scale).astype(int)
+
+    # Clip indices to stay within bounds
+    row_indices = np.clip(row_indices, 0, orig_height - 1)
+    col_indices = np.clip(col_indices, 0, orig_width - 1)
+
+    if image.ndim == 3:
+        return image[row_indices[:, None], col_indices[None, :], :]
+    else:
+        return image[row_indices[:, None], col_indices[None, :]]
+
+
+def getDisto(x: float, y: float, factor: float = 1.0) -> np.ndarray: # Vector2D:
     # distortion = Vector2D(x, y)
-    disto1 = bilinearInterpolation(singleDistortionMap, x, y) * factor
-    disto2 = bilinearInterpolation(singleDistortionMap, x - disto1.x, y - disto1.y) * factor
+    disto1 = numpyBilinearInterpolation(singleDistortionMap, x, y) * factor
+    disto2 = numpyBilinearInterpolation(singleDistortionMap, x - disto1[0], y - disto1[1]) * factor
     return (disto1 + disto2) / 2 #Vector2D(disto.x, disto.y)
     # for disto in reversed(distortionMaps):
     #     d = bilinearInterpolation(disto, distortion.x, distortion.y)
@@ -90,7 +198,7 @@ def getDisto(x: float, y: float, factor: float = 1.0) -> Vector2D:
     # return distortion - Vector2D(x, y)
 
 def getDistoFromIndices(_x: int, _y: int) -> Vector2D:
-    return singleDistortionMap[_x][_y] # Possibly in the wrong order
+    return Vector2D(singleDistortionMap[_x, _y, 0], singleDistortionMap[_x, _y, 1]) # Possibly in the wrong order
     # sizeX, sizeY = len(distortionMaps[0][0]), len(distortionMaps[0])
     # vec: Vector2D = Vector2D(0, 0)
     # if _x < 0 or _x >= sizeX or _y < 0 or _y >= sizeY:
@@ -99,14 +207,14 @@ def getDistoFromIndices(_x: int, _y: int) -> Vector2D:
     #     vec += distoMap[_x][_y]
     # return vec
 
-def evaluatePosAfterDistortion(prevX: float, prevY: float, factor: float = 1.0) -> Tuple[float, float]:
-    newPos = Vector2D(prevX, prevY)
+def evaluatePosAfterDistortion(prevX: float, prevY: float, factor: float = 1.0) -> np.ndarray: # Tuple[float, float]:
+    newPos = np.array([prevX, prevY]) # Vector2D(prevX, prevY)
     nbSteps = 10
     _factor = (factor / nbSteps)
     for _ in range(nbSteps):
-        distor = getDisto(newPos.x, newPos.y, _factor)
+        distor = getDisto(newPos[0], newPos[1], _factor)
         newPos -= distor
-    return newPos.x, newPos.y
+    return newPos #.x, newPos.y
     # pos = Vector2D(prevX, prevY) - getDisto(prevX, prevY) * factor
     # return pos.x, pos.y
 
@@ -146,17 +254,17 @@ def numpyNearestNeighbor(arr: np.ndarray, x: float, y: float) -> float:
     value = arr[_x, _y]
     return value
 
-def bilinearInterpolation(arr: List[List[Vector2D]], x: float, y: float) -> Vector2D:
-    sizeX, sizeY = len(arr[0]), len(arr)
+def bilinearInterpolation(arr: np.ndarray, x: float, y: float) -> Vector2D:
+    sizeX, sizeY = arr.shape[0], arr.shape[1] #len(arr[0]), len(arr)
     _x, _y = coordsToInts(x, y, sizeX, sizeY)
     __x, __y = coordsToFloats(x, y, sizeX, sizeY)
     dx, dy = __x - _x, __y - _y
-    d00 = arr[_x  ][_y  ] if _x >= 0 and _x < sizeX and _y >= 0 and _y < sizeY else Vector2D(0, 0)
-    d01 = arr[_x  ][_y+1] if _x >= 0 and _x < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else Vector2D(0, 0)
-    d10 = arr[_x+1][_y  ] if (_x+1) >= 0 and (_x+1) < sizeX and _y >= 0 and _y < sizeY else Vector2D(0, 0)
-    d11 = arr[_x+1][_y+1] if (_x+1) >= 0 and (_x+1) < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else Vector2D(0, 0)
+    d00 = arr[_x  , _y  ] if _x >= 0 and _x < sizeX and _y >= 0 and _y < sizeY else np.array([0, 0])
+    d01 = arr[_x  , _y+1] if _x >= 0 and _x < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else np.array([0, 0])
+    d10 = arr[_x+1, _y  ] if (_x+1) >= 0 and (_x+1) < sizeX and _y >= 0 and _y < sizeY else np.array([0, 0])
+    d11 = arr[_x+1, _y+1] if (_x+1) >= 0 and (_x+1) < sizeX and (_y+1) >= 0 and (_y+1) < sizeY else np.array([0, 0])
     value = (d00 * (1 - dx) + d10 * dx) * (1 - dy) + (d01 * (1 - dx) + d11 * dx) * dy
-    return value
+    return Vector2D(value[0], value[1])
 
 def clamp(x:float, mini: float, maxi: float) -> float:
     return max(min(maxi, x), mini)
@@ -375,6 +483,7 @@ class IslandSketch:
 
         def updateWaterLevel(val: float):
             self.waterLevel = val
+            self.update()
         def updateSubsidence(val: float):
             self.subsidenceFactor = val
         def updateCoralMinMax(valMinMax: Tuple[float, float]):
@@ -400,6 +509,11 @@ class IslandSketch:
         self.profileView.onChangeEnded(self.update)
         self.distortionView.onChangeEnded(self.update)
         self.resistanceView.onChangeEnded(self.update)
+
+        self.distortionStrength = 0.1
+        self.distortionWidth = 0.5
+
+        self.includeCoralSimulation = True
 
     @lru_cache
     def getSequenceID(self, pos: Vector2D):
@@ -439,11 +553,11 @@ class IslandSketch:
     def updateDistortionsAx(self):
         # sizeX = len(distortionMaps[0][0])
         # sizeY = len(distortionMaps[0])
-        sizeX = len(singleDistortionMap[0])
-        sizeY = len(singleDistortionMap)
-        addDistortionFromSketch(self.distortionView)
+        sizeX = 20 # len(singleDistortionMap[0])
+        sizeY = 20 # len(singleDistortionMap)
+        addDistortionFromSketch(self.distortionView, self.distortionStrength, self.distortionWidth)
         self.distortionSketch.reset()
-        wholeMap = [[getDistoFromIndices(x, y) for y in range(sizeY)] for x in range(sizeX)]
+        wholeMap = resize_nearest_numpy(singleDistortionMap, (sizeX, sizeY)) # [[getDistoFromIndices(x, y) for y in range(sizeY)] for x in range(sizeX)]
 
         ax: plt.Axes = self.distortionView.ax
         for l in ax.lines:
@@ -451,8 +565,10 @@ class IslandSketch:
                 l.remove()
         for _y in range(sizeY):
             for _x in range(sizeX):
-                x, y = intsToCoords(_x, _y, sizeX, sizeY)
-                ax.plot([x, x + wholeMap[_x][_y].x], [y, y + wholeMap[_x][_y].y], c="blue")
+                y, x = intsToCoords(_x, _y, sizeX, sizeY)
+                # x = - x
+                y = -y
+                ax.plot([x, x + wholeMap[_x, _y, 0]], [y, y - wholeMap[_x, _y, 1]], c="blue")
         self.distortionView.draw(False)
 
     def updateSideViewMarkers(self):
@@ -460,6 +576,7 @@ class IslandSketch:
         for line in ax.lines:
             line.set_data([], [])
 
+        ax.axhline(self.waterLevel, color="blue", linestyle="--")
         ax.vlines([0.2, 0.4, 0.6, 0.8], colors=[l.color for l in self.sketches], ymin=0.0, ymax=1.0,
                   linestyles="--")
         self.profileView.draw(False)
@@ -556,6 +673,12 @@ class IslandSketch:
                     _distMap[x, y] = t
             return _distMap
 
+        def distortionsToRGB(disto) :
+            d = np.zeros((disto.shape[0], disto.shape[1], 3))
+            d[:,:,:2] = 0.5 + np.clip(disto, -1, 1) * 0.5
+            d[:,:,2] = 0.5
+            return d
+
         # heightmap = coralize_my_island.bw2rgb(np.clip(heightmap, 0.0, 1.0))
         # plt.imsave(f"{pathHeightmap}{filePrefix}.png", heightmap)
         # features = np.array(features)
@@ -568,12 +691,13 @@ class IslandSketch:
         # return heightmap, features, distortions
 
         distances = getReefDistances(features)
-        _singleDistortionMap = np.zeros((heightmap.shape[0], heightmap.shape[1], 2))
-        for _x in range(_singleDistortionMap.shape[0]):
-            for _y in range(_singleDistortionMap.shape[1]):
-                x, y = numpyIndicesToCoords(_x, _y, _singleDistortionMap.shape[0], _singleDistortionMap.shape[1])
-                d = getDisto(x, y)
-                _singleDistortionMap[_x, _y] = [d.x, d.y]
+        # _singleDistortionMap = np.zeros((heightmap.shape[0], heightmap.shape[1], 2))
+        # for _x in range(_singleDistortionMap.shape[0]):
+        #     for _y in range(_singleDistortionMap.shape[1]):
+        #         x, y = numpyIndicesToCoords(_x, _y, _singleDistortionMap.shape[0], _singleDistortionMap.shape[1])
+        #         d = getDisto(x, y)
+        #         _singleDistortionMap[_x, _y] = [d.x, d.y]
+        _singleDistortionMap = singleDistortionMap * (1.0 - np.reshape(resistanceMap, (resistanceMap.shape[0], resistanceMap.shape[1], 1)))
 
 
         n = noise.perlin.SimplexNoise(1000)
@@ -585,7 +709,7 @@ class IslandSketch:
                 subsidence = self.subsidenceFactor
             _resistanceMap = np.clip(resistanceMap + np.array([[n.noise2(x / 30, y / 30 + 100 * i) * 0.1 * n.noise2(x / 100 + 100 * i, y / 100 + 500 * i) for x in range(heightmap.shape[0])] for y in range(heightmap.shape[1])]), 0.0, 1.0)
             _heightmap = np.array(heightmap)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=1.0, erosion_factor=0.2)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap*0+1, iterations=100, talus_angle=1.0, erosion_factor=0.2)
             _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
             _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
             _features = np.array(features)
@@ -594,24 +718,27 @@ class IslandSketch:
                     _features[x, y] = valueAsHSV(_features[x, y, 0], _features[x, y, 1], _features[x, y, 2], L=subsidence*.5)
 
             _distances = deform_image(distances, _singleDistortionMap * (1.0 - _resistanceMap).reshape((256, 256, 1)), scale = 128.0)
-
-            # _heightmap = coralize_my_island.method1Create(_heightmap, subsidence, waterLevel, coralMaxHeight, coralMinHeight)
-            _heightmap, terrain, corals = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
+            terrain = _heightmap
+            if self.includeCoralSimulation:
+                _heightmap, terrain, corals = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
             _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(5.0, 15.0), randomnessStrength=getRandom(1.0, 3.0))
-            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=1.0, solubility=0.99, evaporation=0.05, capacity=1.0)
-            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.1)
+            _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=0.5, solubility=0.99, evaporation=0.05, capacity=1.0)
+            _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.01)
             _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
-            return _heightmap, _features, distortions
+            # return _heightmap, _features, distortionsToRGB(distortions)
 
             # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", _heightmap)
             plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
-            plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
+            plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortionsToRGB(distortions))
             # plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0)))
             # plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
-            # plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortions)
+            # plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortionsToRGB(distortions))
+            if not randomize_parameters:
+                plt.imsave(f"{pathHeightmap}{filePrefix}-demo-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png", _heightmap)
+                # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
-        return _heightmap, _features, distortions #, coralize_my_island.bw2rgb(np.clip(terrain, 0.0, 1.0)), coralize_my_island.bw2rgb(np.clip(corals, 0.0, 1.0))
+        return _heightmap, _features, distortionsToRGB(distortions) #, coralize_my_island.bw2rgb(np.clip(terrain, 0.0, 1.0)), coralize_my_island.bw2rgb(np.clip(corals, 0.0, 1.0))
 
     def fractal_erosion(self, heightmap: np.ndarray, resistance: np.ndarray, radialFreq: float = 5.0, strength: float = 10.0, randomnessStrength: float = 2.0) -> np.ndarray:
         sX, sY = heightmap.shape[0], heightmap.shape[1] #20, 20
@@ -683,6 +810,7 @@ class IslandSketch:
                 resistance = self.evaluateResistance(pos)
                 resistances[_x, _y] = min(max(resistance, 0.0), 1.0)
 
+        return deform_image(resistances, singleDistortionMap)
         # distortion part :
         for _y in range(dims[1]):
             for _x in range(dims[0]):
@@ -695,8 +823,8 @@ class IslandSketch:
     def heightFeatsAndDistoFromSketches(self, featureColorVivid: float = 1.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         dims = outputImageDims
         heights: np.ndarray = np.zeros((dims[0], dims[1]))
-        features: np.ndarray = np.zeros((dims[0], dims[1]))
-        resistances: np.ndarray = np.zeros((dims[0], dims[1]))
+        features: np.ndarray = np.zeros((dims[0], dims[1], 3))
+        resistances: np.ndarray = np.zeros((dims[0], dims[1], 1))
 
         disto_heights: np.ndarray = np.zeros((dims[0], dims[1]))
         disto_features: np.ndarray = np.zeros((dims[0], dims[1], 3))
@@ -711,8 +839,11 @@ class IslandSketch:
                 h, resistance = self.evaluateHeightAndResistance(pos)
                 height = h * noiseVal
                 heights[_x, _y] = min(max(height, 0.0), 1.0)
-                features[_x, _y] = self.getSequenceID(pos)
+                features[_x, _y] = np.array([self.getSequenceID(pos), float(-1), float(len(self.sequences))])
                 resistances[_x, _y] = min(max(resistance, 0.0), 1.0)
+
+        deformation = singleDistortionMap * (1.0 - resistances)
+        return deform_image(heights, deformation, 128), deform_image(features, deformation, 128, interpolation="nearest"), singleDistortionMap
         # distortion part :
         for _x in range(dims[0]):
             for _y in range(dims[1]):
@@ -729,48 +860,98 @@ class IslandSketch:
 def addDistortionFromCurve(curve: List[Vector2D], distortionStrength: float, lineWidth: float = 0.5) -> None:
     global singleDistortionMap
     distortions = singleDistortionMap
-    sizeX, sizeY = len(distortions[0]), len(distortions)
-    for _x in range(sizeX):
-        for _y in range(sizeY):
-            x, y = intsToCoords(_x, _y, sizeX, sizeY)
-            closestLineIndex: int = -1
-            closestDistance: float = lineWidth
-            pos = Vector2D(x, y)
-            for i in range(len(curve) - 1):
-                if curve[i] == curve[i + 1]: continue
-                # Check original and wrapped distances
-                candidates = [
-                    pos,  # Original position
-                    Vector2D(pos.x - 2.0, pos.y),  # Wrapped left
-                    Vector2D(pos.x + 2.0, pos.y),  # Wrapped right
-                    Vector2D(pos.x, pos.y - 2.0),  # Wrapped up
-                    Vector2D(pos.x, pos.y + 2.0),  # Wrapped down
-                    Vector2D(pos.x - 2.0, pos.y - 2.0),  # Diagonal wrap: top-left
-                    Vector2D(pos.x + 2.0, pos.y - 2.0),  # Diagonal wrap: top-right
-                    Vector2D(pos.x - 2.0, pos.y + 2.0),  # Diagonal wrap: bottom-left
-                    Vector2D(pos.x + 2.0, pos.y + 2.0),  # Diagonal wrap: bottom-right
-                ]
+    sizeY, sizeX = distortions.shape[:2]
 
-                for candidate in candidates:
-                    distToLine = Vectors.distance2ToLine(candidate, curve[i], curve[i + 1])
-                    if distToLine < closestDistance:
-                        closestDistance = distToLine
-                        closestLineIndex = i
-                #
-                # distToLine = Vectors.distanceToLine(pos, curve[i], curve[i + 1])
-                # if distToLine < closestDistance:
-                #     closestDistance = distToLine
-                #     closestLineIndex = i
-            if closestLineIndex > -1:
-                closestDistance = math.sqrt(closestDistance)
-                distToLine = (closestDistance - 0) / (lineWidth - 0)
-                mouseMotion = (curve[closestLineIndex + 1] - curve[closestLineIndex]).normalize() * distortionStrength
-                distortions[_x][_y] += mouseMotion * wyvill(distToLine)
+    # Generate full coordinate grid, normalized to [-1, 1] (or whatever `intsToCoords` does)
+    xs = np.linspace(1, -1, sizeX)
+    ys = np.linspace(1, -1, sizeY)
+    grid_y, grid_x = np.meshgrid(ys, xs, indexing='ij')
+    positions = np.stack((grid_x, grid_y), axis=-1)  # shape: (H, W, 2)
+    pos_flat = positions.reshape(-1, 2)  # shape: (N, 2)
+
+    # Prepare data
+    num_points = pos_flat.shape[0]
+    best_distances = np.full(num_points, lineWidth**2)
+    best_directions = np.zeros((num_points, 2))
+
+    # Evaluate distances from all points to each curve segment
+    for i in range(len(curve) - 1):
+        p1 = np.array([-curve[i].x, curve[i].y])
+        p2 = np.array([-curve[i + 1].x, curve[i + 1].y])
+        if np.allclose(p1, p2):
+            continue
+
+        # Compute vectorized distances
+        v = p2 - p1
+        v_len2 = np.sum(v**2)
+        w = pos_flat - p1
+        t = np.clip(np.sum(w * v, axis=1) / v_len2, 0.0, 1.0)
+        proj = p1 + np.outer(t, v)
+        dist2 = np.sum((pos_flat - proj)**2, axis=1)
+
+        # Use masking to update only closer distances
+        mask = dist2 < best_distances
+        best_distances[mask] = dist2[mask]
+
+        direction = v / np.linalg.norm(v)
+        best_directions[mask] = direction * np.array([-1, -1])  # same for all, so no need to normalize again
+
+    # Apply distortion where distances are within threshold
+    within_range = best_distances < lineWidth**2
+    influence = wyvill(np.sqrt(best_distances[within_range]) / lineWidth)
+    motions = best_directions[within_range] * distortionStrength * influence[:, None]
+
+    # Reshape and accumulate
+    flat_distortions = distortions.reshape(-1, 2)
+    flat_distortions[within_range] += motions
+    singleDistortionMap = flat_distortions.reshape(distortions.shape)
+
+# def addDistortionFromCurve(curve: List[Vector2D], distortionStrength: float, lineWidth: float = 0.5) -> None:
+#     global singleDistortionMap
+#     distortions = singleDistortionMap
+#     sizeX, sizeY = len(distortions[0]), len(distortions)
+#     for _x in range(sizeX):
+#         for _y in range(sizeY):
+#             x, y = intsToCoords(_x, _y, sizeX, sizeY)
+#             closestLineIndex: int = -1
+#             closestDistance: float = lineWidth
+#             pos = Vector2D(x, y)
+#             for i in range(len(curve) - 1):
+#                 if curve[i] == curve[i + 1]: continue
+#                 # Check original and wrapped distances
+#                 candidates = [
+#                     pos,  # Original position
+#                     Vector2D(pos.x - 2.0, pos.y),  # Wrapped left
+#                     Vector2D(pos.x + 2.0, pos.y),  # Wrapped right
+#                     Vector2D(pos.x, pos.y - 2.0),  # Wrapped up
+#                     Vector2D(pos.x, pos.y + 2.0),  # Wrapped down
+#                     Vector2D(pos.x - 2.0, pos.y - 2.0),  # Diagonal wrap: top-left
+#                     Vector2D(pos.x + 2.0, pos.y - 2.0),  # Diagonal wrap: top-right
+#                     Vector2D(pos.x - 2.0, pos.y + 2.0),  # Diagonal wrap: bottom-left
+#                     Vector2D(pos.x + 2.0, pos.y + 2.0),  # Diagonal wrap: bottom-right
+#                 ]
+#
+#                 for candidate in candidates:
+#                     distToLine = Vectors.distance2ToLine(candidate, curve[i], curve[i + 1])
+#                     if distToLine < closestDistance:
+#                         closestDistance = distToLine
+#                         closestLineIndex = i
+#                 #
+#                 # distToLine = Vectors.distanceToLine(pos, curve[i], curve[i + 1])
+#                 # if distToLine < closestDistance:
+#                 #     closestDistance = distToLine
+#                 #     closestLineIndex = i
+#             if closestLineIndex > -1:
+#                 closestDistance = math.sqrt(closestDistance)
+#                 distToLine = (closestDistance - 0) / (lineWidth - 0)
+#                 mouseMotion = (curve[closestLineIndex + 1] - curve[closestLineIndex]).normalize() * distortionStrength
+#                 distortions[_x, _y] += np.array([mouseMotion.x, mouseMotion.y]) * wyvill(distToLine)
 
 
-def addDistortionFromSketch(distortionSketcher: SketchManagement) -> None:
+def addDistortionFromSketch(distortionSketcher: SketchManagement, strength: float, width: float) -> None:
     mousePath = distortionSketcher.lineBuilders[0].getCurve()
-    addDistortionFromCurve(mousePath, 0.1)
+    addDistortionFromCurve(mousePath, strength, width)
+    distortionSketcher.lineBuilders[0].reset()
 
 
 def updateResultsFigure(images: List[np.ndarray], _axes: List[plt.Axes]):
@@ -815,7 +996,7 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         profileRandomness = getRandom(profileRandomMin, profileRandomMax)
         resistanceRandomness = getRandom(resistanceRandomMin, resistanceRandomMax)
         n = noise.perlin.SimplexNoise(1000)
-        singleDistortionMap = initialDistoMap(30, 30)
+        singleDistortionMap = initialDistoMap(outputImageDims[0], outputImageDims[1]) #initialDistoMap(30, 30)
         for _ in range(int(getRandom(nbCurvesMin, nbCurvesMax))):
             addDistortionFromCurve(randomDistortionCurve(), getRandom(distoStrengthMin, distoStrengthMax), getRandom(distoWidthMin, distoWidthMax))
         radiusFactor = getRandom(radiusRandomMin, radiusRandomMax)
@@ -888,8 +1069,13 @@ def main():
     # axHeight, axFeatures, axDisto = fig2.subplots(1, 3)
     fig2, axesResults = plt.subplots(1, 3, squeeze=True)
     axHeight, axFeatures, axDisto = axesResults
+    axHeight.set_title("Height field")
+    axFeatures.set_title("Label map")
+    axDisto.set_title("Distortion map")
+    for ax in axesResults:
+        ax.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
 
-    singleDistortionMap = initialDistoMap(20, 20)
+    singleDistortionMap = initialDistoMap(outputImageDims[0], outputImageDims[1]) # initialDistoMap(20, 20)
 
     sketch_names = ["Island", "Beach", "Lagoon", "Reef"]
     sketch_colors = ["green", "yellow", "blue", "orange"]
@@ -905,12 +1091,14 @@ def main():
     topViewAx.set_title('Top view')
     topViewAx.set_xlim(-1, 1)
     topViewAx.set_ylim(-1, 1)
+    topViewAx.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
     sideViewAx.set_title('Side view')
     sideViewAx.set_xlim(0, 1)
     sideViewAx.set_ylim(0, 1)
     distortionsAx.set_title('Distortions')
     distortionsAx.set_xlim(-1, 1)
     distortionsAx.set_ylim(-1, 1)
+    distortionsAx.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
     resistanceAx.set_title('Resistance')
     resistanceAx.set_xlim(0, 1)
     resistanceAx.set_ylim(0, 1)
@@ -918,14 +1106,14 @@ def main():
     axWater = fig.add_axes((0.92, 0.2, 0.0225, 0.68))
     water_slider = Slider(
         ax=axWater,
-        label="Water",
+        label="Water\nlevel",
         valmin=0,
         valmax=1,
         valinit=0.4,
         orientation="vertical"
     )
 
-    axCoral = fig.add_axes((0.95, 0.2, 0.0225, 0.68))
+    axCoral = fig.add_axes((95, 0.2, 0.0225, 0.68)) #(0.95, 0.2, 0.0225, 0.68))
     coral_slider = RangeSlider(
         ax=axCoral,
         label="Corals",
@@ -937,22 +1125,25 @@ def main():
     axSubsid = fig.add_axes((0.97, 0.2, 0.0225, 0.68))
     subsid_slider = Slider(
         ax=axSubsid,
-        label="Subsidence",
+        label="Subsidence\nfactor",
         valmin=0,
         valmax=1,
         valinit=0.8,
         orientation="vertical"
     )
 
+    # islandSketch = IslandSketch(topViewAx, sideViewAx, topViewAx, sideViewAx, water_slider, coral_slider, subsid_slider, sketch_names, sketch_colors)
     islandSketch = IslandSketch(topViewAx, sideViewAx, distortionsAx, resistanceAx, water_slider, coral_slider, subsid_slider, sketch_names, sketch_colors)
 
 
     buttons: List[Button] = []
     button_size = 0.5 / len(sketch_names)
+    button_height = 0.5 / len(sketch_names)
     for i_sketch in range(len(sketch_names)):
         # islandSketches.addSketch(color = sketch_colors[i_sketch], sketch_type = sketch_types[i_sketch])
         sketchID = i_sketch
-        ax_button = fig.add_axes((0.5 + button_size * sketchID, 0.05, button_size - 0.01, 0.075))
+        # ax_button = fig.add_axes((0.5 + button_size * sketchID, 0.05, button_size - 0.01, 0.075))
+        ax_button = fig.add_axes((0.005, 0.25 + (button_height + 0.01) * i_sketch, 0.05, button_height))
         buttons.append(Button(ax_button, sketch_names[sketchID]))
         def activationFunction(id):
             def action(event):
@@ -966,12 +1157,51 @@ def main():
     ax_button_dataset = fig.add_axes((0.16, 0.05, 0.15, 0.075))
     dataset_button = Button(ax_button_dataset, "Gen dataset")
 
+    def resetWind():
+        global singleDistortionMap
+        singleDistortionMap = initialDistoMap(outputImageDims[0], outputImageDims[1])
+        islandSketch.update()
+
+    def setWindWidth(newWidth: float):
+        islandSketch.distortionWidth = newWidth
+    def setWindStrength(newStrength: float):
+        islandSketch.distortionStrength = newStrength
+
+    ax_wind_reset = fig.add_axes((0.5, 0.05, 0.08, 0.075))
+    wind_reset_button = Button(ax_wind_reset, "Reset")
+    wind_reset_button.on_clicked(lambda e: resetWind())
+
+    ax_wind_width = fig.add_axes((0.6, 0.025, 0.08, 0.075))
+    wind_width_slider = Slider(ax=ax_wind_width, label="Width", valmin=0.0, valmax=1.0, valinit=islandSketch.distortionWidth, orientation="horizontal")
+    wind_width_slider.on_changed(setWindWidth)
+    wind_width_slider.valtext.set_visible(False)
+    wind_width_slider.label.set_visible(False)
+    fig.text(0.64, 0.04, "Width", ha='center', va='top')
+
+    ax_wind_strength = fig.add_axes((0.6, 0.1, 0.08, 0.075))
+    wind_strength_slider = Slider(ax=ax_wind_strength, label="Strength", valmin=0.0, valmax=0.5, valinit=islandSketch.distortionStrength, orientation="horizontal")
+    wind_strength_slider.on_changed(setWindStrength)
+    wind_strength_slider.valtext.set_visible(False)
+    wind_strength_slider.label.set_visible(False)
+    fig.text(0.64, 0.125, "Strength", ha='center', va='top')
+
+    def setCoralSimulationActive(checkboxes):
+        islandSketch.includeCoralSimulation = checkboxes.get_status()[0]
+
+    ax_coral_checkbox = fig.add_axes((0.8, 0.04, 0.15, 0.075))
+    coral_checkbox = CheckButtons(ax=ax_coral_checkbox, labels=["Include coral simulation"], actives=[islandSketch.includeCoralSimulation])
+    coral_checkbox.on_clicked(lambda l: setCoralSimulationActive(coral_checkbox))
+    # coral_checkbox.on_changed(setWindStrength)
+    # coral_checkbox.valtext.set_visible(False)
+    # coral_checkbox.label.set_visible(False)
+    # fig.text(0.64, 0.125, "Strength", ha='center', va='top')
+
     def genIsland():
-        sequences = getSequences(islandSketch.profileSketch)
-        lagoonSequence = sequences[2][2]
-        reefSequence = sequences[3][2]
-        coralMaxHeight = lagoonSequence[len(lagoonSequence) // 2]
-        coralMinHeight = lagoonSequence[-1] #reefSequence[len(reefSequence) // 2]
+        # sequences = getSequences(islandSketch.profileSketch)
+        # lagoonSequence = sequences[2][2]
+        # reefSequence = sequences[3][2]
+        # coralMaxHeight = lagoonSequence[len(lagoonSequence) // 2]
+        # coralMinHeight = lagoonSequence[-1] #reefSequence[len(reefSequence) // 2]
         # subsidence = 0.8
         # print(coralMinHeight, coralMaxHeight, subsidence, lagoonSequence + reefSequence)
         # print("Profile:", [p.y for p in islandSketch.profileSketch.getCurve()])
@@ -1016,12 +1246,17 @@ def main():
     islandSketch.resistanceSketch.setCurve(_randomResistanceCurve)
     # for i in range(len(sketch_names)):
     #     islandSketch.sketches[i].setCurve(centeredCircle(float(i + 1) / float(len(sketch_names) + 1), 1.1))
-    islandSketch.sketches[0].setCurve(centeredCircle(0.25, 1.1))
-    islandSketch.sketches[1].setCurve(centeredCircle(0.30, 1.1))
-    islandSketch.sketches[2].setCurve(centeredCircle(0.35, 1.1))
-    islandSketch.sketches[3].setCurve(centeredCircle(0.80, 1.5))
+    islandSketch.sketches[0].setCurve(centeredCircle(0.25, 1.0))
+    islandSketch.sketches[1].setCurve(centeredCircle(0.50, 1.0))
+    islandSketch.sketches[2].setCurve(centeredCircle(0.70, 1.0))
+    islandSketch.sketches[3].setCurve(centeredCircle(0.80, 1.0))
     # createDatasetOfRandomIslands(islandSketch, 100)
     islandSketch.update()
+    # with cProfile.Profile() as profiler:
+    #     genIsland()
+    # stats = pstats.Stats(profiler)
+    # stats.sort_stats(pstats.SortKey.TIME)  # Sorts by time spent in each function
+    # stats.print_stats(20)  # Prints top 20 lines of profiling results
     plt.show()
 
     # import dataAugmentationIslandGeneration

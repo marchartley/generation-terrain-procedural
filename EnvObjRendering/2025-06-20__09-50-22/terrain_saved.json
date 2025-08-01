@@ -1,0 +1,107 @@
+{
+	"assets": {
+		"algae": "/home/marc/generation-terrain-procedural/src/assets/models/algae",
+		"arch": "/home/marc/generation-terrain-procedural/src/assets/models/arche",
+		"bigrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"boulder": "/home/marc/generation-terrain-procedural/src/assets/models/boulder",
+		"bush": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"coralpolyp": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflat": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflata": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatb": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatc": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypstrong": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"palm": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"smallrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"tree": "/home/marc/generation-terrain-procedural/src/assets/models/tree"
+	},
+	"instances": {
+		"tree": [
+			{
+				"position": [
+					57.150421142578125,
+					36.74631881713867,
+					8.636699676513672
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.5707963705062866
+				],
+				"scale": [
+					5.875526428222656,
+					5.875526428222656,
+					5.875526428222656
+				]
+			},
+			{
+				"position": [
+					58.327816009521484,
+					64.76179504394531,
+					11.63374137878418
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.5707963705062866
+				],
+				"scale": [
+					5.657492160797119,
+					5.657492160797119,
+					5.657492160797119
+				]
+			},
+			{
+				"position": [
+					40.31462097167969,
+					56.513126373291016,
+					9.949850082397461
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.5631815195083618
+				],
+				"scale": [
+					5.545304775238037,
+					5.545304775238037,
+					5.545304775238037
+				]
+			},
+			{
+				"position": [
+					27.38890266418457,
+					37.8419303894043,
+					9.955947875976563
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.6737961769104004
+				],
+				"scale": [
+					6.445610523223877,
+					6.445610523223877,
+					6.445610523223877
+				]
+			},
+			{
+				"position": [
+					8.297685623168945,
+					61.232872009277344,
+					6.499217510223389
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.1780974864959717
+				],
+				"scale": [
+					5.891546726226807,
+					5.891546726226807,
+					5.891546726226807
+				]
+			}
+		]
+	}
+}

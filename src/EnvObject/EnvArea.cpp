@@ -111,12 +111,15 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 
         GridV3 flow = GridV3(EnvObject::flowfield.getDimensions());
 
-        GridF dist(flow.getDimensions());
-        flow.iterateParallel([&] (const Vector3& pos) {
-            dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, true) ? 1.f : 0.f);
-        });
+        GridF dist(flow.getDimensions(), 1.f);
+        // flow.iterateParallel([&] (const Vector3& pos) {
+        //     dist(pos) = (box.contains(pos) && translatedCurve.contains(pos, true) ? 1.f : 0.f);
+        // });
+        for (const auto& p : translatedCurve.getPath(500)) {
+            dist(p) = 0.f;
+        }
         dist = dist.toDistanceMap(true, false);
-        GridV3 grad = dist.gradient() * -1.f;
+        GridV3 grad = dist.abs().gradient() * -1.f; // Here, "abs" is used to have a flow towards an island, and a flow outwards.
         for (auto& v : grad)
             v.normalize();
 
@@ -124,7 +127,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         float timeApply = 0.f;
 
         flow.iterateParallel([&] (const Vector3& pos) {
-            if (!box.contains(pos) || !translatedCurve.contains(pos, true))
+            if (!box.contains(pos) /*|| !translatedCurve.contains(pos, true) */)
                 return;
 
             Vector3 impact, direction, normal, binormal;
@@ -134,7 +137,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
                 Vector3 closestPos = translatedCurve.getPoint(closestTime);
 
                 float distanceToBorder = (pos - closestPos).norm();
-                float distFactor = clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
+                float distFactor = 1.f - clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
                 Vector3 previousFlow = EnvObject::flowfield(pos);
                 // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
         //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
@@ -145,7 +148,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
                 if (normal.dot(previousFlow) > 0) {
                     normal *= -1.f;
                 }
-                impact = this->flowEffect;// * distFactor;
+                impact = this->flowEffect * distFactor;
             });
             timeApply += timeIt([&]() {
                 flow.at(pos) += impact.changedBasis(direction, normal, binormal);// + impact * previousFlow;

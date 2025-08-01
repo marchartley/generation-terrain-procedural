@@ -63,6 +63,7 @@
       "binormal": 0.0
     },
     "depositionRate" : {
+    	"sand": 0.01
     },
     "absorptionRate" : {
     },
@@ -81,7 +82,7 @@
     "name": "CoralPolyp",
     "type": "point",
     "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3)",
-    "rule": "(1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 30)",
+    "rule": "(normal(current.vel * 5.0)) * (1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 3000)",
     "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
     "flow": 0.10,
     "dimensions": {
@@ -141,11 +142,137 @@
   },
   
   {
+    "name": "CoralPolypFoliose",
+    "type": "point",
+    "rule": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypfoliose - pos))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypTable",
+    "type": "point",
+    "rule": "normal((depth - 3.0) * 0.5) * ( 1 / sand) * ((currenttime - spawntime) < 3000) * (d(coralpolyptable - pos))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypEncrust",
+    "type": "point",
+    "rule": "d(depth.gradient) * (depth > 0) * ((currenttime - spawntime) < 3000) * (d(coralpolypencrust - pos)) * (polyp + 0.1)",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypBranches",
+    "type": "point",
+    "rule": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypbranches - pos))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
+    "name": "CoralPolypBoulder",
+    "type": "point",
+    "rule": "normal(d(greatreef - pos)*0.2) * (d(greatreef - pos) > 1)  * ((currenttime - spawntime) < 3000) * (d(coralpolypboulder - pos))",
+    "flow": 0.0,
+    "dimensions": {
+      "x": 10.0,
+      "y": 10.0,
+      "z": 1.0
+    },
+    "needs": {
+      "age": 10.0
+    },
+    "depositionRate": {
+    	"sand": 0.1,
+    	"polyp": 100.0
+    },
+    "absorptionRate": {
+    	"sand": 0.1
+    },
+    "minScore": 0,
+    "heightfrom": "surface",
+    "geometry": "None",
+    "material": "coral"
+  },
+  {
     "name": "CoralPolypFlat",
     "type": "point",
     "--rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (abs(currenttime - spawntime) < 20) * (d2(coralpolypflat - pos) > 2) * (depth > 0)",
-    "rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (1 - (normal(d(coralpolypflat - pos) - 2)/4)) * (depth > 0) * d(depth.gradient)",
-    "flow": 1.0,
+    "--rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (1 - (normal(d(coralpolypflat - pos) - 2)/4)) * (depth > 0) * d(depth.gradient)",
+    "rule": "(3 - normal(d((coralpolypflat - pos) ? {0, 0, 0}))) * (1 - current.vel * 2)",
+    "flow": 0.0,
     "dimensions": {
       "x": 10.0,
       "y": 10.0,
@@ -248,7 +375,7 @@
     "absorptionRate" : {
     },
     "dimensions": {
-      "x": 10,
+      "x": 5,
       "y": 70,
       "z": 3
     },
@@ -266,7 +393,9 @@
     "--rule": "(10 - (d(fault.center - pos) - abs(d(fault.start - pos) - d(fault.end - pos))^2)) max 0 * (5 - d(fault - pos)) max 0",
     "flow": 1.0,
     "depositionRate" : {
-    	"pebbles": 0.1
+    	"pebbles": 0.1,
+    	"boulders": 0.5,
+    	"shade": 1.0
     },
     "absorptionRate" : {
     },
@@ -447,7 +576,8 @@
   {
     "name": "Lagoon",
     "type": "area",
-    "rule": "(polyp) max (sand) ",
+    "rule": "(polyp) max (sand) * (1 - lagoon.inside)",
+    "-rule": "(10 - d(greatreef - pos)) min 10",
     "---rule": "((20 - d(island - pos)) * (1 - island.inside)) max 0",
     "-rule": "sand",
     "--rule": "(normal((depth - 10)/0.5)) *  (d(lagoon - pos) > 5) + (d(lagoon.center - pos) < 10)",
@@ -530,7 +660,7 @@
     	"sand": 1.0
     },
     "absorptionRate": {
-      "sand": 0.0
+      "sand": 0.5
     },
     "minScore": 0.5,
     "heightfrom": "ground",

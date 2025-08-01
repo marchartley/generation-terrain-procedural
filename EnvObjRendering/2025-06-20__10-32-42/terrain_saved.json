@@ -1,0 +1,39 @@
+{
+	"assets": {
+		"algae": "/home/marc/generation-terrain-procedural/src/assets/models/algae",
+		"arch": "/home/marc/generation-terrain-procedural/src/assets/models/arche",
+		"bigrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"boulder": "/home/marc/generation-terrain-procedural/src/assets/models/boulder",
+		"bush": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"coralpolyp": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflat": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflata": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatb": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatc": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypstrong": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"palm": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"smallrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"tree": "/home/marc/generation-terrain-procedural/src/assets/models/tree"
+	},
+	"instances": {
+		"arch": [
+			{
+				"position": [
+					58.267677307128906,
+					29.434165954589844,
+					-6.404736518859863
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-0.4747563600540161
+				],
+				"scale": [
+					36.9748649597168,
+					36.9748649597168,
+					36.9748649597168
+				]
+			}
+		]
+	}
+}

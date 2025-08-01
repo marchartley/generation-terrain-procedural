@@ -69,6 +69,7 @@ public:
 
     void manualModificationOfFocusArea();
     void manualModificationOfFlowfield();
+    void resetFlowfield();
 
     void updateObjectsList();
 
@@ -121,7 +122,11 @@ public:
 
     void updateVectorFieldVisu();
 
+    void saveForRenders();
+
     StatsValues displayStatsForObjectCreation(std::string objectName, int nbSamples = 10);
+
+    GridV3 computeUserKelvinletField() const;
 
 public:
     Mesh velocitiesMesh;
@@ -132,6 +137,8 @@ public:
 
     GridV3 userFlowField;
     GridV3 simulationFlowField;
+    std::vector<Kelvinlet*> userKelvinlets;
+    std::string KelvinletChoice = "grab";
     bool displayFlow = false;
 
     HierarchicalListUI* objectsListWidget = nullptr;
@@ -139,6 +146,11 @@ public:
     Vector3 draggingPoint = Vector3(false);
     Vector3 draggingFullObject = Vector3(false);
     Vector3 draggingHasBeenApplied = Vector3(false);
+
+
+    Vector3 kelvinletDraggingPoint = Vector3(false);
+    Vector3 kelvinletDraggingFullObject = Vector3(false);
+    Vector3 kelvinletDraggingHasBeenApplied = Vector3(false);
 
     bool displayVelocities = true;
     bool displayHighErosions = true;
@@ -190,6 +202,13 @@ public:
 
     GridF initialHeightmap;
     GridF subsidedHeightmap;
+
+
+
+
+    GridF groundConstraintedHeights;
+    GridF waterConstraintedHeights;
+    GridF surfaceHeights;
 
     bool displayDepositionOnHeightmap = true;
 

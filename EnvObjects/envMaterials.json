@@ -1,10 +1,10 @@
 [
 	{
 		"name": "sand",
-		"diffusionSpeed": 1.0,
+		"diffusionSpeed": 2.0,
 		"waterTransport": 1.0,
-		"mass": 1.0,
-		"decay": 0.9,
+		"mass": 0.010,
+		"decay": 0.999,
 		"virtualheight": 0.0
 	},
 	{
@@ -20,6 +20,14 @@
 		"diffusionSpeed": 2,
 		"waterTransport":  1,
 		"mass": 1.0,
+		"decay": 0.9,
+		"virtualheight": 0.0
+	},
+	{
+		"name": "boulders",
+		"diffusionSpeed": 1,
+		"waterTransport":  0.5,
+		"mass": 3.0,
 		"decay": 0.9,
 		"virtualheight": 0.0
 	},

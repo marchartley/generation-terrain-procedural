@@ -912,13 +912,7 @@ void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
 
 void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float waterLevel, float maxHeight)
 {
-    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
-        Vector3 waterFlow = EnvObject::flowfield(pos);
-        EnvObject::allVectorProperties["current"](pos) = waterFlow;
-        EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
-        EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
-    });
-    EnvObject::allVectorProperties["current.gradient"] = EnvObject::allScalarProperties["current.vel"].gradient();
+    EnvObject::recomputeFlow();
     for (auto& [matName, material] : EnvObject::materials) {
         EnvObject::allScalarProperties[matName] = material.currentState;
         EnvObject::allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
@@ -928,6 +922,17 @@ void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float wat
 
     EnvObject::allScalarProperties["fracture"] = EnvObject::scenario.computeTectonic(EnvObject::allScalarProperties["fracture"].getDimensions());
     EnvObject::allVectorProperties["fracture.gradient"] = EnvObject::allScalarProperties["fracture"].gradient();
+}
+
+void EnvObject::recomputeFlow()
+{
+    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
+        Vector3 waterFlow = EnvObject::flowfield(pos);
+        EnvObject::allVectorProperties["current"](pos) = waterFlow;
+        EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
+        EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
+    });
+    EnvObject::allVectorProperties["current.gradient"] = EnvObject::allScalarProperties["current.vel"].gradient();
 }
 
 void EnvObject::reset()

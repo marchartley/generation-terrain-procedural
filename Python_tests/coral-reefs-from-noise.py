@@ -7,6 +7,8 @@ import noise.perlin
 import numpy as np
 import matplotlib.pyplot as plt
 
+from Python_tests.mergedIslandGeneration import valueAsHSV
+
 
 def sign(x):
     return 1 if x > 0 else -1
@@ -39,7 +41,7 @@ arr = np.zeros((256, 256, 3))
 n = noise.perlin.SimplexNoise(period=200)
 
 X = 6
-
+val_array = np.zeros((256, 256))
 for y in range(arr.shape[0]):
     for x in range(arr.shape[1]):
         noise_val = n.noise2(x / 150, y / 150) * 0.8 + n.noise2(x / 100, y / 100) * 0.3 + n.noise2(x / 50, y / 50) * 0.2
@@ -60,8 +62,16 @@ for y in range(arr.shape[0]):
         # val = (X) - floor(max(val * X * falloff(x, y, arr.shape[1], arr.shape[0], 100), 0))
         # if val == X - 1:
         #     val = X
-        arr[y, x] = np.array(valueAsHSV(val, 0, (X), L=0.05))
+        val_array[y, x] = val
 
-plt.imsave("/media/marc/Data/NN Datasets/1/input_label.png", arr)
-plt.imshow(arr)
-plt.show()
+nbLevels = 30
+for iteration in range(nbLevels):
+    L = 0.5 * (1 - (iteration / (nbLevels - 1)))
+    for y in range(arr.shape[0]):
+        for x in range(arr.shape[1]):
+            arr[x, y] = valueAsHSV(val_array[x, y], 0, X, L=L) # np.array(valueAsHSV(val, 0, (X), L=0.05))
+
+    if iteration == 0:
+        plt.imshow(arr)
+        plt.show()
+    plt.imsave(f"/media/marc/Data/NN Datasets/1/noise_labels/input_label-{iteration}.png", arr)

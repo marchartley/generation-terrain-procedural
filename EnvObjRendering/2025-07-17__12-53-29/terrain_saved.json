@@ -1,0 +1,78 @@
+{
+	"assets": {
+		"algae": "/home/marc/generation-terrain-procedural/src/assets/models/algae",
+		"arch": "/home/marc/generation-terrain-procedural/src/assets/models/arche",
+		"bigrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"boulder": "/home/marc/generation-terrain-procedural/src/assets/models/boulder",
+		"bush": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"coralpolyp": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypboulder": "/home/marc/generation-terrain-procedural/src/assets/models/coral_boulder",
+		"coralpolypbranches": "/home/marc/generation-terrain-procedural/src/assets/models/coral_branches",
+		"coralpolypencrust": "/home/marc/generation-terrain-procedural/src/assets/models/coral_encrust",
+		"coralpolypflat": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflata": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatb": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypflatc": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolypfoliose": "/home/marc/generation-terrain-procedural/src/assets/models/coral_foliose",
+		"coralpolypstrong": "/home/marc/generation-terrain-procedural/src/assets/models/coral",
+		"coralpolyptable": "/home/marc/generation-terrain-procedural/src/assets/models/coral_table",
+		"palm": "/home/marc/generation-terrain-procedural/src/assets/models/tree",
+		"smallrock": "/home/marc/generation-terrain-procedural/src/assets/models/rocks",
+		"tree": "/home/marc/generation-terrain-procedural/src/assets/models/tree"
+	},
+	"instances": {
+		"coralpolypboulder": [
+			{
+				"position": [
+					11.029579162597656,
+					87.11637115478516,
+					0.49860644340515137
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.9837437868118286
+				],
+				"scale": [
+					5.0,
+					5.0,
+					5.0
+				]
+			},
+			{
+				"position": [
+					26.248239517211914,
+					59.340396881103516,
+					6.648517608642578
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.3077985048294067
+				],
+				"scale": [
+					5.0,
+					5.0,
+					5.0
+				]
+			},
+			{
+				"position": [
+					39.19468688964844,
+					60.793296813964844,
+					21.19391632080078
+				],
+				"rotation": [
+					0.0,
+					0.0,
+					-1.1580941677093506
+				],
+				"scale": [
+					5.0,
+					5.0,
+					5.0
+				]
+			}
+		]
+	}
+}

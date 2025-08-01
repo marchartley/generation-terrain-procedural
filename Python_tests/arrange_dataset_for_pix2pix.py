@@ -66,7 +66,7 @@ def main():
 
     args = parser.parse_args()
 
-    mainPath = args.dataset + "/" # "/media/marc/Data/test_synthetic_terrains_dataset_larger_reef/"
+    mainPath = args.dataset + "/" # "/media/marc/Data/synthetic_terrains_dataset/"
     pathHeightmap = mainPath + "heightmaps/"
     pathFeatures = mainPath + "features/"
     pathDistortions = mainPath + "distortions/"
