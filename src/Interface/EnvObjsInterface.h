@@ -33,6 +33,7 @@ public:
     void setScenarioFile(std::string filename);
 
     EnvObject* instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score);
+    EnvObject* instantiateObjectAtBestPositionWithoutScoreMap(std::string objectName, Vector3 position, const Vector3 &maxPos);
     EnvObject* instantiateObjectUsingSpline(std::string objectName, const BSpline& spline);
 
 public Q_SLOTS:

@@ -16,9 +16,9 @@ from mathutils import Euler
 
 timestamp = "latest"
 timestamp = "2025-06-20__10-32-20"
-timestamp = -5
+timestamp = -1
 
-display_objects = True
+display_objects = False
 display_flow = False # Test
 display_material = None # "sand"  # None
 

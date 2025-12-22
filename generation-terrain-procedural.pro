@@ -3,7 +3,7 @@ CONFIG += qt opengl warn_on thread rtti console embed_manifest_exe no_keywords
 
 INCLUDEPATH *= src/
 
-QMAKE_CXXFLAGS += -fopenmp
+QMAKE_CXXFLAGS += -fopenmp -g
 LIBS += -fopenmp
 
 DEFINES += "WM_LABEL_SIZE=32"
@@ -187,6 +187,7 @@ SOURCES += \
     src/Utils/Delaunay.cpp \
         src/Utils/Globals.cpp \
     src/Utils/HotreloadFile.cpp \
+    src/Utils/PSO.cpp \
     src/Utils/PbmReader.cpp \
     src/Utils/RadialShape.cpp \
         src/Utils/RewritableFile.cpp \
@@ -378,6 +379,7 @@ HEADERS += \
     src/Utils/Globals.h \
     src/Karst/KarstPathsGeneration.h \
     src/Utils/HotreloadFile.h \
+    src/Utils/PSO.h \
     src/Utils/PbmReader.h \
     src/Utils/RadialShape.h \
     src/Utils/RewritableFile.h \

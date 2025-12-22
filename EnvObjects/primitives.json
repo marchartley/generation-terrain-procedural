@@ -81,8 +81,8 @@
   {
     "name": "CoralPolyp",
     "type": "point",
-    "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3)",
-    "rule": "(normal(current.vel * 5.0)) * (1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 3000)",
+    "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3) / freshwater",
+    "rule": "(normal(current.vel * 5.0)) * (1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 30000)",
     "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
     "flow": 0.10,
     "dimensions": {
@@ -672,7 +672,7 @@
   {
     "name": "Tree",
     "type": "point",
-    "rule": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10)",
+    "rule": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10000)",
     "flow": 0.0,
     "dimensions": {
       "x": 1.0,
@@ -795,7 +795,7 @@
   {
     "name": "Bush",
     "type": "point",
-    "rule": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 10)",
+    "rule": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 1000)",
     "flow": 0.0,
     "dimensions": {
       "x": 5.0,
