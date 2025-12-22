@@ -78,6 +78,13 @@ public:
     T& operator()(size_t x, size_t y, size_t z = 0);
     T& operator()(size_t i);
     T& operator()(const Vector3& pos);
+    inline T& unsafe(size_t i) noexcept { return data[i]; }
+    inline const T& unsafe(size_t i) const noexcept { return data[i]; }
+    inline T& unsafe(size_t x, size_t y, size_t z = 0) noexcept { return data[getIndex(x, y, z)]; }
+    inline const T& unsafe(size_t x, size_t y, size_t z = 0) const noexcept { return data[getIndex(x, y, z)]; }
+    inline T& unsafe(const Vector3& p) noexcept { return data[getIndex(p.x, p.y, p.z)]; }
+    inline const T& unsafe(const Vector3& p) const noexcept { return data[getIndex(p.x, p.y, p.z)]; }
+
 
     Vector3 getDimensions() const;
     int width() const;
@@ -126,10 +133,10 @@ public:
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1) const;
     Matrix3<T> subset(const Vector3& start, const Vector3& end) const;
     Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3& upperLeftFrontCorner = Vector3());
-    Matrix3<T>& paste(const Matrix3<T> &matrixToPaste, int left, int up, int front);
+    Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, bool useInterpolation = false);
-    Matrix3<T>& add(const Matrix3<T> &matrixToAdd, int left, int up, int front, bool useInterpolation = false);
-    Matrix3<T> concat(const Matrix3<T> matrixToConcat);
+    Matrix3<T>& add(const Matrix3<T>& matrixToAdd, int left, int up, int front, bool useInterpolation = false);
+    Matrix3<T> concat(const Matrix3<T>& matrixToConcat);
 
     Matrix3<float> toDistanceMap(bool ignoreZlayer = false, bool considerBorders = true);
     Matrix3<std::complex<float>> FFT() const;
@@ -146,7 +153,7 @@ public:
     Matrix3<T>& min(const T& minVal);
     Matrix3<T>& max(const T& maxVal);
 
-    Matrix3<T>& max(const Matrix3<T> &otherMatrix, const Vector3& upperLeftFrontCorner);
+    Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
     Matrix3<T>& max(const Matrix3<T>& otherMatrix, int left, int up, int front);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, int left, int up, int front);
@@ -243,9 +250,9 @@ public:
     template<typename U>
     Matrix3<T>& operator-=(const Matrix3<U>& o);
     template<typename U>
-    Matrix3<T>& operator*=(Matrix3<U>& o);
+    Matrix3<T>& operator*=(const Matrix3<U>& o);
     template<typename U>
-    Matrix3<T>& operator/=(Matrix3<U>& o);
+    Matrix3<T>& operator/=(const Matrix3<U>& o);
     template<typename U>
     Matrix3<T>& operator*=(U o);
     template<typename U>
@@ -255,7 +262,7 @@ public:
     template<typename U>
     Matrix3<T>& operator-=(U o);
     template<typename U>
-    bool operator==(Matrix3<U> o) const;
+    bool operator==(const Matrix3<U>& o) const;
 
 
     std::string toString() const {return "Matrix3 (" + std::to_string(this->sizeX) + "x" + std::to_string(this->sizeY) + "x" + std::to_string(this->sizeZ) + ")"; }
@@ -291,6 +298,24 @@ public:
 template<class T> template<class Func>
 void Matrix3<T>::iterate(Func function) const
 {
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if constexpr (std::is_invocable_v<Func, Vector3>) {
+                    Vector3 pos(x, y, z);
+                    function(pos);
+                } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
+                    Vector3 pos(x, y, z);
+                    function(pos.x, pos.y, pos.z);
+                } else if constexpr (std::is_invocable_v<Func, int>) {
+                    function(this->getIndex(x, y, z));
+                } else {
+                    function();
+                }
+            }
+        }
+    }
+    /*
     for (size_t i = 0; i < this->size(); i++) {
         if constexpr (std::is_invocable_v<Func, Vector3>) {
             Vector3 pos = this->getCoordAsVector3(i);
@@ -303,11 +328,29 @@ void Matrix3<T>::iterate(Func function) const
         } else {
             function();
         }
-    }
+    }*/
 }
 template<class T> template<class Func>
 void Matrix3<T>::iterateReverse(Func function) const
 {
+    for (int x = this->sizeX - 1; x >= 0; x--) {
+        for (int y = this->sizeY - 1; y >= 0; y--) {
+            for (int z = this->sizeZ - 1; z >= 0; z--) {
+                if constexpr (std::is_invocable_v<Func, Vector3>) {
+                    Vector3 pos(x, y, z);
+                    function(pos);
+                } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
+                    Vector3 pos(x, y, z);
+                    function(pos.x, pos.y, pos.z);
+                } else if constexpr (std::is_invocable_v<Func, int>) {
+                    function(this->getIndex(x, y, z));
+                } else {
+                    function();
+                }
+            }
+        }
+    }
+    /*
     for (int i = int(this->size()) - 1; i >= 0; i--) {
         if constexpr (std::is_invocable_v<Func, Vector3>) {
             Vector3 pos = this->getCoordAsVector3(i);
@@ -321,10 +364,30 @@ void Matrix3<T>::iterateReverse(Func function) const
             function();
         }
     }
+    */
 }
 template<class T> template<class Func>
 void Matrix3<T>::iterateParallel(Func function) const
 {
+    #pragma omp parallel for collapse(3)
+    for (int x = 0; x < this->sizeX; x++) {
+        for (int y = 0; y < this->sizeY; y++) {
+            for (int z = 0; z < this->sizeZ; z++) {
+                if constexpr (std::is_invocable_v<Func, Vector3>) {
+                    Vector3 pos(x, y, z);
+                    function(pos);
+                } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
+                    Vector3 pos(x, y, z);
+                    function(pos.x, pos.y, pos.z);
+                } else if constexpr (std::is_invocable_v<Func, int>) {
+                    function(this->getIndex(x, y, z));
+                } else {
+                    function();
+                }
+            }
+        }
+    }
+    /*
     #pragma omp parallel for
     for (size_t i = 0; i < this->size(); i++) {
         if constexpr (std::is_invocable_v<Func, Vector3>) {
@@ -339,6 +402,7 @@ void Matrix3<T>::iterateParallel(Func function) const
             function();
         }
     }
+    */
 }
 template<class T> template<class Func>
 void Matrix3<T>::iterateRandomly(Func function) const
@@ -363,9 +427,9 @@ void Matrix3<T>::iterateRandomly(Func function) const
     }
 }
 //template<class T>
-Matrix3<float> operator-(const float a, Matrix3<float> b);
+Matrix3<float> operator-(const float a, const Matrix3<float>& b);
 //template<class T>
-Matrix3<float> operator+(const float a, Matrix3<float> b);
+Matrix3<float> operator+(const float a, const Matrix3<float>& b);
 #include <sstream>
 template<class T>
 std::string Matrix3<T>::displayValues() const
@@ -398,7 +462,7 @@ std::string Matrix3<T>::displayAsPlot(T min, T max, std::vector<std::string> pat
         out << "[Z-level = " << z << "] : \n";
         for (int y = 0; y < this->sizeY; y++) {
             for (int x = 0; x < this->sizeX; x++) {
-                T val = this->at(x, y, z);
+                T val = this->unsafe(x, y, z);
                 bool specialCharUsed = false;
                 for (const auto& [targetValue, character] : specialCharactersAtValue) {
                     if (targetValue - specialCharEpsilon <= val && val <= targetValue + specialCharEpsilon) {
@@ -434,8 +498,10 @@ Matrix3<T>::Matrix3(const Vector3& size, T initValue) : Matrix3<T>(size.x, size.
 template<class T>
 Matrix3<T>::Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ, T initValue)
 {
-    std::vector<T> data(sizeX * sizeY * sizeZ, initValue);
-    init(data, sizeX, sizeY, sizeZ);
+    this->data = std::vector<T>(sizeX * sizeY * sizeZ, initValue);
+    this->sizeX = sizeX;
+    this->sizeY = sizeY;
+    this->sizeZ = sizeZ;
 }
 template<class T>
 Matrix3<T>::Matrix3(const std::vector<T>& data, size_t sizeX, size_t sizeY, int sizeZ)
@@ -492,7 +558,7 @@ Matrix3<T> Matrix3<T>::col(int colIndex, int depthIndex)
 {
     Matrix3<T> res(1, this->sizeY, 1);
     for (int y = 0; y < this->sizeY; y++) {
-        res(0, y, 0) = this->at(colIndex, y, depthIndex);
+        res(0, y, 0) = this->unsafe(colIndex, y, depthIndex);
     }
     return res;
 }
@@ -502,7 +568,7 @@ Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
 {
     Matrix3<T> res(this->sizeX, 1, 1);
     for (int x = 0; x < this->sizeX; x++) {
-        res(x, 0, 0) = this->at(x, rowIndex, depthIndex);
+        res(x, 0, 0) = this->unsafe(x, rowIndex, depthIndex);
     }
     return res;
 }
@@ -577,7 +643,7 @@ const T &Matrix3<T>::at(int i, int j, int k) const
 
     }
     if (!raiseError)
-        return this->at(newPos);
+        return this->unsafe(newPos.x, newPos.y, newPos.z);
     else
         throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
             + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
@@ -586,7 +652,7 @@ const T &Matrix3<T>::at(int i, int j, int k) const
 template<class T>
 const T &Matrix3<T>::at(size_t i) const
 {
-    if (i >= 0 && i < sizeX * sizeY * sizeZ) {
+    if (i < data.size()) {
         return this->data[i];
     }
     int x, y, z;
@@ -613,7 +679,7 @@ const T &Matrix3<T>::at(size_t i) const
             newPos = getRepeatPosition(newPos);
     }
     if (!raiseError)
-        return this->at(newPos);
+        return this->unsafe(newPos.x, newPos.y, newPos.z);
     else
         throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
             + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
@@ -677,7 +743,7 @@ T &Matrix3<T>::at(int i, int j, int k)
 
     }
     if (!raiseError)
-        return this->at(newPos);
+        return this->unsafe(newPos.x, newPos.y, newPos.z);
     else
         throw std::out_of_range("Trying to access coord (" + std::to_string(i) + ", " + std::to_string(j) + ", " + std::to_string(k) + ") on matrix of size "
             + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
@@ -713,7 +779,7 @@ T &Matrix3<T>::at(size_t i)
             newPos = getRepeatPosition(newPos);
     }
     if (!raiseError)
-        return this->at(newPos);
+        return this->unsafe(newPos.x, newPos.y, newPos.z);
     else
         throw std::out_of_range("Trying to access index " + std::to_string(i) + " (coord " + std::to_string(x) + ", " + std::to_string(y) + ", " + std::to_string(z) + ") on matrix of size "
             + std::to_string(sizeX) + "x" + std::to_string(sizeY) + "x" + std::to_string(sizeZ) + ". Max index is " + std::to_string(sizeX * sizeY * sizeZ - 1));
@@ -809,6 +875,24 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, float x, float y, float z) {
 template<class T>
 Vector3 Matrix3<T>::gradient(const Vector3& position) const
 {
+    Vector3 p = position.floor();
+
+    auto mirror = [&](const Vector3& q) -> Vector3 {
+        return this->checkCoord(q) ? q : this->getMirrorPosition(q);
+    };
+
+    const Vector3 p0 = mirror(p);
+    const Vector3 px = mirror(p + Vector3(1, 0, 0));
+    const Vector3 py = mirror(p + Vector3(0, 1, 0));
+    const Vector3 pz = mirror(p + Vector3(0, 0, 1));
+
+    const T f0 = this->unsafe(p0);
+    return Vector3(
+        this->unsafe(px) - f0,
+        this->unsafe(py) - f0,
+        this->unsafe(pz) - f0
+        );
+    /*
     auto self = *this;
     self.raiseErrorOnBadCoord = false;
     self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
@@ -820,24 +904,7 @@ Vector3 Matrix3<T>::gradient(const Vector3& position) const
                 (self.at(flooredPos + Vector3(0, 1, 0)) - self.at(flooredPos)), // * offset.y,
                 (self.at(flooredPos + Vector3(0, 0, 1)) - self.at(flooredPos)) // * offset.z
                 );
-    /*
-    float NWB = at(flooredPos + Vector3(0, 0, 0));
-    float NEB = at(flooredPos + Vector3(1, 0, 0));
-    float SWB = at(flooredPos + Vector3(0, 1, 0));
-    float SEB = at(flooredPos + Vector3(1, 1, 0));
-    float NWT = at(flooredPos + Vector3(0, 0, 1));
-    float NET = at(flooredPos + Vector3(1, 0, 1));
-    float SWT = at(flooredPos + Vector3(0, 1, 1));
-    float SET = at(flooredPos + Vector3(1, 1, 1));
-
-    return Vector3(
-                ()
-                );
-    return Vector3(
-                at(flooredPos + Vector3(1, 0, 0)) * (1 - offset.x) + at(flooredPos) * offset.x,
-                at(flooredPos + Vector3(0, 1, 0)) * (1 - offset.y) + at(flooredPos) * offset.y,
-                at(flooredPos + Vector3(0, 0, 1)) * (1 - offset.z) + at(flooredPos) * offset.z
-                );*/
+    */
 }
 
 template<class T>
@@ -849,6 +916,68 @@ Vector3 Matrix3<T>::gradient(float posX, float posY, float posZ) const
 template<class T>
 Matrix3<T> Matrix3<T>::dilate(bool use2D, float t) const
 {
+    if (this->empty()) return *this;
+    if (t <= 0.f) return *this;
+
+    const int sx = this->sizeX, sy = this->sizeY, sz = this->sizeZ;
+    const int xy = sx * sy;
+
+    // ping-pong buffers
+    Matrix3<T> cur = *this;
+    Matrix3<T> nxt(sx, sy, sz);
+
+    auto clampi = [](int v, int lo, int hi) -> int {
+        return v < lo ? lo : (v > hi ? hi : v);
+    };
+
+    // number of full iterations + one fractional blend at the end
+    const int steps = (int)std::floor(t);
+    const float frac = t - (float)steps;
+
+    auto one_step = [&](float blend /* 1.0 for full step, frac for fractional */) {
+        // Full morphological dilation gives maxVal.
+        // If blend < 1: interpolate between original and dilated value
+        #pragma omp parallel for collapse(3)
+        for (int z = 0; z < sz; ++z) {
+            for (int y = 0; y < sy; ++y) {
+                for (int x = 0; x < sx; ++x) {
+
+                    const int z0 = use2D ? z : clampi(z - 1, 0, sz - 1);
+                    const int z1 = use2D ? z : clampi(z + 1, 0, sz - 1);
+
+                    T maxVal = cur.data[z * xy + y * sx + x];
+
+                    // iterate neighborhood with clamp borders (REPEAT_VALUE behavior)
+                    for (int zz = z0; zz <= z1; ++zz) {
+                        const int zbase = zz * xy;
+                        for (int yy = clampi(y - 1, 0, sy - 1); yy <= clampi(y + 1, 0, sy - 1); ++yy) {
+                            const int ybase = zbase + yy * sx;
+                            const int x0 = clampi(x - 1, 0, sx - 1);
+                            const int x1 = clampi(x + 1, 0, sx - 1);
+                            for (int xx = x0; xx <= x1; ++xx) {
+                                maxVal = std::max(maxVal, cur.data[ybase + xx]);
+                            }
+                        }
+                    }
+
+                    const T center = cur.data[z * xy + y * sx + x];
+                    nxt.data[z * xy + y * sx + x] = (blend >= 1.f)
+                                                        ? maxVal
+                                                        : (T)((1.f - blend) * center + blend * maxVal);
+                }
+            }
+        }
+
+        cur.data.swap(nxt.data);
+    };
+
+    // full integer steps
+    for (int i = 0; i < steps; ++i) one_step(1.f);
+    // fractional step if needed
+    if (frac > 0.f) one_step(frac);
+
+    return cur;
+    /*
     Matrix3<T> res = *this;
     while (t > 0.f) {
         Matrix3<T> copy = res;
@@ -867,35 +996,80 @@ Matrix3<T> Matrix3<T>::dilate(bool use2D, float t) const
             }
             res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * maxVal;
         });
-        /*#pragma omp parallel for collapse(3)
-        for (int x = 0; x < res.sizeX; x++) {
-            for (int y = 0; y < res.sizeY; y++) {
-                for (int z = 0; z < res.sizeZ; z++) {
-                    T maxVal = res.at(x, y, z);
-                    for (int dx = -1; dx <= 1; dx++) {
-                        for (int dy = -1; dy <= 1; dy++) {
-                            for (int dz = -1; dz <= 1; dz++) {
-                                maxVal = std::max(maxVal, copy.at(x + dx, y + dy, z + dz));
-                            }
-                        }
-                    }
-                    res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * maxVal;
-                }
-            }
-        }*/
         t -= 1.f;
     }
-    return res;
+    return res;*/
 }
 
 template<class T>
 Matrix3<T> Matrix3<T>::erode(bool use2D, float t) const
 {
+    if (this->empty()) return *this;
+    if (t <= 0.f) return *this;
+
+    const int sx = this->sizeX, sy = this->sizeY, sz = this->sizeZ;
+    const int xy = sx * sy;
+
+    // ping-pong buffers
+    Matrix3<T> cur = *this;
+    Matrix3<T> nxt(sx, sy, sz);
+
+    auto clampi = [](int v, int lo, int hi) -> int {
+        return v < lo ? lo : (v > hi ? hi : v);
+    };
+
+    // number of full iterations + one fractional blend at the end
+    const int steps = (int)std::floor(t);
+    const float frac = t - (float)steps;
+
+    auto one_step = [&](float blend /* 1.0 for full step, frac for fractional */) {
+        // Full morphological erosion gives minVal.
+        // If blend < 1: interpolate between original and eroded value
+        #pragma omp parallel for collapse(3)
+        for (int z = 0; z < sz; ++z) {
+            for (int y = 0; y < sy; ++y) {
+                for (int x = 0; x < sx; ++x) {
+
+                    const int z0 = use2D ? z : clampi(z - 1, 0, sz - 1);
+                    const int z1 = use2D ? z : clampi(z + 1, 0, sz - 1);
+
+                    T minVal = cur.data[z * xy + y * sx + x];
+
+                    // iterate neighborhood with clamp borders (REPEAT_VALUE behavior)
+                    for (int zz = z0; zz <= z1; ++zz) {
+                        const int zbase = zz * xy;
+                        for (int yy = clampi(y - 1, 0, sy - 1); yy <= clampi(y + 1, 0, sy - 1); ++yy) {
+                            const int ybase = zbase + yy * sx;
+                            const int x0 = clampi(x - 1, 0, sx - 1);
+                            const int x1 = clampi(x + 1, 0, sx - 1);
+                            for (int xx = x0; xx <= x1; ++xx) {
+                                minVal = std::min(minVal, cur.data[ybase + xx]);
+                            }
+                        }
+                    }
+
+                    const T center = cur.data[z * xy + y * sx + x];
+                    nxt.data[z * xy + y * sx + x] = (blend >= 1.f)
+                                                        ? minVal
+                                                        : (T)((1.f - blend) * center + blend * minVal);
+                }
+            }
+        }
+
+        cur.data.swap(nxt.data);
+    };
+
+    // full integer steps
+    for (int i = 0; i < steps; ++i) one_step(1.f);
+    // fractional step if needed
+    if (frac > 0.f) one_step(frac);
+
+    return cur;
+    /*
     Matrix3<T> res = *this;
     while (t > 0.f) {
         Matrix3<T> copy = res;
         copy.raiseErrorOnBadCoord = false;
-//        copy.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
         copy.defaultValueOnBadCoord = 0;
         float dt = (t < 1.f ? t : 1.f);
         copy.iterateParallel([&](int x, int y, int z) {
@@ -910,25 +1084,10 @@ Matrix3<T> Matrix3<T>::erode(bool use2D, float t) const
             }
             res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * minVal;
         });
-        /*#pragma omp parallel for collapse(3)
-        for (int x = 0; x < res.sizeX; x++) {
-            for (int y = 0; y < res.sizeY; y++) {
-                for (int z = 0; z < res.sizeZ; z++) {
-                    T minVal = res.at(x, y, z);
-                    for (int dx = -1; dx <= 1; dx++) {
-                        for (int dy = -1; dy <= 1; dy++) {
-                            for (int dz = -1; dz <= 1; dz++) {
-                                minVal = std::min(minVal, copy.at(x + dx, y + dy, z + dz));
-                            }
-                        }
-                    }
-                    res.at(x, y, z) = (1 - dt) * res.at(x, y, z) + t * minVal;
-                }
-            }
-        }*/
         t -= 1.f;
     }
     return res;
+    */
 }
 
 
@@ -972,7 +1131,7 @@ T Matrix3<T>::trace() const
         throw std::domain_error("Cannot compute the trace of the matrix : Matrix should be squared (sizeX = sizeY) but here sizeX = " + std::to_string(this->sizeX) + " and sizeY = " + std::to_string(this->sizeY));
     T sum = T();
     for (int i = 0; i < sizeX; i++)
-        sum += this->at(i, i);
+        sum += this->unsafe(i, i);
     return sum;
 }
 
@@ -983,6 +1142,7 @@ Matrix3<T>& Matrix3<T>::init(const std::vector<T>& data, size_t sizeX, size_t si
     this->sizeX = sizeX;
     this->sizeY = sizeY;
     this->sizeZ = sizeZ;
+    // std::cout << "Copied " << this->data.size() << std::endl;
     return *this;
 }
 
@@ -1056,6 +1216,7 @@ Matrix3<T> Matrix3<T>::rounded(int precision) const
 {
     for(T& val : this->data)
         val = (val * std::pow(10, precision)) / (int)std::pow(10, precision);
+    return *this;
 }
 
 template<class T>
@@ -1116,12 +1277,12 @@ Matrix3<T> Matrix3<T>::transposeXY()
 {
     Matrix3<T> res(this->getDimensions().yxz());
     res.iterateParallel([&](int x, int y, int z) {
-        res(x, y, z) = this->at(y, x, z);
+        res(x, y, z) = this->unsafe(y, x, z);
     });
     /*for (int x = 0; x < res.sizeX; x++) {
         for (int y = 0; y < res.sizeY; y++) {
             for (int z = 0; z < res.sizeZ; z++) {
-                T prevVal = this->at(y, x, z);
+                T prevVal = this->unsafe(y, x, z);
                 res.at(x, y, z) = prevVal;
             }
         }
@@ -1378,15 +1539,20 @@ Matrix3<Vector3> Matrix3<T>::gradient() {
 template<class T>
 Matrix3<Vector3> Matrix3<T>::gradient() const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
-    auto self = *this;
-    bool oldError = this->raiseErrorOnBadCoord;
-    RETURN_VALUE_ON_OUTSIDE oldReturn = this->returned_value_on_outside;
-    self.raiseErrorOnBadCoord = false;
-    self.returned_value_on_outside = MIRROR_VALUE;
+    // auto self = *this;
+    // bool oldError = this->raiseErrorOnBadCoord;
+    // RETURN_VALUE_ON_OUTSIDE oldReturn = this->returned_value_on_outside;
+    // self.raiseErrorOnBadCoord = false;
+    // self.returned_value_on_outside = MIRROR_VALUE;
+
+    auto repeat = [&](int x, int y, int z) -> Vector3 {
+        const auto p = Vector3(x, y, z);
+        return this->checkCoord(x, y, z) ? p : this->getRepeatPosition(p);
+    };
     iterateParallel([&](int x, int y, int z) {
-        returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)) * .5f,
-                                            (self.at(x, y + 1, z) - self.at(x, y - 1, z)) * .5f,
-                                            (self.at(x, y, z + 1) - self.at(x, y, z - 1)) * .5f);
+        returningGrid.at(x, y, z) = Vector3((this->unsafe(repeat(x + 1, y, z)) - this->unsafe(repeat(x - 1, y, z))) * .5f,
+                                            (this->unsafe(repeat(x, y + 1, z)) - this->unsafe(repeat(x, y - 1, z))) * .5f,
+                                            (this->unsafe(repeat(x, y, z + 1)) - this->unsafe(repeat(x, y, z - 1))) * .5f);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -1528,7 +1694,7 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
     bool useZ = (this->sizeZ > 1);
 
     iterateParallel([&](int x, int y, int z) {
-        if (this->at(x, y, z) <= 0) return;
+        if (this->unsafe(x, y, z) <= 0) return;
         if (ignoreBorders && (x == 0 || x == sizeX - 1 || y == 0 || y == sizeY - 1 || z == 0 || (ignoreZtopBorder && z == sizeZ - 1))) return;
         bool isSurface = false;
         for (int dx = -1; dx <= 1 && !isSurface; dx++) {
@@ -1545,7 +1711,7 @@ Matrix3<int> Matrix3<T>::isosurface(T isovalue, bool ignoreZtopBorder, bool igno
     /*for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                if (!this->at(x, y, z)) continue;
+                if (!this->unsafe(x, y, z)) continue;
                 bool isSurface = false;
                 for (int dx = -1; dx <= 1 && !isSurface; dx++) {
                     for (int dy = -1; dy <= 1 && !isSurface; dy++) {
@@ -1570,21 +1736,21 @@ Matrix3<T> Matrix3<T>::slice(int index, int axis) const
         result = Matrix3<T>(1, sizeY, sizeZ);
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
-                result(0, y, z) = this->at(index, y, z);
+                result(0, y, z) = this->unsafe(index, y, z);
             }
         }
     } else if (axis == 1) { // XZ
         result = Matrix3<T>(sizeX, 1, sizeZ);
         for (int x = 0; x < sizeX; x++) {
             for (int z = 0; z < sizeZ; z++) {
-                result(x, 0, z) = this->at(x, index, z);
+                result(x, 0, z) = this->unsafe(x, index, z);
             }
         }
     } else if (axis == 2) { // XY
         result = Matrix3<T>(sizeX, sizeY, 1);
         for (int x = 0; x < sizeX; x++) {
             for (int y = 0; y < sizeY; y++) {
-                result(x, y, 0) = this->at(x, y, index);
+                result(x, y, 0) = this->unsafe(x, y, index);
             }
         }
     }
@@ -1697,7 +1863,7 @@ Matrix3<T> Matrix3<T>::perlin(const Vector3 &dimensions, const Vector3& scale, i
 }
 
 template<typename T>
-Matrix3<T> operator+(Matrix3<T> a, Matrix3<T> b) {
+Matrix3<T> operator+(Matrix3<T> a, const Matrix3<T> &b) {
     a += b;
     return a;
 }
@@ -1719,7 +1885,7 @@ Matrix3<T>& Matrix3<T>::operator+=(const Matrix3<U>& o) {
     return *this;
 }
 template<typename T, typename U>
-Matrix3<T> operator-(Matrix3<T> a, const Matrix3<U>& b) {
+Matrix3<T> operator-(Matrix3<T> a, const Matrix3<U> &b) {
     a -= b;
     return a;
 }
@@ -1736,12 +1902,12 @@ Matrix3<T>& Matrix3<T>::operator-=(const Matrix3<U>& o)  {
     return *this;
 }
 template<typename T, typename U>
-Matrix3<T> operator*(Matrix3<T> a, Matrix3<U> o) {
+Matrix3<T> operator*(Matrix3<T> a, const Matrix3<U>& o) {
     a *= o;
     return a;
 }
 template<typename T> template<typename U>
-Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
+Matrix3<T>& Matrix3<T>::operator*=(const Matrix3<U> &o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices must have same sizes to be multiplied (M1 = " + this->toString() + " and M2 = " + o.toString());
     iterateParallel([&](size_t i) {
@@ -1754,12 +1920,12 @@ Matrix3<T>& Matrix3<T>::operator*=(Matrix3<U>& o) {
     return *this;
 }
 template<typename T, typename U>
-Matrix3<T> operator/(Matrix3<T>& a, const Matrix3<U>& b) {
+Matrix3<T> operator/(Matrix3<T> a, const Matrix3<U>& b) {
     a /= b;
     return a;
 }
 template<typename T> template<typename U>
-Matrix3<T>& Matrix3<T>::operator/=(Matrix3<U>& o) {
+Matrix3<T>& Matrix3<T>::operator/=(const Matrix3<U>& o) {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         throw std::domain_error("Matrices must have same sizes to be divided (M1 = " + this->toString() + " and M2 = " + o.toString());
     iterateParallel([&](size_t i) {
@@ -1837,7 +2003,7 @@ Matrix3<T>& Matrix3<T>::operator-=(U o) {
     return *this;
 }
 template<typename T> template<typename U>
-bool Matrix3<T>::operator==(Matrix3<U> o) const {
+bool Matrix3<T>::operator==(const Matrix3<U> &o) const {
     if (this->sizeX != o.sizeX || this->sizeY != o.sizeY || this->sizeZ != o.sizeZ)
         return false;
     for (size_t i = 0; i < this->data.size(); i++)
@@ -1907,14 +2073,14 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
             int z_plus_1 = (z_original >= this->sizeZ - 1 ? z_original : z_original + 1);
             float d_z = (z * rz) - z_original;
 
-            T f000 = this->at(x_original    , y_original    , z_original    );
-            T f100 = this->at(x_plus_1, y_original    , z_original    );
-            T f010 = this->at(x_original    , y_plus_1, z_original    );
-            T f110 = this->at(x_plus_1, y_plus_1, z_original    );
-            T f001 = this->at(x_original    , y_original    , z_plus_1);
-            T f101 = this->at(x_plus_1, y_original    , z_plus_1);
-            T f011 = this->at(x_original    , y_plus_1, z_plus_1);
-            T f111 = this->at(x_plus_1, y_plus_1, z_plus_1);
+            T f000 = this->unsafe(x_original    , y_original    , z_original    );
+            T f100 = this->unsafe(x_plus_1, y_original    , z_original    );
+            T f010 = this->unsafe(x_original    , y_plus_1, z_original    );
+            T f110 = this->unsafe(x_plus_1, y_plus_1, z_original    );
+            T f001 = this->unsafe(x_original    , y_original    , z_plus_1);
+            T f101 = this->unsafe(x_plus_1, y_original    , z_plus_1);
+            T f011 = this->unsafe(x_original    , y_plus_1, z_plus_1);
+            T f111 = this->unsafe(x_plus_1, y_plus_1, z_plus_1);
             // Interpolation
             T res = ((
                                       f000 * (1-d_x) + f100 * d_x) * (1-d_y) + (
@@ -1940,14 +2106,14 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                     int z_plus_1 = (z_original >= this->sizeZ - 1 ? z_original : z_original + 1);
                     float d_z = (z * rz) - z_original;
 
-                    T f000 = this->at(x_original    , y_original    , z_original    );
-                    T f100 = this->at(x_plus_1, y_original    , z_original    );
-                    T f010 = this->at(x_original    , y_plus_1, z_original    );
-                    T f110 = this->at(x_plus_1, y_plus_1, z_original    );
-                    T f001 = this->at(x_original    , y_original    , z_plus_1);
-                    T f101 = this->at(x_plus_1, y_original    , z_plus_1);
-                    T f011 = this->at(x_original    , y_plus_1, z_plus_1);
-                    T f111 = this->at(x_plus_1, y_plus_1, z_plus_1);
+                    T f000 = this->unsafe(x_original    , y_original    , z_original    );
+                    T f100 = this->unsafe(x_plus_1, y_original    , z_original    );
+                    T f010 = this->unsafe(x_original    , y_plus_1, z_original    );
+                    T f110 = this->unsafe(x_plus_1, y_plus_1, z_original    );
+                    T f001 = this->unsafe(x_original    , y_original    , z_plus_1);
+                    T f101 = this->unsafe(x_plus_1, y_original    , z_plus_1);
+                    T f011 = this->unsafe(x_original    , y_plus_1, z_plus_1);
+                    T f111 = this->unsafe(x_plus_1, y_plus_1, z_plus_1);
                     // Interpolation
                     T res = ((
                                               f000 * (1-d_x) + f100 * d_x) * (1-d_y) + (
@@ -1982,10 +2148,10 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                         if (modifiedMatrix.checkCoord(dx, dy, dz)) {
                             // If this cell hasn't been modified yet, we cannot apply the min/max operator
                             if (modifiedMatrix.at(dx, dy, dz) == 0) {
-                                newMat.at(dx, dy, dz) = this->at(x, y, z);
+                                newMat.at(dx, dy, dz) = this->unsafe(x, y, z);
                                 modifiedMatrix.at(dx, dy, dz) = 1;
                             } else {
-                                newMat.at(dx, dy, dz) = (mode == MAX_VAL ? std::max(newMat.at(dx, dy, dz), this->at(x, y, z)) : std::min(newMat.at(dx, dy, dz), this->at(x, y, z)));
+                                newMat.at(dx, dy, dz) = (mode == MAX_VAL ? std::max(newMat.at(dx, dy, dz), this->unsafe(x, y, z)) : std::min(newMat.at(dx, dy, dz), this->unsafe(x, y, z)));
                             }
                         }
                     }
@@ -2009,10 +2175,10 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
                                 if (modifiedMatrix.checkCoord(dx, dy, dz)) {
                                     // If this cell hasn't been modified yet, we cannot apply the min/max operator
                                     if (modifiedMatrix.at(dx, dy, dz) == 0) {
-                                        newMat.at(dx, dy, dz) = this->at(x, y, z);
+                                        newMat.at(dx, dy, dz) = this->unsafe(x, y, z);
                                         modifiedMatrix.at(dx, dy, dz) = 1;
                                     } else {
-                                        newMat.at(dx, dy, dz) = (mode == MAX_VAL ? std::max(newMat.at(dx, dy, dz), this->at(x, y, z)) : std::min(newMat.at(dx, dy, dz), this->at(x, y, z)));
+                                        newMat.at(dx, dy, dz) = (mode == MAX_VAL ? std::max(newMat.at(dx, dy, dz), this->unsafe(x, y, z)) : std::min(newMat.at(dx, dy, dz), this->unsafe(x, y, z)));
                                     }
                                 }
                             }
@@ -2025,12 +2191,12 @@ Matrix3<T> Matrix3<T>::resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE
         if (rz == 0) rz = 1;
         Vector3 ratio(rx, ry, rz);
         iterateParallel([&](const Vector3& pos) {
-            newMat(pos / ratio) = this->at(pos);
+            newMat(pos / ratio) = this->unsafe(pos);
         }); /*
         for (int x = 0; x < this->sizeX; x++) {
             for (int y = 0; y < this->sizeY; y++) {
                 for (int z = 0; z < this->sizeZ; z++) {
-                    T old = this->at(x, y, z);
+                    T old = this->unsafe(x, y, z);
                     Vector3 pos(x / rx, y / ry, z / rz);
                     newMat.at(pos) = old;
                 }
@@ -2061,7 +2227,7 @@ Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) cons
     // Apply interpolations
     Vector3 ratio(rx, ry, rz);
     newMat.iterateParallel([&](const Vector3& pos) {
-        newMat(pos) = this->at((pos * ratio).roundedDown());
+        newMat(pos) = this->unsafe((pos * ratio).roundedDown());
     });
     /*for (int x = 0; x < newX; x++) {
         int x_rounded = std::round(x * rx);
@@ -2069,7 +2235,7 @@ Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) cons
             int y_rounded = std::round(y * ry);
             for (int z = 0; z < newZ; z++) {
                 int z_rounded = std::round(z * rz);
-                T res = this->at(x_rounded, y_rounded, z_rounded);
+                T res = this->unsafe(x_rounded, y_rounded, z_rounded);
                 newMat.at(x, y, z) = res;
             }
         }
@@ -2103,7 +2269,7 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
         int oldY = y + startY;
         int oldZ = z + startZ;
         if (0 > oldX || oldX >= this->sizeX || 0 > oldY || oldY >= this->sizeY || 0 > oldZ || oldZ >= this->sizeZ) return;
-        croppedMatrix(x, y, z) = this->at(oldX, oldY, oldZ);
+        croppedMatrix(x, y, z) = this->unsafe(oldX, oldY, oldZ);
     });
     /*
     for (int x = startX; x < endX; x++) {
@@ -2112,7 +2278,7 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
             if (y < 0 || this->sizeY <= y) continue;
             for (int z = startZ; z < endZ; z++) {
                 if (z < 0 || this->sizeZ <= z) continue;
-                croppedMatrix.at(x - startX, y - startY, z - startZ) = this->at(x, y, z);
+                croppedMatrix.at(x - startX, y - startY, z - startZ) = this->unsafe(x, y, z);
             }
         }
     }*/
@@ -2133,12 +2299,12 @@ Matrix3<T>& Matrix3<T>::paste(const Matrix3<T>& matrixToPaste, int left, int up,
        int oldY = y - up;
        int oldZ = z - front;
        if (!checkCoord(x, y, z) || !matrixToPaste.checkCoord(oldX, oldY, oldZ)) return;
-       this->at(x, y, z) = matrixToPaste(oldX, oldY, oldZ);
+       this->unsafe(x, y, z) = matrixToPaste(oldX, oldY, oldZ);
     });/*
     for (int x = std::max(left, 0); x < std::min(matrixToPaste.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToPaste.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToPaste.sizeZ + front, this->sizeZ); z++) {
-                this->at(x, y, z) = matrixToPaste.at(x - left, y - up, z - front);
+                this->unsafe(x, y, z) = matrixToPaste.at(x - left, y - up, z - front);
             }
         }
     }*/
@@ -2156,7 +2322,7 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T>& matrixToAdd, const Vector3& upperL
             for (int y = 0; y < matrixToAdd.sizeY; y++) {
                 for (int z = 0; z < matrixToAdd.sizeZ; z++) {
     //                T& val = matrixToAdd.at(x - left, y - up, z - front);
-    //                this->at(x, y, z) += val;
+    //                this->unsafe(x, y, z) += val;
                     const T& val = matrixToAdd.at(x, y, z);
                     this->addValueAt(val, upperLeftFrontCorner + Vector3(x, y, z));
                 }
@@ -2175,13 +2341,13 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !matrixToAdd.checkCoord(x, y, z)) return;
-       this->at(oldX, oldY, oldZ) += matrixToAdd(x, y, z);
+       this->unsafe(oldX, oldY, oldZ) += matrixToAdd(x, y, z);
     });/*
     for (int x = std::max(left, 0); x < std::min(matrixToAdd.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(matrixToAdd.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(matrixToAdd.sizeZ + front, this->sizeZ); z++) {
                 const T& val = matrixToAdd.at(x - left, y - up, z - front);
-                this->at(x, y, z) += val;
+                this->unsafe(x, y, z) += val;
             }
         }
     }*/
@@ -2189,7 +2355,7 @@ Matrix3<T>& Matrix3<T>::add(const Matrix3<T> &matrixToAdd, int left, int up, int
 }
 
 template<class T>
-Matrix3<T> Matrix3<T>::concat(const Matrix3<T> matrixToConcat)
+Matrix3<T> Matrix3<T>::concat(const Matrix3<T>& matrixToConcat)
 {
     Matrix3<T> newMatrix(this->getDimensions() + matrixToConcat.getDimensions() * Vector3(1, 0, 0));
     newMatrix.paste(*this, Vector3());
@@ -2210,12 +2376,12 @@ Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, int left, int up, int
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
-       this->at(oldX, oldY, oldZ) = std::max(this->at(oldX, oldY, oldZ), otherMatrix(x, y, z));
+       this->unsafe(oldX, oldY, oldZ) = std::max(this->unsafe(oldX, oldY, oldZ), otherMatrix(x, y, z));
     });/*
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(otherMatrix.sizeZ + front, this->sizeZ); z++) {
-                this->at(x, y, z) = std::max(this->at(x, y, z), otherMatrix.at(x - left, y - up, z - front));
+                this->unsafe(x, y, z) = std::max(this->unsafe(x, y, z), otherMatrix.at(x - left, y - up, z - front));
             }
         }
     }*/
@@ -2235,12 +2401,12 @@ Matrix3<T>& Matrix3<T>::min(const Matrix3<T> &otherMatrix, int left, int up, int
        int oldY = y + up;
        int oldZ = z + front;
        if (!checkCoord(oldX, oldY, oldZ) || !otherMatrix.checkCoord(x, y, z)) return;
-       this->at(oldX, oldY, oldZ) = std::min(this->at(oldX, oldY, oldZ), otherMatrix(x, y, z));
+       this->unsafe(oldX, oldY, oldZ) = std::min(this->unsafe(oldX, oldY, oldZ), otherMatrix(x, y, z));
     });/*
     for (int x = std::max(left, 0); x < std::min(otherMatrix.sizeX + left, this->sizeX); x++) {
         for (int y = std::max(up, 0); y < std::min(otherMatrix.sizeY + up, this->sizeY); y++) {
             for (int z = std::max(front, 0); z < std::min(otherMatrix.sizeZ + front, this->sizeZ); z++) {
-                this->at(x, y, z) = std::min(this->at(x, y, z), otherMatrix.at(x - left, y - up, z - front));
+                this->unsafe(x, y, z) = std::min(this->unsafe(x, y, z), otherMatrix.at(x - left, y - up, z - front));
             }
         }
     }*/
@@ -2292,7 +2458,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
     // First pass
     distances.iterate([&](const Vector3& pos) {
         float currentVal = distances.at(pos);
-        if (!this->at(pos)) {
+        if (!this->unsafe(pos)) {
             distances.at(pos) = 0;
             return;
         }
@@ -2313,7 +2479,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
         for (int y = 0; y < distances.sizeY; y++) {
             for (int z = 0; z < distances.sizeZ; z++) {
                 float currentVal = distances.at(x, y, z);
-                if (!this->at(x, y, z)) {
+                if (!this->unsafe(x, y, z)) {
                     distances.at(x, y, z) = 0;
                     continue;
                 }
@@ -2333,7 +2499,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
     }*/
     // Second pass
     distances.iterateReverse([&](const Vector3& pos) {
-        if (!this->at(pos)) {
+        if (!this->unsafe(pos)) {
             distances.at(pos) = 0;
             return;
         }
@@ -2351,7 +2517,7 @@ Matrix3<float> Matrix3<T>::toDistanceMap(bool ignoreZlayer, bool considerBorders
     /*for (int x = distances.sizeX-1; x >= 0; x--) {
         for (int y = distances.sizeY-1; y >= 0; y--) {
             for (int z = distances.sizeZ-1; z >= 0; z--) {
-                if (!this->at(x, y, z)) {
+                if (!this->unsafe(x, y, z)) {
                     distances.at(x, y, z) = 0;
                     continue;
                 }
@@ -2391,7 +2557,7 @@ Matrix3<std::complex<float>> Matrix3<T>::FFT() const {
         for (size_t z = 0; z < dimZ; ++z) {
             std::vector<std::complex<float>> col(dimX);
             for (size_t x = 0; x < dimX; ++x) {
-                col[x] = std::complex<float>(this->at(x, y, z), 0);
+                col[x] = std::complex<float>(this->unsafe(x, y, z), 0);
             }
             std::vector<std::complex<float>> fft_result_x = fft(col); // Perform 1D FFT along X-axis
             for (size_t x = 0; x < dimX; ++x) {
@@ -2440,7 +2606,7 @@ Matrix3<std::complex<float> > Matrix3<T>::iFFT() const
             for (size_t z = 0; z < sizeZ; ++z) {
                 std::vector<std::complex<float>> col(sizeX);
                 for (size_t x = 0; x < sizeX; ++x) {
-                    col[x] = this->at(x, y, z);
+                    col[x] = this->unsafe(x, y, z);
                 }
                 std::vector<std::complex<float>> ifft_result_x = inverseFFT(col); // Perform 1D IFFT along X-axis
                 for (size_t x = 0; x < sizeX; ++x) {
@@ -2489,7 +2655,7 @@ Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
         int targetX = (onX ? this->sizeX - (x +1) : x);
         int targetY = (onY ? this->sizeY - (y +1) : y);
         int targetZ = (onZ ? this->sizeZ - (z +1) : z);
-        result.at(x, y, z) = this->at(targetX, targetY, targetZ);
+        result.at(x, y, z) = this->unsafe(targetX, targetY, targetZ);
     });
     /*for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
@@ -2497,7 +2663,7 @@ Matrix3<T> Matrix3<T>::flip(bool onX, bool onY, bool onZ)
                 int targetX = (onX ? this->sizeX - (x +1) : x);
                 int targetY = (onY ? this->sizeY - (y +1) : y);
                 int targetZ = (onZ ? this->sizeZ - (z +1) : z);
-                result.at(x, y, z) = this->at(targetX, targetY, targetZ);
+                result.at(x, y, z) = this->unsafe(targetX, targetY, targetZ);
             }
         }
     }*/
@@ -2618,7 +2784,7 @@ Matrix3<T> Matrix3<T>::convolution(const Matrix3<U>& convMatrix, CONVOLUTION_BOR
     auto getVal = [&](const Vector3& pos) {
         if (borders == CONVOLUTION_BORDERS::ZERO_PAD && !result.checkCoord(pos))
             return T();
-        return this->at(pos);
+        return this->unsafe(pos);
     };
 
     this->iterateParallel([&](int x, int y, int z) {
@@ -2691,10 +2857,14 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
     // better results because we can fetch outside values (with mirror for ex)
     // But that's not the current definition.
     Matrix3<T> result(getDimensions());
-    auto self = *this;
-    self.raiseErrorOnBadCoord = false;
-    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
-    result.raiseErrorOnBadCoord = false;
+    // auto self = *this;
+    // self.raiseErrorOnBadCoord = false;
+    // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
+    // result.raiseErrorOnBadCoord = false;
+
+    auto valOrDefault = [&](const Vector3& q) -> T {
+        return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord;
+    };
 
     if (precision > 1) {
         Matrix3<Vector3> displacements(warper.getDimensions());
@@ -2705,14 +2875,14 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
                 pos -= warper.interpolate(pos) / float(precision);
             }
         });
-        self.iterate([&](const Vector3& pos) {
+        iterate([&](const Vector3& pos) {
             const auto& warp = displacements.at(pos);
-            result.at(pos) = self.interpolate(warp);
+            result.at(pos) = valOrDefault(warp);
         });
     } else {
         iterate([&](const Vector3& pos) {
             const Vector3& warp = warper.at(pos);
-            result.addValueAt(self.at(pos), pos + warp);
+            result.addValueAt(valOrDefault(pos), pos + warp);
         });
     }
     return result;
@@ -2809,19 +2979,23 @@ template<class T>
 Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const Matrix3<Vector3>& warper) const
 {
     Matrix3<T> result = *this; //(getDimensions());
-    auto self = *this;
-    self.raiseErrorOnBadCoord = false;
-    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
     result.raiseErrorOnBadCoord = false;
+    // auto self = *this;
+    // self.raiseErrorOnBadCoord = false;
+    // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+
+    auto repeat = [&](const Vector3& q) -> Vector3 {
+        return this->checkCoord(q) ? q : this->getRepeatPosition(q);
+    };
     iterateParallel([&](const Vector3& pos) {
-        result.at(pos + warper(pos)) = self.at(pos);
+        result.at(pos + warper(pos)) = this->unsafe(repeat(pos));
     });
     /*for (int x = 0; x < sizeX; x++) {
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 pos(x, y, z);
                 const Vector3& warp = warper.at(pos);
-                result.at(pos + warp) = this->at(pos);
+                result.at(pos + warp) = this->unsafe(pos);
             }
         }
     }*/
@@ -2833,9 +3007,13 @@ Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const BSpline &original, const B
 {
 //    bool previousRaise = this->raiseErrorOnBadCoord;
 //    T previousDefault  = this->returned_value_on_outside;
-    auto self = *this;
-    self.raiseErrorOnBadCoord = false;
-    self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+    // auto self = *this;
+    // self.raiseErrorOnBadCoord = false;
+    // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
+
+    auto repeat = [&](const Vector3& q) -> Vector3 {
+        return this->checkCoord(q) ? q : this->getRepeatPosition(q);
+    };
 
     Matrix3<Vector3> indices(this->getDimensions());
     for (size_t i = 0; i < this->size(); i++)
@@ -2845,7 +3023,7 @@ Matrix3<T> Matrix3<T>::warpWithoutInterpolation(const BSpline &original, const B
 
     Matrix3<T> values(this->getDimensions());
     for (size_t i = 0; i < this->size(); i++) {
-        values[i] = self.at(indices[i]);
+        values[i] = this->unsafe(repeat(indices[i]));
     }
 
 //    this->raiseErrorOnBadCoord = previousRaise;

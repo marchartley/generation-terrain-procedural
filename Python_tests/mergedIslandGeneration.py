@@ -21,6 +21,7 @@ from scipy.ndimage import map_coordinates
 from matplotlib.widgets import RangeSlider, Slider, CheckButtons
 import cProfile
 import pstats
+import tkinter as tk
 
 # Global Variables
 outputImageDims = [256, 256]
@@ -41,6 +42,8 @@ def coordsToNumpyIndices(x: float, y: float, sizeX: int, sizeY: int) -> Tuple[fl
     _x, _y = coordsToInts(-y, x, sizeX, sizeY)
     return _x, _y
 
+def sign(x):
+    return -1 if x < 0 else 1 if x > 0 else 0
 
 def intsToCoords(x: int, y: int, sizeX: int, sizeY: int) -> Tuple[float, float]:
     newX, newY = ((x / sizeX) - .5) * 2.0, ((y / sizeY) - .5) * 2.0
@@ -68,7 +71,8 @@ def deform_image(
         image: np.ndarray,
         vector_field: np.ndarray,
         scale: Union[float, Tuple[float, float]] = 1.0,
-        interpolation: str = 'linear'
+        interpolation: str = 'linear',
+        repeats = 4
 ) -> np.ndarray:
     """
     Deform an image using a displacement vector field.
@@ -96,7 +100,6 @@ def deform_image(
     else:
         scaleX = scaleY = scale
 
-    repeats = 4
     scaleX /= repeats
     scaleY /= repeats
     deformed_image = np.array(image)
@@ -481,6 +484,8 @@ class IslandSketch:
         self.distortionSketch = LineBuilder2D(distortionAx, color="blue")
         self.distortionView.addSketch(line=self.distortionSketch)
 
+        self.windStrokes = []
+
         def updateWaterLevel(val: float):
             self.waterLevel = val
             self.update()
@@ -514,6 +519,7 @@ class IslandSketch:
         self.distortionWidth = 0.5
 
         self.includeCoralSimulation = True
+        self.includeDentriticSimulation = False
 
     @lru_cache
     def getSequenceID(self, pos: Vector2D):
@@ -550,25 +556,37 @@ class IslandSketch:
     def updateTopViewAx(self):
         self.topView.draw(False)
 
+    def resetWindStrokes(self):
+        self.windStrokes.clear()
+
     def updateDistortionsAx(self):
         # sizeX = len(distortionMaps[0][0])
         # sizeY = len(distortionMaps[0])
         sizeX = 20 # len(singleDistortionMap[0])
         sizeY = 20 # len(singleDistortionMap)
+        if len(self.distortionView.lineBuilders[0].getCurve()) > 0:
+            self.windStrokes.append(self.distortionView.lineBuilders[0].getCurve())
         addDistortionFromSketch(self.distortionView, self.distortionStrength, self.distortionWidth)
         self.distortionSketch.reset()
-        wholeMap = resize_nearest_numpy(singleDistortionMap, (sizeX, sizeY)) # [[getDistoFromIndices(x, y) for y in range(sizeY)] for x in range(sizeX)]
 
+        wholeMap = resize_nearest_numpy(singleDistortionMap, (sizeX, sizeY)) # [[getDistoFromIndices(x, y) for y in range(sizeY)] for x in range(sizeX)]
         ax: plt.Axes = self.distortionView.ax
         for l in ax.lines:
             if l is not self.distortionSketch.line:
                 l.remove()
+        for l in ax.patches:
+            l.remove()
+
+        for curve in self.windStrokes:
+            ax.plot([v.x for v in curve[:-2]], [v.y for v in curve[:-2]], c="red")
+            if len(curve) > 3:
+                ax.arrow(curve[-3].x, curve[-3].y, dx = curve[-1].x - curve[-3].x, dy = curve[-1].y - curve[-3].y, color="red", width=0.01)
         for _y in range(sizeY):
             for _x in range(sizeX):
                 y, x = intsToCoords(_x, _y, sizeX, sizeY)
                 # x = - x
                 y = -y
-                ax.plot([x, x + wholeMap[_x, _y, 0]], [y, y - wholeMap[_x, _y, 1]], c="blue")
+                ax.plot([x, x + sign(wholeMap[_x, _y, 0]) * min(abs(wholeMap[_x, _y, 0]), 0.15)], [y, y - sign(wholeMap[_x, _y, 1]) * min(abs(wholeMap[_x, _y, 1]), 0.15)], c="blue", alpha=0.3)
         self.distortionView.draw(False)
 
     def updateSideViewMarkers(self):
@@ -637,19 +655,22 @@ class IslandSketch:
         featuresFolder = "features/"
         distoFolder = "distortions/"
         heightFolder = "heightmaps/"
+        resistanceFolder = "resistance/"
 
         pathHeightmap = path + heightFolder
         pathFeatures = path + featuresFolder
         pathDisto = path + distoFolder
+        pathResistances = path + resistanceFolder
         os.makedirs(pathHeightmap, exist_ok=True)
         os.makedirs(pathFeatures, exist_ok=True)
         os.makedirs(pathDisto, exist_ok=True)
+        os.makedirs(pathResistances, exist_ok=True)
 
         resistanceMap = self.computeResistanceMap()
         waterLevel = self.waterLevel
         # coralMinHeight = self.coralMin
         # coralMaxHeight = self.coralMax
-        heightmap, features, distortions = self.heightFeatsAndDistoFromSketches()
+        heightmap, features, distortions, resistances = self.heightFeatsAndDistoFromSketches()
 
         def getReefDistances(features):
             _distMap = np.zeros((features.shape[0], features.shape[1]))
@@ -721,7 +742,8 @@ class IslandSketch:
             terrain = _heightmap
             if self.includeCoralSimulation:
                 _heightmap, terrain, corals = coralize_my_island.method2Create(_heightmap, _distances, subsidence, waterLevel)
-            _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(5.0, 15.0), randomnessStrength=getRandom(1.0, 3.0))
+            if self.includeDentriticSimulation:
+                _heightmap = self.fractal_erosion(_heightmap, _resistanceMap, radialFreq=getRandom(3.0, 6.0), strength=getRandom(15.0, 20.0), randomnessStrength=getRandom(1.0, 3.0))
             _heightmap = coralize_my_island.apply_hydraulic_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=50, water=0.5, solubility=0.99, evaporation=0.05, capacity=1.0)
             _heightmap = coralize_my_island.apply_thermal_erosion(_heightmap, resistanceMap=_resistanceMap, iterations=100, talus_angle=0.5, erosion_factor=0.01)
             _heightmap = coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0))
@@ -730,6 +752,7 @@ class IslandSketch:
             # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", _heightmap)
             plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
+            plt.imsave(f"{pathResistances}{filePrefix}-{i}.png", resistances)
             plt.imsave(f"{pathDisto}{filePrefix}-{i}.png", distortionsToRGB(distortions))
             # plt.imsave(f"{pathHeightmap}{filePrefix}-{i}.png", coralize_my_island.bw2rgb(np.clip(_heightmap, 0.0, 1.0)))
             # plt.imsave(f"{pathFeatures}{filePrefix}-{i}.png", _features)
@@ -738,7 +761,7 @@ class IslandSketch:
                 plt.imsave(f"{pathHeightmap}{filePrefix}-demo-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png", _heightmap)
                 # plt.imsave(f"/media/marc/Data/NN Datasets/1/result_height.png", _heightmap)
             print(f"Heightmap saved at {pathHeightmap}{filePrefix}-{i}.png")
-        return _heightmap, _features, distortionsToRGB(distortions) #, coralize_my_island.bw2rgb(np.clip(terrain, 0.0, 1.0)), coralize_my_island.bw2rgb(np.clip(corals, 0.0, 1.0))
+        return _heightmap, _features, distortionsToRGB(distortions), resistances #, coralize_my_island.bw2rgb(np.clip(terrain, 0.0, 1.0)), coralize_my_island.bw2rgb(np.clip(corals, 0.0, 1.0))
 
     def fractal_erosion(self, heightmap: np.ndarray, resistance: np.ndarray, radialFreq: float = 5.0, strength: float = 10.0, randomnessStrength: float = 2.0) -> np.ndarray:
         sX, sY = heightmap.shape[0], heightmap.shape[1] #20, 20
@@ -820,7 +843,7 @@ class IslandSketch:
         return disto_resistances
 
 
-    def heightFeatsAndDistoFromSketches(self, featureColorVivid: float = 1.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def heightFeatsAndDistoFromSketches(self, featureColorVivid: float = 1.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         dims = outputImageDims
         heights: np.ndarray = np.zeros((dims[0], dims[1]))
         features: np.ndarray = np.zeros((dims[0], dims[1], 3))
@@ -843,7 +866,15 @@ class IslandSketch:
                 resistances[_x, _y] = min(max(resistance, 0.0), 1.0)
 
         deformation = singleDistortionMap * (1.0 - resistances)
-        return deform_image(heights, deformation, 128), deform_image(features, deformation, 128, interpolation="nearest"), singleDistortionMap
+
+        deformed_height = heights.copy()
+        deformed_features = features.copy()
+        nbRepetitions = 1
+        # for i in range(nbRepetitions):
+        deformed_height = deform_image(deformed_height, deformation, 128, repeats = 2)
+        deformed_features = deform_image(deformed_features, deformation, 128, repeats = 2, interpolation="nearest")
+
+        return deformed_height, deformed_features, singleDistortionMap, np.reshape(resistances, (resistances.shape[:2]))
         # distortion part :
         for _x in range(dims[0]):
             for _y in range(dims[1]):
@@ -897,8 +928,9 @@ def addDistortionFromCurve(curve: List[Vector2D], distortionStrength: float, lin
         best_directions[mask] = direction * np.array([-1, -1])  # same for all, so no need to normalize again
 
     # Apply distortion where distances are within threshold
-    within_range = best_distances < lineWidth**2
-    influence = wyvill(np.sqrt(best_distances[within_range]) / lineWidth)
+    within_range = best_distances < (lineWidth * 2)**2
+    # influence = wyvill(np.sqrt(best_distances[within_range]) / lineWidth)
+    influence = np.exp(-(best_distances[within_range])/(2.0 * (lineWidth/2)**2))
     motions = best_directions[within_range] * distortionStrength * influence[:, None]
 
     # Reshape and accumulate
@@ -1045,7 +1077,7 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         islandSketch.resistanceSketch.setCurve(randomResistanceCurve)
 
 
-        h, f, d = islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
+        h, f, d, r = islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
 
     if use_user_input:
         islandSketch.sketches[0].setCurve(original_islandBorders)
@@ -1067,7 +1099,18 @@ def main():
     global singleDistortionMap
     # fig2 = plt.figure()
     # axHeight, axFeatures, axDisto = fig2.subplots(1, 3)
-    fig2, axesResults = plt.subplots(1, 3, squeeze=True)
+
+    root = tk.Tk()
+    screen_width_px = root.winfo_screenwidth()
+    screen_height_px = root.winfo_screenheight()
+    root.destroy()
+
+    dpi = 100
+    width_in = screen_width_px / dpi - 10
+    height_in = screen_height_px / dpi * 0.6
+
+
+    fig2, axesResults = plt.subplots(1, 3, squeeze=True, figsize=(width_in, height_in), dpi=dpi)
     axHeight, axFeatures, axDisto = axesResults
     axHeight.set_title("Height field")
     axFeatures.set_title("Label map")
@@ -1081,7 +1124,7 @@ def main():
     sketch_colors = ["green", "yellow", "blue", "orange"]
 
     # Creates a top view for island sketching and a side view for profile editing
-    fig, axes = plt.subplots(1, 4, squeeze=True)
+    fig, axes = plt.subplots(1, 4, squeeze=True, figsize=(width_in, height_in), dpi=dpi)
     topViewAx: plt.Axes = axes[0]
     sideViewAx: plt.Axes = axes[1]
     distortionsAx: plt.Axes = axes[2]
@@ -1095,15 +1138,20 @@ def main():
     sideViewAx.set_title('Side view')
     sideViewAx.set_xlim(0, 1)
     sideViewAx.set_ylim(0, 1)
-    distortionsAx.set_title('Distortions')
+    sideViewAx.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], ["center", "mountains", "beach", "lagoon", "reef", "abyss"], rotation=45)
+    sideViewAx.tick_params(top=False, bottom=True, left=False, right=False, labelleft=False, labelbottom=True)
+    # sideViewAx.tick_params(axis="x", direction="out", pad=-10)
+    distortionsAx.set_title('Deformation')
     distortionsAx.set_xlim(-1, 1)
     distortionsAx.set_ylim(-1, 1)
     distortionsAx.tick_params(top=False, bottom=False, left=False, right=False, labelleft=False, labelbottom=False)
     resistanceAx.set_title('Resistance')
+    resistanceAx.set_xticks([0.0, 0.2, 0.4, 0.6, 0.8, 1.0], ["center", "mountains", "beach", "lagoon", "reef", "abyss"], rotation=45)
+    resistanceAx.tick_params(top=False, bottom=True, left=False, right=False, labelleft=False, labelbottom=True)
     resistanceAx.set_xlim(0, 1)
     resistanceAx.set_ylim(0, 1)
 
-    axWater = fig.add_axes((0.92, 0.2, 0.0225, 0.68))
+    axWater = fig.add_axes((0.91, 0.2, 0.0225, 0.68))
     water_slider = Slider(
         ax=axWater,
         label="Water\nlevel",
@@ -1113,7 +1161,7 @@ def main():
         orientation="vertical"
     )
 
-    axCoral = fig.add_axes((95, 0.2, 0.0225, 0.68)) #(0.95, 0.2, 0.0225, 0.68))
+    axCoral = fig.add_axes((92, 0.2, 0.0225, 0.68)) #(0.95, 0.2, 0.0225, 0.68))
     coral_slider = RangeSlider(
         ax=axCoral,
         label="Corals",
@@ -1122,7 +1170,7 @@ def main():
         valinit=(0.2, 0.3),
         orientation="vertical"
     )
-    axSubsid = fig.add_axes((0.97, 0.2, 0.0225, 0.68))
+    axSubsid = fig.add_axes((0.95, 0.2, 0.0225, 0.68))
     subsid_slider = Slider(
         ax=axSubsid,
         label="Subsidence\nfactor",
@@ -1160,6 +1208,7 @@ def main():
     def resetWind():
         global singleDistortionMap
         singleDistortionMap = initialDistoMap(outputImageDims[0], outputImageDims[1])
+        islandSketch.resetWindStrokes()
         islandSketch.update()
 
     def setWindWidth(newWidth: float):
@@ -1187,10 +1236,18 @@ def main():
 
     def setCoralSimulationActive(checkboxes):
         islandSketch.includeCoralSimulation = checkboxes.get_status()[0]
+        islandSketch.includeDentriticSimulation = checkboxes.get_status()[1]
+    # def setDentriticSimulationActive(checkboxes):
+    #     pass
 
-    ax_coral_checkbox = fig.add_axes((0.8, 0.04, 0.15, 0.075))
-    coral_checkbox = CheckButtons(ax=ax_coral_checkbox, labels=["Include coral simulation"], actives=[islandSketch.includeCoralSimulation])
+    ax_coral_checkbox = fig.add_axes((0.85, 0.01, 0.15, 0.075))
+    coral_checkbox = CheckButtons(ax=ax_coral_checkbox, labels=["Include coral simulation", "Include dentries"], actives=[islandSketch.includeCoralSimulation, islandSketch.includeDentriticSimulation])
     coral_checkbox.on_clicked(lambda l: setCoralSimulationActive(coral_checkbox))
+
+    # ax_dendritic_checkbox = fig.add_axes((0.8, 0.04, 0.15, 0.075))
+    # dendritic_checkbox = CheckButtons(ax=ax_dendritic_checkbox, labels=["Include dentries"], actives=[islandSketch.includeDentriticSimulation])
+    # dendritic_checkbox.on_clicked(lambda l: setDentriticSimulationActive(dendritic_checkbox))
+
     # coral_checkbox.on_changed(setWindStrength)
     # coral_checkbox.valtext.set_visible(False)
     # coral_checkbox.label.set_visible(False)
@@ -1206,7 +1263,7 @@ def main():
         # print(coralMinHeight, coralMaxHeight, subsidence, lagoonSequence + reefSequence)
         # print("Profile:", [p.y for p in islandSketch.profileSketch.getCurve()])
         # print("Resistance", [p.y for p in islandSketch.resistanceSketch.getCurve()])
-        h, f, d = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="result_height", randomize_parameters=False)
+        h, f, d, r = islandSketch.createMapsFromSketch(path="test_island_heightmap/", filePrefix="result_height", randomize_parameters=False)
         axesResults[0].imshow(h)
         axesResults[1].imshow(f)
         axesResults[2].imshow(d)
@@ -1217,7 +1274,7 @@ def main():
 
     def genDataset():
         print(f"Generating dataset at {dataset_path}heightmaps/")
-        createDatasetOfRandomIslands(islandSketch, 2, use_user_input=True)
+        createDatasetOfRandomIslands(islandSketch, 1000, use_user_input=True)
 
 
     distance_button.on_clicked(lambda e: genIsland()) # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))

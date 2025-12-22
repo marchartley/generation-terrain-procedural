@@ -1,3 +1,7 @@
+print("Outdated, use mergedIslandGeneration.py instead...")
+exit(-1)
+
+
 import itertools
 import pstats
 import time
@@ -435,7 +439,7 @@ def genAndSaveHeightMap(profileSketch: LineBuilder, islandSketches: SketchManage
 
     rgb = np.zeros((heightmap.shape[0], heightmap.shape[1], 3))
     rgb[:, :, 0] = rgb[:, :, 1] = rgb[:, :, 2] = heightmap
-    plt.imsave(pathHeightmap + filePrefix + ".png", rgb)
+    plt.imsave(pathHeightmap + filePrefix + ".png", rgb.astype(np.uint8))
     plt.imsave(pathFeatures + filePrefix + ".png", features)
     plt.imsave(pathDisto + filePrefix + ".png", distortions)
 

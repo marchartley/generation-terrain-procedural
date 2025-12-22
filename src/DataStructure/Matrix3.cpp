@@ -318,7 +318,9 @@ template<>
 Matrix3<int> Matrix3<int>::findContour(bool use2D) const
 {
 //    return this->dilate(true) - *this;
-    return *this - this->erode(use2D);
+    // auto self = *this;
+    auto eroded = this->erode(use2D);
+    return *this - eroded;
 }
 
 template<>
@@ -528,7 +530,7 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
     return map;
 }
 //template<class T>
-Matrix3<float> operator-(const float a, Matrix3<float> b) {
+Matrix3<float> operator-(const float a, const Matrix3<float>& b) {
     Matrix3<float> res = b;
     res.iterateParallel([&] (size_t i) {
         res[i] = a - res[i];
@@ -538,7 +540,7 @@ Matrix3<float> operator-(const float a, Matrix3<float> b) {
     return res;
 }
 //template<class T>
-Matrix3<float> operator+(const float a, Matrix3<float> b) {
+Matrix3<float> operator+(const float a, const Matrix3<float>& b) {
     return b + a;
     /*Matrix3<float> res = b;
     for (size_t i = 0; i < res.size(); i++)

@@ -253,8 +253,71 @@ Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imag
     return reconstructed;
 }
 
+
+void testingSmoothmaxInCPP() {
+    #define FLOAT_TYPE float
+    int nbTrials = 10000;
+
+    auto LSE = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
+        return (1.f/k) * log(exp(k * a) + exp(k * b));
+    };
+    auto AbsMax = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
+        return ((a + b)/2.f) + log(1.f + exp(k * abs(a - b)))/(2.f * k);
+    };
+    auto smaxLong = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
+        return (a != b ? a + ((b - a)/2.f) * (1.f/(1 + exp(-k * (b - a))) + 1.f/(1 - exp(-k * (b - a)))) : a + 1.f/(2.f * k));
+    };
+    auto smaxMini = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
+        return (a != b ? a + (b - a)/(1.f-exp(-2.f * k * (b - a))) : a + 1.f/(2.f * k));
+    };
+
+    FLOAT_TYPE a = 256.f;
+    FLOAT_TYPE b = 0.f;
+    FLOAT_TYPE k = 2.f;
+
+    FLOAT_TYPE trueVal = max(a, b);
+    std::setprecision(10);
+    std::cout << "LSE         ... " << timeIt([=](){ FLOAT_TYPE z = LSE(a, b, k); }, nbTrials) << " -- Error: " << (LSE(a, b, k) - trueVal) << " (found " << LSE(a, b, k) << ")" <<  std::endl;
+    std::cout << "AbsMax      ... " << timeIt([=](){ FLOAT_TYPE z = AbsMax(a, b, k); }, nbTrials) << " -- Error: " << (AbsMax(a, b, k) - trueVal) << " (found " << AbsMax(a, b, k) << ")" << std::endl;
+    std::cout << "smaxLong    ... " << timeIt([=](){ FLOAT_TYPE z = smaxLong(a, b, k); }, nbTrials) << " -- Error: " << (smaxLong(a, b, k) - trueVal) << " (found " << smaxLong(a, b, k) << ")" << std::endl;
+    std::cout << "smaxMini    ... " << timeIt([=](){ FLOAT_TYPE z = smaxMini(a, b, k); }, nbTrials) << " -- Error: " << (smaxMini(a, b, k) - trueVal) << " (found " << smaxMini(a, b, k) << ")" << std::endl;
+
+    FLOAT_TYPE minBreakLSE = -1.f;
+    FLOAT_TYPE minBreakAbsMax = -1.f;
+    FLOAT_TYPE minBreaksmaxLong = -1.f;
+    FLOAT_TYPE minBreaksmaxMini = -1.f;
+    b = 0.0;
+    for (int i = 0; i < 100000; i++) {
+        a = FLOAT_TYPE(i);
+        if (!((abs(LSE(a, b, k) - max(a, b) > 10.f) || isnan(LSE(a, b, k)) || isinf(LSE(a, b, k))))) minBreakLSE = max(a, b);
+        if (!((abs(AbsMax(a, b, k) - max(a, b) > 10.f) || isnan(AbsMax(a, b, k)) || isinf(AbsMax(a, b, k))))) minBreakAbsMax = max(a, b);
+        if (!((abs(smaxLong(a, b, k) - max(a, b) > 10.f) || isnan(smaxLong(a, b, k)) || isinf(smaxLong(a, b, k))))) minBreaksmaxLong = max(a, b);
+        if (!((abs(smaxMini(a, b, k) - max(a, b) > 10.f) || isnan(smaxMini(a, b, k)) || isinf(smaxMini(a, b, k))))) minBreaksmaxMini = max(a, b);
+    }
+    std::cout << "Min break LSE: " << minBreakLSE << std::endl;
+    std::cout << "Min break AbsMax: " << minBreakAbsMax << std::endl;
+    std::cout << "Min break smaxLong: " << minBreaksmaxLong << std::endl;
+    std::cout << "Min break smaxMini: " << minBreaksmaxMini << std::endl;
+
+    std::cout << sizeof(float) << " " << sizeof(double) << std::endl;
+}
+
 int main(int argc, char *argv[])
 {
+    /*float a = 1.f;
+    float b = 200000.f;
+    float c = -30.f;
+
+
+    float delta = b*b - 4 * a * c;
+    float x1 = (-b + sqrt(delta)) / (2.f * a);
+    float x2 = (2.f * c) / (-b - sqrt(delta));
+
+    std::cout << x1 << "\n" << x2 << std::endl;
+
+    return 0;*/
+
+
     #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
         QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
         QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
@@ -279,7 +342,39 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+    /*int W = 1000, H = 1000, D = 100;
 
+    displayProcessTime("", [&]() {
+        int sum = 0;
+        for (int i = 0; i < W * H * D; i++) {
+            int x = i % W;
+            int y = (i % (W * H)) / W;
+            int z = i / (W * H);
+            sum += x - y + z;
+        }
+        std::cout << sum << std::endl;
+    });
+
+
+    displayProcessTime("", [&]() {
+        int sum = 0;
+        for (int x = 0; x < W; x++) {
+            for (int y = 0; y < H; y++) {
+                for (int z = 0; z < D; z++) {
+                    sum += x - y + z;
+                }
+            }
+        }
+        std::cout << sum << std::endl;
+    });
+    return 0;*/
+
+
+    /*
+     * Benchmark: C++ implementation of Smoothmax and other smooth maximum functions
+    testingSmoothmaxInCPP();
+    return 0;
+    */
     /*
      * C++ implementation of island from curves
      *

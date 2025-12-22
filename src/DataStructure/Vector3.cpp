@@ -1,5 +1,5 @@
 #include "DataStructure/Vector3.h"
-#include <math.h>
+#include <cmath>
 #include "Utils/Globals.h"
 #include "Utils/Utils.h"
 
@@ -36,20 +36,20 @@ Vector3::Vector3(const float *coords, bool valid)
 }
 
 float Vector3::norm() const {
-    if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
+    // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x * this->x + this->y * this->y + this->z * this->z);
 }
 float Vector3::norm2() const {
-    if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
+    // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return this->x * this->x + this->y * this->y + this->z * this->z;
 }
 
 
 Vector3& Vector3::normalize() {
-    if(this->norm() < 1e-5)
-        return *this;
-    float norm = this->norm();
-    *this /= norm;
+    float n2 = x*x + y*y + z*z;
+    if (n2 < 1e-10f) return *this;   // (1e-5)^2
+    float inv = 1.0f / std::sqrt(n2);
+    x *= inv; y *= inv; z *= inv;
     return *this;
 }
 Vector3 Vector3::normalized() const {
@@ -104,7 +104,8 @@ Vector3 Vector3::clamped(float minMag, float maxMag) const
 
 bool Vector3::isAlmostVertical()
 {
-    return std::abs(this->dot(Vector3(0, 0, 1))) > 0.999;
+    static const Vector3 up(0, 0, 1);
+    return std::abs(this->dot(up)) > 0.999;
 }
 
 Matrix Vector3::toMatrix() const
@@ -172,9 +173,12 @@ Vector3 Vector3::getAllAnglesWith(const Vector3 &otherVector) const
 
 float Vector3::getAngleWith(const Vector3& otherVector) const
 {
-    Vector3 vA = this->normalized();
-    Vector3 vB = otherVector.normalized();
-    return std::acos(vA.dot(vB));
+    float denom = std::sqrt(this->norm2() * otherVector.norm2());
+    if (denom < 1e-10) return 0;
+    float c = dot(otherVector) / denom;
+    c = std::clamp(c, -1.0f, 1.0f);
+    return std::acos(c);
+
 }
 
 float Vector3::getSignedAngleWith(const Vector3 &otherVector) const
@@ -280,17 +284,18 @@ Vector3 Vector3::floor() const
 }
 Vector3 Vector3::ceil() const
 {
-    Vector3 v = this->floor();
-    if (v.x != x) v.x += 1;
-    if (v.y != y) v.y += 1;
-    if (v.z != z) v.z += 1;
+    Vector3 v = *this;
+    v.x = std::ceil(v.x);
+    v.y = std::ceil(v.y);
+    v.z = std::ceil(v.z);
     return v;
 }
 
 Vector3 Vector3::wrap(const Vector3& p, const Vector3& mini, const Vector3& maxi)
 {
-    Vector3 newP = p - mini;
     Vector3 newMaxi = maxi - mini;
+    Vector3 newP = p - mini;
+    /*
 //    p -= mini;
 //    maxi -= mini;
     Vector3 rounded = newP.roundedDown();
@@ -299,7 +304,8 @@ Vector3 Vector3::wrap(const Vector3& p, const Vector3& mini, const Vector3& maxi
                            int(rounded.y + newMaxi.y) % int(newMaxi.y),
                            int(rounded.z + newMaxi.z) % int(newMaxi.z)
                            ) + decimals + mini;
-    return wrap;
+    return wrap;*/
+    return Vector3(fmod(newP.x, newMaxi.x) + mini.x, fmod(newP.y, newMaxi.y) + mini.y, fmod(newP.z, newMaxi.z) + mini.z);
 }
 
 float Vector3::magnitude() const
@@ -347,15 +353,13 @@ Vector3 Vector3::random(const Vector3& minValues, const Vector3& maxValues)
 
 std::vector<float> Vector3::toArray(const Vector3& v)
 {
-    std::vector<float> arr;
-    arr.insert(arr.end(), {v.x, v.y, v.z});
-    return arr;
+    return {v.x, v.y, v.z};
 }
-std::vector<float> Vector3::toArray(std::vector<Vector3> vs)
+std::vector<float> Vector3::toArray(const std::vector<Vector3>& vs)
 {
     std::vector<float> arr;
-    for (Vector3& v : vs)
-        arr.insert(arr.end(), {v.x, v.y, v.z});
+    arr.reserve(vs.size() * 3);
+    for (const auto& v : vs) { arr.push_back(v.x); arr.push_back(v.y); arr.push_back(v.z); }
     return arr;
 }
 
@@ -387,7 +391,7 @@ Vector3 Vector3::max(const Vector3& a, const Vector3& b)
     return Vector3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
 
-Vector3 Vector3::min(std::vector<Vector3> allVectors)
+Vector3 Vector3::min(const std::vector<Vector3>& allVectors)
 {
     if (allVectors.empty())
         return Vector3(false);
@@ -397,7 +401,7 @@ Vector3 Vector3::min(std::vector<Vector3> allVectors)
     return res;
 }
 
-Vector3 Vector3::max(std::vector<Vector3> allVectors)
+Vector3 Vector3::max(const std::vector<Vector3>& allVectors)
 {
     if (allVectors.empty())
         return Vector3(false);
@@ -484,10 +488,17 @@ Vector3 Vector3::translated(const Vector3& move) {
 
 Vector3& Vector3::applyTransform(Matrix transformMatrix)
 {
-    Matrix newCoords = transformMatrix.product(this->toMatrix());
-    this->x = newCoords[0][0];
-    this->y = newCoords[1][0];
-    this->z = newCoords[2][0];
+    // Matrix newCoords = transformMatrix.product(this->toMatrix());
+    // this->x = newCoords[0][0];
+    // this->y = newCoords[1][0];
+    // this->z = newCoords[2][0];
+    // return *this;
+    const Vector3 newP(
+        x * transformMatrix[0][0] + y * transformMatrix[0][1] + z * transformMatrix[0][2],
+        x * transformMatrix[1][0] + y * transformMatrix[1][1] + z * transformMatrix[1][2],
+        x * transformMatrix[2][0] + y * transformMatrix[2][1] + z * transformMatrix[2][2]
+        );
+    this->x = newP.x; this->y = newP.y; this->z = newP.z;
     return *this;
 }
 
@@ -521,7 +532,8 @@ Vector3 Vector3::reflexion(const Vector3& normal)
 
 Vector3 Vector3::toPolar()
 {
-    return Vector3(this->getAngleWith(Vector3(1, 0)) / (2.f * M_PI), this->norm());
+    static const Vector3 right(1, 0);
+    return Vector3(this->getAngleWith(right) / (2.f * M_PI), this->norm());
 }
 
 Vector3 Vector3::fromPolar()
@@ -759,7 +771,9 @@ float Vector3::signedManhattanDistanceToBoundaries(const Vector3& pos, const Vec
         newPos = newPos.xy();
         newMax = newMax.xy();
     }
-    if (Vector3::isInBox(newPos, Vector3(), newMax)) {
+
+    static const Vector3 origin;
+    if (Vector3::isInBox(newPos, origin, newMax)) {
         if (ignoreZdimension)
             return -std::min({newPos.x, newPos.y, newMax.x - newPos.x, newMax.y - newPos.y});
         else
@@ -786,7 +800,9 @@ float Vector3::signedDistanceToBoundaries(const Vector3& pos, const Vector3& min
     Vector3 q = (pos - (minPos + halfDim)).abs() - halfDim; // - ((maxPos - minPos) * .5f);
     if (ignoreZdimension)
         q.z = 0.f;
-    float d = Vector3::max(q, Vector3(0, 0, 0)).norm() + std::min(q.maxComp(), 0.f);
+
+    static const Vector3 origin(0, 0, 0);
+    float d = Vector3::max(q, origin).norm() + std::min(q.maxComp(), 0.f);
     return d;
 
 }
@@ -809,13 +825,13 @@ AABBox::AABBox(const Vector3& mini, const Vector3& maxi) : mini(mini), maxi(maxi
 
 }
 
-AABBox::AABBox(std::tuple<Vector3, Vector3> minMax)
+AABBox::AABBox(const std::tuple<Vector3, Vector3> &minMax)
     : AABBox(std::get<0>(minMax), std::get<1>(minMax))
 {
 
 }
 
-AABBox::AABBox(std::vector<Vector3> allPointsToContain)
+AABBox::AABBox(const std::vector<Vector3> &allPointsToContain)
     : AABBox(Vector3::min(allPointsToContain), Vector3::max(allPointsToContain))
 {
 

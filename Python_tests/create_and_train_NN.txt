@@ -23,6 +23,7 @@ python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix
 sudo rmmod nvidia_uvm
 sudo modprobe nvidia_uvm
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input /media/marc/Data/NN\ Datasets/1/input_label.png --output /media/marc/Data/NN\ Datasets/1/result_height.png --name labels_to_terrain_pacific_graphics_2025_larger_reef --model pix2pix --direction AtoB
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py --input /media/marc/Data/NN\ Datasets/1/input_label.png --output /media/marc/Data/NN\ Datasets/1/result_height.png --name labels_to_terrain_volcanic_islands --model pix2pix --direction AtoB
 
 
 cd pytorch-CycleGAN-and-pix2pix

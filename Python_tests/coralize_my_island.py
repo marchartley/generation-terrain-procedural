@@ -161,10 +161,10 @@ def smin(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
 
 def smax(a: np.ndarray, b: np.ndarray, k: float) -> np.ndarray:
     # return -smin(-a, -b, k)
-    if a == b: return a + 0.5 * k
+    # if a == b: return a + 0.5 * k
     x = (b-a)
-    E = exp(2 * k * x)
-    return a + 0.5 * k * ((2 * E)/(E - 1)) # Equivalent to 1/(1-e^-kx)+1/(1+e^-kx)
+    E = np.exp(2 * k * x)
+    return a + 0.5 * k * np.where(a == b, 1.0, ((2 * E)/(E - 1))) # Equivalent to 1/(1-e^-kx)+1/(1+e^-kx)
 
 def method1Create(heights: np.ndarray, subsidence: float, waterLevel: float = 0.5, maxCoralHeight:float = None, minCoralHeight: float = None, outsideSlopeFactor: float = 3.0) -> np.ndarray:
     # waterLevel: float = .7

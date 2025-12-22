@@ -20,15 +20,15 @@ public:
     explicit Vector3(const float* coords, bool valid = true);
 
     static std::vector<float> toArray(const Vector3& v);
-    static std::vector<float> toArray(std::vector<Vector3> vs);
-    std::tuple<int, int, int> toIntTuple() {return std::make_tuple<int, int, int>(int(this->x), int(this->y), int(this->z)); }
+    static std::vector<float> toArray(const std::vector<Vector3> &vs);
+    std::tuple<int, int, int> toIntTuple() const {return {int(x), int(y), int(z)}; }
 
     static Vector3 min();
     static Vector3 max();
     static Vector3 min(const Vector3& a, const Vector3& b);
     static Vector3 max(const Vector3& a, const Vector3& b);
-    static Vector3 min(std::vector<Vector3> allVectors);
-    static Vector3 max(std::vector<Vector3> allVectors);
+    static Vector3 min(const std::vector<Vector3>& allVectors);
+    static Vector3 max(const std::vector<Vector3>& allVectors);
 
     static std::vector<Vector3> getAABBoxVertices(const Vector3& mini, const Vector3& maxi);
 
@@ -95,9 +95,9 @@ public:
     Vector3 eulerAnglesWith(const Vector3& other);
 
     Vector3 getAllAnglesWith(const Vector3& otherVector) const;
-    float getAngleWith(const Vector3 &otherVector) const;
-    float getSignedAngleWith(const Vector3 &otherVector) const;
-    float getSignedAngleAroundAxisWith(const Vector3 &otherVector, const Vector3& axis) const;
+    float getAngleWith(const Vector3& otherVector) const;
+    float getSignedAngleWith(const Vector3& otherVector) const;
+    float getSignedAngleAroundAxisWith(const Vector3& otherVector, const Vector3& axis) const;
 
     static Vector3 quaternionToEuler(qglviewer::Quaternion quaternion);
     static Vector3 quaternionToEuler(float x, float y, float z, float w);
@@ -108,7 +108,10 @@ public:
         return min + (max - min) * t;
     }
     static float inverseLerp(const Vector3& val, const Vector3& min, const Vector3& max) {
-        return (val - min).dot(max - min) / ((max - min).norm2() > 0 ? (max - min).norm2() : 0.0001f);
+        Vector3 d = max - min;
+        float d2 = d.norm2();
+        return (val - min).dot(d) / (d2 > 0 ? d2 : 1e-4f);
+
     }
     float inverseLerp(const Vector3& min, const Vector3& max) {
         return Vector3::inverseLerp(*this, min, max);
@@ -131,8 +134,8 @@ public:
 
     static Vector3 nabla;
 
-    float maxComp() const { return std::max({x, y, z}); };
-    float minComp() const { return std::min({x, y, z}); };
+    float maxComp() const { return std::max(x, std::max(y, z)); }
+    float minComp() const { return std::min(x, std::min(y, z)); }
 
 
     static bool isInBox(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos);
@@ -141,9 +144,10 @@ public:
     static float signedDistanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension = false);
     static float distanceToBoundaries(const Vector3& pos, const Vector3& minPos, const Vector3& maxPos, bool ignoreZdimension = false);
 
-    bool isValid() const { return this->valid && (this->x == this->x && this->y == this->y && this->z == this->z); }
+    bool isValid() const { return this->valid && std::isfinite(x) && std::isfinite(y) && std::isfinite(z); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
     static Vector3 invalid() { return Vector3(false); }
+    static Vector3 origin() { return Vector3(); }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x, this->y, this->z); }
     explicit operator float*() const { return new float[3]{this->x, this->y, this->z}; }
 //    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
@@ -220,7 +224,7 @@ namespace std {
     Vector3 abs(const Vector3& o);
     template <> struct hash<Vector3>
     {
-        size_t operator()(const Vector3 & x) const
+        size_t operator()(const Vector3&  x) const
         {
             size_t seed = 0;
             hash_combine(seed, int(x.x * 100));
@@ -235,8 +239,8 @@ class AABBox { //: public std::pair<Vector3, Vector3> {
 public:
     AABBox();
     AABBox(const Vector3& mini, const Vector3& maxi);
-    AABBox(std::tuple<Vector3, Vector3> minMax);
-    AABBox(std::vector<Vector3> allPointsToContain);
+    AABBox(const std::tuple<Vector3, Vector3>& minMax);
+    AABBox(const std::vector<Vector3>& allPointsToContain);
     Vector3 min() const { return this->mini; }
     Vector3 max() const { return this->maxi; }
     Vector3 dimensions() const { return max() - min(); }

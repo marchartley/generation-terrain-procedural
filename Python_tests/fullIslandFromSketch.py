@@ -1,3 +1,8 @@
+print("Outdated, use mergedIslandGeneration.py instead")
+exit(-1)
+
+
+
 from copy import deepcopy
 import random
 import math

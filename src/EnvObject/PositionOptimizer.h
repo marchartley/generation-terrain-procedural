@@ -30,10 +30,14 @@ public:
     static BSpline getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
     static BSpline getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
     static BSpline getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength);
-
-//protected:
     static BSpline followIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength);
     static BSpline followGradient(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, int maxTries, bool goUp);
+
+    static BSpline getMinLengthCurveFollowingIsolevelWithoutScoreMap(const Vector3& seedPosition, std::function<float(const Vector3&)> func, float minLength);
+    static BSpline getExactLengthCurveFollowingGradientsWithoutScoreMap(const Vector3& seedPosition, std::function<float(const Vector3&)> func, float targetLength);
+    static BSpline getSkeletonCurveWithoutScoreMap(const Vector3& seedPosition, std::function<float(const Vector3&)> func, float targetLength);
+    static BSpline followIsolevelWithoutScoreMap(const Vector3& seedPosition, std::function<float(const Vector3&)> func, float minLength);
+    static BSpline followGradientWithoutScoreMap(const Vector3& seedPosition, std::function<float(const Vector3&)> func, int maxTries, bool goUp);
 };
 
 class AreaOptimizer
