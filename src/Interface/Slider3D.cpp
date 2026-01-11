@@ -110,7 +110,7 @@ SliderConstraint::SliderConstraint(const Vector3& minPos, const Vector3& maxPos)
     this->constraint->setTranslationConstraintType(qglviewer::AxisPlaneConstraint::AXIS);
     this->constraint->setRotationConstraintType(qglviewer::AxisPlaneConstraint::FORBIDDEN);
     Vector3 dir = maxPos - minPos;
-    this->constraint->setTranslationConstraintDirection(qglviewer::Vec(dir.x, dir.y, dir.z));
+    this->constraint->setTranslationConstraintDirection(qglviewer::Vec(dir.x(), dir.y(), dir.z()));
 }
 
 SliderConstraint::~SliderConstraint()

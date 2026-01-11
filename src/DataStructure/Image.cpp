@@ -55,34 +55,34 @@ void Image::writeColor(png_structp png, png_infop info, png_bytep* row_pointers)
 
             if (bitDepth == 1) {
                 uint8_t byteValue = 0;
-                if (px.x >= 0.5f) byteValue |= 0b10000000; // R
-                if (px.y >= 0.5f) byteValue |= 0b01000000; // G
-                if (px.z >= 0.5f) byteValue |= 0b00100000; // B
+                if (px.x() >= 0.5f) byteValue |= 0b10000000; // R
+                if (px.y() >= 0.5f) byteValue |= 0b01000000; // G
+                if (px.z() >= 0.5f) byteValue |= 0b00100000; // B
                 row[x / 8] = byteValue; // Here, 8 pixels are packed into a single byte
 
             } else if (bitDepth == 2) {
-                uint8_t r = static_cast<uint8_t>(px.x * 3); // scale 0-1 to 0-3
-                uint8_t g = static_cast<uint8_t>(px.y * 3);
-                uint8_t b = static_cast<uint8_t>(px.z * 3);
+                uint8_t r = static_cast<uint8_t>(px.x() * 3); // scale 0-1 to 0-3
+                uint8_t g = static_cast<uint8_t>(px.y() * 3);
+                uint8_t b = static_cast<uint8_t>(px.z() * 3);
                 row[x] = (r << 6) | (g << 4) | (b << 2);
 
             } else if (bitDepth == 4) {
-                uint8_t r = static_cast<uint8_t>(px.x * 15); // scale 0-1 to 0-15
-                uint8_t g = static_cast<uint8_t>(px.y * 15);
-                uint8_t b = static_cast<uint8_t>(px.z * 15);
+                uint8_t r = static_cast<uint8_t>(px.x() * 15); // scale 0-1 to 0-15
+                uint8_t g = static_cast<uint8_t>(px.y() * 15);
+                uint8_t b = static_cast<uint8_t>(px.z() * 15);
                 row[x * 2] = (r << 4) | g;
                 row[x * 2 + 1] = (b << 4);
 
             } else if (bitDepth == 8) {
-                row[x * 4 + 0] = static_cast<png_byte>(px.x * 255);
-                row[x * 4 + 1] = static_cast<png_byte>(px.y * 255);
-                row[x * 4 + 2] = static_cast<png_byte>(px.z * 255);
+                row[x * 4 + 0] = static_cast<png_byte>(px.x() * 255);
+                row[x * 4 + 1] = static_cast<png_byte>(px.y() * 255);
+                row[x * 4 + 2] = static_cast<png_byte>(px.z() * 255);
                 row[x * 4 + 3] = 255; // Alpha
 
             } else if (bitDepth == 16) {
-                uint16_t r = static_cast<uint16_t>(px.x * 65535);
-                uint16_t g = static_cast<uint16_t>(px.y * 65535);
-                uint16_t b = static_cast<uint16_t>(px.z * 65535);
+                uint16_t r = static_cast<uint16_t>(px.x() * 65535);
+                uint16_t g = static_cast<uint16_t>(px.y() * 65535);
+                uint16_t b = static_cast<uint16_t>(px.z() * 65535);
 
                 // R channel
                 row[x * 8 + 0] = (r >> 8) & 0xFF;
@@ -190,9 +190,9 @@ void Image::writeOtherThanPNG(std::string filename, std::string ext)
     } else if (ext == "HDR") {
         std::vector<float> toFloatData(width*height*nbComp);
         for (size_t i = 0; i < img.size(); i++) {
-            toFloatData[nbComp * i + 0] = std::max(img[i].x, 0.f);
-            toFloatData[nbComp * i + 1] = std::max(img[i].y, 0.f);
-            toFloatData[nbComp * i + 2] = std::max(img[i].z, 0.f);
+            toFloatData[nbComp * i + 0] = std::max(img[i].x(), 0.f);
+            toFloatData[nbComp * i + 1] = std::max(img[i].y(), 0.f);
+            toFloatData[nbComp * i + 2] = std::max(img[i].z(), 0.f);
             toFloatData[nbComp * i + 3] = 1.f;
         }
         stbi_write_hdr(filename.c_str(), width, height, nbComp, toFloatData.data());
@@ -201,10 +201,10 @@ void Image::writeOtherThanPNG(std::string filename, std::string ext)
         std::vector<uint8_t> toIntData(width*height*nbComp);
 
         for (size_t i = 0; i < img.size(); i++) {
-            img[i] = Vector3::max(img[i] * 255, Vector3(0, 0, 0));
-            toIntData[nbComp * i + 0] = int(img[i].x);
-            toIntData[nbComp * i + 1] = int(img[i].y);
-            toIntData[nbComp * i + 2] = int(img[i].z);
+            img[i] = Vector3::max(img[i] * 255.f, Vector3(0, 0, 0));
+            toIntData[nbComp * i + 0] = int(img[i].x());
+            toIntData[nbComp * i + 1] = int(img[i].y());
+            toIntData[nbComp * i + 2] = int(img[i].z());
             toIntData[nbComp * i + 3] = 255;
         }
 
@@ -417,7 +417,7 @@ GridF Image::getBwImage() const
     if (!isColor) return this->bwImage;
     GridF img(colorImage.getDimensions());
     img.iterateParallel([&](size_t i) {
-        img[i] = (colorImage[i].x + colorImage[i].y + colorImage[i].z) / 3.f;
+        img[i] = (colorImage[i].x() + colorImage[i].y() + colorImage[i].z()) / 3.f;
     });
     return img;
 }

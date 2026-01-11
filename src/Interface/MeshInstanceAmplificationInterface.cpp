@@ -240,8 +240,8 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getCoralAvailablePositio
     for (auto& interv : intervals) {
         Vector3 start = interv.min();
         Vector3 end = interv.max();
-        float minHeight = start.z;
-        float maxHeight = end.z;
+        float minHeight = start.z();
+        float maxHeight = end.z();
 
         extendedPositions.push_back({start.xy() + Vector3(0, 0, minHeight), end});
         extendedPositions.push_back({start.xy() + Vector3(0, 0, maxHeight), end});
@@ -262,8 +262,8 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     for (auto& interv : intervals) {
         Vector3 start = interv.min();
         Vector3 end = interv.max();
-        float minHeight = start.z;
-        float maxHeight = end.z;
+        float minHeight = start.z();
+        float maxHeight = end.z();
 
         extendedPositions.push_back({start.xy() + Vector3(0, 0, minHeight), end});
         extendedPositions.push_back({start.xy() + Vector3(0, 0, maxHeight), end});
@@ -282,27 +282,27 @@ std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface
         if (toUpper(obj->name) != toUpper(type)) continue;
         float growthFactor = obj->computeGrowingState();
         if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
-            positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x, asPoint->position.y, heightmap->getHeight(asPoint->position)), growthFactor, asPoint->ID});
+            positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x(), asPoint->position.y(), heightmap->getHeight(asPoint->position)), growthFactor, asPoint->ID});
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
             auto path = asCurve->curve.getPath(60);
             for (auto p : path) {
                 p = p + Vector3::random(asCurve->width * .5f);
-                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor, asCurve->ID});
+                positionsAndGrowthFactor.push_back({Vector3(p.x(), p.y(), heightmap->getHeight(p)), growthFactor, asCurve->ID});
             }
         } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
 //            float totalArea = asArea->area.computeArea();
             std::vector<Vector3> randomPoints;
             AABBox box = AABBox(asArea->curve.AABBox());
-            for (int x = box.min().x; x < box.max().x; x += 5) {
-                for (int y = box.min().y; y < box.max().y; y += 5) {
+            for (int x = box.min().x(); x < box.max().x(); x += 5) {
+                for (int y = box.min().y(); y < box.max().y(); y += 5) {
                     Vector3 pos(x, y, 0);
-                    if (random_gen::generate_perlin(pos.x * 5.f, pos.y * 5.f) > .5f && asArea->curve.containsXY(pos))
+                    if (random_gen::generate_perlin(pos.x() * 5.f, pos.y() * 5.f) > .5f && asArea->curve.containsXY(pos))
                         randomPoints.push_back(pos);
                 }
             }
 //            auto randomPoints = asArea->area.randomPointsInside(60);
             for (const auto& p : randomPoints) {
-                positionsAndGrowthFactor.push_back({Vector3(p.x, p.y, heightmap->getHeight(p)), growthFactor, asArea->ID});
+                positionsAndGrowthFactor.push_back({Vector3(p.x(), p.y(), heightmap->getHeight(p)), growthFactor, asArea->ID});
             }
         }
     }
@@ -328,7 +328,7 @@ void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string 
         for (auto& col : jsonColors) {
             colors.push_back(json_to_color(col));
         }
-        Vector3 translation = json_to_vec3(instance["translation"]);
+        Vector3 translation = json_to_vec3<float>(instance["translation"]);
         int minInstances = instance["mininstances"];
         int maxInstances = instance["maxinstances"];
         float minSize = instance["minsize"];
@@ -438,21 +438,21 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
             int objIndex = std::get<2>(availablePositions[i]);
 //            Vector3 orientation = EnvObject::flowfield(position.xy()).normalized(); //Vector3(0, 0, EnvObject::flowfield(position).getAngleWith(Vector3(1, 0, 0)));
 
-            int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x * 1000, position.y * 1000, objIndex) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
+            int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x() * 1000, position.y() * 1000, objIndex) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
             int nbRandomValues = 4;
             std::vector<float> randomVals(nbInstances * nbRandomValues);
             for (int iRand = 0; iRand < randomVals.size(); iRand++) {
-                randomVals[iRand] = (random_gen::generate_perlin(position.x * 1000, position.y * 1000, (iRand + objIndex) * 100) + 1) * .5f;
+                randomVals[iRand] = (random_gen::generate_perlin(position.x() * 1000, position.y() * 1000, (iRand + objIndex) * 100) + 1) * .5f;
             }
             for (int iInstance = 0; iInstance < nbInstances; iInstance++) {
                 size_t randomIdx = iInstance * nbRandomValues;
                 Vector3 instancePos = position + (Vector3(randomVals[randomIdx + 0], randomVals[randomIdx + 1], 0.f) - Vector3(.5f, .5f, 0.f)) * meshType.radius;
                 if (!Vector3::isInBox(instancePos.xy(), Vector3(.1f, .1f, 0), Vector3(heightmap->getSizeX() - .1f, heightmap->getSizeY() - .1f, 0))) continue;
-                instancePos.z = heightmap->getHeight(instancePos.xy());
+                instancePos.z() = heightmap->getHeight(instancePos.xy());
                 Vector3 orientation = EnvObject::flowfield(instancePos.xy()).normalized();
                 int meshIndex = int(randomVals[randomIdx + 2] * meshType.possibleMeshes.size());
                 float scale = interpolation::inv_linear(randomVals[randomIdx + 3], meshType.minMaxSizes.first * growth, meshType.minMaxSizes.second * growth);
-//                instancePos.z -= scale * .15f;
+//                instancePos.z() -= scale * .15f;
 //                meshType.indicesAndPositionsAndSizes.push_back({meshIndex, instancePos, scale});
                 meshType.add(meshIndex, instancePos, scale, orientation);
             }
@@ -528,11 +528,11 @@ nlohmann::json InstantiationMeshOption::currentInstancesToJSON(GridF scoreMap)
         Vector3& orientation = orientations[i];
 
         nlohmann::json json;
-        json["position"] = std::vector<float>({pos.x, pos.y, pos.z});
+        json["position"] = std::vector<float>({pos.x(), pos.y(), pos.z()});
         json["scale"] = std::vector<float>({size, size, size});
 
         Vector3 angle = Vector3(0, 0, -(orientation.getAngleWith(Vector3(0, 1, 0))));
-        json["rotation"] = std::vector<float>({angle.x, angle.y, angle.z});
+        json["rotation"] = std::vector<float>({angle.x(), angle.y(), angle.z()});
 
         if (!scoreMap.empty())
             json["score"] = scores.interpolate(pos.xy());

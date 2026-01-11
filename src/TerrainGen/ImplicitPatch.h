@@ -120,9 +120,9 @@ public:
 
 //    virtual size_t getCurrentHistoryIndex() const;
 
-    virtual float getSizeX() const { return this->getBBox().max().x; }
-    virtual float getSizeY() const { return this->getBBox().max().y; }
-    virtual float getSizeZ() const { return this->getBBox().max().z; }
+    virtual float getSizeX() const { return this->getBBox().max().x(); }
+    virtual float getSizeY() const { return this->getBBox().max().y(); }
+    virtual float getSizeZ() const { return this->getBBox().max().z(); }
 
     GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 

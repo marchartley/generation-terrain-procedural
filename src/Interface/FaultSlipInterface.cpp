@@ -61,10 +61,10 @@ void FaultSlipInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 slippingDirection = json_to_vec3(parameters.at("slipping_direction")) + Vector3::random();
+        Vector3 slippingDirection = json_to_vec3<float>(parameters.at("slipping_direction")) + Vector3::random();
         float slippingDistance = parameters.at("slipping_distance").get<float>() * (1 + random_gen::generate(-1.f, 1.f));
-        Vector3 firstPointPos = json_to_vec3(parameters.at("first_point_pos")) + Vector3::random(10.f);
-        Vector3 secondPointPos = json_to_vec3(parameters.at("second_point_pos")) + Vector3::random(10.f);
+        Vector3 firstPointPos = json_to_vec3<float>(parameters.at("first_point_pos")) + Vector3::random(10.f);
+        Vector3 secondPointPos = json_to_vec3<float>(parameters.at("second_point_pos")) + Vector3::random(10.f);
         bool positiveSideFalling = parameters.at("positive_side").get<bool>();
 
         this->faultSlip.slippingDirection = slippingDirection;

@@ -174,7 +174,7 @@ bool Collision::intersectionTriangleAABBox(const Vector3& t0, const Vector3& t1,
 //    Vector3 box = maxAABBox - minAABBox;
     AABBox box(minAABBox - Vector3(1, 1, 1), maxAABBox + Vector3(1, 1, 1));
     Vector3 halfDims = box.dimensions() * .5f;
-    return Collision::intersectionAABBoxPlane(box.min(), box.max(), {t0, t1, t2}) && Collision::intersectionTriangleAABBox(t0, t1, t2, box.center(), Vector3(halfDims.x, 0, 0), Vector3(0, halfDims.y, 0), Vector3(0, 0, halfDims.z));
+    return Collision::intersectionAABBoxPlane(box.min(), box.max(), {t0, t1, t2}) && Collision::intersectionTriangleAABBox(t0, t1, t2, box.center(), Vector3(halfDims.x(), 0, 0), Vector3(0, halfDims.y(), 0), Vector3(0, 0, halfDims.z()));
 //    bool planeIntersection = Collision::intersectionAABBoxPlane(box.min(), box.max(), {t0, t1, t2});
 //    bool triangleIntersection = Collision::intersectionTriangleAABBox(t0, t1, t2, box.center(), Vector3(halfDims.x, 0, 0), Vector3(0, halfDims.y, 0), Vector3(0, 0, halfDims.z));
 //    return planeIntersection && triangleIntersection;
@@ -241,13 +241,13 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
 //    Vector3 box = (boxMax - boxMin);
 //    orig -= boxMin;
 
-    float tmin = (boxMin.x - orig.x) / dir.x;
-    float tmax = (boxMax.x - orig.x) / dir.x;
+    float tmin = (boxMin.x() - orig.x()) / dir.x();
+    float tmax = (boxMax.x() - orig.x()) / dir.x();
 
     if (tmin > tmax) std::swap(tmin, tmax);
 
-    float tymin = (boxMin.y - orig.y) / dir.y;
-    float tymax = (boxMax.y - orig.y) / dir.y;
+    float tymin = (boxMin.y() - orig.y()) / dir.y();
+    float tymax = (boxMax.y() - orig.y()) / dir.y();
 
     if (tymin > tymax) std::swap(tymin, tymax);
 
@@ -260,8 +260,8 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
     if (tymax < tmax)
         tmax = tymax;
 
-    float tzmin = (boxMin.z - orig.z) / dir.z;
-    float tzmax = (boxMax.z - orig.z) / dir.z;
+    float tzmin = (boxMin.z() - orig.z()) / dir.z();
+    float tzmax = (boxMax.z() - orig.z()) / dir.z();
 
     if (tzmin > tzmax) std::swap(tzmin, tzmax);
 
@@ -513,7 +513,7 @@ bool Collision::intersectionAABBoxPlane(const Vector3 &boxMin, const Vector3 &bo
     // Compute signed distance from box center to plane
     float dist = triangle.normal.dot(boxCenter) - triangle.d;
     // Compute box's extent along plane normal
-    Vector3 absNormal(std::abs(triangle.normal.x), std::abs(triangle.normal.y), std::abs(triangle.normal.z));
+    Vector3 absNormal(std::abs(triangle.normal.x()), std::abs(triangle.normal.y()), std::abs(triangle.normal.z()));
     float extent = boxHalfDiagonal.dot(absNormal);
 
     // Box intersects plane if absolute distance to plane is within box's extent along plane normal

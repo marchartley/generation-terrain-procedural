@@ -56,16 +56,16 @@ void KarstPathGenerationInterface::affectTerrains(std::shared_ptr<Heightmap> hei
 //    this->voxelGrid = voxelGrid;
     this->AABBoxMinPos = Vector3(0, 0, 0);
     this->AABBoxMaxPos = voxelGrid->getDimensions(); // Vector3(voxelGrid->sizeX, voxelGrid->sizeY, voxelGrid->sizeZ); // * voxelGrid->blockSize;
-    this->fractureVector->setPositions(AABBoxMinPos, Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z));
-    this->waterHeightSlider->setPositions(AABBoxMinPos + Vector3(-10, -10, 0), Vector3(AABBoxMinPos.x, AABBoxMinPos.y, AABBoxMaxPos.z) + Vector3(-10, -10, 0));
+    this->fractureVector->setPositions(AABBoxMinPos, Vector3(AABBoxMinPos.x(), AABBoxMinPos.y(), AABBoxMaxPos.z()));
+    this->waterHeightSlider->setPositions(AABBoxMinPos + Vector3(-10, -10, 0), Vector3(AABBoxMinPos.x(), AABBoxMinPos.y(), AABBoxMaxPos.z()) + Vector3(-10, -10, 0));
     this->waterHeightSlider->sliderControlPoint->setGrabberStateColor({
                                                                           {INACTIVE, {0/255.f, 0/255.f, 180/255.f, 1.f}},
                                                                           {ACTIVE, {0/255.f, 0/255.f, 255/255.f, 1.f}},
                                                                       });
 
-    Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
-    Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
-    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z);
+    Vector3 offX = Vector3(AABBoxMaxPos.x() - AABBoxMinPos.x(), 0, 0);
+    Vector3 offY = Vector3(0, AABBoxMaxPos.y() - AABBoxMinPos.y(), 0);
+    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z());
     this->waterLevelMesh.fromArray({
                                        {AABBoxMinPos + offZ, AABBoxMinPos + offX + offZ,
                                         AABBoxMinPos + offX + offZ, AABBoxMinPos + offX + offY + offZ,
@@ -106,9 +106,9 @@ void KarstPathGenerationInterface::updateWaterHeight(float newHeight)
     if (karstCreator->waterHeights.empty())
         this->karstCreator->addWaterHeight(WaterHeight(0.f, 20.f, 2.0));
     karstCreator->waterHeights.back().height = newHeight;
-    Vector3 offX = Vector3(AABBoxMaxPos.x - AABBoxMinPos.x, 0, 0);
-    Vector3 offY = Vector3(0, AABBoxMaxPos.y - AABBoxMinPos.y, 0);
-    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z);
+    Vector3 offX = Vector3(AABBoxMaxPos.x() - AABBoxMinPos.x(), 0, 0);
+    Vector3 offY = Vector3(0, AABBoxMaxPos.y() - AABBoxMinPos.y(), 0);
+    Vector3 offZ = Vector3(0, 0, this->waterHeightSlider->sliderControlPoint->getPosition().z());
     this->waterLevelMesh.fromArray({
                                        {AABBoxMinPos + offZ, AABBoxMinPos + offX + offZ,
                                         AABBoxMinPos + offX + offZ, AABBoxMinPos + offX + offY + offZ,

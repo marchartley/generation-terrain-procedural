@@ -34,7 +34,7 @@ void StableFluids::StableFluidsSimulation::addVelocity(int x, int y, int z, cons
 
 void StableFluids::StableFluidsSimulation::diffuse() {
     int sizeX = dimensions.x, sizeY = dimensions.y, sizeZ = dimensions.z;
-    float a = dt * viscosity * dimensions.x * dimensions.y * dimensions.z * diffusion;
+    float a = dt * viscosity * dimensions.x() * dimensions.y() * dimensions.z() * diffusion;
     for (int k = 0; k < solverIterations; ++k) { // 20 iterations is a common choice
         auto oldVelocities = velocity;
         oldVelocities.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
@@ -65,9 +65,9 @@ void StableFluids::StableFluidsSimulation::project() {
             for (int z = 1; z < sizeZ - 1; ++z) {
                 Vector3 pos(x, y, z);
                 divergence.at(pos) = -0.5f * (
-                            velocity.at(Vector3(x+1, y, z)).x - velocity.at(Vector3(x-1, y, z)).x +
-                            velocity.at(Vector3(x, y+1, z)).y - velocity.at(Vector3(x, y-1, z)).y +
-                            velocity.at(Vector3(x, y, z+1)).z - velocity.at(Vector3(x, y, z-1)).z
+                            velocity.at(Vector3(x+1, y, z)).x() - velocity.at(Vector3(x-1, y, z)).x() +
+                            velocity.at(Vector3(x, y+1, z)).y() - velocity.at(Vector3(x, y-1, z)).y() +
+                            velocity.at(Vector3(x, y, z+1)).z() - velocity.at(Vector3(x, y, z-1)).z
                             );
                 pressure.at(pos) = 0;
             }
@@ -98,9 +98,9 @@ void StableFluids::StableFluidsSimulation::project() {
         for (int y = 1; y < sizeY - 1; ++y) {
             for (int z = 1; z < sizeZ - 1; ++z) {
                 Vector3 pos(x, y, z);
-                velocity.at(pos).x -= 0.5f * (pressure.at(Vector3(x+1, y, z)) - pressure.at(Vector3(x-1, y, z)));
-                velocity.at(pos).y -= 0.5f * (pressure.at(Vector3(x, y+1, z)) - pressure.at(Vector3(x, y-1, z)));
-                velocity.at(pos).z -= 0.5f * (pressure.at(Vector3(x, y, z+1)) - pressure.at(Vector3(x, y, z-1)));
+                velocity.at(pos).x() -= 0.5f * (pressure.at(Vector3(x+1, y, z)) - pressure.at(Vector3(x-1, y, z)));
+                velocity.at(pos).y() -= 0.5f * (pressure.at(Vector3(x, y+1, z)) - pressure.at(Vector3(x, y-1, z)));
+                velocity.at(pos).z() -= 0.5f * (pressure.at(Vector3(x, y, z+1)) - pressure.at(Vector3(x, y, z-1)));
             }
         }
     }
@@ -120,9 +120,9 @@ void StableFluids::StableFluidsSimulation::advect() {
                 Vector3 lastPos = pos - dt * velocity.at(pos);
 
                 // Clamp the position to be within the simulation box
-                lastPos.x = std::max(0.0f, std::min((float)sizeX, lastPos.x));
-                lastPos.y = std::max(0.0f, std::min((float)sizeY, lastPos.y));
-                lastPos.z = std::max(0.0f, std::min((float)sizeZ, lastPos.z));
+                lastPos.x() = std::max(0.0f, std::min((float)sizeX, lastPos.x));
+                lastPos.y() = std::max(0.0f, std::min((float)sizeY, lastPos.y));
+                lastPos.z() = std::max(0.0f, std::min((float)sizeZ, lastPos.z));
 
                 // Interpolate the velocity at the new position
                 newVelocity.at(pos) = velocity.interpolate(lastPos);
@@ -544,9 +544,9 @@ void StableFluidsSimulation::advectVelocity()
         for (int y = 0; y < sizeY; y++) {
             for (int z = 0; z < sizeZ; z++) {
                 Vector3 emittingCell = Vector3(x, y, z) - (velocity_old(x, y, z) * dt0);
-                float xCell = clamp(emittingCell.x, 0.f, (float)sizeX - 0.0001f);
-                float yCell = clamp(emittingCell.y, 0.f, (float)sizeY - 0.0001f);
-                float zCell = clamp(emittingCell.z, 0.f, (float)sizeZ - 0.0001f);
+                float xCell = clamp(emittingCell.x(), 0.f, (float)sizeX - 0.0001f);
+                float yCell = clamp(emittingCell.y(), 0.f, (float)sizeY - 0.0001f);
+                float zCell = clamp(emittingCell.z(), 0.f, (float)sizeZ - 0.0001f);
 
 //                if (!velocity.checkCoord(emittingCell)) {
 //                    velocity.at(emittingCell) -= velocity_old.at(x, y, z);

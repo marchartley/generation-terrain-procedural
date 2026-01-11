@@ -5,6 +5,26 @@
 #include <vector>
 #include <set>
 #include <complex>
+
+
+
+namespace interpolation {
+    float linear(float x, float _min = 0.0, float _max = 1.0);
+    float inv_linear(float x, float _min = 0.0, float _max = 1.0);
+    float sigmoid(float _x, float lambda = 10.0, float offset = -0.5, float _min = 0.0, float _max = 1.0);
+    float smooth(float _x, float _min = 0.0, float _max = 1.0);
+    float quadratic(float _x, float _min = 0.0, float _max = 1.0);
+    float cubic(float _x, float _min = 0.0, float _max = 1.0);
+    float cosine(float _x, float _min = 0.0, float _max = 1.0);
+    float binary(float _x, float _min = 0.0, float _max = 1.0);
+    float wyvill(float _x, float _min = 0.0, float _max = 1.0);
+
+    // Found in A Review of Digital Terrain Modeling (Eric Galin, Eric Guérin, Adrien Peytavie, Guillaume Cordonnier, Marie-Paule
+    // Cani, Bedrich Benes, James Gain) [2019]
+    // Used to generate a terrain from random faults
+    float fault_distance(float distance, float impactRadius);
+}
+
 #include "DataStructure/Vector3.h"
 
 #define PI M_PI
@@ -97,23 +117,6 @@ std::vector<T> vectorIntersection(std::vector<T> v1, std::vector<T> v2) {
     v2 = removeDuplicatesFromVector(v2);
     std::set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(), std::back_inserter(result));
     return result;
-}
-
-namespace interpolation {
-    float linear(float x, float _min = 0.0, float _max = 1.0);
-    float inv_linear(float x, float _min = 0.0, float _max = 1.0);
-    float sigmoid(float _x, float lambda = 10.0, float offset = -0.5, float _min = 0.0, float _max = 1.0);
-    float smooth(float _x, float _min = 0.0, float _max = 1.0);
-    float quadratic(float _x, float _min = 0.0, float _max = 1.0);
-    float cubic(float _x, float _min = 0.0, float _max = 1.0);
-    float cosine(float _x, float _min = 0.0, float _max = 1.0);
-    float binary(float _x, float _min = 0.0, float _max = 1.0);
-    float wyvill(float _x, float _min = 0.0, float _max = 1.0);
-
-    // Found in A Review of Digital Terrain Modeling (Eric Galin, Eric Guérin, Adrien Peytavie, Guillaume Cordonnier, Marie-Paule
-    // Cani, Bedrich Benes, James Gain) [2019]
-    // Used to generate a terrain from random faults
-    float fault_distance(float distance, float impactRadius);
 }
 
 

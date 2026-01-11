@@ -58,7 +58,7 @@ void EnvCurve::applyDeposition(EnvMaterial& material)
         p = p + Vector3(width, width, 0) - box.min();
 
     if (_cachedAbsorptionDepositionField.empty()) {
-        _cachedAbsorptionDepositionField = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+        _cachedAbsorptionDepositionField = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
         _cachedAbsorptionDepositionField.iterateParallel([&] (const Vector3& pos) {
             float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
@@ -80,7 +80,7 @@ void EnvCurve::applyAbsorption(EnvMaterial& material)
             p = p + Vector3(width, width, 0) - box.min();
 
         if (_cachedAbsorptionDepositionField.empty()) {
-            _cachedAbsorptionDepositionField = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+            _cachedAbsorptionDepositionField = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
             _cachedAbsorptionDepositionField.iterateParallel([&] (const Vector3& pos) {
                 float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
@@ -107,7 +107,7 @@ void EnvCurve::applyDepositionOnDeath()
         BSpline translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(width, width, 0) - box.min();
-        GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+        GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
         sand.iterateParallel([&] (const Vector3& pos) {
             sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * amount;
@@ -127,7 +127,7 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         Vector3 halfWidth = objectWidth * .5f;
         BSpline translatedCurve = this->curve;
         for (auto& p : translatedCurve)
-            p.z = 0;
+            p.z() = 0;
         AABBox box = AABBox(translatedCurve.points);
         box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
@@ -195,7 +195,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         heights.raiseErrorOnBadCoord = false;
         heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
         for (Vector3& p : translatedCurve) {
-            p.z = heights(p.xy());
+            p.z() = heights(p.xy());
         }
         if (height == 0){
             box = AABBox({box.center()});
@@ -207,7 +207,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         std::cout << "Nullptr box: " << box << std::endl;
         // translatedCurve.translate(-(box.min() - offset * .5f));
         // translatedCurve.translate(-(box.min()).xy());
-        // translatedCurve.translate(Vector3(0, 0, -offset.z * 0.5f));
+        // translatedCurve.translate(Vector3(0, 0, -offset.z() * 0.5f));
         // box = AABBox(translatedCurve.points);
         // box.expand({box.min() - offset, box.max() + offset});
         patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, height, translatedCurve, false);
@@ -244,8 +244,8 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
         float maxHeight = 0;
         for (Vector3& p : translatedCurve) {
-            p.z = heights(p.xy());
-            maxHeight = std::max(maxHeight, p.z);
+            p.z() = heights(p.xy());
+            maxHeight = std::max(maxHeight, p.z());
         }
         if (radius == 0){
             box = AABBox({box.center()});
@@ -265,8 +265,8 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
         heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
         float maxHeight = 0;
         for (Vector3& p : translatedCurve) {
-            p.z = heights(p.xy());
-            maxHeight = std::max(maxHeight, p.z);
+            p.z() = heights(p.xy());
+            maxHeight = std::max(maxHeight, p.z());
         }
         if (radius == 0){
             box = AABBox({box.center()});

@@ -1,0 +1,41 @@
+----------------- Options ---------------
+               batch_size: 1                             
+          checkpoints_dir: ./checkpoints                 
+                crop_size: 256                           
+                 dataroot: None                          
+             dataset_mode: aligned                       
+                direction: AtoB                          
+          display_winsize: 256                           
+                    epoch: latest                        
+                     eval: False                         
+                  fromCpp: True                          	[default: False]
+                  gpu_ids: 0                             
+                init_gain: 0.02                          
+                init_type: normal                        
+                    input: /media/marc/Data/NN Datasets/1/input_label.png	[default: None]
+                 input_nc: 3                             
+                  isTrain: False                         	[default: None]
+                load_iter: 0                             	[default: 0]
+                load_size: 256                           
+         max_dataset_size: inf                           
+                    model: pix2pix                       	[default: test]
+               n_layers_D: 3                             
+                     name: labels_to_terrain_pacific_graphics_2025_larger_reefs	[default: experiment_name]
+                      ndf: 64                            
+                     netD: basic                         
+                     netG: unet_256                      
+                      ngf: 64                            
+               no_dropout: False                         
+                  no_flip: False                         
+                     norm: batch                         
+              num_threads: 0                             
+                   output: /media/marc/Data/NN Datasets/1/result_height.png	[default: None]
+                output_nc: 3                             
+                    phase: test                          
+               preprocess: resize_and_crop               
+           serial_batches: False                         
+                   suffix:                               
+                use_wandb: False                         
+                  verbose: False                         
+       wandb_project_name: CycleGAN-and-pix2pix          
+----------------- End -------------------

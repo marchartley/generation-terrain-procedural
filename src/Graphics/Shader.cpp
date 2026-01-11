@@ -187,7 +187,7 @@ void Shader::setFloat(std::string pname, float value)
 void Shader::setVector(std::string pname, const Vector3& value)
 {
     if (!this->use()) return;
-    this->setVector(pname, (float*)value, 3);
+    this->setVector(pname, value.data(), 3);
 }
 
 void Shader::setVector(std::string pname, const Vector4 &value)
@@ -213,7 +213,7 @@ void Shader::setVector(std::string pname, glm::vec2 value)
     if (!this->use()) return;
     GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }*/
-void Shader::setVector(std::string pname, float value[], int n)
+void Shader::setVector(std::string pname, const float* value, int n)
 {
     if (!this->use()) return;
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());

@@ -14,7 +14,7 @@ TerrainModel::~TerrainModel()
 
 float TerrainModel::getHeight(const Vector3& pos)
 {
-    return this->getHeight(pos.x, pos.y);
+    return this->getHeight(pos.x(), pos.y());
 }
 
 bool TerrainModel::contains(const Vector3& v)
@@ -104,7 +104,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
     auto densities = this->getEnvironmentalDensities().resize(simulation->dimensions);
     float maxDensity = densities.max();
     for (size_t i = 0; i < obstacleMap.size(); i++)
-        obstacleMap[i] = ((maxDensity > 10 && densities[i] < 1000) || obstacleMap.getCoordAsVector3(i).z < 1 ? 1 : obstacleMap[i]);
+        obstacleMap[i] = ((maxDensity > 10 && densities[i] < 1000) || obstacleMap.getCoordAsVector3(i).z() < 1 ? 1 : obstacleMap[i]);
     size_t nbCurrentsToCompute = 1; //this->multipleFluidSimulations.size();
     fluidSimRescale = this->getDimensions() / simulation->dimensions;
 
@@ -131,7 +131,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                         Vector3 pos(x, y, z);
                         float closestTime = curve.estimateClosestTime(pos);
                         Vector3 closest = curve.getPoint(closestTime);
-                        if ((pos - closest).norm2() < (asPrimitive->parametersProvided[0] / fluidSimRescale.x) * (asPrimitive->parametersProvided[0] / fluidSimRescale.x))
+                        if ((pos - closest).norm2() < (asPrimitive->parametersProvided[0] / fluidSimRescale.x()) * (asPrimitive->parametersProvided[0] / fluidSimRescale.x()))
                             rasterizedCurve.at(pos) = closestTime;
                     }
                 }
@@ -159,7 +159,7 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
                         Vector3 pos(x, y, z);
                         float closestTime = curve.estimateClosestTime(pos);
                         Vector3 closest = curve.getPoint(closestTime);
-                        if ((pos - closest).norm2() < (asPrimitive->parametersProvided[0] / fluidSimRescale.x) * (asPrimitive->parametersProvided[0] / fluidSimRescale.x))
+                        if ((pos - closest).norm2() < (asPrimitive->parametersProvided[0] / fluidSimRescale.x()) * (asPrimitive->parametersProvided[0] / fluidSimRescale.x()))
                             rasterizedCurve.at(pos) = closestTime;
                     }
                 }
@@ -204,9 +204,9 @@ void TerrainModel::computeFlowfield(FluidSimType simu, int steps, TerrainModel *
         Vector3 simulationDimensions = simulation->dimensions;
         simulation->setObstacles(obstacleMap);
 //        this->multipleFluidSimulations[iCurrent].setObstacles(geom);
-        for (int x = 0; x < simulationDimensions.x; x++) {
-            for (int y = 0; y < simulationDimensions.y; y++) {
-                for (int z = 0; z < simulationDimensions.z; z++) {
+        for (int x = 0; x < simulationDimensions.x(); x++) {
+            for (int y = 0; y < simulationDimensions.y(); y++) {
+                for (int z = 0; z < simulationDimensions.z(); z++) {
                     Vector3 pos(x, y, z);
 //                    if (!Vector3::isInBox(pos - (sea_current.normalized() * 2.f), Vector3(), simulationDimensions))
                         simulation->setVelocity(x, y, z, sea_current);

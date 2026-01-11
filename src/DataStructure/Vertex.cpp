@@ -17,7 +17,7 @@ Vertex::Vertex(const Vector3& v, float isosurface)
 
 void Vertex::display() {
     glPushMatrix();
-    glTranslatef(x, y, z);
+    glTranslatef(x(), y(), z());
     float mini_change = 0.01; //(rand() % 100)/3000.0;
     if (isosurface > 0)
         glColor3f(1., 1., 1.);

@@ -197,8 +197,8 @@ Mesh& Mesh::normalize()
 
     for (const auto& p : this->vertexArray) {
         center += p;
-        minAABBox = Vector3(std::min(minAABBox.x, p.x), std::min(minAABBox.y, p.y), std::min(minAABBox.z, p.z));
-        maxAABBox = Vector3(std::max(maxAABBox.x, p.x), std::max(maxAABBox.y, p.y), std::max(maxAABBox.z, p.z));
+        minAABBox = Vector3(std::min(minAABBox.x(), p.x()), std::min(minAABBox.y(), p.y()), std::min(minAABBox.z(), p.z()));
+        maxAABBox = Vector3(std::max(maxAABBox.x(), p.x()), std::max(maxAABBox.y(), p.y()), std::max(maxAABBox.z(), p.z()));
     }
     center /= (float)vertexArray.size();
 
@@ -571,8 +571,8 @@ void Mesh::displayNormals()
 {
     glBegin(GL_LINES);
     for (size_t i = 0; i < this->vertexArray.size(); i++) {
-        glVertex3f(this->vertexArray[i].x, this->vertexArray[i].y, this->vertexArray[i].z);
-        glVertex3f(this->vertexArray[i].x + this->normalsArray[i].x, this->vertexArray[i].y + this->normalsArray[i].y, this->vertexArray[i].z + this->normalsArray[i].z);
+        glVertex3f(this->vertexArray[i].x(), this->vertexArray[i].y(), this->vertexArray[i].z());
+        glVertex3f(this->vertexArray[i].x() + this->normalsArray[i].x(), this->vertexArray[i].y() + this->normalsArray[i].y(), this->vertexArray[i].z() + this->normalsArray[i].z());
     }
     glEnd();
 }
@@ -694,7 +694,7 @@ void Mesh::displayAsScalarField(GridF field, const Vector3& cameraPosition, std:
     for (size_t i = 0; i < isoValues.size(); i++) {
         float iso = isoValues[i];
         Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
-        this->shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
+        this->shader->setVector("color", std::vector<float> {color.x(), color.y(), color.z(), .3f});
         this->shader->setFloat("isolevel", iso);
 
         // display the mesh
@@ -780,19 +780,19 @@ void Mesh::reorderAny(const Vector3& camPos, int nbVertexToUse)
             size_t vectorIndex = nbVertexToUse * newOrder[i] + iVertex;
             size_t flatIndex = 3 * (nbVertexToUse * i + iVertex);
             if (vertexArray.size() > vectorIndex) {
-                vertexArrayFloat[flatIndex + 0] = vertexArray[vectorIndex].x;
-                vertexArrayFloat[flatIndex + 1] = vertexArray[vectorIndex].y;
-                vertexArrayFloat[flatIndex + 2] = vertexArray[vectorIndex].z;
+                vertexArrayFloat[flatIndex + 0] = vertexArray[vectorIndex].x();
+                vertexArrayFloat[flatIndex + 1] = vertexArray[vectorIndex].y();
+                vertexArrayFloat[flatIndex + 2] = vertexArray[vectorIndex].z();
             }
             if (normalsArray.size() > vectorIndex) {
-                normalsArrayFloat[flatIndex + 0] = normalsArray[vectorIndex].x;
-                normalsArrayFloat[flatIndex + 1] = normalsArray[vectorIndex].y;
-                normalsArrayFloat[flatIndex + 2] = normalsArray[vectorIndex].z;
+                normalsArrayFloat[flatIndex + 0] = normalsArray[vectorIndex].x();
+                normalsArrayFloat[flatIndex + 1] = normalsArray[vectorIndex].y();
+                normalsArrayFloat[flatIndex + 2] = normalsArray[vectorIndex].z();
             }
             if (colorsArray.size() > vectorIndex) {
-                colorsArrayFloat[flatIndex + 0] = colorsArray[vectorIndex].x;
-                colorsArrayFloat[flatIndex + 1] = colorsArray[vectorIndex].y;
-                colorsArrayFloat[flatIndex + 2] = colorsArray[vectorIndex].z;
+                colorsArrayFloat[flatIndex + 0] = colorsArray[vectorIndex].x();
+                colorsArrayFloat[flatIndex + 1] = colorsArray[vectorIndex].y();
+                colorsArrayFloat[flatIndex + 2] = colorsArray[vectorIndex].z();
             }
         }
     }
@@ -802,19 +802,19 @@ void Mesh::reorderAny(const Vector3& camPos, int nbVertexToUse)
             size_t vectorIndex = nbVertexToUse * i + iVertex;
             size_t flatIndex = 3 * (nbVertexToUse * i + iVertex);
             if (vertexArray.size() > vectorIndex) {
-                vertexArray[vectorIndex].x = vertexArrayFloat[flatIndex + 0];
-                vertexArray[vectorIndex].y = vertexArrayFloat[flatIndex + 1];
-                vertexArray[vectorIndex].z = vertexArrayFloat[flatIndex + 2];
+                vertexArray[vectorIndex].x() = vertexArrayFloat[flatIndex + 0];
+                vertexArray[vectorIndex].y() = vertexArrayFloat[flatIndex + 1];
+                vertexArray[vectorIndex].z() = vertexArrayFloat[flatIndex + 2];
             }
             if (normalsArray.size() > vectorIndex) {
-                normalsArray[vectorIndex].x = normalsArrayFloat[flatIndex + 0];
-                normalsArray[vectorIndex].y = normalsArrayFloat[flatIndex + 1];
-                normalsArray[vectorIndex].z = normalsArrayFloat[flatIndex + 2];
+                normalsArray[vectorIndex].x() = normalsArrayFloat[flatIndex + 0];
+                normalsArray[vectorIndex].y() = normalsArrayFloat[flatIndex + 1];
+                normalsArray[vectorIndex].z() = normalsArrayFloat[flatIndex + 2];
             }
             if (colorsArray.size() > vectorIndex) {
-                colorsArray[vectorIndex].x = colorsArrayFloat[flatIndex + 0];
-                colorsArray[vectorIndex].y = colorsArrayFloat[flatIndex + 1];
-                colorsArray[vectorIndex].z = colorsArrayFloat[flatIndex + 2];
+                colorsArray[vectorIndex].x() = colorsArrayFloat[flatIndex + 0];
+                colorsArray[vectorIndex].y() = colorsArrayFloat[flatIndex + 1];
+                colorsArray[vectorIndex].z() = colorsArrayFloat[flatIndex + 2];
             }
         }
         /*for (int j = 0; j < 3 * nbVertexToUse; j++) {
@@ -855,7 +855,7 @@ std::string Mesh::toOBJ()
     std::string out = "# ICAR Team - Terrain generation\n# mesh.obj\n\no terrain\n\n";
 
     for (size_t i = 0; i < vertexArray.size(); i++)
-        out += "v " + std::to_string(vertexArray[i].x) + " " + std::to_string(vertexArray[i].z) + " " + std::to_string(vertexArray[i].y) + "\n";
+        out += "v " + std::to_string(vertexArray[i].x()) + " " + std::to_string(vertexArray[i].z()) + " " + std::to_string(vertexArray[i].y()) + "\n";
 
 //    out += "\n";
 //    for (size_t i = 0; i < vertexArray.size(); i++)
@@ -880,7 +880,7 @@ std::string Mesh::toOFF()
 
     out += std::to_string(vertexArray.size()) + " " + std::to_string(vertexArray.size() / 3) + " 0\n# Vertices\n";
     for (size_t i = 0; i < vertexArray.size(); i++)
-        out += std::to_string(vertexArray[i].x) + " " + std::to_string(vertexArray[i].y) + " " + std::to_string(vertexArray[i].z) + "\n";
+        out += std::to_string(vertexArray[i].x()) + " " + std::to_string(vertexArray[i].y()) + " " + std::to_string(vertexArray[i].z()) + "\n";
 
     out += "# Faces\n";
     for (size_t i = 0; i < vertexArray.size(); i += 3)
@@ -906,11 +906,11 @@ std::string Mesh::toSTL()
         Vector3 v1 = this->vertexArray[i + 0];
         Vector3 v2 = this->vertexArray[i + 1];
         Vector3 v3 = this->vertexArray[i + 2];
-        file << "\t" << "facet normal" << " " << n.x << " " << n.y << " " << n.z << "\n";
+        file << "\t" << "facet normal" << " " << n.x() << " " << n.y() << " " << n.z() << "\n";
         file << "\t\t" << "outer loop" << "\n";
-        file << "\t\t\t" << " " << "vertex" << " " << v1.x << " " << v1.y << " " << v1.z << "\n";
-        file << "\t\t\t" << " " << "vertex" << " " << v2.x << " " << v2.y << " " << v2.z << "\n";
-        file << "\t\t\t" << " " << "vertex" << " " << v3.x << " " << v3.y << " " << v3.z << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v1.x() << " " << v1.y() << " " << v1.z() << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v2.x() << " " << v2.y() << " " << v2.z() << "\n";
+        file << "\t\t\t" << " " << "vertex" << " " << v3.x() << " " << v3.y() << " " << v3.z() << "\n";
         file << "\t\t" << "endloop" << "\n";
         file << "\t" << "endfacet" << "\n";
     }
@@ -1020,16 +1020,16 @@ GridI Mesh::voxelize(const Vector3& dimensions) const
     }
     tree.build(Triangle::vectorsToTriangles(triangles));
 
-    int dimX = dimensions.x;
-    int dimY = dimensions.y;
-    int dimZ = dimensions.z;
+    int dimX = dimensions.x();
+    int dimY = dimensions.y();
+    int dimZ = dimensions.z();
 
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < dimX; x++) {
         for (int y = 0; y < dimY; y++) {
             for (int z = 0; z < dimZ; z++) {
                 Vector3 pos = Vector3(x, y, z); // /(dimensions / myDims.dimensions()) + myDims.min();
-                Vector3 ray = Vector3(pos.x + 1, pos.y + 3, pos.z + 500); // Vector3(pos.x, pos.y, pos.z + myDims.dimensions().z + 1);
+                Vector3 ray = Vector3(pos.x() + 1, pos.y() + 3, pos.z() + 500); // Vector3(pos.x, pos.y, pos.z() + myDims.dimensions().z() + 1);
 //                res.at(x, y, z) = (tree.checkIntersection(pos, ray) ? 1 : 0);
 //                res.at(x, y, z) = (tree.getIntersection(pos, ray).isValid() ? 1 : 0);
                 res.at(pos) = (tree.getAllIntersections(pos, ray).size() % 2 == 0 ? 0.f : 1.f);
@@ -1052,9 +1052,9 @@ GridI Mesh::voxelizeSurface(const Vector3& dimensions) const
     BVHTree tree;
     tree.build(Triangle::vectorsToTriangles(triangles));
 
-    int dimX = dimensions.x;
-    int dimY = dimensions.y;
-    int dimZ = dimensions.z;
+    int dimX = dimensions.x();
+    int dimY = dimensions.y();
+    int dimZ = dimensions.z();
 
 #pragma omp parallel for collapse(3)
     for (int x = 0; x < dimX; x++) {
@@ -1265,7 +1265,7 @@ void Mesh::displayScalarField(GridF field, Mesh &mesh, const Vector3& cameraPosi
     for (size_t i = 0; i < isoValues.size(); i++) {
         float iso = isoValues[i];
         Vector3 color = HSVtoRGB(i / float(isoValues.size()), 1.f, 1.f);
-        mesh.shader->setVector("color", std::vector<float> {color.x, color.y, color.z, .3f});
+        mesh.shader->setVector("color", std::vector<float> {color.x(), color.y(), color.z(), .3f});
         mesh.shader->setFloat("isolevel", iso);
 
         // display the mesh

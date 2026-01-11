@@ -163,9 +163,9 @@ void LBMFluidSimulation::stream() {
         for (int y = 0; y < f.sizeY; y++) {
             for (int z = 0; z < f.sizeZ; z++) {
                 for (int i = 0; i < c.size(); i++) {
-                    int x_next = x + c[i].x;
-                    int y_next = y + c[i].y;
-                    int z_next = z + c[i].z;
+                    int x_next = x + c[i].x();
+                    int y_next = y + c[i].y();
+                    int z_next = z + c[i].z();
                     if (x_next >= 0 && x_next < f.sizeX && y && y_next >= 0 && y_next < f.sizeY && z_next >= 0 && z_next < f.sizeZ) {
                         f.at(x_next, y_next, z_next)[i] += f_temp.at(x, y, z)[i];
                         counts.at(x_next, y_next, z_next)[i]++;
@@ -226,9 +226,9 @@ GridV3 LBMFluidSimulation::getVelocities(int newSizeX, int newSizeY, int newSize
     if (_cachedStep != currentStep) {
         _cachedStep = currentStep;
         GridV3 velocities(this->f.getDimensions());
-        for (int x = 0; x < dimensions.x; x++) {
-            for (int y = 0; y < dimensions.y; y++) {
-                for (int z = 0; z < dimensions.z; z++) {
+        for (int x = 0; x < dimensions.x(); x++) {
+            for (int y = 0; y < dimensions.y(); y++) {
+                for (int z = 0; z < dimensions.z(); z++) {
                     /*Vector3 u(0, 0, 0);
                     float rho = 0;
 
@@ -277,7 +277,7 @@ void LBMFluidSimulation::setObstacles(const GridF &obstacles)
         return FluidSimulation::setObstacles(obstacles);
     } else {
         this->obstacleGrid = GridF(this->dimensions);
-        obstacles.resize(this->dimensions.x, this->dimensions.y, obstacles.sizeZ);
+        obstacles.resize(this->dimensions.x(), this->dimensions.y(), obstacles.sizeZ);
         for (int x = 0; x < obstacles.sizeX; x++) {
             for (int y = 0; y < obstacles.sizeY; y++) {
                 float height = 0;

@@ -16,12 +16,12 @@ FluidSimulation::FluidSimulation(int sizeX, int sizeY, int sizeZ)
 
 GridV3 FluidSimulation::getVelocities(const Vector3& dimensions)
 {
-    return this->getVelocities(dimensions.x, dimensions.y, dimensions.z);
+    return this->getVelocities(dimensions.x(), dimensions.y(), dimensions.z());
 }
 
 Vector3 FluidSimulation::getVelocity(const Vector3 &pos)
 {
-    return this->getVelocity(pos.x, pos.y, pos.z);
+    return this->getVelocity(pos.x(), pos.y(), pos.z());
 }
 Vector3 FluidSimulation::getVelocity(int x, int y, int z)
 {
@@ -30,12 +30,12 @@ Vector3 FluidSimulation::getVelocity(int x, int y, int z)
 
 void FluidSimulation::addVelocity(const Vector3 &pos, const Vector3 &amount)
 {
-    return this->addVelocity(pos.x, pos.y, pos.z, amount);
+    return this->addVelocity(pos.x(), pos.y(), pos.z(), amount);
 }
 
 void FluidSimulation::setVelocity(const Vector3 &pos, const Vector3 &amount)
 {
-    return this->setVelocity(pos.x, pos.y, pos.z, amount);
+    return this->setVelocity(pos.x(), pos.y(), pos.z(), amount);
 }
 
 void FluidSimulation::setVelocity(int x, int y, int z, const Vector3 &amount)

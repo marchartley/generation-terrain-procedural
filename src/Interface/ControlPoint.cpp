@@ -829,7 +829,7 @@ std::pair<ControlPoint::Axis, Vector3> ControlPoint::mouseOnRotationCircle(const
 void ControlPoint::move(const Vector3& newPos)
 {
     if (!this->isManipulated()) {
-        this->setPosition(newPos.x, newPos.y, newPos.z);
+        this->setPosition(newPos.x(), newPos.y(), newPos.z());
         this->updateSphere();
     }
     this->stillOnInitialState = false;

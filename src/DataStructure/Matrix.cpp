@@ -16,14 +16,14 @@ Matrix::Matrix(int n, int m, float default_value)
         this->push_back(std::vector<float>(m, default_value));
     }
 }
-Matrix::Matrix(int n, int m, float* data){
+Matrix::Matrix(int n, int m, const float* data){
     for(int i = 0; i < n; i++) {
         this->push_back(std::vector<float>());
         for (int j = 0; j < m; j++)
             (*this)[i].push_back(data[i + j*n]);
     }
 }
-Matrix::Matrix(int n, int m, float** data){
+Matrix::Matrix(int n, int m, const float **data){
 
     for(int i = 0; i < n; i++) {
         this->push_back(std::vector<float>());

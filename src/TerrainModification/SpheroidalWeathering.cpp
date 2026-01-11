@@ -131,12 +131,12 @@ void SpheroidalWeathering::_deposition(GridF &voxels)
                             while (voxels.at(newPosition + Vector3(dx, dy, depth)) < .25f && z + depth > 0) {
                                 depth--;
                             }
-                            if (depth < bestDirection.z) {
+                            if (depth < bestDirection.z()) {
                                 bestDirection = Vector3(dx, dy, depth + 1);
                             }
                         }
                     }
-                    slope = -bestDirection.z;
+                    slope = -bestDirection.z();
                     newPosition += bestDirection;
                 }
                 voxels.at(x, y, z) = 0;

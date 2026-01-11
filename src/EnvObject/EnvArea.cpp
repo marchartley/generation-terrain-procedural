@@ -59,7 +59,7 @@ void EnvArea::applyDeposition(EnvMaterial& material)
     ShapeCurve translatedCurve = this->curve;
     for (auto& p : translatedCurve)
         p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+    GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
     sand.iterateParallel([&] (const Vector3& pos) {
         bool inside = translatedCurve.contains(pos);
@@ -83,7 +83,7 @@ void EnvArea::applyDepositionOnDeath()
         ShapeCurve translatedCurve = this->curve;
         for (auto& p : translatedCurve)
             p = p + Vector3(width, width, 0) - box.min();
-        GridF sand = GridF(box.dimensions().x + width * 2.f, box.dimensions().y + width * 2.f);
+        GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
         sand.iterateParallel([&] (const Vector3& pos) {
             bool inside = translatedCurve.contains(pos);
@@ -104,7 +104,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         Vector3 halfWidth = objectWidth * .5f;
         ShapeCurve translatedCurve = this->curve;
         for (auto& p : translatedCurve)
-            p.z = 0;
+            p.z() = 0;
         AABBox box = AABBox(translatedCurve.points);
         box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
@@ -171,7 +171,7 @@ ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimit
     }
     BSpline translatedCurve = this->curve;
     for (Vector3& p : translatedCurve) {
-        p.z = heights(p.xy());
+        p.z() = heights(p.xy());
     }
     AABBox box(translatedCurve.points);
     float growingState = 1.f; //this->computeGrowingState2();
@@ -188,7 +188,7 @@ ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimit
         patch = ImplicitPatch::createPredefinedShape(this->implicitShape, box.dimensions() + offset, this->height * growingState, translatedCurve, true);
     }
     patch->position = (box.min() - offset.xy() * .5f).xy();
-    // patch->position.z += heights(patch->position.xy());
+    // patch->position.z() += heights(patch->position.xy());
     patch->supportDimensions = box.dimensions() + offset;
     patch->material = this->material;
     patch->name = this->name;

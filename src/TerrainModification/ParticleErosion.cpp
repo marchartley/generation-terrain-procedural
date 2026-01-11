@@ -192,7 +192,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
 //                float dotNormal = std::abs(particle.velocity.normalized().dot(normal));
 //                vRel = particle.velocity.norm() * (1.f - dotNormal); // velocity relative to the surface
 
-//                if (!continueSimulation && normal.z < 0)
+//                if (!continueSimulation && normal.z() < 0)
 //                    continueSimulation = true;
 //            }
 
@@ -214,7 +214,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
 
 //            if (amountToErode - amountToDeposit != 0) {
 //                particle.capacity += (amountToErode - amountToDeposit);
-//                if (nextPos.z >= 0.f) {
+//                if (nextPos.z() >= 0.f) {
 ////                    erosionValuesAndPositions.push_back({amountToErode - amountToDeposit, nextPos});
 
 //                    erosionValues.push_back(amountToErode - amountToDeposit);
@@ -255,10 +255,10 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
         if (wrapPositions)
             particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
         particle.velocity *= 0.99f;
-        if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.velocity.norm2() < 1e-8 || !continueSimulation || maxBounces <= 0) {
+        if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z() < -20) || particle.pos.z() < -20 || particle.velocity.norm2() < 1e-8 || !continueSimulation || maxBounces <= 0) {
             if (depositFactor > 0.f && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
                 while (!terrain->checkIsInGround(particle.pos) && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
-                    particle.pos.z -= .5f;
+                    particle.pos.z() -= .5f;
                 }
                 erosionApplied -= particle.capacity;
                 particle.capacity = 0.f;
@@ -345,7 +345,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
                 //steps = -1000;
                 rolling = true;
                 justStartedRolling = true;
-//                    particle.pos.z += .1f;
+//                    particle.pos.z() += .1f;
             } else if (rolling && collisionPoint.isValid()) {
                 rolling = false;
                 lastCollisions.push_back(collisionPoint);
@@ -372,7 +372,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
                 float dotNormal = std::abs(particle.dir.normalized().dot(normal));
                 vRel = particle.dir.norm() * (1.f - dotNormal); // velocity relative to the surface
 
-                if (!continueSimulation && normal.z < 0)
+                if (!continueSimulation && normal.z() < 0)
                     continueSimulation = true;
             }
 
@@ -392,7 +392,7 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
             if (amountToErode - amountToDeposit != 0) {
                 erosionApplied = amountToDeposit - amountToErode;
                 particle.capacity -= erosionApplied;
-                if (nextPos.z >= 0.f) {
+                if (nextPos.z() >= 0.f) {
 //                    erosionValuesAndPositions.push_back({amountToErode - amountToDeposit, nextPos});
 
 //                    erosionValues.push_back(amountToErode - amountToDeposit);
@@ -433,10 +433,10 @@ ParticleHistory ParticleErosion::trackParticlePositions(ErosionParticle &particl
         if (wrapPositions)
             particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
         particle.dir *= 0.99f;
-        if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
+        if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z() < -20) || particle.pos.z() < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
             if (depositFactor > 0.f && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
                 while (!terrain->checkIsInGround(particle.pos) && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
-                    particle.pos.z -= .5f;
+                    particle.pos.z() -= .5f;
                 }
                 //Vector3 depositPosition = particle.pos;
                 //erosionValues.push_back(-particle.capacity);
@@ -622,9 +622,9 @@ void ParticleErosion::modifyLayerBased(const std::vector<std::vector<ErosionPoin
                 for (int y = -radiusXY; y < radiusXY; y++) {
                     if (x*x + y*y < radiusXY * radiusXY) {
                         float halfHeight = .5f * std::sqrt(radius*radius - (x*x + y*y))/radius;
-                        float startZ = std::max(0.f, pos.z - halfHeight);
-                        float endZ = pos.z + halfHeight;
-                        layerBasedGrid->transformLayer(pos.x + x, pos.y + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
+                        float startZ = std::max(0.f, pos.z() - halfHeight);
+                        float endZ = pos.z() + halfHeight;
+                        layerBasedGrid->transformLayer(pos.x() + x, pos.y() + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
                     }
                 }
             }
@@ -676,7 +676,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
 
     gravityDefault = Vector3(0, 0, -gravity);
 //    auto environmentalDensities = [&](const Vector3& pos) {
-//        if (pos.z < 0) return 1000.f;
+//        if (pos.z() < 0) return 1000.f;
 //        return 1.f;
 //    };
 //    auto flowfieldValues = [&](const Vector3& pos) {
@@ -693,7 +693,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
         Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, (waterFlowfieldRotation / 180) * PI);
         for (size_t i = 0; i < flowfieldValues.size(); i++) {
             Vector3 pos = flowfieldValues.getCoordAsVector3(i);
-//            if (pos.x > flowfieldValues.sizeX / 2) continue;
+//            if (pos.x() > flowfieldValues.sizeX / 2) continue;
             if (environmentalDensities(pos) < 100) { // In the air
                 flowfieldValues(pos) = airDir;
             } else { // In water

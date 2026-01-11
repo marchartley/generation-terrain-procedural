@@ -51,7 +51,7 @@ GraphNode* RegularSimplicialComplex::getNode(int x, int y)
 
 GraphNode* RegularSimplicialComplex::getNode(const Vector3& pos)
 {
-    return this->getNode(pos.x, pos.y);
+    return this->getNode(pos.x(), pos.y());
 }
 
 void RegularSimplicialComplex::display()

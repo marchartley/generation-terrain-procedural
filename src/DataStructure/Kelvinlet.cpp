@@ -118,9 +118,9 @@ Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
     double b = a / (4 * (1.f - v));
     double c = 2 / (3 * a - 2 * b);
 
-    float fx = this->force.x;
-    float fy = this->force.y;
-    float fz = this->force.z;
+    float fx = this->force.x();
+    float fy = this->force.y();
+    float fz = this->force.z();
     float mean = (fx + fy + fz) / 3.f;
     fx -= mean;
     fy -= mean;
@@ -272,9 +272,9 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
     double b = a / (4 * (1.f - v));
     double c = 2 / (3 * a - 2 * b);
 
-    float fx = dir.x;
-    float fy = dir.y;
-    float fz = dir.z;
+    float fx = dir.x();
+    float fy = dir.y();
+    float fz = dir.z();
     float mean = (fx + fy + fz) / 3.f;
     fx -= mean;
     fy -= mean;

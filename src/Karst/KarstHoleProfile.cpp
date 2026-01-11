@@ -136,7 +136,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
     } else {
         // Vertical case
         KarstHoleProfile interpolation(KarstHolePredefinedShapes::TUBE);
-        interpolation.setSize(this->scaling.x, this->scaling.y);
+        interpolation.setSize(this->scaling.x(), this->scaling.y());
         //return interpolation.rotateTowardVector(path, t).translate(path.getPoint(t));
         if (previousAcceptedTime > -1.f && nextAcceptedTime > -1.f) {
             float normalRotation = 0.f;
@@ -165,7 +165,7 @@ KarstHoleProfile KarstHoleProfile::interpolate(KarstHoleProfile other, BSpline p
             }
         }
         // The points are automatically vertically-defined
-        interpolation.setSize(this->scaling.x, this->scaling.y);
+        interpolation.setSize(this->scaling.x(), this->scaling.y());
         return interpolation.translate((path.getPoint(t)));
     }
 }
@@ -251,10 +251,10 @@ KarstHoleProfile &KarstHoleProfile::setSize(float sizeX, float sizeY)
     Vector3 minVec(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), 0);
     Vector3 maxVec(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), 1);
     for (const Vector3& point : this->vertices) {
-        minVec.x = std::min(minVec.x, point.x);
-        minVec.y = std::min(minVec.y, point.y);
-        maxVec.x = std::max(maxVec.x, point.x);
-        maxVec.y = std::max(maxVec.y, point.y);
+        minVec.x() = std::min(minVec.x, point.x);
+        minVec.y() = std::min(minVec.y, point.y);
+        maxVec.x() = std::max(maxVec.x, point.x);
+        maxVec.y() = std::max(maxVec.y, point.y);
     }
     Vector3 scaling = Vector3(sizeX, sizeY, 1) / (maxVec - minVec);*/
     Vector3 previousScaling = this->scaling;
@@ -432,6 +432,6 @@ nlohmann::json karst_profile_to_json(KarstHoleProfile profile) {
 }
 KarstHoleProfile json_to_karst_profile(nlohmann::json json) {
     KarstHoleProfile profile(json_to_bspline(json.at("outlines")));
-    profile.scaling = json_to_vec3(json.at("scaling"));
+    profile.scaling = json_to_vec3<float>(json.at("scaling"));
     return profile;
 }

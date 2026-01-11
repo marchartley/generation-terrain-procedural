@@ -40,10 +40,10 @@ ExpressionParser::ExpressionParser() {
     unaryVectorOperators["d2"] = [](const Vector3& a) { return a.norm2(); };
     unaryVectorOperators["normalize"] = [](const Vector3& a) { return a.normalized(); };
     unaryVectorOperators["d"] = [](const Vector3& a) { return a.norm(); };
-    unaryVectorOperators["random"] = [](const Vector3& a) { return random_gen::generate_perlin(a.x, a.y, a.z); };
-    unaryVectorOperators["x"] = [](const Vector3& a) { return a.x; };
-    unaryVectorOperators["y"] = [](const Vector3& a) { return a.y; };
-    unaryVectorOperators["z"] = [](const Vector3& a) { return a.z; };
+    unaryVectorOperators["random"] = [](const Vector3& a) { return random_gen::generate_perlin(a.x(), a.y(), a.z()); };
+    unaryVectorOperators["x"] = [](const Vector3& a) { return a.x(); };
+    unaryVectorOperators["y"] = [](const Vector3& a) { return a.y(); };
+    unaryVectorOperators["z"] = [](const Vector3& a) { return a.z(); };
 
     binaryVectorFloatOperators["*"] = [](const Vector3& a, float b) { return a * b; };
     binaryVectorFloatOperators["/"] = [](const Vector3& a, float b) { return a / b; };

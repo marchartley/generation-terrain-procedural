@@ -123,8 +123,8 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const BSpline &contour,
         Vector3 AB = (pos - prevPos);
         Vector3 BC = (nextPos - pos);
         Vector3 areaGradientDirection = (AB.rotated90XY() + BC.rotated90XY()).normalize();
-        // Area is (new upper triangle ABB' are + new lower triangle CB'B area) with Area ABC = 1/2 * |AB x AC|
-        float addedArea = -0.5f * (AB.y * areaGradientDirection.x - AB.x * areaGradientDirection.y) + 0.5f * (BC.x * areaGradientDirection.y - BC.y * areaGradientDirection.x);
+        // Area is (new upper triangle ABB' are + new lower triangle CB'B area) with Area ABC = 1/2 * |AB x() AC|
+        float addedArea = -0.5f * (AB.y() * areaGradientDirection.x() - AB.x() * areaGradientDirection.y()) + 0.5f * (BC.x() * areaGradientDirection.y() - BC.y() * areaGradientDirection.x());
 
         std::vector<Vector3> randomPoints = ShapeCurve({pos, nextPos, prevPos}).randomPointsInside(3);
         float addedIntegral = 0;
@@ -232,7 +232,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
     for (int i = 0; i < numPoints; ++i) {
         Vector3 dir1 = computeEnergyGradient(newContour, i, (random_gen::generate() > .5f ? true : false));
         Vector3 gradient = dir1; // .normalize();
-        if (gradient.x != gradient.x) {
+        if (gradient.x() != gradient.x) {
             std::cerr << "NaN found in the Snake gradient descent" << std::endl;
             // gradient = computeEnergyGradient(newContour, i, true) + computeEnergyGradient(newContour, i, false);
         } else {

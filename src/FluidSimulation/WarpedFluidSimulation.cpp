@@ -45,7 +45,7 @@ void WarpedFluidSimulation::addVelocity(int x, int y, int z, const Vector3 &amou
 void WarpedFluidSimulation::setObstacles(const GridF &obstacles)
 {
     this->obstacleGrid = GridF(this->dimensions);
-    auto resizedObstacles = obstacles.resize(this->dimensions.x, this->dimensions.y, obstacles.sizeZ);
+    auto resizedObstacles = obstacles.resize(this->dimensions.x(), this->dimensions.y(), obstacles.sizeZ);
     for (int x = 0; x < resizedObstacles.sizeX; x++) {
         for (int y = 0; y < resizedObstacles.sizeY; y++) {
             float height = 0;
@@ -61,8 +61,8 @@ void WarpedFluidSimulation::setObstacles(const GridF &obstacles)
 
 void WarpedFluidSimulation::recomputeVelocities()
 {
-    int width = this->dimensions.x;
-    int height = this->dimensions.y;
+    int width = this->dimensions.x();
+    int height = this->dimensions.y();
     velocities = GridV3(width, height);
 
     Vector3 wind = mainDirection;

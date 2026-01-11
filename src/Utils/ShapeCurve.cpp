@@ -119,7 +119,7 @@ float ShapeCurve::computeSignedArea()
 {
     float area = 0;
     for (size_t i = 1; i < this->points.size() + 1; i++){
-        area += points[i % points.size()].x * (points[(i+1) % points.size()].y - points[(i-1) % points.size()].y);
+        area += points[i % points.size()].x() * (points[(i+1) % points.size()].y() - points[(i-1) % points.size()].y());
     }
     return area / 2.f;
 }
@@ -294,8 +294,8 @@ std::vector<Vector3> ShapeCurve::randomPointsInside(int numberOfPoints)
     int maxFailures = 10000 * numberOfPoints;
     Vector3 minVec, maxVec;
     std::tie(minVec, maxVec) = this->AABBox();
-    minVec.z = -1;
-    maxVec.z =  1;
+    minVec.z() = -1;
+    maxVec.z() =  1;
     Vector3 normalRay = this->planeNormal() * (maxVec - minVec).norm();
 
     for (int i = 0; i < numberOfPoints; i++) {
@@ -624,8 +624,8 @@ Vector3 computePointFromGreenCoordinates(const std::vector<float>& greenCoords, 
     const auto& weights = greenCoords;
     Vector3 p;
     for (size_t i = 0; i < vertices.size(); i++) {
-        p.x += vertices[i].x * weights[i];
-        p.y += vertices[i].y * weights[i];
+        p.x() += vertices[i].x() * weights[i];
+        p.y() += vertices[i].y() * weights[i];
     }
     return p;
 

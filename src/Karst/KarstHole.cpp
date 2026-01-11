@@ -136,12 +136,12 @@ std::vector<std::vector<Vector3> > KarstHole::generateMesh()
         float t = v_times[i]; //i * dt;
         std::vector<Vector3> intermediateShape = this->interpolate(t).vertices.points;
         for (const Vector3& pos : intermediateShape) {
-            minVec.x = std::min(minVec.x, pos.x);
-            minVec.y = std::min(minVec.y, pos.y);
-            minVec.z = std::min(minVec.z, pos.z);
-            maxVec.x = std::max(maxVec.x, pos.x);
-            maxVec.y = std::max(maxVec.y, pos.y);
-            maxVec.z = std::max(maxVec.z, pos.z);
+            minVec.x() = std::min(minVec.x(), pos.x());
+            minVec.y() = std::min(minVec.y(), pos.y());
+            minVec.z() = std::min(minVec.z(), pos.z());
+            maxVec.x() = std::max(maxVec.x(), pos.x());
+            maxVec.y() = std::max(maxVec.y(), pos.y());
+            maxVec.z() = std::max(maxVec.z(), pos.z());
         }
         // Find non-vertical times in our path
         if (!this->path.getDirection(t).isAlmostVertical()) {
@@ -235,12 +235,12 @@ std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vecto
     Vector3 maxVec = Vector3(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest(), std::numeric_limits<float>::lowest());
     for (const auto& triangle : triangles) {
         for (const Vector3& pos : triangle) {
-            minVec.x = std::min(minVec.x, pos.x);
-            minVec.y = std::min(minVec.y, pos.y);
-            minVec.z = std::min(minVec.z, pos.z);
-            maxVec.x = std::max(maxVec.x, pos.x);
-            maxVec.y = std::max(maxVec.y, pos.y);
-            maxVec.z = std::max(maxVec.z, pos.z);
+            minVec.x() = std::min(minVec.x(), pos.x());
+            minVec.y() = std::min(minVec.y(), pos.y());
+            minVec.z() = std::min(minVec.z(), pos.z());
+            maxVec.x() = std::max(maxVec.x(), pos.x());
+            maxVec.y() = std::max(maxVec.y(), pos.y());
+            maxVec.z() = std::max(maxVec.z(), pos.z());
         }
     }
     for (auto& triangle : triangles) {
@@ -254,12 +254,12 @@ std::tuple<GridF, Vector3> KarstHole::generateMask(std::vector<std::vector<Vecto
     for (auto& triangle : triangles) {
         Vector3 minTriangle = mask.getDimensions(), maxTriangle = Vector3(0, 0, 0);
         for (Vector3& pos : triangle) {
-            minTriangle.x = std::min(minTriangle.x, pos.x);
-            maxTriangle.x = std::max(maxTriangle.x, pos.x);
-            minTriangle.y = std::min(minTriangle.y, pos.y);
-            maxTriangle.y = std::max(maxTriangle.y, pos.y);
-            minTriangle.z = std::min(minTriangle.z, pos.z);
-            maxTriangle.z = std::max(maxTriangle.z, pos.z);
+            minTriangle.x() = std::min(minTriangle.x, pos.x);
+            maxTriangle.x() = std::max(maxTriangle.x, pos.x);
+            minTriangle.y() = std::min(minTriangle.y, pos.y);
+            maxTriangle.y() = std::max(maxTriangle.y, pos.y);
+            minTriangle.z() = std::min(minTriangle.z, pos.z);
+            maxTriangle.z() = std::max(maxTriangle.z, pos.z);
         }
         for (int x = minTriangle.x; x < maxTriangle.x; x++) {
             for (int y = minTriangle.y; y < maxTriangle.y; y++) {

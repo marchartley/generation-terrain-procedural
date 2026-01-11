@@ -59,8 +59,8 @@ void ErosionInterface::computePredefinedRocksLocations()
                 Vector3 position;
                 Vector3 direction;
                 /*if (loc == SKY) {
-                    position = Vector3::random(Vector3(-30, -30), dimensions.xy() + Vector3(30, 30)) + Vector3(0, 0, dimensions.z + 5.f);
-//                    position = Vector3::random(Vector3(15, 15, 0), Vector3(85, 85, 0)) + Vector3(0, 0, dimensions.z + 5.f);
+                    position = Vector3::random(Vector3(-30, -30), dimensions.xy() + Vector3(30, 30)) + Vector3(0, 0, dimensions.z() + 5.f);
+//                    position = Vector3::random(Vector3(15, 15, 0), Vector3(85, 85, 0)) + Vector3(0, 0, dimensions.z() + 5.f);
                     direction = Vector3(0, 0, -1) + Vector3::random(0.1f);
                 } else */if (loc == RIVER) {
                     position = Vector3(15, 100, 50) + Vector3::random(10.f).xy();
@@ -69,20 +69,20 @@ void ErosionInterface::computePredefinedRocksLocations()
                     position = Vector3(15, 50, 100) + Vector3::random(25.f).xy();
                     direction = Vector3(0, 0, 0);
                 } else if (loc == UNDERWATER) {
-                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, dimensions.y * .4, dimensions.z * .2f), Vector3(0, dimensions.y *.6, dimensions.z * .5f));
+                    position = Vector3(5, 0, 0) + Vector3::random(Vector3(0, dimensions.y() * .4, dimensions.z() * .2f), Vector3(0, dimensions.y() *.6, dimensions.z() * .5f));
                     direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
                 } else if (loc == FROM_X) {
-                    position = Vector3::random(Vector3(0, 20, 20), Vector3(0, dimensions.y - 20, dimensions.z - 20)) - Vector3(1, 0, 0);
-                    direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z));
+                    position = Vector3::random(Vector3(0, 20, 20), Vector3(0, dimensions.y() - 20, dimensions.z() - 20)) - Vector3(1, 0, 0);
+                    direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z()));
                 } else if (loc == FROM_BIG_X) {
-                    position = Vector3::random(Vector3(0, 0, 20), Vector3(0, dimensions.y, dimensions.z - 20)) - Vector3(1, 0, 0);
-                    direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z));
+                    position = Vector3::random(Vector3(0, 0, 20), Vector3(0, dimensions.y(), dimensions.z() - 20)) - Vector3(1, 0, 0);
+                    direction = (Vector3(1, 0, 0) + Vector3::random(.5f).xy() + Vector3(0, 0, Vector3::random(.1f).z()));
                 } else if (loc == CENTER_TOP) {
                     position = Vector3::random(Vector3(voxelGrid->getSizeX() * .45f, voxelGrid->getSizeY() * .45f, voxelGrid->getSizeZ() + 2.f), Vector3(voxelGrid->getSizeX() * .55f, voxelGrid->getSizeY()*.55f, voxelGrid->getSizeZ() + 2.f));
                     direction = (Vector3(1, 0, 0) + Vector3::random(.1f));
                 } else if (loc == RANDOM) {
                     position = Vector3::random() * 100.f;
-                    position.z = std::abs(position.z);
+                    position.z() = std::abs(position.z());
                     direction = -position.normalized();
                     position += voxelGrid->getDimensions().xy() * .5f;
                 } else if (loc == EVERYWHERE) {
@@ -117,7 +117,7 @@ void ErosionInterface::recomputeAboveVoxelRocksPositions(TerrainModel* terrain, 
     bool foundOne = false;
     while (terrainSurfaceAndNormalInversed.size() < maxParticles) {
         for (auto& tri : boundaries.triangles) {
-            if (tri[0].z > 1.f) {
+            if (tri[0].z() > 1.f) {
                 Vector3 pos = AABBox(tri.vertices).center();
                 Vector3 gradient = tri.normal;
                 terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f + Vector3::random(0.5f), -gradient + Vector3::random(0.2f)});
@@ -145,12 +145,12 @@ void ErosionInterface::recomputeUnderwaterRocksPositions(TerrainModel *terrain, 
     auto normals = -voxels.gradient();
     std::vector<std::pair<Vector3, Vector3>> terrainSurfaceAndNormalInversed;
     Vector3 terrainSize = terrain->getDimensions();
-    float waterLevel = voxelGrid->properties->waterLevel * terrainSize.z;
+    float waterLevel = voxelGrid->properties->waterLevel * terrainSize.z();
     Vector3 down = Vector3(0, 0, -1);
     bool foundOne = false;
     while (terrainSurfaceAndNormalInversed.size() < maxParticles) {
         for (auto& tri : boundaries.triangles) {
-            if (tri[0].z > 1.f && tri[0].z <= waterLevel && Vector3::distanceToBoundaries(tri[0], Vector3(), terrainSize) > 1.f) {
+            if (tri[0].z() > 1.f && tri[0].z() <= waterLevel && Vector3::distanceToBoundaries(tri[0], Vector3(), terrainSize) > 1.f) {
                 Vector3 pos = AABBox(tri.vertices).center();
                 Vector3 gradient = tri.normal;
                 terrainSurfaceAndNormalInversed.push_back({pos + gradient * 2.f + Vector3::random(0.5f), -gradient + Vector3::random(0.2f)});
@@ -181,11 +181,11 @@ void ErosionInterface::recomputeRainingPositions(TerrainModel *terrain, const Sp
     while (possiblePositions.size() < maxParticles) {
         for (auto& tri : boundaries.triangles) {
             auto center = AABBox(tri.vertices).center();
-            float height = center.z;
-            float relativeHeight = height / terrainSize.z;
+            float height = center.z();
+            float relativeHeight = height / terrainSize.z();
             int nbDrops = std::min(1, int(std::ceil(relativeHeight * relativeHeight) * 1.f));
             for (int i = 0; i < nbDrops; i++) {
-                possiblePositions.push_back({Vector3(center.x, center.y, height + 5.f) + Vector3::random(), initialSpeed});
+                possiblePositions.push_back({Vector3(center.x(), center.y(), height + 5.f) + Vector3::random(), initialSpeed});
             }
         }
     }
@@ -261,8 +261,8 @@ void ErosionInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 pos = json_to_vec3(parameters.at("position")) + Vector3::random(0.f, 20.f);
-        Vector3 dir = json_to_vec3(parameters.at("direction")) + Vector3::random();
+        Vector3 pos = json_to_vec3<float>(parameters.at("position")) + Vector3::random(0.f, 20.f);
+        Vector3 dir = json_to_vec3<float>(parameters.at("direction")) + Vector3::random();
         float size = parameters.at("size").get<float>() + random_gen::generate(0.f, 3.f);
         int qtt = parameters.at("quantity").get<int>() + random_gen::generate(0.f, 100.f);
         float strength = parameters.at("strength").get<float>() + random_gen::generate(0.f, 1.f);
@@ -292,7 +292,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
     UnderwaterErosion erod = UnderwaterErosion(voxelGrid.get(), this->erosionSize, this->erosionStrength, this->erosionQtt);
     erod.heightmap = heightmap.get();
 
-    GridF layersHeightmap(layerGrid->getDimensions().x, layerGrid->getDimensions().y);
+    GridF layersHeightmap(layerGrid->getDimensions().x(), layerGrid->getDimensions().y());
     for (int x = 0; x < layersHeightmap.sizeX; x++)
         for (int y = 0; y < layersHeightmap.sizeY; y++)
             layersHeightmap.at(x, y) = layerGrid->getHeight(x, y) - 1;
@@ -362,7 +362,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 std::vector<std::vector<Vector3>> _triangles;
                 _triangles.reserve(triangles.size());
                 for (int i = triangles.size() - 1; i >= 0; i--) {
-                    if (triangles[i][0].z > 1.f) {
+                    if (triangles[i][0].z() > 1.f) {
                         _triangles.push_back(triangles[i]);
                     }
                 }
@@ -485,7 +485,7 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                     recomputeAboveVoxelRocksPositions(terrain, boundariesTree);
                 } else if (location == RIVER) {
                     for(auto& [p, d]  : initialPositionsAndDirections[location][iteration % (initialPositionsAndDirections[location].size())]) {
-                        p.z = 100; //terrain->getHeight(p.xy()) + 1.f;
+                        p.z() = 100; //terrain->getHeight(p.xy()) + 1.f;
                     }
                 } else if (location == SKY) {
                     recomputeRainingPositions(terrain, boundariesTree);
@@ -872,7 +872,7 @@ void ErosionInterface::testManyManyErosionParameters()
 //                    std::ofstream particleFile(folderName + "particles/flow_" + std::to_string(iteration) + ".txt");
 //                    for (const auto& path : lastRocksLaunched) {
 //                        for (const auto& p : path) {
-//                            particleFile << p.x << " " << p.y << " " << p.z << " ";
+//                            particleFile << p.x() << " " << p.y() << " " << p.z() << " ";
 //                        }
 //                        particleFile << std::endl;
 //                    }

@@ -29,7 +29,7 @@ void BiomeInterface::display(const Vector3& camPos)
         if (selectionPlane.shader != nullptr) {
             int classIndex = std::distance(allBiomeNames.begin(), std::find(allBiomeNames.begin(), allBiomeNames.end(), this->selectedBiomes[i]->classname));
             Vector3 color = HSVtoRGB(float(classIndex) / (float)(allBiomeNames.size() - 1), 1.f, 1.f);
-            selectionPlane.shader->setVector("color", std::vector<float>{color.x, color.y, color.z, .5f});
+            selectionPlane.shader->setVector("color", std::vector<float>{color.x(), color.y(), color.z(), .5f});
         }
         selectionPlane.display();
     }
@@ -38,13 +38,13 @@ void BiomeInterface::display(const Vector3& camPos)
 
 Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, const Vector3& offset = Vector3(), float scaling = 1.f) {
     Vector3 finalPos = pos;
-//    pos.x = (pos.x - offset.x) * scaling; // clamp(pos.x / scaling - offset.x, 0.f, grid->getDimensions().x - 1);
-//    pos.y = (pos.y - offset.y) * scaling; // clamp(pos.y / scaling - offset.y, 0.f, grid->getDimensions().y - 1);
-    finalPos.z = std::max(finalPos.z, 0.f); // In case of small imprecision
+//    pos.x() = (pos.x() - offset.x) * scaling; // clamp(pos.x() / scaling - offset.x, 0.f, grid->getDimensions().x() - 1);
+//    pos.y() = (pos.y() - offset.y) * scaling; // clamp(pos.y() / scaling - offset.y, 0.f, grid->getDimensions().y() - 1);
+    finalPos.z() = std::max(finalPos.z(), 0.f); // In case of small imprecision
     while (grid->getVoxelValues().at(finalPos) > 0) {
         finalPos += Vector3(0, 0, 1); // Move the position one voxel heigher
         if (!grid->contains(finalPos)) { // If it gets too high, the whole column must be filled, I guess we should cancel it...
-            finalPos.z = 0;
+            finalPos.z() = 0;
             break;
         }
     }
@@ -114,11 +114,11 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     Vector3 heightmapDim = Vector3(3*31, 3*31, 1);
 //    this->heightmap->heights = GridF(heightmapDim, 20.f);
 //    this->heightmap->maxHeight = 40.f;
-    this->heightmap = std::make_shared<Heightmap>(heightmapDim.x, heightmapDim.y, 40.f);
+    this->heightmap = std::make_shared<Heightmap>(heightmapDim.x(), heightmapDim.y(), 40.f);
     heightmap->raise(GridF(heightmapDim, 20.f));
 
     Vector3 voxelGridOffsetEnd = (voxelGridOffsetStart + heightmapDim / voxelGridScaleFactor).floor();
-    voxelGridOffsetEnd.z = 1; // Force the Z component to be 1, instead of being rounded to 0 in the division
+    voxelGridOffsetEnd.z() = 1; // Force the Z component to be 1, instead of being rounded to 0 in the division
 
     std::cout << "From " << voxelGridOffsetStart << " to " << voxelGridOffsetEnd << " with scale = " << voxelGridScaleFactor << std::endl;
     /////// this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
@@ -185,9 +185,9 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //        std::ostream& out = std::cout;
         out << "Checking for " << current->getInstanceName() << " :" << std::endl;
         bool atLeastOne = false;
-        for (int x = AABBoxMin.x; x < AABBoxMax.x; x++) {
-            for (int y = AABBoxMin.y; y < AABBoxMax.y; y++) {
-                if (area.contains(Vector3(x, y, area.points[0].z)) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
+        for (int x = AABBoxMin.x(); x < AABBoxMax.x(); x++) {
+            for (int y = AABBoxMin.y(); y < AABBoxMax.y(); y++) {
+                if (area.contains(Vector3(x, y, area.points[0].z())) && heightmap->getBiomeIndices().checkCoord(Vector3(x, y))) {
                     heightmap->getBiomeIndices().at(x, y).push_back(current->instanceID);
                     out << "Found at (" << x << ", " << y << ")" << std::endl;
                     atLeastOne = true;
@@ -226,12 +226,12 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
             GridF falloff2D(heightmap->getSizeX(), heightmap->getSizeY(), 1, 0.f);
             for (size_t i = 0; i < falloff2D.size(); i++) {
                 Vector3 pos = falloff2D.getCoordAsVector3(i);
-                if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
+                if(AABBoxMin.x() <= pos.x() && pos.x() <= AABBoxMax.x() && AABBoxMin.y() <= pos.y() && pos.y() <= AABBoxMax.y()) {
                     float dist = area.estimateDistanceFrom(pos);
                     falloff2D[i] = dist < 0 ? 1.f : 0.f;
                 }
             }
-            float desiredDepth = current->depthShape.getPoint(.5f).y;
+            float desiredDepth = current->depthShape.getPoint(.5f).y();
             GridF newHeight = falloff2D.binarize() * -desiredDepth/5.f;
             heightChange += newHeight;
         }
@@ -256,7 +256,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
         GridF falloff3D(voxelGrid->getSizeX(), voxelGrid->getSizeY(), voxelGrid->getSizeZ(), 1.f);
         for (size_t i = 0; i < falloff2D.size(); i++) {
             Vector3 pos = falloff2D.getCoordAsVector3(i);
-            if(AABBoxMin.x <= pos.x && pos.x <= AABBoxMax.x && AABBoxMin.y <= pos.y && pos.y <= AABBoxMax.y) {
+            if(AABBoxMin.x() <= pos.x() && pos.x() <= AABBoxMax.x() && AABBoxMin.y() <= pos.y() && pos.y() <= AABBoxMax.y()) {
                 float dist = area.estimateDistanceFrom(pos);
                 falloff2D[i] = dist < 0 ? 1.f - interpolation::fault_distance(-dist, 0.1f) : 0.f;
             }
@@ -300,7 +300,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
         if (modif2D && !heightmapModifier.data.empty()) {
 
-            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x, AABBoxMax.x, AABBoxMin.y, AABBoxMax.y) * (voxelGrid->getSizeZ() / (float)heightmap->getHeightFactor()), 10.f, AABBoxMin.xy());
+            voxelGrid->add2DHeightModification(heightmapModifier.subset(AABBoxMin.x(), AABBoxMax.x(), AABBoxMin.y(), AABBoxMax.y()) * (voxelGrid->getSizeZ() / (float)heightmap->getHeightFactor()), 10.f, AABBoxMin.xy());
         }
         if (modif3D && !modifications.data.empty()) {
 
@@ -382,30 +382,30 @@ void BiomeInterface::setVoxelGridSizeFactor(float newFactor)
     Vector3 newStart = currentCenter - (maxDims / (this->voxelGridScaleFactor * 2.f));
     Vector3 newEnd = currentCenter + (maxDims / (this->voxelGridScaleFactor * 2.f));
 
-    if (newStart.x < 0) {
-        newEnd.x -= newStart.x;
-        newStart.x = 0;
+    if (newStart.x() < 0) {
+        newEnd.x() -= newStart.x();
+        newStart.x() = 0;
     }
-    if (newStart.y < 0) {
-        newEnd.y -= newStart.y;
-        newStart.y = 0;
+    if (newStart.y() < 0) {
+        newEnd.y() -= newStart.y();
+        newStart.y() = 0;
     }
-    if (newStart.z < 0) {
-        newEnd.z -= newStart.z;
-        newStart.z = 0;
+    if (newStart.z() < 0) {
+        newEnd.z() -= newStart.z();
+        newStart.z() = 0;
     }
 
-    if (newEnd.x >= maxDims.x) {
-        newStart.x -= (newEnd.x - maxDims.x);
-        newEnd.x = maxDims.x;
+    if (newEnd.x() >= maxDims.x()) {
+        newStart.x() -= (newEnd.x() - maxDims.x());
+        newEnd.x() = maxDims.x();
     }
-    if (newEnd.y >= maxDims.y) {
-        newStart.y -= (newEnd.y - maxDims.y);
-        newEnd.y = maxDims.y;
+    if (newEnd.y() >= maxDims.y()) {
+        newStart.y() -= (newEnd.y() - maxDims.y());
+        newEnd.y() = maxDims.y();
     }
-    if (newEnd.z >= maxDims.z) {
-        newStart.z -= (newEnd.z - maxDims.z);
-        newEnd.z = maxDims.z;
+    if (newEnd.z() >= maxDims.z()) {
+        newStart.z() -= (newEnd.z() - maxDims.z());
+        newEnd.z() = maxDims.z();
     }
     this->voxelGridOffsetStart = newStart.floor();
 
@@ -457,22 +457,22 @@ void BiomeInterface::keyPressEvent(QKeyEvent* event)
             regenMap = true;
         }
         else if (event->key() == Qt::Key_Left) {
-            this->voxelGridOffsetStart.x = std::max(this->voxelGridOffsetStart.x - this->voxelGrid->getSizeX() / this->voxelGridScaleFactor, 0.f);
+            this->voxelGridOffsetStart.x() = std::max(this->voxelGridOffsetStart.x() - this->voxelGrid->getSizeX() / this->voxelGridScaleFactor, 0.f);
             setVoxelGridSizeFactor(this->voxelGridScaleFactor);
             regenMap = true;
         }
         else if (event->key() == Qt::Key_Right) {
-            this->voxelGridOffsetStart.x = std::min(this->voxelGridOffsetStart.x + this->voxelGrid->getSizeX() / this->voxelGridScaleFactor, this->heightmap->heights.sizeX - this->voxelGrid->getSizeX() / this->voxelGridScaleFactor);
+            this->voxelGridOffsetStart.x() = std::min(this->voxelGridOffsetStart.x() + this->voxelGrid->getSizeX() / this->voxelGridScaleFactor, this->heightmap->heights.sizeX - this->voxelGrid->getSizeX() / this->voxelGridScaleFactor);
             setVoxelGridSizeFactor(this->voxelGridScaleFactor);
             regenMap = true;
         }
         else if (event->key() == Qt::Key_Up) {
-            this->voxelGridOffsetStart.y = std::min(this->voxelGridOffsetStart.y + this->voxelGrid->getSizeY() / this->voxelGridScaleFactor, this->heightmap->heights.sizeY - this->voxelGrid->getSizeY() / this->voxelGridScaleFactor);
+            this->voxelGridOffsetStart.y() = std::min(this->voxelGridOffsetStart.y() + this->voxelGrid->getSizeY() / this->voxelGridScaleFactor, this->heightmap->heights.sizeY - this->voxelGrid->getSizeY() / this->voxelGridScaleFactor);
             setVoxelGridSizeFactor(this->voxelGridScaleFactor);
             regenMap = true;
         }
         else if (event->key() == Qt::Key_Down) {
-            this->voxelGridOffsetStart.y = std::max(this->voxelGridOffsetStart.y - this->voxelGrid->getSizeY() / this->voxelGridScaleFactor, 0.f);
+            this->voxelGridOffsetStart.y() = std::max(this->voxelGridOffsetStart.y() - this->voxelGrid->getSizeY() / this->voxelGridScaleFactor, 0.f);
             setVoxelGridSizeFactor(this->voxelGridScaleFactor);
             regenMap = true;
         } else if (event->key() == Qt::Key_Delete) {
@@ -570,12 +570,12 @@ void BiomeInterface::updateSelectionPlaneToFitBiome(int biomeID, int planeIndex,
             Vector3 surfacePoint = getSurfacePosition(voxelGrid, fromHeightmapPosToVoxels(point));
             upperPoints.push_back(surfacePoint);
             lowerPoints.push_back(surfacePoint);
-            maxHeight = std::max(maxHeight, surfacePoint.z);
-            minHeight = std::min(maxHeight, surfacePoint.z);
+            maxHeight = std::max(maxHeight, surfacePoint.z());
+            minHeight = std::min(maxHeight, surfacePoint.z());
         }
         for (size_t i = 0; i < upperPoints.size(); i++) {
-            upperPoints[i].z = maxHeight + 5;
-            lowerPoints[i].z = minHeight - 5;
+            upperPoints[i].z() = maxHeight + 5;
+            lowerPoints[i].z() = minHeight - 5;
         }
         std::vector<Vector3> vertices;
         for (size_t i = 0; i < upperPoints.size(); i++) {

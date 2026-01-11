@@ -117,8 +117,8 @@ void AbstractFluidSimulationInterface::updateVectorsMesh()
     GridV3 velocities = _simulation->getVelocities(resolution);
     if (displayOnlyAtSurface) {
         GridF surface = voxelGrid->getVoxelValues().resize(resolution).binarize().dilate();
-        for (int x = 0; x < resolution.x; x++)
-            for (int y = 0; y < resolution.y; y++)
+        for (int x = 0; x < resolution.x(); x++)
+            for (int y = 0; y < resolution.y(); y++)
                 for (int z = 0; z < 3; z++)
                     surface.at(x, y, z) = 1;
         velocities *= surface;
@@ -198,9 +198,9 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
 void AbstractFluidSimulationInterface::computeSimulation(int nbSteps)
 {
 //    this->voxelGrid->computeFlowfield(LBM, nbSteps, this->implicitTerrain.get());
-    for (int x = 0; x < _simulation->dimensions.x; x++) {
-        for (int y = 0; y < _simulation->dimensions.y; y++) {
-            for (int z = 0; z < _simulation->dimensions.z; z++) {
+    for (int x = 0; x < _simulation->dimensions.x(); x++) {
+        for (int y = 0; y < _simulation->dimensions.y(); y++) {
+            for (int z = 0; z < _simulation->dimensions.z(); z++) {
                 if (x == 0) {
                     _simulation->addVelocity(x, y, z, Vector3(1, 0, 0));
                 }

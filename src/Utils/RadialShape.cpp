@@ -10,12 +10,12 @@ RadialShape::RadialShape(float radius, int number_points)
 
 float RadialShape::estimateDistanceFrom(const Vector3 &pos) const
 {
-    float t = pos.x;
-    return abs(getPoint(t).y - pos.y);
+    float t = pos.x();
+    return abs(getPoint(t).y() - pos.y());
 }
 
 bool RadialShape::containsXY(const Vector3 &pos, bool useNativeShape, int increaseAccuracy) const
 {
-    float t = pos.x;
-    return getPoint(t).y > pos.y;
+    float t = pos.x();
+    return getPoint(t).y() > pos.y();
 }

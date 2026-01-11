@@ -90,7 +90,7 @@ public:
     void retrieveMap(std::string filename) {};
 
     std::string toString() { return this->toShortString(); };
-    std::string toShortString() { return "Layered terrain : " + std::to_string(this->getDimensions().x) + "x" + std::to_string(this->getDimensions().y) + "x" + std::to_string(this->getDimensions().z); };
+    std::string toShortString() { return "Layered terrain : " + std::to_string(this->getDimensions().x()) + "x" + std::to_string(this->getDimensions().y()) + "x" + std::to_string(this->getDimensions().z()); };
 
     void reset() { this->layers = previousState; }
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }

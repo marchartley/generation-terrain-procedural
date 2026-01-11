@@ -516,7 +516,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                 k->force = delta;
             } else if (this->KelvinletChoice == "twist") {
                 TwistKelvinlet* k = dynamic_cast<TwistKelvinlet*>(_k);
-                k->force = Vector3(0, 0, delta.norm() * sign(delta.x));
+                k->force = Vector3(0, 0, delta.norm() * sign(delta.x()));
                 // k->radialScale = delta.norm();
             }
 
@@ -1309,7 +1309,7 @@ void EnvObjsInterface::updateSelectionMesh()
     for (auto currentSelection : currentSelections) {
         // Vector3 evalPos = currentSelection->evaluationPosition;
         for (auto evalPos : currentSelection->evaluationPositions) {
-            evalPos.z = subsidedHeightmap.interpolate(evalPos.x, evalPos.y) + offsetAbove;
+            evalPos.z() = subsidedHeightmap.interpolate(evalPos.x(), evalPos.y()) + offsetAbove;
             std::vector<Vector3> evalLines = {evalPos - Vector3(2, 2, 0), evalPos + Vector3(2, 2, 0), evalPos - Vector3(-2, 2, 0), evalPos + Vector3(-2, 2, 0)};
             lines.insert(lines.end(), evalLines.begin(), evalLines.end());
             std::vector<Vector3> evalColors = std::vector<Vector3>(evalLines.size(), Vector3(0.5, 0.5, 1));
@@ -1319,7 +1319,7 @@ void EnvObjsInterface::updateSelectionMesh()
         if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
             continue; // Do not display the points!!
             selectionPos = asPoint->position;
-            selectionPos.z = subsidedHeightmap.interpolate(selectionPos.x, selectionPos.y) + offsetAbove;
+            selectionPos.z() = subsidedHeightmap.interpolate(selectionPos.x(), selectionPos.y()) + offsetAbove;
             std::vector<Vector3> meshPoints = Mesh::getPointsForArrow(selectionPos + Vector3(0, 0, 20), selectionPos);
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
@@ -1331,15 +1331,15 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
-                Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
+                Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x(), p2.y()) + offsetAbove);
                 meshPoints.push_back(p1leveled);
                 meshPoints.push_back(p2leveled);
             }
             for (int i = 0; i < asCurve->curve.size(); i++) {
                 auto& p1 = asCurve->curve[i];
                 auto& p2 = asCurve->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -1354,13 +1354,13 @@ void EnvObjsInterface::updateSelectionMesh()
             for (size_t i = 0; i < path.size() - 1; i++) {
                 auto p1 = path[i];
                 auto p2 = path[i + 1];
-                meshPoints.push_back(p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + 5.f));
-                meshPoints.push_back(p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + 5.f));
+                meshPoints.push_back(p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + 5.f));
+                meshPoints.push_back(p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x(), p2.y()) + 5.f));
             }
             for (int i = 0; i < asArea->curve.size(); i++) {
                 auto& p1 = asArea->curve[i];
                 auto& p2 = asArea->curve[std::abs(i - 1)];
-                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
+                Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
                 Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
                 meshPoints.push_back(p1leveled + perpendicular);
                 meshPoints.push_back(p1leveled - perpendicular);
@@ -1407,15 +1407,15 @@ void EnvObjsInterface::updateNewObjectMesh()
     for (size_t i = 0; i < path.size() - 1; i++) {
         auto p1 = path[i];
         auto p2 = path[i + 1];
-        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
-        Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x, p2.y) + offsetAbove);
+        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
+        Vector3 p2leveled = p2 + Vector3(0, 0, subsidedHeightmap.interpolate(p2.x(), p2.y()) + offsetAbove);
         meshPoints.push_back(p1leveled);
         meshPoints.push_back(p2leveled);
     }
     for (int i = 0; i < objectSkeletonCreation.size(); i++) {
         auto& p1 = objectSkeletonCreation[i];
         auto& p2 = objectSkeletonCreation[std::abs(i - 1)];
-        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x, p1.y) + offsetAbove);
+        Vector3 p1leveled = p1 + Vector3(0, 0, subsidedHeightmap.interpolate(p1.x(), p1.y()) + offsetAbove);
         Vector3 perpendicular = (p2 - p1).rotate(0, 0, deg2rad(90)).normalized() * 1.f;
         meshPoints.push_back(p1leveled + perpendicular);
         meshPoints.push_back(p1leveled - perpendicular);
@@ -1539,8 +1539,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::str
 
         GridV3 eval(EnvObject::flowfield.getDimensions());
         eval.iterateParallel([&](const Vector3& p) {
-            eval(p).x = fake.fitnessFunction(p);
-            eval(p).y = fake.fittingFunction(p);
+            eval(p).x() = fake.fitnessFunction(p);
+            eval(p).y() = fake.fittingFunction(p);
         });
         Plotter::get("Object Preview")->addImage(eval);
         Plotter::get("Object Preview")->show();
@@ -1885,14 +1885,14 @@ void EnvObjsInterface::loadScene(std::string filename)
         EnvObject* newObject = EnvObject::instantiate(objectName);
         newObject->age = obj["age"];
         newObject->fitnessScoreAtCreation = obj["fitnessScoreAtCreation"];
-        // newObject->evaluationPosition = json_to_vec3(obj["evaluationPosition"]);
+        // newObject->evaluationPosition = json_to_vec3<float>(obj["evaluationPosition"]);
         /*std::vector<nlohmann::json> positions = obj["evaluationPositions"];
         for (auto position : positions) {
 
         }*/
 
         if (auto asPoint = dynamic_cast<EnvPoint*>(newObject)) {
-            asPoint->position = json_to_vec3(obj["position"]);
+            asPoint->position = json_to_vec3<float>(obj["position"]);
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(newObject)) {
             asCurve->curve = json_to_bspline(obj["curve"]);
             newObject->createdManually = true;
@@ -1999,12 +1999,12 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
 
     */
     std::cout << "Preview... " << std::endl;
-    GridV3 dataV3 = Plotter::get("Object Preview")->displayedImage;
+    GridV3 dataV3 = Plotter::get("Object Preview")->dataModel->displayedImage;
     GridF fitnessScoreGrid(dataV3.getDimensions());
     GridF fittingScoreGrid(dataV3.getDimensions());
     dataV3.iterateParallel([&](size_t i) {
-        fitnessScoreGrid[i] = dataV3[i].x;
-        fittingScoreGrid[i] = dataV3[i].y;
+        fitnessScoreGrid[i] = dataV3[i].x();
+        fittingScoreGrid[i] = dataV3[i].y();
     });
 
     auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
@@ -2064,7 +2064,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
                 }
                 if (iteration == 9) {
                     for (const auto& v : s.randomGreenCoords) {
-                        result(computePointFromGreenCoordinates(v, ShapeCurve(s.contour))).z = 1;
+                        result(computePointFromGreenCoordinates(v, ShapeCurve(s.contour))).z() = 1;
                     }
                 }
             }
@@ -2227,7 +2227,7 @@ void EnvObjsInterface::addObjectsHeightmaps()
                     Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, fakeNormal, Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
                     float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/(sigma * 1.f);
                     // float initialDistance = std::clamp(1.f - (pos - closestPoint).norm() / sigma, 0.f, 1.f);
-                    float grooves = std::max(0.f, 1.f - (sizeX * std::abs(newSpace.x - 1.f/sizeX) + std::pow(sizeY * newSpace.y, 2.f)));
+                    float grooves = std::max(0.f, 1.f - (sizeX * std::abs(newSpace.x() - 1.f/sizeX) + std::pow(sizeY * newSpace.y(), 2.f)));
                     // return std::max(grooves, initialDistance);
                     const Vector3& flow = EnvObject::flowfield(pos);
                     surfaceHeights(pos) += 2.f * grooves * std::max(abs(flow.dot(fakeNormal)), 0.f);

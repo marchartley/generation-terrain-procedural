@@ -6,14 +6,10 @@
 
 //#define OPENVDB_DLL
 #include "Utils/Globals.h"
-//#include "sim-fluid-loganzartman/Game.hpp"
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <qapplication.h>
 #include <iostream>
-#include "Interface/Interface.h"
-#include "EnvObject/EnvObject.h"
-#include "FluidSimulation/OpenFoamParser.h"
 
 #include <chrono>
 #include <fstream>
@@ -25,21 +21,11 @@
 #include <cstdio>
 #include <unistd.h>
 
-#include "TerrainModification/ParticleErosion.h"
-#include "Utils/Delaunay.h"
-#include "Graph/RegularSimplicialComplex.h"
-#include "Graph/TopoMap.h"
-#include "Utils/Table.h"
-#include "Graph/WaveFunctionCollapse.h"
-#include "DataStructure/Kelvinlet.h"
+#include "Interface/Interface.h"
+#include "EnvObject/EnvObject.h"
 #include "DataStructure/Image.h"
-#include "EnvObject/ExpressionParser.h"
-#include "Utils/HotreloadFile.h"
-#include "EnvObject/PositionOptimizer.h"
-#include "Utils/RadialShape.h"
 
 using namespace std;
-
 
 std::map<std::string, std::string> getAllEnvironmentVariables() {
     std::string cmd = "/bin/bash -i -c 'source ~/.bashrc && env'";
@@ -183,7 +169,7 @@ std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(std
     });
     GridF data(initialImage.colorImage.getDimensions());
     data.iterateParallel([&](size_t i) {
-        data[i] = initialImage.colorImage[i].x;
+        data[i] = initialImage.colorImage[i].x();
     });
     std::vector<GridF> images;
     // int nbX = 200;
@@ -304,6 +290,47 @@ void testingSmoothmaxInCPP() {
 
 int main(int argc, char *argv[])
 {
+/*
+    auto allVars = getAllEnvironmentVariables();
+    for (auto& [key, val] : allVars) {
+        // auto lowerKey = toLower(key);
+        //        if (lowerKey == "path" || lowerKey == "ld_library_path" || lowerKey.find("foam") != lowerKey.npos) {
+        // std::string s_cmd = key + "=" + val;
+        // auto cmd = const_cast<char*>(s_cmd.c_str());
+        setenv(key.c_str(), val.c_str(), 1);
+        //        }
+    }*/
+
+    /*
+    QProcess ganProc;
+    ganProc.setWorkingDirectory("/home/marc");
+    ganProc.start("/home/marc/code/miniconda3/envs/venv310/bin/python", QStringList() << "/home/marc/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py" << "--fromCpp" << "--input" << "/media/marc/Data/NN Datasets/1/input_label.png" << "--output" << "/media/marc/Data/NN Datasets/1/result_height.png" << "--name" << "labels_to_terrain_pacific_graphics_2025_larger_reefs" << "--model" << "pix2pix" << "--direction" << "AtoB");
+
+    if (!ganProc.waitForStarted(-1)) {
+        std::cout << "Could not start" << std::endl;
+        qDebug() << "Error: " << ganProc.errorString();
+        return false;
+    }
+
+    ganProc.write("Qt rocks!");
+    ganProc.write("Qt rocks!");
+    ganProc.write("Qt rocks!");
+    ganProc.write("Qt rocks!");
+    // ganProc.closeWriteChannel();
+
+    if (!ganProc.waitForFinished()) {
+        std::cout << "Could not finish" << std::endl;
+        return false;
+    }
+
+    QByteArray result = ganProc.readAll();
+    qDebug() << "Res: \n" << result;
+    QByteArray resultErr = ganProc.readAllStandardError();
+    qDebug() << "Err: \n" << resultErr;
+
+    return 0;
+    */
+
     /*float a = 1.f;
     float b = 200000.f;
     float c = -30.f;
@@ -428,7 +455,7 @@ int main(int argc, char *argv[])
             float y = distancesForRegions[i] * .5f * w;
             regions[i] = RadialShape(y, 20);
             for (auto& p : regions[i]) {
-                p.y = std::max(p.y + random_gen::generate_fbm(cos(p.x * 2.f * M_PI) * 100.f, sin(p.x * 2.f * M_PI) * 100.f, p.y * 100.f) * 10.f, 0.f);
+                p.y() = std::max(p.y() + random_gen::generate_fbm(cos(p.x() * 2.f * M_PI) * 100.f, sin(p.x() * 2.f * M_PI) * 100.f, p.y() * 100.f) * 10.f, 0.f);
             }
         }
 
@@ -436,8 +463,8 @@ int main(int argc, char *argv[])
         GridV3 displacementMap(dims);
         displacementMap.iterateParallel([&](const Vector3& p) {
             Vector3 pp = p * 0.1f;
-            // pp.z = iteration;
-            displacementMap.at(p) = Vector3(random_gen::generate_fbm(pp.x, pp.y, pp.z), random_gen::generate_fbm(pp.x + 100.f, pp.y + 100.f, pp.z)) * random_gen::generate_fbm(pp.x + 200.f, pp.y, pp.z) * 40.f;
+            // pp.z() = iteration;
+            displacementMap.at(p) = Vector3(random_gen::generate_fbm(pp.x, pp.y, pp.z), random_gen::generate_fbm(pp.x() + 100.f, pp.y() + 100.f, pp.z)) * random_gen::generate_fbm(pp.x() + 200.f, pp.y, pp.z) * 40.f;
         });
 
         GridF distances(dims, regions.size());
@@ -624,17 +651,6 @@ int main(int argc, char *argv[])
     return 0;
     */
 
-
-
-    auto allVars = getAllEnvironmentVariables();
-    for (auto& [key, val] : allVars) {
-        // auto lowerKey = toLower(key);
-//        if (lowerKey == "path" || lowerKey == "ld_library_path" || lowerKey.find("foam") != lowerKey.npos) {
-            // std::string s_cmd = key + "=" + val;
-            // auto cmd = const_cast<char*>(s_cmd.c_str());
-            setenv(key.c_str(), val.c_str(), 1);
-//        }
-    }
     /* Unit test skeletonizeToBSplines
     // Diagonal
     const int imgSize = 500;
@@ -694,8 +710,8 @@ int main(int argc, char *argv[])
         for (int i = 1; i < s.size() - 1; i++) {
             if ((s[i] - s[i-1]).normalized().dot((s[i + 1] - s[i]).normalized()) < 0.5f) {
                 auto& point = s[i];
-                for (int x = point.x - pointsize; x < point.x + pointsize; x++) {
-                    for (int y = point.y - pointsize; y < point.y + pointsize; y++) {
+                for (int x = point.x() - pointsize; x < point.x() + pointsize; x++) {
+                    for (int y = point.y() - pointsize; y < point.y() + pointsize; y++) {
                         testPolyline.at(x, y) = Vector3(1, 1, 1);
                     }
                 }
@@ -795,7 +811,7 @@ int main(int argc, char *argv[])
     GridF score = GridF::perlin(dim, Vector3(5, 5, 1)); //Image::readFromFile("slope_like_deussen.png").getBwImage().normalize().resize(dim);
     GridV3 gradients = score.grad();
 
-    float targetArea = dim.x * dim.y;
+    float targetArea = dim.x() * dim.y;
 
     auto h = [=](const Vector3& p) { return score(p); };
     auto hh = [=](const Vector3& p) { return gradients(p).norm(); };
@@ -822,9 +838,9 @@ int main(int argc, char *argv[])
         BSpline curve = ShapeCurve::circle(20.f, mousePos * dim, 50); //BSpline({Vector3(0.25f, .01f, 0) * dim, Vector3(.75f, 0.99f, 0) * dim}).resamplePoints(200);
         // BSpline curve = BSpline({mousePos * dim + Vector3(25, 0, 0), mousePos * dim - Vector3(25, 0, 0)}).resamplePoints(200);
         for (auto& p : curve) {
-            p.y += random_gen::generate() * 5.f;
+            p.y() += random_gen::generate() * 5.f;
         }
-        // ShapeCurve curve = ShapeCurve::circle(dim.x * .5f, mousePos * dim, 50);
+        // ShapeCurve curve = ShapeCurve::circle(dim.x() * .5f, mousePos * dim, 50);
         SnakeSegmentation s; // = SnakeSegmentation(curve, newScore, newGradients);
         s.contour = curve;
         s.image = newScore;
@@ -921,7 +937,7 @@ int main(int argc, char *argv[])
     GridF allMasks(fullImage.getDimensions());
     int nbSub = 50;
     Vector3 subImgSize = (input.getDimensions() / float(nbSub)).ceil();
-    subImgSize.z = 1;
+    subImgSize.z() = 1;
     Matrix3 mask(subImgSize, 0.f);
     Vector3 maskCenter = (mask.getDimensions() / 2.f).xy();
     auto distFunc = [&](const Vector3& pos, const Vector3& center) -> float {
@@ -999,8 +1015,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i <= 1000; i++) {
         float t = float(i) / 1000.f;
         auto p = spline.getPoint(t);
-        vals(p).x = 1;
-        if (p.x != p.x) {
+        vals(p).x() = 1;
+        if (p.x() != p.x) {
             std::cerr << "Without duplicates, NaN found for t = " << t << std::endl;
         }
     }
@@ -1009,8 +1025,8 @@ int main(int argc, char *argv[])
     for (int i = 0; i <= 1000; i++) {
         float t = float(i) / 1000.f;
         auto p = spline.getPoint(t);
-        vals(p).y = 1;
-        if (p.x != p.x) {
+        vals(p).y() = 1;
+        if (p.x() != p.x) {
             std::cerr << "With duplicates, NaN found for t = " << t << std::endl;
         }
     }
@@ -1022,7 +1038,7 @@ int main(int argc, char *argv[])
      * Unit test: testing the color palette
     GridV3 colors(1000, 1);
     colors.iterate([&] (const Vector3& p) {
-        colors(p) = colorPalette(p.x / colors.sizeX, {Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(1, 1, 0)});
+        colors(p) = colorPalette(p.x() / colors.sizeX, {Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, 0, 1), Vector3(1, 1, 0)});
     });
     Plotter::get()->addImage(colors);
     return Plotter::get()->exec();
@@ -1077,7 +1093,7 @@ int main(int argc, char *argv[])
     GridV3 output = outData.data;
 
     output.iterateParallel([&](size_t i) {
-        output[i].x = (output[i].isValid() ? 1.f : 0.f);
+        output[i].x() = (output[i].isValid() ? 1.f : 0.f);
     });
     Plotter::get()->addImage(output);
     Plotter::get()->exec();
@@ -1087,19 +1103,19 @@ int main(int argc, char *argv[])
      * Unit tests: FFT and iFFT on arbitrary sizes (limited to 3 dimensions max)
 //    GridF vals(128, 1);
 //    vals.iterateParallel([&](const Vector3& p) {
-//        vals(p) = std::sin(p.x * .2f) + std::sin(p.x * .1f);
+//        vals(p) = std::sin(p.x() * .2f) + std::sin(p.x() * .1f);
 //    });
 //    GridF vals(1, 128);
 //    vals.iterateParallel([&](const Vector3& p) {
-//        vals(p) = std::sin(p.y * .2f) + std::sin(p.y * .1f);
+//        vals(p) = std::sin(p.y() * .2f) + std::sin(p.y() * .1f);
 //    });
 //    GridF vals(1, 1, 128);
 //    vals.iterateParallel([&](const Vector3& p) {
-//        vals(p) = std::sin(p.z * .2f) + std::sin(p.z * .1f);
+//        vals(p) = std::sin(p.z() * .2f) + std::sin(p.z() * .1f);
 //    });
     GridF vals(100, 200);
     vals.iterateParallel([&](const Vector3& p) {
-        vals(p) = std::sin(p.x * .2f) + std::sin(p.y * .1f);
+        vals(p) = std::sin(p.x() * .2f) + std::sin(p.y() * .1f);
     });
     for (size_t i = 0; i < vals.size(); i++)
         std::cout << vals[i] << "\n";
@@ -1434,7 +1450,7 @@ int main(int argc, char *argv[])
                 float x = _x, y = _y, z = _z;
                 Vector3 pos(x, y, z);
                 Vector3 query = bbox.normalize(pos); // * M.getDimensions(); //pos * ratio;
-                query.z = 0;
+                query.z() = 0;
                 auto val = M.interpolate(query);
                 m.at(pos) = val;
             }
@@ -1580,14 +1596,14 @@ int main(int argc, char *argv[])
         screen.iterateParallel([&](const Vector3& pos) {
             for (auto& p : voro.pointset) {
                 if ((pos - p).norm2() < 4.f) {
-                    screen(pos).y = 1.f;
+                    screen(pos).y() = 1.f;
                 }
             }
 
             for (auto& region : voro.areas) {
                 float distance = region.estimateSqrDistanceFrom(pos);
                 if (0 < distance && distance < 1.f) {
-                    screen(pos).x = 1.f;
+                    screen(pos).x() = 1.f;
                 }
             }
 
@@ -1596,7 +1612,7 @@ int main(int argc, char *argv[])
                     BSpline path({nodeA->pos, nodeB->pos});
                     float distance = path.estimateSqrDistanceFrom(pos);
                     if (0 < distance && distance < 1.f) {
-                        screen(pos).z = 1.f;
+                        screen(pos).z() = 1.f;
                     }
                 }
             }
@@ -1617,11 +1633,11 @@ int main(int argc, char *argv[])
     Delaunay delaunay(voro);
 
     GridV3 screen(size);
-    displayProcessTime("Comuting some distances for map of size " + std::to_string(size.x * size.y) + "... ", [&]() {
+    displayProcessTime("Comuting some distances for map of size " + std::to_string(size.x() * size.y) + "... ", [&]() {
         screen.iterateParallel([&](const Vector3& pos) {
             for (auto& p : voro.pointset) {
                 if ((pos - p).norm2() < 2000.f)
-                    screen(pos).x += .1f;
+                    screen(pos).x() += .1f;
             }
         });
     });
@@ -1907,7 +1923,7 @@ int main(int argc, char *argv[])
 
     auto recompute = [&](std::complex<float> c) {
         res.iterateParallel([&](const Vector3& p) {
-            std::complex<float> z1 = std::complex<float>(p.x - res.sizeX * .5f, p.y - res.sizeY * .5f) / std::complex<float>(res.sizeX * .25f, res.sizeY * .25f);
+            std::complex<float> z1 = std::complex<float>(p.x() - res.sizeX * .5f, p.y() - res.sizeY * .5f) / std::complex<float>(res.sizeX * .25f, res.sizeY * .25f);
             auto z = z1;
             int iter = 0;
             int maxIter = 200;
@@ -1925,7 +1941,7 @@ int main(int argc, char *argv[])
 
 
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
-        recompute({(p.x - .5f) * 2.f, (p.y - .5f) * 2.f});
+        recompute({(p.x() - .5f) * 2.f, (p.y() - .5f) * 2.f});
     });
     recompute({0.f, 0.f});
     Plotter::get()->exec();
@@ -2047,7 +2063,7 @@ int main(int argc, char *argv[])
 //                img(p) = warp;
     //            img(p) = pos - mousePos;
 //                img(p) = pos.xy() / size;
-//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y * .1f) * std::sin(pos.x * .1f);
+//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y() * .1f) * std::sin(pos.x() * .1f);
                 img(p) = initialImage.interpolate(pos);
 
             });
@@ -2056,8 +2072,8 @@ int main(int argc, char *argv[])
         Plotter::get()->show();
     };
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
-        float r = p.x * 1.f * size.x;
-        float s = p.y * 1.f * size.y;
+        float r = p.x() * 1.f * size.x;
+        float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
@@ -2084,7 +2100,7 @@ int main(int argc, char *argv[])
 //        TranslateKelvinletCurve* t = new TranslateKelvinletCurve;
 //        ScaleKelvinletCurve* t = new ScaleKelvinletCurve;
         PinchKelvinletCurve* t = new PinchKelvinletCurve;
-        t->curve = BSpline({center, center + Vector3(0, size.y * .25f), mousePos});
+        t->curve = BSpline({center, center + Vector3(0, size.y() * .25f), mousePos});
         t->force = 3000.f;
         t->radialScale = r;
 
@@ -2106,7 +2122,7 @@ int main(int argc, char *argv[])
 //                img(p) = pos - p;
     //            img(p) = pos - mousePos;
 //                img(p) = pos.xy() / size;
-//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y * .1f) * std::sin(pos.x * .1f);
+//                img(p) = pos * Vector3(1, 1, 1) * std::sin(pos.y() * .1f) * std::sin(pos.x() * .1f);
                 img(p) = initialImage.interpolate(pos);
 
             });
@@ -2115,8 +2131,8 @@ int main(int argc, char *argv[])
         Plotter::get()->show();
     };
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
-        float r = p.x * 1.f * size.x;
-        float s = p.y * 1.f * size.y;
+        float r = p.x() * 1.f * size.x;
+        float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
@@ -2143,7 +2159,7 @@ int main(int argc, char *argv[])
 //        TranslateKelvinletCurve* t = new TranslateKelvinletCurve;
 //        ScaleKelvinletCurve* t = new ScaleKelvinletCurve;
         PinchKelvinletCurve* t = new PinchKelvinletCurve;
-        t->curve = BSpline({center, center + Vector3(0, size.y * .25f), mousePos});
+        t->curve = BSpline({center, center + Vector3(0, size.y() * .25f), mousePos});
         t->force = -3000.f;
         t->radialScale = r;
 
@@ -2167,7 +2183,7 @@ int main(int argc, char *argv[])
 //                img(p) = pos - p;
     //            img(p) = pos - mousePos;
 //                img(p) = pos.xy() / size;
-                img(p) = Vector3(1, 1, 1) * (std::sin(pos.y * .1f) * std::sin(pos.x * .1f) > 0.f ? 1.f : 0.f);
+                img(p) = Vector3(1, 1, 1) * (std::sin(pos.y() * .1f) * std::sin(pos.x() * .1f) > 0.f ? 1.f : 0.f);
 //                img(p) = initialImage.interpolate(pos);
 
             });
@@ -2186,8 +2202,8 @@ int main(int argc, char *argv[])
         Plotter::get()->show();
     };
     QObject::connect(Plotter::get()->chartView, &ChartView::mouseMoved, [&](Vector3 p) {
-        float r = p.x * 1.f * size.x;
-        float s = p.y * 1.f * size.y;
+        float r = p.x() * 1.f * size.x;
+        float s = p.y() * 1.f * size.y;
         f(5.f, s, p * size);
     });
     QObject::connect(Plotter::get(), &Plotter::clickedOnImage, [&](const Vector3& clickPos, Vector3 value) {
@@ -2214,7 +2230,7 @@ int main(int argc, char *argv[])
 //    ShapeCurve shape = ShapeCurve::circle(30, center, 10);
     img.iterateParallel([&](const Vector3& p) {
         Vector3 pos = p;
-        pos += Vector3(random_gen::generate_perlin(p.x * 2.f, p.y * 2.f, 0), random_gen::generate_perlin(p.x * 2.f, p.y * 2.f, 100), 0) * 100.f;
+        pos += Vector3(random_gen::generate_perlin(p.x() * 2.f, p.y() * 2.f, 0), random_gen::generate_perlin(p.x() * 2.f, p.y() * 2.f, 100), 0) * 100.f;
         float val = (random_gen::generate_perlin(pos.x, pos.y, pos.z) + 1.f) * .5f;
 
         float signDistance = BSpline(shape.closedPath()).estimateDistanceFrom(p, true); // * (shape.containsXY(p, false) ? 1.f : -1.f);
@@ -2399,8 +2415,8 @@ int main(int argc, char *argv[])
         gradients.raiseErrorOnBadCoord = false;
         gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
-        float targetArea = (size.x * size.x) / 1.f;
-        float targetLength = size.x / 4.f;
+        float targetArea = (size.x() * size.x) / 1.f;
+        float targetLength = size.x() / 4.f;
         BSpline track;
 //        ShapeCurve track;
         displayProcessTime("> ", [&]() {
@@ -2484,7 +2500,7 @@ int main(int argc, char *argv[])
     gradients.raiseErrorOnBadCoord = false;
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     gradients.iterateParallel([&](const Vector3& p) {
-        // gradients(p) = (std::sin(p.x / 3.f) < .75f && std::sin(p.y / 3.f) < .75f ? Vector3(1, 1, 1) : Vector3(0, 0, 0));
+        // gradients(p) = (std::sin(p.x() / 3.f) < .75f && std::sin(p.y() / 3.f) < .75f ? Vector3(1, 1, 1) : Vector3(0, 0, 0));
         gradients(p) = (p - size.xy() * .5f);
     });
 
@@ -2501,8 +2517,8 @@ int main(int argc, char *argv[])
     Vector3 resultImageSize(300, 300, 1);
     GridV3 velocities(fieldSize);
     velocities.iterateParallel([&](const Vector3& p) {
-        // velocities(p) = Vector3(std::cos(PI * p.x / float(velocities.sizeX)), std::cos(2.f * PI * p.y / float(velocities.sizeY)), 0);
-        velocities(p) = Vector3(random_gen::generate_perlin(p.x * (500.f / fieldSize.x), p.y * (500.f / fieldSize.y)), random_gen::generate_perlin(p.x * (500.f / fieldSize.x), p.y * (500.f / fieldSize.y) + 10), 0);
+        // velocities(p) = Vector3(std::cos(PI * p.x() / float(velocities.sizeX)), std::cos(2.f * PI * p.y() / float(velocities.sizeY)), 0);
+        velocities(p) = Vector3(random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y)), random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y) + 10), 0);
     });
     displayProcessTime("Vector field... ", [&]() {
         Plotter::get()->addVectorField(velocities, 1/10.f, resultImageSize);
@@ -2525,7 +2541,7 @@ int main(int argc, char *argv[])
 
     GridV3 flow(size);
     flow.iterateParallel([&](const Vector3& p) {
-        flow(p) = Vector3(20.f * normalizedGaussian(5.f, std::pow((p.y - (size.y * .5f)) * (100.f / size.x), 2)), 10.f * sin(p.x * .1f * (100.f / size.x)), 0) * strength;
+        flow(p) = Vector3(20.f * normalizedGaussian(5.f, std::pow((p.y() - (size.y() * .5f)) * (100.f / size.x), 2)), 10.f * sin(p.x() * .1f * (100.f / size.x)), 0) * strength;
     });
 
     Plotter::get()->setNormalizedModeImage(true);
@@ -2643,7 +2659,7 @@ int main(int argc, char *argv[])
 
     Plotter::get()->setNormalizedModeImage(true);
     float scale = 8;
-    heights = GridF(size.x / 8, size.y / 8, 1);
+    heights = GridF(size.x() / 8, size.y() / 8, 1);
     for (auto& path : randomPaths)
         path.scale(1.f / scale);
     displayProcessTime("4) ", [&]() {

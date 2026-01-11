@@ -29,8 +29,8 @@ void WaveFunctionCollapse::run(int sizeX, int sizeY, int sizeZ)
 
         for (size_t i = 0; i < finalMap.size(); i++) {
             Vector3 pos = finalMap.getCoordAsVector3(i);
-            if (pos.x == 0 || pos.x == finalMap.sizeX - 1 || pos.y == 0 || pos.y == finalMap.sizeY - 1) {
-                finalMap.at(pos) = int(pos.x) % 2; //0;
+            if (pos.x() == 0 || pos.x() == finalMap.sizeX - 1 || pos.y() == 0 || pos.y() == finalMap.sizeY - 1) {
+                finalMap.at(pos) = int(pos.x()) % 2; //0;
             }
         }
 
@@ -95,9 +95,9 @@ bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPro
     if (myLabel == -1) {
         std::set<int> possibleStates = convertVectorToSet(availablePatternsOnCell.at(from));
 
-        for (int x = from.x - 1; x <= from.x + 1; x++) {
-            for (int y = from.y - 1; y <= from.y + 1; y++) {
-                for (int z = from.z - 1; z <= from.z + 1; z++) {
+        for (int x = from.x() - 1; x <= from.x() + 1; x++) {
+            for (int y = from.y() - 1; y <= from.y() + 1; y++) {
+                for (int z = from.z() - 1; z <= from.z() + 1; z++) {
                     Vector3 neighborPos(x, y, z);
                     if (neighborPos == from || !finalMap.checkCoord(neighborPos)) continue;
 
@@ -139,9 +139,9 @@ bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPro
             finalMap.at(from) = constraints[availablePatternsOnCell.at(from)[0]].at(tilesAnchor);
         else if (availablePatternsOnCell.at(from).size() == 0)
             return false;
-        for (int x = from.x - 1; x <= from.x + 1; x++) {
-            for (int y = from.y - 1; y <= from.y + 1; y++) {
-                for (int z = from.z - 1; z <= from.z + 1; z++) {
+        for (int x = from.x() - 1; x <= from.x() + 1; x++) {
+            for (int y = from.y() - 1; y <= from.y() + 1; y++) {
+                for (int z = from.z() - 1; z <= from.z() + 1; z++) {
                     if (from != Vector3(x, y, z))
                         returnValue &= propagate(Vector3(x, y, z));
                 }
@@ -154,9 +154,9 @@ bool WaveFunctionCollapse::propagate(const Vector3& from, bool forceNeighborsPro
     // Label is now set yet
     if (myLabel == -1) {
         // Check all neighbors
-        for (int x = from.x - 2; x <= from.x + 2; x++) {
-            for (int y = from.y - 2; y <= from.y + 2; y++) {
-                for (int z = from.z - 2; z <= from.z + 2; z++) {
+        for (int x = from.x() - 2; x <= from.x() + 2; x++) {
+            for (int y = from.y() - 2; y <= from.y() + 2; y++) {
+                for (int z = from.z() - 2; z <= from.z() + 2; z++) {
                     Vector3 neighborPos(x, y, z);
                     // If neighbor didn't change since step, just ignore it
                     if (modifiedCell.at(neighborPos) == 0) continue;
@@ -205,10 +205,10 @@ std::vector<GridI > WaveFunctionCollapse::createLabelsFromImage(GridI image, con
     std::vector<GridI > patterns;
     Vector3 halfDimLow = Vector3(1, 1, 0);
     Vector3 halfDimHigh = Vector3(1, 1, 0);
-    for (int x = halfDimLow.x; x < image.sizeX - halfDimHigh.x; x++) {
-        for (int y = halfDimLow.y; y < image.sizeY - halfDimHigh.y; y++) {
-            for (int z = halfDimLow.z; z < image.sizeZ - halfDimHigh.z; z++) {
-                patterns.push_back(image.subset(x-1, x + tilesDim.x-1, y-1, y + tilesDim.y-1, z, z + tilesDim.z));
+    for (int x = halfDimLow.x(); x < image.sizeX - halfDimHigh.x(); x++) {
+        for (int y = halfDimLow.y(); y < image.sizeY - halfDimHigh.y(); y++) {
+            for (int z = halfDimLow.z(); z < image.sizeZ - halfDimHigh.z(); z++) {
+                patterns.push_back(image.subset(x-1, x + tilesDim.x()-1, y-1, y + tilesDim.y()-1, z, z + tilesDim.z()));
             }
         }
     }

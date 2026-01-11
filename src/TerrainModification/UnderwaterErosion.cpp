@@ -292,7 +292,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
     Vector3 gravityDefault = Vector3(0, 0, -gravity);
 //    auto environmentalDensities = [&](const Vector3& pos) {
-//        if (pos.z < 0) return 1000.f;
+//        if (pos.z() < 0) return 1000.f;
 //        return 1.f;
 //    };
 //    auto flowfieldValues = [&](const Vector3& pos) {
@@ -309,7 +309,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
         Vector3 waterDir = Vector3(0, waterForce, 0).rotate(0, 0, ((waterFlowfieldRotation + random_gen::generate(-45, 45)) / 180) * PI);
         for (size_t i = 0; i < flowfieldValues.size(); i++) {
             Vector3 pos = flowfieldValues.getCoordAsVector3(i);
-//            if (pos.x > flowfieldValues.sizeX / 2) continue;
+//            if (pos.x() > flowfieldValues.sizeX / 2) continue;
             if (environmentalDensities(pos) < 100) { // In the air
                 flowfieldValues(pos) = airDir;
             } else { // In water
@@ -393,7 +393,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 Vector3 justFlow = flowfieldValues(particle.pos); // (flowfieldValues.at(pos) + flowfieldValues.at(nextPos)) * .5f;
                 Vector3 justGravity = gravityDefault * gravityCoefficient;
     //            Vector3 justGravity = (gravityfieldValues.at(particle.pos) * gravityCoefficient); // (gravityfieldValues.at(nextPos) * gravityCoefficient); // .maxMagnitude(2.f);
-    //            std::cout << "Z=" << particle.pos.z << " -> flow " << justFlow << " -- gravity: " << justGravity << "(" << gravityDefault << " * " << gravityCoefficient << ") density = " << environmentDensity << " (" << environmentalDensities << ")" << std::endl;
+    //            std::cout << "Z=" << particle.pos.z() << " -> flow " << justFlow << " -- gravity: " << justGravity << "(" << gravityDefault << " * " << gravityCoefficient << ") density = " << environmentDensity << " (" << environmentalDensities << ")" << std::endl;
                 Vector3 flowfield = justFlow + justGravity;
 
                     if (matterDensity < 0)
@@ -427,7 +427,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                         //steps = -1000;
                         rolling = true;
                         justStartedRolling = true;
-    //                    particle.pos.z += .1f;
+    //                    particle.pos.z() += .1f;
                     } else if (rolling && collisionPoint.isValid()) {
                         rolling = false;
                         lastCollisions.push_back(collisionPoint);
@@ -453,7 +453,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                         float dotNormal = std::abs(particle.dir.normalized().dot(normal));
                         vRel = particle.dir.norm() * (1.f - dotNormal); // velocity relative to the surface
 
-                        if (!continueSimulation && normal.z < 0)
+                        if (!continueSimulation && normal.z() < 0)
                             continueSimulation = true;
                     }
 
@@ -480,7 +480,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                     }
     //                std::cout << theta << " " << shear << " " << amountToErode << " " << particle.maxCapacity << " " << particle.capacity << std::endl;
                     amountToErode = std::min(amountToErode, particle.properties->maxCapacity - particle.capacity);
-                    if (nextPos.isValid() && nextPos.z < 3.f) {
+                    if (nextPos.isValid() && nextPos.z() < 3.f) {
 //                        std::cout << "Ignore\n";
                         amountToErode = 0;
                     }
@@ -496,7 +496,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
 
                     if (amountToErode - amountToDeposit != 0) {
                         particle.capacity += (amountToErode - amountToDeposit);
-                        if (nextPos.z >= 0.f) {
+                        if (nextPos.z() >= 0.f) {
                             erosionValuesAndPositions.push_back({amountToErode - amountToDeposit, nextPos});
                         }
                     }
@@ -536,10 +536,10 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                 if (wrapPositions)
                     particle.pos = Vector3::wrap(particle.pos, Vector3(0, 0, -100), Vector3(terrain->getSizeX(), terrain->getSizeY(), 1000));
                 particle.dir *= 0.99f;
-                if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z < -20) || particle.pos.z < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
+                if (steps < 0 || (hasBeenAtLeastOnceInside && nextPos.z() < -20) || particle.pos.z() < -20 || particle.dir.norm2() < 1e-4 || !continueSimulation || maxBounces <= 0) {
                     if (depositFactor > 0.f && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
                         while (!terrain->checkIsInGround(particle.pos) && Vector3::isInBox(particle.pos, Vector3(), terrain->getDimensions())) {
-                            particle.pos.z -= .5f;
+                            particle.pos.z() -= .5f;
                         }
                         Vector3 depositPosition = particle.pos;
                         erosionValuesAndPositions.push_back({-particle.capacity, depositPosition});
@@ -597,9 +597,9 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                         for (int y = -radiusXY; y < radiusXY; y++) {
                             if (x*x + y*y < radiusXY * radiusXY) {
                                 float halfHeight = .5f * std::sqrt(radius*radius - (x*x + y*y))/radius;
-                                float startZ = std::max(0.f, pos.z - halfHeight);
-                                float endZ = pos.z + halfHeight;
-                                asLayers->transformLayer(pos.x + x, pos.y + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
+                                float startZ = std::max(0.f, pos.z() - halfHeight);
+                                float endZ = pos.z() + halfHeight;
+                                asLayers->transformLayer(pos.x() + x, pos.y() + y, startZ, endZ, (val > 0 ? TerrainTypes::AIR : TerrainTypes::SAND));
                             }
                         }
                     }
@@ -914,13 +914,13 @@ std::vector<Vector3> UnderwaterErosion::CreateCrack(const Vector3& start, const 
 //    GridI resizedMap = this->grid->getVoxelValues().resize(this->grid->sizeX / rx, this->grid->sizeY / ry, this->grid->sizeZ / rz).binarize();
     Matrix3Graph graph = Matrix3Graph(resizedMap).computeSurface().randomizeEdges(.5f);
     Vector3 clampedStart = start / ratio;
-    clampedStart.x = std::clamp(clampedStart.x, 0.f, resizedMap.sizeX - 1.f);
-    clampedStart.y = std::clamp(clampedStart.y, 0.f, resizedMap.sizeY - 1.f);
-    clampedStart.z = std::clamp(clampedStart.z, 0.f, resizedMap.sizeZ - 1.f);
+    clampedStart.x() = std::clamp(clampedStart.x(), 0.f, resizedMap.sizeX - 1.f);
+    clampedStart.y() = std::clamp(clampedStart.y(), 0.f, resizedMap.sizeY - 1.f);
+    clampedStart.z() = std::clamp(clampedStart.z(), 0.f, resizedMap.sizeZ - 1.f);
     Vector3 clampedEnd = end / ratio;
-    clampedEnd.x = std::clamp(clampedEnd.x, 0.f, resizedMap.sizeX - 1.f);
-    clampedEnd.y = std::clamp(clampedEnd.y, 0.f, resizedMap.sizeY - 1.f);
-    clampedEnd.z = std::clamp(clampedEnd.z, 0.f, resizedMap.sizeZ - 1.f);
+    clampedEnd.x() = std::clamp(clampedEnd.x(), 0.f, resizedMap.sizeX - 1.f);
+    clampedEnd.y() = std::clamp(clampedEnd.y(), 0.f, resizedMap.sizeY - 1.f);
+    clampedEnd.z() = std::clamp(clampedEnd.z(), 0.f, resizedMap.sizeZ - 1.f);
     std::vector<Vector3> path = graph.shortestPath(clampedStart, clampedEnd);
 
     ratio = ((start / clampedStart.rounded()) + (end / clampedEnd.rounded())) / 2.f; // To be continued...
@@ -985,7 +985,7 @@ void UnderwaterErosion::ParisSeaErosion()
 {
     Curve1D resistanceCurve = Curve1D(BSpline({Vector3(0, 0, 0), Vector3(1, 0, 0)}).getPath(20));
     for (auto& p : resistanceCurve)
-        p.y = random_gen::generate(0.f, 1.f);
+        p.y() = random_gen::generate(0.f, 1.f);
 
     float waterLevel = voxelGrid->properties->waterLevel;
     float previousWater = clamp(waterLevel - 0.1f, 0.f, 1.f);
@@ -1009,7 +1009,7 @@ void UnderwaterErosion::ParisSeaErosion()
     float maxZ;
     for (size_t i = 0; i < possiblePositions.size(); i++) {
         auto& p = possiblePositions[i];
-        float z = p.z / voxelGrid->getSizeZ();
+        float z = p.z() / voxelGrid->getSizeZ();
         float resistance = resistanceCurve.get(z);
         float erosion = seaErosionCurve.get(z);
         float energy = erosion * (1.f - resistance) * (1.f - beta) + erosion * beta;

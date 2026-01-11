@@ -73,9 +73,9 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     graph.forceDrivenPositioning();
     Vector3 minPosition = Vector3::max();
     for (auto& n : graph.nodes) {
-        minPosition.x = std::min(minPosition.x, n->pos.x);
-        minPosition.y = std::min(minPosition.y, n->pos.y);
-        minPosition.z = std::min(minPosition.z, n->pos.z);
+        minPosition.x() = std::min(minPosition.x(), n->pos.x());
+        minPosition.y() = std::min(minPosition.y(), n->pos.y());
+        minPosition.z() = std::min(minPosition.z(), n->pos.z());
     }
     for (auto& n : graph.nodes)
         n->pos -= minPosition;
@@ -99,7 +99,7 @@ Graph subsetToFitMostBiomes(Graph graph, std::vector<std::string> biomesNames)
 
     for (size_t iNode = 0; iNode < graph.nodes.size(); iNode++) {
         Vector3 pos = graph.nodes[iNode]->pos;
-        if (desiredAABBoxMin.x < pos.x && pos.x < desiredAABBoxMax.x && desiredAABBoxMin.y < pos.y && pos.y < desiredAABBoxMax.y)
+        if (desiredAABBoxMin.x() < pos.x() && pos.x() < desiredAABBoxMax.x() && desiredAABBoxMin.y() < pos.y() && pos.y() < desiredAABBoxMax.y())
 //            returnedGraph.nodes.push_back(graph.nodes[iNode]);
             returnedGraph.nodes[iNode] = graph.nodes[iNode];
     }
