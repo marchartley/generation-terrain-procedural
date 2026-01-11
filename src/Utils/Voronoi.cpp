@@ -22,9 +22,9 @@ Voronoi::Voronoi(int numberRandomPoints, const Vector3& maxBoundarie)
 Voronoi::Voronoi(int numberRandomPoints, const Vector3& minBoundarie, const Vector3& maxBoundarie)
     : Voronoi(numberRandomPoints, ShapeCurve({
                                                  Vector3(minBoundarie.xy()),
-                                                 Vector3(maxBoundarie.x, minBoundarie.y),
+                                                 Vector3(maxBoundarie.x(), minBoundarie.y()),
                                                  Vector3(maxBoundarie.xy()),
-                                                 Vector3(minBoundarie.x, maxBoundarie.y),
+                                                 Vector3(minBoundarie.x(), maxBoundarie.y()),
                                              }))
 {
 
@@ -44,18 +44,18 @@ Voronoi::Voronoi(std::vector<Vector3> pointset)
     minBoundarie = Vector3::max();
     maxBoundarie = Vector3::min();
     for (auto& point : pointset) {
-        minBoundarie.x = std::min(point.x, minBoundarie.x);
-        minBoundarie.y = std::min(point.y, minBoundarie.y);
-        minBoundarie.z = std::min(point.z, minBoundarie.z);
-        maxBoundarie.x = std::max(point.x, maxBoundarie.x);
-        maxBoundarie.y = std::max(point.y, maxBoundarie.y);
-        maxBoundarie.z = std::max(point.z, maxBoundarie.z);
+        minBoundarie.x() = std::min(point.x(), minBoundarie.x());
+        minBoundarie.y() = std::min(point.y(), minBoundarie.y());
+        minBoundarie.z() = std::min(point.z(), minBoundarie.z());
+        maxBoundarie.x() = std::max(point.x(), maxBoundarie.x());
+        maxBoundarie.y() = std::max(point.y(), maxBoundarie.y());
+        maxBoundarie.z() = std::max(point.z(), maxBoundarie.z());
     }
     this->boundingShape = ShapeCurve({
                                          Vector3(minBoundarie.xy()),
-                                         Vector3(maxBoundarie.x, minBoundarie.y),
+                                         Vector3(maxBoundarie.x(), minBoundarie.y()),
                                          Vector3(maxBoundarie.xy()),
-                                         Vector3(minBoundarie.x, maxBoundarie.y),
+                                         Vector3(minBoundarie.x(), maxBoundarie.y()),
                                      });
 
     this->solve(false, 0);
@@ -70,9 +70,9 @@ Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& maxBoundarie)
 Voronoi::Voronoi(std::vector<Vector3> pointset, const Vector3& minBoundarie, const Vector3& maxBoundarie)
     : Voronoi(pointset, ShapeCurve({
                                        Vector3(minBoundarie.xy()),
-                                       Vector3(maxBoundarie.x, minBoundarie.y),
+                                       Vector3(maxBoundarie.x(), minBoundarie.y()),
                                        Vector3(maxBoundarie.xy()),
-                                       Vector3(minBoundarie.x, maxBoundarie.y),
+                                       Vector3(minBoundarie.x(), maxBoundarie.y()),
                                    }))
 {
 
@@ -91,10 +91,10 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
 
     if (boundingShape.points.empty()) {
         boundingShape.points = {
-            Vector3(minBoundarie.x, minBoundarie.y, minBoundarie.z),
-            Vector3(minBoundarie.x, maxBoundarie.y, minBoundarie.z),
-            Vector3(maxBoundarie.x, maxBoundarie.y, minBoundarie.z),
-            Vector3(maxBoundarie.x, minBoundarie.y, minBoundarie.z)
+            Vector3(minBoundarie.x(), minBoundarie.y(), minBoundarie.z()),
+            Vector3(minBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
+            Vector3(maxBoundarie.x(), maxBoundarie.y(), minBoundarie.z()),
+            Vector3(maxBoundarie.x(), minBoundarie.y(), minBoundarie.z())
         };
     }
     if (pointset.size() == 0) {
@@ -106,8 +106,8 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     jcv_point* points = (jcv_point*)malloc( sizeof(jcv_point) * pointset.size());
     jcv_point* boundingPoints = (jcv_point*)malloc( sizeof(jcv_point) * boundingShape.points.size());
     for (size_t i = 0; i < pointset.size(); i++) {
-        points[i].x = pointset[i].x;
-        points[i].y = pointset[i].y;
+        points[i].x = pointset[i].x();
+        points[i].y = pointset[i].y();
         if (i == 0)
             points[i].weight = 1.f;
         else
@@ -115,8 +115,8 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     }
     for (size_t i = 0; i < boundingShape.points.size(); i++) {
         if (i > 0 && boundingShape.points[i] == boundingShape.points[0]) continue;
-        boundingPoints[i].x = boundingShape.points[i].x;
-        boundingPoints[i].y = boundingShape.points[i].y;
+        boundingPoints[i].x = boundingShape.points[i].x();
+        boundingPoints[i].y = boundingShape.points[i].y();
     }
 
     jcv_clipper polygonclipper;
@@ -137,8 +137,8 @@ std::vector<ShapeCurve> Voronoi::solve(bool randomizeUntilAllPointsAreSet, int n
     clipper = &polygonclipper;
 
     jcv_rect* rect = new jcv_rect;
-    rect->min = {minBoundarie.x, minBoundarie.y, 1.f};
-    rect->max = {maxBoundarie.x, maxBoundarie.y, 1.f};
+    rect->min = {minBoundarie.x(), minBoundarie.y(), 1.f};
+    rect->max = {maxBoundarie.x(), maxBoundarie.y(), 1.f};
 
     jcv_diagram diagram;
     memset(&diagram, 0, sizeof(jcv_diagram));

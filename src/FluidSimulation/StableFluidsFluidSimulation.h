@@ -233,22 +233,22 @@ public:
                 for (int z = 1; z < this->sizeZ - 1; z++) {
                     tmpVec = Vector3(x, y, z) - (velocity_array(x, y, z) * dtVector); // Vector3(dtx, dty, dtz));
 
-                    tmpVec.x = std::min(std::max(tmpVec.x, .5f), float(this->sizeX) + .5f);
-                    x0 = std::floor(tmpVec.x);
+                    tmpVec.x() = std::min(std::max(tmpVec.x(), .5f), float(this->sizeX) + .5f);
+                    x0 = std::floor(tmpVec.x());
                     x1 = x0 + 1.f;
-                    s1 = tmpVec.x - x0;
+                    s1 = tmpVec.x() - x0;
                     s0 = 1.0 - s1;
 
-                    tmpVec.y = std::min(std::max(tmpVec.y, .5f), float(this->sizeY) + .5f);
-                    y0 = std::floor(tmpVec.y);
+                    tmpVec.y() = std::min(std::max(tmpVec.y(), .5f), float(this->sizeY) + .5f);
+                    y0 = std::floor(tmpVec.y());
                     y1 = y0 + 1.f;
-                    t1 = tmpVec.y - y0;
+                    t1 = tmpVec.y() - y0;
                     t0 = 1.0 - t1;
 
-                    tmpVec.z = std::min(std::max(tmpVec.z, .5f), float(this->sizeZ) + .5f);
-                    z0 = std::floor(tmpVec.z);
+                    tmpVec.z() = std::min(std::max(tmpVec.z(), .5f), float(this->sizeZ) + .5f);
+                    z0 = std::floor(tmpVec.z());
                     z1 = z0 + 1.f;
-                    u1 = tmpVec.z - z0;
+                    u1 = tmpVec.z() - z0;
                     u0 = 1.0 - u1;
 
                     // TODO : Correct the simplifications caused by high velocities in "velocity_array"

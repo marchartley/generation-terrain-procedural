@@ -24,7 +24,7 @@ void GravityInterface::replay(nlohmann::json action)
         bool applyGlobalGravity = parameters.at("global_gravity").get<bool>();
         bool applySandGravity = parameters.at("sand_gravity").get<bool>();
         float erosionStrength = parameters.at("erosion_strength").get<float>();
-        Vector3 currentDirection = json_to_vec3(parameters.at("current_direction"));
+        Vector3 currentDirection = json_to_vec3<float>(parameters.at("current_direction"));
 
         if (applyGlobalGravity) {
             this->voxelGrid->makeItFall();

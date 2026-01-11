@@ -14,19 +14,19 @@ Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
         Vector3 dY = at(x, y + radius, z) - at(x, y - radius, z);
         Vector3 dZ = at(x, y, z + radius) - at(x, y, z - radius);
 
-        Vector3 curl(dY.z - dZ.y, dZ.x - dX.z, dX.y - dY.x);
+        Vector3 curl(dY.z() - dZ.y(), dZ.x() - dX.z(), dX.y() - dY.x());
         returningGrid(x, y, z) = curl / (radius * 2.f);
 //        Vector3 dF = Vector3(at(x + radius, y, z) - at(x - radius, y, z), at(x, y + radius, z) - at(x, y - radius, z), at(x, y, z + radius) - at(x, y, z - radius));
-//        returningGrid(x, y, z) = Vector3(dF.z - dF.y, dF.x - dF.z, dF.y - dF.x) / (2 * radius);
+//        returningGrid(x, y, z) = Vector3(dF.z() - dF.y, dF.x() - dF.z, dF.y() - dF.x) / (2 * radius);
 //        const Vector3& vec = this->at(x, y, z);
-//        returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
+//        returningGrid.at(x, y, z) = Vector3(vec.z() - vec.y, vec.x() - vec.z, vec.y() - vec.x);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
                 Vector3& vec = this->at(x, y, z);
-                returningGrid.at(x, y, z) = Vector3(vec.z - vec.y, vec.x - vec.z, vec.y - vec.x);
+                returningGrid.at(x, y, z) = Vector3(vec.z() - vec.y, vec.x() - vec.z, vec.y() - vec.x);
             }
         }
     }*/
@@ -189,8 +189,8 @@ Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<BSpline> splines) 
     int i = 0;
     for (auto& spline : splines) {
         for (auto& point : spline) {
-            for (int x = point.x - pointsize; x < point.x + pointsize; x++) {
-                for (int y = point.y - pointsize; y < point.y + pointsize; y++) {
+            for (int x = point.x() - pointsize; x < point.x() + pointsize; x++) {
+                for (int y = point.y() - pointsize; y < point.y() + pointsize; y++) {
                     newImage.at(x, y) = HSVtoRGB((float)i / splines.size(), 1.0f, 0.5f);
                 }
             }
@@ -360,7 +360,7 @@ std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     if (!(dx == 0 || dy == 0)) continue;
-                    Vector3 nextPos(current.x + dx, current.y + dy);
+                    Vector3 nextPos(current.x() + dx, current.y() + dy);
                     if (grid(nextPos)) {
                         q.push_back(nextPos);
                         grid(nextPos) = 0;
@@ -383,9 +383,9 @@ Matrix3<float> Matrix3<Vector3>::divergence() const
     self.raiseErrorOnBadCoord = false;
     Matrix3<float> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&] (int x, int y, int z) {
-        returningGrid.at(x, y, z) = ((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x +
-                                     (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y +
-                                     (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z) * .5f;
+        returningGrid.at(x, y, z) = ((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x() +
+                                     (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y() +
+                                     (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z()) * .5f;
     });
     return returningGrid;
 }
@@ -398,9 +398,9 @@ Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
     Vector3 flooredPos = position.floor();
     Vector3 offset = position - flooredPos;
     return Vector3(
-                self.at(flooredPos + Vector3(1, 0, 0)).x * (1 - offset.x) + self.at(flooredPos).x * offset.x,
-                self.at(flooredPos + Vector3(0, 1, 0)).y * (1 - offset.y) + self.at(flooredPos).y * offset.y,
-                self.at(flooredPos + Vector3(0, 0, 1)).z * (1 - offset.z) + self.at(flooredPos).z * offset.z
+                self.at(flooredPos + Vector3(1, 0, 0)).x() * (1 - offset.x()) + self.at(flooredPos).x() * offset.x(),
+                self.at(flooredPos + Vector3(0, 1, 0)).y() * (1 - offset.y()) + self.at(flooredPos).y() * offset.y(),
+                self.at(flooredPos + Vector3(0, 0, 1)).z() * (1 - offset.z()) + self.at(flooredPos).z() * offset.z()
                 );
 }
 
@@ -417,9 +417,9 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient() const
     self.raiseErrorOnBadCoord = false;
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
     iterateParallel([&] (int x, int y, int z) {
-        returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x * .5f,
-                                            (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y * .5f,
-                                            (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z * .5f);
+        returningGrid.at(x, y, z) = Vector3((self.at(x + 1, y, z) - self.at(x - 1, y, z)).x() * .5f,
+                                            (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y() * .5f,
+                                            (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z() * .5f);
     });
     /*#pragma omp parallel for collapse(3)
     for (int x = 0; x < this->sizeX; x++) {
@@ -429,9 +429,9 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient() const
 //                continue;
                 // Need to change the divergence function...
 //                returningGrid.at(x, y, z) = this->at(x, y, z).divergence();
-                returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x * .5f,
-                                                    (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y * .5f,
-                                                    (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z * .5f);
+                returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x() * .5f,
+                                                    (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y() * .5f,
+                                                    (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z() * .5f);
             }
         }
     }*/
@@ -590,7 +590,7 @@ std::string stringifyGridV3(const GridV3 &data, bool binaryMode)
     } else {
         outFile << width << " " << depth << " " << height;
         for (size_t i = 0; i < data.size(); i++) {
-            outFile << " " << data[i].x << " " << data[i].y << " " << data[i].z;
+            outFile << " " << data[i].x() << " " << data[i].y() << " " << data[i].z();
         }
     }
     return outFile.str();
@@ -654,7 +654,7 @@ GridV3 loadGridV3(const std::string &str, bool binaryMode)
         inFile >> width >> depth >> height;
         data = GridF(width, depth, height);
         for (int i = 0; i < data.size(); i++) {
-            inFile >> data[i].x >> data[i].y >> data[i].z;
+            inFile >> data[i].x() >> data[i].y() >> data[i].z();
         }
     }
 

@@ -8,6 +8,27 @@ LIBS += -fopenmp
 
 DEFINES += "WM_LABEL_SIZE=32"
 
+
+TORCH_DIR = $$getenv(HOME)/codes/libtorch
+
+INCLUDEPATH += \
+    $$TORCH_DIR/include \
+    $$TORCH_DIR/include/torch/csrc/api/include
+
+LIBS += -L$$TORCH_DIR/lib \
+        -ltorch_global_deps \
+        -ltorch \
+        -ltorch_cpu \
+        -lc10 \
+        -ltorch_cuda \
+        -lc10_cuda \
+        -ldl -lrt -lpthread
+
+QMAKE_LFLAGS += -Wl,-rpath,$$TORCH_DIR/lib
+DEFINES += _GLIBCXX_USE_CXX11_ABI=1
+QMAKE_LFLAGS_RELEASE -= -Wl,-s
+
+
 unix {
     LIBS *= -lQGLViewer-qt5
     LIBS *= -lpng
@@ -108,6 +129,7 @@ SOURCES += \
     src/Graphics/ComputeShader.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
+    src/Graphics/GanUIPainter.cpp \
         src/Graphics/MarchingCubes.cpp \
     src/Graphics/Plotter.cpp \
     src/Graphics/RayMarching.cpp \
@@ -299,6 +321,7 @@ HEADERS += \
     src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
+    src/Graphics/GanUIPainter.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
     src/Graphics/Plotter.h \

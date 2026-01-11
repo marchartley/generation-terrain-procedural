@@ -49,7 +49,7 @@ float Heightmap::getMaxHeight() const
 
 bool Heightmap::checkIsInGround(const Vector3& position)
 {
-    return this->getHeight(position.xy()) >= position.z;
+    return this->getHeight(position.xy()) >= position.z();
 }
 
 
@@ -106,7 +106,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
             pos += dir;
 
             // Stop simulating droplet if it's not moving or has flowed over edge of map
-            if ((dir.x == 0 && dir.y == 0) || !heights.checkCoord(pos)) {
+            if ((dir.x() == 0 && dir.y() == 0) || !heights.checkCoord(pos)) {
                 break;
             }
 
@@ -170,7 +170,7 @@ std::vector<std::vector<Vector3>> Heightmap::hydraulicErosion(int numIterations,
     this->heights *= currentMaxHeight;
     for (size_t i = 0; i < traces.size(); i++) {
         for (size_t j = 0; j < traces[i].size(); j++) {
-            traces[i][j].z = heights.interpolate(traces[i][j]) + 1.f;
+            traces[i][j].z() = heights.interpolate(traces[i][j]) + 1.f;
         }
     }
     return traces;
@@ -185,7 +185,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
     heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     for (size_t i = 0; i < heights.size(); i++) {
         Vector3 pos = heights.getCoordAsVector3(i);
-//        if (pos.x == 0 || pos.x == getSizeX() - 1 || pos.y == 0 || pos.y == getSizeY() - 1) // On the borders, don't try yet...
+//        if (pos.x() == 0 || pos.x() == getSizeX() - 1 || pos.y() == 0 || pos.y() == getSizeY() - 1) // On the borders, don't try yet...
 //            continue;
         float totalMatterToMove = 0;
         float height = heights.at(i);
@@ -193,7 +193,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
                 if (x == 0 && y == 0) continue;
-                Vector3 neighbor(pos.x + x, pos.y + y);
+                Vector3 neighbor(pos.x() + x, pos.y() + y);
                 if (height - heights.at(neighbor) < -minSlope) {
                     totalMatterToMove += (height - heights.at(neighbor)) - minSlope;
                     displacement.at(x+1, y+1) = (height - heights.at(neighbor)) - minSlope;
@@ -204,7 +204,7 @@ void Heightmap::thermalErosion(float erosionCoef, float minSlope)
         displacement *= erosionCoef;
         for (int x = -1; x <= 1; x++) {
             for (int y = -1; y <= 1; y++) {
-                Vector3 neighbor(pos.x + x, pos.y + y);
+                Vector3 neighbor(pos.x() + x, pos.y() + y);
                 heights.at(neighbor) += displacement.at(x + 1, y + 1);
             }
         }
@@ -218,7 +218,7 @@ void windCascade(const Vector3& pos, GridF& ground, GridF& sand, float roughness
         for (int y = -1; y <= 1; y++) {
             if (x == 0 && y == 0) continue;
 
-            Vector3 neighbor(pos.x + x, pos.y + y);
+            Vector3 neighbor(pos.x() + x, pos.y() + y);
             float diff = (ground.at(pos) + sand.at(pos)) - (ground.at(neighbor) + sand.at(neighbor));
             float excess = std::abs(diff) - roughness;
 
@@ -301,11 +301,11 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
 
         // While particle in map
         while (heights.checkCoord(pos) && direction.norm2() > .0001f) {
-            trace.push_back(Vector3(pos.x, pos.y, height * maxHeight));
+            trace.push_back(Vector3(pos.x(), pos.y(), height * maxHeight));
             float sandHeight = ground.interpolate(pos) + sand.interpolate(pos);
             // Compute normal
-            float rightHeight = ground.interpolate(pos.x + 1, pos.y) + sand.interpolate(pos.x + 1, pos.y);
-            float frontHeight = ground.interpolate(pos.x, pos.y + 1) + sand.interpolate(pos.x, pos.y + 1);
+            float rightHeight = ground.interpolate(pos.x() + 1, pos.y()) + sand.interpolate(pos.x() + 1, pos.y());
+            float frontHeight = ground.interpolate(pos.x(), pos.y() + 1) + sand.interpolate(pos.x(), pos.y() + 1);
             Vector3 normal = Vector3(1.f, 0.f, (sandHeight - rightHeight) * scale).cross(Vector3(0.f, 1.f, (sandHeight - frontHeight) * scale)).normalize();
 
             // If new pos is outside, stop it
@@ -344,14 +344,14 @@ std::vector<std::vector<Vector3> > Heightmap::windErosion(int numberOfParticles,
             }
             if (height > sandHeight) {
                 // Particle in air, apply gravity
-                direction.z -= dt * .01f;
+                direction.z() -= dt * .01f;
             } else {
                 // Loose speed by rolling on ground
                 direction += direction.cross(normal).cross(normal) * dt;
             }
             direction += (windDirection - direction) * dt * .1f;
-            pos += Vector3(direction.x, direction.y) * dt;
-            height += direction.z * dt;
+            pos += Vector3(direction.x(), direction.y()) * dt;
+            height += direction.z() * dt;
             height = std::max(height, ground.interpolate(pos) + sand.interpolate(pos));
 
         }
@@ -589,7 +589,7 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
     float stepSize = .1f;
     // AABBox myAABBox(Vector3::max(minPos, Vector3(2.f * stepSize, 2.f * stepSize, this->heights.min() - 2.f * stepSize)), Vector3::min(maxPos, this->getDimensions() + Vector3(2.f) * stepSize));
     Vector3 minBound = Vector3::max(minPos.xy(), Vector3(0, 0, 0));
-    minBound.z = this->heights.min();
+    minBound.z() = this->heights.min();
     Vector3 maxBound = Vector3::min(maxPos, this->getDimensions());
     AABBox myAABBox(minBound, maxBound);
     Vector3 currPos = origin;
@@ -640,15 +640,15 @@ Mesh Heightmap::getGeometry(const Vector3& dimensions)
     Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
         finalDimensions = originalDimensions;
-    finalDimensions.z = 1;
+    finalDimensions.z() = 1;
 
     std::vector<Vector3> vertices;
-    vertices.resize(6 * (finalDimensions.x - 1) * (finalDimensions.y - 1) );
+    vertices.resize(6 * (finalDimensions.x() - 1) * (finalDimensions.y() - 1) );
     auto heights = this->getHeights().resize(finalDimensions);
 
     size_t i = 0;
-    for (int x = 0; x < finalDimensions.x - 1; x++) {
-        for (int y = 0; y < finalDimensions.y - 1; y++) {
+    for (int x = 0; x < finalDimensions.x() - 1; x++) {
+        for (int y = 0; y < finalDimensions.y() - 1; y++) {
             vertices[i + 0] = Vector3(x + 0, y + 0, heights.at(x + 0, y + 0));
             vertices[i + 1] = Vector3(x + 1, y + 0, heights.at(x + 1, y + 0));
             vertices[i + 2] = Vector3(x + 0, y + 1, heights.at(x + 0, y + 1));

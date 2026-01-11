@@ -33,7 +33,7 @@ void ManualEditionInterface::replay(nlohmann::json action)
 
         float size = parameters.at("size").get<float>() * random_gen::generate(0.f, 2.f);
         float strength = parameters.at("strength").get<float>() * random_gen::generate(0.f, 2.f);
-        Vector3 position = json_to_vec3(parameters.at("position")) + Vector3::random(0.f, 20.f);
+        Vector3 position = json_to_vec3<float>(parameters.at("position")) + Vector3::random(0.f, 20.f);
         bool addingMode = parameters.at("addingMode").get<bool>();
 
         RockErosion rock(size, strength);

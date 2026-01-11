@@ -153,12 +153,12 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
 
             bool keep = true;
             Vector3 indicePos = pos.rounded();
-            for (int x = indicePos.x - 1; x <= indicePos.x + 1 && keep; x++) {
-                for (int y = indicePos.y - 1; y <= indicePos.y + 1 && keep; y++) {
-                    for (int z = indicePos.z - 1; z <= indicePos.z + 1 && keep; z++) {
+            for (int x = indicePos.x() - 1; x <= indicePos.x() + 1 && keep; x++) {
+                for (int y = indicePos.y() - 1; y <= indicePos.y() + 1 && keep; y++) {
+                    for (int z = indicePos.z() - 1; z <= indicePos.z() + 1 && keep; z++) {
                         if (!this->nodesIndices.checkCoord(x, y, z))
                             continue;
-                        if (x == indicePos.x && y == indicePos.y && z == indicePos.z)
+                        if (x == indicePos.x() && y == indicePos.y() && z == indicePos.z)
                             continue;
                         if (this->nodesIndices.at(x, y, z) != -1) {
                             if ((pos - allNodes[this->nodesIndices.at(x, y, z)]->pos).norm2() < sqr_diameter) {

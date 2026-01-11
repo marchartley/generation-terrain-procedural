@@ -639,12 +639,12 @@ std::tuple<Vector3, Vector3> BSpline::AABBox() const
     Vector3 minVec = Vector3(maxDim, maxDim, maxDim),
             maxVec = Vector3(minDim, minDim, minDim);
     for (const auto& point : points) {
-        minVec.x = std::min(point.x, minVec.x);
-        minVec.y = std::min(point.y, minVec.y);
-        minVec.z = std::min(point.z, minVec.z);
-        maxVec.x = std::max(point.x, maxVec.x);
-        maxVec.y = std::max(point.y, maxVec.y);
-        maxVec.z = std::max(point.z, maxVec.z);
+        minVec.x() = std::min(point.x(), minVec.x());
+        minVec.y() = std::min(point.y(), minVec.y());
+        minVec.z() = std::min(point.z(), minVec.z());
+        maxVec.x() = std::max(point.x(), maxVec.x());
+        maxVec.y() = std::max(point.y(), maxVec.y());
+        maxVec.z() = std::max(point.z(), maxVec.z());
     }
     return std::make_tuple(minVec, maxVec);
 }
@@ -677,7 +677,7 @@ BSpline BSpline::computeConvexHull() const
     // Get point with lowest Y (and lowest X in case of tie)
     for (size_t i = 0; i < this->points.size(); i++) {
         Vector3 p = points[i];
-        if (p.y < start.y || (p.y == start.y && p.x < start.x)) {
+        if (p.y() < start.y() || (p.y() == start.y() && p.x() < start.x())) {
             start = p;
         }
     }
@@ -686,7 +686,7 @@ BSpline BSpline::computeConvexHull() const
     for (size_t i = 0; i < this->points.size(); i++) {
         Vector3 dir = (points[i] - start).normalize();
         if (dir == Vector3()) continue; // Ignore the starting point
-        float angle = -dir.x; // Sort from "most right" to "more left"
+        float angle = -dir.x(); // Sort from "most right" to "more left"
         if (points_angle.count(angle) == 0 || ((points_angle[angle] - start).norm2() < (points[i] - start).norm2())) {
             points_angle[angle] = points[i];
         }
@@ -698,7 +698,7 @@ BSpline BSpline::computeConvexHull() const
         // Remove the points from the stack if they create a "left turn"
         // This can be checked if the Z component of (P1-P0).cross(P2-P0) <= 0
         // With P0 the current point, P1 the top of stack and P2 the second top
-        while(stack.size() > 1 && ((stack[stack.size() - 1] - stack[stack.size() - 2]).cross((points_angle.begin()->second - stack[stack.size() - 2])).z <= 0)) {
+        while(stack.size() > 1 && ((stack[stack.size() - 1] - stack[stack.size() - 2]).cross((points_angle.begin()->second - stack[stack.size() - 2])).z() <= 0)) {
             stack.pop_back();
         }
         // Add the point at the end of the stack
@@ -767,7 +767,7 @@ BSpline &BSpline::displacePointsRandomly(const Vector3 &maxDistance)
         Vector3 binormal = this->getBinormal(x).normalized();
         dir.normalize();
         normal.normalize();
-        newPoints[i] = points[i] + (dir * random_gen::generate(-1, 1) * maxDistance.x) + (normal * random_gen::generate(-1, 1) * maxDistance.y) + (binormal * random_gen::generate(-1, 1) * maxDistance.z);
+        newPoints[i] = points[i] + (dir * random_gen::generate(-1, 1) * maxDistance.x()) + (normal * random_gen::generate(-1, 1) * maxDistance.y()) + (binormal * random_gen::generate(-1, 1) * maxDistance.z());
     }
     this->points = newPoints;
     return *this;
@@ -787,7 +787,7 @@ BSpline &BSpline::displacePointsRandomlyPerlin(const Vector3& maxDistance, float
         Vector3 binormal = this->getBinormal(x).normalized();
         dir.normalize();
         normal.normalize();
-        newPoints[i] = points[i] + (dir * random_gen::generate_perlin(points[i].x * scale, points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.x) + (normal * random_gen::generate_perlin(100 + points[i].x * scale, points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.y) + (binormal * random_gen::generate_perlin(points[i].x * scale, 100 + points[i].y * scale, points[i].z * scale + (!loop ? 10 * i : 0)) * maxDistance.z);
+        newPoints[i] = points[i] + (dir * random_gen::generate_perlin(points[i].x() * scale, points[i].y() * scale, points[i].z() * scale + (!loop ? 10 * i : 0)) * maxDistance.x()) + (normal * random_gen::generate_perlin(100 + points[i].x() * scale, points[i].y() * scale, points[i].z() * scale + (!loop ? 10 * i : 0)) * maxDistance.y()) + (binormal * random_gen::generate_perlin(points[i].x() * scale, 100 + points[i].y() * scale, points[i].z() * scale + (!loop ? 10 * i : 0)) * maxDistance.z());
     }
     this->points = newPoints;
     return *this;
@@ -826,14 +826,14 @@ std::string BSpline::display1DPlot(int sizeX, int sizeY) const
     auto [mini, maxi] = AABBox();
     for (auto& p : translated) {
         p = (p - mini) / (maxi - mini); // between (0, 0) and (1, 1)
-        p.y = 1.f - p.y;
+        p.y() = 1.f - p.y();
         p *= Vector3(sizeX, sizeY);
         roundedPositions.push_back(p.roundedDown());
     }
 
     for (int y = 0; y < sizeY; y++) {
-        if (y == 0) oss << std::fixed << std::setprecision(2) << maxi.y << "|";
-        else if (y == sizeY - 1) oss << std::fixed << std::setprecision(2) << mini.y << "|";
+        if (y == 0) oss << std::fixed << std::setprecision(2) << maxi.y() << "|";
+        else if (y == sizeY - 1) oss << std::fixed << std::setprecision(2) << mini.y() << "|";
         else oss << "    |";
         for (int x = 0; x < sizeX; x++) {
             Vector3 pos(x, y);
@@ -846,9 +846,9 @@ std::string BSpline::display1DPlot(int sizeX, int sizeY) const
         }
         oss << std::endl;
     }
-    oss << std::fixed << std::setprecision(2) << "   " << mini.x;
+    oss << std::fixed << std::setprecision(2) << "   " << mini.x();
     for (int x = 0; x < sizeX - 4; x++) oss << " ";
-    oss << std::fixed << std::setprecision(2) << maxi.x;
+    oss << std::fixed << std::setprecision(2) << maxi.x();
 
     return oss.str();
 }
@@ -1050,7 +1050,7 @@ nlohmann::json bspline_to_json(const BSpline& spline) {
 BSpline json_to_bspline(nlohmann::json json) {
     BSpline spline;
     for (auto& point : json.at("points"))
-        spline.points.push_back(json_to_vec3(point));
+        spline.points.push_back(json_to_vec3<float>(point));
     if (json.at("closed").get<bool>())
         spline.close();
     return spline;

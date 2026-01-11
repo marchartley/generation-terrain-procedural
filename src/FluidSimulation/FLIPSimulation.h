@@ -102,7 +102,7 @@ public:
 
     std::vector<Particle> savedState;
 
-    int countCells() const { return fNum.x * fNum.y * fNum.z; }
+    int countCells() const { return fNum.x() * fNum.y() * fNum.z(); }
 
     float getU(const Vector3& p, const GridF& uGrid) const;
     float getV(const Vector3& p, const GridF& vGrid) const;

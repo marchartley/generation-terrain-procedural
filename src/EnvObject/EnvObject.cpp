@@ -205,17 +205,17 @@ void EnvObject::readScenarioFileContent(std::string content)
             float amount = event["amount"];
             scenario.waterLevelEvents.push_back(WaterLevelEvent(amount, startTime, endTime));
         } else if (type == "storm") {
-            Vector3 position = json_to_vec3(event["position"]);
-            Vector3 direction = json_to_vec3(event["direction"]);
+            Vector3 position = json_to_vec3<float>(event["position"]);
+            Vector3 direction = json_to_vec3<float>(event["direction"]);
             float sigma = event["sigma"];
             scenario.stormEvents.push_back(StormEvent(position, direction, sigma, startTime, endTime));
         } else if (type == "subsidence") {
-            Vector3 position = json_to_vec3(event["position"]);
+            Vector3 position = json_to_vec3<float>(event["position"]);
             float amount = event["amount"];
             float sigma = event["sigma"];
             scenario.subsidenceEvents.push_back(SubsidenceEvent(position, amount, sigma, startTime, endTime));
         } else if (type == "tectonic") {
-            Vector3 direction = json_to_vec3(event["direction"]);
+            Vector3 direction = json_to_vec3<float>(event["direction"]);
             float sigma = event["sigma"];
             scenario.tectonicEvents.push_back(TectonicEvent(direction, sigma, startTime, endTime));
         } else {
@@ -244,7 +244,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     std::map<std::string, float> materialDepositionOnDeath;
     TerrainTypes material = materialFromString(content["material"]);
     ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
-    Vector3 dimensions = json_to_vec3(content["dimensions"]);
+    Vector3 dimensions = json_to_vec3<float>(content["dimensions"]);
     HeightmapFrom heightFrom = (!content.contains("heightfrom") || content["heightfrom"] == "surface" ? SURFACE : (content["heightfrom"] == "water" ? WATER : GROUND));
     float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
@@ -266,8 +266,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     Vector3 flowEffect;
     if (objType == "point") {
         auto asPoint = new EnvPoint;
-        asPoint->radius = dimensions.x;
-        asPoint->height = dimensions.z;
+        asPoint->radius = dimensions.x();
+        asPoint->height = dimensions.z();
         obj = asPoint;
         if (content["flow"].is_number())
             flowEffect = Vector3(content["flow"], content["flow"], content["flow"]);
@@ -275,9 +275,9 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
             flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     } else if (objType == "curve") {
         auto asCurve = new EnvCurve;
-        asCurve->width = dimensions.x;
-        asCurve->length = dimensions.y;
-        asCurve->height = dimensions.z;
+        asCurve->width = dimensions.x();
+        asCurve->length = dimensions.y();
+        asCurve->height = dimensions.z();
         if (content.contains("follows")) {
             if (content["follows"] == "isovalue") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::ISOVALUE;
             else if (content["follows"] == "gradients") asCurve->curveFollow = EnvCurve::CURVE_FOLLOW::GRADIENTS;
@@ -288,9 +288,9 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     } else if (objType == "area") {
         auto asArea = new EnvArea;
-        asArea->width = dimensions.x;
-        asArea->length = dimensions.y;
-        asArea->height = dimensions.z;
+        asArea->width = dimensions.x();
+        asArea->length = dimensions.y();
+        asArea->height = dimensions.z();
         obj = asArea;
         flowEffect = Vector3(content["flow"]["direction"], content["flow"]["normal"], content["flow"]["binormal"]);
     }
@@ -340,7 +340,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     obj->recomputeEvaluationPoints();
     obj->heightFrom = heightFrom;
     obj->minScore = minScore;
-    if (dimensions.z == 0) obj->inputDimensions = Vector3();
+    if (dimensions.z() == 0) obj->inputDimensions = Vector3();
     return obj;
 }
 
@@ -408,10 +408,10 @@ GridF EnvObject::createHeightfield()
             if (_cachedHeightfield.empty() && patch && patch->predefinedShape != ImplicitPatch::NONE) {
                 auto previousMaterial = patch->material;
                 patch->material = SAND; // Temporarly be solid to get some height (which is then depth...)
-                GridF heights(patch->getDimensions().x, patch->getDimensions().y, 1);
+                GridF heights(patch->getDimensions().x(), patch->getDimensions().y(), 1);
                 heights.iterateParallel([&] (const Vector3& p) {
                     float resolution = .5f;
-                    for (float z = 1; z < patch->getDimensions().z * 1.f; z += resolution) {
+                    for (float z = 1; z < patch->getDimensions().z() * 1.f; z += resolution) {
                         heights(p) += (patch->evaluate(p.xy() + patch->position.xy() + Vector3(0, 0, z)) > 0 ? resolution : 0.f);
                     }
                 });
@@ -905,7 +905,7 @@ void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
             EnvObject::allScalarProperties[name + ".inside"](pos) = (allProperties["inside"].isValid() ? 1.f : 0.f);
             EnvObject::allVectorProperties[name + ".normal"](pos) = allProperties["normal"];
             EnvObject::allVectorProperties[name + ".dir"](pos) = allProperties["dir"];
-            EnvObject::allScalarProperties[name + ".curvature"](pos) = (allProperties["curvature"].x < 1e5 ? allProperties["curvature"].x : -1.f);
+            EnvObject::allScalarProperties[name + ".curvature"](pos) = (allProperties["curvature"].x() < 1e5 ? allProperties["curvature"].x() : -1.f);
         }
     });
 }

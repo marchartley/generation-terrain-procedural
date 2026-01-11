@@ -244,9 +244,9 @@ GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std
 //    std::cout << "All points in range: " << limits << "\nUseful in range " << meshBoundaries << std::endl;
     auto transfo = [&](const Vector3& point) {
         Vector3 newPos = (point - meshBoundaries.mini);
-//        newPos.y = meshBoundaries.dimensions().y - newPos.y;
+//        newPos.y() = meshBoundaries.dimensions().y() - newPos.y;
 //        Vector3 newPos = ((point - limits.mini) / (limits.maxi - limits.mini)) * meshBoundaries.dimensions();
-        return Vector3(newPos.x, boundaryDimensions.y - newPos.z, newPos.y) / scaling;
+        return Vector3(newPos.x(), boundaryDimensions.y() - newPos.z(), newPos.y()) / scaling;
     };
     GridV3 velocities(boundaryDimensions / scaling); //(dimX, dimY, dimZ);
 //    std::cout << "Velocity is of size " << velocities.getDimensions() << std::endl;
@@ -254,7 +254,7 @@ GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std
     for (auto& [idx, cell] : cells) {
         Vector3 midPoint = cell.getMidpoint(faces, points);
         Vector3 gridPos = transfo(midPoint);
-        Vector3 cellVelocity(cell.velocity.x, -cell.velocity.z, cell.velocity.y);
+        Vector3 cellVelocity(cell.velocity.x(), -cell.velocity.z(), cell.velocity.y());
         velocities.addValueAt(cellVelocity, gridPos);
 //        velocities.at(gridPos) += cell.velocity;
     }

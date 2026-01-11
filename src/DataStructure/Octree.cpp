@@ -14,9 +14,9 @@ OctreeNode::~OctreeNode() {
 
 bool OctreeNode::intersects(const Vector3 &start, const Vector3 &end) const {
     // Check if the two AABBs are disjoint along any axis
-    if (start.x > origin.x + halfDimension.x || end.x < origin.x - halfDimension.x) return false;
-    if (start.y > origin.y + halfDimension.y || end.y < origin.y - halfDimension.y) return false;
-    if (start.z > origin.z + halfDimension.z || end.z < origin.z - halfDimension.z) return false;
+    if (start.x() > origin.x() + halfDimension.x() || end.x() < origin.x() - halfDimension.x()) return false;
+    if (start.y() > origin.y() + halfDimension.y() || end.y() < origin.y() - halfDimension.y()) return false;
+    if (start.z() > origin.z() + halfDimension.z() || end.z() < origin.z() - halfDimension.z()) return false;
 
     // If the AABBs are not disjoint along any axis, they must intersect
     return true;
@@ -360,9 +360,9 @@ bool Octree::insert(OctreeNode *node, const Vector3 &p1, const Vector3 &p2, cons
             #pragma omp parallel for
             for (int i = 0; i < 8; ++i) {
                 Vector3 newOrigin = node->origin;
-                newOrigin.x += node->halfDimension.x * ((i & 1) ? 0.5f : -0.5f);
-                newOrigin.y += node->halfDimension.y * ((i & 2) ? 0.5f : -0.5f);
-                newOrigin.z += node->halfDimension.z * ((i & 4) ? 0.5f : -0.5f);
+                newOrigin.x() += node->halfDimension.x() * ((i & 1) ? 0.5f : -0.5f);
+                newOrigin.y() += node->halfDimension.y() * ((i & 2) ? 0.5f : -0.5f);
+                newOrigin.z() += node->halfDimension.z() * ((i & 4) ? 0.5f : -0.5f);
                 node->children[i] = new OctreeNode(newOrigin, node->halfDimension * 0.5f);
                 node->children[i]->data.reserve(maxDataCapacity);
             }
@@ -382,7 +382,7 @@ bool Octree::insert(OctreeNode *node, const Vector3 &p1, const Vector3 &p2, cons
         for (size_t child = 0; child < 8; child++)
             insertValidated |= insert(node->children[child], p1, p2, p3, pointIndex);
         // Add the point to the appropriate child
-//        int octant = (p1.x >= node->origin.x) + ((p1.y >= node->origin.y) << 1) + ((p1.z >= node->origin.z) << 2);
+//        int octant = (p1.x() >= node->origin.x) + ((p1.y() >= node->origin.y) << 1) + ((p1.z() >= node->origin.z) << 2);
 //        insertValidated = insert(node->children[octant], p1, p2, p3, pointIndex);
     }
     return insertValidated;

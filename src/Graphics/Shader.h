@@ -43,7 +43,7 @@ public:
     void setVector(std::string pname, glm::vec2 value);
 //    void setVector(std::string pname, glm::vec3 value);
 //    void setVector(std::string pname, glm::vec4 value);
-    void setVector(std::string pname, float* value, int n);
+    void setVector(std::string pname, const float* value, int n);
     void setLightSource(std::string pname, LightSource& value);
     void addLightSource(std::string pname, LightSource& value);
     void clearLightSources(std::string pname);

@@ -10,7 +10,7 @@ WaterHeight::WaterHeight(float height, float max_dist, float effect)
 
 float WaterHeight::cost(const Vector3& node) const
 {
-    float dist = std::abs(node.z - this->height);
+    float dist = std::abs(node.z() - this->height);
     if (dist < this->max_distance_of_effect) {
         return (dist / max_distance_of_effect) * this->effect;
     } else {

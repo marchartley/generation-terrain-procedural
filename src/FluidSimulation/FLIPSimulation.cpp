@@ -22,10 +22,10 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
     this->density = density;
     this->fNum = Vector3(std::floor(width / spacing) + 1, std::floor(depth / spacing) + 1, std::floor(height / spacing) + 1);
 
-    this->cellSize = height / fNum.z;
+    this->cellSize = height / fNum.z();
     this->fInvSpacing = 1.0 / spacing;
 
-    int nbCells = fNum.x * fNum.y * fNum.z;
+    int nbCells = fNum.x() * fNum.y() * fNum.z();
     this->u = GridF(fNum);
     this->v = GridF(fNum);
     this->w = GridF(fNum);
@@ -62,7 +62,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
         Vector3 newPos(false);
         while (!newPos.isValid() || (!this->obstacleGrid.empty() && this->obstacleGrid(newPos) > 0)) {
             newPos = this->dimensions * Vector3::random(Vector3(.1f, .1f, 1.f), Vector3(.9f, .9f, 1.1f));
-            newPos.z = this->dimensions.z - 3;
+            newPos.z() = this->dimensions.z() - 3;
         }
         particles[i].position = newPos;
     }
@@ -203,9 +203,9 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
         for (int i = 0; i < numParticles; i++) {
             auto& p = particles[i];
 
-            u.addValueAt(p.velocity.x, p.position);
-            v.addValueAt(p.velocity.y, p.position);
-            w.addValueAt(p.velocity.z, p.position);
+            u.addValueAt(p.velocity.x(), p.position);
+            v.addValueAt(p.velocity.y(), p.position);
+            w.addValueAt(p.velocity.z(), p.position);
 
             du.addValueAt(1.f, p.position);
             dv.addValueAt(1.f, p.position);
@@ -315,7 +315,7 @@ bool checkValidPositions(std::vector<Particle> particles) {
     bool validPositions = true;
     for (size_t i = 0; i < particles.size(); i++) {
         const auto& particle = particles[i];
-        if (particle.position.z < 4.f) {
+        if (particle.position.z() < 4.f) {
             std::cout << "Invalid #" << i << ": " << particle.position << std::endl;
             validPositions = false;
         }
@@ -454,7 +454,7 @@ void FLIPSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
 
 void FLIPSimulation::reset()
 {
-    this->init(this->density, this->dimensions.x, this->dimensions.y, this->dimensions.z, 1.f / this->fInvSpacing, this->particleRadius, this->maxParticles, this->dt);
+    this->init(this->density, this->dimensions.x(), this->dimensions.y(), this->dimensions.z(), 1.f / this->fInvSpacing, this->particleRadius, this->maxParticles, this->dt);
 }
 
 float FLIPSimulation::getU(const Vector3 &p, const GridF &uGrid) const
@@ -463,10 +463,10 @@ float FLIPSimulation::getU(const Vector3 &p, const GridF &uGrid) const
     return uGrid.interpolate(pp);
     /*
     Vector3 pp = p;
-    pp.x -= 1.5f;
+    pp.x() -= 1.5f;
     Vector3 pp2 = p;
-    pp2.x += 1.5f;
-    float t = pp.x - int(pp.x);
+    pp2.x() += 1.5f;
+    float t = pp.x() - int(pp.x);
     return uGrid(pp) * (1.f - t) + uGrid(pp2) * t;*/
 }
 
@@ -476,10 +476,10 @@ float FLIPSimulation::getV(const Vector3 &p, const GridF &vGrid) const
     return vGrid.interpolate(pp);
     /*
     Vector3 pp = p;
-    pp.y -= 1.5f;
+    pp.y() -= 1.5f;
     Vector3 pp2 = p;
-    pp2.y += 1.5f;
-    float t = pp.y - int(pp.y);
+    pp2.y() += 1.5f;
+    float t = pp.y() - int(pp.y);
     return vGrid(pp) * (1.f - t) + vGrid(pp2) * t;
     */
 }
@@ -490,10 +490,10 @@ float FLIPSimulation::getW(const Vector3 &p, const GridF &wGrid) const
     return wGrid.interpolate(pp);
     /*
     Vector3 pp = p;
-    pp.z -= 1.5f;
+    pp.z() -= 1.5f;
     Vector3 pp2 = p;
-    pp2.z += 1.5f;
-    float t = pp.z - int(pp.z);
+    pp2.z() += 1.5f;
+    float t = pp.z() - int(pp.z);
     return wGrid(pp) * (1.f - t) + wGrid(pp2) * t;
     */
 }

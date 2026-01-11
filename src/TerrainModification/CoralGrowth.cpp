@@ -7,9 +7,9 @@ CoralGrowth::CoralGrowth()
     highErosionArea = GridF(terrainSize);
     highDepositArea = GridF(terrainSize);
 
-    for (int x = 0; x < terrainSize.x; x++) {
-        for (int y = 0; y < terrainSize.y; y++) {
-            for (int z = 0; z < terrainSize.z; z++) {
+    for (int x = 0; x < terrainSize.x(); x++) {
+        for (int y = 0; y < terrainSize.y(); y++) {
+            for (int z = 0; z < terrainSize.z(); z++) {
                 if (5 < y && y < 10 && z < 5) {
                     coralArea.at(x, y, z) = 1.f;
                 } else {
@@ -34,9 +34,9 @@ void CoralGrowth::step()
         val = (val == 0.f ? 1.f : 0.f);
 
     // Find most exposed and least exposed areas
-    for (int x = 0; x < terrainSize.x; x++) {
-        for (int y = 0; y < terrainSize.y; y++) {
-            for (int z = 0; z < terrainSize.z; z++) {
+    for (int x = 0; x < terrainSize.x(); x++) {
+        for (int y = 0; y < terrainSize.y(); y++) {
+            for (int z = 0; z < terrainSize.z(); z++) {
                 Vector3 pos(x, y, z);
                 if (!surface.at(pos))
                     continue;
@@ -50,7 +50,7 @@ void CoralGrowth::step()
                 }
 
                 if (shaded) {
-                    shadeDistance = (checkingPos - pos).norm() / terrainSize.x;
+                    shadeDistance = (checkingPos - pos).norm() / terrainSize.x();
                     highDepositArea.at(pos) = (1.f - shadeDistance);
                 }  else {
                     highErosionArea.at(pos) = std::abs(1.f - normals.at(pos).dot(waterflow));

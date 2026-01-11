@@ -46,7 +46,7 @@ LayerBasedGrid::LayerBasedGrid(int nx, int ny, float nz)
 
 TerrainTypes LayerBasedGrid::getValue(const Vector3& pos)
 {
-    return getValue(pos.x, pos.y, pos.z);
+    return getValue(pos.x(), pos.y(), pos.z());
 }
 
 TerrainTypes LayerBasedGrid::getValue(float x, float y, float z)
@@ -327,12 +327,12 @@ std::map<TerrainTypes, float> LayerBasedGrid::getKernel(const Vector3& pos, floa
 {
     std::map<TerrainTypes, float> finalDensities;
     float halfK = kernelSize * .5f;
-    float minX = std::max(pos.x - halfK, 0.f);
-    float maxX = std::min(pos.x + halfK, float(this->getSizeX()));
-    float minY = std::max(pos.y - halfK, 0.f);
-    float maxY = std::min(pos.y + halfK, float(this->getSizeY()));
-    float minZ = std::max(pos.z - halfK, 0.f);
-    float maxZ = pos.z + halfK; // No way to know the Z max in a fast way
+    float minX = std::max(pos.x() - halfK, 0.f);
+    float maxX = std::min(pos.x() + halfK, float(this->getSizeX()));
+    float minY = std::max(pos.y() - halfK, 0.f);
+    float maxY = std::min(pos.y() + halfK, float(this->getSizeY()));
+    float minZ = std::max(pos.z() - halfK, 0.f);
+    float maxZ = pos.z() + halfK; // No way to know the Z max in a fast way
 
     for (int x = std::floor(minX); x < std::ceil(maxX); x++) {
         for (int y = std::floor(minY); y < std::ceil(maxY); y++) {
@@ -365,12 +365,12 @@ std::pair<TerrainTypes, float> LayerBasedGrid::getMaterialAndHeight(const Vector
         return {TerrainTypes::AIR, 0.f};
     float currentHeight = 0;
     for (auto materialTuple : this->layers.at(pos.xy())) {
-        if (currentHeight <= pos.z && pos.z < currentHeight + materialTuple.second)
+        if (currentHeight <= pos.z() && pos.z() < currentHeight + materialTuple.second)
             return materialTuple;
         currentHeight += materialTuple.second;
     }
     // No material found at this position, let's assume z < 0 is ground and z > max is water
-//    return (pos.z < 0 ? {TerrainTypes::DIRT, 0.f} : {TerrainTypes::WATER, 0.f});
+//    return (pos.z() < 0 ? {TerrainTypes::DIRT, 0.f} : {TerrainTypes::WATER, 0.f});
     return {TerrainTypes::WATER, 0.f};
 }
 
@@ -401,7 +401,7 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(const Vector3& origin, const V
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
-    if (currPos.z <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+    if (currPos.z() <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
     return Vector3::invalid();
 }
@@ -541,7 +541,7 @@ void LayerBasedGrid::cleanLayers(float minLayerHeight)
     for (size_t iStack = 0; iStack < nbStacks; iStack++) {
         auto& stack = layers[iStack];
         Vector3 pos = layers.getCoordAsVector3(iStack);
-        cleanLayer(pos.x, pos.y, minLayerHeight);
+        cleanLayer(pos.x(), pos.y(), minLayerHeight);
         /*while (stack.size() > 0 && isIn(stack.back().first, LayerBasedGrid::invisibleLayers)) //(stack.back().first == WATER || stack.back().first == AIR))
             stack.pop_back();
         for (size_t i = 0; i < stack.size(); i++) {
@@ -723,12 +723,12 @@ void LayerBasedGrid::add(ImplicitPatch* patch)
     Vector3 minPos = (AABBox.min() / this->scaling) - this->translation;
     Vector3 maxPos = (AABBox.max() / this->scaling) - this->translation;
 
-    int minX = std::max(0, int(minPos.x));
-    int maxX = std::min(int(this->getSizeX()), int(maxPos.x));
-    int minY = std::max(0, int(minPos.y));
-    int maxY = std::min(int(this->getSizeY()), int(maxPos.y));
-    float minZ = std::max(0.f, minPos.z);
-    float maxZ = std::min(float(maxPos.z), 40.f);
+    int minX = std::max(0, int(minPos.x()));
+    int maxX = std::min(int(this->getSizeX()), int(maxPos.x()));
+    int minY = std::max(0, int(minPos.y()));
+    int maxY = std::min(int(this->getSizeY()), int(maxPos.y()));
+    float minZ = std::max(0.f, minPos.z());
+    float maxZ = std::min(float(maxPos.z()), 40.f);
     float zResolution = 1.f;
     int nbEvaluations = 0;
     if (auto as2Dnary = dynamic_cast<Implicit2DNary*>(patch)) {
@@ -807,7 +807,7 @@ Mesh LayerBasedGrid::getGeometry(const Vector3& dimensions)
     Vector3 finalDimensions = dimensions;
     if (!dimensions.isValid())
         finalDimensions = originalDimensions;
-    finalDimensions.z = 1; // Force the Z to 1
+    finalDimensions.z() = 1; // Force the Z to 1
 
     auto copiedLayers = this->layers.resizeNearest(finalDimensions);
 
@@ -815,8 +815,8 @@ Mesh LayerBasedGrid::getGeometry(const Vector3& dimensions)
 //    auto layers = layersAndHeights.first;
 //    auto heights = layersAndHeights.second;
 
-    for (int x = 0; x < finalDimensions.x; x++) {
-        for (int y = 0; y < finalDimensions.y; y++) {
+    for (int x = 0; x < finalDimensions.x(); x++) {
+        for (int y = 0; y < finalDimensions.y(); y++) {
             auto layers = copiedLayers.at(x, y);
             float currentHeight = 0.f;
 

@@ -475,12 +475,12 @@ void Viewer::mousePressEvent(QMouseEvent *e)
     Vector3 terrainTranslate = this->getCurrentTerrainModel()->translation;
     if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
         if (this->mapMode == MapMode::VOXEL_MODE) {
-            std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+            std::cout << "Voxel (" << int(mousePosWorld.x()) << ", " << int(mousePosWorld.y()) << ", " << int(mousePosWorld.z()) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
         } else if (this->mapMode == MapMode::LAYER_MODE) {
             auto [mat, height] = this->layerGrid->getMaterialAndHeight(mousePosWorld);
-            std::cout << "Stack (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << LayerBasedGrid::densityFromMaterial(mat) << " for height " << height << std::endl;
+            std::cout << "Stack (" << int(mousePosWorld.x()) << ", " << int(mousePosWorld.y()) << ", " << int(mousePosWorld.z()) << ") has value " << LayerBasedGrid::densityFromMaterial(mat) << " for height " << height << std::endl;
         } else if (this->mapMode == MapMode::GRID_MODE) {
-            std::cout << "Vertex (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has height " << this->heightmap->getHeight(mousePosWorld) << std::endl;
+            std::cout << "Vertex (" << int(mousePosWorld.x()) << ", " << int(mousePosWorld.y()) << ", " << int(mousePosWorld.z()) << ") has height " << this->heightmap->getHeight(mousePosWorld) << std::endl;
         } else if (this->mapMode == MapMode::IMPLICIT_MODE) {
             std::cout << "Implicit surface at " << mousePosWorld << std::endl;
         }
@@ -539,7 +539,7 @@ void Viewer::mouseDoubleClickEvent(QMouseEvent *e)
     QGLViewer::mouseDoubleClickEvent(e);
     checkMouseOnVoxel();
     if (this->mouseInWorld && e->button() == Qt::MouseButton::LeftButton) {
-        std::cout << "Voxel (" << int(mousePosWorld.x) << ", " << int(mousePosWorld.y) << ", " << int(mousePosWorld.z) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
+        std::cout << "Voxel (" << int(mousePosWorld.x()) << ", " << int(mousePosWorld.y()) << ", " << int(mousePosWorld.z()) << ") has value " << this->voxelGrid->getVoxelValue(this->mousePosWorld) << std::endl;
 
     }
     Q_EMIT this->mouseDoubleClickedOnMap(this->mousePosWorld, this->mouseInWorld, e, this->getCurrentTerrainModel());

@@ -96,7 +96,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         ScaleKelvinlet k;
         k.pos = this->position;
         k.radialScale = this->radius * .2f;
-        k.scale = 10.f * /*growingState * */this->flowEffect.x;
+        k.scale = 10.f * /*growingState * */this->flowEffect.x();
         k.mu = .9f;
         k.v = 0.f;
 
@@ -145,7 +145,7 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
         *previousPrimitive = *ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, 0, {}, false);
     } else {
         patch = ImplicitPatch::createPredefinedShape(this->implicitShape, dimensions, radius * .25f * growingState, {}, false);
-        patchPosition.z = heights(this->position.xy());
+        patchPosition.z() = heights(this->position.xy());
     }
 
     patch->position = patchPosition;

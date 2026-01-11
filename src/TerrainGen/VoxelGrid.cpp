@@ -36,13 +36,13 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
 //        this->getSizeZ() = grid.getMaxHeight() /* * scaleFactor*/ * 2;
     } else {
         // Otherwise, we want a subset of the map, we just need to clamp the dimensions
-        subsectionStart.x = std::max(subsectionStart.x, 0.f);
-        subsectionStart.y = std::max(subsectionStart.y, 0.f);
-        subsectionEnd.x = std::min(subsectionEnd.x, (float)grid.getSizeX());
-        subsectionEnd.y = std::min(subsectionEnd.y, (float)grid.getSizeY());
+        subsectionStart.x() = std::max(subsectionStart.x(), 0.f);
+        subsectionStart.y() = std::max(subsectionStart.y(), 0.f);
+        subsectionEnd.x() = std::min(subsectionEnd.x(), (float)grid.getSizeX());
+        subsectionEnd.y() = std::min(subsectionEnd.y(), (float)grid.getSizeY());
     }
-    this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, height, 0.f);
-    // this->_cachedVoxelValues = GridF((subsectionEnd.x - subsectionStart.x) * scaleFactor, (subsectionEnd.y - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
+    this->_cachedVoxelValues = GridF((subsectionEnd.x() - subsectionStart.x()) * scaleFactor, (subsectionEnd.y() - subsectionStart.y()) * scaleFactor, height, 0.f);
+    // this->_cachedVoxelValues = GridF((subsectionEnd.x() - subsectionStart.x) * scaleFactor, (subsectionEnd.y() - subsectionStart.y) * scaleFactor, std::max(1.f, grid.getMaxHeight()), 0.f);
     this->initMap();
 
     GridF gridHeights = grid.getHeights().subset(subsectionStart.xy(), subsectionEnd.xy()).resize(this->getDimensions().xy() + Vector3(0, 0, 1));
@@ -142,7 +142,7 @@ void VoxelGrid::computeMultipleFlowfields(FluidSimType type, int steps, Implicit
     auto densities = this->getEnvironmentalDensities().resize(this->multipleFluidSimulations[0].dimensions);
     float maxDensity = densities.max();
     for (size_t i = 0; i < obstacleMap.size(); i++)
-        obstacleMap[i] = ((maxDensity > 10 && densities[i] < 1000) || obstacleMap.getCoordAsVector3(i).z < 1 ? 1 : obstacleMap[i]);
+        obstacleMap[i] = ((maxDensity > 10 && densities[i] < 1000) || obstacleMap.getCoordAsVector3(i).z() < 1 ? 1 : obstacleMap[i]);
     size_t nbCurrentsToCompute = this->multipleFluidSimulations.size();
 
 
@@ -430,7 +430,7 @@ void VoxelGrid::letGravityMakeSandFallWithFlow(bool remesh)
             }
         }
         std::sort(sandyPositions.begin(), sandyPositions.end(),
-                  [](const Vector3& a, const Vector3& b) -> bool { return a.z < b.z; });
+                  [](const Vector3& a, const Vector3& b) -> bool { return a.z() < b.z(); });
 
         int a = 0;
         for (const Vector3& sandPos : sandyPositions) {
@@ -597,7 +597,7 @@ float VoxelGrid::getHeight(float x, float y) {
 }
 
 bool VoxelGrid::contains(const Vector3& v) {
-    return this->contains(v.x, v.y, v.z);
+    return this->contains(v.x(), v.y(), v.z());
 }
 
 bool VoxelGrid::contains(float x, float y, float z) {
@@ -694,8 +694,8 @@ GridF VoxelGrid::getVoxelValues()
         _cachedMaxHeights = GridF(_cachedVoxelValues.sizeX, _cachedVoxelValues.sizeY, 1, -1);
         for (int i = _cachedVoxelValues.size() - 1; i >= 0; i--) {
             Vector3 p = _cachedVoxelValues.getCoordAsVector3(i);
-            if (_cachedMaxHeights.at(p.x, p.y) < 0 && _cachedVoxelValues[i] > 0) {
-                _cachedMaxHeights.at(p.x, p.y) = p.z;
+            if (_cachedMaxHeights.at(p.x(), p.y()) < 0 && _cachedVoxelValues[i] > 0) {
+                _cachedMaxHeights.at(p.x(), p.y()) = p.z();
             }
         }
     }
@@ -895,13 +895,13 @@ Mesh VoxelGrid::getGeometry(const Vector3& dimensions)
 }
 /*
 std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(const Vector3& pos) {
-    return getChunksAndVoxelIndices(pos.x, pos.y, pos.z);
+    return getChunksAndVoxelIndices(pos.x(), pos.y(), pos.z());
 }
-std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x, float y, float z) {
+std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x(), float y(), float z()) {
 
-    if(z < 0 || x < 0 || y < 0)
+    if(z() < 0 || x() < 0 || y() < 0)
         return std::make_tuple(-1, -1, -1, -1); // -1 = not good coord
-    int _x = x, _y = y, _z = z;
+    int _x = x(), _y = y(), _z = z();
     int xChunk = int(_x / chunkSize);
     int voxPosX = _x % chunkSize;
     int yChunk = _y / chunkSize;
@@ -912,7 +912,7 @@ std::tuple<int, int, int, int> VoxelGrid::getChunksAndVoxelIndices(float x, floa
     return std::make_tuple(xChunk * (this->getSizeY() / chunkSize) + yChunk, voxPosX, voxPosY, _z);
 }*/
 float VoxelGrid::getVoxelValue(const Vector3& pos) {
-    return this->getVoxelValue(pos.x, pos.y, pos.z);
+    return this->getVoxelValue(pos.x(), pos.y(), pos.z());
 }
 
 float VoxelGrid::getVoxelValue(float x, float y, float z) {
@@ -924,7 +924,7 @@ float VoxelGrid::getVoxelValue(float x, float y, float z) {
     return this->getVoxelValues().at(x, y, z);
 }
 void VoxelGrid::setVoxelValue(const Vector3& pos, float newVal) {
-    this->setVoxelValue(pos.x, pos.y, pos.z, newVal);
+    this->setVoxelValue(pos.x(), pos.y(), pos.z(), newVal);
 }
 void VoxelGrid::setVoxelValue(float x, float y, float z, float newVal)
 {
@@ -1149,17 +1149,17 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
     values.raiseErrorOnBadCoord = false;
 
     Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
-    float tMaxX = (dir.x > 0) ? (std::ceil(currentPosition.x) - currentPosition.x) / dir.x :
-                      (currentPosition.x - std::floor(currentPosition.x)) / (-dir.x);
-    float tMaxY = (dir.y > 0) ? (std::ceil(currentPosition.y) - currentPosition.y) / dir.y :
-                  (currentPosition.y - std::floor(currentPosition.y)) / (-dir.y);
-    float tMaxZ = (dir.z > 0) ? (std::ceil(currentPosition.z) - currentPosition.z) / dir.z :
-                  (currentPosition.z - std::floor(currentPosition.z)) / (-dir.z);
+    float tMaxX = (dir.x() > 0) ? (std::ceil(currentPosition.x()) - currentPosition.x()) / dir.x() :
+                      (currentPosition.x() - std::floor(currentPosition.x())) / (-dir.x());
+    float tMaxY = (dir.y() > 0) ? (std::ceil(currentPosition.y()) - currentPosition.y()) / dir.y() :
+                  (currentPosition.y() - std::floor(currentPosition.y())) / (-dir.y());
+    float tMaxZ = (dir.z() > 0) ? (std::ceil(currentPosition.z()) - currentPosition.z()) / dir.z() :
+                  (currentPosition.z() - std::floor(currentPosition.z())) / (-dir.z());
 
     // Calculate steps in each axis based on stepSizes
-    float tDeltaX = std::abs(stepSizes.x * dir.x);
-    float tDeltaY = std::abs(stepSizes.y * dir.y);
-    float tDeltaZ = std::abs(stepSizes.z * dir.z);
+    float tDeltaX = std::abs(stepSizes.x() * dir.x());
+    float tDeltaY = std::abs(stepSizes.y() * dir.y());
+    float tDeltaZ = std::abs(stepSizes.z() * dir.z());
 
     while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
         if (values(currentPosition) > 0) {
@@ -1167,17 +1167,17 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
         }
 
         if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-            currentPosition.x += dir.x;
+            currentPosition.x() += dir.x();
             tMaxX += tDeltaX;
         } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
-            currentPosition.y += dir.y;
+            currentPosition.y() += dir.y();
             tMaxY += tDeltaY;
         } else {
-            currentPosition.z += dir.z;
+            currentPosition.z() += dir.z();
             tMaxZ += tDeltaZ;
         }
     }
-    if (currentPosition.z <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
+    if (currentPosition.z() <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
     return Vector3::invalid();
 /*
@@ -1201,7 +1201,7 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currentPosition + dir, myAABBox.min(), myAABBox.max());
     }
     if (beenInBox && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy())) {
-        currentPosition.z = 0;
+        currentPosition.z() = 0;
         return currentPosition;
     }
     return Vector3(false);

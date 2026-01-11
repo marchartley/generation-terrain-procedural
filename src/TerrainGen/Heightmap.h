@@ -20,7 +20,7 @@ public:
 
     GridF getHeights() const { return this->heights; }
     float getHeight(float x, float y) { return this->heights.interpolate(x, y); }
-    float getHeight(const Vector3& pos) { return this->getHeight(pos.x, pos.y); }
+    float getHeight(const Vector3& pos) { return this->getHeight(pos.x(), pos.y()); }
 
     float getMaxHeight() const;
     float getHeightFactor() const { return this->heightFactor; }
@@ -77,7 +77,7 @@ public:
     bool redo() { return false; };
 
     std::string toString() { return this->toShortString(); };
-    std::string toShortString() { return "Grid: " + std::to_string(getDimensions().x) + "x" + std::to_string(getDimensions().y); };
+    std::string toShortString() { return "Grid: " + std::to_string(getDimensions().x()) + "x" + std::to_string(getDimensions().y()); };
 
     Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
 

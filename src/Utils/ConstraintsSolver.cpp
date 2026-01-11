@@ -62,7 +62,7 @@ std::map<int, Vector3> ConstraintsSolver::solveWithVoxelGrid(std::shared_ptr<Vox
     for (size_t i = 0; i < voxels.size(); i++) {
         // Don't allow any element to get on the borders of the terrain (it could be the bottom of the map, for example)
         Vector3 vox = voxels.getCoordAsVector3(i);
-        if (vox.x == 0 || vox.x == voxels.sizeX - 1 || vox.y == 0 || vox.y == voxels.sizeY - 1 || vox.z == 0 || vox.z == voxels.sizeZ - 1)
+        if (vox.x() == 0 || vox.x() == voxels.sizeX - 1 || vox.y() == 0 || vox.y() == voxels.sizeY - 1 || vox.z() == 0 || vox.z() == voxels.sizeZ - 1)
             borders[i] = 0;
 
         if (borders[i] == 1) {

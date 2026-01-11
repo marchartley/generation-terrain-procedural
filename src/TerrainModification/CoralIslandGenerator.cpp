@@ -71,7 +71,7 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 {
     // Input image might not be the same size than the terrain, need to resize all the curves on the XY components
     Vector3 ratio = terrainDimensions / img.getDimensions();
-    ratio.z = 1;
+    ratio.z() = 1;
 
     // Map the image color to a type of object
     std::map<std::tuple<int, int, int>, std::string> colorToFeature = {
@@ -91,8 +91,8 @@ std::vector<EnvObject*> CoralIslandGenerator::envObjsFromFeatureMap(const GridV3
 
         for (size_t i = 0; i < img.size(); i++) {
             const auto& pix = img[i];
-            if (colorToFeature.count({pix.x, pix.y, pix.z}) == 0) continue;
-            featureAreas[colorToFeature[{pix.x, pix.y, pix.z}]][i] = 1;
+            if (colorToFeature.count({pix.x(), pix.y(), pix.z()}) == 0) continue;
+            featureAreas[colorToFeature[{pix.x(), pix.y(), pix.z()}]][i] = 1;
         }
     });
 

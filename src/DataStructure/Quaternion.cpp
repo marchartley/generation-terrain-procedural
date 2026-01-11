@@ -15,11 +15,11 @@ Quaternion::Quaternion(float w, float x, float y, float z)
 Quaternion Quaternion::AxisAngle(const Vector3 &axis, float angle) {
     float halfAngle = angle * 0.5f;
     float s = std::sin(halfAngle);
-    return Quaternion(std::cos(halfAngle), axis.x * s, axis.y * s, axis.z * s);
+    return Quaternion(std::cos(halfAngle), axis.x() * s, axis.y() * s, axis.z() * s);
 }
 
 Vector3 Quaternion::rotate(const Vector3 &v) const {
-    Quaternion qv(0, v.x, v.y, v.z);
+    Quaternion qv(0, v.x(), v.y(), v.z());
     Quaternion rotated = (*this) * qv * conjugate();
     return rotated.toVector3();
 }
@@ -116,20 +116,20 @@ Vector3 Quaternion::toAxisAngle(float &angle) const {
     Vector3 axis;
 
     if (s < 0.001) {
-        axis.x = x;
-        axis.y = y;
-        axis.z = z;
+        axis.x() = x;
+        axis.y() = y;
+        axis.z() = z;
     } else {
-        axis.x = x / s;
-        axis.y = y / s;
-        axis.z = z / s;
+        axis.x() = x / s;
+        axis.y() = y / s;
+        axis.z() = z / s;
     }
     return axis;
 }
 
 Quaternion Quaternion::fromAxisAngle(const Vector3 &axis, float angle) {
     float s = std::sin(angle / 2);
-    return Quaternion(std::cos(angle / 2), axis.x * s, axis.y * s, axis.z * s);
+    return Quaternion(std::cos(angle / 2), axis.x() * s, axis.y() * s, axis.z() * s);
 }
 
 Matrix Quaternion::toRotationMatrix() const {

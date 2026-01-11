@@ -249,7 +249,7 @@ TectonicEvent::TectonicEvent(Vector3 direction, float sigma, float startTime, fl
             Vector3 p1 = area[i+1];
             BSpline path = BSpline({p0, p1}).resamplePoints(10);
             Vector3 dir = (p0 - p1);
-            dir = Vector3(dir.y, dir.x).normalize();
+            dir = Vector3(dir.y(), dir.x()).normalize();
             for (auto& p : path) {
                 p += random_gen::generate_normal() * 2.f * dir;
             }

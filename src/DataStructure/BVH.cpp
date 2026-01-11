@@ -90,7 +90,7 @@ bool BVHTree::_checkIntersection(BVHNode *node, const Vector3 &rayStart, const V
 
 float computeSurfaceArea(const AABBox& box) {
     Vector3 dims = box.dimensions();
-    return 2.0f * (dims.x * dims.y + dims.x * dims.z + dims.y * dims.z);
+    return 2.0f * (dims.x() * dims.y() + dims.x() * dims.z() + dims.y() * dims.z());
 }
 int BVHTree::findBestSplitSAH(int start, int end) {
     const int MAX_SPLITS = 100; // maximum number of splits to consider
@@ -145,7 +145,7 @@ int BVHTree::findBestSplitSAH(int start, int end) {
 
 int BVHTree::partition(int start, int end, int pivotIdx, int axis) {
     Triangle& pivot = triangles[pivotIdx];
-    Vector3 pivotMidPoint = (pivot[0] + pivot[1] + pivot[2]) / 3;
+    Vector3 pivotMidPoint = (pivot[0] + pivot[1] + pivot[2]) / 3.f;
 
     // Move the pivot value to the end
     std::swap(triangles[pivotIdx], triangles[end-1]);
@@ -153,7 +153,7 @@ int BVHTree::partition(int start, int end, int pivotIdx, int axis) {
     int storeIndex = start;
 
     for (int i = start; i < end-1; ++i) {
-        Vector3 triangleMidPoint = (triangles[i][0] + triangles[i][1] + triangles[i][2]) / 3;
+        Vector3 triangleMidPoint = (triangles[i][0] + triangles[i][1] + triangles[i][2]) / 3.f;
         if (triangleMidPoint[axis] < pivotMidPoint[axis]) {
             std::swap(triangles[i], triangles[storeIndex]);
             storeIndex++;
@@ -260,15 +260,15 @@ BVHNode *BVHTree::buildBVH(int start, int end)
     } else {
         // Choose an axis and midpoint along that axis to partition the triangles
         Vector3 boxSize = maxPoint - minPoint;
-        int axis = boxSize.x > boxSize.y ? (boxSize.x > boxSize.z ? 0 : 2) : (boxSize.y > boxSize.z ? 1 : 2);
+        int axis = boxSize.x() > boxSize.y() ? (boxSize.x() > boxSize.z() ? 0 : 2) : (boxSize.y() > boxSize.z() ? 1 : 2);
 
         int mid;
         if (useSAH) {
             // Sort the triangles based on their midpoint along the chosen axis
             std::sort(triangles.begin() + start, triangles.begin() + end,
                 [axis](const Triangle& triangle1, const Triangle& triangle2) {
-                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3;
-                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3;
+                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3.f;
+                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3.f;
                     return midPoint1[axis] < midPoint2[axis];
                 });
             mid = this->findBestSplitSAH(start, end);
@@ -291,8 +291,8 @@ BVHNode *BVHTree::buildBVH(int start, int end)
             // Sort the triangles based on their midpoint along the chosen axis
             std::sort(triangles.begin() + start, triangles.begin() + end,
                 [axis](const Triangle& triangle1, const Triangle& triangle2) {
-                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3;
-                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3;
+                    Vector3 midPoint1 = (triangle1[0] + triangle1[1] + triangle1[2]) / 3.f;
+                    Vector3 midPoint2 = (triangle2[0] + triangle2[1] + triangle2[2]) / 3.f;
                     return midPoint1[axis] < midPoint2[axis];
                 });
             mid = start + (end - start) / 2;

@@ -121,9 +121,9 @@ GridV3 TerrainComparatorInterface::extractDifferencesAsImage()
     auto [untouched, eroded, deposited] = UnderwaterErosion::flatteningErodedTerrain(voxelsFromHeightmap.getVoxelValues(), voxelGrid->getVoxelValues());
     GridV3 colors(untouched.getDimensions());
     colors.iterateParallel([&](size_t i) {
-        colors[i].x = untouched[i];
-        colors[i].y = eroded[i];
-        colors[i].z = deposited[i];
+        colors[i].x() = untouched[i];
+        colors[i].y() = eroded[i];
+        colors[i].z() = deposited[i];
     });
     return colors;
 }

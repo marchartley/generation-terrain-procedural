@@ -280,17 +280,17 @@ void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std
         terrainSize = voxelGrid->getDimensions();
 
     if (!this->heightmap)
-        this->heightmap = std::make_shared<Heightmap>(terrainSize.x, terrainSize.y, terrainSize.z);
+        this->heightmap = std::make_shared<Heightmap>(terrainSize.x(), terrainSize.y(), terrainSize.z());
     if (!this->voxelGrid)
-        this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x, terrainSize.y, terrainSize.z);
+        this->voxelGrid = std::make_shared<VoxelGrid>(terrainSize.x(), terrainSize.y(), terrainSize.z());
     if (!this->layerGrid)
-        this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x, terrainSize.y, 0.f);
+        this->layerGrid = std::make_shared<LayerBasedGrid>(terrainSize.x(), terrainSize.y(), 0.f);
     if (!this->implicitTerrain)
         this->implicitTerrain = std::make_shared<ImplicitNaryOperator>();
 
     if (ext == "PGM" || ext == "PNG" || ext == "JPG" || ext == "PNG" || ext == "TGA" || ext == "BMP" || ext == "PSD" || ext == "GIF" || ext == "HDR" || ext == "PIC") {
         // From heightmap
-        displayProcessTime("Opening heightmap... ", [&]() { heightmap->loadFromHeightmap(filename, terrainSize.x, terrainSize.y, terrainSize.z); });
+        displayProcessTime("Opening heightmap... ", [&]() { heightmap->loadFromHeightmap(filename, terrainSize.x(), terrainSize.y(), terrainSize.z()); });
         displayProcessTime("Generating voxels... ", [&]() { voxelGrid->from2DGrid(*heightmap); });
         displayProcessTime("Generating layers... ", [&]() { layerGrid->from2DGrid(*heightmap); });
 
@@ -719,7 +719,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     this->heightmapMesh = Mesh(std::make_shared<Shader>(vShader_mc_voxels, fShader_mc_voxels, gShader_grid), true, GL_POINTS);
 
     marchingCubeMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions()));
-    heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions().x, voxelGrid->getVoxelValues().getDimensions().y, 1));
+    heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 0, GridF(voxelGrid->getVoxelValues().getDimensions().x(), voxelGrid->getVoxelValues().getDimensions().y(), 1));
     // heightmapMesh.shader->setTexture3D("scalarFieldToDisplay", 4, GridF(1, 1, 1, 0.5f));
     // marchingCubeMesh.shader->setInt("scalarFieldToDisplay", 4);
     // layersMesh.shader->setInt("scalarFieldToDisplay", 4);
@@ -731,7 +731,7 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     std::vector<Vector3> positions(heightData.size());
     for (size_t i = 0; i < positions.size(); i++) {
         positions[i] = heightData.getCoordAsVector3(i);
-        heightData[i] = heightmap->getHeight(positions[i].x, positions[i].y);
+        heightData[i] = heightmap->getHeight(positions[i].x(), positions[i].y());
     }
     heightmapMesh.useIndices = false;
     heightmapMesh.fromArray(positions);
@@ -748,9 +748,9 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     GridV3 gradients = heights.gradient();
     for (size_t i = 0; i < heights.size(); i++) {
         gradients[i] = (gradients[i].normalized() + Vector3(1, 1, 1)) / 2.f;
-        heightmapData[i * 4 + 0] = gradients[i].x;
-        heightmapData[i * 4 + 1] = gradients[i].y;
-        heightmapData[i * 4 + 2] = gradients[i].z;
+        heightmapData[i * 4 + 0] = gradients[i].x();
+        heightmapData[i * 4 + 1] = gradients[i].y();
+        heightmapData[i * 4 + 2] = gradients[i].z();
         heightmapData[i * 4 + 3] = heights[i];
     }
 
@@ -873,23 +873,23 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     allDisplacementTextures /= 255.f;
     float *allTexturesColors = new float[allColorTextures.size() * 4];
     for (size_t i = 0; i < allColorTextures.size(); i++) {
-        allTexturesColors[4 * i + 0] = allColorTextures[i].x;
-        allTexturesColors[4 * i + 1] = allColorTextures[i].y;
-        allTexturesColors[4 * i + 2] = allColorTextures[i].z;
+        allTexturesColors[4 * i + 0] = allColorTextures[i].x();
+        allTexturesColors[4 * i + 1] = allColorTextures[i].y();
+        allTexturesColors[4 * i + 2] = allColorTextures[i].z();
         allTexturesColors[4 * i + 3] = 1.f;
     }
     float *allTexturesNormal = new float[allNormalTextures.size() * 4];
     for (size_t i = 0; i < allNormalTextures.size(); i++) {
-        allTexturesNormal[4 * i + 0] = allNormalTextures[i].x;
-        allTexturesNormal[4 * i + 1] = allNormalTextures[i].y;
-        allTexturesNormal[4 * i + 2] = allNormalTextures[i].z;
+        allTexturesNormal[4 * i + 0] = allNormalTextures[i].x();
+        allTexturesNormal[4 * i + 1] = allNormalTextures[i].y();
+        allTexturesNormal[4 * i + 2] = allNormalTextures[i].z();
         allTexturesNormal[4 * i + 3] = 1.f;
     }
     float *allTexturesDisplacement = new float[allDisplacementTextures.size() * 4];
     for (size_t i = 0; i < allDisplacementTextures.size(); i++) {
-        allTexturesDisplacement[4 * i + 0] = allDisplacementTextures[i].x;
-        allTexturesDisplacement[4 * i + 1] = allDisplacementTextures[i].y;
-        allTexturesDisplacement[4 * i + 2] = allDisplacementTextures[i].z;
+        allTexturesDisplacement[4 * i + 0] = allDisplacementTextures[i].x();
+        allTexturesDisplacement[4 * i + 1] = allDisplacementTextures[i].y();
+        allTexturesDisplacement[4 * i + 2] = allDisplacementTextures[i].z();
         allTexturesDisplacement[4 * i + 3] = 1.f;
     }
 
