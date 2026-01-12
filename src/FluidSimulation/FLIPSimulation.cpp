@@ -219,7 +219,7 @@ void FLIPSimulation::transferVelocities(bool toGrid, float flipRatio)
         });
 
         // restore solid cells
-        /*cellType.iterateParallel([&](const Vector3& pos) {
+        /*cellType.iterateParallel([&](const Vector3i& pos) {
             bool solid = cellType(pos) == SOLID_CELL;
             if (solid || cellType(pos - Vector3(1, 0, 0)) == SOLID_CELL)
                 u(pos) = prevU(pos);
@@ -261,7 +261,7 @@ void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRe
     for (int iter = 0; iter < numIters; iter++) {
         p.reset();
         GridV3 velocities(u.getDimensions());
-        velocities.iterateParallel([&](const Vector3& pos) {
+        velocities.iterateParallel([&](const Vector3i& pos) {
             float _u = u.interpolate(pos - Vector3(.5f, .0f, .0f));
             float _v = v.interpolate(pos - Vector3(.0f, .5f, .0f));
             float _w = w.interpolate(pos - Vector3(.0f, .0f, .5f));
@@ -269,7 +269,7 @@ void FLIPSimulation::solveIncompressibility(int numIters, float dt, float overRe
         });
         GridF divergences = velocities.divergence();
 
-        cellType.iterateParallel([&](const Vector3& pos) {
+        cellType.iterateParallel([&](const Vector3i& pos) {
 //            if (cellType(pos) != FLUID_CELL)
 //                return;
 

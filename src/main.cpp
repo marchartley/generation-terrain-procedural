@@ -461,7 +461,7 @@ int main(int argc, char *argv[])
 
 
         GridV3 displacementMap(dims);
-        displacementMap.iterateParallel([&](const Vector3& p) {
+        displacementMap.iterateParallel([&](const Vector3i& p) {
             Vector3 pp = p * 0.1f;
             // pp.z() = iteration;
             displacementMap.at(p) = Vector3(random_gen::generate_fbm(pp.x, pp.y, pp.z), random_gen::generate_fbm(pp.x() + 100.f, pp.y() + 100.f, pp.z)) * random_gen::generate_fbm(pp.x() + 200.f, pp.y, pp.z) * 40.f;
@@ -469,7 +469,7 @@ int main(int argc, char *argv[])
 
         GridF distances(dims, regions.size());
         displayProcessTime("Compute distances... ", [&]() {
-            distances.iterateParallel([&](const Vector3& p) {
+            distances.iterateParallel([&](const Vector3i& p) {
                 Vector3 polar = (p - center).toPolar();
                 distances.at(p) = (regions.size());
                 for (int i = 0; i < regions.size(); i++) {
@@ -492,7 +492,7 @@ int main(int argc, char *argv[])
 
         GridF resistanceMap(dims);
         displayProcessTime("Compute resistance... ", [&]() {
-            resistanceMap.iterateParallel([&](const Vector3& p) {
+            resistanceMap.iterateParallel([&](const Vector3i& p) {
                 float resistance = resistanceCurve.estimateDistanceFrom(Vector3(distances.at(p) / float(regions.size() - 1), 0));
                 resistanceMap.at(p) = resistance;
                 displacementMap.at(p) *= 1.f - resistance;
@@ -505,7 +505,7 @@ int main(int argc, char *argv[])
 
         GridF heightMap(dims);
         displayProcessTime("Compute heights... ", [&]() {
-            heightMap.iterateParallel([&](const Vector3& p) {
+            heightMap.iterateParallel([&](const Vector3i& p) {
                 heightMap.at(p) = profileCurve.estimateDistanceFrom(Vector3(distances.at(p) / float(regions.size() - 1), 0));
             });
             heightMap = heightMap.warpWithoutInterpolation(displacementMap);
@@ -513,7 +513,7 @@ int main(int argc, char *argv[])
 
         GridF labelMap(dims);
         displayProcessTime("Compute labels... ", [&]() {
-            labelMap.iterateParallel([&](const Vector3& p) {
+            labelMap.iterateParallel([&](const Vector3i& p) {
                 labelMap.at(p) = std::floor(distances.at(p));
             });
             labelMap = labelMap.warpWithoutInterpolation(displacementMap);
@@ -534,13 +534,13 @@ int main(int argc, char *argv[])
             float h_abyss = 0.f;
 
             GridF distanceInReef = (distances - 2.f) * .5f;
-            distanceInReef.iterateParallel([&](const Vector3& p) {
+            distanceInReef.iterateParallel([&](const Vector3i& p) {
                 distanceInReef.at(p) = (distanceInReef.at(p) > 1.f ? 1.f : distanceInReef.at(p) < 0 ? 0.f : distanceInReef.at(p));
             });
 
             GridF coralHeight(heights.getDimensions());
             GridF finalHeight(heights.getDimensions());
-            coralHeight.iterateParallel([&](const Vector3& p) {
+            coralHeight.iterateParallel([&](const Vector3i& p) {
                 float d = distanceInReef.at(p);
                 float initialHeight = heights.at(p);
                 float h = 0.f;
@@ -817,7 +817,7 @@ int main(int argc, char *argv[])
     auto hh = [=](const Vector3& p) { return gradients(p).norm(); };
 
     GridF newScore = score;
-    newScore.iterateParallel([&](const Vector3& p) { newScore(p) = h(p); });
+    newScore.iterateParallel([&](const Vector3i& p) { newScore(p) = h(p); });
     // newScore = newScore.gaussianSmooth(2.f, true, true);
     GridV3 newGradients = newScore.grad();
 
@@ -1047,7 +1047,7 @@ int main(int argc, char *argv[])
      * Unit test: divergence of a vector field
      * There should be the value "2" everywhere, except on the right and bottom borders (and 1.5 on top and left borders)
     GridV3 vels(50, 50);
-    vels.iterateParallel([&](const Vector3& p) {
+    vels.iterateParallel([&](const Vector3i& p) {
         vels(p) = p;
     });
     GridF divergence = vels.divergence();
@@ -1078,7 +1078,7 @@ int main(int argc, char *argv[])
      * Unit test: Save and load vector fields
     GridV3 input(100, 100, 100);
     Vector3 center(50, 50, 10);
-    input.iterateParallel([&](const Vector3& p) {
+    input.iterateParallel([&](const Vector3i& p) {
         input(p).setValid((p - center).norm2() < 30*30);
     });
 
@@ -1102,19 +1102,19 @@ int main(int argc, char *argv[])
     /*
      * Unit tests: FFT and iFFT on arbitrary sizes (limited to 3 dimensions max)
 //    GridF vals(128, 1);
-//    vals.iterateParallel([&](const Vector3& p) {
+//    vals.iterateParallel([&](const Vector3i& p) {
 //        vals(p) = std::sin(p.x() * .2f) + std::sin(p.x() * .1f);
 //    });
 //    GridF vals(1, 128);
-//    vals.iterateParallel([&](const Vector3& p) {
+//    vals.iterateParallel([&](const Vector3i& p) {
 //        vals(p) = std::sin(p.y() * .2f) + std::sin(p.y() * .1f);
 //    });
 //    GridF vals(1, 1, 128);
-//    vals.iterateParallel([&](const Vector3& p) {
+//    vals.iterateParallel([&](const Vector3i& p) {
 //        vals(p) = std::sin(p.z() * .2f) + std::sin(p.z() * .1f);
 //    });
     GridF vals(100, 200);
-    vals.iterateParallel([&](const Vector3& p) {
+    vals.iterateParallel([&](const Vector3i& p) {
         vals(p) = std::sin(p.x() * .2f) + std::sin(p.y() * .1f);
     });
     for (size_t i = 0; i < vals.size(); i++)
@@ -1365,7 +1365,7 @@ int main(int argc, char *argv[])
 //    }
 //    spline.resamplePoints();
     GridF grid(105, 105, 1, 0);
-    grid.iterateParallel([&](const Vector3& pos) {
+    grid.iterateParallel([&](const Vector3i& pos) {
         if (spline.estimateDistanceFrom(pos) < 10.f){
             float x = spline.estimateClosestTime(pos);
             float curve = spline.getCurvature(x);
@@ -1593,7 +1593,7 @@ int main(int argc, char *argv[])
 
         GridV3 screen(size);
 
-        screen.iterateParallel([&](const Vector3& pos) {
+        screen.iterateParallel([&](const Vector3i& pos) {
             for (auto& p : voro.pointset) {
                 if ((pos - p).norm2() < 4.f) {
                     screen(pos).y() = 1.f;
@@ -1634,7 +1634,7 @@ int main(int argc, char *argv[])
 
     GridV3 screen(size);
     displayProcessTime("Comuting some distances for map of size " + std::to_string(size.x() * size.y) + "... ", [&]() {
-        screen.iterateParallel([&](const Vector3& pos) {
+        screen.iterateParallel([&](const Vector3i& pos) {
             for (auto& p : voro.pointset) {
                 if ((pos - p).norm2() < 2000.f)
                     screen(pos).x() += .1f;
@@ -1882,7 +1882,7 @@ int main(int argc, char *argv[])
      * Unit test : COmputation of the curl on a 2D grid
      *
     GridV3 cyclone(200, 200, 1);
-    cyclone.iterateParallel([&](const Vector3& p) {
+    cyclone.iterateParallel([&](const Vector3i& p) {
         Vector3 pos = p - cyclone.getDimensions().xy() * .5f;
         float r = pos.norm();
         Vector3 dir = Vector3(-pos.y, pos.x).normalized(); // * 20.f * r;
@@ -1922,7 +1922,7 @@ int main(int argc, char *argv[])
     GridV3 res(1000, 1000, 1);
 
     auto recompute = [&](std::complex<float> c) {
-        res.iterateParallel([&](const Vector3& p) {
+        res.iterateParallel([&](const Vector3i& p) {
             std::complex<float> z1 = std::complex<float>(p.x() - res.sizeX * .5f, p.y() - res.sizeY * .5f) / std::complex<float>(res.sizeX * .25f, res.sizeY * .25f);
             auto z = z1;
             int iter = 0;
@@ -2049,7 +2049,7 @@ int main(int argc, char *argv[])
 
         GridV3 img(size);
         displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
-            img.iterateParallel([&](const Vector3& p) {
+            img.iterateParallel([&](const Vector3i& p) {
                 if (p == center) return;
 //                float rEps = t->densityFunction((t->pos - p).norm());
 //                img(p) = Vector3(1, 1, 1) * rEps;
@@ -2111,7 +2111,7 @@ int main(int argc, char *argv[])
 
         GridV3 img(size);
         displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
-            img.iterateParallel([&](const Vector3& p) {
+            img.iterateParallel([&](const Vector3i& p) {
                 if (p == center) return;
                 Vector3 pos = p;
                 for (int i = operations.size() - 1; i >= 0; i--) {
@@ -2171,7 +2171,7 @@ int main(int argc, char *argv[])
         GridV3 img(size);
         GridV3 distortion(size);
         displayProcessTime("Computing " + std::to_string(operations.size()) + " operations... ", [&]() {
-            img.iterateParallel([&](const Vector3& p) {
+            img.iterateParallel([&](const Vector3i& p) {
                 if (p == center) return;
                 Vector3 pos = p;
                 for (int i = operations.size() - 1; i >= 0; i--) {
@@ -2228,7 +2228,7 @@ int main(int argc, char *argv[])
                                       Vector3(50, 10)
                                   });
 //    ShapeCurve shape = ShapeCurve::circle(30, center, 10);
-    img.iterateParallel([&](const Vector3& p) {
+    img.iterateParallel([&](const Vector3i& p) {
         Vector3 pos = p;
         pos += Vector3(random_gen::generate_perlin(p.x() * 2.f, p.y() * 2.f, 0), random_gen::generate_perlin(p.x() * 2.f, p.y() * 2.f, 100), 0) * 100.f;
         float val = (random_gen::generate_perlin(pos.x, pos.y, pos.z) + 1.f) * .5f;
@@ -2302,7 +2302,7 @@ int main(int argc, char *argv[])
     k2.force = Vector3(0, 0, -force);
     k2.radialScale = radialScale;
 
-    img.iterateParallel([&](const Vector3& p) {
+    img.iterateParallel([&](const Vector3i& p) {
         img(p) = initialImage(p + k1.evaluate(p + k2.evaluate(p))); // initialImage(p + k1.evaluate(p) + k2.evaluate(p));
     });
 
@@ -2499,7 +2499,7 @@ int main(int argc, char *argv[])
     GridV3 gradients(size);
     gradients.raiseErrorOnBadCoord = false;
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
-    gradients.iterateParallel([&](const Vector3& p) {
+    gradients.iterateParallel([&](const Vector3i& p) {
         // gradients(p) = (std::sin(p.x() / 3.f) < .75f && std::sin(p.y() / 3.f) < .75f ? Vector3(1, 1, 1) : Vector3(0, 0, 0));
         gradients(p) = (p - size.xy() * .5f);
     });
@@ -2516,7 +2516,7 @@ int main(int argc, char *argv[])
     Vector3 fieldSize(100, 100, 1);
     Vector3 resultImageSize(300, 300, 1);
     GridV3 velocities(fieldSize);
-    velocities.iterateParallel([&](const Vector3& p) {
+    velocities.iterateParallel([&](const Vector3i& p) {
         // velocities(p) = Vector3(std::cos(PI * p.x() / float(velocities.sizeX)), std::cos(2.f * PI * p.y() / float(velocities.sizeY)), 0);
         velocities(p) = Vector3(random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y)), random_gen::generate_perlin(p.x() * (500.f / fieldSize.x), p.y() * (500.f / fieldSize.y) + 10), 0);
     });
@@ -2534,13 +2534,13 @@ int main(int argc, char *argv[])
     Vector3 size(100, 100, 1);
     GridF grid(size);
     float strength = 2.f;
-    grid.iterateParallel([&](const Vector3& p) {
+    grid.iterateParallel([&](const Vector3i& p) {
         // grid(p) = ((p - size.xy() * .5f).norm2() < 100 * 100 ? 1.f : 0.f);
         grid(p) = std::cos((p - size.xy() * .5f).norm() * (100.f / size.x));
     });
 
     GridV3 flow(size);
-    flow.iterateParallel([&](const Vector3& p) {
+    flow.iterateParallel([&](const Vector3i& p) {
         flow(p) = Vector3(20.f * normalizedGaussian(5.f, std::pow((p.y() - (size.y() * .5f)) * (100.f / size.x), 2)), 10.f * sin(p.x() * .1f * (100.f / size.x)), 0) * strength;
     });
 
@@ -2697,7 +2697,7 @@ int main(int argc, char *argv[])
     float lacunarity = 2.0;
     float gain = 0.5;
     displayProcessTime("Time : ", [&]() {
-        img.iterateParallel([&](const Vector3& p) {
+        img.iterateParallel([&](const Vector3i& p) {
             img(p) = random_gen::generate_fbm(p.x, p.y, 0, octaves, gain, lacunarity);
         });
     });

@@ -158,7 +158,7 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         k.curve = translatedCurve;
 
         GridV3 flow = EnvObject::flowfield;
-        flow.iterateParallel([&](const Vector3& p) {
+        flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement.xy();
         });

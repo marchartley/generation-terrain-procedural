@@ -14,43 +14,6 @@ public:
     static Plotter* get(std::string name = "") { return Plotter::getInstance(toLower(name)); }
     static Plotter* init(std::string name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
-    // Plotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
-    // Plotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
-    // Plotter* addPlot(const BSpline& data, std::string name = "", QColor color = Qt::gray);
-
-    // Plotter* addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-    // Plotter* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-
-    // Plotter* addImage(GridV3 image);
-    // Plotter* addImage(const GridF& image);
-    // Plotter* addImage(const Matrix3<double>& image);
-    // Plotter* addImage(const GridI& image);
-
-    // GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
-    // Plotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
-    // GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
-    // Plotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
-
-    // int exec();
-    // Plotter* saveFig(std::string filename);
-    // Plotter* copyToClipboard();
-    // void resizeEvent(QResizeEvent* event);
-    // void showEvent(QShowEvent* event);
-
-    // QTimer *animate(std::function<void()> callback, int interval_ms = 30);
-
-    // Plotter* reset();
-
-    // bool normalizedMode = false;
-    // bool absoluteMode = false;
-    // float minValueToDisplay = -10000.f;
-    // float maxValueToDisplay = 10000.f;
-    // bool clampValues = false;
-
-    // bool displayR = true;
-    // bool displayG = true;
-    // bool displayB = true;
-
     RangeSliderElement* rangeValuesWidget;
 
 public Q_SLOTS:

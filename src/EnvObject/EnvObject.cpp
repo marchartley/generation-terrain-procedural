@@ -884,7 +884,7 @@ void EnvObject::precomputeTerrainProperties(const GridF& heightmap, float waterL
 void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
 {
     auto name = objectName;
-    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
+    EnvObject::flowfield.iterateParallel([&](const Vector3i& pos) {
 //        auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
         EnvObject* object = EnvObject::findClosest(objectName, pos);
         if (object == nullptr) {
@@ -926,7 +926,7 @@ void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float wat
 
 void EnvObject::recomputeFlow()
 {
-    EnvObject::flowfield.iterateParallel([&](const Vector3& pos) {
+    EnvObject::flowfield.iterateParallel([&](const Vector3i& pos) {
         Vector3 waterFlow = EnvObject::flowfield(pos);
         EnvObject::allVectorProperties["current"](pos) = waterFlow;
         EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();

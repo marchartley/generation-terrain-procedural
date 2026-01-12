@@ -29,6 +29,8 @@ inline std::map<PlotColor, QColor> PlotColorToQColor = {
 
 class Chart;
 class PlotModel;
+
+
 class ChartView : public QChartView {
     Q_OBJECT
 public:
@@ -47,6 +49,12 @@ public:
     Vector3 getRelativeMousePositionInImage(const Vector3& pos);
 
     QPoint previousMousePos;
+
+
+    ChartView* setOverlay(GridV3 image, GridF alpha = GridF(1, 1, 1, 1.f));
+    GridV3 overlayColors;
+    GridF  overlayAlpha;
+
 protected:
     bool viewportEvent(QEvent *event);
     void mousePressEvent(QMouseEvent *event);
@@ -92,6 +100,7 @@ public:
     GridV3& getImage() { return this->image; }
     const GridV3& getImage() const { return this->image; }
     QImage computeDisplayedImage() const;
+    QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
 
 
 // protected:
@@ -108,11 +117,11 @@ class PlotModel {
 public:
     PlotModel();
 
-    PlotModel* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
+    PlotModel* addPlot(const std::vector<Vector3>& data, const std::string& name = "", const QColor& color = Qt::gray);
 
-    PlotModel* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
+    PlotModel* addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    PlotModel* addImage(const GridV3 &image, bool clamped = false, bool normalized = false, bool absolute = false, const Vector3& minColors = Vector3::min(), const Vector3& maxColors = Vector3::max());
+    PlotModel* addImage(const GridV3& image/*, bool clamped = false, bool normalized = false, bool absolute = false, const Vector3& minColors = Vector3::min(), const Vector3& maxColors = Vector3::max()*/);
 
     PlotModel* reset();
 
@@ -168,6 +177,8 @@ public:
     AbstractPlotter* addImage(const Matrix3<double>& image);
     AbstractPlotter* addImage(const GridI& image);
 
+    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha);
+
     GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
     AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
     GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
@@ -197,6 +208,7 @@ public:
     InterfaceUI* infosInterface;
 
     std::string name;
+
 
 protected:
     static std::string defaultName;

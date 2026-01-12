@@ -56,37 +56,46 @@ class Matrix3
 public:
     Matrix3();
     Matrix3(size_t sizeX, size_t sizeY, size_t sizeZ = 1, T initValue = T());
-    Matrix3(const Vector3& size, T initValue = T());
+    // Matrix3(const Vector3& size, T initValue = T());
+    Matrix3(const Vector3i& size, T initValue = T());
     Matrix3(const std::vector<std::vector<std::vector<T>>>& data);
     Matrix3(const std::vector<std::vector<T>>& data);
     Matrix3(const std::vector<T>& data, size_t sizeX, size_t sizeY, int sizeZ = -1);
 
     const T& at(int i, int j, int k = 0) const;
-    const T& at(const Vector3& pos) const;
+    // const T& at(const Vector3& pos) const;
+    const T& at(const Vector3i& pos) const;
     const T& at(size_t i) const;
     const T& operator()(size_t x, size_t y, size_t z = 0) const;
     const T& operator()(size_t i) const;
-    const T& operator()(const Vector3& pos) const;
+    // const T& operator()(const Vector3& pos) const;
+    const T& operator()(const Vector3i& pos) const;
     const T& operator[](size_t i) const;
-    const T& operator[](const Vector3& pos) const;
+    // const T& operator[](const Vector3& pos) const;
+    const T& operator[](const Vector3i& pos) const;
     T& at(int i, int j, int k = 0);
-    T& at(const Vector3& pos);
+    // T& at(const Vector3& pos);
+    T& at(const Vector3i& pos);
     T& at(size_t i);
 //    T& operator[](size_t x, size_t y);
     T& operator[](size_t i);
-    T& operator[](const Vector3& pos);
+    // T& operator[](const Vector3& pos);
+    T& operator[](const Vector3i& pos);
     T& operator()(size_t x, size_t y, size_t z = 0);
     T& operator()(size_t i);
-    T& operator()(const Vector3& pos);
+    // T& operator()(const Vector3& pos);
+    T& operator()(const Vector3i& pos);
     inline T& unsafe(size_t i) noexcept { return data[i]; }
     inline const T& unsafe(size_t i) const noexcept { return data[i]; }
     inline T& unsafe(size_t x, size_t y, size_t z = 0) noexcept { return data[getIndex(x, y, z)]; }
     inline const T& unsafe(size_t x, size_t y, size_t z = 0) const noexcept { return data[getIndex(x, y, z)]; }
-    inline T& unsafe(const Vector3& p) noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
-    inline const T& unsafe(const Vector3& p) const noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
+    // inline T& unsafe(const Vector3& p) noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
+    inline T& unsafe(const Vector3i& p) noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
+    // inline const T& unsafe(const Vector3& p) const noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
+    inline const T& unsafe(const Vector3i& p) const noexcept { return data[getIndex(p.x(), p.y(), p.z())]; }
 
 
-    Vector3 getDimensions() const;
+    Vector3i getDimensions() const;
     int width() const;
     int depth() const;
     int height() const;
@@ -95,11 +104,13 @@ public:
     int cols() const;
 
     int getIndex(size_t x, size_t y, size_t z) const;
-    int getIndex(const Vector3& coord) const;
+    // int getIndex(const Vector3& coord) const;
+    int getIndex(const Vector3i& coord) const;
     std::tuple<size_t, size_t, size_t> getCoord(size_t index) const;
     Vector3 getCoordAsVector3(size_t index) const;
+    Vector3i getCoordAsVector3i(size_t index) const;
     bool checkCoord(int x, int y, int z = 0) const;
-    bool checkCoord(const Vector3& pos) const;
+    bool checkCoord(const Vector3i& pos) const;
     bool checkIndex(size_t i) const;
 
     Matrix3<T> col(int colIndex, int depthIndex = 0);
@@ -120,21 +131,27 @@ public:
     Matrix3<T>& addValueAt(T value, float x, float y, float z = 0.f);
 
     int getNumberNeighbors(size_t x, size_t y, size_t z, bool using4connect = true) const;
-    int getNumberNeighbors(const Vector3& pos, bool using4connect = true) const;
+    // int getNumberNeighbors(const Vector3& pos, bool using4connect = true) const;
+    int getNumberNeighbors(const Vector3i& pos, bool using4connect = true) const;
 
     Matrix3<T> resize(float factor, RESIZE_MODE mode = LINEAR) const;
     Matrix3<T> resize(size_t newX, size_t newY, size_t newZ, RESIZE_MODE mode = LINEAR) const;
-    Matrix3<T> resize(const Vector3& newSize, RESIZE_MODE mode = LINEAR) const;
+    // Matrix3<T> resize(const Vector3& newSize, RESIZE_MODE mode = LINEAR) const;
+    Matrix3<T> resize(const Vector3i& newSize, RESIZE_MODE mode = LINEAR) const;
 
     Matrix3<T> resizeNearest(float factor) const;
     Matrix3<T> resizeNearest(size_t newX, size_t newY, size_t newZ) const;
-    Matrix3<T> resizeNearest(const Vector3& newSize) const;
+    // Matrix3<T> resizeNearest(const Vector3& newSize) const;
+    Matrix3<T> resizeNearest(const Vector3i& newSize) const;
 
     Matrix3<T> subset(int startX, int endX, int startY, int endY, int startZ = 0, int endZ = -1) const;
-    Matrix3<T> subset(const Vector3& start, const Vector3& end) const;
-    Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3& upperLeftFrontCorner = Vector3());
+    // Matrix3<T> subset(const Vector3& start, const Vector3& end) const;
+    Matrix3<T> subset(const Vector3i& start, const Vector3i& end) const;
+    // Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3& upperLeftFrontCorner = Vector3());
+    Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, const Vector3i& upperLeftFrontCorner = Vector3i());
     Matrix3<T>& paste(const Matrix3<T>& matrixToPaste, int left, int up, int front);
     Matrix3<T>& add(const Matrix3<T>& matrixToAdd, const Vector3& upperLeftFrontCorner, bool useInterpolation = false);
+    Matrix3<T>& add(const Matrix3<T>& matrixToAdd, const Vector3i& upperLeftFrontCorner);
     Matrix3<T>& add(const Matrix3<T>& matrixToAdd, int left, int up, int front, bool useInterpolation = false);
     Matrix3<T> concat(const Matrix3<T>& matrixToConcat);
 
@@ -153,9 +170,11 @@ public:
     Matrix3<T>& min(const T& minVal);
     Matrix3<T>& max(const T& maxVal);
 
-    Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
+    // Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
+    Matrix3<T>& max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
     Matrix3<T>& max(const Matrix3<T>& otherMatrix, int left, int up, int front);
-    Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
+    // Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner);
+    Matrix3<T>& min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner);
     Matrix3<T>& min(const Matrix3<T>& otherMatrix, int left, int up, int front);
 
     static Matrix3<T> max(const Matrix3<T>& m1, const Matrix3<T>& m2);
@@ -236,10 +255,12 @@ public:
     }
 
 
-    static Matrix3<T> random(const Vector3& dimensions);
+    // static Matrix3<T> random(const Vector3& dimensions);
+    static Matrix3<T> random(const Vector3i& dimensions);
     static Matrix3<T> random(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
     static Matrix3<T> identity(size_t sizeX, size_t sizeY, size_t sizeZ = 1);
-    static Matrix3<T> perlin(const Vector3& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
+    // static Matrix3<T> perlin(const Vector3& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
+    static Matrix3<T> perlin(const Vector3i& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
 
     static Matrix3<Vector3> fromImageRGB(std::string filename);
     static Matrix3<float> fromImageBW(std::string filename);
@@ -286,8 +307,11 @@ public:
     bool empty() const { return begin() == end(); }
 
     Vector3 getMirrorPosition(const Vector3& pos) const;
+    Vector3i getMirrorPosition(const Vector3i& pos) const;
     Vector3 getWrappedPosition(const Vector3& pos) const;
+    Vector3i getWrappedPosition(const Vector3i& pos) const;
     Vector3 getRepeatPosition(const Vector3& pos) const;
+    Vector3i getRepeatPosition(const Vector3i& pos) const;
 
     Matrix3& init(const std::vector<T>& data, size_t sizeX, size_t sizeY, size_t sizeZ);
 
@@ -301,11 +325,11 @@ void Matrix3<T>::iterate(Func function) const
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                if constexpr (std::is_invocable_v<Func, Vector3>) {
-                    Vector3 pos(x, y, z);
+                if constexpr (std::is_invocable_v<Func, Vector3i>) {
+                    Vector3i pos(x, y, z);
                     function(pos);
                 } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
-                    Vector3 pos(x, y, z);
+                    Vector3i pos(x, y, z);
                     function(pos.x(), pos.y(), pos.z());
                 } else if constexpr (std::is_invocable_v<Func, int>) {
                     function(this->getIndex(x, y, z));
@@ -336,11 +360,11 @@ void Matrix3<T>::iterateReverse(Func function) const
     for (int x = this->sizeX - 1; x >= 0; x--) {
         for (int y = this->sizeY - 1; y >= 0; y--) {
             for (int z = this->sizeZ - 1; z >= 0; z--) {
-                if constexpr (std::is_invocable_v<Func, Vector3>) {
-                    Vector3 pos(x, y, z);
+                if constexpr (std::is_invocable_v<Func, Vector3i>) {
+                    Vector3i pos(x, y, z);
                     function(pos);
                 } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
-                    Vector3 pos(x, y, z);
+                    Vector3i pos(x, y, z);
                     function(pos.x(), pos.y(), pos.z());
                 } else if constexpr (std::is_invocable_v<Func, int>) {
                     function(this->getIndex(x, y, z));
@@ -373,11 +397,11 @@ void Matrix3<T>::iterateParallel(Func function) const
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
-                if constexpr (std::is_invocable_v<Func, Vector3>) {
-                    Vector3 pos(x, y, z);
+                if constexpr (std::is_invocable_v<Func, Vector3i>) {
+                    Vector3i pos(x, y, z);
                     function(pos);
                 } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
-                    Vector3 pos(x, y, z);
+                    Vector3i pos(x, y, z);
                     function(pos.x(), pos.y(), pos.z());
                 } else if constexpr (std::is_invocable_v<Func, int>) {
                     function(this->getIndex(x, y, z));
@@ -413,11 +437,11 @@ void Matrix3<T>::iterateRandomly(Func function) const
     std::shuffle(iter.begin(), iter.end(), random_gen::random_generator);
     for (size_t j = 0; j < iter.size(); j++) {
         size_t i = iter[j];
-        if constexpr (std::is_invocable_v<Func, Vector3>) {
-            Vector3 pos = this->getCoordAsVector3(i);
+        if constexpr (std::is_invocable_v<Func, Vector3i>) {
+            Vector3i pos = this->getCoordAsVector3i(i);
             function(pos);
         } else if constexpr (std::is_invocable_v<Func, int, int, int>) {
-            Vector3 pos = this->getCoordAsVector3(i);
+            Vector3i pos = this->getCoordAsVector3i(i);
             function(pos.x(), pos.y(), pos.z());
         } else if constexpr (std::is_invocable_v<Func, int>) {
             function(i);
@@ -491,8 +515,12 @@ template<class T>
 Matrix3<T>::Matrix3()
 {
 }
-template<class T>
+/*template<class T>
 Matrix3<T>::Matrix3(const Vector3& size, T initValue) : Matrix3<T>(size.x(), size.y(), size.z(), initValue)
+{
+}*/
+template<class T>
+Matrix3<T>::Matrix3(const Vector3i& size, T initValue) : Matrix3<T>(size.x(), size.y(), size.z(), initValue)
 {
 }
 template<class T>
@@ -541,9 +569,9 @@ bool Matrix3<T>::checkCoord(int x, int y, int z) const
 }
 
 template<class T>
-bool Matrix3<T>::checkCoord(const Vector3& pos) const
+bool Matrix3<T>::checkCoord(const Vector3i& pos) const
 {
-    if (pos.minComp() < 0 || pos.x() > sizeX-1 || pos.y() > sizeY-1 || pos.z() > sizeZ-1) return false;
+    // if (pos.minComp() < 0 || pos.x() > sizeX-1 || pos.y() > sizeY-1 || pos.z() > sizeZ-1) return false;
     return checkCoord(pos.x(), pos.y(), pos.z());
 }
 
@@ -576,21 +604,21 @@ Matrix3<T> Matrix3<T>::row(int rowIndex, int depthIndex)
 template<class T>
 T Matrix3<T>::interpolate(const Vector3& coord, RETURN_VALUE_ON_OUTSIDE padding) const
 {
-    Vector3 round = coord.floor();
+    Vector3i round = coord.floor();
     Vector3 cellOffset = coord - round;
 
     bool previousErrorConfig = this->raiseErrorOnBadCoord;
     RETURN_VALUE_ON_OUTSIDE previousOutsideConfig = this->returned_value_on_outside;
 //    this->raiseErrorOnBadCoord = false;
 //    this->returned_value_on_outside = padding;
-    T f000 = this->at(round + Vector3(0, 0, 0));
-    T f100 = this->at(round + Vector3(1, 0, 0));
-    T f010 = this->at(round + Vector3(0, 1, 0));
-    T f110 = this->at(round + Vector3(1, 1, 0));
-    T f001 = this->at(round + Vector3(0, 0, 1));
-    T f101 = this->at(round + Vector3(1, 0, 1));
-    T f011 = this->at(round + Vector3(0, 1, 1));
-    T f111 = this->at(round + Vector3(1, 1, 1));
+    T f000 = this->at(round + Vector3i(0, 0, 0));
+    T f100 = this->at(round + Vector3i(1, 0, 0));
+    T f010 = this->at(round + Vector3i(0, 1, 0));
+    T f110 = this->at(round + Vector3i(1, 1, 0));
+    T f001 = this->at(round + Vector3i(0, 0, 1));
+    T f101 = this->at(round + Vector3i(1, 0, 1));
+    T f011 = this->at(round + Vector3i(0, 1, 1));
+    T f111 = this->at(round + Vector3i(1, 1, 1));
     // Interpolation
     T interpol = ((
                               f000 * (1-cellOffset.x()) + f100 * cellOffset.x()) * (1-cellOffset.y()) + (
@@ -609,8 +637,13 @@ T Matrix3<T>::interpolate(float x, float y, float z, RETURN_VALUE_ON_OUTSIDE pad
     return interpolate(Vector3(x, y, z), padding);
 }
 
-template<class T>
+/*template<class T>
 const T &Matrix3<T>::at(const Vector3& pos) const
+{
+    return this->at(pos.x(), pos.y(), pos.z());
+}*/
+template<class T>
+const T &Matrix3<T>::at(const Vector3i& pos) const
 {
     return this->at(pos.x(), pos.y(), pos.z());
 }
@@ -622,16 +655,16 @@ const T &Matrix3<T>::at(int i, int j, int k) const
         return this->data[index];
     }
     bool raiseError = raiseErrorOnBadCoord;
-    Vector3 newPos(i, j, k);
+    Vector3i newPos(i, j, k);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
             return defaultValueOnBadCoord;
 
-        if (stillRaiseErrorForX && (newPos.x() < 0 || sizeX <= int(newPos.x())))
+        if (stillRaiseErrorForX && (newPos.x() < 0 || sizeX <= newPos.x()))
             return defaultValueOnBadCoord;
-        if (stillRaiseErrorForY && (newPos.y() < 0 || sizeY <= int(newPos.y())))
+        if (stillRaiseErrorForY && (newPos.y() < 0 || sizeY <= newPos.y()))
             return defaultValueOnBadCoord;
-        if (stillRaiseErrorForZ && (newPos.z() < 0 || sizeZ <= int(newPos.z())))
+        if (stillRaiseErrorForZ && (newPos.z() < 0 || sizeZ <= newPos.z()))
             return defaultValueOnBadCoord;
 
         if (returned_value_on_outside == MIRROR_VALUE)
@@ -659,7 +692,7 @@ const T &Matrix3<T>::at(size_t i) const
     std::tie(x, y, z) = this->getCoord(i);
 
     bool raiseError = raiseErrorOnBadCoord;
-    Vector3 newPos(x, y, z);
+    Vector3i newPos(x, y, z);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
             return defaultValueOnBadCoord;
@@ -692,21 +725,34 @@ template<typename T>
 const T& Matrix3<T>::operator()(size_t i) const {
     return this->at(i);
 }
-template<typename T>
+/*template<typename T>
 const T& Matrix3<T>::operator()(const Vector3& pos) const {
+    return this->at(pos);
+}*/
+template<typename T>
+const T& Matrix3<T>::operator()(const Vector3i& pos) const {
     return this->at(pos);
 }
 template<typename T>
 const T& Matrix3<T>::operator[](size_t i) const {
     return this->at(i);
 }
-template<typename T>
+/*template<typename T>
 const T& Matrix3<T>::operator[](const Vector3& pos) const {
+    return this->at(pos);
+}*/
+template<typename T>
+const T& Matrix3<T>::operator[](const Vector3i& pos) const {
     return this->at(pos);
 }
 
-template<class T>
+/*template<class T>
 T &Matrix3<T>::at(const Vector3& pos)
+{
+    return this->at(pos.x(), pos.y(), pos.z());
+}*/
+template<class T>
+T &Matrix3<T>::at(const Vector3i& pos)
 {
     return this->at(pos.x(), pos.y(), pos.z());
 }
@@ -722,7 +768,7 @@ T &Matrix3<T>::at(int i, int j, int k)
     }
     bool raiseError = raiseErrorOnBadCoord;
     dummyValue = defaultValueOnBadCoord;
-    Vector3 newPos(i, j, k);
+    Vector3i newPos(i, j, k);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
             return dummyValue; // defaultValueOnBadCoord;
@@ -759,7 +805,7 @@ T &Matrix3<T>::at(size_t i)
     std::tie(x, y, z) = this->getCoord(i);
 
     bool raiseError = raiseErrorOnBadCoord;
-    Vector3 newPos(x, y, z);
+    Vector3i newPos(x, y, z);
     if (!raiseErrorOnBadCoord) {
         if (returned_value_on_outside == DEFAULT_VALUE)
             return dummyValue; // defaultValueOnBadCoord;
@@ -792,8 +838,12 @@ template<typename T>
 T& Matrix3<T>::operator[](size_t i) {
     return this->at(i);
 }
-template<typename T>
+/*template<typename T>
 T& Matrix3<T>::operator[](const Vector3& pos) {
+    return this->at(pos);
+}*/
+template<typename T>
+T& Matrix3<T>::operator[](const Vector3i& pos) {
     return this->at(pos);
 }
 template<typename T>
@@ -804,8 +854,12 @@ template<typename T>
 T& Matrix3<T>::operator()(size_t i) {
     return this->at(i);
 }
-template<typename T>
+/*template<typename T>
 T& Matrix3<T>::operator()(const Vector3& pos) {
+    return this->at(pos);
+}*/
+template<typename T>
+T& Matrix3<T>::operator()(const Vector3i& pos) {
     return this->at(pos);
 }
 
@@ -814,10 +868,15 @@ int Matrix3<T>::getIndex(size_t x, size_t y, size_t z) const
 {
     return z * (this->sizeX * this->sizeY) + y * (this->sizeX) + x;
 }
-template<class T>
+/*template<class T>
 int Matrix3<T>::getIndex(const Vector3& coord) const
 {
     return this->getIndex(int(coord.x()), int(coord.y()), int(coord.z()));
+}*/
+template<class T>
+int Matrix3<T>::getIndex(const Vector3i& coord) const
+{
+    return this->getIndex(coord.x(), coord.y(), coord.z());
 }
 
 template<class T>
@@ -836,6 +895,14 @@ Vector3 Matrix3<T>::getCoordAsVector3(size_t index) const
     int x = index % this->sizeX;
     return Vector3(x, y, z);
 }
+template<class T>
+Vector3i Matrix3<T>::getCoordAsVector3i(size_t index) const
+{
+    int z = index / (this->sizeX * this->sizeY);
+    int y = (index % (this->sizeX * this->sizeY)) / this->sizeX;
+    int x = index % this->sizeX;
+    return Vector3i(x, y, z);
+}
 
 template <class T>
 Matrix3<T>& Matrix3<T>::addValueAt(T value, const Vector3& coord) {
@@ -843,17 +910,17 @@ Matrix3<T>& Matrix3<T>::addValueAt(T value, const Vector3& coord) {
 
     this->raiseErrorOnBadCoord = false;
 
-    Vector3 floorPos = coord.floor();
+    Vector3i floorPos = coord.floor();
     Vector3 offset = coord - floorPos;
 
-    const Vector3 v0 = floorPos + Vector3(0, 0, 0);
-    const Vector3 v1 = floorPos + Vector3(0, 0, 1);
-    const Vector3 v2 = floorPos + Vector3(0, 1, 0);
-    const Vector3 v3 = floorPos + Vector3(0, 1, 1);
-    const Vector3 v4 = floorPos + Vector3(1, 0, 0);
-    const Vector3 v5 = floorPos + Vector3(1, 0, 1);
-    const Vector3 v6 = floorPos + Vector3(1, 1, 0);
-    const Vector3 v7 = floorPos + Vector3(1, 1, 1);
+    const Vector3i v0 = floorPos + Vector3i(0, 0, 0);
+    const Vector3i v1 = floorPos + Vector3i(0, 0, 1);
+    const Vector3i v2 = floorPos + Vector3i(0, 1, 0);
+    const Vector3i v3 = floorPos + Vector3i(0, 1, 1);
+    const Vector3i v4 = floorPos + Vector3i(1, 0, 0);
+    const Vector3i v5 = floorPos + Vector3i(1, 0, 1);
+    const Vector3i v6 = floorPos + Vector3i(1, 1, 0);
+    const Vector3i v7 = floorPos + Vector3i(1, 1, 1);
 
     this->at(v0) += value * (1 - offset.x()) * (1 - offset.y()) * (1 - offset.z());
     this->at(v1) += value * (1 - offset.x()) * (1 - offset.y()) * (    offset.z());
@@ -1297,7 +1364,7 @@ Matrix3<float> Matrix3<T>::gaussian(int sizeOnX, int sizeOnY, int sizeOnZ, float
     center -= Vector3((sizeOnX > 1 ? .5 : 0), (sizeOnY > 1 ? .5 : 0), (sizeOnZ > 1 ? .5 : 0));
     float oneOverSqrt2Pi = 1.f/std::sqrt(2 * M_PI);
     float sqrSigma = sigma * sigma;
-    gaussian.iterateParallel([&](const Vector3& pos) {
+    gaussian.iterateParallel([&](const Vector3i& pos) {
         gaussian(pos) = std::exp(-((pos - center).norm2())/(2*sqrSigma)) * oneOverSqrt2Pi;
     });
     return gaussian;
@@ -1545,8 +1612,8 @@ Matrix3<Vector3> Matrix3<T>::gradient() const {
     // self.raiseErrorOnBadCoord = false;
     // self.returned_value_on_outside = MIRROR_VALUE;
 
-    auto repeat = [&](int x, int y, int z) -> Vector3 {
-        const auto p = Vector3(x, y, z);
+    auto repeat = [&](int x, int y, int z) -> Vector3i {
+        const auto p = Vector3i(x, y, z);
         return this->checkCoord(x, y, z) ? p : this->getRepeatPosition(p);
     };
     iterateParallel([&](int x, int y, int z) {
@@ -1775,8 +1842,13 @@ Matrix3<T> Matrix3<T>::sliceXZ(int index) const
     return slice(index, 1);
 }
 
-template<class T>
+/*template<class T>
 Matrix3<T> Matrix3<T>::random(const Vector3& dimensions)
+{
+    return Matrix3<T>::random(dimensions.x(), dimensions.y(), dimensions.z());
+}*/
+template<class T>
+Matrix3<T> Matrix3<T>::random(const Vector3i& dimensions)
 {
     return Matrix3<T>::random(dimensions.x(), dimensions.y(), dimensions.z());
 }
@@ -1851,8 +1923,18 @@ Matrix3<T> Matrix3<T>::identity(size_t sizeX, size_t sizeY, size_t sizeZ)
     return mat;
 }
 
-template<class T>
+/*template<class T>
 Matrix3<T> Matrix3<T>::perlin(const Vector3 &dimensions, const Vector3& scale, int seed)
+{
+    Matrix3<T> result(dimensions);
+
+    result.iterateParallel([&](float x, float y, float z) {
+        result(x, y, z) = random_gen::generate_perlin(x * scale.x() + seed, y * scale.y() + seed, z * scale.z() + seed);
+    });
+    return result;
+}*/
+template<class T>
+Matrix3<T> Matrix3<T>::perlin(const Vector3i& dimensions, const Vector3& scale, int seed)
 {
     Matrix3<T> result(dimensions);
 
@@ -2033,8 +2115,13 @@ int Matrix3<T>::getNumberNeighbors(size_t x, size_t y, size_t z, bool using4conn
     }
     return neighbors;
 }
-template<class T>
+/*template<class T>
 int Matrix3<T>::getNumberNeighbors(const Vector3& pos, bool using4connect) const
+{
+    return getNumberNeighbors(pos.x(), pos.y(), pos.z(), using4connect);
+}*/
+template<class T>
+int Matrix3<T>::getNumberNeighbors(const Vector3i& pos, bool using4connect) const
 {
     return getNumberNeighbors(pos.x(), pos.y(), pos.z(), using4connect);
 }
@@ -2048,8 +2135,13 @@ Matrix3<T> Matrix3<T>::resize(float factor, RESIZE_MODE mode) const
     if (newSize.z() < 1) newSize.z() = 1;
     return this->resize(newSize, mode);
 }
-template<typename T>
+/*template<typename T>
 Matrix3<T> Matrix3<T>::resize(const Vector3& newSize, RESIZE_MODE mode) const
+{
+    return this->resize(newSize.x(), newSize.y(), newSize.z(), mode);
+}*/
+template<typename T>
+Matrix3<T> Matrix3<T>::resize(const Vector3i& newSize, RESIZE_MODE mode) const
 {
     return this->resize(newSize.x(), newSize.y(), newSize.z(), mode);
 }
@@ -2226,7 +2318,7 @@ Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) cons
 
     // Apply interpolations
     Vector3 ratio(rx, ry, rz);
-    newMat.iterateParallel([&](const Vector3& pos) {
+    newMat.iterateParallel([&](const Vector3i& pos) {
         newMat(pos) = this->unsafe((pos * ratio).roundedDown());
     });
     /*for (int x = 0; x < newX; x++) {
@@ -2243,17 +2335,30 @@ Matrix3<T> Matrix3<T>::resizeNearest(size_t newX, size_t newY, size_t newZ) cons
     return newMat;
 }
 
-template<class T>
+/*template<class T>
 Matrix3<T> Matrix3<T>::resizeNearest(const Vector3& newSize) const
+{
+    return this->resizeNearest(newSize.x(), newSize.y(), newSize.z());
+}*/
+template<class T>
+Matrix3<T> Matrix3<T>::resizeNearest(const Vector3i& newSize) const
 {
     return this->resizeNearest(newSize.x(), newSize.y(), newSize.z());
 }
 
 
-template<typename T>
+/*template<typename T>
 Matrix3<T> Matrix3<T>::subset(const Vector3& start, const Vector3& end) const
 {
     float endZ = end.z();
+    if (start.z() == 0 && end.z() == 0)
+        endZ = -1; // Give it the default value so it will be managed by the main function
+    return this->subset(start.x(), end.x(), start.y(), end.y(), start.z(), endZ);
+}*/
+template<typename T>
+Matrix3<T> Matrix3<T>::subset(const Vector3i& start, const Vector3i& end) const
+{
+    int endZ = end.z();
     if (start.z() == 0 && end.z() == 0)
         endZ = -1; // Give it the default value so it will be managed by the main function
     return this->subset(start.x(), end.x(), start.y(), end.y(), start.z(), endZ);
@@ -2286,8 +2391,13 @@ Matrix3<T> Matrix3<T>::subset(int startX, int endX, int startY, int endY, int st
 }
 
 
-template<typename T>
+/*template<typename T>
 Matrix3<T>& Matrix3<T>::paste(const Matrix3<T> &matrixToPaste, const Vector3& upperLeftFrontCorner)
+{
+    return this->paste(matrixToPaste, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
+}*/
+template<typename T>
+Matrix3<T>& Matrix3<T>::paste(const Matrix3<T> &matrixToPaste, const Vector3i& upperLeftFrontCorner)
 {
     return this->paste(matrixToPaste, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
@@ -2363,8 +2473,13 @@ Matrix3<T> Matrix3<T>::concat(const Matrix3<T>& matrixToConcat)
     return newMatrix;
 }
 
-template<typename T>
+/*template<typename T>
 Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner)
+{
+    return this->max(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
+}*/
+template<typename T>
+Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
 {
     return this->max(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
@@ -2388,8 +2503,13 @@ Matrix3<T>& Matrix3<T>::max(const Matrix3<T>& otherMatrix, int left, int up, int
     return *this;
 }
 
-template<typename T>
+/*template<typename T>
 Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3& upperLeftFrontCorner)
+{
+    return this->min(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
+}*/
+template<typename T>
+Matrix3<T>& Matrix3<T>::min(const Matrix3<T>& otherMatrix, const Vector3i& upperLeftFrontCorner)
 {
     return this->min(otherMatrix, upperLeftFrontCorner.x(), upperLeftFrontCorner.y(), upperLeftFrontCorner.z());
 }
@@ -2849,6 +2969,41 @@ Vector3 Matrix3<T>::getRepeatPosition(const Vector3& pos) const
     return returned;
 }
 
+template<class T>
+Vector3i Matrix3<T>::getMirrorPosition(const Vector3i& pos)  const
+{
+    int x = pos.x();
+    int y = pos.y();
+    int z = pos.z();
+    x = (x < 0 ? std::abs(x) : (x >= sizeX ? (sizeX - 1) - (x - sizeX) : x));
+    y = (y < 0 ? std::abs(y) : (y >= sizeY ? (sizeY - 1) - (y - sizeY) : y));
+    z = (z < 0 ? std::abs(z) : (z >= sizeZ ? (sizeZ - 1) - (z - sizeZ) : z));
+    return Vector3i(x, y, z);
+}
+
+template<class T>
+Vector3i Matrix3<T>::getWrappedPosition(const Vector3i& pos) const
+{
+    /*Vector3 rounded = pos.roundedDown();
+    Vector3 decimals = pos - rounded;
+    Vector3  wrap = Vector3(int(rounded.x() + sizeX) % sizeX,
+                           int(rounded.y() + sizeY) % sizeY,
+                           int(rounded.z() + sizeZ) % sizeZ
+                           ) + decimals;
+    return wrap;*/
+    return Vector3i((pos.x() + sizeX) % sizeX, (pos.y() + sizeY) % sizeY, (pos.z() + sizeZ) % sizeZ);
+}
+
+template<class T>
+Vector3i Matrix3<T>::getRepeatPosition(const Vector3i& pos) const
+{
+    Vector3i returned;
+    returned.x() = std::min(std::max(0, pos.x()), sizeX - 1);
+    returned.y() = std::min(std::max(0, pos.y()), sizeY - 1);
+    returned.z() = std::min(std::max(0, pos.z()), sizeZ - 1);
+    return returned;
+}
+
 template <class T>
 Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) const
 {
@@ -2868,7 +3023,7 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
 
     if (precision > 1) {
         Matrix3<Vector3> displacements(warper.getDimensions());
-        displacements.iterateParallel([&](const Vector3& p) {
+        displacements.iterateParallel([&](const Vector3i& p) {
             auto& pos = displacements(p);
             pos = p;
             for (int iter = 0; iter < precision; iter++) {
@@ -3108,9 +3263,9 @@ int Matrix3<T>::cols() const
 }
 
 template<class T>
-Vector3 Matrix3<T>::getDimensions() const
+Vector3i Matrix3<T>::getDimensions() const
 {
-    return Vector3(this->sizeX, this->sizeY, this->sizeZ);
+    return Vector3i(this->sizeX, this->sizeY, this->sizeZ);
 }
 
 

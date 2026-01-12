@@ -145,8 +145,8 @@ public:
     T minComp() const { return std::min(x(), std::min(y(), z())); }
 
 
-    template<typename U>
-    static bool isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos);
+    template<typename U, typename V>
+    static bool isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<V>& maxPos);
     template<typename U>
     static float signedManhattanDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension = false);
     template<typename U>
@@ -1142,8 +1142,8 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vec3<T>> v) {
 template<class T>
 Vec3<T> std::abs(const Vec3<T>& o) { return o.abs(); }
 
-template<class T> template<class U>
-bool Vec3<T>::isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos) {
+template<class T> template<class U, class V>
+bool Vec3<T>::isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<V> &maxPos) {
     return (minPos.x() <= pos.x() && pos.x() <= maxPos.x()) && (minPos.y() <= pos.y() && pos.y() <= maxPos.y()) && (minPos.z() <= pos.z() && pos.z() <= maxPos.z());
     //    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
 }
