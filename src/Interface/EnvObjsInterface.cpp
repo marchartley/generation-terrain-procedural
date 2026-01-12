@@ -1998,8 +1998,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     return;
 
     */
-    std::cout << "Preview... " << std::endl;
-    GridV3 dataV3 = Plotter::get("Object Preview")->dataModel->displayedImage;
+    GridV3 dataV3 = Plotter::get("Object Preview")->dataModel->getImage();
     GridF fitnessScoreGrid(dataV3.getDimensions());
     GridF fittingScoreGrid(dataV3.getDimensions());
     dataV3.iterateParallel([&](size_t i) {
@@ -2073,7 +2072,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         }
         isoline = initialCurve;
     }
-    std::cout << isoline.toString() << std::endl;
+    // std::cout << isoline.toString() << std::endl;
 
     if (isoline.closed) {
         dataV3.iterateParallel([&](const Vector3& pos) {

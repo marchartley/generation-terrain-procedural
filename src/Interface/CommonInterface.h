@@ -121,6 +121,10 @@ public:
     RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
     RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, Qt::Orientation orientation = Qt::Horizontal);
 
+    RangeSliderElement* setMinValue(float valueMin) { slider()->setMinValue(valueMin); return this; }
+    RangeSliderElement* setMaxValue(float valueMax) { slider()->setMaxValue(valueMax); return this; }
+    RangeSliderElement* setMinMaxValues(float valueMin, float valueMax) { return this->setMinValue(valueMin)->setMaxValue(valueMax); }
+
     RangeSlider* slider();
     QLabel* label();
 
@@ -153,7 +157,7 @@ public:
 
     QCheckBox* checkBox();
 
-    void setChecked(bool checked) { checkBox()->setChecked(checked); }
+    CheckboxElement* setChecked(bool checked) { checkBox()->setChecked(checked); return this; }
 
     DEFINE_SET_ON_FUNCTION(setOnChecked, QCheckBox, toggled)
 
