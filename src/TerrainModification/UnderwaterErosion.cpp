@@ -749,7 +749,7 @@ std::tuple<GridF, GridF, GridF> UnderwaterErosion::flatteningErodedTerrain(const
     GridF flatInitial(finalDimensions);
     GridF flatCurrent(finalDimensions);
 
-    initialTerrain.iterateParallel([&](const Vector3& pos) {
+    initialTerrain.iterateParallel([&](const Vector3i& pos) {
         if (initialTerrain(pos) > 0) flatInitial(pos.xy()) += 1.f;
         if (currentTerrain(pos) > 0) flatCurrent(pos.xy()) += 1.f;
     });

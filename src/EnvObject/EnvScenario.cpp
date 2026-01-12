@@ -211,7 +211,7 @@ GridF SubsidenceEvent::apply(float progress, const Vector3 &dimensions)
     GridF result(dimensions, 0.f);
     if (progress <= 0) return result;
 
-    result.iterateParallel([&](const Vector3& pos) {
+    result.iterateParallel([&](const Vector3i& pos) {
         result(pos) = applyAt(pos, progress);
     });
     return result;
@@ -228,7 +228,7 @@ GridV3 StormEvent::apply(float progress, const Vector3& dimensions)
     GridV3 result(dimensions, Vector3());
     if (progress <= 0) return result;
 
-    result.iterateParallel([&](const Vector3& pos) {
+    result.iterateParallel([&](const Vector3i& pos) {
         result(pos) = applyAt(pos, progress);
     });
     return result;
@@ -294,7 +294,7 @@ GridF TectonicEvent::apply(float progress, const Vector3 &dimensions)
     GridF result(dimensions, 0.f);
     if (progress <= 0) return result;
 
-    result.iterateParallel([&](const Vector3& pos) {
+    result.iterateParallel([&](const Vector3i& pos) {
         result(pos) = applyAt(pos, progress);
     });
     return result;

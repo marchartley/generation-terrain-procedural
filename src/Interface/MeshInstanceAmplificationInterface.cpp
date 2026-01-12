@@ -514,7 +514,7 @@ nlohmann::json InstantiationMeshOption::currentInstancesToJSON(GridF scoreMap)
     auto newObject = EnvObject::availableObjects[this->name];
     auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
     GridF scores(Vector3(100, 100, 1));
-    scores.iterateParallel([&](const Vector3& p) {
+    scores.iterateParallel([&](const Vector3i& p) {
         scores[p] = fitFunc(p);
     });
     scores.normalize();

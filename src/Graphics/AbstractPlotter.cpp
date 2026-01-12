@@ -54,7 +54,12 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
         int ViewH = static_cast<int>(this->height());
 
         //scale the image to fit plot area
-        QImage scaledImage = this->_dataModel->imageData.computeDisplayedImage().scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
+        QImage scaledImage;
+        if (!this->overlayColors.empty())
+            scaledImage = this->_dataModel->imageData.computeDisplayedImage(this->overlayColors, this->overlayAlpha);
+        else
+            scaledImage = this->_dataModel->imageData.computeDisplayedImage();
+        scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
         //        *backImage = backImage->scaled(QSize(width, height));
 
         //We have to translate the image because setPlotAreaBackGround
@@ -216,6 +221,12 @@ Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
     QPointF qRelativeMousePos = mousePosInPlot;
     Vector3 mousePos(qRelativeMousePos.x() / float(plotArea.width()), qRelativeMousePos.y() / float(plotArea.height()));
     return mousePos;
+}
+
+ChartView *ChartView::setOverlay(GridV3 image, GridF alpha)
+{
+    this->overlayColors = image;
+    this->overlayAlpha = alpha;
 }
 
 bool ChartView::viewportEvent(QEvent *event)
@@ -471,6 +482,13 @@ AbstractPlotter* AbstractPlotter::addImage(const Matrix3<double> &image)
 AbstractPlotter* AbstractPlotter::addImage(const GridI &image)
 {
     return this->addImage((GridF)image);
+}
+
+AbstractPlotter *AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha)
+{
+    this->chartView->overlayColors = colors;
+    this->chartView->overlayAlpha = alpha;
+    return this;
 }
 
 GridV3 AbstractPlotter::computeVectorFieldRendering(const GridV3 &field, float reductionFactor, Vector3 imgSize) const
@@ -796,7 +814,7 @@ PlotModel::PlotModel()
 
 }
 
-PlotModel *PlotModel::addPlot(std::vector<Vector3> data, std::string name, QColor color)
+PlotModel *PlotModel::addPlot(const std::vector<Vector3>& data, const std::string& name, const QColor& color)
 {
     this->plot_data.push_back(data);
     this->plot_names.push_back(name);
@@ -804,7 +822,7 @@ PlotModel *PlotModel::addPlot(std::vector<Vector3> data, std::string name, QColo
     return this;
 }
 
-PlotModel *PlotModel::addScatter(std::vector<Vector3> data, std::string name, std::vector<std::string> labels, std::vector<QColor> colors)
+PlotModel *PlotModel::addScatter(const std::vector<Vector3>& data, const std::string& name, const std::vector<std::string>& labels, std::vector<QColor> colors)
 {
     if (colors.size() == 0) {
         colors = std::vector<QColor>({Qt::blue});
@@ -819,13 +837,15 @@ PlotModel *PlotModel::addScatter(std::vector<Vector3> data, std::string name, st
     return this;
 }
 
-PlotModel *PlotModel::addImage(const GridV3& image, bool clamped, bool normalized, bool absolute, const Vector3 &minColors, const Vector3 &maxColors)
+PlotModel *PlotModel::addImage(const GridV3& image/*, bool clamped, bool normalized, bool absolute, const Vector3 &minColors, const Vector3 &maxColors*/)
 {
     this->imageData.setImage(image);
+    /*
     this->imageData.setNormalized(normalized);
     this->imageData.setClamped(clamped);
     this->imageData.setAbsolute(absolute);
     this->imageData.setColorRanges(minColors, maxColors);
+    */
     /*
     this->displayedImage = image;
     //    image = image.flip(false, true);
@@ -1000,5 +1020,24 @@ QImage PlotImageData::computeDisplayedImage() const
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
-    return QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+    QImage result = QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+    return result;
+}
+
+QImage PlotImageData::computeDisplayedImage(const GridV3 &overlay, const GridF &overlayAlpha) const
+{
+    QImage img = this->computeDisplayedImage();
+    QPainter painter = QPainter(&img);
+
+    unsigned char* data = new unsigned char[overlay.size() * 4];
+
+    for (size_t i = 0; i < overlay.size(); ++i) {
+        data[int(4 * i + 2)] = (unsigned char)(std::clamp(overlay[i].x(), 0.f, 1.f) * 255);
+        data[int(4 * i + 1)] = (unsigned char)(std::clamp(overlay[i].y(), 0.f, 1.f) * 255);
+        data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
+        data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
+    }
+    painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
+    painter.end();
+    return img;
 }

@@ -110,7 +110,7 @@ void FLIPSimulationInterface::display(const Vector3 &camPos)
     gridBoundaryMesh.shader->setVector("scale", voxelGrid->getDimensions() / simulation->particleDensity.getDimensions());
 //    Mesh::displayScalarField((simulation->p / simulation->p.max()).resize(voxelGrid->getDimensions() / 2.f), gridBoundaryMesh, camPos, {0.f, .1f, .2f, .3f, .4f, .5f, .6f, .7f, .8f, .9f, 1.f}, voxelGrid->getDimensions());
     GridV3 velocitiesFromUVW(simulation->dimensions);
-    velocitiesFromUVW.iterateParallel([&](const Vector3& pos) {
+    velocitiesFromUVW.iterateParallel([&](const Vector3i& pos) {
         velocitiesFromUVW(pos) = Vector3(simulation->u.interpolate(pos + Vector3(.5f, .0f, .0f)), simulation->v.interpolate(pos + Vector3(.0f, .5f, .0f)), simulation->w.interpolate(pos + Vector3(.0f, .0f, .5f)));
     });
     Mesh::createVectorField(velocitiesFromUVW, velocitiesFromUVW.getDimensions(), &vectorsMesh, -1, false, true);

@@ -558,7 +558,7 @@ GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& p
     auto obj = EnvObject::availableObjects[objectName];
     EnvObject::recomputeFlow();
     GridF score = GridF(dimensions);
-    score.iterateParallel([&](const Vector3& pos) {
+    score.iterateParallel([&](const Vector3i& pos) {
         score(pos) = std::max(obj->evaluate(pos), 0.f);
     });
     if (score.max() > 1e-5) {
@@ -655,7 +655,7 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     newObject->evaluationPositions = {initialPosition};
     int nbOutside = 0;
     for (auto& p : newObject->evaluationPositions) {
-        if (!Vector3::isInBox(p, Vector3(), score.getDimensions())) {
+        if (!Vector3::isInBox(p, Vector3i(), score.getDimensions())) {
             nbOutside++;
         }
     }
@@ -1486,7 +1486,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formul
         fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
 
         GridF eval(EnvObject::flowfield.getDimensions());
-        eval.iterateParallel([&](const Vector3& p) {
+        eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fitnessFunction(p);
         });
         Plotter::get("Fitness Function")->addImage(eval);
@@ -1512,7 +1512,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formul
         // fake.fitnessFunction = EnvObject::parseFittingFunction(formula, "");
 
         GridF eval(EnvObject::flowfield.getDimensions());
-        eval.iterateParallel([&](const Vector3& p) {
+        eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fittingFunction(p);
         });
         Plotter::get("Fitting Function")->addImage(eval);
@@ -1538,7 +1538,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::str
         fake.fitnessFunction = EnvObject::parseFittingFunction(fake.s_FitnessFunction, "");
 
         GridV3 eval(EnvObject::flowfield.getDimensions());
-        eval.iterateParallel([&](const Vector3& p) {
+        eval.iterateParallel([&](const Vector3i& p) {
             eval(p).x() = fake.fitnessFunction(p);
             eval(p).y() = fake.fittingFunction(p);
         });
@@ -2009,7 +2009,8 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     auto obj = EnvObject::availableObjects[objectCombobox->getSelection().label];
     auto score = fittingScoreGrid;
 
-    GridV3 result = GridV3(score.getDimensions(), Vector3(1, 1, 1)) * score;
+    GridV3 result = GridV3(score.getDimensions());
+    GridF resultAlpha = GridF(score.getDimensions(), 0.f);
     ShapeCurve isoline;
     // auto position = clickPos;
     // auto score = fitnessScoreGrid;
@@ -2058,12 +2059,16 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
                 display.resamplePoints(100);
                 if (iteration == 9) {
                     for (size_t i = 0; i < display.size(); i++) {
-                        result(display[i]) = colorPalette(float(iteration) / float(maxIterations - 1));
+                        const auto& pos = display[i];
+                        result(pos) = colorPalette(float(iteration) / float(maxIterations - 1));
+                        resultAlpha(pos) = 1.f;
                     }
                 }
                 if (iteration == 9) {
                     for (const auto& v : s.randomGreenCoords) {
-                        result(computePointFromGreenCoordinates(v, ShapeCurve(s.contour))).z() = 1;
+                        auto pos = computePointFromGreenCoordinates(v, ShapeCurve(s.contour));
+                        result(pos).z() = 1;
+                        resultAlpha(pos) = 1.f;
                     }
                 }
             }
@@ -2075,21 +2080,26 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     // std::cout << isoline.toString() << std::endl;
 
     if (isoline.closed) {
-        dataV3.iterateParallel([&](const Vector3& pos) {
-            result(pos) += Vector3(.5f, .5f, .5f) * (isoline.containsXY(pos, false) ? 1.f : 0.f);
+        dataV3.iterateParallel([&](const Vector3i& pos) {
+            bool insideCurve = isoline.containsXY(pos, false);
+            result(pos) += Vector3(.5f, .5f, .5f) * (insideCurve ? 1.f : 0.f);
+            resultAlpha(pos) = (insideCurve ? .5f : 0.f);
         });
     }
     int nbSamples = 500;
     auto path = isoline.getPath(nbSamples); // .resamplePoints(nbSamples).points;
     for (size_t i = 0; i < path.size(); i++) {
         result(path[i]) = Vector3(0, 0, 1.f); //colorPalette(float(i) / float(path.size() - 1));
+        resultAlpha(path[i]) = 1.f;
     }
     for (size_t i = 0; i < isoline.size(); i++) {
         result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
+        resultAlpha(isoline[i]) = 1.f;
     }
-    Plotter::get("Object Preview")->addImage(result);
+    Plotter::get("Object Preview")->setOverlay(result, resultAlpha);
+    // Plotter::get("Object Preview")->addImage(result);
     Plotter::get("Object Preview")->show();
-    Plotter::get("Object Preview")->addImage(dataV3);
+    // Plotter::get("Object Preview")->addImage(dataV3);
 }
 
 void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocus)
@@ -2110,7 +2120,7 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
 
     // float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
     GridV3 brush = GridV3(30, 30, 1, brushDir);
-    brush.iterateParallel([&](const Vector3& p) {
+    brush.iterateParallel([&](const Vector3i& p) {
         brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
     });
     // EnvObject::initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
@@ -2215,7 +2225,7 @@ void EnvObjsInterface::addObjectsHeightmaps()
                 BSpline path = objAsEnvCurve->curve;
                 float nbGrooves = path.length() / 10.f;
                 float sigma = objAsEnvCurve->width;
-                surfaceHeights.iterateParallel([&](const Vector3& pos) {
+                surfaceHeights.iterateParallel([&](const Vector3i& pos) {
                     float closestT = path.estimateClosestTime(pos);
                     float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
                     auto [closestPoint, direction, normal] = path.pointAndDerivativeAndSecondDerivative(closestT);
@@ -2522,7 +2532,7 @@ void EnvObjsInterface::saveForRenders()
         {"island", Vector3(255, 255,   0)}
     };
     GridV3 labels(imageDimensions, featuresToColors["abyss"]);
-    labels.iterateParallel([&](const Vector3& _p) {
+    labels.iterateParallel([&](const Vector3i& _p) {
         Vector3 p = _p / ratio;
         float depth = depthMap(p);
 
@@ -2602,7 +2612,7 @@ void EnvObjsInterface::saveForRenders()
                 grid(p) = std::max(grid(p), evaluationScore);
             }
         } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
-            grid.iterateParallel([&](const Vector3& p) {
+            grid.iterateParallel([&](const Vector3i& p) {
                 if (asArea->curve.containsXY(p)) {
                     grid(p) = std::max(grid(p), evaluationScore);
                 }
@@ -2697,7 +2707,7 @@ StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectNa
 GridV3 EnvObjsInterface::computeUserKelvinletField() const
 {
     GridV3 flow(this->userFlowField.getDimensions());
-    flow.iterateParallel([&](const Vector3& p) {
+    flow.iterateParallel([&](const Vector3i& p) {
         Vector3 v;
         for (auto& kelvinlet : this->userKelvinlets) {
             v += kelvinlet->evaluate(p);

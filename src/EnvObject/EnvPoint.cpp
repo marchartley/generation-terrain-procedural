@@ -102,7 +102,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 
         // GridV3 flow = EnvObject::flowfield;
         GridV3 flow(EnvObject::flowfield.getDimensions());
-        flow.iterateParallel([&](const Vector3& p) {
+        flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement;
         });
@@ -111,7 +111,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         /*
         GridV3 gradients(2.f*radius, 2.f*radius, 1);
         Vector3 center = Vector3(radius, radius);
-        gradients.iterateParallel([&](const Vector3& pos) {
+        gradients.iterateParallel([&](const Vector3i& pos) {
             Vector3 dir = pos - center;
             float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
             gradients(pos) = dir.setMag(mag * currentGrowth);
