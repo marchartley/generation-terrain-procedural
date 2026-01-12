@@ -1,5 +1,5 @@
 #include "PrimitivePatchesInterface.h"
-#include "Graphics/Plotter.h"
+#include "Graphics/ImageViewer.h"
 #include "Interface/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"
@@ -1522,7 +1522,7 @@ void PrimitivePatchesInterface::displayParametricCurve()
 
 void PrimitivePatchesInterface::displayPatchesTree()
 {
-    Plotter* plt = Plotter::getInstance();
+    ImageViewer* plt = ImageViewer::getInstance();
 
     std::vector<std::pair<ImplicitPatch*, std::vector<int>>> allPatchesAndDirections;
     std::vector<std::tuple<ImplicitPatch*, std::vector<int>, int>> queueWithDirections = {{implicitTerrain.get(), {}, -1}};
@@ -1578,7 +1578,7 @@ void PrimitivePatchesInterface::displayPatchesTree()
     plt->addScatter(positions, "", labels);
     plt->draw();
     plt->show();
-//    QObject::connect(plt, &Plotter::finished, this, [=](int result) {
+//    QObject::connect(plt, &ImageViewer::finished, this, [=](int result) {
 //        std::cout << "Closed with result " << result << std::endl;
 //        plt->close();
     //    });

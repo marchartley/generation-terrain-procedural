@@ -170,7 +170,7 @@ ChartView* ChartView::updateLabelsPositions()
     }
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
         // this->draw();
-        std::cout << "Removed a call to Plotter::draw() here..." << std::endl;
+        std::cout << "Removed a call to ImageViewer::draw() here..." << std::endl;
     }
     //    this->blockSignals(false);
     return this;

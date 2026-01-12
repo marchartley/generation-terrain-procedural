@@ -65,8 +65,8 @@ void TerrainComparatorInterface::keyPressEvent(QKeyEvent *event)
 
     if (event->key() == Qt::Key_0) {
         auto colors = this->extractDifferencesAsImage();
-        Plotter::get()->addImage(colors);
-        Plotter::get()->show();
+        ImageViewer::get()->addImage(colors);
+        ImageViewer::get()->show();
     }
     return ActionInterface::keyPressEvent(event);
 }

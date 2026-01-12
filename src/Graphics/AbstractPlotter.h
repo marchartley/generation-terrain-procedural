@@ -106,7 +106,7 @@ public:
 // protected:
     bool normalized = false;
     bool absolute = false;
-    bool clamped = false;
+    bool clamped = true;
     Vector3 colorRangeMin = Vector3::min();
     Vector3 colorRangeMax = Vector3::max();
     Vector3i displayedColors = Vector3i(1, 1, 1);
