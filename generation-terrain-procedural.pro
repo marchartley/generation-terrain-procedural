@@ -132,7 +132,7 @@ SOURCES += \
         src/Graphics/DebugShader.cpp \
     src/Graphics/GanUIPainter.cpp \
         src/Graphics/MarchingCubes.cpp \
-    src/Graphics/Plotter.cpp \
+    src/Graphics/ImageViewer.cpp \
     src/Graphics/RayMarching.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
@@ -326,7 +326,7 @@ HEADERS += \
     src/Graphics/GanUIPainter.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
-    src/Graphics/Plotter.h \
+    src/Graphics/ImageViewer.h \
     src/Graphics/RayMarching.h \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \

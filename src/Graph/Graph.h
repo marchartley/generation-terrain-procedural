@@ -5,7 +5,7 @@
 #include "Graph/GraphNode.h"
 #include "Utils/ConstraintsSolver.h"
 
-#include "Graphics/Plotter.h"
+#include "Graphics/ImageViewer.h"
 
 template <class T>
 class GraphTemplate
@@ -490,11 +490,11 @@ void GraphTemplate<T>::draw()
 
         for (auto& [neighbor, weight] : node->neighbors) {
 //            linksPos.push_back({{node->pos.x, node->pos.y}, {neighbor->pos.x, neighbor->pos.y}});
-            Plotter::get()->addPlot({node->pos, neighbor->pos});
+            ImageViewer::get()->addPlot({node->pos, neighbor->pos});
         }
     }
-    Plotter::get()->addScatter(nodesPos,  "", labels);
-    Plotter::get()->show();
+    ImageViewer::get()->addScatter(nodesPos,  "", labels);
+    ImageViewer::get()->show();
 }
 
 typedef GraphTemplate<int> Graph;

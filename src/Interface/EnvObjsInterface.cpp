@@ -65,15 +65,15 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     EnvObject::precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
 
 
-    // QObject::connect(Plotter::get(), &Plotter::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
-    QObject::connect(Plotter::get("Object Preview"), &Plotter::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
+    // QObject::connect(ImageViewer::get(), &ImageViewer::clickedOnImage, this, [&](const Vector3& clickPos, Vector3 value) {
+    QObject::connect(ImageViewer::get("Object Preview"), &ImageViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* _event) {
         // if (!this->isVisible()) return;
         // if (!previewingObjectInPlotter) return;
 
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    QObject::connect(Plotter::get("Focus"), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+    QObject::connect(ImageViewer::get("Focus"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
         // if (!this->isVisible()) return;
         // if (!this->focusAreaEditing) return;
 
@@ -84,7 +84,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->previewFocusAreaEdition(mousePos, leftPressed);
     });
 
-    QObject::connect(Plotter::get("Flowfield"), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+    QObject::connect(ImageViewer::get("Flowfield"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
         // if (!this->isVisible()) return;
         // if (!this->flowfieldEditing) return;
 
@@ -100,7 +100,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
     });
 
 
-    /*QObject::connect(Plotter::get(), &Plotter::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+    /*QObject::connect(ImageViewer::get(), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
 
         ShapeCurve initial({
             Vector3(30, 30, 0),
@@ -152,8 +152,8 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
                 img(pp) = Vector3(1, 1, 1);
         }
 
-        Plotter::get()->addImage(img);
-        Plotter::get()->show();
+        ImageViewer::get()->addImage(img);
+        ImageViewer::get()->show();
     });*/
 }
 
@@ -1170,7 +1170,7 @@ void EnvObjsInterface::displayProbas(std::string objectName)
     bool possible;
     GridF score = computeScoreMap(objectName, dimensions, possible, false);
     if (!possible) {
-        Plotter::get("Object Preview")->addImage(score * 0.f);
+        ImageViewer::get("Object Preview")->addImage(score * 0.f);
     } else {
         float smallestPositive = score.max();
         score.iterate([&](size_t i) {
@@ -1180,9 +1180,9 @@ void EnvObjsInterface::displayProbas(std::string objectName)
         score.iterateParallel([&](size_t i) {
             score[i] = std::max(score[i], smallestPositive);
         });
-        Plotter::get("Object Preview")->addImage(score);
+        ImageViewer::get("Object Preview")->addImage(score);
     }
-    Plotter::get("Object Preview")->show();
+    ImageViewer::get("Object Preview")->show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(score);
     Q_EMIT updated();
 }
@@ -1190,8 +1190,8 @@ void EnvObjsInterface::displayProbas(std::string objectName)
 void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
 {
     GridF distribution = EnvObject::materials[materialName].currentState;
-    Plotter::get("Material")->addImage(distribution);
-    Plotter::get("Material")->show();
+    ImageViewer::get("Material")->addImage(distribution);
+    ImageViewer::get("Material")->show();
     dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(distribution);
     Q_EMIT updated();
 }
@@ -1199,15 +1199,15 @@ void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
 /*void EnvObjsInterface::displaySedimentsDistrib()
 {
     GridF sediments = EnvObject::materials["sand"].currentState;
-    Plotter::get()->addImage(sediments);
-    Plotter::get()->show();
+    ImageViewer::get()->addImage(sediments);
+    ImageViewer::get()->show();
 }
 
 void EnvObjsInterface::displayPolypDistrib()
 {
     GridF polyp = EnvObject::materials["polyp"].currentState;
-    Plotter::get()->addImage(polyp);
-    Plotter::get()->show();
+    ImageViewer::get()->addImage(polyp);
+    ImageViewer::get()->show();
 }*/
 
 void EnvObjsInterface::manualModificationOfFocusArea()
@@ -1215,8 +1215,8 @@ void EnvObjsInterface::manualModificationOfFocusArea()
     this->focusAreaEditing = true;
     this->flowfieldEditing = false;
     this->previewingObjectInPlotter = false;
-    Plotter::get("Focus")->addImage(this->renderFocusArea());
-    Plotter::get("Focus")->show();
+    ImageViewer::get("Focus")->addImage(this->renderFocusArea());
+    ImageViewer::get("Focus")->show();
 }
 
 void EnvObjsInterface::manualModificationOfFlowfield()
@@ -1224,8 +1224,8 @@ void EnvObjsInterface::manualModificationOfFlowfield()
     this->focusAreaEditing = false;
     this->flowfieldEditing = true;
     this->previewingObjectInPlotter = false;
-    Plotter::get("Flowfield")->addImage(this->renderFlowfield());
-    Plotter::get("Flowfield")->show();
+    ImageViewer::get("Flowfield")->addImage(this->renderFlowfield());
+    ImageViewer::get("Flowfield")->show();
 }
 
 void EnvObjsInterface::resetFlowfield()
@@ -1239,7 +1239,7 @@ void EnvObjsInterface::resetFlowfield()
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
-    Plotter::get("Flowfield")->addImage(this->renderFlowfield());
+    ImageViewer::get("Flowfield")->addImage(this->renderFlowfield());
     Q_EMIT this->updated();
 }
 
@@ -1489,8 +1489,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formul
         eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fitnessFunction(p);
         });
-        Plotter::get("Fitness Function")->addImage(eval);
-        Plotter::get("Fitness Function")->show();
+        ImageViewer::get("Fitness Function")->addImage(eval);
+        ImageViewer::get("Fitness Function")->show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1515,8 +1515,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formul
         eval.iterateParallel([&](const Vector3i& p) {
             eval(p) = fake.fittingFunction(p);
         });
-        Plotter::get("Fitting Function")->addImage(eval);
-        Plotter::get("Fitting Function")->show();
+        ImageViewer::get("Fitting Function")->addImage(eval);
+        ImageViewer::get("Fitting Function")->show();
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1542,8 +1542,8 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::str
             eval(p).x() = fake.fitnessFunction(p);
             eval(p).y() = fake.fittingFunction(p);
         });
-        Plotter::get("Object Preview")->addImage(eval);
-        Plotter::get("Object Preview")->show();
+        ImageViewer::get("Object Preview")->addImage(eval);
+        ImageViewer::get("Object Preview")->show();
         // dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->updateScalarFieldToDisplay(eval);
         Q_EMIT updated();
     } catch (std::exception e) {
@@ -1824,9 +1824,9 @@ void EnvObjsInterface::runPerformanceTest()
 
         timings.push_back((time * 1e-6) / 5.f);
     }
-    Plotter::get()->reset();
-    Plotter::get()->addPlot(timings, "Timing", Qt::darkBlue);
-    Plotter::get()->show();
+    ImageViewer::get()->reset();
+    ImageViewer::get()->addPlot(timings, "Timing", Qt::darkBlue);
+    ImageViewer::get()->show();
     */
 }
 
@@ -1973,15 +1973,15 @@ GridV3 EnvObjsInterface::renderFlowfield() const
 {
     EnvObject::updateFlowfield(userFlowField + simulationFlowField + EnvObject::scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
     GridV3& flow = EnvObject::flowfield;
-    // return Plotter::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
-    return Plotter::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
+    // return ImageViewer::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
+    return ImageViewer::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
 }
 
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
 {
     /*
-    GridV3 initial = Plotter::get("Object Preview")->displayedImage;
-    GridV3 img = GridV3(Plotter::get("Object Preview")->displayedImage.getDimensions());
+    GridV3 initial = ImageViewer::get("Object Preview")->displayedImage;
+    GridV3 img = GridV3(ImageViewer::get("Object Preview")->displayedImage.getDimensions());
     auto trajectories = PSO::findHighestAndTrack((size_t) 100, AABBox(Vector3::origin(), this->heightmap->getDimensions()), EnvObject::availableObjects[objectCombobox->getSelection().label]->fitnessFunction, 10);
     std::vector<BSpline> lines(trajectories.size());
     for (size_t i = 0; i < lines.size(); i++) {
@@ -1992,13 +1992,13 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
             img(isoline[j]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
         }
     }
-    Plotter::get("Object Preview")->addImage(img);
-    Plotter::get("Object Preview")->show();
-    Plotter::get("Object Preview")->addImage(initial);
+    ImageViewer::get("Object Preview")->addImage(img);
+    ImageViewer::get("Object Preview")->show();
+    ImageViewer::get("Object Preview")->addImage(initial);
     return;
 
     */
-    GridV3 dataV3 = Plotter::get("Object Preview")->dataModel->getImage();
+    GridV3 dataV3 = ImageViewer::get("Object Preview")->dataModel->getImage();
     GridF fitnessScoreGrid(dataV3.getDimensions());
     GridF fittingScoreGrid(dataV3.getDimensions());
     dataV3.iterateParallel([&](size_t i) {
@@ -2096,10 +2096,10 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         result(isoline[i]) = Vector3(1, 1, 1); //colorPalette(float(i) / float(path.size() - 1));
         resultAlpha(isoline[i]) = 1.f;
     }
-    Plotter::get("Object Preview")->setOverlay(result, resultAlpha);
-    // Plotter::get("Object Preview")->addImage(result);
-    Plotter::get("Object Preview")->show();
-    // Plotter::get("Object Preview")->addImage(dataV3);
+    ImageViewer::get("Object Preview")->setOverlay(result, resultAlpha);
+    // ImageViewer::get("Object Preview")->addImage(result);
+    ImageViewer::get("Object Preview")->show();
+    // ImageViewer::get("Object Preview")->addImage(dataV3);
 }
 
 void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocus)
@@ -2111,8 +2111,8 @@ void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocu
     focusedArea.iterateParallel([&](size_t i) {
         focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
     });
-    Plotter::get("Focus")->addImage(renderFocusArea());
-    Plotter::get("Focus")->show();
+    ImageViewer::get("Focus")->addImage(renderFocusArea());
+    ImageViewer::get("Focus")->show();
 }
 
 void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
@@ -2131,8 +2131,8 @@ void EnvObjsInterface::previewFlowEdition(Vector3 mousePos, Vector3 brushDir)
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
 
-    Plotter::get("Flowfield")->addImage(renderFlowfield());
-    Plotter::get("Flowfield")->show();
+    ImageViewer::get("Flowfield")->addImage(renderFlowfield());
+    ImageViewer::get("Flowfield")->show();
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter()
@@ -2172,8 +2172,8 @@ void EnvObjsInterface::showAllElementsOnPlotter()
         }
     }
 
-    Plotter::get("Topography")->addImage(img);
-    Plotter::get("Topography")->show();
+    ImageViewer::get("Topography")->addImage(img);
+    ImageViewer::get("Topography")->show();
 }
 
 void EnvObjsInterface::addObjectsHeightmaps()

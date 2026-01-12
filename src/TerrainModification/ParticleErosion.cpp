@@ -4,7 +4,7 @@
 #include "Graphics/Mesh.h"
 #include "TerrainModification/RockErosion.h"
 
-#include "Graphics/Plotter.h"
+#include "Graphics/ImageViewer.h"
 
 Vector3 ErosionParticle::predictNextPos(float dt)
 {
@@ -724,8 +724,8 @@ std::vector<ParticleHistory> ParticleErosion::process()
     flowfieldValues.raiseErrorOnBadCoord = false;
     flowfieldValues.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
 
-//    Plotter::get()->addImage(flowfieldValues.sliceXY(flowfieldValues.sizeZ / 2));
-//    Plotter::get()->show();
+//    ImageViewer::get()->addImage(flowfieldValues.sliceXY(flowfieldValues.sizeZ / 2));
+//    ImageViewer::get()->show();
 
 //    std::vector<BSpline> tunnels(quantity);
 //    std::vector<GridF> submodifications(quantity, GridF(modifications.getDimensions()));

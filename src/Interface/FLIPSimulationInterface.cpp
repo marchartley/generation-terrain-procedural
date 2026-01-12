@@ -159,9 +159,9 @@ void FLIPSimulationInterface::keyPressEvent(QKeyEvent *e)
     if (e->key() == Qt::Key_V) {
         GridF data(changesHistory.size(), 1, 1);
         data.data = changesHistory;
-        Plotter::get()->reset();
-        Plotter::get()->addPlot(data.medianBlur(20, 3, 3, true).data);
-        Plotter::get()->show();
+        ImageViewer::get()->reset();
+        ImageViewer::get()->addPlot(data.medianBlur(20, 3, 3, true).data);
+        ImageViewer::get()->show();
         e->accept();
     }
     return AbstractFluidSimulationInterface::keyPressEvent(e);
