@@ -9,6 +9,8 @@ FLIPSimulation::FLIPSimulation()
 FLIPSimulation::FLIPSimulation(float density, float width, float depth, float height, float spacing, float particleRadius, float maxParticles, float dt)
     : FluidSimulation(width, depth, height)
 {
+    this->usesTrianglesBoundaries = true;
+    this->usesGridBoundaries = false;
     init(density, width, depth, height, spacing, particleRadius, maxParticles, dt);
 }
 

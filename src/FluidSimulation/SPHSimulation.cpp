@@ -2,6 +2,9 @@
 
 SPHSimulation::SPHSimulation()
 {
+    this->usesTrianglesBoundaries = true;
+    this->usesGridBoundaries = false;
+
     this->dimensions = Vector3(100, 100, 30);
     this->nbParticles = 50000;
     this->dt = 0.01f;
