@@ -89,7 +89,8 @@ SliderElement::SliderElement(std::string label, float valMin, float valMax, floa
 
     QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
-    layout->addWidget(_label);
+    if (!label.empty())
+        layout->addWidget(_label);
     layout->addWidget(_slider);
     getWidget()->setLayout(layout);
 }
@@ -360,7 +361,9 @@ RangeSliderElement::RangeSliderElement(std::string label, float valMin, float va
 
     QBoxLayout* layout = new QHBoxLayout;
     layout->setMargin(0);
-    layout->addWidget(_label);
+    if (!label.empty()) {
+        layout->addWidget(_label);
+    }
     layout->addWidget(_slider);
     getWidget()->setLayout(layout);
 }

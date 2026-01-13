@@ -153,6 +153,7 @@ SOURCES += \
     src/Interface/FLIPSimulationInterface.cpp \
         src/Interface/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
+    src/Interface/GANPainterInterface.cpp \
         src/Interface/GravityInterface.cpp \
         src/Interface/HeightmapErosionInterface.cpp \
     src/Interface/HierarchicalListWidget.cpp \
@@ -346,6 +347,7 @@ HEADERS += \
     src/Interface/FLIPSimulationInterface.h \
     src/Interface/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
+    src/Interface/GANPainterInterface.h \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
     src/Interface/HierarchicalListWidget.h \

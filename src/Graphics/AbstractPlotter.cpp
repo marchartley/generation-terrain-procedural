@@ -625,6 +625,7 @@ AbstractPlotter* AbstractPlotter::saveFig(std::string filename)
     if (this->hasImage())
         p = QPixmap::fromImage(this->dataModel->imageData.computeDisplayedImage());
     p.save(QString::fromStdString(filename), "PNG");
+    std::cout << "Image " << filename << " saved." << std::endl;
     return this;
 }
 
@@ -760,7 +761,7 @@ AbstractPlotter* AbstractPlotter::selectData(const Vector3& pos)
 
 AbstractPlotter* AbstractPlotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
 {
-    if (this->hasImage() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
+    if (!this->hasImage() || relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
         return this;
     std::ostringstream oss;
     Vector3 size = this->dataModel->getImage().getDimensions();

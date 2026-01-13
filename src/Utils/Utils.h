@@ -18,6 +18,7 @@ namespace interpolation {
     float cosine(float _x, float _min = 0.0, float _max = 1.0);
     float binary(float _x, float _min = 0.0, float _max = 1.0);
     float wyvill(float _x, float _min = 0.0, float _max = 1.0);
+    float power_wyvill(float _x, float power, float _min = 0.0, float _max = 1.0);
 
     // Found in A Review of Digital Terrain Modeling (Eric Galin, Eric Guérin, Adrien Peytavie, Guillaume Cordonnier, Marie-Paule
     // Cani, Bedrich Benes, James Gain) [2019]

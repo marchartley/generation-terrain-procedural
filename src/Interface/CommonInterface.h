@@ -92,6 +92,8 @@ public:
     SliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
     SliderElement(std::string label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
 
+    SliderElement* setValue(float newValue) { slider()->setfValue(newValue); }
+
     FancySlider* slider();
     QLabel* label();
 

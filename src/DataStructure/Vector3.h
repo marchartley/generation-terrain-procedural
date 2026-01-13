@@ -284,7 +284,7 @@ using Vector3i = Vec3<int>;
 
 
 template<class T>
-Vec3<T>::Vec3(T x, T y, T z, bool valid) : v({x, y, z}), valid(valid) {
+Vec3<T>::Vec3(T x, T y, T z, bool valid) : v{x, y, z}, valid(valid) {
 
 }
 template<class T>
@@ -540,7 +540,8 @@ template<class T>
 Vec3<T> Vec3<T>::slerp(float t, const Vec3 &A, const Vec3 &B) {
     float lengthA = A.norm();
     float lengthB = B.norm();
-    auto start = A / lengthA, end = B / lengthB;
+    auto start = (lengthA > 0 ? A / lengthA : A);
+    auto end = (lengthB > 0 ? B / lengthB : B);
     float dot = start.dot(end);
     dot = std::clamp(dot, -1.0f, 1.0f);
 

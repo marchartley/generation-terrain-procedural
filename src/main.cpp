@@ -290,7 +290,6 @@ void testingSmoothmaxInCPP() {
 
 int main(int argc, char *argv[])
 {
-/*
     auto allVars = getAllEnvironmentVariables();
     for (auto& [key, val] : allVars) {
         // auto lowerKey = toLower(key);
@@ -299,7 +298,7 @@ int main(int argc, char *argv[])
         // auto cmd = const_cast<char*>(s_cmd.c_str());
         setenv(key.c_str(), val.c_str(), 1);
         //        }
-    }*/
+    }
 
     /*
     QProcess ganProc;
