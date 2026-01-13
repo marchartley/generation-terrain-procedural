@@ -7,6 +7,8 @@ WarpedFluidSimulation::WarpedFluidSimulation()
 WarpedFluidSimulation::WarpedFluidSimulation(int x, int y, int z)
     : FluidSimulation(x, y, 1)
 {
+    this->usesTrianglesBoundaries = false;
+    this->usesGridBoundaries = true;
     this->recomputeVelocities();
 }
 

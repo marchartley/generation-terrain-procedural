@@ -166,33 +166,36 @@ void AbstractFluidSimulationInterface::updateBoundariesMesh()
     values.iterateParallel([&](const Vector3i& p) {
         values(p) = (values(p) > 0 ? values(p) : Vector3::isInBox(p, Vector3(-1, 3, 3), voxelGrid->getDimensions() - Vector3(-1, 3, -1)) ? -1.f : 1.f);
     });
-
-    AABBox box;
-    auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
-    for (auto& tri : triangles) {
-        Vector3 center = (tri[0] + tri[1] + tri[2]) / 3.f;
-        for (auto& p : tri) {
-            p += (p - center).setMag(.1f);
-            p = p *  _simulation->dimensions / values.getDimensions();
-            box.expand(p);
-        }
+    if (this->_simulation->usesGridBoundaries) {
+        _simulation->setObstacles(values.binarize());
     }
-    _simulation->setObstacles(triangles);
-    _simulation->setObstacles(values.binarize());
-
-    auto usedTrianglesIndices = _simulation->obstacleTriangleTree.getAllStoredTrianglesIndices();
-//    std::vector<size_t> usedTrianglesIndices(triangles.size());
-//    for (size_t i = 0; i < usedTrianglesIndices.size(); i++)
-//        usedTrianglesIndices[i] = i;
-    std::vector<Vector3> allVertices;
-    allVertices.reserve(usedTrianglesIndices.size() * 3);
-    for (auto iTriangle : usedTrianglesIndices) {
-        const auto& triangle = triangles[iTriangle];
-        for (const auto& vertex : triangle) {
-            allVertices.push_back(vertex * (finalDimensions / _simulation->dimensions));
+    if (this->_simulation->usesTrianglesBoundaries) {
+        AABBox box;
+        auto triangles = Mesh::applyMarchingCubes(values).getTriangles();
+        for (auto& tri : triangles) {
+            Vector3 center = (tri[0] + tri[1] + tri[2]) / 3.f;
+            for (auto& p : tri) {
+                p += (p - center).setMag(.1f);
+                p = p *  _simulation->dimensions / values.getDimensions();
+                box.expand(p);
+            }
         }
+        _simulation->setObstacles(triangles);
+
+        auto usedTrianglesIndices = _simulation->obstacleTriangleTree.getAllStoredTrianglesIndices();
+    //    std::vector<size_t> usedTrianglesIndices(triangles.size());
+    //    for (size_t i = 0; i < usedTrianglesIndices.size(); i++)
+    //        usedTrianglesIndices[i] = i;
+        std::vector<Vector3> allVertices;
+        allVertices.reserve(usedTrianglesIndices.size() * 3);
+        for (auto iTriangle : usedTrianglesIndices) {
+            const auto& triangle = triangles[iTriangle];
+            for (const auto& vertex : triangle) {
+                allVertices.push_back(vertex * (finalDimensions / _simulation->dimensions));
+            }
+        }
+        boundariesMesh.fromArray(allVertices);
     }
-    boundariesMesh.fromArray(allVertices);
 }
 
 void AbstractFluidSimulationInterface::computeSimulation(int nbSteps)

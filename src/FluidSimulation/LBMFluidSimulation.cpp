@@ -3,6 +3,8 @@
 LBMFluidSimulation::LBMFluidSimulation(bool uses3D)
     : FluidSimulation(30, 30, (uses3D ? 50 : 1)), uses3D(uses3D)
 {
+    this->usesTrianglesBoundaries = false;
+    this->usesGridBoundaries = true;
     c = (uses3D ? c3D : c2D);
 //    GridF heights(dimensions);
     f = Matrix3<GridF>(dimensions, GridF(c.size(), 1));

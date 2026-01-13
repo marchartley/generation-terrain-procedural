@@ -51,6 +51,9 @@ public:
     int currentStep = 0;
     int _cachedStep = -1;
     GridV3 _cachedVelocity;
+
+    bool usesTrianglesBoundaries = true;
+    bool usesGridBoundaries = true;
 };
 
 #endif // FLUIDSIMULATION_H

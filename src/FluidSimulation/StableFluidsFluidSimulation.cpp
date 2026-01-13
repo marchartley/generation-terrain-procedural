@@ -411,6 +411,8 @@ StableFluidsSimulation::StableFluidsSimulation()
 StableFluidsSimulation::StableFluidsSimulation(int sizeX, int sizeY, int sizeZ, float dt, float diffusionAmount, float viscosity, int iterations)
     : FluidSimulation(sizeX, sizeY, sizeZ), sizeX(sizeX), sizeY(sizeY), sizeZ(sizeZ), dt(dt), diffusionAmount(diffusionAmount), viscosity(viscosity), iterations(iterations)
 {
+    this->usesTrianglesBoundaries = false;
+    this->usesGridBoundaries = true;
 //    obstacles = GridF(dimensions);
     density_old = GridF(dimensions);
     density = GridF(dimensions);

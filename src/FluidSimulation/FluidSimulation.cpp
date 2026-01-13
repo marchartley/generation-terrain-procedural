@@ -44,6 +44,7 @@ void FluidSimulation::setVelocity(int x, int y, int z, const Vector3 &amount)
 }
 
 void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &triangles) {
+    if (!this->usesTrianglesBoundaries) return;
     this->triangles = triangles;
 //    obstacleTriangleTree = BVHTree(); //(triangles);
     obstacleTriangleTree.build(Triangle::vectorsToTriangles(triangles));
@@ -65,16 +66,19 @@ void FluidSimulation::setObstacles(const std::vector<std::vector<Vector3> > &tri
 }
 
 void FluidSimulation::setObstacles(const GridF &obstacle) {
+    if (!this->usesGridBoundaries) return;
     this->obstacleGrid = obstacle.resize(dimensions).binarize();
     this->obstacleGradient = obstacleGrid.gradient().normalized();
 }
 
 void FluidSimulation::addObstacles(const std::vector<std::vector<Vector3> > &triangles)
 {
+    if (!this->usesTrianglesBoundaries) return;
     this->setObstacles(vectorUnion(triangles, this->triangles));
 }
 
 void FluidSimulation::addObstacles(const GridF& obstacle)
 {
+    if (!this->usesGridBoundaries) return;
     this->setObstacles(this->obstacleGrid + obstacle);
 }
