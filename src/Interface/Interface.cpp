@@ -27,6 +27,7 @@
 #include "Interface/EnvObjectFluidSimulation.h"
 #include "Interface/TerrainComparatorInterface.h"
 #include "Interface/ScreenshotInterface.h"
+#include "Interface/GANPainterInterface.h"
 
 #include "Interface/CommonInterface.h"
 
@@ -70,7 +71,8 @@ ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displa
         std::make_shared<EnvObjsInterface>(this),
         std::make_shared<EnvObjectFluidSimulation>(this),
         std::make_shared<TerrainComparatorInterface>(this),
-        std::make_shared<ScreenshotInterface>(this)
+        std::make_shared<ScreenshotInterface>(this),
+        std::make_shared<GANPainterInterface>(this)
     };
 
     this->actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>();
@@ -160,7 +162,9 @@ ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displa
             for (auto& otherActionInterface : this->actionInterfaces) {
                 QObject::connect(actionInterface.second.get(), &ActionInterface::terrainUpdated, this, [&]() {
                     QObject::blockSignals(true);
-                    otherActionInterface.second->afterTerrainUpdated();
+                    displayProcessTime("Processing 'afterTerrainUpdate' from '" + otherActionInterface.first + "'... ", [&]() {
+                        otherActionInterface.second->afterTerrainUpdated();
+                    });
                     QObject::blockSignals(false);
                     this->viewer->update();
                 });

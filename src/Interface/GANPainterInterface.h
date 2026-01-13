@@ -1,0 +1,23 @@
+#ifndef GANPAINTERINTERFACE_H
+#define GANPAINTERINTERFACE_H
+
+#include "Interface/Interface.h"
+
+class GANPainterInterface : public ActionInterface
+{
+    Q_OBJECT
+public:
+    GANPainterInterface(QWidget *parent = nullptr);
+    ~GANPainterInterface();
+
+    void display(const Vector3& camPos = Vector3(false));
+    void replay(nlohmann::json action);
+
+    void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
+
+    QLayout* createGUI();
+
+    QProcess* ganProc;
+};
+
+#endif // GANPAINTERINTERFACE_H

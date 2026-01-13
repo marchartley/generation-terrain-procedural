@@ -139,6 +139,12 @@ float wyvill(float _x, float _min, float _max)
     return inv_linear(std::pow(1 - x*x, 3), _min, _max);
 }
 
+float power_wyvill(float _x, float power, float _min, float _max)
+{
+    float x = linear(_x, _min, _max);
+    return inv_linear(std::pow(1 - x*x, power), _min, _max);
+}
+
 float fault_distance(float distance, float impactRadius)
 {
 //    float a = distance / impactRadius;

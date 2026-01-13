@@ -417,7 +417,7 @@ Vector3 Collision::projectPointOnSegment(const Vector3& point, const Vector3& se
 {
     Vector3 startToPoint = point - segmentStart;
     Vector3 segment = segmentEnd - segmentStart;
-    float t = startToPoint.dot(segment) / segment.norm2();
+    float t = (segment.norm2() > 0 ? startToPoint.dot(segment) / segment.norm2() : 0.f);
     t = std::max(0.f, std::min(1.f, t)); // Stay on segment
     return segmentStart + t * segment;
 }

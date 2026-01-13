@@ -12,7 +12,7 @@
                   gpu_ids: 0                             
                 init_gain: 0.02                          
                 init_type: normal                        
-                    input: /media/marc/Data/NN Datasets/1/input_label.png	[default: None]
+                    input: cGANdata/input_label.png      	[default: None]
                  input_nc: 3                             
                   isTrain: False                         	[default: None]
                 load_iter: 0                             	[default: 0]
@@ -29,7 +29,7 @@
                   no_flip: False                         
                      norm: batch                         
               num_threads: 0                             
-                   output: /media/marc/Data/NN Datasets/1/result_height.png	[default: None]
+                   output: cGANdata/result_height.png    	[default: None]
                 output_nc: 3                             
                     phase: test                          
                preprocess: resize_and_crop               
