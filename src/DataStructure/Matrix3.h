@@ -1390,44 +1390,151 @@ Matrix3<T> Matrix3<T>::LaplacianOfGaussian(int sizeOnX, int sizeOnY, int sizeOnZ
 }
 template<class T>
 Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const {
+    /*
     Matrix3<T> tempResult = *this; //(this->sizeX, this->sizeY, this->sizeZ);
     tempResult.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     tempResult.raiseErrorOnBadCoord = false;
     Matrix3<T> result(this->sizeX, this->sizeY, this->sizeZ);
     result.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     result.raiseErrorOnBadCoord = false;
-    float divisor = (sizeOnX * sizeOnY * sizeOnZ);
 
     // Perform 1D convolution along x-axis
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
         for (int dx = -(sizeOnX / 2); dx <= (sizeOnX / 2); ++dx) {
             if (x + dx >= 0 && x + dx < this->sizeX) {
-                neighboringSum += tempResult.at(x + dx, y, z);
+                neighboringSum += tempResult.unsafe(x + dx, y, z);
             }
         }
-        result.at(x, y, z) = neighboringSum;
+        result.unsafe(x, y, z) = neighboringSum;
     });
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
         for (int dx = -(sizeOnY / 2); dx <= (sizeOnY / 2); ++dx) {
             if (y + dx >= 0 && y + dx < this->sizeY) {
-                neighboringSum += result.at(x, y + dx, z);
+                neighboringSum += result.unsafe(x, y + dx, z);
             }
         }
-        tempResult.at(x, y, z) = neighboringSum;
+        tempResult.unsafe(x, y, z) = neighboringSum;
     });
     this->iterateParallel([&](int x, int y, int z) {
         T neighboringSum = T();
         for (int dx = -(sizeOnZ / 2); dx <= (sizeOnZ / 2); ++dx) {
             if (z + dx >= 0 && z + dx < this->sizeZ) {
-                neighboringSum += tempResult.at(x, y, z + dx);
+                neighboringSum += tempResult.unsafe(x, y, z + dx);
             }
         }
-        result.at(x, y, z) = neighboringSum;
+        result.unsafe(x, y, z) = neighboringSum;
     });
 
-    return result / divisor;
+    return result / T(sizeOnX * sizeOnY * sizeOnZ);
+    */
+    auto mirror_idx = [&](int i, int n) {
+        if (n <= 1) return 0;
+        // small-radius typical, so loop is tiny near borders
+        while ((unsigned)i >= (unsigned)n) {
+            if (i < 0) i = -i - 1;
+            else       i = 2*n - i - 1;
+        }
+        return i;
+    };
+
+    const int X = this->sizeX;
+    const int Y = this->sizeY;
+    const int Z = this->sizeZ;
+
+    const int rx = sizeOnX / 2;
+    const int ry = sizeOnY / 2;
+    const int rz = sizeOnZ / 2;
+
+    // Scratch buffers
+    Matrix3<T> buf1(X, Y, Z);
+    Matrix3<T> buf2(X, Y, Z);
+
+    const T* src = this->data.data();
+    T* tmp  = buf1.data.data();
+    T* tmp2 = buf2.data.data();
+
+    const int XY = X * Y;
+
+    // ---- Pass 1: X (contiguous) ----
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int z = 0; z < Z; ++z) {
+        for (int y = 0; y < Y; ++y) {
+            const int base = z*XY + y*X;
+
+            // initial window sum at x=0
+            T sum = T();
+            for (int dx = -rx; dx <= rx; ++dx) {
+                int xi = mirror_idx(dx, X);
+                sum += src[base + xi];
+            }
+            tmp[base + 0] = sum;
+
+            // slide
+            for (int x = 1; x < X; ++x) {
+                int x_add = mirror_idx(x + rx, X);
+                int x_sub = mirror_idx(x - rx - 1, X);
+                sum += src[base + x_add] - src[base + x_sub];
+                tmp[base + x] = sum;
+            }
+        }
+    }
+
+    // ---- Pass 2: Y (stride = X) ----
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int z = 0; z < Z; ++z) {
+        for (int x = 0; x < X; ++x) {
+            const int baseZ = z*XY;
+
+            // initial sum at y=0
+            T sum = T();
+            for (int dy = -ry; dy <= ry; ++dy) {
+                int yi = mirror_idx(dy, Y);
+                sum += tmp[baseZ + yi*X + x];
+            }
+            tmp2[baseZ + 0*X + x] = sum;
+
+            for (int y = 1; y < Y; ++y) {
+                int y_add = mirror_idx(y + ry, Y);
+                int y_sub = mirror_idx(y - ry - 1, Y);
+                sum += tmp[baseZ + y_add*X + x] - tmp[baseZ + y_sub*X + x];
+                tmp2[baseZ + y*X + x] = sum;
+            }
+        }
+    }
+
+    // ---- Pass 3: Z (stride = X*Y) ----
+    Matrix3<T> out(X, Y, Z);
+    T* dst = out.data.data();
+
+
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < Y; ++y) {
+        for (int x = 0; x < X; ++x) {
+
+            // initial sum at z=0
+            T sum = T();
+            for (int dz = -rz; dz <= rz; ++dz) {
+                int zi = mirror_idx(dz, Z);
+                sum += tmp2[zi*XY + y*X + x];
+            }
+            dst[0*XY + y*X + x] = sum;
+
+            for (int z = 1; z < Z; ++z) {
+                int z_add = mirror_idx(z + rz, Z);
+                int z_sub = mirror_idx(z - rz - 1, Z);
+                sum += tmp2[z_add*XY + y*X + x] - tmp2[z_sub*XY + y*X + x];
+                dst[z*XY + y*X + x] = sum;
+            }
+        }
+    }
+    const float inv = 1.0f / float(sizeOnX * sizeOnY * sizeOnZ);
+
+    // scale in-place (or fuse into last pass if you prefer)
+#pragma omp parallel for schedule(static)
+    for (int i = 0; i < X*Y*Z; ++i) dst[i] *= inv;
+    return out;
 }
 
 template<class T>

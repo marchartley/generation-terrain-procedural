@@ -164,7 +164,7 @@ ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displa
                     QObject::blockSignals(true);
                     displayProcessTime("Processing 'afterTerrainUpdate' from '" + otherActionInterface.first + "'... ", [&]() {
                         otherActionInterface.second->afterTerrainUpdated();
-                    });
+                    }, false);
                     QObject::blockSignals(false);
                     this->viewer->update();
                 });

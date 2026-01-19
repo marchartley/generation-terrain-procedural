@@ -14,11 +14,13 @@ python -m visdom.start
 python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py "path/to/saving/folder/"
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A "path/to/saving/folder/features/" --fold_B "path/to/saving/folder/heightmaps/" --fold_AB "path/to/saving/folder/AB"
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot "path/to/saving/folder/AB/" --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot "path/to/saving/folder/AB/" --name pretrained_terrains_labelsToHeights --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1
 
 # (With latest paths)
 python ~/generation-terrain-procedural/Python_tests/arrange_dataset_for_pix2pix.py /media/marc/Data/synthetic_terrains_dataset/
 python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/datasets/combine_A_and_B.py --fold_A /media/marc/Data/synthetic_terrains_dataset/features/ --fold_B /media/marc/Data/synthetic_terrains_dataset/heightmaps/ --fold_AB /media/marc/Data/synthetic_terrains_dataset/AB
-python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset/AB/ --name labels_to_terrain_pacific_graphics_2025_larger_reef --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --env_name "Training name" --continue_train
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-features_undeformed/AB/ --name labels_to_terrain_features_undeformed --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
+python ~/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/train.py --dataroot /media/marc/Data/synthetic_terrains_dataset-no_dendritic/AB/ --name labels_to_terrain_no_dendritic --model pix2pix --direction AtoB --display_id 1 --save_epoch_freq 1 --continue_train
 
 sudo rmmod nvidia_uvm
 sudo modprobe nvidia_uvm

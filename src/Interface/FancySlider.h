@@ -14,7 +14,12 @@ public:
     float getfValue();
     void setfValue(float val);
     void setfRange(float min, float max);
+    void addTicks(const std::vector<std::pair<float, std::string>>& posAndLabels);
     float multiplier;
+
+    std::vector<std::pair<float, std::string>> ticksPositionsAndLabels;
+
+    void paintEvent(QPaintEvent *ev);
 
 Q_SIGNALS:
     void floatValueChanged(float value);

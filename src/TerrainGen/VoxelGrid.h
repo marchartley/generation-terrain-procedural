@@ -39,7 +39,7 @@ public:
     VoxelGrid(Heightmap& grid);
     VoxelGrid(int nx, int ny, int nz, float noise_shifting = 0.0);
     ~VoxelGrid();
-    void from2DGrid(Heightmap grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
+    void from2DGrid(const Heightmap &grid, Vector3 subsectionStart = Vector3(), Vector3 subsectionEnd = Vector3(), float scaleFactor = 1.f);
     void fromLayerBased(LayerBasedGrid layerBased, int fixedHeight = -1);
     void fromImplicit(ImplicitPatch* implicitTerrain, int fixedHeight = -1);
     VoxelGrid *fromCachedData();

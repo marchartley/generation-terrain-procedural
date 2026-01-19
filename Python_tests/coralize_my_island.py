@@ -6,7 +6,7 @@ from jupyterlab.semver import outside
 from scipy.ndimage import convolve
 from scipy.signal import convolve2d
 
-from Python_tests.smoothmax_tests import smoothmax
+from smoothmax_tests import smoothmax
 from heightmap_from_skeleton import *
 import numpy as np
 import matplotlib.pyplot as plt

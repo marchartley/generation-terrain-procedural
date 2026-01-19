@@ -278,14 +278,15 @@ float computeShadowOcclusion(vec3 pos) {
 
     float occlusions = 0;
     int evaluatingLights = 1;
-    int nbSamples = 10;
+    int nbSamples = 20;
     for (int iLight = 0; iLight < evaluatingLights; iLight++) {
         for (int iSample = 0; iSample < nbSamples; iSample++) {
+            vec3 seed = lights[iLight].position + pos + iSample + iLight;
             vec3 toLight = lights[iLight].position - pos;
-            vec3 dir = normalize(normalize(toLight * vec3(1, 1, 1.0/heightFactor)) + fbmToVec3(vec2(iSample)) * 0.10);
-            vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * (iSample + 1));
-            int try = 0;
-            vec3 offset = fbm3ToVec3(grealNormal + iSample + try);
+            vec3 dir = normalize(normalize(toLight * vec3(1, 1, 1.0/heightFactor)) + (fbm3ToVec3(seed) - vec3(.5f)) * 0.10);
+            vec3 currentPosition = pos + (ceil(abs(dir)) * sign(dir) * ((2.f * iSample / float(nbSamples)) + 1.f));
+            // int try = 0;
+            vec3 offset = grealNormal * (fbm3ToVec3(grealNormal + seed) * 0.1f);
             if (dot(offset, grealNormal) <= 0) {
                 offset *= -1;
             }
@@ -486,10 +487,11 @@ void main(void)
     vec3 green = vec3(0.5, 0.8, 0.5);
     float relDepth = clamp(depth / 20.0, 0.0, 1.0);
 
-    if (displayDepth)
+    if (displayDepth) {
         fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : mix(blue, green, clamp(pow(relDepth, (ambiantOcclusionFactor != 0.5 ? 1.0/(1 + ambiantOcclusionFactor-0.5) : 10.0)), 0.0, 1000.0))), 1.0);
-    else
+    } else {
         fragColor = vec4(fragColor.xyz * (depth < 0 ? vec3(1.0) : blue), 1.0);
+    }
 //    fragColor = vec4(vec3(abs(varyingNormal)), 1);
 
     /*

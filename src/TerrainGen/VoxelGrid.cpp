@@ -21,11 +21,12 @@ VoxelGrid::~VoxelGrid()
 {
 //    this->chunks.clear();
 }
-void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
+void VoxelGrid::from2DGrid(const Heightmap& grid, Vector3 subsectionStart, Vector3 subsectionEnd, float scaleFactor) {
     float zScale = 1.f;
     float height = this->getSizeZ();
     // std::cout << "Voxels height: " << height << std::endl;
     this->_cachedVoxelValues = GridF(grid.getSizeX(), grid.getSizeY(), height/*grid.getSizeZ() * zScale*/);
+
     this->initMap();
     if (subsectionEnd == subsectionStart) {
         // If they are not set, we want the entire map
@@ -33,7 +34,7 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
         subsectionEnd = Vector3(grid.getSizeX(), grid.getSizeY());
 //        this->getSizeX() = grid.getSizeX();
 //        this->getSizeY() = grid.getSizeY();
-//        this->getSizeZ() = grid.getMaxHeight() /* * scaleFactor*/ * 2;
+//        this->getSizeZ() = grid.getMaxHeight() * 2;
     } else {
         // Otherwise, we want a subset of the map, we just need to clamp the dimensions
         subsectionStart.x() = std::max(subsectionStart.x(), 0.f);
@@ -52,24 +53,44 @@ void VoxelGrid::from2DGrid(Heightmap grid, Vector3 subsectionStart, Vector3 subs
     int sizeY = this->getSizeY();
     int sizeZ = this->getSizeZ();
     float gridMaxHeight = grid.getMaxHeight();
-    #pragma omp parallel for collapse(2)
-    for (int x = 0; x < sizeX; x++) {
-        for (int y = 0; y < sizeY; y++) {
-            float grid_height = gridHeights.at(x, y) * (sizeZ / gridMaxHeight);
-            if (gridMaxHeight < 1e-5) grid_height = 0;
-            int z = int(std::max(grid_height, 2.f));
-            // Positive values
-            for (int i = 0; i < int(z); i++) {
-                _cachedVoxelValues.at(x, y, i) = .5f;
-            }
-            if (z < this->getSizeZ()) {
-                _cachedVoxelValues.at(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
-                for (int i = z+1; i < this->getSizeZ(); i++) {
-                    _cachedVoxelValues.at(x, y, i) = -.5f;
-                }
-            }
+    // gridHeights.iterateParallel([&](int x, int y, int _z) {
+    // /*#pragma omp parallel for collapse(2)
+    // for (int x = 0; x < sizeX; x++) {
+    //     for (int y = 0; y < sizeY; y++) {*/
+    //         float grid_height = gridHeights.unsafe(x, y) * (sizeZ / gridMaxHeight);
+    //         if (gridMaxHeight < 1e-5) grid_height = 0;
+    //         int z = int(std::max(grid_height, 2.f));
+    //         // Positive values
+    //         for (int i = 0; i < int(z); i++) {
+    //             _cachedVoxelValues.unsafe(x, y, i) = .5f;
+    //         }
+    //         if (z < this->getSizeZ()) {
+    //             _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
+    //             for (int i = z+1; i < this->getSizeZ(); i++) {
+    //                 _cachedVoxelValues.unsafe(x, y, i) = -.5f;
+    //             }
+    //         }
+    // });
+    //         /*
+    //     }
+    // }*/
+
+    _cachedVoxelValues.iterateParallel([&](int x, int y, int z) {
+        float grid_height = gridHeights.unsafe(x, y) * (sizeZ / gridMaxHeight);
+        if (gridMaxHeight < 1e-5) grid_height = 0;
+        float grid_z = std::max(grid_height, 2.f);
+        _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(clamp(grid_z - z, -1.f, 1.f), -.5f, .5f);
+        /* // Positive values
+        for (int i = 0; i < int(z); i++) {
+            _cachedVoxelValues.unsafe(x, y, i) = .5f;
         }
-    }
+        if (z < this->getSizeZ()) {
+            _cachedVoxelValues.unsafe(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
+            for (int i = z+1; i < this->getSizeZ(); i++) {
+                _cachedVoxelValues.unsafe(x, y, i) = -.5f;
+            }
+        }*/
+    });
     _cachedVoxelValues = _cachedVoxelValues.meanSmooth(3, 3, 3, true).meanSmooth(3, 3, 3, true);
     this->fromCachedData();
 //    this->smoothVoxels();
@@ -1144,22 +1165,26 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
         return Vector3::invalid();
 
     Vector3 normalizedDir = dir.normalized();
+    if (std::abs(normalizedDir.x()) < 1e-5) normalizedDir.x() = 1000;
+    if (std::abs(normalizedDir.y()) < 1e-5) normalizedDir.y() = 1000;
+    if (std::abs(normalizedDir.z()) < 1e-5) normalizedDir.z() = 1000;
 
     auto values = this->getVoxelValues();
     values.raiseErrorOnBadCoord = false;
 
+
     Vector3 stepSizes = Vector3(1, 1, 1) / normalizedDir;
-    float tMaxX = (dir.x() > 0) ? (std::ceil(currentPosition.x()) - currentPosition.x()) / dir.x() :
-                      (currentPosition.x() - std::floor(currentPosition.x())) / (-dir.x());
-    float tMaxY = (dir.y() > 0) ? (std::ceil(currentPosition.y()) - currentPosition.y()) / dir.y() :
-                  (currentPosition.y() - std::floor(currentPosition.y())) / (-dir.y());
-    float tMaxZ = (dir.z() > 0) ? (std::ceil(currentPosition.z()) - currentPosition.z()) / dir.z() :
-                  (currentPosition.z() - std::floor(currentPosition.z())) / (-dir.z());
+    float tMaxX = (normalizedDir.x() > 0) ? (std::ceil(currentPosition.x()) - currentPosition.x()) / normalizedDir.x() :
+                      (currentPosition.x() - std::floor(currentPosition.x())) / (-normalizedDir.x());
+    float tMaxY = (normalizedDir.y() > 0) ? (std::ceil(currentPosition.y()) - currentPosition.y()) / normalizedDir.y() :
+                  (currentPosition.y() - std::floor(currentPosition.y())) / (-normalizedDir.y());
+    float tMaxZ = (normalizedDir.z() > 0) ? (std::ceil(currentPosition.z()) - currentPosition.z()) / normalizedDir.z() :
+                  (currentPosition.z() - std::floor(currentPosition.z())) / (-normalizedDir.z());
 
     // Calculate steps in each axis based on stepSizes
-    float tDeltaX = std::abs(stepSizes.x() * dir.x());
-    float tDeltaY = std::abs(stepSizes.y() * dir.y());
-    float tDeltaZ = std::abs(stepSizes.z() * dir.z());
+    float tDeltaX = std::abs(stepSizes.x() * normalizedDir.x());
+    float tDeltaY = std::abs(stepSizes.y() * normalizedDir.y());
+    float tDeltaZ = std::abs(stepSizes.z() * normalizedDir.z());
 
     while (Vector3::isInBox(currentPosition, myAABBox.min(), myAABBox.max())) {
         if (values(currentPosition) > 0) {
@@ -1167,13 +1192,13 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
         }
 
         if (tMaxX < tMaxY && tMaxX < tMaxZ) {
-            currentPosition.x() += dir.x();
+            currentPosition.x() += normalizedDir.x();
             tMaxX += tDeltaX;
         } else if (tMaxY < tMaxX && tMaxY < tMaxZ) {
-            currentPosition.y() += dir.y();
+            currentPosition.y() += normalizedDir.y();
             tMaxY += tDeltaY;
         } else {
-            currentPosition.z() += dir.z();
+            currentPosition.z() += normalizedDir.z();
             tMaxZ += tDeltaZ;
         }
     }
