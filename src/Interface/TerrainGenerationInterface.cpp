@@ -80,8 +80,8 @@ void TerrainGenerationInterface::heightmapToImplicit()
 void TerrainGenerationInterface::heightmapToAll()
 {
     displayProcessTime("Heightmap to voxels... ", [&]() { heightmapToVoxels(); });
-    displayProcessTime("Heightmap to layers... ", [&]() { heightmapToLayers(); });
-    displayProcessTime("Heightmap to implicit.. ", [&]() { heightmapToImplicit(); });
+    displayProcessTime("Heightmap to layers... ", [&]() { heightmapToLayers(); }, false);
+    displayProcessTime("Heightmap to implicit.. ", [&]() { heightmapToImplicit(); }, false);
 }
 
 void TerrainGenerationInterface::voxelsToHeightmap()
@@ -1069,6 +1069,8 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 heightmapMesh.shader->setFloat("ambiantOcclusionFactor", ambiantOcclusionFactor);
                 heightmapMesh.shader->setBool("displayAsComparisonTerrain", displayAsComparativeMode);
                 heightmapMesh.shader->setFloat("heightFactor", heightFactor);
+                heightmapMesh.shader->setBool("displayDepth", displayDepth);
+                // heightmapMesh.shader->setBool("displayShadows", displayShadows);
                 if (voxelGrid->getDimensions() == initialTerrainValues.getDimensions()) {
                     heightmapMesh.shader->setTexture3D("dataChangesFieldTex", 3, getHeightmapChanges(voxelGrid, initialTerrainValues) + 2.f);
                 }

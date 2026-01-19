@@ -1,3 +1,4 @@
+import argparse
 import cProfile
 import glob
 import os.path
@@ -13,7 +14,7 @@ import matplotlib.pyplot as plt
 import PIL.Image
 import PIL.ImageChops
 
-from Python_tests.smoothmax_tests import smoothmax
+from smoothmax_tests import smoothmax
 
 def bb_intersection_over_union(boxA, boxB):
     # determine the (x, y)-coordinates of the intersection rectangle
@@ -189,6 +190,27 @@ def addDistortions(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, posit
     currentImg.paste(PIL.Image.fromarray(curr.astype(np.uint8)))
     return currentImg
 
+def addResistance(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, position: Tuple[int, int]) -> PIL.Image.Image:
+    curr = np.array(currentImg, dtype=np.float32)
+    paste = np.array(addedImg, dtype=np.float32)
+
+    x_off, y_off = position
+    h, w = paste.shape[:2]
+
+    # Calculate bounds
+    y1, y2 = max(0, y_off), min(curr.shape[0], y_off + h)
+    x1, x2 = max(0, x_off), min(curr.shape[1], x_off + w)
+    py1, py2 = y1 - y_off, y2 - y_off
+    px1, px2 = x1 - x_off, x2 - x_off
+
+    # Apply smooth maximum (fifth root of sum of fifth powers)
+    region = curr[y1:y2, x1:x2]
+    paste_region = paste[py1:py2, px1:px2]
+    result = smoothmax(region, paste_region, k=5) # np.power(np.power(region, 5) + np.power(paste_region, 5), 1/5)
+
+    curr[y1:y2, x1:x2] = result
+    currentImg.paste(PIL.Image.fromarray(np.clip(curr, 0, 255).astype(np.uint8)))
+    return currentImg
 
 
 #
@@ -293,16 +315,21 @@ def addDistortions(currentImg: PIL.Image.Image, addedImg: PIL.Image.Image, posit
 #             # plt.imshow(results[2], cmap="gray", vmin=0, vmax=255)
 #             # plt.show()
 def main():
-    dataset_folder = "/media/marc/Data/synthetic_terrains_dataset/"
+    parser = argparse.ArgumentParser(description="Program to increase the dataset of radial islands.")
+    parser.add_argument('path', nargs='?', default='/media/marc/Data/synthetic_terrains_dataset/', help='Path of the dataset')
+    args = parser.parse_args()
+
+    dataset_folder = args.path
     heightmaps_folder = dataset_folder + "heightmaps/"
     features_folder = dataset_folder + "features/"
     distortions_folder = dataset_folder + "distortions/"
+    resistance_folder = dataset_folder + "resistance/"
 
     allHeightmaps = glob.glob(heightmaps_folder + "*.png")
 
-    folders = [heightmaps_folder, features_folder, distortions_folder]
+    folders = [heightmaps_folder, features_folder, distortions_folder, resistance_folder]
 
-    defaultColors = [0, (255, 0, 0), (127, 127, 127)]
+    defaultColors = [0, (255, 0, 0), (127, 127, 127), 127]
 
     for iFile, fullpath in enumerate(allHeightmaps):
         print(f"{iFile + 1}/{len(allHeightmaps)}")
@@ -349,7 +376,8 @@ def main():
             results = [
                 PIL.Image.new("L", (256, 256), defaultColors[0]),
                 PIL.Image.new("RGB", (256, 256), defaultColors[1]),
-                PIL.Image.new("RGB", (256, 256), defaultColors[2])
+                PIL.Image.new("RGB", (256, 256), defaultColors[2]),
+                PIL.Image.new("L", (256, 256), defaultColors[3])
             ]
 
             # Sample one image per transformation (e.g., 5 different images for 5 sub-transforms)
@@ -362,6 +390,7 @@ def main():
                     Image2(PIL.Image.open(heightmaps_folder + fname).convert("L")),
                     Image2(PIL.Image.open(features_folder + fname).convert("RGB")),
                     Image2(PIL.Image.open(distortions_folder + fname).convert("RGB")),
+                    Image2(PIL.Image.open(resistance_folder + fname).convert("L")),
                 ]
                 for i, img in enumerate(originals):
                     img.fillColor = defaultColors[i]
@@ -385,6 +414,8 @@ def main():
                         addFeatures(res, orig.img, position)
                     elif i == 2:
                         addDistortions(res, orig.img, position)
+                    elif i == 3:
+                        addResistance(res, orig.img, position)
                     else:
                         print("Impossible case")
 

@@ -29,7 +29,7 @@ outputImageDims = [256, 256]
 singleDistortionMap = np.zeros((outputImageDims[0], outputImageDims[1], 2)) #: List[List[Vector2D]] = []
 fig, fig2 = None, None
 axesResults = []
-dataset_path = "/media/marc/Data/synthetic_terrains_dataset/"
+dataset_path = "/media/marc/Data/synthetic_terrains_dataset-no_dendritic/"
 
 
 def numpyIndicesToCoords(_x: int, _y: int, sizeX: int, sizeY: int) -> Tuple[float, float] :
@@ -651,7 +651,7 @@ class IslandSketch:
         t = (distFromCenter - distMin) / (distMax - distMin)
         return interpolateOnCurve(profile, t).y, interpolateOnCurve(resistance, t).y
 
-    def createMapsFromSketch(self, path: str = "./", filePrefix: str = "result", randomize_parameters: bool = True):
+    def createMapsFromSketch(self, path: str = "./", filePrefix: str = "result", randomize_parameters: bool = True, deform_features_with_wind: bool = True):
         featuresFolder = "features/"
         distoFolder = "distortions/"
         heightFolder = "heightmaps/"
@@ -670,7 +670,7 @@ class IslandSketch:
         waterLevel = self.waterLevel
         # coralMinHeight = self.coralMin
         # coralMaxHeight = self.coralMax
-        heightmap, features, distortions, resistances = self.heightFeatsAndDistoFromSketches()
+        heightmap, features, distortions, resistances = self.heightFeatsAndDistoFromSketches(deform_features_with_wind)
 
         def getReefDistances(features):
             _distMap = np.zeros((features.shape[0], features.shape[1]))
@@ -843,7 +843,7 @@ class IslandSketch:
         return disto_resistances
 
 
-    def heightFeatsAndDistoFromSketches(self, featureColorVivid: float = 1.0) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def heightFeatsAndDistoFromSketches(self, deform_features: bool = True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         dims = outputImageDims
         heights: np.ndarray = np.zeros((dims[0], dims[1]))
         features: np.ndarray = np.zeros((dims[0], dims[1], 3))
@@ -872,7 +872,8 @@ class IslandSketch:
         nbRepetitions = 1
         # for i in range(nbRepetitions):
         deformed_height = deform_image(deformed_height, deformation, 128, repeats = 2)
-        deformed_features = deform_image(deformed_features, deformation, 128, repeats = 2, interpolation="nearest")
+        if deform_features:
+            deformed_features = deform_image(deformed_features, deformation, 128, repeats = 2, interpolation="nearest")
 
         return deformed_height, deformed_features, singleDistortionMap, np.reshape(resistances, (resistances.shape[:2]))
         # distortion part :
@@ -1005,7 +1006,7 @@ def randomizeUserCircle(previousOutlines, randomness, scaling: float = 1.0):
     return newOutlines
 
 
-def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 1000, use_user_input=False):
+def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 1000, use_user_input=False, deform_features_with_wind: bool = True):
     global singleDistortionMap
     radiusRandomMin, radiusRandomMax = 0.8, 1.1
     nbCurvesMin, nbCurvesMax = 2, 6
@@ -1077,7 +1078,7 @@ def createDatasetOfRandomIslands(islandSketch: IslandSketch, nbSamples: int = 10
         islandSketch.resistanceSketch.setCurve(randomResistanceCurve)
 
 
-        h, f, d, r = islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample)) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
+        h, f, d, r = islandSketch.createMapsFromSketch(path=f"{dataset_path}", filePrefix=str(iSample), deform_features_with_wind=deform_features_with_wind) # , coralMinHeight=coralMinHeight, coralMaxHeight=coralMaxHeight)
 
     if use_user_input:
         islandSketch.sketches[0].setCurve(original_islandBorders)
@@ -1274,7 +1275,7 @@ def main():
 
     def genDataset():
         print(f"Generating dataset at {dataset_path}heightmaps/")
-        createDatasetOfRandomIslands(islandSketch, 1000, use_user_input=True)
+        createDatasetOfRandomIslands(islandSketch, 1000, use_user_input=False, deform_features_with_wind = True)
 
 
     distance_button.on_clicked(lambda e: genIsland()) # genAndSaveHeightMap(profileSketching.lineBuilders[0], islandSketches, sliceCut))

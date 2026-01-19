@@ -1191,7 +1191,7 @@ float Vec3<T>::signedDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& min
     //    Vec3 q = pos.abs() - halfDim; // - ((maxPos - minPos) * .5f);
     Vec3 q = (pos - (minPos + halfDim)).abs() - halfDim; // - ((maxPos - minPos) * .5f);
     if (ignoreZdimension)
-        q.z() = 0.f;
+        q.z() = std::numeric_limits<T>::lowest();
 
     static const Vec3 origin(0, 0, 0);
     float d = Vec3::max(q, origin).norm() + std::min(q.maxComp(), 0.f);

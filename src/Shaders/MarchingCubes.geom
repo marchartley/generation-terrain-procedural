@@ -234,12 +234,16 @@ float getAmbiantOcclusion(vec3 pos, vec3 normal) {
     vec3 offsets = vec3(0.0);
     float occlusion = 0.0;
     float total = 0.f;
-    float surrounding = 6.f;
+    float surrounding = 4.f;
+    vec3 up = normal;
+    vec3 left = vec3(0.0, 1.0, 0.0);
+    vec3 front = vec3(1.0, 0.0, 0.0);
+    left = cross(up, front);
     if (!checkPos(pos - vec3(surrounding * .5, surrounding * .5, 0)) || !checkPos(pos + vec3(surrounding * .5, surrounding * .5, 0))) return 1.0;
-    for (float x = 0; x < surrounding + 1.0; x += 1.0) {
-        for (float y = 0; y < surrounding + 1.0; y += 1.0) {
-            for (float z = 0; z < surrounding + 1.0; z += 1.0) {
-                vec3 off = vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * 1.0 + .5;
+    for (float x = -surrounding * .5f; x < surrounding * .5f + 1.0; x += 1.0) {
+        for (float y = -surrounding * .5f; y < surrounding * .5f + 1.0; y += 1.0) {
+            for (float z = -surrounding * .5f; z < surrounding * .5f + 1.0; z += 1.0) {
+                vec3 off = x * front + y * left + z * up; //vec3(x - surrounding*.5f, y - surrounding*.5f, z - surrounding*.5f) * 1.0 + .5;
                 vec3 newPos = (pos + off) / texSize;
                 if (dot(off, normal) < 0) continue;
                 occlusion += (texture(dataFieldTex, newPos - offsets).a > 0.5 && checkPos(newPos * texSize) ? 1.0 : 0.0);
@@ -285,7 +289,7 @@ void main(void) {
         // Front
         grealNormal = vec3(0, -1, 0);
         if (nFront) {
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
 //            gdensity =
@@ -304,7 +308,7 @@ void main(void) {
         // Right
         grealNormal = vec3(1, 0, 0);
         if (nRight) {
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(1, 0, 1), center).xyz;
             EmitVertex();
@@ -322,7 +326,7 @@ void main(void) {
         // Back
         grealNormal = vec3(0, 1, 0);
         if (nBack) {
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(1, 1, 1), center);
             ginitialVertPos = getPosition(position, vec3(1, 1, 1), center).xyz;
             EmitVertex();
@@ -340,7 +344,7 @@ void main(void) {
         // Left
         if (nLeft) {
             grealNormal = vec3(-1, 0, 0);
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 1, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 1, 1), center).xyz;
             EmitVertex();
@@ -359,7 +363,7 @@ void main(void) {
         // Bottom
         if (nBottom) {
             grealNormal = vec3(0, 0, -1);
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 0), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 0), center).xyz;
             EmitVertex();
@@ -378,7 +382,7 @@ void main(void) {
         // Top
         grealNormal = vec3(0, 0, -1);
         if (nTop) {
-            gambiantOcclusion = getAmbiantOcclusion(position.xyz + .5, grealNormal);
+            gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5, grealNormal);
             gl_Position = proj_matrix * mv_matrix * getPosition(position, vec3(0, 0, 1), center);
             ginitialVertPos = getPosition(position, vec3(0, 0, 1), center).xyz;
             EmitVertex();
@@ -432,7 +436,7 @@ void main(void) {
                 position= vec4(vertlist[triTableValue(cubeindex, i)], 1);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
-                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5f, grealNormal);
                 position.z *= heightFactor;
                 gl_Position = proj_matrix * mv_matrix * position;
                 EmitVertex();
@@ -440,7 +444,7 @@ void main(void) {
                 position= vec4(vertlist[triTableValue(cubeindex, i+1)], 1);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
-                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5f, grealNormal);
                 position.z *= heightFactor;
                 gl_Position = proj_matrix * mv_matrix * position;
                 EmitVertex();
@@ -448,7 +452,7 @@ void main(void) {
                 position= vec4(vertlist[triTableValue(cubeindex, i+2)], 1);
                 ginitialVertPos = position.xyz;
                 grealNormal = getNormal(position.xyz);
-                gambiantOcclusion = getAmbiantOcclusion(position.xyz, grealNormal);
+                gambiantOcclusion = getAmbiantOcclusion(position.xyz + grealNormal * .5f, grealNormal);
                 position.z *= heightFactor;
                 gl_Position = proj_matrix * mv_matrix *  position;
                 EmitVertex();

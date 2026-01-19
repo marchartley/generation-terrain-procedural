@@ -87,6 +87,11 @@ float getHeight(vec2 pos) {
     // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
     return bicubicInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
 }
+float getHeightLinear(vec2 pos) {
+    vec2 texSize = textureSize(heightmapFieldTex, 0);
+    // return linearInterpolate(heightmapFieldTex, pos / texSize, texSize, maxHeight);
+    return texture(heightmapFieldTex, pos / texSize).a * maxHeight;
+}
 /*float getHeight(vec2 pos) {
     vec2 texSize = textureSize(heightmapFieldTex, 0);
     return (pos.x >= texSize.x || pos.y >= texSize.y) ? 0 : texture(heightmapFieldTex, pos/texSize).a * maxHeight;
@@ -122,30 +127,35 @@ vec3 getNormal(vec2 pos) {
     normal = cross(e1, e2) + cross(e2, e3) + cross(e3, e5) + cross(e5, e8) + cross(e8, e7) + cross(e7, e6) + cross(e6, e4) + cross(e4, e1);
     return normalize(normal);
 }
-float getAmbiantOcclusion(vec3 pos) {
+float getAmbiantOcclusion(vec3 pos, vec3 normal) {
     if (ambiantOcclusionFactor == 0.0) return 1.0;
-    int nX = 20;
-    int nY = 20;
+    int nX = 5;
+    int nY = 5;
     float fnX = float(nX);
     float fnY = float(nY);
     float pi = 3.141592;
 
+    float maxDistance = 10.0;
+
     float occlusion = 0.0;
     float total = 0.0;
-    for (int _r = 1; _r < 10; _r++) {
-        for (int i = 0; i < nX; i++) {
-            for (int j = 0; j < nY; j++) {
-                float theta = (i / (fnX)) * 2.0 * pi;
-                float phi = (j / (fnY - 1)) * pi - (pi * 0.5);
-                float r = _r;
+    for (int i = 0; i < nX; i++) {
+        for (int j = 0; j < nY; j++) {
+            float theta = (i / (fnX)) * 2.0 * pi;
+            float phi = (j / (fnY - 1)) * pi - (pi * 0.5);
+            vec3 ray = vec3(cos(theta) * cos(phi), sin(theta) * cos(phi), sin(phi));
+            ray *= (dot(ray, normal) <= 0 ? -1.0 : 1.0);
 
-                vec3 ray = vec3(cos(theta) * cos(phi) * r, sin(theta) * cos(phi) * r, sin(phi) * r);
-                occlusion += (pos.z + ray.z < getHeight((pos + ray).xy) ? 1.0 : 0.0);
-                total += 1;
+            bool good = true;
+            for (int _r = 1; _r <= int(maxDistance) && good; _r++) {
+                float r = _r;
+                good = (pos.z + ray.z * r < getHeightLinear((pos + ray * r).xy) ? false : true);
             }
+            occlusion += (good ? 1.0 : 0.0);
+            total += 1;
         }
     }
-    return pow(clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total) + 0.5, 0.0, 1.0), 2.0);
+    return occlusion / total; // pow(clamp(1.0 - smoothstep(0.0, 1.0, occlusion / total) + 0.5, 0.0, 1.0), 2.0);
 }
 
 void sendInfoVertex(vec4 vecPos) {
@@ -157,6 +167,7 @@ void sendInfoVertex(vec4 vecPos) {
     vecPos += vec4(grealNormal * getDisplacementLength(vecPos.xy) * displacementStrength, 0.0);
     vecPos.z *= heightFactor;
     ginitialVertPos = vecPos.xyz;
+    gambiantOcclusion = getAmbiantOcclusion(vecPos.xyz, grealNormal.xyz);
     gl_Position = proj_matrix * mv_matrix * vecPos;
     EmitVertex();
 }

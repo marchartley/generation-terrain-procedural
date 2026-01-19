@@ -16,13 +16,13 @@ public:
 
     void drawStroke(const Vector3& pStart, const Vector3& pEnd);
 
-    Vector3 getColorFromIndex(float index) const;
+    static Vector3 getColorFromIndex(float index);
 
     Vector3 currentColor = Vector3(1.f, .5f, .5f);
 
-    float brushSize = 10.f;
-    float colorIndex = 1.f;
-    float sharpness = 3.f;
+    float brushSize = 50.f;
+    float colorIndex = .2f;
+    float sharpness = 0.01f;
 
 public Q_SLOTS:
     GanUIPainter* updateUI();

@@ -7,7 +7,6 @@ import threading
 import time
 
 import curves
-from Python_tests.curves import catmull_rom_spline
 from Vectors import Vector2D, Vector3D, line_intersection
 
 
