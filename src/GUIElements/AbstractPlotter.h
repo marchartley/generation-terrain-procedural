@@ -11,7 +11,7 @@
 #include <iostream>
 //#include <QButton>
 
-#include "Interface/CommonInterface.h"
+#include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
 
 enum PlotColor {

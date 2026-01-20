@@ -4,15 +4,15 @@
 
 #include "Biomes/BiomeInstance.h"
 class BiomeInterface;
-//#include "Interface/ControlPoint.h"
-//#include "Interface/InteractiveVector.h"
+//#include "GUIElements/ControlPoint.h"
+//#include "GUIElements/InteractiveVector.h"
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
 #include "TerrainGen/Heightmap.h"
 #include "Interface/ActionInterface.h"
 #include "Karst/KarstHole.h"
-#include "Interface/HierarchicalListWidget.h"
+#include "GUIElements/HierarchicalListWidget.h"
 
 class BiomeReplacementDialog;
 class BiomeInterface : public ActionInterface

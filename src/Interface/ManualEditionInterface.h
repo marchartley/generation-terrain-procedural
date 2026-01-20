@@ -6,8 +6,8 @@ class ManualEditionInterface;
 #include "Interface/ActionInterface.h"
 #include <QObject>
 #include "TerrainGen/VoxelGrid.h"
-#include "Interface/FancySlider.h"
-#include "Interface/ControlPoint.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/ControlPoint.h"
 
 class ManualEditionInterface : public ActionInterface
 {

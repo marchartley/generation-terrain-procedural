@@ -43,7 +43,7 @@ enum DebugMeshesNames {
 #include "Karst/KarstPathsGeneration.h"
 #include "Utils/BSpline.h"
 #include "TreeColonisation/TreeColonisation.h"
-#include "Interface/ControlPoint.h"
+#include "GUIElements/ControlPoint.h"
 #include "Interface/ActionInterface.h"
 
 

@@ -2816,7 +2816,7 @@ int main(int argc, char *argv[])
     EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
 
     std::string preload_heightmap = "";
-    MapMode displayMode = MapMode::VOXEL_MODE;
+    MapMode displayMode = MapMode::GRID_MODE;
     if (argc > 1) {
         preload_heightmap = std::string(argv[1]);
     }

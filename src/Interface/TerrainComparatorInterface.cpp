@@ -1,7 +1,7 @@
 #include "TerrainComparatorInterface.h"
-#include "Interface/FancySlider.h"
-#include "Interface/InterfaceUtils.h"
-#include "Interface/RangeSlider.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/InterfaceUtils.h"
+#include "GUIElements/RangeSlider.h"
 
 #include "DataStructure/Image.h"
 

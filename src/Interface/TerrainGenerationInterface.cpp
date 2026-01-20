@@ -2,8 +2,8 @@
 
 #include "Biomes/BiomeInstance.h"
 #include "EnvObject/EnvObject.h"
-#include "Interface/FancySlider.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/InterfaceUtils.h"
 #include "Utils/ConstraintsSolver.h"
 #include "Utils/ShapeCurve.h"
 #include "Utils/Utils.h"

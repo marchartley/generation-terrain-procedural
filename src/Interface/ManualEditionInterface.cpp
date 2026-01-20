@@ -1,6 +1,6 @@
 #include "ManualEditionInterface.h"
 
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 #include "TerrainModification/RockErosion.h"
 
 ManualEditionInterface::ManualEditionInterface(QWidget *parent)

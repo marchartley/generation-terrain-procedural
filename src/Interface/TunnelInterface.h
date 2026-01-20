@@ -4,8 +4,8 @@
 class TunnelInterface;
 #include "Interface/ActionInterface.h"
 #include "TerrainGen/VoxelGrid.h"
-#include "Interface/FancySlider.h"
-#include "Interface/ControlPoint.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/ControlPoint.h"
 #include "Karst/KarstHole.h"
 
 class TunnelInterface : public ActionInterface

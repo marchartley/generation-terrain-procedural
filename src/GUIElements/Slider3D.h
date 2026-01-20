@@ -1,7 +1,7 @@
 #ifndef SLIDER3D_H
 #define SLIDER3D_H
 
-#include "Interface/ControlPoint.h"
+#include "GUIElements/ControlPoint.h"
 #include "Interface/CustomInteractiveObject.h"
 #include "DataStructure/Vector3.h"
 

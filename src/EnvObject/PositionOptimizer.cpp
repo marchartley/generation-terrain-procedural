@@ -187,7 +187,7 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const Grid
 {
     Vector3 pos = seedPosition;
 
-    auto gradientsSmoothed = gradients.gaussianSmooth(5.f, true);
+    auto gradientsSmoothed = gradients.meanSmooth(5, 5, 1); //gradients.gaussianSmooth(5.f, true);
     Vector3 dir = gradientsSmoothed(pos).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
     BSpline initialCurve = BSpline({pos - dir, pos + dir}).getPath(3);
 

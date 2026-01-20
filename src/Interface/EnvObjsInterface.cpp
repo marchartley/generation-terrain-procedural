@@ -1,8 +1,8 @@
 #include "EnvObjsInterface.h"
 
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Interface/CommonInterface.h"
+#include "GUIElements/CommonInterface.h"
 #include "TerrainModification/CoralIslandGenerator.h"
 #include "DataStructure/Image.h"
 #include "EnvObject/ExpressionParser.h"
@@ -224,12 +224,6 @@ QLayout *EnvObjsInterface::createGUI()
     CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
     ButtonElement* saveForRendersButton = new ButtonElement("Save for render", [&]() { this->saveForRenders(); });
 
-    ButtonElement* instantiaABCbutton = new ButtonElement("Instantiate ABC", [&]() {
-        this->instantiateSpecific("CoralPolypFlatA", GridF(), false);
-        this->instantiateSpecific("CoralPolypFlatB", GridF(), false);
-        this->instantiateSpecific("CoralPolypFlatC", GridF(), false);
-    });
-
     // QLabel* label = new QLabel(QString::fromStdString("Objects: " + std::to_string(EnvObject::instantiatedObjects.size())));
     LabelElement* label = new LabelElement("Objects: " + std::to_string(EnvObject::instantiatedObjects.size()));
 
@@ -248,9 +242,7 @@ QLayout *EnvObjsInterface::createGUI()
         this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
     });
     ButtonElement* forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), true, true);
-        // this->updateSelectionMesh();
-
+        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), false, false); //true, true);
         Q_EMIT this->updated();
     });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
@@ -576,6 +568,24 @@ Vector3 bestPositionForInstantiationWithPSO(std::string objectName, const Vector
     auto [pos, score] = PSO::findHighest((size_t) nbParticles, AABBox(Vector3::origin(), maxBounds), EnvObject::availableObjects[objectName]->fitnessFunction, 50);
     return score >= EnvObject::availableObjects[objectName]->minScore ? pos : Vector3::invalid();
 }
+Vector3 bestPositionForInstantiationUniform(std::string objectName, const AABBox& bounds, const GridF& focusArea, int nbSamples = 20) {
+    auto& func = EnvObject::availableObjects[objectName]->fitnessFunction;
+    float bestScore = std::numeric_limits<float>::lowest();
+    Vector3 bestPos = Vector3::invalid();
+    for (size_t i = 0; i < nbSamples; i++) {
+        const Vector3 pos = Vector3::random(bounds);
+        if (focusArea.at(pos) < random_gen::generate()) {
+            i--;
+            continue;
+        }
+        float score = func(pos);
+        if (score > bestScore) {
+            bestPos = pos;
+            bestScore = score;
+        }
+    }
+    return bestScore >= EnvObject::availableObjects[objectName]->minScore ? bestPos : Vector3::invalid();
+}
 
 Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score) {
     GridV3 gradients = score.gradient();
@@ -609,7 +619,8 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPosition(std::string objectN
     auto objAsCurve = dynamic_cast<EnvCurve*>(newObject);
     auto objAsArea = dynamic_cast<EnvArea*>(newObject);
 
-    GridV3 gradients = score.gaussianSmooth(2.f).gradient();
+    GridV3 gradients = score.meanSmooth(3, 3, 1).gradient();
+    // GridV3 gradients = score.gaussianSmooth(2.f).gradient();
     gradients.raiseErrorOnBadCoord = false;
     gradients.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
 
@@ -794,40 +805,51 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
     }
     bool verbose = true;
     displayProcessTime("Instantiate new " + objectName + " (with PSO)... ", [&]() {
-        auto position = bestPositionForInstantiationWithPSO(objectName, this->heightmap->getDimensions());
+            Vector3 position;
+            displayProcessTime("Pos: ", [&]() {
+                position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, 100);
+            });
 
 
         if (position.isValid()) {
-            EnvObject* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
+            EnvObject* newObject;
+            displayProcessTime("Instance: ", [&]() {
+                newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
+            });
             if (!newObject) {
                 this->log("Object not created", verbose);
                 return;
             }
-            auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
-            newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
-            newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
-            this->implicitPatchesFromObjects[newObject] = implicit;
-            if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
-                this->implicitTerrain->addChild(this->rootPatch);
+            ImplicitPatch* implicit;
+            displayProcessTime("Implicit: ", [&]() {
+                implicit = newObject->createImplicitPatch(subsidedHeightmap);
+                newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, true, newObject);
+                newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
+                this->implicitPatchesFromObjects[newObject] = implicit;
+                if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
+                    this->implicitTerrain->addChild(this->rootPatch);
 
-            if (implicit != nullptr) {
-                rootPatch->addChild(implicit);
-            }
-            // Wait until the object is 100% grown:
-            int maxIterations = 100;
-            while (waitForFullyGrown && newObject && newObject->computeGrowingState() < 1.f) {
-                this->updateEnvironmentFromEnvObjects(false, updateScreen);
-                maxIterations--;
-                if (maxIterations < 0) break;
-                if (!isIn(newObject, EnvObject::instantiatedObjects)) {
-                    return; // Object died in this process, stop this function now
+                if (implicit != nullptr) {
+                    rootPatch->addChild(implicit);
                 }
-            }
-            this->currentSelections = {newObject};
-            EnvObject::recomputeTerrainPropertiesForObject(objectName);
-            this->updateEnvironmentFromEnvObjects(implicit != nullptr, updateScreen); // If implicit is null, don't update the map
-            result = newObject;
-            this->materialSimulationStable = false; // We have to compute the simulation again
+            });
+            displayProcessTime("Growing: ", [&]() {
+                // Wait until the object is 100% grown:
+                int maxIterations = 100;
+                while (waitForFullyGrown && newObject && newObject->computeGrowingState() < 1.f) {
+                    this->updateEnvironmentFromEnvObjects(false, updateScreen);
+                    maxIterations--;
+                    if (maxIterations < 0) break;
+                    if (!isIn(newObject, EnvObject::instantiatedObjects)) {
+                        return; // Object died in this process, stop this function now
+                    }
+                }
+                this->currentSelections = {newObject};
+                EnvObject::recomputeTerrainPropertiesForObject(objectName);
+                this->updateEnvironmentFromEnvObjects(implicit != nullptr, updateScreen); // If implicit is null, don't update the map
+                result = newObject;
+                this->materialSimulationStable = false; // We have to compute the simulation again
+            });
             return;
         } else {
             // std::cout << "Nope, impossible to instantiate..." << std::endl;
@@ -1002,7 +1024,7 @@ void EnvObjsInterface::runScenario()
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
 {
-    bool verbose = false;
+    bool verbose = true;
 
     GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
     subsidedHeightmap = initialHeightmap * subsidenceFactor;
@@ -2015,7 +2037,8 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
     // auto position = clickPos;
     // auto score = fitnessScoreGrid;
     // score = score.gaussianSmooth(5.f, true, true, -1);
-    GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
+    GridV3 gradients = score.meanSmooth(5, 5, 1).gradient();
+    // GridV3 gradients = score.gradient().gaussianSmooth(5.f, true, true, -1);
     fitnessScoreGrid.raiseErrorOnBadCoord = false;
     fitnessScoreGrid.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::MIRROR_VALUE;
     gradients.raiseErrorOnBadCoord = false;
@@ -2215,7 +2238,8 @@ void EnvObjsInterface::addObjectsHeightmaps()
     waterConstraintedHeights.iterateParallel([&](size_t i) {
         waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
     });
-    waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
+    waterConstraintedHeights = waterConstraintedHeights.meanSmooth(3, 3, 1);
+    // waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
 
     bool modificationsAppliedToSurface = false;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -2247,11 +2271,14 @@ void EnvObjsInterface::addObjectsHeightmaps()
     }
 
     if (modificationsAppliedToSurface) {
-        surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
+        surfaceHeights = surfaceHeights.meanSmooth(3, 3, 1);
+        // surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
     }
 
-    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
-    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).meanSmooth(5, 5, 1);
+    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
+    // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
+    // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
     /*
     std::map<std::string, GridF> perTypeHeightmap;
     for (auto& obj : EnvObject::instantiatedObjects) {
@@ -2288,7 +2315,7 @@ void EnvObjsInterface::flowErosionSimulation()
         // this->subsidedHeightmap = (this->initialHeightmap * EnvObject::scenario.computeSubsidence()).warpWith(EnvObject::flowfield * flowErosionFactor, 10);
         //this->subsidedHeightmap = (this->subsidedHeightmap).warpWith(EnvObject::flowfield * flowErosionFactor, 10);
     }
-    this->heightmap->heights = subsidedHeightmap.gaussianSmooth(.5f, true) - 1.f;
+    this->heightmap->heights = subsidedHeightmap - 1.f; // .gaussianSmooth(.5f, true) - 1.f;
 }
 
 void EnvObjsInterface::startNewObjectCreation()

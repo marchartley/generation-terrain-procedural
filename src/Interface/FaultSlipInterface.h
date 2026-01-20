@@ -2,8 +2,8 @@
 #define FAULTSLIPINTERFACE_H
 
 class FaultSlipInterface;
-#include "Interface/ControlPoint.h"
-#include "Interface/InteractiveVector.h"
+#include "GUIElements/ControlPoint.h"
+#include "GUIElements/InteractiveVector.h"
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"

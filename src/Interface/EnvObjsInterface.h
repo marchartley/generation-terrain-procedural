@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include "Interface/ActionInterface.h"
-#include "Interface/HierarchicalListWidget.h"
+#include "GUIElements/HierarchicalListWidget.h"
 #include "Utils/HotreloadFile.h"
 
 #include "EnvObject/EnvPoint.h"

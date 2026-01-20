@@ -5,11 +5,11 @@
 #include <QSlider>
 #include <QGridLayout>
 #include "Interface/Viewer.h"
-#include "Interface/RangeSlider.h"
-#include "Interface/FancySlider.h"
-#include "Interface/Spoiler.h"
+#include "GUIElements/RangeSlider.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/Spoiler.h"
 
-#include "Interface/StickyFrame.h"
+#include "GUIElements/StickyFrame.h"
 
 class ViewerInterface : public QMainWindow{
 public:

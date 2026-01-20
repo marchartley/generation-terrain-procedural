@@ -4,9 +4,9 @@
 #include <QWidget>
 #include <QMetaObject>
 #include <vector>
-#include "Interface/InterfaceUtils.h"
-#include "Interface/FancySlider.h"
-#include "Interface/HierarchicalListWidget.h"
+#include "GUIElements/InterfaceUtils.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/HierarchicalListWidget.h"
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>

@@ -5,7 +5,7 @@
 #include "Graph/GraphNode.h"
 #include "Utils/ConstraintsSolver.h"
 
-#include "Graphics/ImageViewer.h"
+#include "GUIElements/ImageViewer.h"
 
 template <class T>
 class GraphTemplate

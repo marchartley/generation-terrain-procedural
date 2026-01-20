@@ -1,6 +1,6 @@
 #include "TunnelInterface.h"
 
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 #include "Utils/BSpline.h"
 #include "TerrainModification/UnderwaterErosion.h"
 

@@ -10,6 +10,7 @@
 //#include <glm/glm.hpp>
 #include <cmath>
 
+class AABBox;
 
 template<class T>
 class Vec3 {
@@ -140,6 +141,7 @@ public:
     static Vec3 random(float minNorm, float maxNorm);
     static Vec3 random(const Vec3& maxValues);
     static Vec3 random(const Vec3& minValues, const Vec3& maxValues);
+    static Vec3 random(const AABBox& bounds);
 
     T maxComp() const { return std::max(x(), std::max(y(), z())); }
     T minComp() const { return std::min(x(), std::min(y(), z())); }
@@ -673,6 +675,12 @@ Vec3<T> Vec3<T>::random(const Vec3& minValues, const Vec3& maxValues)
     return Vec3(random_gen::generate(minValues.x(), maxValues.x()),
                 random_gen::generate(minValues.y(), maxValues.y()),
                 random_gen::generate(minValues.z(), maxValues.z()));
+}
+
+template<class T>
+Vec3<T> Vec3<T>::random(const AABBox &bounds)
+{
+    return Vec3::random(bounds.min(), bounds.max());
 }
 
 template<class T>

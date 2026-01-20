@@ -6,7 +6,7 @@
 #include <QGroupBox>
 #include <QCheckBox>
 #include <functional>
-#include "Interface/RangeSlider.h"
+#include "GUIElements/RangeSlider.h"
 
 QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall = false);
 QGroupBox* createMultipleSliderGroup(std::vector<std::pair<std::string, QSlider *> > labelsAndSliders);

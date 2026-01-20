@@ -1,7 +1,7 @@
 #ifndef GANUIPAINTER_H
 #define GANUIPAINTER_H
 
-#include "Graphics/AbstractPlotter.h"
+#include "GUIElements/AbstractPlotter.h"
 
 class GanUIPainter : public AbstractPlotter {
     Q_OBJECT
