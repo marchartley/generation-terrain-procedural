@@ -1,7 +1,7 @@
 #include "KarstPathGenerationInterface.h"
 
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 
 KarstPathGenerationInterface::KarstPathGenerationInterface(QWidget *parent)
     : ActionInterface("karstpeytavie", "Karts system (Peytavie)", "digging", "Create karsts with graphs", "karst_peytavie_button.png", parent)

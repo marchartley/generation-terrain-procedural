@@ -1,7 +1,7 @@
 #include "SpaceColonizationInterface.h"
 
 #include "TerrainModification/UnderwaterErosion.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 
 SpaceColonizationInterface::SpaceColonizationInterface(QWidget *parent)

@@ -1881,12 +1881,14 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
     heights.iterateParallel([&] (size_t i) {
         heights[i] = std::exp(heights[i] * 3.f);
     });
-    heights = heights.gaussianSmooth(2.f).normalized();
+    heights = heights.meanSmooth(5, 5, 1).normalized();
+    // heights = heights.gaussianSmooth(2.f).normalized();
     heights.iterateParallel([&] (const Vector3& pos) {
         // heights(pos) -= 2.f;
         if (!polygon.containsXY(pos)) heights(pos) = 0;
     });
-    heights = heights.gaussianSmooth(2.f).normalize();
+    heights = heights.meanSmooth(5, 5, 1).normalize();
+    // heights = heights.gaussianSmooth(2.f).normalize();
     heights.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     heights.defaultValueOnBadCoord = 0.f;
 

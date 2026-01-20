@@ -1,6 +1,6 @@
 #include "MeshInstanceAmplificationInterface.h"
 
-#include "Interface/CommonInterface.h"
+#include "GUIElements/CommonInterface.h"
 
 #include "EnvObject/EnvPoint.h"
 #include "EnvObject/EnvCurve.h"

@@ -1,7 +1,7 @@
 #ifndef IMAGEVIEWER_H
 #define IMAGEVIEWER_H
 
-#include "Graphics/AbstractPlotter.h"
+#include "GUIElements/AbstractPlotter.h"
 
 class ImageViewer : public AbstractPlotter {
     Q_OBJECT

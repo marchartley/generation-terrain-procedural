@@ -1,6 +1,6 @@
 #include "ErosionInterface.h"
 
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 #include "Interface/TerrainGenerationInterface.h"
 #include "EnvObject/EnvObject.h"
 

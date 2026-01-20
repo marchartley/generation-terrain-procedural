@@ -1,5 +1,5 @@
 #include "EnvObjectFluidSimulation.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 
 EnvObjectFluidSimulation::EnvObjectFluidSimulation(QWidget *parent)
     : ActionInterface("envbjfluids", "Environmental Obj. fluids", "physics", "Display fluid simulation based on Environmental Obj.", "envobjsfluids_button.png", parent)

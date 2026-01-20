@@ -1,7 +1,7 @@
 #include "CoralIslandGenerator.h"
 
 #include "DataStructure/Matrix3.h"
-#include "Graphics/ImageViewer.h"
+#include "GUIElements/ImageViewer.h"
 
 CoralIslandGenerator::CoralIslandGenerator()
 {

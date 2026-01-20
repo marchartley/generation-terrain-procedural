@@ -9,7 +9,7 @@
 #include "DataStructure/Matrix.h"
 #include "Utils/Utils.h"
 #include "Interface/TerrainGenerationInterface.h"
-#include "Interface/VisitingCamera.h"
+#include "GUIElements/VisitingCamera.h"
 #include <QTemporaryDir>
 #include "Graphics/RayMarching.h"
 

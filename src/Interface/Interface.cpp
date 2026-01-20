@@ -1,5 +1,5 @@
 #include "Interface/Interface.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 
 #include "Interface/KarstPathGenerationInterface.h"
 #include "Interface/SpaceColonizationInterface.h"
@@ -29,7 +29,7 @@
 #include "Interface/ScreenshotInterface.h"
 #include "Interface/GANPainterInterface.h"
 
-#include "Interface/CommonInterface.h"
+#include "GUIElements/CommonInterface.h"
 
 #include "FluidSimulation/OpenFoamParser.h"
 

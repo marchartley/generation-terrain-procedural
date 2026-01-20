@@ -4,7 +4,7 @@
 #include "Graphics/Mesh.h"
 #include "TerrainModification/RockErosion.h"
 
-#include "Graphics/ImageViewer.h"
+#include "GUIElements/ImageViewer.h"
 
 Vector3 ErosionParticle::predictNextPos(float dt)
 {

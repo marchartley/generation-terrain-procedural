@@ -1,6 +1,6 @@
 #include "HeightmapErosionInterface.h"
 
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/InterfaceUtils.h"
 
 HeightmapErosionInterface::HeightmapErosionInterface(QWidget *parent)
     : ActionInterface("heightmaperosion", "Erosion on heightmaps", "physics", "Erosion on heightmap", "heightmap-erosion.png", parent)

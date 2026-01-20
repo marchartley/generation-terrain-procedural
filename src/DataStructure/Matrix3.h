@@ -1540,6 +1540,181 @@ Matrix3<T> Matrix3<T>::meanSmooth(int sizeOnX, int sizeOnY, int sizeOnZ, bool ig
 template<class T>
 Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBorders, float limitFactor) const
 {
+    const int X = this->sizeX;
+    const int Y = this->sizeY;
+    const int Z = this->sizeZ;
+    const int XY = X * Y;
+
+    auto mirror_idx = [&](int i, int n) {
+        if (n <= 1) return 0;
+        while ((unsigned)i >= (unsigned)n) {
+            if (i < 0) i = -i - 1;
+            else       i = 2*n - i - 1;
+        }
+        return i;
+    };
+
+    if (sigma <= 0.0f) return *this;
+
+    if (limitFactor < 0.0f) {
+        limitFactor = std::max({X, Y, Z}) / sigma;
+    }
+
+    const int r = std::max(1, (int)std::ceil(limitFactor * sigma));
+    const int K = 2*r + 1;
+
+    // Build 1D kernel (centered at 0)
+    std::vector<float> kernel(K);
+    {
+        const float inv2s2 = 1.0f / (2.0f * sigma * sigma);
+        float sum = 0.0f;
+        for (int k = -r; k <= r; ++k) {
+            float w = std::exp(-(float)(k*k) * inv2s2);
+            kernel[k + r] = w;
+            sum += w;
+        }
+        const float invSum = 1.0f / sum;
+        for (float& w : kernel) w *= invSum;
+    }
+
+    Matrix3<T> buf1(X, Y, Z);
+    Matrix3<T> buf2(X, Y, Z);
+    Matrix3<T> out (X, Y, Z);
+
+    const T* src = this->data.data();
+    T* tmp  = buf1.data.data();
+    T* tmp2 = buf2.data.data();
+    T* dst  = out.data.data();
+
+// ---- Pass 1: X ----
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int z = 0; z < Z; ++z) {
+        for (int y = 0; y < Y; ++y) {
+            const int base = z*XY + y*X;
+
+            // Interior (no borders)
+            for (int x = r; x < X - r; ++x) {
+                T acc = T();
+                const T* p = src + base + (x - r);
+                for (int k = 0; k < K; ++k) {
+                    acc += p[k] * kernel[k];
+                }
+                tmp[base + x] = (T)acc;
+            }
+
+            // Left border
+            for (int x = 0; x < std::min(r, X); ++x) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int xi = ignoreBorders ? (x + k) : mirror_idx(x + k, X);
+                    if (ignoreBorders && ((unsigned)xi >= (unsigned)X)) continue;
+                    acc += src[base + xi] * kernel[k + r];
+                }
+                tmp[base + x] = (T)acc;
+            }
+
+            // Right border
+            for (int x = std::max(X - r, 0); x < X; ++x) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int xi = ignoreBorders ? (x + k) : mirror_idx(x + k, X);
+                    if (ignoreBorders && ((unsigned)xi >= (unsigned)X)) continue;
+                    acc += src[base + xi] * kernel[k + r];
+                }
+                tmp[base + x] = (T)acc;
+            }
+        }
+    }
+
+// ---- Pass 2: Y ----
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int z = 0; z < Z; ++z) {
+        for (int x = 0; x < X; ++x) {
+            const int baseZ = z*XY;
+
+            // Interior
+            for (int y = r; y < Y - r; ++y) {
+                T acc = T();
+                int idx = baseZ + (y - r)*X + x;
+                for (int k = 0; k < K; ++k) {
+                    acc += tmp[idx + k*X] * kernel[k];
+                }
+                tmp2[baseZ + y*X + x] = (T)acc;
+            }
+
+            // Borders
+            for (int y = 0; y < std::min(r, Y); ++y) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int yi = ignoreBorders ? (y + k) : mirror_idx(y + k, Y);
+                    if (ignoreBorders && ((unsigned)yi >= (unsigned)Y)) continue;
+                    acc += tmp[baseZ + yi*X + x] * kernel[k + r];
+                }
+                tmp2[baseZ + y*X + x] = (T)acc;
+            }
+            for (int y = std::max(Y - r, 0); y < Y; ++y) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int yi = ignoreBorders ? (y + k) : mirror_idx(y + k, Y);
+                    if (ignoreBorders && ((unsigned)yi >= (unsigned)Y)) continue;
+                    acc += tmp[baseZ + yi*X + x] * kernel[k + r];
+                }
+                tmp2[baseZ + y*X + x] = (T)acc;
+            }
+        }
+    }
+
+    if (ignoreZ) {
+        // If Z ignored, output is tmp2
+#pragma omp parallel for schedule(static)
+        for (int i = 0; i < X*Y*Z; ++i) dst[i] = tmp2[i];
+        return out;
+    }
+
+// ---- Pass 3: Z ----
+#pragma omp parallel for collapse(2) schedule(static)
+    for (int y = 0; y < Y; ++y) {
+        for (int x = 0; x < X; ++x) {
+
+            // Interior
+            for (int z = r; z < Z - r; ++z) {
+                T acc = T();
+                int idx = (z - r)*XY + y*X + x;
+                for (int k = 0; k < K; ++k) {
+                    acc += tmp2[idx + k*XY] * kernel[k];
+                }
+                dst[z*XY + y*X + x] = (T)acc;
+            }
+
+            // Borders
+            for (int z = 0; z < std::min(r, Z); ++z) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int zi = ignoreBorders ? (z + k) : mirror_idx(z + k, Z);
+                    if (ignoreBorders && ((unsigned)zi >= (unsigned)Z)) continue;
+                    acc += tmp2[zi*XY + y*X + x] * kernel[k + r];
+                }
+                dst[z*XY + y*X + x] = (T)acc;
+            }
+            for (int z = std::max(Z - r, 0); z < Z; ++z) {
+                T acc = T();
+                for (int k = -r; k <= r; ++k) {
+                    int zi = ignoreBorders ? (z + k) : mirror_idx(z + k, Z);
+                    if (ignoreBorders && ((unsigned)zi >= (unsigned)Z)) continue;
+                    acc += tmp2[zi*XY + y*X + x] * kernel[k + r];
+                }
+                dst[z*XY + y*X + x] = (T)acc;
+            }
+        }
+    }
+
+    return out;
+}
+
+/*
+template<class T>
+Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBorders, float limitFactor) const
+{
     ignoreBorders = false;
     int sizeX = this->sizeX;
     int sizeY = this->sizeY;
@@ -1646,6 +1821,7 @@ Matrix3<T> Matrix3<T>::gaussianSmooth(float sigma, bool ignoreZ, bool ignoreBord
 
     return result;
 }
+*/
 
 template<class T>
 Matrix3<T> Matrix3<T>::medianBlur(int sizeOnX, int sizeOnY, int sizeOnZ, bool ignoreBorders) const

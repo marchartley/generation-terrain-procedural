@@ -5,7 +5,7 @@
 #include "qslider.h"
 #include "qlabel.h"
 
-#include "Interface/FancySlider.h"
+#include "GUIElements/FancySlider.h"
 
 
 /*

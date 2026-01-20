@@ -5,8 +5,8 @@ class ImplicitPatch;
 class PatchReplacementDialog;
 
 #include "ActionInterface.h"
-#include "Interface/HierarchicalListWidget.h"
-#include "Interface/ControlPoint.h"
+#include "GUIElements/HierarchicalListWidget.h"
+#include "GUIElements/ControlPoint.h"
 
 
 class PrimitivePatchesInterface : public ActionInterface

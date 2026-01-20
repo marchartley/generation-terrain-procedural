@@ -2,16 +2,16 @@
 #define KARSTPATHGENERATIONINTERFACE_H
 
 class KarstPathGenerationInterface;
-#include "Interface/ControlPoint.h"
-#include "Interface/InteractiveVector.h"
-#include "Interface/Slider3D.h"
+#include "GUIElements/ControlPoint.h"
+#include "GUIElements/InteractiveVector.h"
+#include "GUIElements/Slider3D.h"
 #include "Karst/KarstPathsGeneration.h"
 #include "Graphics/Mesh.h"
-#include "Interface/FancySlider.h"
+#include "GUIElements/FancySlider.h"
 #include "Utils/BSpline.h"
 #include <QWidget>
 #include "TerrainGen/VoxelGrid.h"
-#include "Interface/PathCameraConstraint.h"
+#include "GUIElements/PathCameraConstraint.h"
 #include <QGLViewer/manipulatedCameraFrame.h>
 #include "Interface/ActionInterface.h"
 

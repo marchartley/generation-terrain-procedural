@@ -126,13 +126,13 @@ SOURCES += \
     src/Graph/RegularSimplicialComplex.cpp \
     src/Graph/TopoMap.cpp \
         src/Graph/WaveFunctionCollapse.cpp \
-    src/Graphics/AbstractPlotter.cpp \
+    src/GUIElements/AbstractPlotter.cpp \
     src/Graphics/ComputeShader.cpp \
         src/Graphics/CubeMesh.cpp \
         src/Graphics/DebugShader.cpp \
-    src/Graphics/GanUIPainter.cpp \
+    src/GUIElements/GanUIPainter.cpp \
         src/Graphics/MarchingCubes.cpp \
-    src/Graphics/ImageViewer.cpp \
+    src/GUIElements/ImageViewer.cpp \
     src/Graphics/RayMarching.cpp \
         src/Graphics/Shader.cpp \
         src/Graphics/Mesh.cpp \
@@ -143,46 +143,46 @@ SOURCES += \
     src/Interface/AbstractFluidSimulationInterface.cpp \
         src/Interface/ActionInterface.cpp \
     src/Interface/BiomeInterface.cpp \
-    src/Interface/CommonInterface.cpp \
-        src/Interface/ControlPoint.cpp \
+    src/GUIElements/CommonInterface.cpp \
+        src/GUIElements/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
         src/Interface/CustomInteractiveObject.cpp \
     src/Interface/EnvObjectFluidSimulation.cpp \
     src/Interface/EnvObjsInterface.cpp \
         src/Interface/ErosionInterface.cpp \
     src/Interface/FLIPSimulationInterface.cpp \
-        src/Interface/FancySlider.cpp \
+        src/GUIElements/FancySlider.cpp \
         src/Interface/FaultSlipInterface.cpp \
     src/Interface/GANPainterInterface.cpp \
         src/Interface/GravityInterface.cpp \
         src/Interface/HeightmapErosionInterface.cpp \
-    src/Interface/HierarchicalListWidget.cpp \
-        src/Interface/InteractiveVector.cpp \
+    src/GUIElements/HierarchicalListWidget.cpp \
+        src/GUIElements/InteractiveVector.cpp \
         src/Interface/Interface.cpp \
-        src/Interface/InterfaceUtils.cpp \
+        src/GUIElements/InterfaceUtils.cpp \
         src/Interface/KarstPathGenerationInterface.cpp \
     src/Interface/LBMFluidSimulationInterface.cpp \
         src/Interface/ManualEditionInterface.cpp \
     src/Interface/MeshInstanceAmplificationInterface.cpp \
-        src/Interface/PathCameraConstraint.cpp \
+        src/GUIElements/PathCameraConstraint.cpp \
     src/Interface/PrimitivePatchesInterface.cpp \
-        src/Interface/RangeSlider.cpp \
+        src/GUIElements/RangeSlider.cpp \
     src/Interface/SPHSimulationInterface.cpp \
     src/Interface/ScreenshotInterface.cpp \
-        src/Interface/Slider3D.cpp \
+        src/GUIElements/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
         src/Interface/SpaceColonizationInterface.cpp \
     src/Interface/SpheroidalErosionInterface.cpp \
-        src/Interface/Spoiler.cpp \
+        src/GUIElements/Spoiler.cpp \
     src/Interface/StableFluidSimulationInterface.cpp \
-        src/Interface/StickyFrame.cpp \
+        src/GUIElements/StickyFrame.cpp \
     src/Interface/TerrainComparatorInterface.cpp \
         src/Interface/TerrainGenerationInterface.cpp \
         src/Interface/TerrainSavingInterface.cpp \
         src/Interface/TunnelInterface.cpp \
         src/Interface/UndoRedoInterface.cpp \
         src/Interface/Viewer.cpp \
-        src/Interface/VisitingCamera.cpp \
+        src/GUIElements/VisitingCamera.cpp \
     src/Interface/WarpFluidSimulationInterface.cpp \
         src/Karst/KarstHole.cpp \
         src/Karst/KarstHoleProfile.cpp \
@@ -320,14 +320,14 @@ HEADERS += \
     src/Graph/RegularSimplicialComplex.h \
     src/Graph/TopoMap.h \
     src/Graph/WaveFunctionCollapse.h \
-    src/Graphics/AbstractPlotter.h \
+    src/GUIElements/AbstractPlotter.h \
     src/Graphics/ComputeShader.h \
     src/Graphics/CubeMesh.h \
     src/Graphics/DebugShader.h \
-    src/Graphics/GanUIPainter.h \
+    src/GUIElements/GanUIPainter.h \
     src/Graphics/MarchingCubes.h \
     src/Graphics/Mesh.h \
-    src/Graphics/ImageViewer.h \
+    src/GUIElements/ImageViewer.h \
     src/Graphics/RayMarching.h \
     src/Graphics/Shader.h \
     src/Graphics/ShaderElement.h \
@@ -337,46 +337,46 @@ HEADERS += \
     src/Interface/AbstractFluidSimulationInterface.h \
     src/Interface/ActionInterface.h \
     src/Interface/BiomeInterface.h \
-    src/Interface/CommonInterface.h \
-    src/Interface/ControlPoint.h \
+    src/GUIElements/CommonInterface.h \
+    src/GUIElements/ControlPoint.h \
     src/Interface/CoralIslandGeneratorInterface.h \
     src/Interface/CustomInteractiveObject.h \
     src/Interface/EnvObjectFluidSimulation.h \
     src/Interface/EnvObjsInterface.h \
     src/Interface/ErosionInterface.h \
     src/Interface/FLIPSimulationInterface.h \
-    src/Interface/FancySlider.h \
+    src/GUIElements/FancySlider.h \
     src/Interface/FaultSlipInterface.h \
     src/Interface/GANPainterInterface.h \
     src/Interface/GravityInterface.h \
     src/Interface/HeightmapErosionInterface.h \
-    src/Interface/HierarchicalListWidget.h \
-    src/Interface/InteractiveVector.h \
+    src/GUIElements/HierarchicalListWidget.h \
+    src/GUIElements/InteractiveVector.h \
     src/Interface/Interface.h \
-    src/Interface/InterfaceUtils.h \
+    src/GUIElements/InterfaceUtils.h \
     src/Interface/KarstPathGenerationInterface.h \
     src/Interface/LBMFluidSimulationInterface.h \
     src/Interface/ManualEditionInterface.h \
     src/Interface/MeshInstanceAmplificationInterface.h \
-    src/Interface/PathCameraConstraint.h \
+    src/GUIElements/PathCameraConstraint.h \
     src/Interface/PrimitivePatchesInterface.h \
-    src/Interface/RangeSlider.h \
+    src/GUIElements/RangeSlider.h \
     src/Interface/SPHSimulationInterface.h \
     src/Interface/ScreenshotInterface.h \
-    src/Interface/Slider3D.h \
+    src/GUIElements/Slider3D.h \
     src/Interface/SmoothInterface.h \
     src/Interface/SpaceColonizationInterface.h \
     src/Interface/SpheroidalErosionInterface.h \
-    src/Interface/Spoiler.h \
+    src/GUIElements/Spoiler.h \
     src/Interface/StableFluidSimulationInterface.h \
-    src/Interface/StickyFrame.h \
+    src/GUIElements/StickyFrame.h \
     src/Interface/TerrainComparatorInterface.h \
     src/Interface/TerrainGenerationInterface.h \
     src/Interface/TerrainSavingInterface.h \
     src/Interface/TunnelInterface.h \
     src/Interface/UndoRedoInterface.h \
     src/Interface/Viewer.h \
-    src/Interface/VisitingCamera.h \
+    src/GUIElements/VisitingCamera.h \
     src/Interface/WarpFluidSimulationInterface.h \
     src/Karst/KarstHole.h \
     src/Karst/KarstHoleProfile.h \

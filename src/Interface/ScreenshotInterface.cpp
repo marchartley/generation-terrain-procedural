@@ -1,5 +1,5 @@
 #include "ScreenshotInterface.h"
-#include "Interface/CommonInterface.h"
+#include "GUIElements/CommonInterface.h"
 
 ScreenshotInterface::ScreenshotInterface(QWidget *parent)
     : ActionInterface("screenshot", "Screenshot", "view", "Take screenshots of maps", "", parent)

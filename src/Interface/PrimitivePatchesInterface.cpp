@@ -1,6 +1,6 @@
 #include "PrimitivePatchesInterface.h"
-#include "Graphics/ImageViewer.h"
-#include "Interface/InterfaceUtils.h"
+#include "GUIElements/ImageViewer.h"
+#include "GUIElements/InterfaceUtils.h"
 //#include "Graphics/Sphere.h"
 #include "Graphics/CubeMesh.h"
 //#include "Utils/stb_image.h"

@@ -1,16 +1,16 @@
 #include "GANPainterInterface.h"
-#include "Graphics/GanUIPainter.h"
+#include "GUIElements/GanUIPainter.h"
 #include "Interface/TerrainGenerationInterface.h"
 #include "DataStructure/Image.h"
 
 GANPainterInterface::GANPainterInterface(QWidget *parent)
     : ActionInterface("ganpainter", "cGAN Painter UI", "digging", "Draw islands using GANs", "open_button.png", parent)
 {
-    ganModelNames["volcanic"] = "labels_to_terrain_volcanic_islands";
-    ganModelNames["classic"] = "labels_to_terrain_pacific_graphics_2025";
-    ganModelNames["reefs"] = "labels_to_terrain_pacific_graphics_2025_larger_reefs";
-    ganModelNames["undeformed"] = "labels_to_terrain_features_undeformed";
-    ganModelNames["no dendritic"] = "labels_to_terrain_no_dendritic";
+    // ganModelNames["volcanic"] = "labels_to_terrain_volcanic_islands";
+    // ganModelNames["classic"] = "labels_to_terrain_pacific_graphics_2025";
+    // ganModelNames["reefs"] = "labels_to_terrain_pacific_graphics_2025_larger_reefs";
+    // ganModelNames["undeformed"] = "labels_to_terrain_features_undeformed";
+    // ganModelNames["no dendritic"] = "labels_to_terrain_no_dendritic";
 
     for (auto& [name, modelName] : ganModelNames) {
         ganProcesses[name] = new QProcess();
@@ -70,7 +70,7 @@ void GANPainterInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, s
 
 void GANPainterInterface::runGANs()
 {
-    GridV3 labelImage = GanUIPainter::get("cGanPainter")->dataModel->getImage() * subsidence;//->saveFig("cGANdata/input_label.png");
+    GridV3 labelImage = GanUIPainter::get("cGanPainter")->dataModel->getImage() * subsidence;
     Image(labelImage).writeToFile("cGANdata/input_label.png");
 
     for (auto& [name, process] : ganProcesses) {

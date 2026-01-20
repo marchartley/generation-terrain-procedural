@@ -9,8 +9,8 @@ class HeightmapErosionInterface;
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Interface/Viewer.h"
 
-#include "Interface/FancySlider.h"
-#include "Interface/InteractiveVector.h"
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/InteractiveVector.h"
 
 class HeightmapErosionInterface : public ActionInterface
 {

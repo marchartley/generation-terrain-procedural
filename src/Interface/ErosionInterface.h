@@ -9,7 +9,7 @@ class ErosionInterface;
 #include "TerrainModification/UnderwaterErosion.h"
 #include "Interface/Viewer.h"
 
-#include "Interface/FancySlider.h"
+#include "GUIElements/FancySlider.h"
 
 class ErosionInterface : public ActionInterface
 {

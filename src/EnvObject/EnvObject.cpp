@@ -1,7 +1,7 @@
 #include "EnvObject.h"
 #include "ExpressionParser.h"
 
-#include "Graphics/ImageViewer.h"
+#include "GUIElements/ImageViewer.h"
 #include <fstream>
 
 #include "EnvObject/EnvPoint.h"
@@ -917,7 +917,8 @@ void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float wat
         EnvObject::allScalarProperties[matName] = material.currentState;
         EnvObject::allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
     }
-    EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.gaussianSmooth(1.f, true));
+    EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.meanSmooth(3, 3, 1));
+    // EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.gaussianSmooth(1.f, true));
     EnvObject::allVectorProperties["depth.gradient"] = EnvObject::allScalarProperties["depth"].gradient();
 
     EnvObject::allScalarProperties["fracture"] = EnvObject::scenario.computeTectonic(EnvObject::allScalarProperties["fracture"].getDimensions());
