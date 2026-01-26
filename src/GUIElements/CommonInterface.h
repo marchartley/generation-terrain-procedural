@@ -12,6 +12,7 @@
 #include <QRadioButton>
 #include <QLineEdit>
 #include <QComboBox>
+#include <QTimer>
 #include <optional>
 #include <variant>
 
@@ -29,8 +30,15 @@ class UIElement : public QObject {
     Q_OBJECT
 public:
     UIElement(QWidget* widget);
-    ~UIElement();
+    virtual ~UIElement();
 
+    template <typename WidgetType, typename SignalType, typename Functor>
+    void addConnection(SignalType signal, Functor&& functor) {
+        auto* w = qobject_cast<WidgetType*>(element);
+        if (!w) throw std::logic_error("Wrong widget type");
+        connections.push_back(QObject::connect(w, signal, this, std::forward<Functor>(functor)));
+    }
+    /*
     template <typename WidgetType, typename SignalType, typename Callable, typename... Args>
     void addConnection(SignalType signal, Callable&& slotFunction, Args&&... args) {
         WidgetType* castedWidget = dynamic_cast<WidgetType*>(element);
@@ -42,7 +50,7 @@ public:
         } else {
             throw std::out_of_range("There was a problem with a UIElement. It appears that an event has a connection with a wrong QWidget type...");
         }
-    }
+    }*/
 
     void setName(std::string name);
     const std::string& getName() const;
@@ -79,11 +87,15 @@ public:
 
     QPushButton* button();
 
+    ButtonElement* setOnRepeat(std::function<void(void)> onRepeatFunction, int delay_ms = 100);
+
     DEFINE_SET_ON_FUNCTION(setOnClick, QPushButton, clicked)
     DEFINE_SET_ON_FUNCTION(setOnPressed, QPushButton, pressed)
     DEFINE_SET_ON_FUNCTION(setOnRelease, QPushButton, released)
 
-
+protected:
+    QTimer* pressedTimer = nullptr;
+    bool currentRepeatFunctionFinished = true;
 };
 
 class SliderElement : public UIElement {
