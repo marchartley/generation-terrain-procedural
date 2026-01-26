@@ -8,19 +8,13 @@ class SnakeSegmentation {
 
 public:
     SnakeSegmentation();
+    virtual ~SnakeSegmentation() {}
     // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
                       // const GridV3& inputGradient);
 
     BSpline runSegmentation(int maxIterations = 100);
 
-// private:
-    // float computeInternalEnergy(const BSpline& contour);
-    // float computeExternalEnergy(const BSpline& contour);
-    // float computeEnergy(const BSpline& contour);
-
     Vector3 computeEnergyGradient(const BSpline& contour, int index, bool usePreviousPointForInternal = true);
-    // Vector3 computeInternalEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true);
-    // Vector3 computeExternalEnergyGradient(const BSpline& contour, int index);
 
     Vector3 computeInternalEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true) const;
     Vector3 computeExternalEnergyGradient(const BSpline& contour, int index) const;
@@ -29,13 +23,13 @@ public:
 
     BSpline updateContour(const BSpline& currentContour, float stepSize = 0.1f);
 
-    // bool hasConverged(const BSpline& contour1, const BSpline& contour2);
-
+    virtual float getImageAt(const Vector3& p) const = 0;
+    virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
 
 // private:
     BSpline contour;     // BSpline representing the contour
-    GridF image;         // Grayscale image grid
-    GridV3 gradientField; // Gradient field of the image
+    // GridF image;         // Grayscale image grid
+    // GridV3 gradientField; // Gradient field of the image
 
     Vector3 position; // Initial position, attracting the whole curve
 

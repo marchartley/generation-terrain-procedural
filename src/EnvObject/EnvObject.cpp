@@ -249,7 +249,7 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
     float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
     bool snakeDefined = false;
-    SnakeSegmentation snakeParameters;
+    SnakeSegmentationImplicit snakeParameters;
     if (content.contains("snake")) {
         auto snakeParamsJSON = content["snake"];
         snakeParameters.connectivityCost = snakeParamsJSON["connectivity"];
@@ -260,6 +260,8 @@ EnvObject *EnvObject::fromJSON(nlohmann::json content)
         snakeParameters.imageInsideCoef = snakeParamsJSON["imageinside"];
         snakeParameters.imageBordersCoef = snakeParamsJSON["imageborders"];
         snakeParameters.nbCatapillars = snakeParamsJSON["catapillars"];
+        snakeParameters.targetLength = (snakeParamsJSON.contains("targetlength") ? snakeParamsJSON["targetlength"].get<float>() : 0.f);
+        snakeParameters.targetArea = (snakeParamsJSON.contains("targetarea") ? snakeParamsJSON["targetarea"].get<float>() : 0.f);
         snakeDefined = true;
     }
 
@@ -466,11 +468,17 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
         throw std::runtime_error("The formula " + formula + " is not valid for object '" + currentObject + "'");
     }
     std::set<std::string> neededVariables = parser.extractAllVariables(formula);
+    const std::string depthStr = "depth";
+    const std::string currenttimeStr = "currenttime";
+    const std::string spawntimeStr = "spawntime";
+    const std::string posStr = "pos";
     auto _func = parser.parse(formula, variables);
-    return [&, formula, _func, neededVariables, currentObject, removeSelfInstances, myObject](Vector3 pos) -> float {
+    return [&, formula, _func, neededVariables, currentObject, removeSelfInstances, myObject, depthStr, currenttimeStr, spawntimeStr, posStr](Vector3 pos) -> float {
         // ExpressionParser parser;
         std::map<std::string, Variable> vars;
+        // displayProcessTime("Variables: ", [&]() {
         for (auto& [prop, map] : EnvObject::allVectorProperties) {
+                if (!isIn(prop, neededVariables)) continue;
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
                 vars[prop] = Vector3::invalid();
             } else {
@@ -478,25 +486,30 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
             }
         }
         for (auto& [prop, map] : EnvObject::allScalarProperties) {
+            if (!isIn(prop, neededVariables)) continue;
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
                 vars[prop] = float();
             } else {
                 vars[prop] = map(pos);
             }
         }
-        if (myObject && myObject->_patch) {
+        if (myObject && myObject->_patch && isIn(depthStr, neededVariables)) {
             // if (auto patch = dynamic_cast<ImplicitPrimitive*>(myObject->_patch)) {
             vars["depth"] = std::get<float>(vars["depth"]) + (myObject->createHeightfield().at(pos)); //.at(pos - patch->position.xy()));
             // } else {
                 // std::cout << "NO" << std::endl;
             // }
         }
-        vars["pos"] = pos;
-        vars["currenttime"] = float(EnvObject::currentTime);
-        if (myObject != nullptr)
-            vars["spawntime"] = float(std::min(EnvObject::currentTime, myObject->spawnTime));
-        else
-            vars["spawntime"] = float(EnvObject::currentTime);
+        if (isIn(posStr, neededVariables))
+            vars["pos"] = pos;
+        if (isIn(currenttimeStr, neededVariables))
+            vars["currenttime"] = float(EnvObject::currentTime);
+        if (isIn(spawntimeStr, neededVariables)) {
+            if (myObject != nullptr)
+                vars["spawntime"] = float(std::min(EnvObject::currentTime, myObject->spawnTime));
+            else
+                vars["spawntime"] = float(EnvObject::currentTime);
+        }
         /*
         for (std::string neededVar : neededVariables) {
             if (std::holds_alternative<float>(vars[neededVar])) {
@@ -507,7 +520,11 @@ std::function<float (Vector3)> EnvObject::parseFittingFunction(std::string formu
                 std::cout << neededVar << ": unknown" << std::endl;
             }
         }*/
-        float score = _func(vars);
+        // });
+        float score;
+        // displayProcessTime("Score: ", [&](){
+        score = _func(vars);
+        // });
 
         /*
         std::cout << "Values used for " << currentObject << ":\n";
@@ -614,20 +631,36 @@ bool EnvObject::updateSedimentation(const GridF& heights)
     auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
 
     std::vector<std::string> names;
-    for (auto& [name, material] : EnvObject::materials) {
+    /*for (auto& [name, material] : EnvObject::materials) {
+        // TODO : SELECT ONLY AFFECTED MATERIALS
+        // if (!material.isStable)
         names.push_back(name);
+    }*/
+
+    for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
+        auto& object = EnvObject::instantiatedObjects[i];
+        for (auto& [materialName, rate] : object->materialAbsorptionRate) {
+            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
+                names.push_back(materialName);
+            }
+        }
+        for (auto& [materialName, rate] : object->materialDepositionRate) {
+            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
+                names.push_back(materialName);
+            }
+        }
     }
 #pragma omp parallel for
     for(int i = 0; i < names.size(); i++) {
         auto& material = materials[names[i]];
-        if (material.isStable) {
+        // if (material.isStable) {
             // std::cout << material.name << " is stable" << std::endl;
             // continue;
-        } else {
+        // } else {
             // std::cout << material.name << " NOT stable" << std::endl;
-        }
+        // }
 
-        bool needToBeUpdated = false;
+        // bool needToBeUpdated = false;
         // float startingAmount = material.currentState.sum();
         auto startState = material.currentState;
         for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
@@ -635,7 +668,7 @@ bool EnvObject::updateSedimentation(const GridF& heights)
             if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
                 // #pragma omp critical
                 object->applyAbsorption(material);
-                needToBeUpdated = true;
+                // needToBeUpdated = true;
             }
         }
 
@@ -644,34 +677,34 @@ bool EnvObject::updateSedimentation(const GridF& heights)
             if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
                 // #pragma omp critical
                 object->applyDeposition(material);
-                needToBeUpdated = true;
+                // needToBeUpdated = true;
             }
         }
 
-        if (needToBeUpdated) {
+        // if (needToBeUpdated) {
             material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
             // material.currentState *= material.decay;
 
             // float endingAmount = material.currentState.sum();
-            float diff = (material.currentState - startState).abs().sum();
+            // float diff = (material.currentState - startState).abs().sum();
 
             // #pragma omp critical
             // {
             //     std::cout << material.name << ": " << diff << std::endl;
             // }
 
-            if (diff > 1e-3) {
-#pragma omp critical
-                {
-                    bigChangesInAtLeastOneMaterialDistribution = true;
-                }
-            } else {
+            // if (diff > 1e-3) {
+// #pragma omp critical
+                // {
+                    // bigChangesInAtLeastOneMaterialDistribution = true;
+                // }
+            // } else {
                 // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
-                material.isStable = true;
-            }
-        } else {
+                // material.isStable = true;
+            // }
+        // } else {
             material.isStable = true;
-        }
+        // }
     }
     return bigChangesInAtLeastOneMaterialDistribution;
 }

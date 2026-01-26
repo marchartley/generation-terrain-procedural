@@ -30,12 +30,14 @@ bool EnvMaterial::fromJSON(nlohmann::json json)
 
 void EnvMaterial::update(const GridV3 &waterCurrents, const GridV3 &heightsGradients, float dt)
 {
-    if (this->diffusionSpeed < 1.f) {
-        if (random_gen::generate() < this->diffusionSpeed) {
-            this->currentState = this->currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
+    // if (!this->isStable) {
+        if (this->diffusionSpeed < 1.f) {
+            if (random_gen::generate() < this->diffusionSpeed) {
+                this->currentState = this->currentState.meanSmooth(3, 3, 1, false); // Diffuse a little bit
+            }
+        } else {
+            this->currentState = this->currentState.meanSmooth(this->diffusionSpeed * 2 + 1, this->diffusionSpeed * 2 + 1, 1, false); // Diffuse
         }
-    } else {
-        this->currentState = this->currentState.meanSmooth(this->diffusionSpeed * 2 + 1, this->diffusionSpeed * 2 + 1, 1, false); // Diffuse
-    }
-    this->currentState = (this->currentState.warpWith((waterCurrents * this->waterTransport) - (heightsGradients * this->mass))) * std::pow(this->decay, dt);
+        this->currentState = (this->currentState.warpWith((waterCurrents * this->waterTransport) - (heightsGradients * this->mass))) * std::pow(this->decay, dt);
+    // }
 }

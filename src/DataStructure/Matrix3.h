@@ -393,7 +393,7 @@ void Matrix3<T>::iterateReverse(Func function) const
 template<class T> template<class Func>
 void Matrix3<T>::iterateParallel(Func function) const
 {
-    #pragma omp parallel for collapse(3)
+#pragma omp parallel for collapse(3) schedule(dynamic)
     for (int x = 0; x < this->sizeX; x++) {
         for (int y = 0; y < this->sizeY; y++) {
             for (int z = 0; z < this->sizeZ; z++) {
