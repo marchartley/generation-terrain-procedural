@@ -109,7 +109,7 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const BSpline &contour,
     Vector3 currentPoint = contour[index];
 
     // Get interpolated gradient from image gradient field at the current contour point
-    Vector3 imageGradient = gradientField.interpolate(currentPoint);
+    Vector3 imageGradient = getGradientImageAt(currentPoint);
 
     Vector3 gradient = -imageGradient;
 
@@ -129,7 +129,7 @@ Vector3 SnakeSegmentation::computeExternalEnergyGradient(const BSpline &contour,
         std::vector<Vector3> randomPoints = ShapeCurve({pos, nextPos, prevPos}).randomPointsInside(3);
         float addedIntegral = 0;
         for (const auto& p : randomPoints) {
-            addedIntegral += this->image.interpolate(p);
+            addedIntegral += this->getImageAt(p);
         }
 
         Vector3 insideGradient = areaGradientDirection * ((currentIntegralOverArea / currentDomainArea) - ((currentIntegralOverArea + addedIntegral) / (currentDomainArea + addedArea)));
@@ -177,7 +177,7 @@ Vector3 SnakeSegmentation::computeShapeEnergyGradient(const BSpline &contour, in
 Vector3 SnakeSegmentation::computeGradientEnergyGradient(const BSpline &contour, int index) const
 {
     if (this->slopeCost != 0) {
-        Vector3 gradient = gradientField.interpolate(contour[index]);
+        Vector3 gradient = getGradientImageAt(contour[index]);
 
         if (index == 0) {
             return slopeCost * -gradient.normalize();
@@ -189,7 +189,7 @@ Vector3 SnakeSegmentation::computeGradientEnergyGradient(const BSpline &contour,
         // if (gradient.norm2() < 1e-4) {
         // internalEnergyGradient *= 0;
         // } else {
-        // float diff = image.interpolate(contour[(i == 0 ? i + 1 : i)]) - image.interpolate(contour[(i == 0 ? i : i - 1)]);
+        // float diff = getImageAt(contour[(i == 0 ? i + 1 : i)]) - getImageAt(contour[(i == 0 ? i : i - 1)]);
         // std::cout << i << ": " << diff << "\n";
         // internalEnergyGradient += slopeCost * gradient.normalized(); // * (diff < 0 ? 0 : 1.f);
         Vector3 internalEnergyGradient = slopeCost * gradient/*.normalize()*/ /* * (shouldGoDownward ? 1.f : -1.f)*/ * t;// * sign(gradient.dot(contour.getDirection(float(i) / float(contour.size() - 1))));
@@ -214,7 +214,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
             }
         }
         for (const auto& v : randomGreenCoords) {
-            currentIntegralOverArea += image.interpolate(computePointFromGreenCoordinates(v, contourAsRegion));
+            currentIntegralOverArea += getImageAt(computePointFromGreenCoordinates(v, contourAsRegion));
         }
     }
 
@@ -296,3 +296,14 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
     }
     return newContour;
 }
+/*
+float SnakeSegmentation::getImageAt(const Vector3 &p) const
+{
+    return this->image.interpolate(p);
+}
+
+Vector3 SnakeSegmentation::getGradientImageAt(const Vector3 &p) const
+{
+    return this->gradientField.interpolate(p);
+}
+*/

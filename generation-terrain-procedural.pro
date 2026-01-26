@@ -16,13 +16,13 @@ INCLUDEPATH += \
     $$TORCH_DIR/include/torch/csrc/api/include
 
 LIBS += -L$$TORCH_DIR/lib \
-        -ltorch_global_deps \
-        -ltorch \
-        -ltorch_cpu \
-        -lc10 \
-        -ltorch_cuda \
-        -lc10_cuda \
-        -ldl -lrt -lpthread
+    -ltorch_global_deps \
+    -ltorch \
+    -ltorch_cpu \
+    -lc10 \
+    -ltorch_cuda \
+    -lc10_cuda \
+    -ldl -lrt -lpthread
 
 QMAKE_LFLAGS += -Wl,-rpath,$$TORCH_DIR/lib
 DEFINES += _GLIBCXX_USE_CXX11_ABI=1
@@ -77,14 +77,12 @@ SOURCES += \
     src/Biomes/BiomeInstance.cpp \
     src/Biomes/BiomeModel.cpp \
     src/Biomes/BiomeUtils.cpp \
-#    src/Biomes/InstancesTree.cpp \
-#    src/Biomes/ModelsTree.cpp \
     src/DataStructure/BVH.cpp \
     src/DataStructure/Image.cpp \
     src/DataStructure/KDTree.cpp \
     src/DataStructure/Kelvinlet.cpp \
-        src/DataStructure/Matrix.cpp \
-        src/DataStructure/Matrix3.cpp \
+    src/DataStructure/Matrix.cpp \
+    src/DataStructure/Matrix3.cpp \
     src/DataStructure/MemoryPool.cpp \
     src/DataStructure/Octree.cpp \
     src/DataStructure/Particle.cpp \
@@ -92,23 +90,21 @@ SOURCES += \
     src/DataStructure/SpacePartitioning.cpp \
     src/DataStructure/Tree.cpp \
     src/DataStructure/Triangle.cpp \
-        src/DataStructure/Vector3.cpp \
+    src/DataStructure/Vector3.cpp \
     src/DataStructure/Vector4.cpp \
-        src/DataStructure/Vertex.cpp \
-        src/DataStructure/Voxel.cpp \
+    src/DataStructure/Vertex.cpp \
+    src/DataStructure/Voxel.cpp \
     src/EnvObject/EnvArea.cpp \
     src/EnvObject/EnvCurve.cpp \
     src/EnvObject/EnvMaterial.cpp \
     src/EnvObject/EnvObject.cpp \
-#        src/FastWFC/propagator.cpp \
-#        src/FastWFC/wave.cpp \
-#        src/FastWFC/wfc.cpp \
     src/EnvObject/EnvPoint.cpp \
     src/EnvObject/EnvScenario.cpp \
     src/EnvObject/ExpressionParser.cpp \
-#    src/FluidSimulation/FLIPSimulation_copy.cpp \
     src/EnvObject/PositionOptimizer.cpp \
     src/EnvObject/SnakeSegmentation.cpp \
+    src/EnvObject/SnakeSegmentationExplicit.cpp \
+    src/EnvObject/SnakeSegmentationImplicit.cpp \
     src/FluidSimulation/FluidSimulation.cpp \
     src/FluidSimulation/FLIPSimulation.cpp \
     src/FluidSimulation/LBMFluidSimulation.cpp \
@@ -117,128 +113,110 @@ SOURCES += \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
-        src/Graph/Graph.cpp \
-        src/Graph/FastPoissonGraph.cpp \
-        src/Graph/GraphNode.cpp \
-        src/Graph/Matrix3Graph.cpp \
-        src/Graph/Pathfinding.cpp \
+    src/Graph/Graph.cpp \
+    src/Graph/FastPoissonGraph.cpp \
+    src/Graph/GraphNode.cpp \
+    src/Graph/Matrix3Graph.cpp \
+    src/Graph/Pathfinding.cpp \
     src/Graph/PathfindingGraph.cpp \
     src/Graph/RegularSimplicialComplex.cpp \
     src/Graph/TopoMap.cpp \
-        src/Graph/WaveFunctionCollapse.cpp \
+    src/Graph/WaveFunctionCollapse.cpp \
     src/GUIElements/AbstractPlotter.cpp \
     src/Graphics/ComputeShader.cpp \
-        src/Graphics/CubeMesh.cpp \
-        src/Graphics/DebugShader.cpp \
+    src/Graphics/CubeMesh.cpp \
+    src/Graphics/DebugShader.cpp \
     src/GUIElements/GanUIPainter.cpp \
-        src/Graphics/MarchingCubes.cpp \
+    src/Graphics/MarchingCubes.cpp \
     src/GUIElements/ImageViewer.cpp \
     src/Graphics/RayMarching.cpp \
-        src/Graphics/Shader.cpp \
-        src/Graphics/Mesh.cpp \
-        src/Graphics/ShaderElement.cpp \
-        src/Graphics/Sphere.cpp \
+    src/Graphics/Shader.cpp \
+    src/Graphics/Mesh.cpp \
+    src/Graphics/ShaderElement.cpp \
+    src/Graphics/Sphere.cpp \
     src/Graphics/miniz.c \
     src/Graphics/ofbx.cpp \
     src/Interface/AbstractFluidSimulationInterface.cpp \
-        src/Interface/ActionInterface.cpp \
+    src/Interface/ActionInterface.cpp \
     src/Interface/BiomeInterface.cpp \
     src/GUIElements/CommonInterface.cpp \
-        src/GUIElements/ControlPoint.cpp \
+    src/GUIElements/ControlPoint.cpp \
     src/Interface/CoralIslandGeneratorInterface.cpp \
-        src/Interface/CustomInteractiveObject.cpp \
+    src/Interface/CustomInteractiveObject.cpp \
     src/Interface/EnvObjectFluidSimulation.cpp \
     src/Interface/EnvObjsInterface.cpp \
-        src/Interface/ErosionInterface.cpp \
+    src/Interface/ErosionInterface.cpp \
     src/Interface/FLIPSimulationInterface.cpp \
-        src/GUIElements/FancySlider.cpp \
-        src/Interface/FaultSlipInterface.cpp \
+    src/GUIElements/FancySlider.cpp \
+    src/Interface/FaultSlipInterface.cpp \
     src/Interface/GANPainterInterface.cpp \
-        src/Interface/GravityInterface.cpp \
-        src/Interface/HeightmapErosionInterface.cpp \
+    src/Interface/GravityInterface.cpp \
+    src/Interface/HeightmapErosionInterface.cpp \
     src/GUIElements/HierarchicalListWidget.cpp \
-        src/GUIElements/InteractiveVector.cpp \
-        src/Interface/Interface.cpp \
-        src/GUIElements/InterfaceUtils.cpp \
-        src/Interface/KarstPathGenerationInterface.cpp \
+    src/GUIElements/InteractiveVector.cpp \
+    src/Interface/Interface.cpp \
+    src/GUIElements/InterfaceUtils.cpp \
+    src/Interface/KarstPathGenerationInterface.cpp \
     src/Interface/LBMFluidSimulationInterface.cpp \
-        src/Interface/ManualEditionInterface.cpp \
+    src/Interface/ManualEditionInterface.cpp \
     src/Interface/MeshInstanceAmplificationInterface.cpp \
-        src/GUIElements/PathCameraConstraint.cpp \
+    src/GUIElements/PathCameraConstraint.cpp \
     src/Interface/PrimitivePatchesInterface.cpp \
-        src/GUIElements/RangeSlider.cpp \
+    src/GUIElements/RangeSlider.cpp \
     src/Interface/SPHSimulationInterface.cpp \
     src/Interface/ScreenshotInterface.cpp \
-        src/GUIElements/Slider3D.cpp \
+    src/GUIElements/Slider3D.cpp \
     src/Interface/SmoothInterface.cpp \
-        src/Interface/SpaceColonizationInterface.cpp \
+    src/Interface/SpaceColonizationInterface.cpp \
     src/Interface/SpheroidalErosionInterface.cpp \
-        src/GUIElements/Spoiler.cpp \
+    src/GUIElements/Spoiler.cpp \
     src/Interface/StableFluidSimulationInterface.cpp \
-        src/GUIElements/StickyFrame.cpp \
+    src/GUIElements/StickyFrame.cpp \
     src/Interface/TerrainComparatorInterface.cpp \
-        src/Interface/TerrainGenerationInterface.cpp \
-        src/Interface/TerrainSavingInterface.cpp \
-        src/Interface/TunnelInterface.cpp \
-        src/Interface/UndoRedoInterface.cpp \
-        src/Interface/Viewer.cpp \
-        src/GUIElements/VisitingCamera.cpp \
+    src/Interface/TerrainGenerationInterface.cpp \
+    src/Interface/TerrainSavingInterface.cpp \
+    src/Interface/TunnelInterface.cpp \
+    src/Interface/UndoRedoInterface.cpp \
+    src/Interface/Viewer.cpp \
+    src/GUIElements/VisitingCamera.cpp \
     src/Interface/WarpFluidSimulationInterface.cpp \
-        src/Karst/KarstHole.cpp \
-        src/Karst/KarstHoleProfile.cpp \
-        src/Karst/KarstPathsGeneration.cpp \
+    src/Karst/KarstHole.cpp \
+    src/Karst/KarstHoleProfile.cpp \
+    src/Karst/KarstPathsGeneration.cpp \
     src/TerrainGen/GlobalTerrainProperties.cpp \
     src/TerrainGen/Heightmap.cpp \
     src/TerrainGen/ImplicitPatch.cpp \
-        src/TerrainGen/LayerBasedGrid.cpp \
+    src/TerrainGen/LayerBasedGrid.cpp \
     src/TerrainGen/TerrainModel.cpp \
-        src/TerrainGen/VoxelChunk.cpp \
-        src/TerrainGen/VoxelGrid.cpp \
+    src/TerrainGen/VoxelChunk.cpp \
+    src/TerrainGen/VoxelGrid.cpp \
     src/TerrainModification/CoralGrowth.cpp \
     src/TerrainModification/CoralIslandGenerator.cpp \
-        src/TerrainModification/FaultSlip.cpp \
+    src/TerrainModification/FaultSlip.cpp \
     src/TerrainModification/ParticleErosion.cpp \
-        src/TerrainModification/RockErosion.cpp \
+    src/TerrainModification/RockErosion.cpp \
     src/TerrainModification/SpheroidalWeathering.cpp \
-        src/TerrainModification/TerrainAction.cpp \
-        src/TerrainModification/UnderwaterErosion.cpp \
-        src/TreeColonisation/TreeColonisation.cpp \
+    src/TerrainModification/TerrainAction.cpp \
+    src/TerrainModification/UnderwaterErosion.cpp \
+    src/TreeColonisation/TreeColonisation.cpp \
     src/Utils/AdjencySolver.cpp \
-        src/Utils/BSpline.cpp \
-        src/Utils/Collisions.cpp \
+    src/Utils/BSpline.cpp \
+    src/Utils/Collisions.cpp \
     src/Utils/ConstraintsSolver.cpp \
     src/Utils/Curve1D.cpp \
     src/Utils/Delaunay.cpp \
-        src/Utils/Globals.cpp \
+    src/Utils/Globals.cpp \
     src/Utils/HotreloadFile.cpp \
     src/Utils/PSO.cpp \
     src/Utils/PbmReader.cpp \
     src/Utils/RadialShape.cpp \
-        src/Utils/RewritableFile.cpp \
+    src/Utils/RewritableFile.cpp \
     src/Utils/ShapeCurve.cpp \
     src/Utils/Skeletonize.cpp \
     src/Utils/Table.cpp \
-        src/Utils/Utils.cpp \
+    src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
-#    src/libpng/example.c \
-#    src/libpng/png.c \
-#    src/libpng/pngerror.c \
-#    src/libpng/pngget.c \
-#    src/libpng/pngmem.c \
-#    src/libpng/pngpread.c \
-#    src/libpng/pngread.c \
-#    src/libpng/pngrio.c \
-#    src/libpng/pngrtran.c \
-#    src/libpng/pngrutil.c \
-#    src/libpng/pngset.c \
-#    src/libpng/pngtest.c \
-#    src/libpng/pngtrans.c \
-#    src/libpng/pngwio.c \
-#    src/libpng/pngwrite.c \
-#    src/libpng/pngwtran.c \
-#    src/libpng/pngwutil.c \
-        src/main.cpp \
-#    src/pngpp/pngpptest.cpp
+    src/main.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
@@ -284,25 +262,13 @@ HEADERS += \
     src/EnvObject/EnvCurve.h \
     src/EnvObject/EnvMaterial.h \
     src/EnvObject/EnvObject.h \
-#    src/FastWFC/color.hpp \
-#    src/FastWFC/direction.hpp \
-#    src/FastWFC/external/rapidxml.hpp \
-#    src/FastWFC/image.hpp \
-#    src/FastWFC/overlapping_wfc.hpp \
-#    src/FastWFC/propagator.hpp \
-#    src/FastWFC/rapidxml_utils.hpp \
-#    src/FastWFC/tiling_wfc.hpp \
-#    src/FastWFC/utils.hpp \
-#    src/FastWFC/utils/array2D.hpp \
-#    src/FastWFC/utils/array3D.hpp \
-#    src/FastWFC/wave.hpp \
-#    src/FastWFC/wfc.hpp \
     src/EnvObject/EnvPoint.h \
     src/EnvObject/EnvScenario.h \
     src/EnvObject/ExpressionParser.h \
-#    src/FluidSimulation/FLIPSimulation_copy.h \
     src/EnvObject/PositionOptimizer.h \
     src/EnvObject/SnakeSegmentation.h \
+    src/EnvObject/SnakeSegmentationExplicit.h \
+    src/EnvObject/SnakeSegmentationImplicit.h \
     src/FluidSimulation/FluidSimulation.h \
     src/FluidSimulation/FLIPSimulation.h \
     src/FluidSimulation/LBMFluidSimulation.h \
@@ -424,29 +390,6 @@ HEADERS += \
     src/Utils/stb_image_write.h \
     src/Utils/stb_image_resize.h \
     src/Utils/stl_reader.h \
-#    src/libpng/png.h \
-#    src/libpng/pngconf.h \
-#    src/libpng/pngdebug.h \
-#    src/libpng/pnginfo.h \
-#    src/libpng/pngpriv.h \
-#    src/libpng/pngstruct.h \
-#    src/pngpp/convert_color_space.hpp \
-#    src/pngpp/end_info.hpp \
-#    src/pngpp/error.hpp \
-#    src/pngpp/image.hpp \
-#    src/pngpp/info.hpp \
-#    src/pngpp/info_base.hpp \
-#    src/pngpp/io_base.hpp \
-#    src/pngpp/io_transform.hpp \
-#    src/pngpp/pixel_buffer.hpp \
-#    src/pngpp/pixel_traits.hpp \
-#    src/pngpp/png.hpp \
-#    src/pngpp/reader.hpp \
-#    src/pngpp/require_color_space.hpp \
-#    src/pngpp/rgb_pixel.hpp \
-#    src/pngpp/rgba_pixel.hpp \
-#    src/pngpp/types.hpp \
-#    src/pngpp/writer.hpp \
     src/sim-fluid-loganzartman/Box.hpp \
     src/sim-fluid-loganzartman/DebugLine.hpp \
     src/sim-fluid-loganzartman/Fluid.hpp \

@@ -235,8 +235,12 @@ QLayout *EnvObjsInterface::createGUI()
 
 
     std::vector<ComboboxLineElement> objectsChoices;
+    int selectionForCoral = 0;
     for (auto& [name, obj] : EnvObject::availableObjects) {
         objectsChoices.push_back(ComboboxLineElement{name, 0});
+        if (toLower(name) == "river") {
+            selectionForCoral = objectsChoices.size() - 1;
+        }
     }
     ButtonElement* showButton = new ButtonElement("Show", [&](){
         this->displayProbas(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label);
@@ -245,7 +249,12 @@ QLayout *EnvObjsInterface::createGUI()
         this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), false, false); //true, true);
         Q_EMIT this->updated();
     });
+    forceButton->setOnRepeat([&](){
+        this->instantiateSpecific(objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label, GridF(), false, false); //true, true);
+        Q_EMIT this->updated();
+    });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
+    objectCombobox->combobox()->setCurrentIndex(selectionForCoral);
 
     // std::vector<QWidget*> materialsButtons;
     // for (auto& [name, material] : EnvObject::materials) {
@@ -570,21 +579,33 @@ Vector3 bestPositionForInstantiationWithPSO(std::string objectName, const Vector
 }
 Vector3 bestPositionForInstantiationUniform(std::string objectName, const AABBox& bounds, const GridF& focusArea, int nbSamples = 20) {
     auto& func = EnvObject::availableObjects[objectName]->fitnessFunction;
-    float bestScore = std::numeric_limits<float>::lowest();
-    Vector3 bestPos = Vector3::invalid();
+    std::vector<std::pair<Vector3, float>> evaluations(nbSamples);
+    float minScoreThreshold = EnvObject::availableObjects[objectName]->minScore;
+#pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < nbSamples; i++) {
-        const Vector3 pos = Vector3::random(bounds);
-        if (focusArea.at(pos) < random_gen::generate()) {
-            i--;
-            continue;
+        float focus = 0.f;
+        Vector3 pos;
+        float score = 0.f;
+        while (focus < random_gen::generate()) {
+            pos = Vector3::random(bounds);
+            focus = focusArea.at(pos);
         }
-        float score = func(pos);
-        if (score > bestScore) {
-            bestPos = pos;
-            bestScore = score;
-        }
+        score = func(pos);
+        evaluations[i] = std::make_pair(pos, score > minScoreThreshold ? score : 0.f);
     }
-    return bestScore >= EnvObject::availableObjects[objectName]->minScore ? bestPos : Vector3::invalid();
+    float totalScore = 0.f;
+    for (int i = 0; i < nbSamples; i++) {
+        totalScore += evaluations[i].second;
+    }
+    float cummul = 0.f;
+    float target = random_gen::generate(0.f, totalScore);
+
+    int iSample = 0;
+    for (iSample = 0; iSample < nbSamples; iSample++) {
+        cummul += evaluations[iSample].second;
+        if (cummul > target) return evaluations[iSample].first;
+    }
+    return Vector3::invalid();
 }
 
 Vector3 bestPositionForInstantiation(std::string objectName, const GridF& score) {
@@ -703,14 +724,21 @@ EnvObject *EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std:
         // position = PositionOptimizer::getHighestPosition(position, score, gradients);
         if (!position.isValid() || position == Vector3())
             return nullptr;
-    }/* else if (objAsCurve) {
+    } else if (objAsCurve) {
         BSpline initialCurve;
-        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+        /*if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
             initialCurve = CurveOptimizer::getSkeletonCurve(position, score, gradients, objAsCurve->length);
         } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
             initialCurve = CurveOptimizer::followIsolevel(position, score, gradients, objAsCurve->length);
         } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
             initialCurve = CurveOptimizer::getExactLengthCurveFollowingGradients(position, score, gradients, objAsCurve->length);
+        }*/
+        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+            initialCurve = ContinuousCurveOptimizer::getSkeletonCurve(position, newObject->fitnessFunction, objAsCurve->length);
+        } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
+            initialCurve = ContinuousCurveOptimizer::followIsolevel(position, newObject->fitnessFunction, objAsCurve->length);
+        } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
+            initialCurve = ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(position, newObject->fitnessFunction, objAsCurve->length);
         }
         if (initialCurve.size() == 0) {
             EnvObject::removeObject(newObject);
@@ -723,7 +751,7 @@ EnvObject *EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std:
         curve.translate(-position);
         objAsCurve->curve = curve;
     } else if (objAsArea) {
-        ShapeCurve initialCurve = AreaOptimizer::getAreaOptimizedShape(position, score, gradients, objAsArea->length * objAsArea->width);
+        ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(position, newObject->fitnessFunction, objAsArea->length * objAsArea->width);
         if (initialCurve.size() == 0) {
             EnvObject::removeObject(newObject);
             delete newObject;
@@ -734,7 +762,7 @@ EnvObject *EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std:
         ShapeCurve curve = initialCurve.close().resamplePoints();
         curve.translate(-position);
         objAsArea->curve = curve.resamplePoints(10);
-    }*/
+    }
 
     newObject->translate(position.xy());
     // newObject->recomputeEvaluationPoints();
@@ -807,7 +835,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
     displayProcessTime("Instantiate new " + objectName + " (with PSO)... ", [&]() {
             Vector3 position;
             displayProcessTime("Pos: ", [&]() {
-                position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, 100);
+                position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, 1000);
             });
 
 
@@ -1867,6 +1895,7 @@ void EnvObjsInterface::resetScene()
 //    this->rootPatch->deleteAllChildren();
     this->rootPatch->composables.clear();
     this->rootPatch->updateCache();
+    this->currentSelections.clear();
 
     this->updateEnvironmentFromEnvObjects(true);
 
@@ -2049,13 +2078,22 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
     } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
         BSpline initialCurve;
-        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+        /*if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
             float targetLength = objAsCurve->length;
             initialCurve = CurveOptimizer::getSkeletonCurve(position, score, gradients, targetLength);
         } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
             initialCurve = CurveOptimizer::followIsolevel(position, score, gradients, objAsCurve->length);
         } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
             initialCurve = CurveOptimizer::getExactLengthCurveFollowingGradients(position, score, gradients, objAsCurve->length);
+        }*/
+
+        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
+            float targetLength = objAsCurve->length;
+            initialCurve = ContinuousCurveOptimizer::getSkeletonCurve(position, objAsCurve->fitnessFunction, targetLength);
+        } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
+            initialCurve = ContinuousCurveOptimizer::followIsolevel(position, objAsCurve->fitnessFunction, objAsCurve->length);
+        } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
+            initialCurve = ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(position, objAsCurve->fitnessFunction, objAsCurve->length);
         }
         isoline = initialCurve;
         isoline.closed = false;
@@ -2066,21 +2104,23 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
             float fakeArea = PI * fakeRadius * fakeRadius;
 
             ShapeCurve curve = ShapeCurve::circle(fakeRadius, position, 20);
-            SnakeSegmentation s = obj->snake;
+            SnakeSegmentationImplicit s = obj->snake;
             s.contour = curve;
-            s.image = score;
-            s.gradientField = gradients;
+            s.imageField = objAsArea->fitnessFunction;
+            s.gradientField = gradientFromFieldFunction(s.imageField);
+            // s.imageField = score;
+            // s.gradientField = gradients;
             s.targetLength = 0;
             s.targetArea = fakeArea;
             s.collapseFirstAndLastPoint = true;
 
             int maxIterations = 10;
             for (int iteration = 0; iteration < maxIterations; iteration++) {
-                initialCurve = s.runSegmentation(50);
+                initialCurve = s.runSegmentation(5);
                 ShapeCurve display = initialCurve;
                 display.points.push_back(display[0]);
                 display.resamplePoints(100);
-                if (iteration == 9) {
+                if (iteration <= 9) {
                     for (size_t i = 0; i < display.size(); i++) {
                         const auto& pos = display[i];
                         result(pos) = colorPalette(float(iteration) / float(maxIterations - 1));
@@ -2106,7 +2146,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         dataV3.iterateParallel([&](const Vector3i& pos) {
             bool insideCurve = isoline.containsXY(pos, false);
             result(pos) += Vector3(.5f, .5f, .5f) * (insideCurve ? 1.f : 0.f);
-            resultAlpha(pos) = (insideCurve ? .5f : 0.f);
+            // resultAlpha(pos) = (insideCurve ? .5f : 0.f);
         });
     }
     int nbSamples = 500;
@@ -2120,9 +2160,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(Vector3 position)
         resultAlpha(isoline[i]) = 1.f;
     }
     ImageViewer::get("Object Preview")->setOverlay(result, resultAlpha);
-    // ImageViewer::get("Object Preview")->addImage(result);
     ImageViewer::get("Object Preview")->show();
-    // ImageViewer::get("Object Preview")->addImage(dataV3);
 }
 
 void EnvObjsInterface::previewFocusAreaEdition(Vector3 mousePos, bool addingFocus)
@@ -2485,9 +2523,9 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
 
         // Also do it for the creation curve
         objectSkeletonCreation.translate(translation);
+        this->updateNewObjectMesh();
+        this->updateSelectionMesh();
     }
-    this->updateNewObjectMesh();
-    this->updateSelectionMesh();
 
     Q_EMIT this->updated();
 }

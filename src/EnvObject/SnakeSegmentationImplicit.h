@@ -1,21 +1,21 @@
-#ifndef SNAKESEGMENTATION_H
-#define SNAKESEGMENTATION_H
+#ifndef SNAKESEGMENTATIONIMPLICIT_H
+#define SNAKESEGMENTATIONIMPLICIT_H
 
 #include "Utils/BSpline.h"
-#include "DataStructure/Matrix3.h"
+#include "Utils/ShapeCurve.h"
+#include "EnvObject/SnakeSegmentation.h"
+#include <functional>
 
-class SnakeSegmentation {
-
+class SnakeSegmentationImplicit : public SnakeSegmentation
+{
 public:
-    SnakeSegmentation();
-    virtual ~SnakeSegmentation() {}
-    // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
-                      // const GridV3& inputGradient);
+    SnakeSegmentationImplicit();
 
-    BSpline runSegmentation(int maxIterations = 100);
 
+    float getImageAt(const Vector3& p) const;
+    Vector3 getGradientImageAt(const Vector3& p) const;
+    /*
     Vector3 computeEnergyGradient(const BSpline& contour, int index, bool usePreviousPointForInternal = true);
-
     Vector3 computeInternalEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true) const;
     Vector3 computeExternalEnergyGradient(const BSpline& contour, int index) const;
     Vector3 computeShapeEnergyGradient(const BSpline& contour, int index, bool usePreviousPoint = true) const;
@@ -23,15 +23,12 @@ public:
 
     BSpline updateContour(const BSpline& currentContour, float stepSize = 0.1f);
 
-    virtual float getImageAt(const Vector3& p) const = 0;
-    virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
+    // private:
+    // BSpline contour;     // BSpline representing the contour
+    std::function<float(const Vector3 &)> imageField; // Grayscale image grid
+    std::function<Vector3(const Vector3 &)> gradientField; // Gradient field of the image
 
-// private:
-    BSpline contour;     // BSpline representing the contour
-    // GridF image;         // Grayscale image grid
-    // GridV3 gradientField; // Gradient field of the image
-
-    Vector3 position; // Initial position, attracting the whole curve
+    // Vector3 position; // Initial position, attracting the whole curve
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -53,12 +50,15 @@ public:
 
     float currentDomainArea = 0;
     float currentIntegralOverArea = 0;
-    std::vector<std::vector<float>> randomGreenCoords;
+    std::vector<std::vector<float>> randomGreenCoords;*/
 
     // float internalCoefficient = 1.f;  // Coefficient for internal energy
     // float externalCoefficient = 1.f;  // Coefficient for external energy
 
     // float convergenceThreshold = 1e-2; // Threshold for convergence
+
+    std::function<float(const Vector3 &)> imageField; // Grayscale image grid
+    std::function<Vector3(const Vector3 &)> gradientField; // Gradient field of the image
 };
 
-#endif // SNAKESEGMENTATION_H
+#endif // SNAKESEGMENTATIONIMPLICIT_H

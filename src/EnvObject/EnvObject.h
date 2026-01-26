@@ -79,7 +79,7 @@ public:
     int ID = -1;
     int spawnTime = 0;
 
-    SnakeSegmentation snake;
+    SnakeSegmentationImplicit snake;
     bool snakeDefined = false;
 
     virtual float getSqrDistance(const Vector3& position) = 0;
