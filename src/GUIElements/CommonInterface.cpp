@@ -30,7 +30,7 @@ void UIElement::update()
 
 UIElement::~UIElement() {
     cleanupConnections();
-    delete element;
+    element->deleteLater();
 }
 
 void UIElement::setName(std::string name)
@@ -49,7 +49,7 @@ LabelElement::LabelElement(std::string text)
 
 QLabel *LabelElement::label()
 {
-    return static_cast<QLabel*>(getWidget());
+    return qobject_cast<QLabel*>(getWidget());
 }
 
 LabelElement *LabelElement::setText(std::string newText)
@@ -66,16 +66,47 @@ std::string LabelElement::getText()
 
 
 ButtonElement::ButtonElement(std::string label)
-    : UIElement(new QPushButton(QString::fromStdString(label))) {}
+    : UIElement(new QPushButton(QString::fromStdString(label))) {
+
+    QObject::connect(this->button(), &QObject::destroyed, this, [this](){
+        if (pressedTimer) pressedTimer->stop();
+    });
+}
 
 ButtonElement::ButtonElement(std::string label, std::function<void ()> onClick)
     : UIElement(new QPushButton(QString::fromStdString(label)))
 {
     this->setOnClick(onClick);
+    QObject::connect(this->button(), &QObject::destroyed, this, [this](){
+        if (pressedTimer) pressedTimer->stop();
+    });
 }
 
 QPushButton *ButtonElement::button() {
-    return static_cast<QPushButton*>(getWidget());
+    return qobject_cast<QPushButton*>(getWidget());
+}
+
+ButtonElement *ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunction, int delay_ms)
+{
+    if (this->pressedTimer != nullptr) delete this->pressedTimer;
+    this->pressedTimer = new QTimer(this);
+    this->pressedTimer->setInterval(delay_ms);
+    QObject::connect(this->pressedTimer, &QTimer::timeout, this, [=](){
+        if (this->currentRepeatFunctionFinished) {
+            this->currentRepeatFunctionFinished = false;
+            onRepeatFunction();
+            this->currentRepeatFunctionFinished = true;
+        }
+        if(this->button() && this->button()->isDown())
+            this->pressedTimer->setInterval(delay_ms);
+    });
+    this->setOnPressed([=]() {
+        this->pressedTimer->start(1000.f);
+    });
+    this->setOnRelease([=]() {
+        this->pressedTimer->stop();
+    });
+    return this;
 }
 
 
@@ -146,7 +177,7 @@ CheckboxElement::CheckboxElement(std::string label, std::function<void (bool)> o
 }
 
 QCheckBox *CheckboxElement::checkBox() {
-    return static_cast<QCheckBox*>(getWidget());
+    return qobject_cast<QCheckBox*>(getWidget());
 }
 
 void CheckboxElement::bindTo(bool &value)
@@ -182,7 +213,7 @@ InterfaceUI::~InterfaceUI()
 
 QGroupBox *InterfaceUI::box() const
 {
-    return static_cast<QGroupBox*>(getWidget());
+    return qobject_cast<QGroupBox*>(getWidget());
 }
 
 UIElement *InterfaceUI::add(UIElement *element, std::string name)
@@ -250,7 +281,7 @@ RadioButtonElement::RadioButtonElement(std::string label, bool &binded)
 
 QRadioButton *RadioButtonElement::radioButton()
 {
-    return static_cast<QRadioButton*>(getWidget());
+    return qobject_cast<QRadioButton*>(getWidget());
 }
 
 void RadioButtonElement::bindTo(bool &value)
@@ -511,7 +542,7 @@ HierarchicalListUI::HierarchicalListUI()
 
 HierarchicalListWidget *HierarchicalListUI::hierarchicalList()
 {
-    return static_cast<HierarchicalListWidget*>(this->getWidget());
+    return qobject_cast<HierarchicalListWidget*>(this->getWidget());
 }
 
 HierarchicalListUI *HierarchicalListUI::setSelectionMode(QAbstractItemView::SelectionMode mode)
