@@ -100,6 +100,9 @@ public:
     float evaluate(const Vector3& position);
     float evaluate();
 
+    virtual bool placeInTerrain(const Vector3& seedPosition) = 0;
+    virtual bool placeInTerrain(const BSpline& seedCurve) = 0;
+
     void die();
 
     bool premature = false;

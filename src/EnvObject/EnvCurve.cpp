@@ -43,6 +43,49 @@ EnvCurve *EnvCurve::instantiate(std::string objectName)
     return dynamic_cast<EnvCurve*>(EnvObject::instantiate(objectName));
 }
 
+bool EnvCurve::placeInTerrain(const Vector3 &seedPosition)
+{
+    BSpline initialCurve;
+    if (this->curveFollow == EnvCurve::SKELETON) {
+        initialCurve = ContinuousCurveOptimizer::getSkeletonCurve(seedPosition, this->fitnessFunction, this->length);
+    } else if (this->curveFollow == EnvCurve::ISOVALUE) {
+        initialCurve = ContinuousCurveOptimizer::followIsolevel(seedPosition, this->fitnessFunction, this->length);
+    } else if (this->curveFollow == EnvCurve::GRADIENTS) {
+        initialCurve = ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(seedPosition, this->fitnessFunction, this->length);
+    }
+    return this->placeInTerrain(initialCurve);
+    /*BSpline curve = initialCurve;
+    curve.resamplePoints(10);
+    Vector3 position = curve[curve.size() / 2];
+    curve.translate(-position);
+    this->curve = curve;
+    this->translate(position.xy());
+    this->recomputeEvaluationPoints();
+    this->fitnessScoreAtCreation = this->evaluate();
+    if (this->fitnessScoreAtCreation < this->minScore)
+        return false;
+    this->spawnTime = EnvObject::currentTime;
+    return true;*/
+}
+
+bool EnvCurve::placeInTerrain(const BSpline &seedCurve)
+{
+    if (seedCurve.empty()) {
+        return false;
+    }
+    this->curve = seedCurve;
+    this->curve.resamplePoints(10);
+    Vector3 position = this->curve[this->curve.size() / 2];
+    this->curve.translate(-position);
+    this->translate(position.xy());
+    this->recomputeEvaluationPoints();
+    this->fitnessScoreAtCreation = this->evaluate();
+    if (this->fitnessScoreAtCreation < this->minScore)
+        return false;
+    this->spawnTime = EnvObject::currentTime;
+    return true;
+}
+
 void EnvCurve::recomputeEvaluationPoints()
 {
     this->evaluationPositions = curve.points;

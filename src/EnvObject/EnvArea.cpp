@@ -43,6 +43,32 @@ EnvArea *EnvArea::instantiate(std::string objectName)
     return dynamic_cast<EnvArea*>(EnvObject::instantiate(objectName));
 }
 
+bool EnvArea::placeInTerrain(const Vector3 &seedPosition)
+{
+    ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->fitnessFunction, this->length * this->width);
+    return this->placeInTerrain(initialCurve);
+}
+
+bool EnvArea::placeInTerrain(const BSpline &seedCurve)
+{
+    ShapeCurve initialCurve = ShapeCurve(seedCurve);
+    initialCurve.close().resamplePoints();
+    if (seedCurve.empty()) {
+        return false;
+    }
+    Vector3 position = initialCurve.centroid(); // The optimisation process might have moved the evaluation position greatly
+    this->curve = initialCurve;
+    this->curve.translate(-position);
+    this->curve.resamplePoints(10);
+    this->translate(position.xy());
+    this->recomputeEvaluationPoints();
+    this->fitnessScoreAtCreation = this->evaluate();
+    if (this->fitnessScoreAtCreation < this->minScore)
+        return false;
+    this->spawnTime = EnvObject::currentTime;
+    return true;
+}
+
 void EnvArea::recomputeEvaluationPoints()
 {
     if (evaluateInside) {
