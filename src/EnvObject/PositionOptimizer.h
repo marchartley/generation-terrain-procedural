@@ -71,6 +71,10 @@ public:
     static BSpline getSkeletonCurve(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetLength);
     static BSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
     static BSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
+
+    static SnakeSegmentationImplicit getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
+    static SnakeSegmentationImplicit getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
+    static SnakeSegmentationImplicit getSnakeForSkeletonCurve(const std::function<float(const Vector3&)>& func, float targetLength);
 };
 
 
@@ -81,6 +85,9 @@ public:
     static ShapeCurve getInitialShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func);
     static ShapeCurve getAreaOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetArea);
     static ShapeCurve getPerimeterOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
+
+    static SnakeSegmentationImplicit getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
+    static SnakeSegmentationImplicit getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 };
 
 std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func);

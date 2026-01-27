@@ -43,6 +43,27 @@ EnvPoint *EnvPoint::instantiate(std::string objectName)
     return dynamic_cast<EnvPoint*>(EnvObject::instantiate(objectName));
 }
 
+bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
+{
+    if (!seedPosition.isValid() || seedPosition == Vector3()) // Not sure if second test is really needed...
+        return false;
+    this->position = seedPosition;
+    this->translate(seedPosition.xy());
+    this->recomputeEvaluationPoints();
+    this->fitnessScoreAtCreation = this->evaluate();
+    if (this->fitnessScoreAtCreation < this->minScore)
+        return false;
+    this->spawnTime = EnvObject::currentTime;
+    return true;
+}
+
+bool EnvPoint::placeInTerrain(const BSpline &seedCurve)
+{
+    if (seedCurve.empty())
+        return false;
+    return this->placeInTerrain(seedCurve.points.back());
+}
+
 void EnvPoint::recomputeEvaluationPoints()
 {
     this->evaluationPositions = {position};

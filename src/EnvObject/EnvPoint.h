@@ -18,6 +18,9 @@ public:
     virtual EnvPoint* clone();
     static EnvPoint* instantiate(std::string objectName);
 
+    virtual bool placeInTerrain(const Vector3& seedPosition);
+    virtual bool placeInTerrain(const BSpline& seedCurve);
+
     virtual void recomputeEvaluationPoints();
 
     virtual void applyDeposition(EnvMaterial& material);
