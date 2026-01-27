@@ -64,6 +64,7 @@ protected:
     std::map<std::string, BinaryVec3Float> binaryVectorFloatOperators;
 
     std::map<std::string, int> precedence;
+    inline static const float errorFloat = 10000000.f;
 };
 
 template <typename T, typename U>

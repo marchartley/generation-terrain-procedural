@@ -36,14 +36,14 @@ ExpressionParser::ExpressionParser() {
 
     // Default unary operators
     unaryVectorOperators["abs"] = [](const Vector3& a) { return std::abs(a); };
-    unaryVectorOperators["norm2"] = [](const Vector3& a) { return a.norm2(); };
+    unaryVectorOperators["norm2"] = [](const Vector3& a) { return a.isValid() ? a.norm2() : ExpressionParser::errorFloat; };
     unaryVectorOperators["d2"] = [](const Vector3& a) { return a.norm2(); };
     unaryVectorOperators["normalize"] = [](const Vector3& a) { return a.normalized(); };
-    unaryVectorOperators["d"] = [](const Vector3& a) { return a.norm(); };
+    unaryVectorOperators["d"] = [](const Vector3& a) { return a.isValid() ? a.norm() : ExpressionParser::errorFloat; };
     unaryVectorOperators["random"] = [](const Vector3& a) { return random_gen::generate_perlin(a.x(), a.y(), a.z()); };
-    unaryVectorOperators["x"] = [](const Vector3& a) { return a.x(); };
-    unaryVectorOperators["y"] = [](const Vector3& a) { return a.y(); };
-    unaryVectorOperators["z"] = [](const Vector3& a) { return a.z(); };
+    unaryVectorOperators["x"] = [](const Vector3& a) { return a.isValid() ? a.x() : ExpressionParser::errorFloat; };
+    unaryVectorOperators["y"] = [](const Vector3& a) { return a.isValid() ? a.y() : ExpressionParser::errorFloat; };
+    unaryVectorOperators["z"] = [](const Vector3& a) { return a.isValid() ? a.z() : ExpressionParser::errorFloat; };
 
     binaryVectorFloatOperators["*"] = [](const Vector3& a, float b) { return a * b; };
     binaryVectorFloatOperators["/"] = [](const Vector3& a, float b) { return a / b; };

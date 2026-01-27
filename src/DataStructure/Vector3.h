@@ -246,7 +246,9 @@ public:
     const T& x() const {return v[0]; }
     const T& y() const {return v[1]; }
     const T& z() const {return v[2]; }
-protected:
+
+
+// protected:
     T v[3];
     bool valid = true;
 
@@ -924,6 +926,7 @@ Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
     this->x() += o.x();
     this->y() += o.y();
     this->z() += o.z();
+    this->valid &= o.valid;
     return *this;
 }
 template<class T, class U>
@@ -937,6 +940,7 @@ Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
     this->x() -= o.x();
     this->y() -= o.y();
     this->z() -= o.z();
+    this->valid &= o.valid;
     return *this;
 }
 
@@ -963,6 +967,7 @@ Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
     this->x() *= o.x();
     this->y() *= o.y();
     this->z() *= o.z();
+    this->valid &= o.valid;
     return *this;
 }
 // template<class T>
@@ -976,6 +981,7 @@ Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
     this->x() /= o.x();
     this->y() /= o.y();
     this->z() /= o.z();
+    this->valid &= o.valid;
     return *this;
 }/*
 Vec3 operator/(const Vec3<T>& a, const Vec3<T>& b) {
