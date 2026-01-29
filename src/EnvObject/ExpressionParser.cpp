@@ -305,7 +305,7 @@ bool parse_float(std::string in, double& res) {
             if (in.size() != read)
                 return false;
         }
-    } catch (std::invalid_argument) {
+    } catch (const std::invalid_argument&) {
         return false;
     }
     return true;

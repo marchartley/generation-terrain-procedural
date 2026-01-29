@@ -8,28 +8,15 @@ template<>
 Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
 //    float radius = 1;
-    iterateParallel([&] (int x, int y, int z) {
+    iterateParallel([&] (size_t x, size_t y, size_t z) {
         // Central finite difference
-        Vector3 dX = at(x + radius, y, z) - at(x - radius, y, z);
-        Vector3 dY = at(x, y + radius, z) - at(x, y - radius, z);
-        Vector3 dZ = at(x, y, z + radius) - at(x, y, z - radius);
+        Vector3 dX = at(int(x) + radius, y, z) - at(int(x) - radius, y, z);
+        Vector3 dY = at(x, int(y) + radius, z) - at(x, int(y) - radius, z);
+        Vector3 dZ = at(x, y, int(z) + radius) - at(x, y, int(z) - radius);
 
         Vector3 curl(dY.z() - dZ.y(), dZ.x() - dX.z(), dX.y() - dY.x());
         returningGrid(x, y, z) = curl / (radius * 2.f);
-//        Vector3 dF = Vector3(at(x + radius, y, z) - at(x - radius, y, z), at(x, y + radius, z) - at(x, y - radius, z), at(x, y, z + radius) - at(x, y, z - radius));
-//        returningGrid(x, y, z) = Vector3(dF.z() - dF.y, dF.x() - dF.z, dF.y() - dF.x) / (2 * radius);
-//        const Vector3& vec = this->at(x, y, z);
-//        returningGrid.at(x, y, z) = Vector3(vec.z() - vec.y, vec.x() - vec.z, vec.y() - vec.x);
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-                Vector3& vec = this->at(x, y, z);
-                returningGrid.at(x, y, z) = Vector3(vec.z() - vec.y, vec.x() - vec.z, vec.y() - vec.x);
-            }
-        }
-    }*/
     return returningGrid;
 }
 template<>
@@ -317,8 +304,6 @@ Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
 template<>
 Matrix3<int> Matrix3<int>::findContour(bool use2D) const
 {
-//    return this->dilate(true) - *this;
-    // auto self = *this;
     auto eroded = this->erode(use2D);
     return *this - eroded;
 }
@@ -421,21 +406,6 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient() const
                                             (self.at(x, y + 1, z) - self.at(x, y - 1, z)).y() * .5f,
                                             (self.at(x, y, z + 1) - self.at(x, y, z - 1)).z() * .5f);
     });
-    /*#pragma omp parallel for collapse(3)
-    for (int x = 0; x < this->sizeX; x++) {
-        for (int y = 0; y < this->sizeY; y++) {
-            for (int z = 0; z < this->sizeZ; z++) {
-//                returningGrid.at(x, y, z) = gradient(x, y, z);
-//                continue;
-                // Need to change the divergence function...
-//                returningGrid.at(x, y, z) = this->at(x, y, z).divergence();
-                returningGrid.at(x, y, z) = Vector3((this->at(x + 1, y, z) - this->at(x - 1, y, z)).x() * .5f,
-                                                    (this->at(x, y + 1, z) - this->at(x, y - 1, z)).y() * .5f,
-                                                    (this->at(x, y, z + 1) - this->at(x, y, z - 1)).z() * .5f);
-            }
-        }
-    }*/
-//    this->raiseErrorOnBadCoord = true;
     return returningGrid;
 }
 
@@ -447,8 +417,6 @@ Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t siz
     mat.iterateParallel([&] (size_t i) {
         mat[i] = Vector3::random();
     });
-    /*for (Vector3& val : mat)
-        val = Vector3::random();*/
     return mat;
 }
 
@@ -468,25 +436,17 @@ Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
                                 "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
     }
     float *data = new float[imgW * imgH * 3];
-    for (int i = 0; i < imgW * imgH * 3; i++)
+    for (size_t i = 0; i < static_cast<std::size_t>(imgW * imgH) * 3; i++)
         data[i] = c_data[i];
     stbi_image_free(c_data);
 
     Matrix3<Vector3> map(imgW, imgH);
-    map.iterateParallel([&] (int x, int y, int _z) {
+    map.iterateParallel([&] (int x, int y, int) {
         int index = x + y * imgW;
         map(x, y) = Vector3(data[3 * index + 0],
                 data[3 * index + 1],
                 data[3 * index + 1]) / 255.f;
     });
-    /*for (int x = 0; x < imgW; x++) {
-        for (int y = 0; y < imgH; y++) {
-            int index = x + y * imgW;
-            map.at(x, y) = Vector3(data[3 * index + 0],
-                    data[3 * index + 1],
-                    data[3 * index + 1]) / 255.f;
-        }
-    }*/
     if (data != nullptr)
         delete[] data;//stbi_image_free(data);
 
@@ -509,21 +469,15 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
                                 "\t- JPG, \n\t- PNG, \n\t- TGA, \n\t- BMP, \n\t- PSD, \n\t- GIF, \n\t- HDR, \n\t- PIC");
     }
     float *data = new float[imgW * imgH];
-    for (int i = 0; i < imgW * imgH; i++)
+    for (size_t i = 0; i < static_cast<std::size_t>(imgW * imgH); i++)
         data[i] = c_data[i];
     stbi_image_free(c_data);
 
     Matrix3<float> map(imgW, imgH);
-    map.iterateParallel([&] (int x, int y, int _z) {
+    map.iterateParallel([&] (int x, int y, int) {
         int index = x + y * imgW;
         map(x, y) = data[index] / 255.f;
     });
-    /*for (int x = 0; x < imgW; x++) {
-        for (int y = 0; y < imgH; y++) {
-            int index = x + y * imgW;
-            map.at(x, y) = data[index] / 255.f;
-        }
-    }*/
     if (data != nullptr)
         delete[] data;//stbi_image_free(data);
 
@@ -616,7 +570,7 @@ GridF loadGridF(const std::string &str, bool binaryMode)
     } else {
         inFile >> width >> depth >> height;
         data = GridF(width, depth, height);
-        for (int i = 0; i < data.size(); i++) {
+        for (size_t i = 0; i < data.size(); i++) {
             inFile >> data[i];
         }
     }
@@ -653,7 +607,7 @@ GridV3 loadGridV3(const std::string &str, bool binaryMode)
     } else {
         inFile >> width >> depth >> height;
         data = GridF(width, depth, height);
-        for (int i = 0; i < data.size(); i++) {
+        for (size_t i = 0; i < data.size(); i++) {
             inFile >> data[i].x() >> data[i].y() >> data[i].z();
         }
     }

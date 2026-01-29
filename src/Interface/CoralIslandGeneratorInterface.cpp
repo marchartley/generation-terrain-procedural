@@ -23,7 +23,7 @@ void CoralIslandGeneratorInterface::affectTerrains(std::shared_ptr<Heightmap> he
     this->startingHeightmap = *this->heightmap;
 }
 
-void CoralIslandGeneratorInterface::replay(nlohmann::json action)
+void CoralIslandGeneratorInterface::replay([[maybe_unused]] nlohmann::json action)
 {
     // return ActionInterface::replay(action);
 }

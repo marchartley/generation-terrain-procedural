@@ -87,7 +87,7 @@ FastPoissonGraph<T>::FastPoissonGraph(Matrix3<U> &available_space_matrix, float 
 }
 
 template<class T> template<class U>
-void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float radius, int max_tries)
+void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float radius, [[maybe_unused]] int max_tries)
 {
     if (_available_space_matrix.getDimensions().minComp() <= radius)
         radius = _available_space_matrix.getDimensions().minComp();
@@ -106,7 +106,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     available_space_matrix.raiseErrorOnBadCoord = false;
 
     radius = 1.0;
-    float sqr_diameter = radius * radius;
+    // float sqr_diameter = radius * radius;
     this->sizeX = available_space_matrix.sizeX;
     this->sizeY = available_space_matrix.sizeY;
     this->sizeZ = available_space_matrix.sizeZ;

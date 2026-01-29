@@ -14,8 +14,8 @@ private:
 
     void readColor(png_structp png, png_infop info, png_bytep* row_pointers);
     void readBlackWhite(png_structp png, png_infop info, png_bytep* row_pointers);
-    void writeColor(png_structp png, png_infop info, png_bytep* row_pointers);
-    void writeBlackWhite(png_structp png, png_infop info, png_bytep* row_pointers);
+    void writeColor(/*png_structp png, png_infop info,*/ png_bytep* row_pointers);
+    void writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_pointers);
 
     void writeOtherThanPNG(std::string filename, std::string ext = "");
 

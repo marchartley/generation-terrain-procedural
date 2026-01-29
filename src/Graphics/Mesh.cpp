@@ -444,7 +444,7 @@ Mesh Mesh::extractGeometryFromShaders(GridF& values)
     return *this;
 }
 
-void Mesh::setShaderToAllMeshesWithoutShader(Shader newShader)
+void Mesh::setShaderToAllMeshesWithoutShader([[maybe_unused]] Shader newShader)
 {
     /*for (Mesh*& mesh : Mesh::all_meshes) {
         if (!mesh->shader || mesh->shader->vShader < 0)
@@ -741,7 +741,7 @@ void Mesh::displayAsVectorField(GridV3 field, const Vector3& finalDimensions, fl
     this->display(GL_LINES);
 }*/
 
-void Mesh::setShader(std::shared_ptr<Shader> shader)
+void Mesh::setShader([[maybe_unused]] std::shared_ptr<Shader> shader)
 {
 
 }

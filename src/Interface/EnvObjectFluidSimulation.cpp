@@ -66,7 +66,7 @@ void EnvObjectFluidSimulation::display(const Vector3& camPos)
 //    otherMeshToDisplay.display();
 }
 
-void EnvObjectFluidSimulation::replay(nlohmann::json action)
+void EnvObjectFluidSimulation::replay([[maybe_unused]] nlohmann::json action)
 {
     // ActionInterface::replay(action);
 }
@@ -147,6 +147,6 @@ void EnvObjectFluidSimulation::updateBoundariesMesh()
 {
 }
 
-void EnvObjectFluidSimulation::computeSimulation(int nbSteps)
+void EnvObjectFluidSimulation::computeSimulation([[maybe_unused]] int nbSteps)
 {
 }

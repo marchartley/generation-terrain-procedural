@@ -27,7 +27,7 @@ void FLIPSimulation::init(float density, float width, float depth, float height,
     this->cellSize = height / fNum.z();
     this->fInvSpacing = 1.0 / spacing;
 
-    int nbCells = fNum.x() * fNum.y() * fNum.z();
+    // int nbCells = fNum.x() * fNum.y() * fNum.z();
     this->u = GridF(fNum);
     this->v = GridF(fNum);
     this->w = GridF(fNum);
@@ -132,9 +132,6 @@ void FLIPSimulation::handleCollisions() {
     //            vel *= 0.f;
                 start = collisionPoint + collisionNormal * .01f;
                 end = pos;
-            }
-            if (maxTries < 2) {
-                int a = 0;
             }
             if (maxTries-- < 0) {
                 pos += (pos - initialPoint) * .5f;
@@ -322,9 +319,6 @@ bool checkValidPositions(std::vector<Particle> particles) {
             validPositions = false;
         }
     }
-    if (!validPositions) {
-        int a = 0;
-    }
     return validPositions;
 }
 
@@ -355,6 +349,7 @@ void FLIPSimulation::step()
         respawnTime = timeIt([&](){ respawnLostParticles(); });
         storingTime = timeIt([&]() { storeVelocities(); });
     });
+    (void)totalTime;
 
     for (size_t i = 0; i < particles.size(); i++) {
         if (std::abs((particles[i].position - savedState[i].position).normalize().dot(Vector3(0, 0, 1))) < .9f) {
@@ -388,7 +383,7 @@ void FLIPSimulation::respawnLostParticles()
     for (size_t i = 0; i < particles.size(); i++) {
         auto& p = particles[i];
         if (!Vector3::isInBox(p.position, Vector3(), this->dimensions + Vector3(0, 0, 10000))) {
-            Vector3 previousPos = p.position;
+            // Vector3 previousPos = p.position;
             p.position = this->dimensions * Vector3::random(Vector3(.0f, .0f, .0f), Vector3(.0f, 1.f, 1.0f));// + Vector3(0, 0, 5.1f);
             if (this->savedState.size() > i) {
                 savedState[i].position = p.position - Vector3(3, 0, 0);

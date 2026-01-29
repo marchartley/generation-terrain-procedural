@@ -4,7 +4,7 @@ WarpedFluidSimulation::WarpedFluidSimulation()
 {
 }
 
-WarpedFluidSimulation::WarpedFluidSimulation(int x, int y, int z)
+WarpedFluidSimulation::WarpedFluidSimulation(int x, int y, [[maybe_unused]] int z)
     : FluidSimulation(x, y, 1)
 {
     this->usesTrianglesBoundaries = false;
@@ -37,7 +37,7 @@ Vector3 WarpedFluidSimulation::getVelocity(int x, int y, int z)
     return FluidSimulation::getVelocity(x, y, z);
 }
 
-void WarpedFluidSimulation::addVelocity(int x, int y, int z, const Vector3 &amount)
+void WarpedFluidSimulation::addVelocity([[maybe_unused]] int x, [[maybe_unused]] int y, [[maybe_unused]] int z, [[maybe_unused]] const Vector3 &amount)
 {
     // No velocity added for now.
 //    velocities.at(x, y, z) += amount;

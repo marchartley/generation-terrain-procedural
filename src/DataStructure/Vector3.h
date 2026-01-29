@@ -11,6 +11,8 @@
 #include <cmath>
 
 class AABBox;
+template<typename T>
+class Vec3;
 
 template<class T>
 class Vec3 {
@@ -253,6 +255,69 @@ public:
     bool valid = true;
 
 };
+template<class T, class U>
+Vec3<T> operator+(const Vec3<T>& a, const Vec3<U>& b);
+template<class T, class U>
+Vec3<T> operator-(const Vec3<T>& a, const Vec3<U>& b);
+template<class T, class U>
+Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b);
+template<class T, class U>
+Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b);
+
+
+template<class T, class U>
+Vec3<T> operator+(U a, const Vec3<T>& b);
+template<class T, class U>
+Vec3<T> operator-(U a, const Vec3<T>& b);
+template<class T, class U>
+Vec3<T> operator*(U a, const Vec3<T>& b);
+template<class T, class U>
+Vec3<T> operator/(U a, const Vec3<T>& b);
+
+template<class T, class U>
+Vec3<T> operator+(const Vec3<T>& b, U a);
+template<class T, class U>
+Vec3<T> operator-(const Vec3<T>& b, U a);
+template<class T, class U>
+Vec3<T> operator*(const Vec3<T>& b, U a);
+template<class T, class U>
+Vec3<T> operator/(const Vec3<T>& b, U a);
+
+using Vector3 = Vec3<float>;
+using Vector3i = Vec3<int>;
+
+
+
+class AABBox { //: public std::pair<Vec3, Vec3> {
+public:
+    AABBox();
+    AABBox(const Vector3& mini, const Vector3& maxi);
+    AABBox(const std::tuple<Vector3, Vector3>& minMax);
+    AABBox(const std::vector<Vector3>& allPointsToContain);
+    Vector3 min() const { return this->mini; }
+    Vector3 max() const { return this->maxi; }
+    Vector3 dimensions() const { return max() - min(); }
+    bool contains(const Vector3& position) const { return Vector3::isInBox(position, min(), max()); }
+    bool containsXY(const Vector3& position) const { return Vector3::isInBox(position.xy(), min().xy(), max().xy()); }
+    Vector3 center() const { return (this->min() + this->max()) * .5f; }
+    Vector3 normalize(const Vector3& p);
+
+    AABBox& expand(const Vector3& newPoint);
+    AABBox& expand(const std::vector<Vector3>& newPoints);
+
+    float distanceTo(const Vector3& p);
+
+    Vector3 mini;
+    Vector3 maxi;
+
+    static Vector3 random(const Vector3& mini, const Vector3& maxi);
+
+    Vector3 intersects(const Vector3& rayStart, const Vector3& rayEnd);
+
+    std::string toString() const {return "AABBox from " + min().toString() + " to " + max().toString(); }
+    friend std::ostream& operator<<(std::ostream& io, const AABBox& v);
+    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> v);
+};
 
 template <class T>
 inline void hash_combine(std::size_t& seed, T const& v)
@@ -274,10 +339,6 @@ Vec3<T> abs(const Vec3<T>& o);
         }
     };*/
 }
-
-
-using Vector3 = Vec3<float>;
-using Vector3i = Vec3<int>;
 
 
 
@@ -954,14 +1015,6 @@ const T &Vec3<T>::operator[](size_t i) const
 {
     return ((T*)(this))[i];
 }
-//Vec3 operator*(const Vec3<T>& a, const Vec3<T>& b) {
-//    a *= b;
-//    return a;
-//}
-//Vec3 operator/(const Vec3<T>& a, const Vec3<T>& b) {
-//    a /= b;
-//    return a;
-//}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
     this->x() *= o.x();
@@ -970,12 +1023,6 @@ Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
     this->valid &= o.valid;
     return *this;
 }
-// template<class T>
-//Vec3<T> Vec3<T>::operator/(const Vec3& o) {
-//    Vec3 v = *this;
-//    v /= o;
-//    return v;
-//}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
     this->x() /= o.x();
@@ -983,17 +1030,7 @@ Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
     this->z() /= o.z();
     this->valid &= o.valid;
     return *this;
-}/*
-Vec3 operator/(const Vec3<T>& a, const Vec3<T>& b) {
-    a /= b;
-    return a;
-}*/
-// template<class T>
-//Vec3<T> Vec3<T>::operator*(T o) const {
-//    Vec3 v = *this;
-//    v *= o;
-//    return v;
-//}
+}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator*=(U o) {
     this->x() *= o;
@@ -1001,12 +1038,6 @@ Vec3<T>& Vec3<T>::operator*=(U o) {
     this->z() *= o;
     return *this;
 }
-// template<class T>
-//Vec3<T> Vec3<T>::operator/(T o) {
-//    Vec3 v = *this;
-//    v /= o;
-//    return v;
-//}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator/=(U o) {
     this->x() /= o;
@@ -1014,12 +1045,6 @@ Vec3<T>& Vec3<T>::operator/=(U o) {
     this->z() /= o;
     return *this;
 }
-// template<class T>
-//Vec3<T> Vec3<T>::operator+(T o) {
-//    Vec3 v = *this;
-//    v += o;
-//    return v;
-//}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator+=(U o) {
     this->x() += o;
@@ -1027,12 +1052,6 @@ Vec3<T>& Vec3<T>::operator+=(U o) {
     this->z() += o;
     return *this;
 }
-// template<class T>
-//Vec3<T> Vec3<T>::operator-(T o) {
-//    Vec3 v = *this;
-//    v -= o;
-//    return v;
-//}
 template<class T> template<typename U>
 Vec3<T>& Vec3<T>::operator-=(U o) {
     this->x() -= o;
@@ -1040,15 +1059,6 @@ Vec3<T>& Vec3<T>::operator-=(U o) {
     this->z() -= o;
     return *this;
 }
-// template<class T>
-/*Vec3<T>& Vec3<T>::operator=(const Vec3& o) {
-    this->x = o.x;
-    this->y = o.y;
-    this->z = o.z;
-    this->valid = o.valid;
-    return *this;
-}*/
-
 template<class T, class U>
 Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b) {
     Vec3 res = a;
@@ -1061,14 +1071,6 @@ Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b) {
     res *= b;
     return res;
 }
-// template<class T>
-//Vec3 operator+(T a, const Vec3<T>& b) {
-//    return b + a;
-//}
-// template<class T>
-//Vec3 operator-(T a, const Vec3<T>& b) {
-//    return b * -1.f + a;
-//}
 template<class T, class U>
 Vec3<T> operator*(U a, const Vec3<T>& b) {
     Vec3 res = b;
@@ -1081,12 +1083,6 @@ Vec3<T> operator/(U a, const Vec3<T>& b) {
     return Vec3(a / b.x(), a / b.y(), a / b.z());
 }
 
-//Vec3 operator+(const Vec3& b, T a) {
-//    return b + a;
-//}
-//Vec3 operator-(const Vec3& b, T a) {
-//    return b * -1.f + a;
-//}
 template<class T, class U>
 Vec3<T> operator*(const Vec3<T>& b, U a) {
     Vec3 res = b;
@@ -1218,39 +1214,6 @@ float Vec3<T>::distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, c
 {
     return std::abs(Vec3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 }
-
-
-
-class AABBox { //: public std::pair<Vec3, Vec3> {
-public:
-    AABBox();
-    AABBox(const Vector3& mini, const Vector3& maxi);
-    AABBox(const std::tuple<Vector3, Vector3>& minMax);
-    AABBox(const std::vector<Vector3>& allPointsToContain);
-    Vector3 min() const { return this->mini; }
-    Vector3 max() const { return this->maxi; }
-    Vector3 dimensions() const { return max() - min(); }
-    bool contains(const Vector3& position) const { return Vector3::isInBox(position, min(), max()); }
-    bool containsXY(const Vector3& position) const { return Vector3::isInBox(position.xy(), min().xy(), max().xy()); }
-    Vector3 center() const { return (this->min() + this->max()) * .5f; }
-    Vector3 normalize(const Vector3& p);
-
-    AABBox& expand(const Vector3& newPoint);
-    AABBox& expand(const std::vector<Vector3>& newPoints);
-
-    float distanceTo(const Vector3& p);
-
-    Vector3 mini;
-    Vector3 maxi;
-
-    static Vector3 random(const Vector3& mini, const Vector3& maxi);
-
-    Vector3 intersects(const Vector3& rayStart, const Vector3& rayEnd);
-
-    std::string toString() const {return "AABBox from " + min().toString() + " to " + max().toString(); }
-    friend std::ostream& operator<<(std::ostream& io, const AABBox& v);
-    friend std::ostream& operator<<(std::ostream& io, std::shared_ptr<AABBox> v);
-};
 
 
 

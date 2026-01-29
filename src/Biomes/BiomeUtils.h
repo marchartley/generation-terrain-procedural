@@ -55,7 +55,7 @@ Graph subsetToFitMostBiomes(Graph graph, std::vector<std::string> biomesNames);
 
 std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json json_content, const Vector3& biomePosition, ShapeCurve area);
 
-std::shared_ptr<BiomeInstance> generateBiome(Graph biomeGraph);
+// std::shared_ptr<BiomeInstance> generateBiome(Graph biomeGraph);
 
 
 #endif // BIOMEUTILS_H

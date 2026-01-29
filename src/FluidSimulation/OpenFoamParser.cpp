@@ -265,9 +265,9 @@ GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std
 
 GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 {
-    bool regularGrid = true;
+    // bool regularGrid = true;
     int highestIteration = -1;
-    std::vector<std::string> filenames;
+    // std::vector<std::string> filenames;
     QDirIterator it(QString::fromStdString(foldername), QDir::Dirs);
     while (it.hasNext()) {
         QString dir = it.next();
@@ -345,7 +345,7 @@ std::string OpenFoamParser::createSimulationFile(std::string foldername, const G
     float scaleFactor = 100.f;
     Mesh m = Mesh::applyMarchingCubes(_boundaries);
     std::string file_name = foldername + "/constant/triSurface/cylinder.stl";
-    Vector3 targetSize = Vector3(1.f, .5f, 3.f);
+    // Vector3 targetSize = Vector3(1.f, .5f, 3.f);
     Vector3 rescale = (Vector3(1.f, 1.f, 1.f) * scaleFactor) / Vector3(_boundaries.sizeX, _boundaries.sizeY, _boundaries.sizeZ - 1); // Take into account that we will reduce Z by 1 unit
     m.translate(-(_boundaries.getDimensions().xy() * .5f + Vector3(0, 0, 1)));
     m.scale(rescale);

@@ -77,7 +77,7 @@ std::vector<ScenariosObject> Scenario::nextObjects()
     return results;
 }
 
-float Scenario::computeWaterLevel(const Vector3 &dimensions)
+float Scenario::computeWaterLevel([[maybe_unused]] const Vector3 &dimensions)
 {
     float time = currentTime();
     float water = this->waterLevel;
@@ -153,7 +153,6 @@ bool Scenario::finished() const
     if (duration > 0 && time >= duration)
         return true;
 
-    bool finish = true;
     for (auto& requiredObjects : objects) {
         if (requiredObjects.amountRequired < 0) continue;
         int objCount = 0;
@@ -185,13 +184,13 @@ bool Scenario::finished() const
     return true;
 }
 
-float WaterLevelEvent::applyAt(const Vector3 &pos, float progress)
+float WaterLevelEvent::applyAt([[maybe_unused]] const Vector3 &pos, float progress)
 {
     if (progress < 0) return 0;
     return amount * std::clamp(progress, 0.f, 1.f);
 }
 
-float WaterLevelEvent::apply(float progress, const Vector3 &dimensions)
+float WaterLevelEvent::apply(float progress, [[maybe_unused]] const Vector3 &dimensions)
 {
     return applyAt(Vector3(), progress);
 }
@@ -244,7 +243,7 @@ TectonicEvent::TectonicEvent(Vector3 direction, float sigma, float startTime, fl
     voro.solve(false);
     #pragma omp parallel for
     for (auto& area : voro.areas) {
-        for (int i = 0; i < area.size(); i++) {
+        for (size_t i = 0; i < area.size(); i++) {
             Vector3 p0 = area[i];
             Vector3 p1 = area[i+1];
             BSpline path = BSpline({p0, p1}).resamplePoints(10);
@@ -301,13 +300,13 @@ GridF TectonicEvent::apply(float progress, const Vector3 &dimensions)
 }
 
 
-float WarmingEvent::applyAt(const Vector3 &pos, float progress)
+float WarmingEvent::applyAt([[maybe_unused]] const Vector3 &pos, float progress)
 {
     if (progress <= 0) return 0.f;
     return std::clamp(progress, 0.f, 1.f) * amount;
 }
 
-float WarmingEvent::apply(float progress, const Vector3 &dimensions)
+float WarmingEvent::apply(float progress, [[maybe_unused]] const Vector3 &dimensions)
 {
     return this->applyAt(Vector3(), progress);
 }

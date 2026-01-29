@@ -31,7 +31,7 @@ public:
     // GridF image;         // Grayscale image grid
     // GridV3 gradientField; // Gradient field of the image
 
-    Vector3 position; // Initial position, attracting the whole curve
+    Vector3 position = Vector3(false); // Initial position, attracting the whole curve
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;

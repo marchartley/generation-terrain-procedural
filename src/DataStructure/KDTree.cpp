@@ -33,7 +33,7 @@ KDNode* KDTree::build(std::vector<Particle> particles, int depth) {
     }
     if (depth == 0) {
         delete this->root;
-        for (int i = 0; i < particles.size(); i++)
+        for (size_t i = 0; i < particles.size(); i++)
             particles[i].index = i;
     }
 

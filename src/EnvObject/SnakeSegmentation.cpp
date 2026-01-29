@@ -85,7 +85,7 @@ Vector3 SnakeSegmentation::computeInternalEnergyGradient(const BSpline &contour,
     if (i == 0 && !collapseFirstAndLastPoint) {
         E_curvature *= 0.f;
         connectVector = -(contour[next] - contour[i]);
-    } else if (i == contour.size() - 1 && !collapseFirstAndLastPoint) {
+    } else if (i == int(contour.size()) - 1 && !collapseFirstAndLastPoint) {
         E_curvature *= 0.f;
         connectVector = (contour[i] - contour[prev]);
     } else {
@@ -162,7 +162,7 @@ Vector3 SnakeSegmentation::computeShapeEnergyGradient(const BSpline &contour, in
 
         if (i == 0 && !collapseFirstAndLastPoint) {
             lengthVector = -(contour[next] - contour[i]);
-        } else if (i == contour.size() - 1 && !collapseFirstAndLastPoint) {
+        } else if (i == int(contour.size()) - 1 && !collapseFirstAndLastPoint) {
             lengthVector = (contour[i] - contour[prev]);
         } else {
             lengthVector = (usePreviousPoint ? (contour[i] - contour[prev]) : (contour[i] - contour[next]));
@@ -184,8 +184,8 @@ Vector3 SnakeSegmentation::computeGradientEnergyGradient(const BSpline &contour,
         }
 
         float t = float(index) / float(contour.size() - 1);
-        Vector3 currentDir = contour.getDirection(t); //(index > 0 ? (contour[index] - contour[index - 1]) : (contour[index + 1] - contour[index]));
-        bool shouldGoDownward = gradient.dot(currentDir) > 0; //(index - int(contour.size())/2) < 0;
+        // Vector3 currentDir = contour.getDirection(t); //(index > 0 ? (contour[index] - contour[index - 1]) : (contour[index + 1] - contour[index]));
+        // bool shouldGoDownward = gradient.dot(currentDir) > 0; //(index - int(contour.size())/2) < 0;
         // if (gradient.norm2() < 1e-4) {
         // internalEnergyGradient *= 0;
         // } else {
@@ -209,7 +209,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
         if (randomGreenCoords.empty()) {
             std::vector<Vector3> randomPointsInit = contourAsRegion.randomPointsInside(numberOfSamples);
             randomGreenCoords.resize(randomPointsInit.size());
-            for (int i = 0; i < randomGreenCoords.size(); i++) {
+            for (size_t i = 0; i < randomGreenCoords.size(); i++) {
                 randomGreenCoords[i] = computeGreenCoordinates(randomPointsInit[i], contourAsRegion);
             }
         }
@@ -285,6 +285,16 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
     for (int i = 0; i < numPoints; ++i) {
         float normalizedStepSize = stepSize / (1.f + gradients[i].norm());
         newContour[i] -= gradients[i] * normalizedStepSize;
+    }
+
+    if (this->positionCost > 0.f && this->position.isValid()) {
+        if (this->collapseFirstAndLastPoint) {
+            Vector3 newCentroid = newContour.center();
+            newContour.translate(this->position - newCentroid);
+        } else {
+            Vector3 posOnCurve = newContour.estimateClosestPos(this->position, true);
+            newContour.translate(this->position - posOnCurve);
+        }
     }
 
     auto autointersections = newContour.checkAutointersections();

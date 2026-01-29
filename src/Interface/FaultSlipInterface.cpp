@@ -11,7 +11,7 @@ FaultSlipInterface::FaultSlipInterface(QWidget *parent)
 //    this->createGUI();
 }
 
-void FaultSlipInterface::display(const Vector3& camPos)
+void FaultSlipInterface::display([[maybe_unused]] const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -33,8 +33,8 @@ void FaultSlipInterface::remesh()
     Vector3 p2 = this->slipVector->getStartingVector();
     Vector3 p3 = p1 + this->slipVector->getResultingVector();
 
-    Vector3 largeur  = (p2 - p1).normalize() * maxAABB;
-    Vector3 hauteur = (p3 - p1).normalize() * maxAABB;
+    Vector3 largeur  = (p2 - p1).normalize() * (maxAABB - minAABB);
+    Vector3 hauteur = (p3 - p1).normalize() * (maxAABB - minAABB);
 
     this->planeMesh.fromArray({
                                   p1 - largeur - hauteur, p2 + largeur - hauteur, p1 - largeur + hauteur,
