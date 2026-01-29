@@ -22,16 +22,16 @@ TranslateKelvinlet::TranslateKelvinlet()
 Vector3 TranslateKelvinlet::evaluate(const Vector3 &p) const
 {
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
     auto identity = Matrix::identity(3);
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double c = 2 / (3 * a - 2 * b);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    // float c = 2 / (3 * a - 2 * b);
 
     Matrix first = identity * float((a - b) * 1. / repsilon);
     float second = b / (repsilon3);
@@ -54,21 +54,21 @@ TwistKelvinlet::TwistKelvinlet()
 Vector3 TwistKelvinlet::evaluate(const Vector3 &p) const
 {
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
-    const double epsilon = radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double epsilon2 = epsilon * epsilon;
+    float epsilon2 = epsilon * epsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
+    float a = 1.f / (4 * M_PI * mu);
+    // float b = a / (4 * (1.f - v));
+    float affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
 
     auto qxr = rvector.cross(force);
 
-    double scaleFactor = 100.;
+    float scaleFactor = 100.;
     return -scaleFactor * a * affineScalar * qxr;
 }
 
@@ -81,17 +81,17 @@ ScaleKelvinlet::ScaleKelvinlet()
 Vector3 ScaleKelvinlet::evaluate(const Vector3 &p) const
 {
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double epsilon2 = epsilon * epsilon;
-    double affineScalar = 1/repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double scale = 2 * b - a;
+    float epsilon2 = epsilon * epsilon;
+    float affineScalar = 1/repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    float scale = 2 * b - a;
     float scaleFactor = 10.f;
     Vector3 delta = rvector * (this->scale * -scaleFactor * scale * affineScalar);
 
@@ -107,16 +107,16 @@ PinchKelvinlet::PinchKelvinlet()
 Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 {
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
     auto identity = Matrix::identity(3);
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double c = 2 / (3 * a - 2 * b);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    float c = 2 / (3 * a - 2 * b);
 
     float fx = this->force.x();
     float fy = this->force.y();
@@ -164,16 +164,16 @@ Vector3 TranslateKelvinletCurve::evaluate(const Vector3 &p) const
     Vector3 dir = curve.getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
     auto identity = Matrix::identity(3);
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double c = 2 / (3 * a - 2 * b);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    // float c = 2 / (3 * a - 2 * b);
 
     Matrix first = identity * float((a - b) * 1. / repsilon);
     float second = b / (repsilon3);
@@ -200,21 +200,21 @@ Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
     Vector3 dir = curve.getBinormal(closestTime); //curve.getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
-    const double epsilon = radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double epsilon2 = epsilon * epsilon;
+    float epsilon2 = epsilon * epsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
+    float a = 1.f / (4 * M_PI * mu);
+    // float b = a / (4 * (1.f - v));
+    float affineScalar = 1 / repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
 
     auto qxr = rvector.cross(dir * force);
 
-    double scaleFactor = 100.;
+    float scaleFactor = 100.;
     return -scaleFactor * a * affineScalar * qxr;
 }
 
@@ -231,17 +231,17 @@ Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
 //    Vector3 dir = curve.getDirection(closestTime);
 
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double epsilon2 = epsilon * epsilon;
-    double affineScalar = 1/repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double scale = 2 * b - a;
+    float epsilon2 = epsilon * epsilon;
+    float affineScalar = 1/repsilon3 + (3 * epsilon2) / (2 * repsilon3 * repsilon * repsilon);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    float scale = 2 * b - a;
     float scaleFactor = 10.f;
     Vector3 delta = rvector * (this->force * -scaleFactor * scale * affineScalar);
 
@@ -261,16 +261,16 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
     Vector3 dir = curve.getDirection(closestTime) * this->force;
 
     Vector3 rvector =  p - pos;
-    const double radius = rvector.norm();
-    const double repsilon = regularDistance(radius);
+    const float radius = rvector.norm();
+    const float repsilon = regularDistance(radius);
     if (repsilon > epsLimit) return Vector3();
     auto identity = Matrix::identity(3);
-    const double epsilon = this->radialScale;
-    const double repsilon3 = repsilon * repsilon * repsilon;
+    const float epsilon = this->radialScale;
+    const float repsilon3 = repsilon * repsilon * repsilon;
 
-    double a = 1.f / (4 * M_PI * mu);
-    double b = a / (4 * (1.f - v));
-    double c = 2 / (3 * a - 2 * b);
+    float a = 1.f / (4 * M_PI * mu);
+    float b = a / (4 * (1.f - v));
+    float c = 2 / (3 * a - 2 * b);
 
     float fx = dir.x();
     float fy = dir.y();

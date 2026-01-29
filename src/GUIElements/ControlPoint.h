@@ -86,8 +86,8 @@ Q_SIGNALS:
     void modified();
     void released();
 
-    void translationApplied(Vector3);
-    void rotationApplied(Vector3);
+    void translationApplied(const Vector3&);
+    void rotationApplied(const Vector3&);
 
 protected:
 //    void updateStateDependingOnManipFrame();
@@ -144,8 +144,8 @@ Q_SIGNALS:
     void pointModified();
     void pointReleased();
 
-    void translationApplied(Vector3);
-    void rotationApplied(Vector3);
+    void translationApplied(const Vector3&);
+    void rotationApplied(const Vector3&);
 
 public Q_SLOTS:
     void hide();

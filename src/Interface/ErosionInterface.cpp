@@ -973,9 +973,9 @@ void ErosionInterface::browseDensityFieldFromFile()
     }
 }
 
-std::function<Vector3 (Vector3)> ErosionInterface::computeFlowfieldFunction()
+std::function<Vector3 (const Vector3&)> ErosionInterface::computeFlowfieldFunction()
 {
-    std::function<Vector3(Vector3)> flowfieldFunction;
+    std::function<Vector3(const Vector3&)> flowfieldFunction;
     if (this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_IMAGE) {
         auto voxelsEnvironmentalDensities = voxelGrid->getEnvironmentalDensities();
         GridV3 waterFlow = -GridF::fromImageBW(this->waterFlowImagePath).resize(Vector3(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1.f)).flip(true, false, false).gradient();

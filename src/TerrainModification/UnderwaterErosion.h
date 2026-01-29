@@ -44,7 +44,7 @@ public:
                                                     float erosionPowerValue = 1.f, // From Wojtan
                                                     float criticalShearValue = 10.f,
                                                      std::vector<std::pair<Vector3, Vector3>> posAndDirs = {},
-//                                                     std::function<Vector3(Vector3)> flowfieldFunction = nullptr
+//                                                     std::function<Vector3(const Vector3&)> flowfieldFunction = nullptr
                                                      FLOWFIELD_TYPE flowType = BASIC,
                                                      GridV3 waterFlow = GridV3(),
                                                      GridV3 airFlow = GridV3(),

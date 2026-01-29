@@ -480,16 +480,16 @@ ImplicitPatch *ImplicitPatch::createIdentity()
 {
     ImplicitPrimitive* primitive = new ImplicitPrimitive();
     primitive->predefinedShape = ImplicitPatch::PredefinedShapes::None;
-    primitive->evalFunction = [](Vector3) { return 0.f; };
+    primitive->evalFunction = [](const Vector3&) { return 0.f; };
     primitive->optionalCurve = {};
     primitive->parametersProvided = {0.f};
 
     return primitive;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve, bool in2D)
 {
-    std::function<float(Vector3)> func;
+    std::function<float(const Vector3&)> func;
     switch(shape) {
     case Sphere:
         func = ImplicitPatch::createSphereFunction(additionalParam, dimensions.x(), dimensions.y(), dimensions.z(), in2D);
@@ -554,7 +554,7 @@ std::function<float (Vector3)> ImplicitPatch::createPredefinedShapeFunction(Pred
 
 ImplicitPrimitive::ImplicitPrimitive()
 {
-    this->evalFunction = [](Vector3) -> float { return 0.f; };
+    this->evalFunction = [](const Vector3&) -> float { return 0.f; };
     this->parametersProvided = {-1.f}; // Just to have an element at first
 }
 
@@ -1234,7 +1234,7 @@ ImplicitPatch* ImplicitBinaryOperator::composableB() const
 ImplicitUnaryOperator::ImplicitUnaryOperator()
 {
     this->composables = std::vector<ImplicitPatch*>(1);
-    this->noiseFunction = [](Vector3) { return 0.f; };
+    this->noiseFunction = [](const Vector3&) { return 0.f; };
 }
 /*
     this->wrapFunction = [=](const Vector3& pos) {
@@ -1247,7 +1247,7 @@ ImplicitUnaryOperator::ImplicitUnaryOperator()
             pos = this->transforms[i].unwrap(pos);
         return pos;
     };
-    this->noiseFunction = [](Vector3) { return 0.f; };
+    this->noiseFunction = [](const Vector3&) { return 0.f; };
 }
 */
 float ImplicitUnaryOperator::evaluate(const Vector3& pos) const
@@ -1601,10 +1601,10 @@ void ImplicitUnaryOperator::addWavelets()
 
 
 
-std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createSphereFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     Vector3 center = Vector3(width, width, width) * .5f;
-    std::function<float (Vector3)> sphere;
+    std::function<float (const Vector3&)> sphere;
     if (in2D) {
         sphere = [=, width, sigma](const Vector3& pos) {
             float D = (pos.xy() - center.xy()).norm2();
@@ -1623,7 +1623,7 @@ std::function<float (Vector3)> ImplicitPatch::createSphereFunction(float sigma, 
     return sphere;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createBlockFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     if (in2D) {
         return [=](const Vector3& pos) {
@@ -1647,14 +1647,14 @@ std::function<float (Vector3)> ImplicitPatch::createBlockFunction(float sigma, f
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createGaussianFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function<float (Vector3)> func2D = [width, depth, sigma, height](const Vector3& pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; };
+    std::function<float (const Vector3&)> func2D = [width, depth, sigma, height](const Vector3& pos) { return normalizedGaussian(Vector3(width, depth, 0), pos.xy(), sigma) * height; };
     if (in2D) return func2D;
     else return ImplicitPatch::convert2DfunctionTo3Dfunction(func2D);
 }
 
-std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createCylinderFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     Vector3 start = Vector3(width * .5f, depth * .5f, height * 0.f);
     Vector3 end = Vector3(width * .5f, depth * .5f, height * 1.f);
@@ -1680,10 +1680,10 @@ std::function<float (Vector3)> ImplicitPatch::createCylinderFunction(float sigma
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createRockFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     auto sphereFunction = ImplicitPatch::createSphereFunction(sigma, width, depth, height, in2D);
-    std::function<float (Vector3)> rockFunction;
+    std::function<float (const Vector3&)> rockFunction;
     if (in2D) {
         rockFunction = [=](const Vector3& pos) {
             float noiseOffset = sigma * 1000.f;
@@ -1703,9 +1703,9 @@ std::function<float (Vector3)> ImplicitPatch::createRockFunction(float sigma, fl
     return rockFunction;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createMountainFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function<float (Vector3)> mountainFunction = [=](const Vector3& pos) {
+    std::function<float (const Vector3&)> mountainFunction = [=](const Vector3& pos) {
         Vector3 translatedPos = pos - (Vector3(width, depth, 0) * .5f);
         Vector3 normalizedPos = translatedPos.xy() / (Vector3(width, depth, 1.f) * .5f);
 //        return normalizedPos.norm();
@@ -1719,24 +1719,24 @@ std::function<float (Vector3)> ImplicitPatch::createMountainFunction(float sigma
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createDuneFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     return ImplicitPatch::createMountainFunction(sigma, width, depth, height, in2D);
 }
 
-std::function<float (Vector3)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createBasinFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     return ImplicitPatch::createBlockFunction(sigma, width, depth, height, in2D);
 }
 
-std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createCaveFunction(float sigma, float width, float depth, float height, bool in2D)
 {
     if (in2D) {
         return [=](const Vector3& pos) {
             return 0.f; // Nothing to do in 2D...
         };
     } else {
-        std::function<float (Vector3)> caveFunc = [=] (const Vector3& pos) {
+        std::function<float (const Vector3&)> caveFunc = [=] (const Vector3& pos) {
             Vector3 start = Vector3(width * .5f, depth * 1.f, height * 1.f);
             Vector3 p1 = Vector3(width * .5f, depth * .7f, height * .3f);
             Vector3 p2 = Vector3(width * .5f, depth * .4f, height * .2f);
@@ -1749,9 +1749,9 @@ std::function<float (Vector3)> ImplicitPatch::createCaveFunction(float sigma, fl
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createArchFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function<float (Vector3)> archFunc;
+    std::function<float (const Vector3&)> archFunc;
 
     Vector3 start = Vector3(width * .5f, depth * 0.f, height * 0.f);
     Vector3 p1 = Vector3(width * .5f, depth * .3f, height * 1.f);
@@ -1779,9 +1779,9 @@ std::function<float (Vector3)> ImplicitPatch::createArchFunction(float sigma, fl
     return archFunc;
 }
 
-std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function<float (Vector3)> noiseFunc = [sigma, width, depth, height](const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> noiseFunc = [sigma, width, depth, height](const Vector3& pos) -> float {
         FastNoiseLite noise;
     //    noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
         noise.SetFractalType(FastNoiseLite::FractalType_FBm);
@@ -1797,9 +1797,9 @@ std::function<float (Vector3)> ImplicitPatch::createNoise2DFunction(float sigma,
     //float noiseValue = (noise.GetNoise(pos.x() * (100.f / width) + noiseOffset, pos.y() * (100.f / width) + noiseOffset, pos.z() * (100.f / width) + noiseOffset) + 1.f) * .5f; // Between 0 and 1
 }
 
-std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
-    std::function<float (Vector3)> chainFunc = [=] (const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> chainFunc = [=] (const Vector3& pos) -> float {
         float closestTime = path.estimateClosestTime(pos);
         Vector3 closestPoint = path.getPoint(closestTime);
 //        Vector3 vertical(0, 0, 1);
@@ -1818,10 +1818,10 @@ std::function<float (Vector3)> ImplicitPatch::createMountainChainFunction(float 
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     ShapeCurve polygon(path.points);
-    std::function<float (Vector3)> polygonFunc = [=] (const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> polygonFunc = [=] (const Vector3& pos) -> float {
         return (polygon.containsXY(pos.xy(), false) ? height : 0.f);
     };
 
@@ -1832,7 +1832,7 @@ std::function<float (Vector3)> ImplicitPatch::createPolygonFunction(float sigma,
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     random_gen::random_generator.seed((path.points[0] + path.points[1]).divergence());
     int nbPoints = 50;
@@ -1851,7 +1851,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
         if (polygon.containsXY(newPoint)) points.push_back(newPoint);
         else maxTries--;
     }
-    if (points.size() == 0) return [](Vector3) {return 0.f;};
+    if (points.size() == 0) return [](const Vector3&) {return 0.f;};
 
     GridF heights(size.x(), size.y(), 1);
 
@@ -1894,7 +1894,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
 
     Vector3 offsets = Vector3(width - size.x(), depth - size.y()) * .5f;
 
-    std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> distFunc = [=] (const Vector3& pos) -> float {
         float finalHeight = sigma * std::clamp(heights(pos.xy() - offsets), 0.f, 1.f);
         return finalHeight;
     };
@@ -1909,7 +1909,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
     ShapeCurve polygon(path.points);
     Vector3 center = polygon.centroid().xy();
     std::vector<Vector3> randomPoints = polygon.randomPointsInside(10);
-    std::function<float (Vector3)> distFunc = [=] (const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> distFunc = [=] (const Vector3& pos) -> float {
         if (!polygon.containsXY(pos.xy(), false))
             return 0.f;
         Vector3 closest = polygon.estimateClosestPos(pos.xy()).xy();
@@ -1933,7 +1933,7 @@ std::function<float (Vector3)> ImplicitPatch::createDistanceMapFunction(float si
     }*/
 }
 
-std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D)
 {
     float epsilon = 1e-1;
 
@@ -1957,9 +1957,9 @@ std::function<float (Vector3)> ImplicitPatch::createParametricTunnelFunction(flo
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createRippleFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    std::function<float (Vector3)> rippleFunc = [=] (const Vector3& pos) -> float {
+    std::function<float (const Vector3&)> rippleFunc = [=] (const Vector3& pos) -> float {
         if(!Vector3::isInBox(pos, Vector3(), Vector3(width, depth, height)))
             return 0.f;
         float x = 2 * pos.x() / width;
@@ -1976,14 +1976,14 @@ std::function<float (Vector3)> ImplicitPatch::createRippleFunction(float sigma, 
     }
 }
 
-std::function<float (Vector3)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height, bool in2D)
+std::function<float (const Vector3&)> ImplicitPatch::createIdentityFunction(float sigma, float width, float depth, float height, bool in2D)
 {
-    return [](Vector3) -> float { return 0.f; };
+    return [](const Vector3&) -> float { return 0.f; };
 }
 
-std::function<float (Vector3)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (Vector3)> func)
+std::function<float (const Vector3&)> ImplicitPatch::convert2DfunctionTo3Dfunction(std::function<float (const Vector3&)> func)
 {
-    std::function<float (Vector3)> _3Dfunction = [func](const Vector3& pos) {
+    std::function<float (const Vector3&)> _3Dfunction = [func](const Vector3& pos) {
         float height = func(pos);
         float inverse_isovalue = .5f - (pos.z() / height); //height * .5f - pos.z;
         float isovalue = 1.f - std::abs(inverse_isovalue);
@@ -2103,8 +2103,8 @@ UnaryOpRotate::UnaryOpRotate(const Vector3& rotationAngles, const Vector3& cente
          }).data());
     Matrix _R = _Rx.product(_Ry).product(_Rz);
 
-    //    std::function<Vector3(Vector3)> previousWrapFunction = this->wrapFunction;
-    //    std::function<Vector3(Vector3)> previousUnwrapFunction = this->unwrapFunction;
+    //    std::function<Vector3(const Vector3&)> previousWrapFunction = this->wrapFunction;
+    //    std::function<Vector3(const Vector3&)> previousUnwrapFunction = this->unwrapFunction;
     this->wrap = [=](const Vector3& pos) -> Vector3 {
         // Exactly the rotation function, but with the matrix computed only once
         return center + (pos - center).applyTransform(R);
@@ -2139,7 +2139,7 @@ UnaryOpWrap::UnaryOpWrap(FastNoiseLite noise, const Vector3& strength)
     };
 }
 
-UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (Vector3)> func)
+UnaryOpWrap::UnaryOpWrap(std::function<Vector3 (const Vector3&)> func)
 {
     this->wrap = [=] (const Vector3& pos) {
         Vector3 newPos = pos + func(pos);

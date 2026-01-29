@@ -44,7 +44,7 @@ void Image::readBlackWhite(png_structp png, png_infop info, png_bytep* row_point
     }
 }
 
-void Image::writeColor(png_structp png, png_infop info, png_bytep* row_pointers) {
+void Image::writeColor(/*png_structp png, png_infop info, */ png_bytep* row_pointers) {
     int width = colorImage.sizeX;
     int height = colorImage.sizeY;
 
@@ -106,7 +106,7 @@ void Image::writeColor(png_structp png, png_infop info, png_bytep* row_pointers)
 
 
 
-void Image::writeBlackWhite(png_structp png, png_infop info, png_bytep* row_pointers) {
+void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_pointers) {
     int width = bwImage.sizeX;
     int height = bwImage.sizeY;
 
@@ -248,7 +248,7 @@ Image Image::readFromFile(std::string filename) {
     png_init_io(png, fp);
     png_read_info(png, info);
 
-    int width = png_get_image_width(png, info);
+    // int width = png_get_image_width(png, info);
     int height = png_get_image_height(png, info);
     png_byte color_type = png_get_color_type(png, info);
     img.bitDepth = png_get_bit_depth(png, info); // Store bitDepth for future use
@@ -378,9 +378,9 @@ void Image::writeToFile(std::string filename, int desiredBitDepth) {
     }
 
     if (!colorImage.empty()) {
-        writeColor(png, info, row_pointers);
+        writeColor(/*png, info,*/ row_pointers);
     } else if (!bwImage.empty()) {
-        writeBlackWhite(png, info, row_pointers);
+        writeBlackWhite(/*png, info,*/ row_pointers);
     }
 
     png_write_image(png, row_pointers);

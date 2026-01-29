@@ -65,7 +65,7 @@ void AbstractFluidSimulationInterface::display(const Vector3& camPos)
 //    otherMeshToDisplay.display();
 }
 
-void AbstractFluidSimulationInterface::replay(nlohmann::json action)
+void AbstractFluidSimulationInterface::replay([[maybe_unused]] nlohmann::json action)
 {
     // ActionInterface::replay(action);
 }

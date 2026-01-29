@@ -98,7 +98,7 @@ public:
     virtual bool undo() { return false; }
     virtual bool redo() { return false; }
 
-    virtual void saveMap(std::string filename) { }
+    virtual void saveMap([[maybe_unused]] std::string filename) { }
     virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
     virtual Mesh getGeometry(const Vector3& dimensions = Vector3(false));
 
@@ -136,32 +136,32 @@ public:
 
     static ImplicitPatch* createIdentity();
     static ImplicitPrimitive *createPredefinedShape(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
-    static std::function<float(Vector3)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
+    static std::function<float(const Vector3&)> createPredefinedShapeFunction(PredefinedShapes shape, const Vector3& dimensions, float additionalParam, BSpline parametricCurve = BSpline(), bool in2D = false);
     static float isovalue;
     static const float zResolution;
 
 
-    static std::function<float(Vector3)> createSphereFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createBlockFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createGaussianFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createCylinderFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createRockFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createMountainFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createDuneFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createBasinFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createCaveFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createArchFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(Vector3)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(Vector3)> createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(Vector3)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
-    static std::function<float(Vector3)> createRippleFunction(float sigma, float width, float depth, float height, bool in2D = false);
-    static std::function<float(Vector3)> createIdentityFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createSphereFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createBlockFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createGaussianFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createCylinderFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createRockFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createMountainFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createDuneFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createBasinFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createCaveFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createArchFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createNoise2DFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createMountainChainFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createPolygonFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createDistanceMapFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createParametricTunnelFunction(float sigma, float width, float depth, float height, BSpline path, bool in2D = false);
+    static std::function<float(const Vector3&)> createRippleFunction(float sigma, float width, float depth, float height, bool in2D = false);
+    static std::function<float(const Vector3&)> createIdentityFunction(float sigma, float width, float depth, float height, bool in2D = false);
 
-//    static std::function<float(Vector3)> ...;
+//    static std::function<float(const Vector3&)> ...;
 
-    static std::function<float(Vector3)> convert2DfunctionTo3Dfunction(std::function<float(Vector3)> func);
+    static std::function<float(const Vector3&)> convert2DfunctionTo3Dfunction(std::function<float(const Vector3&)> func);
 
     ImplicitNaryOperator *getParent() const;
     void setParent(ImplicitNaryOperator* newParent);
@@ -205,8 +205,8 @@ public:
     Vector3 position = Vector3(false);
     Vector3 dimensions = Vector3(false);
     Vector3 supportDimensions = Vector3(false);
-    std::function<float(Vector3)> evalFunction;
-    std::function<float(Vector3)> evalFunction2D;
+    std::function<float(const Vector3&)> evalFunction;
+    std::function<float(const Vector3&)> evalFunction2D;
     TerrainTypes material = WATER;
 
     PredefinedShapes predefinedShape = None;
@@ -336,9 +336,9 @@ public:
     bool contains(PredefinedShapes shape);
     virtual std::vector<ImplicitPatch*> findAll(PredefinedShapes shape);
 
-//    std::function<Vector3(Vector3)> wrapFunction;
-//    std::function<Vector3(Vector3)> unwrapFunction;
-    std::function<float(Vector3)> noiseFunction;
+//    std::function<Vector3(const Vector3&)> wrapFunction;
+//    std::function<Vector3(const Vector3&)> unwrapFunction;
+    std::function<float(const Vector3&)> noiseFunction;
     std::vector<UnaryOp> transforms;
 
 //    virtual ImplicitPatch* copy() const;
@@ -458,8 +458,8 @@ public:
 class UnaryOp {
 public:
     UnaryOp();
-    std::function<Vector3(Vector3)> wrap;
-    std::function<Vector3(Vector3)> unwrap;
+    std::function<Vector3(const Vector3&)> wrap;
+    std::function<Vector3(const Vector3&)> unwrap;
 };
 class UnaryOpTranslate: public UnaryOp {
 public:
@@ -476,7 +476,7 @@ public:
 class UnaryOpWrap: public UnaryOp {
 public:
     UnaryOpWrap(FastNoiseLite noise, const Vector3& strength);
-    UnaryOpWrap(std::function<Vector3(Vector3)> func);
+    UnaryOpWrap(std::function<Vector3(const Vector3&)> func);
     UnaryOpWrap(GridV3 wrapper);
     GridV3 wrapper;
 };

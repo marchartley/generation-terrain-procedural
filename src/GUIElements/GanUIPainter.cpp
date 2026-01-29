@@ -25,7 +25,7 @@ GanUIPainter::GanUIPainter(std::string name, ChartView *chartView, QWidget *pare
     }));
 
     this->addImage(GridV3(256, 256, 1, Vector3(1.f, 0.f, 0.f)));
-    QObject::connect(this, &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, Vector3 value) {
+    QObject::connect(this, &GanUIPainter::clickedOnImage, this, [&](const Vector3& pos, [[maybe_unused]] Vector3 value) {
         if (pos.isValid()) {
             Vector3i p = pos * this->dataModel->getImage().getDimensions();
             this->drawStroke(p, p);

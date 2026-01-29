@@ -6,7 +6,7 @@
 
 struct InstantiationMeshOption {
     InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
-        : name(name), minMaxSizes(minMaxSizes), color(color), folderName(folderName), requiredTranslation(translation), minMaxInstances(minMaxInstances), radius(radius)
+        : name(name), folderName(folderName), minMaxSizes(minMaxSizes), color(color), requiredTranslation(translation), minMaxInstances(minMaxInstances), radius(radius)
     {}
     InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
         : InstantiationMeshOption(name, name, minMaxSizes, color, translation, minMaxInstances, radius)

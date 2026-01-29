@@ -9,7 +9,7 @@ BiomeInterface::BiomeInterface(QWidget* parent)
     createGUI();
 }
 
-void BiomeInterface::display(const Vector3& camPos)
+void BiomeInterface::display([[maybe_unused]] const Vector3& camPos)
 {
     if (!this->isVisible())
         return;
@@ -36,7 +36,7 @@ void BiomeInterface::display(const Vector3& camPos)
 }
 
 
-Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, const Vector3& offset = Vector3(), float scaling = 1.f) {
+Vector3 getSurfacePosition(std::shared_ptr<VoxelGrid> grid, const Vector3& pos, [[maybe_unused]] const Vector3& offset = Vector3(), [[maybe_unused]] float scaling = 1.f) {
     Vector3 finalPos = pos;
 //    pos.x() = (pos.x() - offset.x) * scaling; // clamp(pos.x() / scaling - offset.x, 0.f, grid->getDimensions().x() - 1);
 //    pos.y() = (pos.y() - offset.y) * scaling; // clamp(pos.y() / scaling - offset.y, 0.f, grid->getDimensions().y() - 1);
@@ -124,7 +124,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     /////// this->voxelGrid->from2DGrid(*this->heightmap, voxelGridOffsetStart, voxelGridOffsetEnd, voxelGridScaleFactor);
 //    this->voxelGrid->fromCachedData();
 
-    auto startTime = std::chrono::system_clock::now();
+    // auto startTime = std::chrono::system_clock::now();
 //return;
     ShapeCurve terrainArea({
                    heightmap->getDimensions() * Vector3(0, 0, 0),
@@ -147,7 +147,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     biomeQueue.push_back(rootBiome);
 
-    int biomeID = 0;
+    // int biomeID = 0;
     while (!biomeQueue.empty()) {
         std::shared_ptr<BiomeInstance> current = biomeQueue.front();
         biomeQueue.erase(biomeQueue.begin());
@@ -175,7 +175,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 
     for (auto& current : sortedBiomes) {
         ShapeCurve area = current->area;
-        int level = current->getLevel();
+        // int level = current->getLevel();
 //        area = area.grow(1.f); // Grow the area to fill all artefacts
         Vector3 AABBoxMin, AABBoxMax;
         std::tie(AABBoxMin, AABBoxMax) = area.AABBox();
@@ -205,7 +205,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     }
 
     return;
-
+    /*
     FastNoiseLite noise;
     noise.SetNoiseType(FastNoiseLite::NoiseType_Perlin);
     noise.SetFrequency(.01f);
@@ -238,7 +238,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     }
     heightChange = heightChange.meanSmooth(15, 15, 1, true);
     this->heightmap->raise(heightChange);
-    voxelGrid->add2DHeightModification(heightChange.subset(voxelGridOffsetStart, voxelGridOffsetEnd).resize(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1)) /* * (voxelGrid->getSizeZ() / (float)heightmap->getMaxHeight())*/, 1.5f);
+    voxelGrid->add2DHeightModification(heightChange.subset(voxelGridOffsetStart, voxelGridOffsetEnd).resize(voxelGrid->getDimensions().xy() + Vector3(0, 0, 1)), 1.5f);
 
 //    GridF all2DModifications(heightmapDim);
 //    GridF all3DModifications(voxelGrid->getDimensions());
@@ -246,7 +246,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
 //    bool allModif2D = false;
     // Now add the primitives on top
     for (auto& current : sortedBiomes) {
-        Vector3 pos = current->position;
+        // Vector3 pos = current->position;
 //        Vector3 surfacePos = getSurfacePosition(voxelGrid, pos);
         ShapeCurve area = current->area;
 //        Vector3 areaSize = area.containingBoxSize() + Vector3(0, 0, heightmap->getMaxHeight());
@@ -314,6 +314,7 @@ void BiomeInterface::generateBiomes(std::shared_ptr<BiomeInstance> predefinedBio
     voxelGrid->saveState();
 //    this->heightmap->fromVoxelGrid(*voxelGrid);
     updateBiomeSelectionGui();
+    */
 }
 
 void BiomeInterface::randomize()
@@ -359,7 +360,7 @@ void BiomeInterface::affectHeightmap(std::shared_ptr<Grid> heightmap)
     this->heightmap = heightmap;
 }*/
 
-void BiomeInterface::replay(nlohmann::json action)
+void BiomeInterface::replay([[maybe_unused]] nlohmann::json action)
 {
 
 }
@@ -499,7 +500,7 @@ void BiomeInterface::mousePressEvent(QMouseEvent *event)
     ActionInterface::mousePressEvent(event);
 }
 
-void BiomeInterface::mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent *event, TerrainModel* model)
+void BiomeInterface::mouseDoubleClickOnMapEvent(const Vector3& mousePosition, bool mouseInMap, QMouseEvent *event, [[maybe_unused]] TerrainModel* model)
 {
     if(this->isVisible() && mouseInMap) {
         // Zoom on the area if left click, zoom out with right click
@@ -538,7 +539,7 @@ void BiomeInterface::mouseDoubleClickEvent(QMouseEvent *event)
     ActionInterface::mouseDoubleClickEvent(event);
 }
 */
-void BiomeInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, QMouseEvent* event, TerrainModel* model)
+void BiomeInterface::mouseClickedOnMapEvent(const Vector3& mousePosInMap, bool mouseInMap, [[maybe_unused]] QMouseEvent* event, TerrainModel* model)
 {
     if (this->isVisible()) {
         if (!mouseInMap) return;

@@ -201,14 +201,16 @@ bool ChartView::selectData(const Vector3& pos)
 
     if (!this->_dataModel->selectedPlotData.empty() || !this->_dataModel->selectedScatterData.empty()) {
         this->lockView();
+        return false;
     } else {
         this->unlockView();
+        return true;
     }
 
     // if (!this->_dataModel->displayedImage.empty()) {
     // Q_EMIT clickedOnImage(pos * this->_dataModel->displayedImage.getDimensions(), this->_dataModel->displayedImage(pos * this->_dataModel->displayedImage.getDimensions()));
     // }
-    return this;
+    // return this;
 }
 
 Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
@@ -227,6 +229,7 @@ ChartView *ChartView::setOverlay(GridV3 image, GridF alpha)
 {
     this->overlayColors = image;
     this->overlayAlpha = alpha;
+    return this;
 }
 
 bool ChartView::viewportEvent(QEvent *event)
@@ -304,7 +307,7 @@ bool Chart::sceneEvent(QEvent *event)
     return QChart::event(event);
 }
 
-bool Chart::gestureEvent(QGestureEvent *event)
+bool Chart::gestureEvent([[maybe_unused]] QGestureEvent *event)
 {
     //    if (QGesture *gesture = event->gesture(Qt::PanGesture)) {
     //        QPanGesture *pan = static_cast<QPanGesture *>(gesture);

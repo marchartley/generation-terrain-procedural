@@ -171,7 +171,7 @@ UnderwaterErosion::Apply(EROSION_APPLIED applyOn,
                          float erosionPowerValue,
                          float criticalShearValue,
                          std::vector<std::pair<Vector3, Vector3> > posAndDirs,
-//                         std::function<Vector3(Vector3)> flowfieldFunction)
+//                         std::function<Vector3(const Vector3&)> flowfieldFunction)
                          FLOWFIELD_TYPE flowType,
                          GridV3 waterFlow,
                          GridV3 airFlow,

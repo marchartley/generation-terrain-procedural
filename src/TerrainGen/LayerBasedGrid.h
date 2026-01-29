@@ -81,16 +81,16 @@ public:
     float getSizeY() const { return this->layers.sizeY; }
     float getSizeZ() const;
 
-    void initMap() {};
+    void initMap() {}
 
-    bool undo() { return false; };
-    bool redo() { return false; };
+    bool undo() { return false; }
+    bool redo() { return false; }
 
-    void saveMap(std::string filename) {};
-    void retrieveMap(std::string filename) {};
+    void saveMap([[maybe_unused]] std::string filename) {}
+    void retrieveMap([[maybe_unused]] std::string filename) {}
 
-    std::string toString() { return this->toShortString(); };
-    std::string toShortString() { return "Layered terrain : " + std::to_string(this->getDimensions().x()) + "x" + std::to_string(this->getDimensions().y()) + "x" + std::to_string(this->getDimensions().z()); };
+    std::string toString() { return this->toShortString(); }
+    std::string toShortString() { return "Layered terrain : " + std::to_string(this->getDimensions().x()) + "x" + std::to_string(this->getDimensions().y()) + "x" + std::to_string(this->getDimensions().z()); }
 
     void reset() { this->layers = previousState; }
     Matrix3<std::vector<std::pair<TerrainTypes, float>>>& getLayers() { return this->layers; }

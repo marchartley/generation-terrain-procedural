@@ -13,7 +13,7 @@ std::string biomeName(int ID) {
 
 FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph adjencyGraph) {
     GridI available(100, 100, 1, 1); // All available
-    int maxNeighbors = 6;
+    size_t maxNeighbors = 6;
     int maxNeighboringTries = 20;
     FastPoissonGraph<int> graph(available);
 
@@ -35,15 +35,15 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
         }
 
         // If it isn't saturated in neighbors yet, add some randomly
-        if (int(current->neighbors.size()) < maxNeighbors)
+        if (current->neighbors.size() < maxNeighbors)
         {
-            for (int i = 0; i < maxNeighboringTries && int(current->neighbors.size()) < maxNeighbors; i++) {
+            for (int i = 0; i < maxNeighboringTries && current->neighbors.size() < maxNeighbors; i++) {
                 int neighborIndex = int(random_gen::generate(0, graph.nodes.size()));
                 auto& neighbor = graph.nodes[neighborIndex];
 
                 if (neighbor->value != -1) {
                     // Don't use this node if it's neighboring count is already saturated
-                    if (int(neighbor->neighbors.size()) >= maxNeighbors)
+                    if (neighbor->neighbors.size() >= maxNeighbors)
                         continue;
                     // Don't use it if the biomes are not compatible
                     if (adjencyGraph.connectionMatrix.at(current->value, neighbor->value) == 0)
@@ -51,7 +51,7 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
                 } else {
                     // Find all possible biomes ID that can take the neighbor
                     std::vector<int> possibleBiomes;
-                    for (int iBiome = 0; iBiome < adjencyGraph.connectionMatrix.sizeX; iBiome++) {
+                    for (size_t iBiome = 0; iBiome < adjencyGraph.connectionMatrix.sizeX; iBiome++) {
                         if (adjencyGraph.connectionMatrix.at(current->value, iBiome) != 0)
                             possibleBiomes.push_back(iBiome);
                     }
@@ -83,7 +83,7 @@ FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, G
     return graph;
 }
 
-Graph subsetToFitMostBiomes(Graph graph, std::vector<std::string> biomesNames)
+Graph subsetToFitMostBiomes(Graph graph, [[maybe_unused]] std::vector<std::string> biomesNames)
 {
     Graph returnedGraph;
 
@@ -123,7 +123,8 @@ std::shared_ptr<BiomeInstance> recursivelyCreateBiomeInstance(nlohmann::json jso
     return instance;
 }
 
+/*
 std::shared_ptr<BiomeInstance> generateBiome(Graph biomeGraph)
 {
 
-}
+}*/

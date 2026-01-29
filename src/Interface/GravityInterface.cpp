@@ -12,7 +12,7 @@ GravityInterface::GravityInterface(QWidget *parent)
     this->voxelGrid = voxelGrid;
 }*/
 
-void GravityInterface::display(const Vector3& camPos)
+void GravityInterface::display([[maybe_unused]] const Vector3& camPos)
 {
 
 }

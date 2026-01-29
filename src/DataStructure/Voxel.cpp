@@ -58,7 +58,7 @@ void VoxelDataFile::load(const std::string &filename) {
             try {
                 inFile.seekg(0, std::ios::beg);
                 loadFromFileBinary(filename);
-            } catch(std::exception e) {
+            } catch(const std::exception& e) {
                 inFile.seekg(0, std::ios::beg);
                 loadFromFileOld(filename);
             }

@@ -3,17 +3,17 @@
 #include "Graph/Pathfinding.h"
 #include "Utils/Delaunay.h"
 
-Vector3 PositionOptimizer::getHighestPosition(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients)
+Vector3 PositionOptimizer::getHighestPosition(const Vector3 &seedPosition, [[maybe_unused]] const GridF &score, const GridV3 &gradients)
 {
     return followGradient(seedPosition, gradients, 100, true);
 }
 
-Vector3 PositionOptimizer::getLowestPosition(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients)
+Vector3 PositionOptimizer::getLowestPosition(const Vector3 &seedPosition, [[maybe_unused]] const GridF &score, const GridV3 &gradients)
 {
     return followGradient(seedPosition, gradients, 100, false);
 }
 
-BSpline PositionOptimizer::trackHighestPosition(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, int maxTries, bool goUp)
+BSpline PositionOptimizer::trackHighestPosition(const Vector3 &seedPosition, [[maybe_unused]] const GridF &score, const GridV3 &gradients, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
     BSpline track;
@@ -68,63 +68,6 @@ BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3 &seedPo
     s.slopeCost = 0.f; // Don't follow the slope
 
     return s.runSegmentation(1000);
-
-    /*
-    int maxTries = 5;
-
-    Vector3 pos = seedPosition;
-
-    BSpline curve;
-
-
-    int bestDiffDownhill = maxTries;
-    Vector3 bestPosDownhill;
-    int bestDiffUphill = maxTries;
-    Vector3 bestPosUphill;
-
-    // Start by going downhill, there are much more chances that we find a best solution... (I guess...)
-    for (int i = 0; i < maxTries; i++) {
-        curve = CurveOptimizer::followIsolevel(pos, score, gradients, minLength);
-        // Check if we fullfill minLength condition
-        float length = curve.length();
-        float diff = length - minLength;
-        if (diff < 0 || length == 0) {
-            Vector3 gradient;
-            std::tie(pos, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos, Vector3(false), gradients, 5, 2.f);
-            if (pos.isValid())
-                pos += gradient.normalized() * -1.f;
-            else
-                break;
-
-        } else {
-            bestDiffDownhill = i;
-            bestPosDownhill = pos;
-            break;
-        }
-    }
-    // Now try uphill
-    pos = seedPosition;
-    for (int i = 0; i < bestDiffDownhill; i++) {
-        curve = CurveOptimizer::followIsolevel(pos, score, gradients, minLength);
-        // Check if we fullfill minLength condition
-        float length = curve.length();
-        float diff = length - minLength;
-        if (diff < 0 || length == 0) {
-            Vector3 gradient;
-            std::tie(pos, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos, Vector3(false), gradients, 5, 2.f);
-            if (pos.isValid())
-                pos += gradient.normalized() * 1.f;
-            else
-                break;
-        } else {
-            bestDiffUphill = i;
-            bestPosUphill = pos;
-            break;
-        }
-    }
-
-    curve = CurveOptimizer::followIsolevel((bestDiffDownhill < bestDiffUphill ? bestPosDownhill : bestPosUphill), score, gradients, minLength);
-    return curve;*/
 }
 
 BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float targetLength)
@@ -144,43 +87,6 @@ BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3 &see
     s.slopeCost = 10.f; // Follow the slope
 
     return s.runSegmentation(1000);
-    /*
-    int maxTries = 2.f * targetLength;
-    int tries = 0;
-
-    Vector3 pos = seedPosition;
-
-    BSpline curve;
-
-    auto curveA = CurveOptimizer::followGradient(pos, score, gradients, 5, true);
-    auto curveB = CurveOptimizer::followGradient(pos, score, gradients, 5, false);
-    curve = curveB.reverseVertices();
-    for (const auto& p : curveA) {
-        curve.points.push_back(p);
-    }
-    curve.removeDuplicates();
-    curve.resamplePoints(std::ceil(targetLength));
-    float length = curve.length();
-
-    while (std::abs(length - targetLength) > 1.f && tries < maxTries) {
-        float diff = length - targetLength;
-        for (int iPath = 0; iPath < curve.size(); iPath++) {
-            auto p = curve[iPath];
-            float t = float(iPath) / float(curve.size() - 1);
-            float scaleOnGradient = (t - .5f) * 2.f * std::abs(diff) / float(curve.size());
-            Vector3 gradient;
-            std::tie(p, gradient) = PathOptimizer::jitterToFindPointAndGradient(p, Vector3(false), gradients, 5, 2.f);
-            if (p.isValid() && gradient.isValid())
-                p += gradient.normalized() * scaleOnGradient * sign(diff);
-            else
-                continue;
-            curve[iPath] = p;
-        }
-        curve.resamplePoints();
-        length = curve.length();
-        tries++;
-    }
-    return curve.resamplePoints();*/
 }
 
 BSpline CurveOptimizer::getSkeletonCurve(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float targetLength)
@@ -289,7 +195,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3 &seedPosition, const GridF 
     return path;
 }
 
-BSpline CurveOptimizer::followGradient(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, int maxTries, bool goUp)
+BSpline CurveOptimizer::followGradient(const Vector3 &seedPosition, [[maybe_unused]] const GridF &score, const GridV3 &gradients, int maxTries, bool goUp)
 {
     Vector3 pos = seedPosition;
     BSpline track;
@@ -349,85 +255,12 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3 &seedPosition, con
     BSpline result = s.runSegmentation(200);
     std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << s.targetArea << std::endl;
     return result;
-
-    /*
-
-
-    Vector3 currentSeedPos = seedPosition;
-    float maxError = 5.f;
-    int maxTries = 100;
-    ShapeCurve finalCurve;
-    float moveFactor = 1.f;
-    bool currentlyAreaGettingSmaller = true;
-
-
-    Vector3 pos = seedPosition;
-
-    while (maxTries > 0) {
-        ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients).resamplePoints(50);
-        SnakeSegmentationExplicit s; // = SnakeSegmentationExplicit(curve, score, gradients);
-        s.contour = curve;
-        s.image = score;
-        s.gradientField = gradients;
-        // s.convergenceThreshold = 1e-3;
-        s.curvatureCost = 0.01f;
-        s.lengthCost = 0.0f;
-        s.areaCost = 10.f;
-        s.imageCost = .0f;
-        s.targetLength = 0;
-        float fakeRadius = std::sqrt(targetArea) * .5f;
-        float fakeArea = PI * fakeRadius * fakeRadius;
-        s.targetArea = fakeArea;
-        s.contour = curve;
-        s.collapseFirstAndLastPoint = true;
-
-        curve = s.runSegmentation(100);
-
-        if (curve.size() > 0) {
-            // std::cout << "Shape area: " << curve.computeArea() << " - Target: " << s.targetArea << " (" << fakeRadius << "x" << fakeRadius << ")" << std::endl;
-            return curve;
-        }
-
-        Vector3 gradient = gradients.interpolate(currentSeedPos).normalized();
-        if (!gradient.isValid()) break;
-        currentSeedPos = currentSeedPos + gradient * 2.f;
-        maxTries--;
-
-    }
-    return ShapeCurve();
-    */
-/*
-    // We will move only in the direction of the gradient, since we want to optimize the isolevel.
-    // And we know that higher isolevel => lower area while lower isolevel => higher area.
-    // So isolevel gradient proportional to -area gradient.
-    while (maxTries > 0) {
-        ShapeCurve curve = AreaOptimizer::getInitialShape(currentSeedPos, score, gradients);
-        Vector3 gradient = gradients.interpolate(currentSeedPos).normalized();
-        if (!gradient.isValid()) break;
-
-        if (curve.size() == 0) {
-            // The isocontour is too big, we didn't manage to do a full circle.
-            currentSeedPos = currentSeedPos + gradient * 2.f;
-        } else {
-            float area = curve.computeArea();
-
-            float diff = targetArea - area; // < 0 means curve too big, > 0 means curve too small
-            finalCurve = curve;
-            if (std::abs(diff) < maxError) break;
-            currentSeedPos = currentSeedPos + gradient * (diff > 0 ? -1.f : 1.f) * moveFactor;
-
-            if (currentlyAreaGettingSmaller != (diff > 0)) {
-                currentlyAreaGettingSmaller = !currentlyAreaGettingSmaller;
-                moveFactor *= .5f;
-            }
-        }
-        maxTries--;
-    }
-    return finalCurve;
-*/
 }
 
-ShapeCurve AreaOptimizer::getPerimeterOptimizedShape(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float optmizedPerimeter){}
+ShapeCurve AreaOptimizer::getPerimeterOptimizedShape(const Vector3 &seedPosition, const GridF &score, const GridV3 &gradients, float optmizedPerimeter)
+{
+    return ShapeCurve();
+}
 
 std::pair<Vector3, Vector3> PathOptimizer::jitterToFindPointAndGradient(const Vector3& pos, const Vector3& previousDir, const GridV3& gradients, int maxTries, float jitterMaxRadius)
 {

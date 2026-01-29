@@ -15,7 +15,7 @@ QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets);
 QGroupBox* createHorizontalGroup(std::vector<QWidget*> widgets);
 QGroupBox* createMultiColumnGroup(std::vector<QWidget*> widgets, int nbColumns = 2);
 QGroupBox* createOptionalSlider(RangeSlider* slider, std::string checkboxLabel = "Activer", bool activatedByDefault = true,
-                                std::function<void(bool, RangeSlider*)> onToggleCallback = [](bool active, RangeSlider* slider) -> void {});
+                                std::function<void(bool, RangeSlider*)> onToggleCallback = []([[maybe_unused]] bool active, [[maybe_unused]] RangeSlider* slider) -> void {});
 
 //QWidget* stickTo(QWidget* widget, QWidget* container, float x, float y, float w, float h, bool useAbsolutePosition = true);
 //void clearLayout(QLayout* layout, bool deleteWidgets = true);

@@ -434,7 +434,7 @@ void CombinMap::collapseDuplicateNodes()
 CombinMap CombinMap::dual(Brin *oneExteriorBrin, Brin *oneEdgeTowardInfinity)
 {
     std::vector<Brin*> myExterior;
-    int infinityNodeIndex = -1;
+    // int infinityNodeIndex = -1;
     if (oneEdgeTowardInfinity == nullptr) {
         myExterior = this->exteriorFace(oneExteriorBrin);
         int infinityNodeIndex = 0; // Will contains the Index to the "Infinite node"
@@ -449,7 +449,7 @@ CombinMap CombinMap::dual(Brin *oneExteriorBrin, Brin *oneEdgeTowardInfinity)
 
     } else {
         // Care about the dual of dual later (oneEdgeTowardInfinity != nullptr)
-        infinityNodeIndex = oneEdgeTowardInfinity->getDest();
+        // infinityNodeIndex = oneEdgeTowardInfinity->getDest();
     }
 
     this->debug();

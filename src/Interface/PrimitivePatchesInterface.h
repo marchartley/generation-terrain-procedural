@@ -123,7 +123,7 @@ protected:
 //    Patch3D* currentPatch;
     std::vector<ImplicitPatch*> storedPatches;
 
-//    std::function<float(Vector3)> currentSelectionFunction;
+//    std::function<float(const Vector3&)> currentSelectionFunction;
 
     Vector3 currentPos;
 

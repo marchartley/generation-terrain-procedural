@@ -74,7 +74,7 @@ public:
 
 //protected:
 public:
-    std::function<Vector3(Vector3)> computeFlowfieldFunction();
+    std::function<Vector3(const Vector3&)> computeFlowfieldFunction();
     Mesh rocksPathSuccess;
     Mesh rocksPathFailure;
     Mesh boundariesMesh;
