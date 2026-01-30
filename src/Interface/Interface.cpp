@@ -196,7 +196,7 @@ ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displa
 
         QObject::connect(biomeInterface.get(), &BiomeInterface::terrainViewModified, terrainGenerationInterface.get(), &TerrainGenerationInterface::updateDisplayedView);
 
-        // this->openInterface(envObjectsInterface);
+        this->openInterface(envObjectsInterface);
     });
     viewer->installEventFilter(this);
     setupUi();
