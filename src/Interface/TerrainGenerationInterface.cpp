@@ -153,7 +153,7 @@ void TerrainGenerationInterface::implicitToAll()
     displayProcessTime("Implicit to layers... ", [&]() { implicitToLayers(); });
 }
 
-void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, bool _displayParticles)
+void TerrainGenerationInterface::setVisu(MapMode _mapMode, SmoothingAlgorithm _smoothingAlgorithm, [[maybe_unused]] bool _displayParticles)
 {
     this->mapMode = _mapMode;
     this->smoothingAlgorithm = _smoothingAlgorithm;
@@ -189,17 +189,17 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
         noise.SetFractalOctaves(10);
 
         if (noise2D) {
-            for (int x = 0; x < values.sizeX; x++) {
-                for (int y = 0; y < values.sizeY; y++) {
+            for (size_t x = 0; x < values.sizeX; x++) {
+                for (size_t y = 0; y < values.sizeY; y++) {
                     float grid_height = noise.GetNoise((float)x, (float)y) * noiseStrength * values.sizeZ + this->waterLevel * values.sizeZ;
-                    int z = int(std::max(grid_height, 2.f));
+                    size_t z = size_t(std::max(grid_height, 2.f));
                     // Positive values
-                    for (int i = 0; i < int(z); i++) {
+                    for (size_t i = 0; i < z; i++) {
                         values.at(x, y, i) = .5f;
                     }
                     if (z < values.sizeZ) {
-                        values.at(x, y, z) = interpolation::inv_linear(z - int(z), -.5f, .5f);
-                        for (int i = z+1; i < values.sizeZ; i++) {
+                        values.at(x, y, z) = interpolation::inv_linear(std::max(grid_height, 2.f) - float(z), -.5f, .5f);
+                        for (size_t i = z+1; i < values.sizeZ; i++) {
                             values.at(x, y, i) = -.5f;
                         }
                     }
@@ -207,9 +207,9 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
             }
             values = values.meanSmooth();
         } else {
-            for (int x = 0; x < values.sizeX; x++) {
-                for (int y = 0; y < values.sizeY; y++) {
-                    for (int z = 0; z < values.sizeZ; z++) {
+            for (size_t x = 0; x < values.sizeX; x++) {
+                for (size_t y = 0; y < values.sizeY; y++) {
+                    for (size_t z = 0; z < values.sizeZ; z++) {
                         values.at(x, y, z) = noise.GetNoise((float)x, (float)y, (float)z) * noiseStrength;
                         if (z < this->waterLevel * values.sizeZ && (x > 5))
                             values.at(x, y, z) = std::abs(values.at(x, y, z));
@@ -220,9 +220,9 @@ void TerrainGenerationInterface::createTerrainFromNoise(int nx, int ny, int nz, 
             }
         }
     } else {
-        for (int x = 0; x < values.sizeX; x++) {
-            for (int y = 0; y < values.sizeY; y++) {
-                for (int z = 0; z < values.sizeZ; z++) {
+        for (size_t x = 0; x < values.sizeX; x++) {
+            for (size_t y = 0; y < values.sizeY; y++) {
+                for (size_t z = 0; z < values.sizeZ; z++) {
                     values.at(x, y, z) = (z < this->waterLevel * values.sizeZ ? .1f : -.1f);
                 }
             }
@@ -559,7 +559,7 @@ QLayout* TerrainGenerationInterface::createGUI()
 
 
 
-void TerrainGenerationInterface::prepareShader(bool reload)
+void TerrainGenerationInterface::prepareShader([[maybe_unused]] bool reload)
 {
     bool verbose = true;
 
@@ -788,9 +788,9 @@ void TerrainGenerationInterface::prepareShader(bool reload)
     GridV3 allColorTextures;
     GridV3 allNormalTextures;
     GridV3 allDisplacementTextures;
-    int indexColorTextureClass = 0;
-    int indexNormalTextureClass = 0;
-    int indexDisplacementTextureClass = 0;
+    // int indexColorTextureClass = 0;
+    // int indexNormalTextureClass = 0;
+    // int indexDisplacementTextureClass = 0;
 
     std::vector<QString> filesToLoad;
     while (iTex.hasNext()) {
@@ -969,10 +969,10 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
     auto diff = getVoxelChanges(voxels, initial);
 
     GridF map(diff.sizeX, diff.sizeY);
-    for (int x = 0; x < diff.sizeX; x++) {
-        for (int y = 0; y < diff.sizeY; y++) {
+    for (size_t x = 0; x < diff.sizeX; x++) {
+        for (size_t y = 0; y < diff.sizeY; y++) {
             float sum = 0;
-            for (int z = 0; z < diff.sizeZ; z++) {
+            for (size_t z = 0; z < diff.sizeZ; z++) {
                 sum += diff.at(x, y, z);
             }
             if (sum > 0) {
@@ -987,7 +987,7 @@ GridF getHeightmapChanges(std::shared_ptr<VoxelGrid> voxels, GridF initial) {
 }
 
 
-void TerrainGenerationInterface::display(const Vector3& camPos)
+void TerrainGenerationInterface::display([[maybe_unused]] const Vector3& camPos)
 {
     bool verbose = false;
     float maxHeight;
@@ -1086,14 +1086,15 @@ void TerrainGenerationInterface::display(const Vector3& camPos)
                 GridF values;
                 meshCreationTime = timeIt([&]() {
                     values = voxelGrid->getVoxelValues(); //.meanSmooth(3, 3, 3, true);
-                    #pragma omp parallel for collapse(3)
+                    /*#pragma omp parallel for collapse(3)
                     for (int x = 0; x < values.sizeX; x++) {
                         for (int y = 0; y < values.sizeY; y++) {
                             for (int z = 0; z < 2; z++) {
                                 values(x, y, z) = std::max(std::abs(values(x, y, z)), .0f);
                             }
                         }
-                    }
+                    }*/
+                    values.iterateParallel([&](size_t i) { values[i] = std::max(std::abs(values[i]), 0.f); });
                     if (marchingCubeMesh.vertexArray.size() != values.size()) {
                         std::vector<Vector3> points(values.size());
                         for (size_t i = 0; i < points.size(); i++) {
@@ -1269,7 +1270,7 @@ void TerrainGenerationInterface::saveErosionDepositionTextureMasksOnMultiple()
     QStringList fileNames;
     if (dialog.exec()) {
         fileNames = dialog.selectedFiles();
-        for (size_t i = 0; i < fileNames.size(); i++) {
+        for (size_t i = 0; i < size_t(fileNames.size()); i++) {
             QString& q_filename = fileNames[i];
             std::string filename = q_filename.toStdString();
 
@@ -1310,7 +1311,7 @@ void TerrainGenerationInterface::changeDisplayShadowsMode(bool display)
     Q_EMIT updated();
 }
 
-void TerrainGenerationInterface::updateScalarFieldToDisplay(const GridF &scalarField, float min, float max)
+void TerrainGenerationInterface::updateScalarFieldToDisplay(const GridF &scalarField, [[maybe_unused]] float min, [[maybe_unused]] float max)
 {
     /*if (heightmapMesh.shader) {
         std::cout << "Scalar field updated" << std::endl;
