@@ -21,6 +21,8 @@ public:
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);
 
+    virtual void improvePositionning(float maxDistance);
+
     virtual void recomputeEvaluationPoints();
 
     virtual void applyDeposition(EnvMaterial& material);

@@ -46,6 +46,7 @@ EnvArea *EnvArea::instantiate(std::string objectName)
 bool EnvArea::placeInTerrain(const Vector3 &seedPosition)
 {
     ShapeCurve initialCurve = ContinuousAreaOptimizer::getAreaOptimizedShape(seedPosition, this->fitnessFunction, this->length * this->width);
+    this->snake.position = seedPosition;
     return this->placeInTerrain(initialCurve);
 }
 
@@ -67,6 +68,13 @@ bool EnvArea::placeInTerrain(const BSpline &seedCurve)
         return false;
     this->spawnTime = EnvObject::currentTime;
     return true;
+}
+
+void EnvArea::improvePositionning(float steps)
+{
+    this->snake.contour = this->curve;
+    this->snake.position = this->curve.center();
+    this->updateCurve(this->snake.runSegmentation(steps));
 }
 
 void EnvArea::recomputeEvaluationPoints()

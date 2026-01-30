@@ -58,9 +58,9 @@ public:
 
     std::string name;
     std::string s_FittingFunction;
-    std::function<float(Vector3)> fittingFunction;
+    std::function<float(const Vector3&)> fittingFunction;
     std::string s_FitnessFunction;
-    std::function<float(Vector3)> fitnessFunction;
+    std::function<float(const Vector3&)> fitnessFunction;
     Vector3 flowEffect;
     std::map<std::string, float> materialDepositionRate;
     std::map<std::string, float> materialAbsorptionRate;
@@ -80,7 +80,7 @@ public:
     int spawnTime = 0;
 
     SnakeSegmentationImplicit snake;
-    bool snakeDefined = false;
+    // bool snakeDefined = false;
 
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
@@ -103,6 +103,8 @@ public:
     virtual bool placeInTerrain(const Vector3& seedPosition) = 0;
     virtual bool placeInTerrain(const BSpline& seedCurve) = 0;
 
+    virtual void improvePositionning(float stepsOrDistance) = 0;
+
     void die();
 
     bool premature = false;
@@ -116,7 +118,7 @@ public:
     HeightmapFrom heightFrom = SURFACE;
 
 
-    static std::function<float(Vector3)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
+    static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
 
     static GridV3 flowfield;

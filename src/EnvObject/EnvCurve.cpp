@@ -53,19 +53,8 @@ bool EnvCurve::placeInTerrain(const Vector3 &seedPosition)
     } else if (this->curveFollow == EnvCurve::GRADIENTS) {
         initialCurve = ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(seedPosition, this->fitnessFunction, this->length);
     }
+    this->snake.position = seedPosition;
     return this->placeInTerrain(initialCurve);
-    /*BSpline curve = initialCurve;
-    curve.resamplePoints(10);
-    Vector3 position = curve[curve.size() / 2];
-    curve.translate(-position);
-    this->curve = curve;
-    this->translate(position.xy());
-    this->recomputeEvaluationPoints();
-    this->fitnessScoreAtCreation = this->evaluate();
-    if (this->fitnessScoreAtCreation < this->minScore)
-        return false;
-    this->spawnTime = EnvObject::currentTime;
-    return true;*/
 }
 
 bool EnvCurve::placeInTerrain(const BSpline &seedCurve)
@@ -84,6 +73,13 @@ bool EnvCurve::placeInTerrain(const BSpline &seedCurve)
         return false;
     this->spawnTime = EnvObject::currentTime;
     return true;
+}
+
+void EnvCurve::improvePositionning(float steps)
+{
+    this->snake.contour = this->curve;
+    this->snake.position = this->curve.getPoint(.5f);
+    this->updateCurve(this->snake.runSegmentation(int(steps)));
 }
 
 void EnvCurve::recomputeEvaluationPoints()
@@ -271,7 +267,7 @@ ImplicitPatch* EnvCurve::createImplicitPatch(const GridF& _heights, ImplicitPrim
     AABBox box(this->curve.points);
     float growingState = 1.f; // this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    float height = this->height;
+    // float height = this->height;
     float radius = this->width * growingState;
     Vector3 offset(this->width, this->width, radius * .5f);
 

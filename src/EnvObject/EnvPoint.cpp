@@ -45,14 +45,18 @@ EnvPoint *EnvPoint::instantiate(std::string objectName)
 
 bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
 {
-    if (!seedPosition.isValid() || seedPosition == Vector3()) // Not sure if second test is really needed...
+    if (!seedPosition.isValid() || seedPosition == Vector3()) { // Not sure if second test is really needed...
+        // std::cout << "WTF pos = " << seedPosition << std::endl;
         return false;
+    }
     this->position = seedPosition;
-    this->translate(seedPosition.xy());
+    // this->translate(seedPosition.xy());
     this->recomputeEvaluationPoints();
     this->fitnessScoreAtCreation = this->evaluate();
-    if (this->fitnessScoreAtCreation < this->minScore)
+    if (this->fitnessScoreAtCreation < this->minScore) {
+        // std::cout << "Evaluation of " << name << " for " << this->position << " : " << fitnessScoreAtCreation << " / " << this->minScore << std::endl;
         return false;
+    }
     this->spawnTime = EnvObject::currentTime;
     return true;
 }
@@ -62,6 +66,11 @@ bool EnvPoint::placeInTerrain(const BSpline &seedCurve)
     if (seedCurve.empty())
         return false;
     return this->placeInTerrain(seedCurve.points.back());
+}
+
+void EnvPoint::improvePositionning(float maxDistance)
+{
+    this->position += gradientFromFieldFunction(this->fitnessFunction)(this->position).normalize() * maxDistance;
 }
 
 void EnvPoint::recomputeEvaluationPoints()
