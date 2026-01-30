@@ -82,7 +82,7 @@
     "name": "CoralPolyp",
     "type": "point",
     "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3) / freshwater",
-    "rule": "(normal(current.vel * 5.0))  * (polyp * 100000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0))",
+    "rule": "(normal(current.vel * 5.0))  * (polyp * 10000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0))",
     "-rule": "(normal(current.vel * 5.0)) * (1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 30000)",
     "--rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
     "flow": 0.10,
@@ -297,7 +297,8 @@
   {
     "name": "Island",
     "type": "area",
-    "rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "-rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
+    "rule": "random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime))",
     "flow": {
       "direction": 0.3,
       "normal": 0.0,
@@ -688,7 +689,7 @@
     },
     "absorptionRate": {
     },
-    "minScore": 0,
+    "minScore": 0.01,
     "heightfrom": "surface",
     "geometry": "None",
     "material": "sand"

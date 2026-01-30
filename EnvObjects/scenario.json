@@ -6,7 +6,7 @@
 		},
 		"greatreef": {
 			"proba": 0.1,
-			"amount": -1
+			"amount": 0
 		},
 		"coralpolyp": {
 			"proba": 10.0,
@@ -22,11 +22,11 @@
 		},
 		"smalllagoon": {
 			"proba": 0.05,
-			"amount": 2
+			"amount": 0
 		},
 		"river": {
 			"proba": 0.2,
-			"amount": 3
+			"amount": 0
 		}
 	},
 
