@@ -8,9 +8,9 @@ class Matrix : public std::vector<std::vector<float>>
 {
 public:
     Matrix();
-    Matrix(int n, int m, float default_value = 0.f);
-    Matrix(int n, int m, const float* data);
-    Matrix(int n, int m, const float** data);
+    Matrix(size_t n, size_t m, float default_value = 0.f);
+    Matrix(size_t n, size_t m, const float* data);
+    Matrix(size_t n, size_t m, const float** data);
     Matrix(const std::vector<std::vector<float>>& data);
 
     float det() const;
@@ -22,20 +22,20 @@ public:
     Matrix product(const Matrix& m) const;
     float trace() const;
 
-    int rows() const { return this->size(); }
-    int cols() const { return (*this)[0].size(); }
+    size_t rows() const { return this->size(); }
+    size_t cols() const { return (*this)[0].size(); }
 
-    Matrix col(int colIndex) const;
-    Matrix row(int rowIndex) const;
+    Matrix col(size_t colIndex) const;
+    Matrix row(size_t rowIndex) const;
 
     Matrix abs() const;
 
     float maxCoeff() const;
 
-    Matrix leftCols(int nbCols) const;
-    Matrix rightCols(int nbCols) const;
+    Matrix leftCols(size_t nbCols) const;
+    Matrix rightCols(size_t nbCols) const;
 
-    static Matrix identity(int size);
+    static Matrix identity(size_t size);
 
     std::string displayValues() const;
     std::string toString() const;

@@ -10,32 +10,32 @@ Matrix::Matrix()
 
 }
 
-Matrix::Matrix(int n, int m, float default_value)
+Matrix::Matrix(size_t n, size_t m, float default_value)
 {
-    for(int i = 0; i < n; i++) {
+    for(size_t i = 0; i < n; i++) {
         this->push_back(std::vector<float>(m, default_value));
     }
 }
-Matrix::Matrix(int n, int m, const float* data){
-    for(int i = 0; i < n; i++) {
+Matrix::Matrix(size_t n, size_t m, const float* data){
+    for(size_t i = 0; i < n; i++) {
         this->push_back(std::vector<float>());
-        for (int j = 0; j < m; j++)
+        for (size_t j = 0; j < m; j++)
             (*this)[i].push_back(data[i + j*n]);
     }
 }
-Matrix::Matrix(int n, int m, const float **data){
+Matrix::Matrix(size_t n, size_t m, const float **data){
 
-    for(int i = 0; i < n; i++) {
+    for(size_t i = 0; i < n; i++) {
         this->push_back(std::vector<float>());
-        for (int j = 0; j < m; j++)
+        for (size_t j = 0; j < m; j++)
             (*this)[i].push_back(data[i][j]);
     }
 }
 Matrix::Matrix(const std::vector<std::vector<float> > &data)
     : Matrix(data.size(), data[0].size())
 {
-    for (int i = 0; i < data.size(); i++) {
-        for (int j = 0; j < data[0].size(); j++) {
+    for (size_t i = 0; i < data.size(); i++) {
+        for (size_t j = 0; j < data[0].size(); j++) {
             (*this)[i][j] = data[i][j];
         }
     }
@@ -112,10 +112,10 @@ Matrix Matrix::transpose() const
 
 Matrix Matrix::product(const Matrix& mat) const
 {
-    int m = this->cols();
-    int l = this->rows();
-    int m2 = mat.rows();
-    int n = mat.cols();
+    size_t m = this->cols();
+    size_t l = this->rows();
+    size_t m2 = mat.rows();
+    size_t n = mat.cols();
     if (m != m2) {
         std::ostringstream oss;
         oss << "Error on product between matrices. A defined as " << m << "x" << l << " and B defined as " << n << "x" << m2 << ":\n";
@@ -142,19 +142,19 @@ float Matrix::trace() const
     return trace;
 }
 
-Matrix Matrix::col(int colIndex) const
+Matrix Matrix::col(size_t colIndex) const
 {
     Matrix res(1, this->rows());
-    for (int i = 0; i < this->rows(); i++) {
+    for (size_t i = 0; i < this->rows(); i++) {
         res[0][i] = (*this)[colIndex][i];
     }
     return res;
 }
 
-Matrix Matrix::row(int rowIndex) const
+Matrix Matrix::row(size_t rowIndex) const
 {
     Matrix res(this->cols(), 1);
-    for (int i = 0; i < this->cols(); i++) {
+    for (size_t i = 0; i < this->cols(); i++) {
         res[i][0] = (*this)[i][rowIndex];
     }
     return res;
@@ -163,8 +163,8 @@ Matrix Matrix::row(int rowIndex) const
 Matrix Matrix::abs() const
 {
     Matrix res = *this;
-    for (int i = 0; i < res.size(); i++) {
-        for (int j = 0; j < res[i].size(); j++) {
+    for (size_t i = 0; i < res.size(); i++) {
+        for (size_t j = 0; j < res[i].size(); j++) {
             res[i][j] = std::abs(res[i][j]);
         }
     }
@@ -175,40 +175,40 @@ float Matrix::maxCoeff() const
 {
     float max = std::numeric_limits<float>::lowest();
 
-    for (int i = 0; i < (*this).size(); i++) {
-        for (int j = 0; j < (*this)[i].size(); j++) {
+    for (size_t i = 0; i < (*this).size(); i++) {
+        for (size_t j = 0; j < (*this)[i].size(); j++) {
             max = std::max(max, (*this)[i][j]);
         }
     }
     return max;
 }
 
-Matrix Matrix::leftCols(int nbCols) const
+Matrix Matrix::leftCols(size_t nbCols) const
 {
     Matrix res(this->rows(), nbCols);
-    for (int i = 0; i < res.size(); i++) {
-        for (int j = 0; j < res[i].size(); j++) {
+    for (size_t i = 0; i < res.size(); i++) {
+        for (size_t j = 0; j < res[i].size(); j++) {
             res[i][j] = (*this)[i][j];
         }
     }
     return res;
 }
 
-Matrix Matrix::rightCols(int nbCols) const
+Matrix Matrix::rightCols(size_t nbCols) const
 {
     Matrix res(this->cols() - nbCols, this->rows());
-    for (int i = 0; i < res.size(); i++) {
-        for (int j = 0; j < res[i].size(); j++) {
+    for (size_t i = 0; i < res.size(); i++) {
+        for (size_t j = 0; j < res[i].size(); j++) {
             res[i][j] = (*this)[i + nbCols][j];
         }
     }
     return res;
 }
 
-Matrix Matrix::identity(int size)
+Matrix Matrix::identity(size_t size)
 {
     Matrix m(size, size);
-    for (int i = 0; i < size; i++) {
+    for (size_t i = 0; i < size; i++) {
         m[i][i] = 1;
     }
     return m;
@@ -245,8 +245,8 @@ std::string Matrix::displayValuesOneLine() const
 
 float* Matrix::toArray(bool rowByRow) const
 {
-    const int nbCols = cols();
-    const int nbRows = rows();
+    const size_t nbCols = cols();
+    const size_t nbRows = rows();
 
     float* values = new float(nbRows * nbCols);
     for (size_t r = 0; r < nbRows; r++) {
@@ -262,8 +262,8 @@ float* Matrix::toArray(bool rowByRow) const
 
 std::vector<float> Matrix::toStdVector(bool rowByRow) const
 {
-    const int nbCols = cols();
-    const int nbRows = rows();
+    const size_t nbCols = cols();
+    const size_t nbRows = rows();
 
     std::vector<float> values(nbRows * nbCols);
     for (size_t r = 0; r < nbRows; r++) {
@@ -395,7 +395,7 @@ std::vector<float> Matrix::solve(const Matrix &A, const Matrix &b)
 std::vector<float> Matrix::solve(const Matrix &A, const std::vector<float> &b)
 {
     Matrix B(b.size(), 1);
-    for (int i = 0; i < b.size(); i++) {
+    for (size_t i = 0; i < b.size(); i++) {
         B[i][0] = b[i];
     }
     return Matrix::solve(A, B);

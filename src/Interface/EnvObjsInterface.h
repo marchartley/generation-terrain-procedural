@@ -62,7 +62,6 @@ public:
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
     void updateUntilStabilization();
-    void onlyUpdateFlowAndSandFromEnvObjects();
     void destroyEnvObject(EnvObject* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
 
     void displayProbas(std::string objectName);
@@ -102,9 +101,10 @@ public:
     GridV3 renderFocusArea() const;
     GridV3 renderFlowfield() const;
 
-    void previewCurrentEnvObjectPlacement(Vector3 position);
-    void previewFocusAreaEdition(Vector3 mousePos, bool addingFocus);
-    void previewFlowEdition(Vector3 mousePos, Vector3 brushDir);
+    void previewCurrentEnvObjectPlacement(const Vector3& position);
+    void previewFocusAreaEdition(const Vector3& mousePos, bool addingFocus);
+    void previewFlowEdition(const Vector3& mousePos, const Vector3& brushDir);
+    void previewMaterialEdition(const Vector3& position, bool addingMaterial);
 
     void showAllElementsOnPlotter();
 
@@ -165,6 +165,8 @@ public:
     // std::string currentlyPreviewedObject;
 
     bool materialSimulationStable = false;
+
+    std::string currentMaterialEdited = "";
 
 
     GridF erosionGrid;
