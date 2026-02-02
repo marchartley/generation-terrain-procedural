@@ -20,19 +20,9 @@ BSpline SnakeSegmentation::runSegmentation(int maxIterations) {
     float initialTargetArea = this->targetArea;
 
     for (int iter = 0; iter < maxIterations; ++iter) {
-        /*float a = 0.5f + 0.5f * std::cos(float(nbCatapillars) * float(maxIterations) * 2.f * PI * float(iter) / float(maxIterations - 1));
-        this->targetLength = interpolation::inv_linear(a, initialTargetLength * .15f, initialTargetLength * 2.f);
-        this->targetArea = interpolation::inv_linear(a, initialTargetArea * .15f, initialTargetArea * 2.f);*/
 
         contour = updateContour(contour, stepSize);
-        // std::cout << "Area: " << ShapeCurve(contour).computeArea() << "/" << targetArea << std::endl;
-
-        // if (collapseFirstAndLastPoint) {
-        //     currentContour.points.pop_back();
-        //     currentContour.resamplePoints(currentContour.size() + 1);
-        // } else {
-            contour.resamplePoints();
-        // }
+        contour.resamplePoints();
     }
     if (collapseFirstAndLastPoint) {
         contour[-1] = contour[0];
@@ -227,21 +217,6 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
 
     float totalGradientsNorm = 0.f;
 
-    // Iterate over each control point of the contour
-    /*
-    for (int i = 0; i < numPoints; ++i) {
-        Vector3 dir1 = computeEnergyGradient(newContour, i, (random_gen::generate() > .5f ? true : false));
-        Vector3 gradient = dir1; // .normalize();
-        if (gradient.x() != gradient.x) {
-            std::cerr << "NaN found in the Snake gradient descent" << std::endl;
-            // gradient = computeEnergyGradient(newContour, i, true) + computeEnergyGradient(newContour, i, false);
-        } else {
-            totalGradientsNorm += gradient.norm();
-            gradients[i] = gradient;
-        }
-    }*/
-
-
     std::vector<Vector3> internalGradients(numPoints);
     std::vector<Vector3> externalGradients(numPoints);
     std::vector<Vector3> shapeGradients(numPoints);
@@ -253,6 +228,7 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
 
     bool usePreviousPointForInternal = (random_gen::generate() > .5f ? true : false);
 
+    #pragma omp parallel for
     for (int index = 0; index < numPoints; index++) {
         // Compute the gradient of the total energy with respect to the control point at 'index'
         // Compute internal energy gradient
@@ -263,7 +239,8 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
         shapeGradients[index] = computeShapeEnergyGradient(newContour, index, usePreviousPointForInternal).maxMagnitude(1.f);
         // Slope gradient
         slopeGradients[index] = computeGradientEnergyGradient(newContour, index).maxMagnitude(1.f);
-
+    }
+    for (int index = 0; index < numPoints; index++) {
         totalInternalGradients += internalGradients[index].norm();
         totalExternalGradients += externalGradients[index].norm();
         totalShapeGradients += shapeGradients[index].norm();
@@ -297,13 +274,13 @@ BSpline SnakeSegmentation::updateContour(const BSpline &currentContour, float st
         }
     }
 
-    auto autointersections = newContour.checkAutointersections();
+    /*auto autointersections = newContour.checkAutointersections();
     for (auto [i0, i1] : autointersections) {
         newContour[i0] = currentContour[i0];
         newContour[i0 + 1] = currentContour[i0 + 1];
         newContour[i1] = currentContour[i1];
         newContour[i1 + 1] = currentContour[i1 + 1];
-    }
+    }*/
     return newContour;
 }
 /*
