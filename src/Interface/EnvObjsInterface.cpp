@@ -1806,6 +1806,9 @@ void EnvObjsInterface::showAllElementsOnPlotter()
 
 void EnvObjsInterface::addObjectsHeightmaps()
 {
+    float absoluteWaterLevel = voxelGrid->getSizeZ() * voxelGrid->properties->waterLevel;
+    this->subsidedHeightmap = EnvObject::getHeightmap(initialHeightmap, absoluteWaterLevel, flowErosionFactor, displayGrooves);
+    /*
     GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
     subsidedHeightmap = initialHeightmap * subsidenceFactor;
 
@@ -1884,6 +1887,7 @@ void EnvObjsInterface::addObjectsHeightmaps()
     subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
     // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
     // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
+    */
 }
 
 void EnvObjsInterface::flowErosionSimulation()
