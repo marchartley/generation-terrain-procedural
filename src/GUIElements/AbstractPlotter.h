@@ -51,9 +51,10 @@ public:
     QPoint previousMousePos;
 
 
-    ChartView* setOverlay(GridV3 image, GridF alpha = GridF(1, 1, 1, 1.f));
-    GridV3 overlayColors;
-    GridF  overlayAlpha;
+    ChartView* setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
+    std::map<std::string, GridV3> overlayColors;
+    std::map<std::string, GridF>  overlayAlpha;
+    std::map<std::string, bool>  overlayDisplayed;
 
 protected:
     bool viewportEvent(QEvent *event);
@@ -101,6 +102,7 @@ public:
     const GridV3& getImage() const { return this->image; }
     QImage computeDisplayedImage() const;
     QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
+    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const;
 
 
 // protected:
@@ -177,7 +179,9 @@ public:
     AbstractPlotter* addImage(const Matrix3<double>& image);
     AbstractPlotter* addImage(const GridI& image);
 
-    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha);
+    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default");
+    AbstractPlotter* showOverlay(const std::string& overlayName = "default");
+    AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
 
     GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
     AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
@@ -218,10 +222,16 @@ protected:
 public Q_SLOTS:
     // AbstractPlotter* updateLabelsPositions();
     // AbstractPlotter* selectData(const Vector3& pos);
-    AbstractPlotter* displayInfoUnderMouse(const Vector3& relativeMousePos);
-    AbstractPlotter* draw();
-    AbstractPlotter* show();
-    AbstractPlotter* updateUI();
+    virtual AbstractPlotter* displayInfoUnderMouse(const Vector3& relativeMousePos);
+    virtual AbstractPlotter* draw();
+    virtual AbstractPlotter* show();
+    virtual AbstractPlotter* updateUI();
+
+
+    virtual AbstractPlotter* updateToolsInterface();
+    virtual AbstractPlotter* updateViewOptionsInterface();
+    virtual AbstractPlotter* updateSaveCopyInterface();
+    virtual AbstractPlotter* updateInfosInterface();
 
 Q_SIGNALS:
     void clickedOnImage(const Vector3& pos, Vector3 value);

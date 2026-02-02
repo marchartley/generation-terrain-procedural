@@ -56,7 +56,7 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
         //scale the image to fit plot area
         QImage scaledImage;
         if (!this->overlayColors.empty())
-            scaledImage = this->_dataModel->imageData.computeDisplayedImage(this->overlayColors, this->overlayAlpha);
+            scaledImage = this->_dataModel->imageData.computeDisplayedImage(this->overlayColors, this->overlayAlpha, this->overlayDisplayed);
         else
             scaledImage = this->_dataModel->imageData.computeDisplayedImage();
         scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
@@ -225,10 +225,11 @@ Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
     return mousePos;
 }
 
-ChartView *ChartView::setOverlay(GridV3 image, GridF alpha)
+ChartView *ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha)
 {
-    this->overlayColors = image;
-    this->overlayAlpha = alpha;
+    this->overlayColors[layerName] = image;
+    this->overlayAlpha[layerName] = alpha;
+    this->overlayDisplayed[layerName] = true;
     return this;
 }
 
@@ -487,10 +488,24 @@ AbstractPlotter* AbstractPlotter::addImage(const GridI &image)
     return this->addImage((GridF)image);
 }
 
-AbstractPlotter *AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha)
+AbstractPlotter* AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName)
 {
-    this->chartView->overlayColors = colors;
-    this->chartView->overlayAlpha = alpha;
+    this->chartView->setOverlay(colors, overlayName, alpha);
+    /*
+    this->chartView->overlayColors[overlayName] = colors;
+    this->chartView->overlayAlpha[overlayName] = alpha;
+    this->chartView->overlayDisplayed[overlayName] = true;*/
+    return this;
+}
+
+AbstractPlotter *AbstractPlotter::showOverlay(const std::string &overlayName)
+{
+    this->chartView->overlayDisplayed[overlayName] = true;
+    return this;
+}
+AbstractPlotter *AbstractPlotter::hideOverlay(const std::string &overlayName)
+{
+    this->chartView->overlayDisplayed[overlayName] = false;
     return this;
 }
 
@@ -597,6 +612,7 @@ AbstractPlotter* AbstractPlotter::draw()
 
 AbstractPlotter* AbstractPlotter::show()
 {
+    this->updateUI();
     this->draw();
     QDialog::show();
     return this;
@@ -606,17 +622,46 @@ AbstractPlotter* AbstractPlotter::updateUI()
 {
     blockSignals(true);
 
-    this->toolsInterface->update();
-    this->viewOptionsInterface->update();
-    this->saveCopyInterface->update();
-    this->infosInterface->update();
+    this->updateToolsInterface();
+    this->updateViewOptionsInterface();
+    this->updateSaveCopyInterface();
+    this->updateInfosInterface();
+
+    // this->toolsInterface->update();
+    // this->viewOptionsInterface->update();
+    // this->saveCopyInterface->update();
+    // this->infosInterface->update();
     blockSignals(false);
+    return this;
+}
+
+AbstractPlotter *AbstractPlotter::updateToolsInterface()
+{
+    this->toolsInterface->update();
+    return this;
+}
+
+AbstractPlotter *AbstractPlotter::updateViewOptionsInterface()
+{
+    this->viewOptionsInterface->update();
+    return this;
+}
+
+AbstractPlotter *AbstractPlotter::updateSaveCopyInterface()
+{
+    this->saveCopyInterface->update();
+    return this;
+}
+
+AbstractPlotter *AbstractPlotter::updateInfosInterface()
+{
+    this->infosInterface->update();
     return this;
 }
 
 int AbstractPlotter::exec()
 {
-    this->draw();
+    this->show();
 
     return QDialog::exec();
 
@@ -1030,7 +1075,7 @@ QImage PlotImageData::computeDisplayedImage() const
 
 QImage PlotImageData::computeDisplayedImage(const GridV3 &overlay, const GridF &overlayAlpha) const
 {
-    QImage img = this->computeDisplayedImage();
+    /*QImage img = this->computeDisplayedImage();
     QPainter painter = QPainter(&img);
 
     unsigned char* data = new unsigned char[overlay.size() * 4];
@@ -1042,6 +1087,30 @@ QImage PlotImageData::computeDisplayedImage(const GridV3 &overlay, const GridF &
         data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
     }
     painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
+    painter.end();
+    return img;*/
+    return this->computeDisplayedImage({{"", overlay}}, {{"", overlayAlpha}}, {{"", true}});
+}
+
+QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> &overlays, const std::map<std::string, GridF> &overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const
+{
+    QImage img = this->computeDisplayedImage();
+    QPainter painter = QPainter(&img);
+
+    for (auto& [name, over] : overlays) {
+        if (!displayedOverlays.at(name)) continue;
+        const auto& overlay = overlays.at(name);
+        const auto& overlayAlpha = overlayAlphas.at(name);
+        unsigned char* data = new unsigned char[overlay.size() * 4];
+
+        for (size_t i = 0; i < overlay.size(); ++i) {
+            data[int(4 * i + 2)] = (unsigned char)(std::clamp(overlay[i].x(), 0.f, 1.f) * 255);
+            data[int(4 * i + 1)] = (unsigned char)(std::clamp(overlay[i].y(), 0.f, 1.f) * 255);
+            data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
+            data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
+        }
+        painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
+    }
     painter.end();
     return img;
 }
