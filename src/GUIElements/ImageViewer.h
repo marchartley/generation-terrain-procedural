@@ -23,6 +23,8 @@ public Q_SLOTS:
     ImageViewer* setAbsoluteModeImage(bool absolute);
     ImageViewer* setFilteredValuesImage(bool filtered);
 
+    ImageViewer* updateViewOptionsInterface();
+
 // Q_SIGNALS:
     // void clickedOnImage(const Vector3& pos, Vector3 value);
     // void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);

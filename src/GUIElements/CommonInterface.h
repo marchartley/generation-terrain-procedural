@@ -304,6 +304,7 @@ public:
     std::vector<UIElement*> add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
     UIElement* add(QLayout* layout, std::string name = "");
     UIElement* find(std::string name);
+    InterfaceUI *clear();
 
     std::vector<UIElement*> elements;
     std::vector<std::string> names;

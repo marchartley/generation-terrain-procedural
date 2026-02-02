@@ -258,6 +258,16 @@ UIElement *InterfaceUI::find(std::string name)
     return nullptr;
 }
 
+InterfaceUI *InterfaceUI::clear()
+{
+    for (auto& child : this->elements) {// box()->children()) {
+        child->deleteLater();
+    }
+    this->elements.clear();
+    this->names.clear();
+    return this;
+}
+
 void InterfaceUI::update()
 {
     for (auto& child : this->elements) {// box()->children()) {
