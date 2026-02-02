@@ -989,6 +989,88 @@ void EnvObject::recomputeFlow()
     EnvObject::allVectorProperties["current.gradient"] = EnvObject::allScalarProperties["current.vel"].gradient();
 }
 
+GridF EnvObject::getHeightmap(const GridF& initialHeightmap, float absoluteWaterLevel, float flowErosionFactor, bool displayGrooves)
+{
+    GridF subsidedHeightmap = GridF(initialHeightmap.getDimensions());
+    GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
+    subsidedHeightmap = initialHeightmap * subsidenceFactor;
+
+    GridF groundConstraintedHeights = GridF(subsidedHeightmap.getDimensions()); // Heightmaps from the ground
+    GridF waterConstraintedHeights = GridF(subsidedHeightmap.getDimensions(), -100000.f); // Heightmaps from the water level
+    GridF surfaceHeights = GridF(subsidedHeightmap.getDimensions());
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
+            GridF grid = GridF(subsidedHeightmap.getDimensions(), 0.f);
+            grid = grid.paste(obj->createHeightfield() * obj->computeGrowingState2(), patch->position.xy());
+            if (flowErosionFactor != 0 && EnvObject::materials.count(toLower(stringFromMaterial(obj->material)))) {
+                grid = grid.warpWith(EnvObject::flowfield * flowErosionFactor * EnvObject::materials[toLower(stringFromMaterial(obj->material))].waterTransport, 10);
+            }
+            if (obj->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
+                surfaceHeights = (surfaceHeights + grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f)).max(-15.f);
+            } else if (obj->heightFrom == EnvObject::HeightmapFrom::GROUND) {
+                groundConstraintedHeights = groundConstraintedHeights.max(grid * subsidenceFactor, Vector3());
+            } else if (obj->heightFrom == EnvObject::HeightmapFrom::WATER) {
+                grid.iterateParallel([&] (size_t i) {
+                    grid[i] = (std::abs(grid[i]) < 1e-4 ? -10000.f : grid[i]);
+                });
+                // std::cout << "Max height for " << obj->name << ": " << grid.max() << " while height = " << obj->height << "(grow = " <<  obj->computeGrowingState2() << ")" << std::endl;
+                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - (obj->name == "lagoon" || obj->name == "smalllagoon" ? 3.f : 1.f), Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
+            }
+        }
+    }
+    // if (flowErosionFactor != 0) {
+    // groundConstraintedHeights = groundConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    // waterConstraintedHeights = waterConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    // surfaceHeights = surfaceHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
+    // }
+    // Dirty, remove when you understand why lagoon get over the water...
+    waterConstraintedHeights.iterateParallel([&](size_t i) {
+        waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
+    });
+    waterConstraintedHeights = waterConstraintedHeights.meanSmooth(3, 3, 1);
+    // waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
+
+    bool modificationsAppliedToSurface = false;
+    for (auto& obj : EnvObject::instantiatedObjects) {
+        if (displayGrooves) {
+            if (endsWith(toLower(obj->name), "reef")) {
+                auto objAsEnvCurve = dynamic_cast<EnvCurve*>(obj);
+                BSpline path = objAsEnvCurve->curve;
+                float nbGrooves = path.length() / 10.f;
+                float sigma = objAsEnvCurve->width;
+                surfaceHeights.iterateParallel([&](const Vector3i& pos) {
+                    float closestT = path.estimateClosestTime(pos);
+                    float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
+                    auto [closestPoint, direction, normal] = path.pointAndDerivativeAndSecondDerivative(closestT);
+                    auto closestGrooveStartPoint = path.getPoint(closestGrooveStartT);
+                    if (direction.norm2() == 0) return;
+                    direction.normalize();
+                    auto fakeNormal = direction.rotated90XY(); // (normal.norm2() > 0 ? normal.normalize() : direction.rotated90XY());
+                    Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, fakeNormal, Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
+                    float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/(sigma * 1.f);
+                    // float initialDistance = std::clamp(1.f - (pos - closestPoint).norm() / sigma, 0.f, 1.f);
+                    float grooves = std::max(0.f, 1.f - (sizeX * std::abs(newSpace.x() - 1.f/sizeX) + std::pow(sizeY * newSpace.y(), 2.f)));
+                    // return std::max(grooves, initialDistance);
+                    const Vector3& flow = EnvObject::flowfield(pos);
+                    surfaceHeights(pos) += 2.f * grooves * std::max(abs(flow.dot(fakeNormal)), 0.f);
+                });
+                modificationsAppliedToSurface = true;
+            }
+        }
+    }
+
+    if (modificationsAppliedToSurface) {
+        surfaceHeights = surfaceHeights.meanSmooth(3, 3, 1);
+        // surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
+    }
+
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).meanSmooth(5, 5, 1);
+    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
+    // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
+    // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
+    return subsidedHeightmap;
+}
+
 void EnvObject::reset()
 {
     std::set<std::string> destroyedObjects;

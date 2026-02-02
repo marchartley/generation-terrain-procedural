@@ -154,6 +154,8 @@ public:
     static void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
     static void recomputeFlow();
 
+    static GridF getHeightmap(const GridF &initialHeightmap, float absoluteWaterLevel, float flowErosionFactor = 0.f, bool displayGrooves = false);
+
     static void reset();
 
     static GraphObj sceneToGraph();
