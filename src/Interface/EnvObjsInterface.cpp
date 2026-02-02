@@ -191,11 +191,11 @@ QLayout *EnvObjsInterface::createGUI()
         this->displayProbas(getCurrentObjectName());
     });
     ButtonElement* forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(getCurrentObjectName(), GridF(), false, false); //true, true);
+        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid(), GridF(), false, false); //true, true);
         Q_EMIT this->updated();
     });
     forceButton->setOnRepeat([&](){
-        this->instantiateSpecific(getCurrentObjectName(), GridF(), false, false); //true, true);
+        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid(), GridF(), false, false); //true, true);
         Q_EMIT this->updated();
     });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
@@ -498,7 +498,7 @@ GridF computeScoreMap(std::string objectName, const Vector3& dimensions, bool& p
 }
 
 
-Vector3 bestPositionForInstantiationUniform(std::string objectName, const AABBox& bounds, const GridF& focusArea, int nbSamples = 20) {
+Vector3 bestPositionForInstantiationUniform(std::string objectName, const AABBox& bounds, const GridF& focusArea, const Vector3& focusedPosition = Vector3::invalid(), int nbSamples = 20) {
     auto& func = EnvObject::availableObjects[objectName]->fitnessFunction;
     std::vector<std::pair<Vector3, float>> evaluations(nbSamples);
     float minScoreThreshold = EnvObject::availableObjects[objectName]->minScore;
@@ -509,7 +509,7 @@ Vector3 bestPositionForInstantiationUniform(std::string objectName, const AABBox
         float score = 0.f;
         while (focus < random_gen::generate()) {
             pos = Vector3::random(bounds);
-            focus = focusArea.at(pos);
+            focus = focusArea.at(pos) * (focusedPosition.isValid() ? 1.f / std::max(0.1f, std::log((pos - focusedPosition).norm2())) : 1.f);
         }
         score = func(pos);
         evaluations[i] = std::make_pair(pos, score > minScoreThreshold ? score : 0.f);
@@ -565,7 +565,7 @@ EnvObject* EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF score, bool waitForFullyGrown, bool updateScreen)
+EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, const Vector3 &targetPosition, const GridF &score, bool waitForFullyGrown, bool updateScreen)
 {
     EnvObject* result = nullptr;
     objectName = toLower(objectName);
@@ -574,7 +574,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
         return result;
     }
     bool verbose = true;
-    Vector3 position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, 1000);
+    Vector3 position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, targetPosition, 1000);
 
     if (position.isValid()) {
         EnvObject* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
@@ -618,14 +618,14 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, GridF s
     return result;
 }
 
-EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, GridF score)
+EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, const GridF &score)
 {
     objectName = toLower(objectName);
     if (EnvObject::availableObjects.count(objectName) == 0) {
         std::cerr << "No object '" << objectName << "' in database!" << std::endl;
         return nullptr;
     }
-    Vector3 position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, 1000);
+    Vector3 position = bestPositionForInstantiationUniform(objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, Vector3::invalid(), 1000);
     if (!position.isValid()) {
         return nullptr;
     }
@@ -678,7 +678,7 @@ void EnvObjsInterface::runNextStep()
             // });
             if (possible) {
                 // displayProcessTime("Instantiation ", [&]() {
-                    createdObject = this->instantiateSpecific(nextObject.objectName, score, false);
+                    createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid(), score, false);
                 // });
             }
         }
@@ -738,6 +738,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
                 this->log(obj->name + " went from " + std::to_string(startingScore) + " to " + std::to_string(endingScore) + " -> " + std::to_string(std::round(100.f * endingScore / startingScore)) + "%");
                 this->destroyEnvObject(obj);
                 deadObjects.insert(obj->name);
+                this->instantiateSpecific(obj->name, obj->evaluationPositions[0], GridF(), false, false);
             }
         }
         if (atLeastOneDeath) {

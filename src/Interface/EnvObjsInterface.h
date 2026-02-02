@@ -48,8 +48,8 @@ public Q_SLOTS:
     virtual void keyPressEvent(QKeyEvent* event);
 
 public:
-    EnvObject* instantiateSpecific(std::string objectName, GridF score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
-    EnvObject* fakeInstantiate(std::string objectName, GridF score = GridF());
+    EnvObject* instantiateSpecific(std::string objectName, const Vector3& targetPosition = Vector3::invalid(), const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
+    EnvObject* fakeInstantiate(std::string objectName, const GridF& score = GridF());
 
     bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
 
