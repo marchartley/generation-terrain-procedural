@@ -3,6 +3,7 @@
 
 #include "ActionInterface.h"
 #include "Utils/HotreloadFile.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 struct InstantiationMeshOption {
     InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
@@ -32,7 +33,7 @@ struct InstantiationMeshOption {
     void clear();
     void add(int index, const Vector3& position, float size, const Vector3& orientation);
 
-    nlohmann::json currentInstancesToJSON(GridF scoreMap = GridF());
+    nlohmann::json currentInstancesToJSON(std::shared_ptr<EnvironmentalScene> scene, const GridF &scoreMap = GridF());
 
 };
 
@@ -52,7 +53,7 @@ public:
     std::vector<AABBox> getAvailablePositionsForMaterial(TerrainTypes target);
     std::vector<AABBox> getCoralAvailablePositions();
     std::vector<AABBox> getRocksAvailablePositions();
-    std::vector<std::tuple<Vector3, float, int> > getPositionsFor(std::string type);
+    std::vector<std::tuple<Vector3, float, int> > getPositionsFor(std::string type, std::shared_ptr<EnvironmentalScene> scene);
 
     void readMeshInstanceFile(const std::string& fileContent);
 

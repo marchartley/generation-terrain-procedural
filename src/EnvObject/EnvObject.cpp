@@ -8,39 +8,11 @@
 #include "EnvObject/EnvCurve.h"
 #include "EnvObject/EnvArea.h"
 
-GridV3 initFlow(bool force = false);
-
-GridV3 EnvObject::flowfield = initFlow();
-GridV3 EnvObject::initialFlowfield;
-GridV3 EnvObject::terrainNormals;
-//GridF EnvObject::sandDeposit;
-//GridF EnvObject::polypDeposit;
-//std::map<std::string, GridF> EnvObject::materialDeposit;
-std::map<std::string, EnvMaterial> EnvObject::materials;
-std::map<std::string, EnvObject*> EnvObject::availableObjects;
-std::vector<EnvObject*> EnvObject::instantiatedObjects;
-float EnvObject::flowImpactFactor = .9f;
-int EnvObject::currentMaxID = -1;
-std::vector<MaterialsTransformation> EnvObject::transformationRules;
-int EnvObject::currentTime = 0;
-Scenario EnvObject::scenario;
-
-std::map<std::string, GridV3> EnvObject::allVectorProperties;
-std::map<std::string, GridF> EnvObject::allScalarProperties;
-
-GridV3 initFlow(bool force) {
-    if (force || EnvObject::flowfield.empty()) {
-        EnvObject::initialFlowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
-        EnvObject::initialFlowfield.raiseErrorOnBadCoord = false;
-        EnvObject::initialFlowfield.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::REPEAT_VALUE;
-        EnvObject::flowfield = EnvObject::initialFlowfield;
-    }
-    return EnvObject::flowfield;
-}
+#include "EnvObject/EnvironmentalScene.h"
 
 EnvObject::EnvObject()
 {
-    initFlow();
+
 }
 
 EnvObject::~EnvObject()
@@ -48,194 +20,6 @@ EnvObject::~EnvObject()
 
 }
 
-void EnvObject::readEnvObjectsFile(std::string filename)
-{
-    std::ifstream file(filename);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    EnvObject::readEnvObjectsFileContent(content);
-}
-
-void EnvObject::readEnvObjectsFileContent(std::string content)
-{
-    auto json = nlohmann::json::parse(toLower(content));
-    for (auto& obj : json) {
-        std::string objName = obj["name"];
-        if (startsWith(objName, "--")) continue; // Ignore some objects if the name starts with "--"
-        if (!obj.contains("type")) {
-            throw std::domain_error("No type given for Environmental Object defined as " + nlohmann::to_string(obj));
-        }
-
-        if (obj["type"] == "point")
-            EnvObject::availableObjects[objName] = EnvPoint::fromJSON(obj);
-        else if (obj["type"] == "curve")
-            EnvObject::availableObjects[objName] = EnvCurve::fromJSON(obj);
-        else if (obj["type"] == "area")
-            EnvObject::availableObjects[objName] = EnvArea::fromJSON(obj);
-        else {
-            throw std::domain_error("Unrecognized type for Environmental Object defined as " + nlohmann::to_string(obj));
-        }
-    }
-
-
-    for (auto& [name, obj] : EnvObject::availableObjects) {
-        obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name);
-        obj->fitnessFunction = EnvObject::parseFittingFunction(obj->s_FitnessFunction, obj->name);
-
-        obj->snake.imageField = obj->fittingFunction;
-        obj->snake.gradientField = gradientFromFieldFunction(obj->snake.imageField);
-    }
-
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        auto name = obj->name;
-        obj->flowEffect = EnvObject::availableObjects[name]->flowEffect;
-//        obj->sandEffect = EnvObject::availableObjects[name]->sandEffect;
-        obj->materialAbsorptionRate = EnvObject::availableObjects[name]->materialAbsorptionRate;
-        obj->materialDepositionRate = EnvObject::availableObjects[name]->materialDepositionRate;
-    }
-    //    precomputeTerrainProperties(Heightmap());
-}
-
-void EnvObject::readEnvMaterialsFile(std::string filename)
-{
-    std::ifstream file(filename);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    EnvObject::readEnvMaterialsFileContent(content);
-}
-
-void EnvObject::readEnvMaterialsFileContent(std::string content)
-{
-    auto json = nlohmann::json::parse(toLower(content));
-    for (auto& mat : json) {
-        std::string matName = mat["name"];
-        if (startsWith(matName, "--")) continue; // Ignore some materials if the name starts with "--"
-
-        float diffusionSpeed = mat["diffusionspeed"];
-        float waterTransport = mat["watertransport"];
-        float mass = mat["mass"];
-        float decay = mat["decay"];
-        float virtualHeight = mat["virtualheight"];
-
-        EnvMaterial material;
-        material.name = matName;
-        material.diffusionSpeed = diffusionSpeed;
-        material.waterTransport = waterTransport;
-        material.mass = mass;
-        material.decay = decay;
-        material.virtualHeight = virtualHeight;
-
-        if (EnvObject::materials.count(matName) != 0) {
-            material.currentState = EnvObject::materials[matName].currentState;
-        } else {
-            material.currentState = GridF(EnvObject::flowfield.getDimensions(), 0.f);
-        }
-
-        EnvObject::materials[matName] = material;
-    }
-}
-
-void EnvObject::readEnvMaterialsTransformationsFile(std::string filename)
-{
-    std::ifstream file(filename);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    EnvObject::readEnvMaterialsTransformationsFileContent(content);
-}
-
-void EnvObject::readEnvMaterialsTransformationsFileContent(std::string content)
-{
-    std::vector<MaterialsTransformation> rules;
-//    std::string sline;
-    auto lines = split(content, "\n");
-//    while (std::getline(content, sline)) {
-    for (std::string sline : lines) {
-        if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
-        std::istringstream line(sline);
-        std::map<std::string, float> inputs, outputs;
-        std::string value, word, operation;
-        bool transformationValid = true;
-        // Get inputs
-        while (operation != "=") {
-            line >> value;
-            line >> word;
-            line >> operation;
-            inputs[word] = std::stof(value);
-            transformationValid &= (EnvObject::materials.count(word) != 0);
-        }
-        // Get outputs
-        while (true) {
-            line >> value;
-            line >> word;
-            outputs[word] = std::stof(value);
-            transformationValid &= (EnvObject::materials.count(word) != 0);
-            if (!(line >> operation)) break;
-        }
-        if (transformationValid)
-            rules.push_back({inputs, outputs});
-        else {
-            std::cerr << "Transformation not valid : " << sline << std::endl;
-        }
-    }
-    EnvObject::transformationRules = rules;
-}
-
-void EnvObject::readScenarioFile(std::string filename)
-{
-    std::ifstream file(filename);
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    EnvObject::readScenarioFileContent(content);
-}
-
-void EnvObject::readScenarioFileContent(std::string content)
-{
-    auto json = nlohmann::json::parse(toLower(content));
-
-    scenario = Scenario();
-
-    auto objects = json["objects"].get<std::map<std::string, nlohmann::json>>();
-    for (auto [name, obj] : objects) {
-        float proba = obj["proba"];
-        int amount = (obj.contains("amount") ? obj["amount"].get<int>() : -1);
-
-        scenario.addObject(name, proba, amount);
-    }
-
-    auto events = json["events"];
-    for (auto& event : events) {
-        std::string type = toLower(event["type"]);
-        float startTime = event["start"];
-        float endTime = event["end"];
-
-        if (type == "waterlevel") {
-            float amount = event["amount"];
-            scenario.waterLevelEvents.push_back(WaterLevelEvent(amount, startTime, endTime));
-        } else if (type == "storm") {
-            Vector3 position = json_to_vec3<float>(event["position"]);
-            Vector3 direction = json_to_vec3<float>(event["direction"]);
-            float sigma = event["sigma"];
-            scenario.stormEvents.push_back(StormEvent(position, direction, sigma, startTime, endTime));
-        } else if (type == "subsidence") {
-            Vector3 position = json_to_vec3<float>(event["position"]);
-            float amount = event["amount"];
-            float sigma = event["sigma"];
-            scenario.subsidenceEvents.push_back(SubsidenceEvent(position, amount, sigma, startTime, endTime));
-        } else if (type == "tectonic") {
-            Vector3 direction = json_to_vec3<float>(event["direction"]);
-            float sigma = event["sigma"];
-            scenario.tectonicEvents.push_back(TectonicEvent(direction, sigma, startTime, endTime));
-        } else {
-            std::cerr << "The event " << type << " is not recognized..." << std::endl;
-        }
-    }
-
-    auto parameters = json["simulation"];
-    float duration = parameters["end"];
-    float dt = parameters["dt"];
-    float waterLevel = parameters["waterlevel"];
-
-    scenario.duration = duration;
-    scenario.dt = dt;
-    scenario.waterLevel = waterLevel;
-
-}
 
 EnvObject* EnvObject::fromJSON(nlohmann::json content)
 {
@@ -445,14 +229,14 @@ GridF EnvObject::createHeightfield()
     return _cachedHeightfield;
 }
 
-std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances, EnvObject *myObject)
+std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene* scene, bool removeSelfInstances, EnvObject *myObject)
 {
     formula = toLower(formula);
     if (formula == "")
         return [](const Vector3&) { return 0.f; };
 
     std::map<std::string, Variable> variables;
-    for (auto& [name, obj] : EnvObject::availableObjects) {
+    for (auto& [name, obj] : scene->availableObjects) {
         variables[name] = Vector3::invalid();
         variables[name + ".center"] = Vector3::invalid();
         variables[name + ".start"] = Vector3::invalid();
@@ -475,7 +259,7 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
     variables["depth.gradient"] = Vector3::invalid();
     variables["fracture"] = float();
     variables["fracture.gradient"] = Vector3::invalid();
-    for (auto& [matName, material] : EnvObject::materials) {
+    for (auto& [matName, material] : scene->materials) {
         variables[matName] = float();
         variables[matName + ".gradient"] = Vector3::invalid();
     }
@@ -493,11 +277,11 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
     const std::string spawntimeStr = "spawntime";
     const std::string posStr = "pos";
     auto _func = parser.parse(formula, variables);
-    return [&, formula, _func, neededVariables, currentObject, removeSelfInstances, myObject, depthStr, currenttimeStr, spawntimeStr, posStr](Vector3 pos) -> float {
+    return [&, formula, _func, neededVariables, currentObject, removeSelfInstances, myObject, depthStr, currenttimeStr, spawntimeStr, posStr, scene](Vector3 pos) -> float {
         // ExpressionParser parser;
         std::map<std::string, Variable> vars;
         // displayProcessTime("Variables: ", [&]() {
-        for (auto& [prop, map] : EnvObject::allVectorProperties) {
+        for (auto& [prop, map] : scene->allVectorProperties) {
                 if (!isIn(prop, neededVariables)) continue;
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
                 vars[prop] = Vector3::invalid();
@@ -505,7 +289,7 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
                 vars[prop] = map(pos);
             }
         }
-        for (auto& [prop, map] : EnvObject::allScalarProperties) {
+        for (auto& [prop, map] : scene->allScalarProperties) {
             if (!isIn(prop, neededVariables)) continue;
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
                 vars[prop] = float();
@@ -523,12 +307,12 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
         if (isIn(posStr, neededVariables))
             vars["pos"] = pos;
         if (isIn(currenttimeStr, neededVariables))
-            vars["currenttime"] = float(EnvObject::currentTime);
+            vars["currenttime"] = float(scene->currentTime);
         if (isIn(spawntimeStr, neededVariables)) {
             if (myObject != nullptr)
-                vars["spawntime"] = float(std::min(EnvObject::currentTime, myObject->spawnTime));
+                vars["spawntime"] = float(std::min(scene->currentTime, myObject->spawnTime));
             else
-                vars["spawntime"] = float(EnvObject::currentTime);
+                vars["spawntime"] = float(scene->currentTime);
         }
         /*
         for (std::string neededVar : neededVariables) {
@@ -558,20 +342,6 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
     };
 }
 
-EnvObject *EnvObject::findClosest(std::string objectName, const Vector3 &pos)
-{
-    float minDist = std::numeric_limits<float>::max();
-    EnvObject* bestElem = nullptr;
-    for (auto& instance : EnvObject::instantiatedObjects) {
-        if (instance->name != objectName) continue;
-        float distance = instance->getSqrDistance(pos);
-        if (distance < minDist) {
-            minDist = distance;
-            bestElem = instance;
-        }
-    }
-    return bestElem;
-}
 /*
 std::pair<std::string, std::string> EnvObject::extractNameAndComplement(std::string variable)
 {
@@ -608,254 +378,6 @@ std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(std::string objectName, c
     return {object->getVector(position, complement), object};
 }
 */
-EnvObject *EnvObject::instantiate(std::string objectName)
-{
-    if (EnvObject::availableObjects.count(objectName) == 0) {
-        return nullptr;
-    }
-    EnvObject::currentMaxID++;
-    auto object = EnvObject::availableObjects[objectName]->clone();
-    object->ID = EnvObject::currentMaxID;
-    EnvObject::instantiatedObjects.push_back(object);
-    return object;
-}
-
-void EnvObject::removeObject(EnvObject *obj)
-{
-    if (obj) {
-        auto& list = EnvObject::instantiatedObjects;
-        list.erase(std::find(list.begin(), list.end(), obj));
-    }
-}
-
-void EnvObject::removeAllObjects()
-{
-    for (auto& object : EnvObject::instantiatedObjects) {
-        delete object;
-    }
-    EnvObject::instantiatedObjects.clear();
-}
-
-bool EnvObject::applyEffects(const GridF& heights, const GridV3& userFlow)
-{
-    EnvObject::updateFlowfield(userFlow);
-    return EnvObject::updateSedimentation(heights);
-}
-
-bool EnvObject::updateSedimentation(const GridF& heights)
-{
-    std::cout << "SEDIMENTATION" << std::endl;
-    bool bigChangesInAtLeastOneMaterialDistribution = false;
-    GridV3 heightsGradients = heights.gradient();
-    auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
-
-    std::vector<std::string> names;
-    /*for (auto& [name, material] : EnvObject::materials) {
-        // TODO : SELECT ONLY AFFECTED MATERIALS
-        // if (!material.isStable)
-        names.push_back(name);
-    }*/
-
-    for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-        auto& object = EnvObject::instantiatedObjects[i];
-        for (auto& [materialName, rate] : object->materialAbsorptionRate) {
-            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
-                names.push_back(materialName);
-            }
-        }
-        for (auto& [materialName, rate] : object->materialDepositionRate) {
-            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
-                names.push_back(materialName);
-            }
-        }
-    }
-#pragma omp parallel for
-    for(int i = 0; i < names.size(); i++) {
-        auto& material = materials[names[i]];
-        // if (material.isStable) {
-            // std::cout << material.name << " is stable" << std::endl;
-            // continue;
-        // } else {
-            // std::cout << material.name << " NOT stable" << std::endl;
-        // }
-
-        // bool needToBeUpdated = false;
-        // float startingAmount = material.currentState.sum();
-        auto startState = material.currentState;
-        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-            auto& object = EnvObject::instantiatedObjects[i];
-            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
-                // #pragma omp critical
-                object->applyAbsorption(material);
-                // needToBeUpdated = true;
-            }
-        }
-
-        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-            auto& object = EnvObject::instantiatedObjects[i];
-            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
-                // #pragma omp critical
-                object->applyDeposition(material);
-                // needToBeUpdated = true;
-            }
-        }
-
-        // if (needToBeUpdated) {
-            material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
-            // material.currentState *= material.decay;
-
-            // float endingAmount = material.currentState.sum();
-            // float diff = (material.currentState - startState).abs().sum();
-
-            // #pragma omp critical
-            // {
-            //     std::cout << material.name << ": " << diff << std::endl;
-            // }
-
-            // if (diff > 1e-3) {
-// #pragma omp critical
-                // {
-                    // bigChangesInAtLeastOneMaterialDistribution = true;
-                // }
-            // } else {
-                // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
-                // material.isStable = true;
-            // }
-        // } else {
-            material.isStable = true;
-        // }
-    }
-    return bigChangesInAtLeastOneMaterialDistribution;
-}
-
-std::vector<std::string> EnvObject::updateSedimentationKnowingFluidsAndGradients([[maybe_unused]] const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials)
-{
-    std::cout << "SED_FLUID" << std::endl;
-    std::vector<std::string> stillUnstable;
-    std::vector<std::string> names = unstableMaterials;
-
-    #pragma omp parallel for
-    for(int i = 0; i < names.size(); i++) {
-        auto& material = materials[names[i]];
-
-        bool needToBeUpdated = false;
-        auto startState = material.currentState;
-        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-            auto& object = EnvObject::instantiatedObjects[i];
-            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
-                object->applyAbsorption(material);
-                needToBeUpdated = true;
-            }
-        }
-
-        for (size_t i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-            auto& object = EnvObject::instantiatedObjects[i];
-            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
-                object->applyDeposition(material);
-                needToBeUpdated = true;
-            }
-        }
-
-        // if (needToBeUpdated) {
-        material.update(smoothFluids, heightsGradients, EnvObject::scenario.dt);
-        float diff = (material.currentState - startState).abs().sum();
-        if (diff > 1e-3) {
-            #pragma omp critical
-            {
-                stillUnstable.push_back(material.name);
-            }
-        }
-        // }
-    }
-    return stillUnstable;
-}
-
-void EnvObject::stabilizeMaterials(const GridF &heights, int maxIterations)
-{
-    GridV3 heightsGradients = heights.gradient();
-    auto smoothFluids = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
-    std::vector<std::string> unstableMaterials;
-    for (auto& [name, material] : EnvObject::materials) {
-        unstableMaterials.push_back(name);
-    }
-
-    for (int iteration = 0; iteration < maxIterations; iteration++) {
-        unstableMaterials = EnvObject::updateSedimentationKnowingFluidsAndGradients(heights, heightsGradients, smoothFluids, unstableMaterials);
-        if (unstableMaterials.empty()) {
-            break;
-        }
-    }
-}
-
-void EnvObject::applyMaterialsTransformations()
-{
-    displayProcessTime("Filling compact materials... ", [&]() {
-        std::set<std::string> neededMaterials;
-        for (size_t iRule = 0; iRule < transformationRules.size(); iRule++) {
-            auto [input, output] = transformationRules[iRule];
-            for (auto [inMaterial, inDose] : input) {
-                neededMaterials.insert(inMaterial);
-            }
-            for (auto [outMaterial, outDose] : output) {
-                neededMaterials.insert(outMaterial);
-            }
-        }
-        std::map<std::string, float> initialState; // Loop the map creation only once
-        for (const auto& matName : neededMaterials)
-            initialState.insert({matName, 0.f});
-        Matrix3<std::map<std::string, float>> allMaterials(EnvObject::flowfield.getDimensions(), initialState);
-        allMaterials.iterateParallel([&] (size_t i) {
-            for (const auto& [matName, amount] : allMaterials[i]) {
-                allMaterials[i][matName] = EnvObject::materials[matName].currentState[i];
-            }
-
-            for (size_t iRule = 0; iRule < transformationRules.size(); iRule++) {
-                const auto& [input, output] = transformationRules[iRule];
-                float maxTransform = 10000.f;
-                for (const auto& [inMaterial, inDose] : input) {
-                    float inAmount = allMaterials[i][inMaterial];
-                    float transformVal = inAmount / inDose;
-                    maxTransform = std::min(maxTransform, transformVal);
-                }
-                if (maxTransform > 1e-3) {
-                    for (const auto& [inMaterial, inDose] : input) {
-                        allMaterials[i][inMaterial] -= inDose * maxTransform;
-                    }
-                    for (const auto& [outMaterial, outDose] : output) {
-                        allMaterials[i][outMaterial] += outDose * maxTransform;
-                    }
-                }
-            }
-        });
-
-        for (auto& matName : neededMaterials) {
-            auto& mat = EnvObject::materials[matName];
-            mat.currentState.iterateParallel([&](size_t i) {
-                mat.currentState[i] = allMaterials[i][matName];
-            });
-        }
-    }, false);
-}
-
-void EnvObject::updateFlowfield(const GridV3 &userFlow)
-{
-    EnvObject::flowfield = EnvObject::initialFlowfield;
-    if (!userFlow.empty())
-        EnvObject::flowfield += userFlow;
-    for (int i = 0; i < EnvObject::instantiatedObjects.size(); i++) {
-        auto& object = EnvObject::instantiatedObjects[i];
-        auto [flow, occupancy] = object->computeFlowModification();
-        EnvObject::flowfield = flow;
-    }
-    EnvObject::flowfield = EnvObject::flowfield.meanSmooth(3, 3, 1, true);
-}
-
-void EnvObject::beImpactedByEvents()
-{
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        obj->age += 1.f;
-    }
-}
 
 float EnvObject::evaluate(const Vector3 &position)
 {
@@ -886,223 +408,4 @@ float EnvObject::evaluate()
 void EnvObject::die()
 {
     this->applyDepositionOnDeath();
-}
-
-void EnvObject::precomputeTerrainProperties(const GridF& heightmap, float waterLevel, float maxHeight)
-{
-
-    displayProcessTime("Computing terrain properties... ", [&]() {
-        Vector3 terrainDimensions = heightmap.getDimensions();
-        GridF initialScalarPropertyMap(terrainDimensions, 0.f);
-        GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid());
-
-        // Initialize the maps
-        for (auto& [name, obj] : EnvObject::availableObjects) {
-            EnvObject::allVectorProperties[name] = initialVectorPropertyMap;
-            EnvObject::allVectorProperties[name + ".center"] = initialVectorPropertyMap;
-            EnvObject::allVectorProperties[name + ".start"] = initialVectorPropertyMap;
-            EnvObject::allVectorProperties[name + ".end"] = initialVectorPropertyMap;
-            EnvObject::allVectorProperties[name + ".normal"] = initialVectorPropertyMap;
-            EnvObject::allVectorProperties[name + ".dir"] = initialVectorPropertyMap;
-            EnvObject::allScalarProperties[name + ".inside"] = initialScalarPropertyMap;
-            EnvObject::allScalarProperties[name + ".curvature"] = initialScalarPropertyMap;
-        }
-        EnvObject::allVectorProperties["current"] = initialVectorPropertyMap;
-        EnvObject::allVectorProperties["current.dir"] = initialVectorPropertyMap;
-        EnvObject::allScalarProperties["current.vel"] = initialScalarPropertyMap;
-        EnvObject::allVectorProperties["current.gradient"] = initialVectorPropertyMap;
-
-        EnvObject::allScalarProperties["depth"] = initialScalarPropertyMap;
-        EnvObject::allVectorProperties["depth.gradient"] = initialVectorPropertyMap;
-
-        EnvObject::allScalarProperties["fracture"] = initialScalarPropertyMap;
-        EnvObject::allVectorProperties["fracture.gradient"] = initialVectorPropertyMap;
-
-        for (const auto& [matName, material] : EnvObject::materials) {
-            EnvObject::allScalarProperties[matName] = initialScalarPropertyMap;
-            EnvObject::allVectorProperties[matName + ".gradient"] = initialVectorPropertyMap;
-        }
-
-
-        // Evaluate at each point
-        for (auto& [name, obj] : EnvObject::availableObjects) {
-            displayProcessTime("Computing properties for " + name + "... ", [&]() {
-                EnvObject::recomputeTerrainPropertiesForObject(name);
-            }, false);
-        }
-        EnvObject::recomputeFlowAndSandProperties(heightmap, waterLevel, maxHeight);
-    });
-}
-
-void EnvObject::recomputeTerrainPropertiesForObject(std::string objectName)
-{
-    auto name = objectName;
-    EnvObject::flowfield.iterateParallel([&](const Vector3i& pos) {
-//        auto [distance, object] = EnvObject::getSqrDistanceTo(name, pos);
-        EnvObject* object = EnvObject::findClosest(objectName, pos);
-        if (object == nullptr) {
-            EnvObject::allVectorProperties[name](pos) = Vector3::invalid();
-            EnvObject::allVectorProperties[name + ".center"](pos) = Vector3::invalid();
-            EnvObject::allVectorProperties[name + ".start"](pos) = Vector3::invalid();
-            EnvObject::allVectorProperties[name + ".end"](pos) = Vector3::invalid();
-            EnvObject::allScalarProperties[name + ".inside"](pos) = 0.f;
-            EnvObject::allVectorProperties[name + ".normal"](pos) = Vector3::invalid();
-            EnvObject::allVectorProperties[name + ".dir"](pos) = Vector3::invalid();
-            EnvObject::allScalarProperties[name + ".curvature"](pos) = 0.f;
-        } else {
-            auto allProperties = object->getAllProperties(pos);
-            EnvObject::allVectorProperties[name](pos) = allProperties["default"];
-            EnvObject::allVectorProperties[name + ".center"](pos) = allProperties["center"];
-            EnvObject::allVectorProperties[name + ".start"](pos) = allProperties["start"];
-            EnvObject::allVectorProperties[name + ".end"](pos) = allProperties["end"];
-            EnvObject::allScalarProperties[name + ".inside"](pos) = (allProperties["inside"].isValid() ? 1.f : 0.f);
-            EnvObject::allVectorProperties[name + ".normal"](pos) = allProperties["normal"];
-            EnvObject::allVectorProperties[name + ".dir"](pos) = allProperties["dir"];
-            EnvObject::allScalarProperties[name + ".curvature"](pos) = (allProperties["curvature"].x() < 1e5 ? allProperties["curvature"].x() : -1.f);
-        }
-    });
-}
-
-void EnvObject::recomputeFlowAndSandProperties(const GridF& heightmap, float waterLevel, float maxHeight)
-{
-    EnvObject::recomputeFlow();
-    for (auto& [matName, material] : EnvObject::materials) {
-        EnvObject::allScalarProperties[matName] = material.currentState;
-        EnvObject::allVectorProperties[matName + ".gradient"] = material.currentState.gradient();
-    }
-    EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.meanSmooth(3, 3, 1));
-    // EnvObject::allScalarProperties["depth"] = ((waterLevel * maxHeight) - heightmap.gaussianSmooth(1.f, true));
-    EnvObject::allVectorProperties["depth.gradient"] = EnvObject::allScalarProperties["depth"].gradient();
-
-    EnvObject::allScalarProperties["fracture"] = EnvObject::scenario.computeTectonic(EnvObject::allScalarProperties["fracture"].getDimensions());
-    EnvObject::allVectorProperties["fracture.gradient"] = EnvObject::allScalarProperties["fracture"].gradient();
-}
-
-void EnvObject::recomputeFlow()
-{
-    EnvObject::flowfield.iterateParallel([&](const Vector3i& pos) {
-        Vector3 waterFlow = EnvObject::flowfield(pos);
-        EnvObject::allVectorProperties["current"](pos) = waterFlow;
-        EnvObject::allVectorProperties["current.dir"](pos) = waterFlow.normalized();
-        EnvObject::allScalarProperties["current.vel"](pos) = waterFlow.length();
-    });
-    EnvObject::allVectorProperties["current.gradient"] = EnvObject::allScalarProperties["current.vel"].gradient();
-}
-
-GridF EnvObject::getHeightmap(const GridF& initialHeightmap, float absoluteWaterLevel, float flowErosionFactor, bool displayGrooves)
-{
-    GridF subsidedHeightmap = GridF(initialHeightmap.getDimensions());
-    GridF subsidenceFactor = EnvObject::scenario.computeSubsidence(initialHeightmap.getDimensions());
-    subsidedHeightmap = initialHeightmap * subsidenceFactor;
-
-    GridF groundConstraintedHeights = GridF(subsidedHeightmap.getDimensions()); // Heightmaps from the ground
-    GridF waterConstraintedHeights = GridF(subsidedHeightmap.getDimensions(), -100000.f); // Heightmaps from the water level
-    GridF surfaceHeights = GridF(subsidedHeightmap.getDimensions());
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        if (auto patch = dynamic_cast<ImplicitPrimitive*>(obj->_patch)) {
-            GridF grid = GridF(subsidedHeightmap.getDimensions(), 0.f);
-            grid = grid.paste(obj->createHeightfield() * obj->computeGrowingState2(), patch->position.xy());
-            if (flowErosionFactor != 0 && EnvObject::materials.count(toLower(stringFromMaterial(obj->material)))) {
-                grid = grid.warpWith(EnvObject::flowfield * flowErosionFactor * EnvObject::materials[toLower(stringFromMaterial(obj->material))].waterTransport, 10);
-            }
-            if (obj->heightFrom == EnvObject::HeightmapFrom::SURFACE) {
-                surfaceHeights = (surfaceHeights + grid * (isIn(obj->material, LayerBasedGrid::invisibleLayers) ? -1.f : 1.f)).max(-15.f);
-            } else if (obj->heightFrom == EnvObject::HeightmapFrom::GROUND) {
-                groundConstraintedHeights = groundConstraintedHeights.max(grid * subsidenceFactor, Vector3());
-            } else if (obj->heightFrom == EnvObject::HeightmapFrom::WATER) {
-                grid.iterateParallel([&] (size_t i) {
-                    grid[i] = (std::abs(grid[i]) < 1e-4 ? -10000.f : grid[i]);
-                });
-                // std::cout << "Max height for " << obj->name << ": " << grid.max() << " while height = " << obj->height << "(grow = " <<  obj->computeGrowingState2() << ")" << std::endl;
-                waterConstraintedHeights = waterConstraintedHeights.max((grid - (obj->height)) - (obj->name == "lagoon" || obj->name == "smalllagoon" ? 3.f : 1.f), Vector3()); // Not sure why I need to multiply by 2.0, but otherwise, maxHeight is heigher than obj->height...
-            }
-        }
-    }
-    // if (flowErosionFactor != 0) {
-    // groundConstraintedHeights = groundConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
-    // waterConstraintedHeights = waterConstraintedHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
-    // surfaceHeights = surfaceHeights.warpWith(EnvObject::flowfield * flowErosionFactor, 10);
-    // }
-    // Dirty, remove when you understand why lagoon get over the water...
-    waterConstraintedHeights.iterateParallel([&](size_t i) {
-        waterConstraintedHeights[i] = std::min(waterConstraintedHeights[i] + absoluteWaterLevel, absoluteWaterLevel - 1.f);
-    });
-    waterConstraintedHeights = waterConstraintedHeights.meanSmooth(3, 3, 1);
-    // waterConstraintedHeights = waterConstraintedHeights.gaussianSmooth(1.f, true);
-
-    bool modificationsAppliedToSurface = false;
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        if (displayGrooves) {
-            if (endsWith(toLower(obj->name), "reef")) {
-                auto objAsEnvCurve = dynamic_cast<EnvCurve*>(obj);
-                BSpline path = objAsEnvCurve->curve;
-                float nbGrooves = path.length() / 10.f;
-                float sigma = objAsEnvCurve->width;
-                surfaceHeights.iterateParallel([&](const Vector3i& pos) {
-                    float closestT = path.estimateClosestTime(pos);
-                    float closestGrooveStartT = float(int(closestT * nbGrooves)) / nbGrooves;
-                    auto [closestPoint, direction, normal] = path.pointAndDerivativeAndSecondDerivative(closestT);
-                    auto closestGrooveStartPoint = path.getPoint(closestGrooveStartT);
-                    if (direction.norm2() == 0) return;
-                    direction.normalize();
-                    auto fakeNormal = direction.rotated90XY(); // (normal.norm2() > 0 ? normal.normalize() : direction.rotated90XY());
-                    Vector3 newSpace = Vector3(pos - closestGrooveStartPoint).changeBasis(direction, fakeNormal, Vector3(0, 0, 1)); //.rotated(Vector3(0, 0, random_gen::generate_perlin(closestT * 500.f) * 0.2f));
-                    float sizeX = 1.f/(nbGrooves * .5f), sizeY = 1.f/(sigma * 1.f);
-                    // float initialDistance = std::clamp(1.f - (pos - closestPoint).norm() / sigma, 0.f, 1.f);
-                    float grooves = std::max(0.f, 1.f - (sizeX * std::abs(newSpace.x() - 1.f/sizeX) + std::pow(sizeY * newSpace.y(), 2.f)));
-                    // return std::max(grooves, initialDistance);
-                    const Vector3& flow = EnvObject::flowfield(pos);
-                    surfaceHeights(pos) += 2.f * grooves * std::max(abs(flow.dot(fakeNormal)), 0.f);
-                });
-                modificationsAppliedToSurface = true;
-            }
-        }
-    }
-
-    if (modificationsAppliedToSurface) {
-        surfaceHeights = surfaceHeights.meanSmooth(3, 3, 1);
-        // surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
-    }
-
-    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).meanSmooth(5, 5, 1);
-    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
-    // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
-    // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
-    return subsidedHeightmap;
-}
-
-void EnvObject::reset()
-{
-    std::set<std::string> destroyedObjects;
-    for (auto& obj : EnvObject::instantiatedObjects) {
-        destroyedObjects.insert(obj->name);
-        delete obj;
-    }
-    EnvObject::instantiatedObjects.clear();
-    for (auto name : destroyedObjects) {
-        EnvObject::recomputeTerrainPropertiesForObject(name);
-    }
-    initFlow(true);
-    for (auto& [matName, mat] : materials) {
-        mat.currentState.reset();
-    }
-
-}
-
-#include "Utils/Delaunay.h"
-GraphObj EnvObject::sceneToGraph()
-{
-    GraphObj graph;
-    std::vector<GraphNodeObj*> nodes(EnvObject::instantiatedObjects.size());
-    std::vector<Vector3> positions(nodes.size());
-
-    for (int i = 0; i < nodes.size(); i++) {
-        auto& obj = EnvObject::instantiatedObjects[i];
-        positions[i] = dynamic_cast<EnvPoint*>(obj)->position;
-//        nodes[i] = graph.addNode(new GraphNodeObj(obj, positions[i], i));
-    }
-
-    graph = Delaunay().fromVoronoi(Voronoi(positions)).graph.cast<EnvObject*>();
-
-    return graph;
 }

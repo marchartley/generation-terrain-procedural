@@ -1,4 +1,5 @@
 #include "EnvPoint.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 EnvPoint::EnvPoint()
     : EnvObject()
@@ -38,10 +39,10 @@ EnvPoint *EnvPoint::clone()
     return self;
 }
 
-EnvPoint *EnvPoint::instantiate(std::string objectName)
+/*EnvPoint *EnvPoint::instantiate(std::string objectName)
 {
-    return dynamic_cast<EnvPoint*>(EnvObject::instantiate(objectName));
-}
+    return dynamic_cast<EnvPoint*>(this->scene->instantiate(objectName));
+}*/
 
 bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -57,7 +58,7 @@ bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
         // std::cout << "Evaluation of " << name << " for " << this->position << " : " << fitnessScoreAtCreation << " / " << this->minScore << std::endl;
         return false;
     }
-    this->spawnTime = EnvObject::currentTime;
+    this->spawnTime = this->scene->currentTime;
     return true;
 }
 
@@ -84,7 +85,7 @@ void EnvPoint::applyDeposition(EnvMaterial& material)
     if (this->materialDepositionRate[material.name] == 0) return;
     float growingState = this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * growingState /** (EnvObject::flowfield(this->position).norm() * 10.f)*/;
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * growingState /** (this->scene->flowfield(this->position).norm() * 10.f)*/;
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
 }
 
@@ -109,7 +110,7 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
 void EnvPoint::applyDepositionOnDeath()
 {
     for (auto& [materialName, amount] : materialDepositionOnDeath) {
-        auto& material = EnvObject::materials[materialName];
+        auto& material = this->scene->materials[materialName];
         if (amount == 0) return;
         GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * amount;
         material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
@@ -118,7 +119,7 @@ void EnvPoint::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
 {
-    if (flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
+    if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
     float growingState = this->computeGrowingState2();
     if (_cachedFlowModif.size() == 0) {
         // float growingState = this->computeGrowingState();
@@ -130,8 +131,8 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         k.mu = .9f;
         k.v = 0.f;
 
-        // GridV3 flow = EnvObject::flowfield;
-        GridV3 flow(EnvObject::flowfield.getDimensions());
+        // GridV3 flow = this->scene->flowfield;
+        GridV3 flow(this->scene->flowfield.getDimensions());
         flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement;
@@ -147,15 +148,15 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
             gradients(pos) = dir.setMag(mag * currentGrowth);
         });
 
-        GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
-    //    GridV3 flow = GridV3(EnvObject::flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
+        GridV3 flow = GridV3(this->scene->flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
+    //    GridV3 flow = GridV3(this->scene->flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
         GridF occupancy(flow.getDimensions());
         occupancy.iterateParallel([&] (const Vector3& pos) {
             occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
         });
         return {flow, occupancy};*/
     }
-    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF(EnvObject::flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
+    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF(this->scene->flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)

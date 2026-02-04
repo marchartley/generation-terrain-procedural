@@ -5,6 +5,8 @@
 
 #include "DataStructure/Image.h"
 
+#include "Interface/EnvObjsInterface.h"
+
 CoralIslandGeneratorInterface::CoralIslandGeneratorInterface(QWidget *parent)
     : ActionInterface("coralisland", "Coral island generator", "digging", "Create coral island", "coral_generation_button.png", parent)
 {
@@ -185,7 +187,8 @@ void CoralIslandGeneratorInterface::fromGanUI()
         GridV3 img = Image::readFromFile(file).colorImage;
 
         GridF heights(voxelGrid->getSizeX(), voxelGrid->getSizeY(), 1, 0.f);
-        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions());
+        auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
+        auto envObjects = CoralIslandGenerator::envObjsFromFeatureMap(img, voxelGrid->getDimensions(), scene);
         implicitTerrain->deleteAllChildren();
         for (auto& obj : envObjects)
             implicitTerrain->addChild(obj->createImplicitPatch(heights));

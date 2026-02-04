@@ -1,4 +1,5 @@
 #include "EnvCurve.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 EnvCurve::EnvCurve()
     : EnvObject()
@@ -38,10 +39,10 @@ EnvCurve *EnvCurve::clone()
     return self;
 }
 
-EnvCurve *EnvCurve::instantiate(std::string objectName)
+/*EnvCurve *EnvCurve::instantiate(std::string objectName)
 {
-    return dynamic_cast<EnvCurve*>(EnvObject::instantiate(objectName));
-}
+    return dynamic_cast<EnvCurve*>(this->scene->instantiate(objectName));
+}*/
 
 bool EnvCurve::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -71,7 +72,7 @@ bool EnvCurve::placeInTerrain(const BSpline &seedCurve)
     this->fitnessScoreAtCreation = this->evaluate();
     if (this->fitnessScoreAtCreation < this->minScore)
         return false;
-    this->spawnTime = EnvObject::currentTime;
+    this->spawnTime = this->scene->currentTime;
     return true;
 }
 
@@ -139,7 +140,7 @@ void EnvCurve::applyAbsorption(EnvMaterial& material)
 void EnvCurve::applyDepositionOnDeath()
 {
     for (auto& [materialName, amount] : materialDepositionOnDeath) {
-        auto& material = EnvObject::materials[materialName];
+        auto& material = this->scene->materials[materialName];
         if (amount == 0) return;
 
         AABBox box = AABBox(this->curve.points);
@@ -157,7 +158,7 @@ void EnvCurve::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 {
-    if (this->flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
+    if (this->flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
 
     float growingState = computeGrowingState2();
 
@@ -196,14 +197,14 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
 
         k.curve = translatedCurve;
 
-        GridV3 flow = EnvObject::flowfield;
+        GridV3 flow = this->scene->flowfield;
         flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement.xy();
         });
         this->_cachedFlowModif = flow;
     }
-    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
+    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
 }
 
 

@@ -1,6 +1,8 @@
 #ifndef ENVCURVE_H
 #define ENVCURVE_H
 
+class EnvCurve;
+
 #include "EnvObject/EnvObject.h"
 
 class EnvCurve : public EnvObject {
@@ -16,7 +18,7 @@ public:
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
-    static EnvCurve* instantiate(std::string objectName);
+    // static EnvCurve* instantiate(std::string objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);

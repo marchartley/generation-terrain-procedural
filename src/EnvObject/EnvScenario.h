@@ -9,6 +9,8 @@
 
 #include "DataStructure/Matrix3.h"
 
+class EnvironmentalScene;
+
 
 class Scenario;
 
@@ -101,6 +103,9 @@ public:
 
 class Scenario {
 public:
+    Scenario();
+    Scenario(EnvironmentalScene* scene);
+
     void addObject(std::string name, float proba, int amount = -1);
 
     std::vector<ScenariosObject> objects;
@@ -134,6 +139,8 @@ public:
     GridF tectonic;
 
     bool finished() const;
+
+    EnvironmentalScene* scene;
 };
 
 
