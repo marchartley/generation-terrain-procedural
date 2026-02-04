@@ -1,8 +1,14 @@
 #include "EnvScenario.h"
 
-#include "EnvObject/EnvObject.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 #include "Utils/Delaunay.h"
+
+Scenario::Scenario() : Scenario(nullptr)
+{}
+Scenario::Scenario(EnvironmentalScene *scene)
+    : scene(scene)
+{}
 
 void Scenario::addObject(std::string name, float proba, int amount)
 {
@@ -29,7 +35,7 @@ ScenariosObject Scenario::nextObject()
     for (size_t i = 0; i < objects.size(); i++) {
         auto& requiredObjects = objects[i];
         int objCount = 0;
-        for (auto& obj : EnvObject::instantiatedObjects) {
+        for (auto& obj : this->scene->instantiatedObjects) {
             if (obj->name == requiredObjects.objectName)
                 objCount ++;
         }
@@ -58,7 +64,7 @@ std::vector<ScenariosObject> Scenario::nextObjects()
     for (auto& possibleObj : this->objects) {
         float proba = possibleObj.probabilityPerStep;
         int objCount = 0;
-        for (auto& obj : EnvObject::instantiatedObjects) {
+        for (auto& obj : this->scene->instantiatedObjects) {
             if (obj->name == possibleObj.objectName)
                 objCount ++;
         }
@@ -144,7 +150,7 @@ float Scenario::computeWarming(const Vector3 &dimensions)
 
 float Scenario::currentTime() const
 {
-    return EnvObject::currentTime - startTime;
+    return this->scene->currentTime - startTime;
 }
 
 bool Scenario::finished() const
@@ -156,7 +162,7 @@ bool Scenario::finished() const
     for (auto& requiredObjects : objects) {
         if (requiredObjects.amountRequired < 0) continue;
         int objCount = 0;
-        for (auto& obj : EnvObject::instantiatedObjects) {
+        for (auto& obj : this->scene->instantiatedObjects) {
             if (obj->name == requiredObjects.objectName)
                 objCount ++;
         }

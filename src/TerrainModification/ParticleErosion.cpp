@@ -6,6 +6,8 @@
 
 #include "GUIElements/ImageViewer.h"
 
+#include "EnvObject/EnvironmentalScene.h"
+
 Vector3 ErosionParticle::predictNextPos(float dt)
 {
     return pos + (velocity + force * dt) * dt;
@@ -717,7 +719,7 @@ std::vector<ParticleHistory> ParticleErosion::process()
         for (auto& v : flowfieldValues)
             v *= aspectRatio;
     } else if (flowType == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-        flowfieldValues = EnvObject::flowfield.resize(terrainSize).meanSmooth();
+        flowfieldValues = this->scene->flowfield.resize(terrainSize).meanSmooth();
         for (auto& v : flowfieldValues)
             v = v.xy();
     }

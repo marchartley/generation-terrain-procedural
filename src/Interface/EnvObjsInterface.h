@@ -6,9 +6,10 @@
 #include "GUIElements/HierarchicalListWidget.h"
 #include "Utils/HotreloadFile.h"
 
-#include "EnvObject/EnvPoint.h"
-#include "EnvObject/EnvCurve.h"
-#include "EnvObject/EnvArea.h"
+// #include "EnvObject/EnvPoint.h"
+// #include "EnvObject/EnvCurve.h"
+// #include "EnvObject/EnvArea.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 class EnvObjsInterface : public ActionInterface
 {
@@ -217,6 +218,10 @@ public:
 
     std::string testedFitnessFunction = "";
     std::string testedFittingFunction = "";
+
+
+
+    std::shared_ptr<EnvironmentalScene> scene;
 };
 
 BSpline followIsovalue(const GridF &values, const GridV3& gradients, const Vector3& startPoint, float maxDist);

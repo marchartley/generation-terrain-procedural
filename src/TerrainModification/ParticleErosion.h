@@ -174,6 +174,8 @@ public:
     Heightmap* heightmap;
     ImplicitPatch* implicitTerrain;
     LayerBasedGrid* layerBasedGrid;
+
+    std::shared_ptr<EnvironmentalScene> scene;
 };
 
 

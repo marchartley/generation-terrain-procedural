@@ -2,9 +2,7 @@
 
 #include "GUIElements/CommonInterface.h"
 
-#include "EnvObject/EnvPoint.h"
-#include "EnvObject/EnvCurve.h"
-#include "EnvObject/EnvArea.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 #include "Interface/TerrainGenerationInterface.h"
 #include "Interface/EnvObjsInterface.h"
@@ -275,10 +273,10 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     return extendedPositions;
 }
 
-std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface::getPositionsFor(std::string type)
+std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface::getPositionsFor(std::string type, std::shared_ptr<EnvironmentalScene> scene)
 {
     std::vector<std::tuple<Vector3, float, int>> positionsAndGrowthFactor;
-    for (auto& obj : EnvObject::instantiatedObjects) {
+    for (auto& obj : scene->instantiatedObjects) {
         if (toUpper(obj->name) != toUpper(type)) continue;
         float growthFactor = obj->computeGrowingState();
         if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
@@ -392,7 +390,7 @@ void MeshInstanceAmplificationInterface::setDisplayingType(InstantiationMeshOpti
 
 void MeshInstanceAmplificationInterface::afterTerrainUpdated()
 {
-    this->regenerateRocksPositions();
+    // this->regenerateRocksPositions();
     this->regenerateAllTypePositions();
 }
 
@@ -426,8 +424,9 @@ void MeshInstanceAmplificationInterface::regenerateRocksPositions()
 
 void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
 {
+    auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
     for (auto& meshType : meshesOptions) {
-        auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name) : std::vector<std::tuple<Vector3, float, int>>());
+        auto availablePositions = (meshType.possibleMeshes.size() > 0 ? this->getPositionsFor(meshType.name, scene) : std::vector<std::tuple<Vector3, float, int>>());
 //        std::shuffle(availablePositions.begin(), availablePositions.end(), random_gen::random_generator);
 
 //        meshType.indicesAndPositionsAndSizes = std::vector<std::tuple<int, Vector3, float>>(); //(std::min(meshType.numberDisplayed, int(availablePositions.size())));
@@ -436,7 +435,7 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
             Vector3 position = std::get<0>(availablePositions[i]);
             float growth = std::get<1>(availablePositions[i]);
             int objIndex = std::get<2>(availablePositions[i]);
-//            Vector3 orientation = EnvObject::flowfield(position.xy()).normalized(); //Vector3(0, 0, EnvObject::flowfield(position).getAngleWith(Vector3(1, 0, 0)));
+//            Vector3 orientation = scene->flowfield(position.xy()).normalized(); //Vector3(0, 0, scene->flowfield(position).getAngleWith(Vector3(1, 0, 0)));
 
             int nbInstances = int(interpolation::inv_linear((random_gen::generate_perlin(position.x() * 1000, position.y() * 1000, objIndex) + 1) * .5f, meshType.minMaxInstances.first, meshType.minMaxInstances.second + 1));
             int nbRandomValues = 4;
@@ -449,7 +448,7 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
                 Vector3 instancePos = position + (Vector3(randomVals[randomIdx + 0], randomVals[randomIdx + 1], 0.f) - Vector3(.5f, .5f, 0.f)) * meshType.radius;
                 if (!Vector3::isInBox(instancePos.xy(), Vector3(.1f, .1f, 0), Vector3(heightmap->getSizeX() - .1f, heightmap->getSizeY() - .1f, 0))) continue;
                 instancePos.z() = heightmap->getHeight(instancePos.xy());
-                Vector3 orientation = EnvObject::flowfield(instancePos.xy()).normalized();
+                Vector3 orientation = scene->flowfield(instancePos.xy()).normalized();
                 int meshIndex = int(randomVals[randomIdx + 2] * meshType.possibleMeshes.size());
                 float scale = interpolation::inv_linear(randomVals[randomIdx + 3], meshType.minMaxSizes.first * growth, meshType.minMaxSizes.second * growth);
 //                instancePos.z() -= scale * .15f;
@@ -479,12 +478,13 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
 
 void MeshInstanceAmplificationInterface::exportJSONFile(std::string filename)
 {
+    auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
     nlohmann::json json;
     for (auto& meshType : meshesOptions) {
         json["assets"][meshType.name] = meshType.folderPath;
         if (meshType.positions.empty()) continue;
 
-        json["instances"][meshType.name] = meshType.currentInstancesToJSON();
+        json["instances"][meshType.name] = meshType.currentInstancesToJSON(scene);
     }
 
     std::ofstream out(filename);
@@ -509,10 +509,10 @@ void InstantiationMeshOption::add(int index, const Vector3 &position, float size
 }
 
 
-nlohmann::json InstantiationMeshOption::currentInstancesToJSON(GridF scoreMap)
+nlohmann::json InstantiationMeshOption::currentInstancesToJSON(std::shared_ptr<EnvironmentalScene> scene, const GridF& scoreMap)
 {
-    auto newObject = EnvObject::availableObjects[this->name];
-    auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, true, newObject);
+    auto newObject = scene->availableObjects[this->name];
+    auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, scene.get(), true, newObject);
     GridF scores(Vector3(100, 100, 1));
     scores.iterateParallel([&](const Vector3i& p) {
         scores[p] = fitFunc(p);

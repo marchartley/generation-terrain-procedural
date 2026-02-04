@@ -1,6 +1,9 @@
 #include "EnvObjectFluidSimulation.h"
 #include "GUIElements/InterfaceUtils.h"
 
+#include "EnvObject/EnvironmentalScene.h"
+#include "Interface/EnvObjsInterface.h"
+
 EnvObjectFluidSimulation::EnvObjectFluidSimulation(QWidget *parent)
     : ActionInterface("envbjfluids", "Environmental Obj. fluids", "physics", "Display fluid simulation based on Environmental Obj.", "envobjsfluids_button.png", parent)
 {
@@ -111,7 +114,8 @@ QLayout *EnvObjectFluidSimulation::createGUI()
 
 void EnvObjectFluidSimulation::updateVectorsMesh()
 {
-    GridV3 velocities = EnvObject::flowfield.resize(Vector3(50, 50, 1));
+    auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
+    GridV3 velocities = scene->flowfield.resize(Vector3(50, 50, 1));
     Mesh::createVectorField(velocities, this->voxelGrid->getDimensions(), &vectorsMesh, 1.f, false, true);
 }
 

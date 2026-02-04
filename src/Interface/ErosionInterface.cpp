@@ -2,7 +2,8 @@
 
 #include "GUIElements/InterfaceUtils.h"
 #include "Interface/TerrainGenerationInterface.h"
-#include "EnvObject/EnvObject.h"
+// #include "EnvObject/EnvObject.h"
+#include "Interface/EnvObjsInterface.h"
 
 #include <chrono>
 
@@ -404,8 +405,9 @@ void ErosionInterface::throwFrom(PARTICLE_INITIAL_LOCATION location)
                 } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLUID_SIMULATION) {
 
                 } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-                    waterFlowfield = EnvObject::flowfield;
-                    airFlowfield = EnvObject::flowfield;
+                    auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
+                    waterFlowfield = scene->flowfield;
+                    airFlowfield = scene->flowfield;
                     std::cout << "Using ENVOBJS" << std::endl;
                 }
             });
@@ -995,7 +997,8 @@ std::function<Vector3 (const Vector3&)> ErosionInterface::computeFlowfieldFuncti
             return fluidSim.at(pos);
         };
     } else if (this->flowfieldUsed == FLOWFIELD_TYPE::FLOWFIELD_ENVOBJECTS) {
-        auto fluidSim = EnvObject::flowfield.resize(voxelGrid->getDimensions());
+        auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
+        auto fluidSim = scene->flowfield.resize(voxelGrid->getDimensions());
         std::cout << fluidSim.toString() << std::endl;
 
         flowfieldFunction = [&](const Vector3& pos) {

@@ -1,4 +1,5 @@
 #include "EnvArea.h"
+#include "EnvObject/EnvironmentalScene.h"
 
 EnvArea::EnvArea()
     : EnvObject()
@@ -38,10 +39,10 @@ EnvArea *EnvArea::clone()
     return self;
 }
 
-EnvArea *EnvArea::instantiate(std::string objectName)
+/*EnvArea *EnvArea::instantiate(std::string objectName)
 {
-    return dynamic_cast<EnvArea*>(EnvObject::instantiate(objectName));
-}
+    return dynamic_cast<EnvArea*>(this->scene->instantiate(objectName));
+}*/
 
 bool EnvArea::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -66,7 +67,7 @@ bool EnvArea::placeInTerrain(const BSpline &seedCurve)
     this->fitnessScoreAtCreation = this->evaluate();
     if (this->fitnessScoreAtCreation < this->minScore)
         return false;
-    this->spawnTime = EnvObject::currentTime;
+    this->spawnTime = this->scene->currentTime;
     return true;
 }
 
@@ -111,7 +112,7 @@ void EnvArea::applyAbsorption(EnvMaterial& material)
 void EnvArea::applyDepositionOnDeath()
 {
     for (auto& [materialName, amount] : materialDepositionOnDeath) {
-        auto& material = EnvObject::materials[materialName];
+        auto& material = this->scene->materials[materialName];
         if (amount == 0) return;
         AABBox box = AABBox(this->curve.points);
         ShapeCurve translatedCurve = this->curve;
@@ -129,7 +130,7 @@ void EnvArea::applyDepositionOnDeath()
 
 std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 {
-    if (flowEffect == Vector3()) return {EnvObject::flowfield, GridF()};
+    if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
 
     float growingState = computeGrowingState2();
 
@@ -143,7 +144,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
 
-        GridV3 flow = GridV3(EnvObject::flowfield.getDimensions());
+        GridV3 flow = GridV3(this->scene->flowfield.getDimensions());
 
         GridF dist(flow.getDimensions(), 1.f);
         // flow.iterateParallel([&] (const Vector3& pos) {
@@ -172,7 +173,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
 
                 float distanceToBorder = (pos - closestPos).norm();
                 float distFactor = 1.f - clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
-                Vector3 previousFlow = EnvObject::flowfield(pos);
+                Vector3 previousFlow = this->scene->flowfield(pos);
                 // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
         //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
                 // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
@@ -192,7 +193,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         // return {flow, occupancy};
         this->_cachedFlowModif = flow;
     }
-    return {EnvObject::flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()};
+    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()};
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)

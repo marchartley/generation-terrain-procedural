@@ -17,7 +17,7 @@
 #include "DataStructure/Kelvinlet.h"
 
 #include "EnvObject/PositionOptimizer.h"
-#include "EnvObject/EnvScenario.h"
+// #include "EnvObject/EnvScenario.h"
 
 class EnvPoint;
 class EnvCurve;
@@ -25,10 +25,8 @@ class EnvArea;
 
 class EnvObject;
 
-typedef GraphTemplate<EnvObject*> GraphObj;
-typedef GraphNodeTemplate<EnvObject*> GraphNodeObj;
-
-typedef std::pair<std::map<std::string, float>, std::map<std::string, float>> MaterialsTransformation;
+class EnvironmentalScene;
+// #include "EnvObject/EnvironmentalScene.h"
 
 
 class EnvObject
@@ -37,21 +35,11 @@ public:
     EnvObject();
     virtual ~EnvObject();
 
-    static void readEnvObjectsFile(std::string filename);
-    static void readEnvObjectsFileContent(std::string content);
-
-    static void readEnvMaterialsFile(std::string filename);
-    static void readEnvMaterialsFileContent(std::string content);
-
-    static void readEnvMaterialsTransformationsFile(std::string filename);
-    static void readEnvMaterialsTransformationsFileContent(std::string content);
-
-    static void readScenarioFile(std::string filename);
-    static void readScenarioFileContent(std::string content);
-
     static EnvObject* fromJSON(nlohmann::json content);
 
     virtual nlohmann::json toJSON() const;
+
+    static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene *scene, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
     float height;
 
@@ -117,53 +105,6 @@ public:
     };
     HeightmapFrom heightFrom = SURFACE;
 
-
-    static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
-
-
-    static GridV3 flowfield;
-    static GridV3 initialFlowfield;
-    static GridV3 terrainNormals;
-
-    static std::map<std::string, EnvMaterial> materials;
-
-    static float flowImpactFactor;
-
-    static std::map<std::string, EnvObject*> availableObjects;
-    static std::vector<EnvObject*> instantiatedObjects;
-
-    static EnvObject* findClosest(std::string objectName, const Vector3& pos);
-
-    static EnvObject* instantiate(std::string objectName);
-    static void removeObject(EnvObject* obj);
-    static void removeAllObjects();
-    static bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
-    static bool updateSedimentation(const GridF& heights);
-    static std::vector<std::string> updateSedimentationKnowingFluidsAndGradients(const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials);
-    static void stabilizeMaterials(const GridF& heights, int maxIterations = 40); // 40 is enough iterations to find a good stability usually, without taking too much time
-    static void applyMaterialsTransformations();
-    static void updateFlowfield(const GridV3& userFlow = GridV3());
-    static void beImpactedByEvents();
-
-    static int currentMaxID;
-
-    static std::map<std::string, GridV3> allVectorProperties;
-    static std::map<std::string, GridF> allScalarProperties;
-    static void precomputeTerrainProperties(const GridF &heightmap, float waterLevel, float maxHeight);
-    static void recomputeTerrainPropertiesForObject(std::string objectName);
-    static void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
-    static void recomputeFlow();
-
-    static GridF getHeightmap(const GridF &initialHeightmap, float absoluteWaterLevel, float flowErosionFactor = 0.f, bool displayGrooves = false);
-
-    static void reset();
-
-    static GraphObj sceneToGraph();
-
-    static std::vector<MaterialsTransformation> transformationRules;
-
-    static int currentTime;
-
     GridV3 _cachedFlowModif;
     ImplicitPatch* _patch = nullptr;
     GridF _cachedHeightfield;
@@ -172,7 +113,7 @@ public:
 
     Vector3 storedOrientation = Vector3(false);
 
-    static Scenario scenario;
+    EnvironmentalScene* scene;
 };
 
 #endif // ENVOBJECT_H

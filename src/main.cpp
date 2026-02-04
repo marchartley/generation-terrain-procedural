@@ -368,6 +368,7 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+
     /*int W = 1000, H = 1000, D = 100;
 
     displayProcessTime("", [&]() {
@@ -2812,8 +2813,8 @@ int main(int argc, char *argv[])
     // return 0;
 
 
-    EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
-    EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
+    // EnvObject::readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    // EnvObject::readEnvObjectsFile("EnvObjects/primitives.json");
 
     std::string preload_heightmap = "";
     MapMode displayMode = MapMode::GRID_MODE;

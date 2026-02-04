@@ -1,6 +1,8 @@
 #ifndef ENVPOINT_H
 #define ENVPOINT_H
 
+class EnvPoint;
+
 #include "EnvObject/EnvObject.h"
 
 class EnvPoint : public EnvObject {
@@ -16,7 +18,7 @@ public:
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvPoint* clone();
-    static EnvPoint* instantiate(std::string objectName);
+    // static EnvPoint* instantiate(std::string objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);
