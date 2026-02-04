@@ -99,11 +99,11 @@ public:
     void loadScene(std::string filename);
     void saveScene(std::string filename);
 
-    GridV3 renderFocusArea() const;
+    // GridV3 renderFocusArea() const;
     GridV3 renderFlowfield() const;
 
     void previewCurrentEnvObjectPlacement(const Vector3& position);
-    void previewFocusAreaEdition(const Vector3& mousePos, bool addingFocus);
+    // void previewFocusAreaEdition(const Vector3& mousePos, bool addingFocus);
     void previewFlowEdition(const Vector3& mousePos, const Vector3& brushDir);
     void previewMaterialEdition(const Vector3& position, bool addingMaterial);
 

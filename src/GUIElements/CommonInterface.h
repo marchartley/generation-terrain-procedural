@@ -22,8 +22,9 @@ class UIElement;
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
     template <typename Callable, typename... Args> \
-    void FUNCTION_NAME(Callable&& callback, Args&&... args) { \
+    auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
+        return this; \
     }
 
 class UIElement : public QObject {
@@ -110,14 +111,15 @@ public:
     QLabel* label();
 
     template <typename Callable, typename... Args>
-    void setOnValueChanged(Callable&& callback, Args&&... args) {
+    SliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &FancySlider::floatValueChanged,
                                                               std::forward<Callable>(callback),
                                                               std::forward<Args>(args)...);
         connections.push_back(connection);
+        return this;
     }
 
-    void bindTo(float& value);
+    SliderElement* bindTo(float& value);
 
 public Q_SLOTS:
     void update();
@@ -143,14 +145,15 @@ public:
     QLabel* label();
 
     template <typename Callable, typename... Args>
-    void setOnValueChanged(Callable&& callback, Args&&... args) {
+    RangeSliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &RangeSlider::alt_valueChanged,
                                                               std::forward<Callable>(callback),
                                                               std::forward<Args>(args)...);
         connections.push_back(connection);
+        return this;
     }
 
-    void bindTo(float& valueMin, float& valueMax);
+    RangeSliderElement* bindTo(float& valueMin, float& valueMax);
 
 public Q_SLOTS:
     void update();
@@ -175,7 +178,7 @@ public:
 
     DEFINE_SET_ON_FUNCTION(setOnChecked, QCheckBox, toggled)
 
-    void bindTo(bool& value);
+    CheckboxElement* bindTo(bool& value);
 
 public Q_SLOTS:
     void update();
@@ -192,9 +195,11 @@ public:
 
     QRadioButton* radioButton();
 
+    RadioButtonElement* setChecked(bool checked) { radioButton()->setChecked(checked); return this; }
+
     DEFINE_SET_ON_FUNCTION(setOnChecked, QRadioButton, toggled)
 
-    void bindTo(bool& value);
+    RadioButtonElement* bindTo(bool& value);
 
 public Q_SLOTS:
     void update();
@@ -215,15 +220,16 @@ public:
 //    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
 
     template <typename Callable, typename... Args>
-    void setOnReturnPressed(Callable&& callback, Args&&... args) {
+    TextEditElement* setOnReturnPressed(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
                                                               std::forward<Callable>(callback),
                                                               std::forward<Args>(args)...);
         connections.push_back(connection);
+        return this;
     }
-    void setOnTextChange(std::function<void(std::string)> func);
+    TextEditElement* setOnTextChange(std::function<void(std::string)> func);
 
-    void bindTo(std::string& value);
+    TextEditElement* bindTo(std::string& value);
 
 public Q_SLOTS:
     void update();
@@ -254,9 +260,9 @@ public:
 
     QComboBox* combobox() const;
 
-    void setOnSelectionChanged(std::function<void(int)> func);
+    ComboboxElement* setOnSelectionChanged(std::function<void(int)> func);
 
-    void bindTo(int& indexSelected);
+    ComboboxElement* bindTo(int& indexSelected);
 
     ComboboxLineElement getSelection() const;
 
@@ -273,6 +279,38 @@ public:
     QComboBox* _combobox;
 
 //    bool itemsAreImages = false;
+};
+
+
+#include "GUIElements/qtcolorpicker.h"
+#include "DataStructure/Vector3.h"
+class ColorPickerElement : public UIElement {
+    Q_OBJECT
+public:
+    ColorPickerElement(std::string label);
+    ColorPickerElement(std::string label, Vector3& currentSelection);
+
+    QtColorPicker* colorPicker() const;
+
+    ColorPickerElement* setOnSelectionChanged(std::function<void(const Vector3&)> func);
+
+    ColorPickerElement* bindTo(Vector3& indexSelected);
+
+    Vector3 getSelection() const;
+
+public Q_SLOTS:
+    void update();
+
+    //protected:
+public:
+    std::optional<std::reference_wrapper<Vector3>> boundColor;
+
+    QLabel* _label;
+    QtColorPicker* _colorPicker;
+
+protected:
+    static Vector3 qColorToVec3(const QColor& col);
+    static QColor vec3ToQColor(const Vector3& col);
 };
 
 class HierarchicalListUI : public UIElement {
@@ -313,6 +351,7 @@ public:
 public Q_SLOTS:
     void update();
 };
+
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets);
 InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets);

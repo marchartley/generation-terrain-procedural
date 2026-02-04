@@ -1,10 +1,10 @@
 #include "GanUIPainter.h"
 
-GanUIPainter::GanUIPainter(std::string name, QWidget *parent) : GanUIPainter(name, new ChartView(new Chart()), parent)
+GanUIPainter::GanUIPainter(const std::string& name, QWidget *parent) : GanUIPainter(name, new ChartView(new Chart()), parent)
 {
 }
 
-GanUIPainter::GanUIPainter(std::string name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
+GanUIPainter::GanUIPainter(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
 {
     auto brushSizeSlider = new SliderElement("Brush size", 1, 50, 1, this->brushSize);
     // auto colorSlider = new SliderElement("Biome", .2f, 1.f, 0.01f, this->colorIndex); // Ignore the 0-0.2 range as it is a transition from abyss to island center.
@@ -53,7 +53,7 @@ GanUIPainter *GanUIPainter::getInstance(std::string name)
     return dynamic_cast<GanUIPainter*>(GanUIPainter::instances[name]);
 }
 
-GanUIPainter *GanUIPainter::init(std::string name, ChartView *chartView, QWidget *parent)
+GanUIPainter *GanUIPainter::init(const std::string& name, ChartView *chartView, QWidget *parent)
 {
     if (GanUIPainter::instances.count(name))
         delete GanUIPainter::instances[name];
@@ -63,7 +63,7 @@ GanUIPainter *GanUIPainter::init(std::string name, ChartView *chartView, QWidget
 
 void GanUIPainter::drawStroke(const Vector3& pStart, const Vector3& pEnd)
 {
-    auto& currentImage = this->dataModel->getImage();
+    auto currentImage = this->dataModel->getImage();
     Vector3i brushCenter = Vector3i(brushSize / 2.f, brushSize / 2.f);
     Vector3 minMask = Vector3::min(pStart, pEnd) - brushCenter;
     Vector3 maxMask = Vector3::max(pStart, pEnd) + brushCenter;
@@ -77,6 +77,7 @@ void GanUIPainter::drawStroke(const Vector3& pStart, const Vector3& pEnd)
     mask.iterateParallel([&](const Vector3i& p) {
         currentImage[p + minMask] = (mask[p] >= 1.f ? currentImage[p + minMask] : currentColor); //Vector3::slerp(interpolation::power_wyvill(mask[p], std::max(0.001f, this->sharpness)), currentImage[p + minMask], currentColor);
     });
+    this->dataModel->addImage(currentImage);
 }
 
 GanUIPainter* GanUIPainter::updateUI()

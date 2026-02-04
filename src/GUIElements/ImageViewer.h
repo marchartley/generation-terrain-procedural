@@ -5,16 +5,16 @@
 
 class ImageViewer : public AbstractPlotter {
     Q_OBJECT
-private: // Singleton
-    ImageViewer(std::string name, QWidget* parent = nullptr);
-    ImageViewer(std::string name, ChartView* chartView, QWidget* parent = nullptr);
+protected: // Singleton
+    ImageViewer(const std::string& name, QWidget* parent = nullptr);
+    ImageViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     static ImageViewer* getInstance(std::string name = "");
     static ImageViewer* get(std::string name = "") { return ImageViewer::getInstance(toLower(name)); }
-    static ImageViewer* init(std::string name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    static ImageViewer* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
-    RangeSliderElement* rangeValuesWidget;
+    // RangeSliderElement* rangeValuesWidget;
 
 public Q_SLOTS:
     ImageViewer* updateUI();

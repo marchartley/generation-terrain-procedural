@@ -1,7 +1,7 @@
 #include "Image.h"
 
 
-Image::Image() : isColor(true), bitDepth(8) {}
+Image::Image() : _isColor(true), bitDepth(8) {}
 
 Image::Image(const GridF &image)
     : Image()
@@ -170,7 +170,7 @@ void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_
 void Image::writeOtherThanPNG(std::string filename, std::string ext)
 {
     GridV3 img;
-    if (this->isColor) {
+    if (this->_isColor) {
         img = this->colorImage;
     } else {
         img = GridV3(this->bwImage.getDimensions());
@@ -400,7 +400,7 @@ Image &Image::setImage(const GridF &img)
 {
     this->colorImage.clear();
     this->bwImage = img;
-    this->isColor = false;
+    this->_isColor = false;
     return *this;
 }
 
@@ -408,13 +408,13 @@ Image &Image::setImage(const GridV3& img)
 {
     this->bwImage.clear();
     this->colorImage = img;
-    this->isColor = true;
+    this->_isColor = true;
     return *this;
 }
 
 GridF Image::getBwImage() const
 {
-    if (!isColor) return this->bwImage;
+    if (!_isColor) return this->bwImage;
     GridF img(colorImage.getDimensions());
     img.iterateParallel([&](size_t i) {
         img[i] = (colorImage[i].x() + colorImage[i].y() + colorImage[i].z()) / 3.f;
@@ -424,7 +424,7 @@ GridF Image::getBwImage() const
 
 GridV3 Image::getColorImage() const
 {
-    if (isColor) return this->colorImage;
+    if (_isColor) return this->colorImage;
     GridV3 img(bwImage.getDimensions());
     img.iterateParallel([&](size_t i) {
         img[i] = Vector3(1, 1, 1) * bwImage[i];

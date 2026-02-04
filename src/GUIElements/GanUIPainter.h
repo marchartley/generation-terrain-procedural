@@ -6,13 +6,13 @@
 class GanUIPainter : public AbstractPlotter {
     Q_OBJECT
 private: // Singleton
-    GanUIPainter(std::string name, QWidget* parent = nullptr);
-    GanUIPainter(std::string name, ChartView* chartView, QWidget* parent = nullptr);
+    GanUIPainter(const std::string& name, QWidget* parent = nullptr);
+    GanUIPainter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     static GanUIPainter* getInstance(std::string name = "");
     static GanUIPainter* get(std::string name = "") { return GanUIPainter::getInstance(toLower(name)); }
-    static GanUIPainter* init(std::string name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    static GanUIPainter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     void drawStroke(const Vector3& pStart, const Vector3& pEnd);
 

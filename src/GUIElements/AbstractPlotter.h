@@ -13,6 +13,7 @@
 
 #include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
+#include "DataStructure/Image.h"
 
 enum PlotColor {
     WHITE, GRAY, BLACK, RED, GREEN, BLUE, RANDOM
@@ -87,32 +88,48 @@ protected:
     //    virtual void wheelEvent(QWheelEvent* event) override;
 };
 
-class PlotImageData {
-public:
-    PlotImageData();
-    PlotImageData(const GridV3& img);
 
-    PlotImageData* setImage(const GridV3& img);
-    PlotImageData* setNormalized(bool normalize);
-    PlotImageData* setColorRanges(const Vector3& minRange, const Vector3& maxRange);
-    PlotImageData* setAbsolute(bool absolute);
-    PlotImageData* setClamped(bool clamp);
-
-    GridV3& getImage() { return this->image; }
-    const GridV3& getImage() const { return this->image; }
-    QImage computeDisplayedImage() const;
-    QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
-    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const;
-
-
-// protected:
+struct DisplayedImageParameters {
     bool normalized = false;
     bool absolute = false;
     bool clamped = true;
     Vector3 colorRangeMin = Vector3::min();
     Vector3 colorRangeMax = Vector3::max();
     Vector3i displayedColors = Vector3i(1, 1, 1);
-    GridV3 image;
+
+    BSpline colorRamp = BSpline({Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)});
+};
+
+class PlotImageData {
+public:
+    PlotImageData();
+    PlotImageData(const GridV3& img);
+    PlotImageData(const GridF& img);
+
+    PlotImageData* setImage(const GridV3& img);
+    PlotImageData* setImage(const GridF& img);
+    PlotImageData* setNormalized(bool normalize);
+    PlotImageData* setColorRanges(const Vector3& minRange, const Vector3& maxRange);
+    PlotImageData* setAbsolute(bool absolute);
+    PlotImageData* setClamped(bool clamp);
+
+    GridV3 getImage() const { return this->image.getColorImage(); }
+    GridF getImageGrey() const { return this->image.getBwImage(); }
+    QImage computeDisplayedImage() const;
+    QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
+    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const;
+
+
+// protected:
+    /*bool normalized = false;
+    bool absolute = false;
+    bool clamped = true;
+    Vector3 colorRangeMin = Vector3::min();
+    Vector3 colorRangeMax = Vector3::max();
+    Vector3i displayedColors = Vector3i(1, 1, 1);*/
+    DisplayedImageParameters displayParameters;
+    // GridV3 image;
+    Image image;
 };
 
 class PlotModel {
@@ -123,7 +140,8 @@ public:
 
     PlotModel* addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    PlotModel* addImage(const GridV3& image/*, bool clamped = false, bool normalized = false, bool absolute = false, const Vector3& minColors = Vector3::min(), const Vector3& maxColors = Vector3::max()*/);
+    PlotModel* addImage(const GridV3& image);
+    PlotModel* addImage(const GridF& image);
 
     PlotModel* reset();
 
@@ -142,8 +160,8 @@ public:
 
     PlotImageData imageData;
 
-    GridV3& getImage() { return imageData.getImage(); }
-    const GridV3& getImage() const { return imageData.getImage(); }
+    GridV3 getImage() const { return imageData.getImage(); }
+    GridF getImageGrey() const { return imageData.getImageGrey(); }
     // GridV3 displayedImage;
     // QImage* backImage = nullptr;
 
@@ -159,13 +177,13 @@ public:
 class AbstractPlotter : public QDialog {
     Q_OBJECT
 protected: // Singleton
-    AbstractPlotter(std::string name, QWidget* parent = nullptr);
-    AbstractPlotter(std::string name, ChartView* chartView, QWidget* parent = nullptr);
+    AbstractPlotter(const std::string& name, QWidget* parent = nullptr);
+    AbstractPlotter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
     // static AbstractPlotter* getInstance(std::string name = "");
     // static AbstractPlotter* get(std::string name = "") { return AbstractPlotter::getInstance(toLower(name)); }
-    // static AbstractPlotter* init(std::string name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    // static AbstractPlotter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     AbstractPlotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
     AbstractPlotter* addPlot(std::vector<Vector3> data, std::string name = "", QColor color = Qt::gray);
@@ -174,7 +192,7 @@ public:
     AbstractPlotter* addScatter(std::vector<float> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
     AbstractPlotter* addScatter(std::vector<Vector3> data, std::string name = "", std::vector<std::string> labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
 
-    AbstractPlotter* addImage(GridV3 image);
+    AbstractPlotter* addImage(const GridV3 &image);
     AbstractPlotter* addImage(const GridF& image);
     AbstractPlotter* addImage(const Matrix3<double>& image);
     AbstractPlotter* addImage(const GridI& image);
@@ -225,7 +243,7 @@ public Q_SLOTS:
     virtual AbstractPlotter* displayInfoUnderMouse(const Vector3& relativeMousePos);
     virtual AbstractPlotter* draw();
     virtual AbstractPlotter* show();
-    virtual AbstractPlotter* updateUI();
+    virtual AbstractPlotter* updateUI(bool forceUpdate = false);
 
 
     virtual AbstractPlotter* updateToolsInterface();
