@@ -18,12 +18,14 @@ template<class T>
 class Vec3 {
 public:
     Vec3();
-    Vec3(T x, T y, T z = 0.f, bool valid = true);
+    constexpr Vec3(T x, T y, T z = 0.f, bool valid = true);
 //    Vec3(const Vec3& copy);
 //    Vec3(Vec3* copy);
     Vec3(qglviewer::Vec other);
     explicit Vec3(bool valid);
     explicit Vec3(const T* coords, bool valid = true);
+
+    ~Vec3() = default;
 
     static std::vector<T> toArray(const Vec3& v);
     static std::vector<T> toArray(const std::vector<Vec3> &vs);
@@ -63,6 +65,8 @@ public:
     Vec3& minMagnitude(float minMag);
     Vec3& clamp(float minMag, float maxMag);
     Vec3 clamped(float minMag, float maxMag) const;
+    Vec3& clamp(const Vec3 &minBound, const Vec3 &maxBound);
+    Vec3 clamped(const Vec3& minBound, const Vec3& maxBound) const;
 
     bool isAlmostVertical();
 
@@ -249,6 +253,20 @@ public:
     const T& y() const {return v[1]; }
     const T& z() const {return v[2]; }
 
+    T& r() { return v[0]; }
+    T& g() { return v[1]; }
+    T& b() { return v[2]; }
+    const T& r() const {return v[0]; }
+    const T& g() const {return v[1]; }
+    const T& b() const {return v[2]; }
+
+
+
+    inline static constexpr Vec3 white { T(1), T(1), T(1) };
+    inline static constexpr Vec3 black { T(0), T(0), T(0) };
+    inline static constexpr Vec3 red   { T(1), T(0), T(0) };
+    inline static constexpr Vec3 green { T(0), T(1), T(0) };
+    inline static constexpr Vec3 blue  { T(0), T(0), T(1) };
 
 // protected:
     T v[3];
@@ -285,7 +303,6 @@ Vec3<T> operator/(const Vec3<T>& b, U a);
 
 using Vector3 = Vec3<float>;
 using Vector3i = Vec3<int>;
-
 
 
 class AABBox { //: public std::pair<Vec3, Vec3> {
@@ -349,7 +366,7 @@ Vec3<T> abs(const Vec3<T>& o);
 
 
 template<class T>
-Vec3<T>::Vec3(T x, T y, T z, bool valid) : v{x, y, z}, valid(valid) {
+constexpr Vec3<T>::Vec3(T x, T y, T z, bool valid) : v{x, y, z}, valid(valid) {
 
 }
 template<class T>
@@ -460,6 +477,22 @@ Vec3<T> Vec3<T>::clamped(float minMag, float maxMag) const
 {
     Vec3 v = *this;
     return v.clamp(minMag, maxMag);
+}
+
+template<class T>
+Vec3<T> &Vec3<T>::clamp(const Vec3 &minBound, const Vec3 &maxBound)
+{
+    this->x() = (this->x() < minBound.x() ? minBound.x() : this->x() > maxBound.x() ? maxBound.x() : this->x());
+    this->y() = (this->y() < minBound.y() ? minBound.y() : this->y() > maxBound.y() ? maxBound.y() : this->y());
+    this->z() = (this->z() < minBound.z() ? minBound.z() : this->z() > maxBound.z() ? maxBound.z() : this->z());
+    return *this;
+}
+
+template<class T>
+Vec3<T> Vec3<T>::clamped(const Vec3 &minBound, const Vec3 &maxBound) const
+{
+    Vec3 v = *this;
+    return v.clamp(minBound, maxBound);
 }
 
 template<class T>

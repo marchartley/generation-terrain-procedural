@@ -1,12 +1,13 @@
 #include "ImageViewer.h"
+#include "GUIElements/ImageViewerOptionsUI.h"
 
-ImageViewer::ImageViewer(std::string name, QWidget *parent) : ImageViewer(name, new ChartView(new Chart()), parent)
+ImageViewer::ImageViewer(const std::string& name, QWidget *parent) : ImageViewer(name, new ChartView(new Chart()), parent)
 {
 }
 
-ImageViewer::ImageViewer(std::string name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
+ImageViewer::ImageViewer(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
 {
-    this->updateViewOptionsInterface();
+    // this->updateViewOptionsInterface();
 }
 
 ImageViewer *ImageViewer::getInstance(std::string name)
@@ -19,7 +20,7 @@ ImageViewer *ImageViewer::getInstance(std::string name)
     return dynamic_cast<ImageViewer*>(ImageViewer::instances[name]);
 }
 
-ImageViewer *ImageViewer::init(std::string name, ChartView *chartView, QWidget *parent)
+ImageViewer *ImageViewer::init(const std::string& name, ChartView *chartView, QWidget *parent)
 {
     if (ImageViewer::instances.count(name))
         delete ImageViewer::instances[name];
@@ -55,6 +56,13 @@ ImageViewer *ImageViewer::updateViewOptionsInterface()
 {
     if (this->viewOptionsInterface != nullptr)
         this->viewOptionsInterface->clear();
+    else
+        this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
+    this->viewOptionsInterface->add(ImageViewerOptionsUI::createRGBImageViewerOptions(this->chartView, this->dataModel));
+    /*
+    std::cout << "UPDATE VIEWOPTIONS" << std::endl;
+    if (this->viewOptionsInterface != nullptr)
+        this->viewOptionsInterface->clear();
     auto normalizeModeButton = (new CheckboxElement("Normalize"))->setChecked(false);
     auto absoluteModeButton = (new CheckboxElement("Absolute"))->setChecked(false);
     // this->rangeValuesWidget = new RangeSliderElement("Values", -1000, 1000, 0.01f, -1000, 1000, Qt::Vertical);
@@ -69,10 +77,6 @@ ImageViewer *ImageViewer::updateViewOptionsInterface()
         this->dataModel->imageData.setNormalized(toggled);
         this->draw();
     });
-    /*rangeValuesWidget->setOnValueChanged([&](float minVal, float maxVal) {
-        this->dataModel->imageData.setColorRanges(minVal, maxVal);
-        this->draw();
-    });*/
 
     CheckboxElement* displayRButton = (new CheckboxElement(""))->setChecked(this->dataModel->imageData.displayedColors.x());
     CheckboxElement* displayGButton = (new CheckboxElement(""))->setChecked(this->dataModel->imageData.displayedColors.y());
@@ -110,6 +114,6 @@ ImageViewer *ImageViewer::updateViewOptionsInterface()
                                                           displayGButton,
                                                           displayBButton})),
         createVerticalGroupUI(overlayCheckboxes)
-    });
+    });*/
     return this;
 }

@@ -9,7 +9,7 @@
 
 class Image {
 private:
-    bool isColor;
+    bool _isColor;
     int bitDepth; // 8 or 16
 
     void readColor(png_structp png, png_infop info, png_bytep* row_pointers);
@@ -31,6 +31,10 @@ public:
 
     GridF getBwImage() const;
     GridV3 getColorImage() const;
+
+    bool isColor() const { return this->_isColor; }
+
+    bool empty() const { return this->colorImage.empty() && this->bwImage.empty(); }
 
     GridV3 colorImage;
     GridF bwImage;

@@ -353,11 +353,11 @@ bool Chart::gestureEvent([[maybe_unused]] QGestureEvent *event)
 std::map<std::string, AbstractPlotter*> AbstractPlotter::instances = std::map<std::string, AbstractPlotter*>();
 std::string AbstractPlotter::defaultName = "default";
 
-AbstractPlotter::AbstractPlotter(std::string name, QWidget *parent) : AbstractPlotter(name, new ChartView(new Chart()), parent)
+AbstractPlotter::AbstractPlotter(const std::string& name, QWidget *parent) : AbstractPlotter(name, new ChartView(new Chart()), parent)
 {
 }
 
-AbstractPlotter::AbstractPlotter(std::string name, ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
+AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
 {
     if (this->chartView == nullptr)
         this->chartView = new ChartView(new Chart());
@@ -462,7 +462,7 @@ AbstractPlotter* AbstractPlotter::addScatter(std::vector<Vector3> data, std::str
     return this;
 }
 
-AbstractPlotter* AbstractPlotter::addImage(GridV3 image)
+AbstractPlotter* AbstractPlotter::addImage(const GridV3& image)
 {
     this->dataModel->addImage(image);
     return this;
@@ -470,12 +470,14 @@ AbstractPlotter* AbstractPlotter::addImage(GridV3 image)
 
 AbstractPlotter* AbstractPlotter::addImage(const GridF &image)
 {
-    GridV3 copy(image.getDimensions());
+    /*GridV3 copy(image.getDimensions());
     for (size_t i = 0; i < copy.size(); i++) {
         float val = image[i];
         copy[i] = Vector3(val, val, val);
     }
-    return this->addImage(copy);
+    return this->addImage(copy);*/
+    this->dataModel->addImage(image);
+    return this;
 }
 
 AbstractPlotter* AbstractPlotter::addImage(const Matrix3<double> &image)
@@ -618,20 +620,22 @@ AbstractPlotter* AbstractPlotter::show()
     return this;
 }
 
-AbstractPlotter* AbstractPlotter::updateUI()
+AbstractPlotter* AbstractPlotter::updateUI(bool forceUpdate)
 {
-    blockSignals(true);
+    if (forceUpdate || !this->isVisible()) {
+        blockSignals(true);
 
-    this->updateToolsInterface();
-    this->updateViewOptionsInterface();
-    this->updateSaveCopyInterface();
-    this->updateInfosInterface();
+        this->updateToolsInterface();
+        this->updateViewOptionsInterface();
+        this->updateSaveCopyInterface();
+        this->updateInfosInterface();
 
-    // this->toolsInterface->update();
-    // this->viewOptionsInterface->update();
-    // this->saveCopyInterface->update();
-    // this->infosInterface->update();
-    blockSignals(false);
+        // this->toolsInterface->update();
+        // this->viewOptionsInterface->update();
+        // this->saveCopyInterface->update();
+        // this->infosInterface->update();
+        blockSignals(false);
+    }
     return this;
 }
 
@@ -889,72 +893,12 @@ PlotModel *PlotModel::addScatter(const std::vector<Vector3>& data, const std::st
 PlotModel *PlotModel::addImage(const GridV3& image/*, bool clamped, bool normalized, bool absolute, const Vector3 &minColors, const Vector3 &maxColors*/)
 {
     this->imageData.setImage(image);
-    /*
-    this->imageData.setNormalized(normalized);
-    this->imageData.setClamped(clamped);
-    this->imageData.setAbsolute(absolute);
-    this->imageData.setColorRanges(minColors, maxColors);
-    */
-    /*
-    this->displayedImage = image;
-    //    image = image.flip(false, true);
-    if (image.empty()) return this;
-    if (clamped) {
-        float min = std::numeric_limits<float>::max();
-        float max = std::numeric_limits<float>::lowest();
-        image.iterate([&](size_t i) {
-            min = std::min(min, image[i].minComp());
-            max = std::max(max, image[i].maxComp());
-        });
-        image.iterateParallel([&](size_t i) {
-            for (int c = 0; c < 3; c++) {
-                image[i][c] = std::clamp(image[i][c], minColors[c], maxColors[c]);
-            }
-        });
-    }
-    if (absolute) {
-        image = image.abs();
-    }
-    if (normalized) {
-        for (int c = 0; c < 3; c++) {
-            float min = std::numeric_limits<float>::max();
-            float max = std::numeric_limits<float>::lowest();
-            image.iterate([&](size_t i) {
-                min = std::min(image[i][c], min);
-                max = std::max(image[i][c], max);
-            });
-            float d = max - min;
-            if (d == 0) {
-                image.iterateParallel([&](size_t i) {
-                    image[i][c] = 0.f;
-                });
-            } else {
-                image.iterateParallel([&](size_t i) {
-                    image[i][c] = (image[i][c] - min) / d;
-                });
-            }
-        }
-        //        image.normalize();
-    }
-    Vector3 colorFilter = Vector3(1.f, 1.f, 1.f); //Vector3((displayR ? 1.f : 0.f), (displayG ? 1.f : 0.f), (displayB ? 1.f : 0.f));
-    image.iterateParallel([&](size_t i) {
-        image[i] *= colorFilter;
-    });
-    unsigned char* data = new unsigned char[image.size() * 4];
+    return this;
+}
 
-    for (size_t i = 0; i < image.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(std::clamp(image[i].x(), 0.f, 1.f) * 255);
-        data[int(4 * i + 1)] = (unsigned char)(std::clamp(image[i].y(), 0.f, 1.f) * 255);
-        data[int(4 * i + 0)] = (unsigned char)(std::clamp(image[i].z(), 0.f, 1.f) * 255);
-        data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
-    }
-
-    if (this->backImage) {
-        delete this->backImage;
-    }
-    this->backImage = new QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
-    //    *(this->backImage) = this->backImage->mirrored();
-    */
+PlotModel *PlotModel::addImage(const GridF &image)
+{
+    this->imageData.setImage(image);
     return this;
 }
 
@@ -988,53 +932,72 @@ PlotImageData::PlotImageData(const GridV3 &img) : image(img)
 
 }
 
+PlotImageData::PlotImageData(const GridF &img) : image(img)
+{
+
+}
+
 PlotImageData *PlotImageData::setImage(const GridV3 &img)
 {
-    this->image = img;
+    this->image.setImage(img);
+    return this;
+}
+
+PlotImageData *PlotImageData::setImage(const GridF &img)
+{
+    this->image.setImage(img);
     return this;
 }
 
 PlotImageData *PlotImageData::setNormalized(bool normalize)
 {
-    this->normalized = normalize;
+    // this->normalized = normalize;
+    this->displayParameters.normalized = normalize;
     return this;
 }
 
 PlotImageData *PlotImageData::setColorRanges(const Vector3 &minRange, const Vector3 &maxRange)
 {
-    this->colorRangeMin = minRange;
-    this->colorRangeMax = maxRange;
+    // this->colorRangeMin = minRange;
+    // this->colorRangeMax = maxRange;
+    this->displayParameters.colorRangeMin = minRange;
+    this->displayParameters.colorRangeMax = maxRange;
     return this;
 }
 
 PlotImageData *PlotImageData::setAbsolute(bool absolute)
 {
-    this->absolute = absolute;
+    // this->absolute = absolute;
+    this->displayParameters.absolute = absolute;
     return this;
 }
 
 PlotImageData *PlotImageData::setClamped(bool clamp)
 {
-    this->clamped = clamp;
+    // this->clamped = clamp;
+    this->displayParameters.clamped = clamp;
     return this;
 }
 
 QImage PlotImageData::computeDisplayedImage() const
 {
-    auto displayedImage = this->image;
-    //    this->image = this->image.flip(false, true);
+    auto displayedImage = this->image.getColorImage();
     if (displayedImage.empty()) return QImage();
-    if (this->clamped) {
+    // if (this->clamped) {
+    if (this->displayParameters.clamped) {
         displayedImage.iterateParallel([&](size_t i) {
             for (int c = 0; c < 3; c++) {
-                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->colorRangeMin[c], this->colorRangeMax[c]);
+                // displayedImage[i][c] = std::clamp(displayedImage[i][c], this->colorRangeMin[c], this->colorRangeMax[c]);
+                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->displayParameters.colorRangeMin[c], this->displayParameters.colorRangeMax[c]);
             }
         });
     }
-    if (this->absolute) {
+    // if (this->absolute) {
+    if (this->displayParameters.absolute) {
         displayedImage = displayedImage.abs();
     }
-    if (this->normalized) {
+    // if (this->normalized) {
+    if (this->displayParameters.normalized) {
         for (int c = 0; c < 3; c++) {
             float min = std::numeric_limits<float>::max();
             float max = std::numeric_limits<float>::lowest();
@@ -1055,10 +1018,17 @@ QImage PlotImageData::computeDisplayedImage() const
         }
         //        displayedImage.normalize();
     }
-    // Vector3 colorFilter = Vector3(1.f, 1.f, 1.f); //Vector3((displayR ? 1.f : 0.f), (displayG ? 1.f : 0.f), (displayB ? 1.f : 0.f));
-    displayedImage.iterateParallel([&](size_t i) {
-        displayedImage[i] *= this->displayedColors;
-    });
+    if (this->image.isColor()) {
+        displayedImage.iterateParallel([&](size_t i) {
+            // displayedImage[i] *= this->displayedColors;
+            displayedImage[i] *= this->displayParameters.displayedColors;
+        });
+    } else {
+        displayedImage.iterateParallel([&](size_t i) {
+            // displayedImage[i] *= this->displayedColors;
+            displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
+        });
+    }
 
     unsigned char* data = new unsigned char[displayedImage.size() * 4];
 
@@ -1069,7 +1039,7 @@ QImage PlotImageData::computeDisplayedImage() const
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
-    QImage result = QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32);
+    QImage result = QImage(data, displayedImage.sizeX, displayedImage.sizeY, QImage::Format_ARGB32);
     return result;
 }
 
@@ -1109,7 +1079,7 @@ QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> 
             data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
             data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
         }
-        painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
+        painter.drawImage(0, 0, QImage(data, overlay.sizeX, overlay.sizeY, QImage::Format_ARGB32));
     }
     painter.end();
     return img;

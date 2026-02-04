@@ -94,12 +94,15 @@ SOURCES += \
     src/DataStructure/Vector4.cpp \
     src/DataStructure/Vertex.cpp \
     src/DataStructure/Voxel.cpp \
+    src/EnvObjGUI/EnvMaterialViewer.cpp \
+    src/EnvObjGUI/FocusAreaViewer.cpp \
     src/EnvObject/EnvArea.cpp \
     src/EnvObject/EnvCurve.cpp \
     src/EnvObject/EnvMaterial.cpp \
     src/EnvObject/EnvObject.cpp \
     src/EnvObject/EnvPoint.cpp \
     src/EnvObject/EnvScenario.cpp \
+    src/EnvObject/EnvironmentalScene.cpp \
     src/EnvObject/ExpressionParser.cpp \
     src/EnvObject/PositionOptimizer.cpp \
     src/EnvObject/SnakeSegmentation.cpp \
@@ -113,6 +116,9 @@ SOURCES += \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
+    src/GUIElements/ImageViewerOptionsUI.cpp \
+    src/GUIElements/PainterToolsUI.cpp \
+    src/GUIElements/qtcolorpicker.cpp \
     src/Graph/Graph.cpp \
     src/Graph/FastPoissonGraph.cpp \
     src/Graph/GraphNode.cpp \
@@ -258,12 +264,15 @@ HEADERS += \
     src/DataStructure/Vector4.h \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
+    src/EnvObjGUI/EnvMaterialViewer.h \
+    src/EnvObjGUI/FocusAreaViewer.h \
     src/EnvObject/EnvArea.h \
     src/EnvObject/EnvCurve.h \
     src/EnvObject/EnvMaterial.h \
     src/EnvObject/EnvObject.h \
     src/EnvObject/EnvPoint.h \
     src/EnvObject/EnvScenario.h \
+    src/EnvObject/EnvironmentalScene.h \
     src/EnvObject/ExpressionParser.h \
     src/EnvObject/PositionOptimizer.h \
     src/EnvObject/SnakeSegmentation.h \
@@ -277,6 +286,9 @@ HEADERS += \
     src/FluidSimulation/ShallowWaterSimulation.h \
     src/FluidSimulation/StableFluidsFluidSimulation.h \
     src/FluidSimulation/WarpedFluidSimulation.h \
+    src/GUIElements/ImageViewerOptionsUI.h \
+    src/GUIElements/PainterToolsUI.h \
+    src/GUIElements/qtcolorpicker.h \
     src/Graph/Graph.h \
     src/Graph/FastPoissonGraph.h \
     src/Graph/GraphNode.h \

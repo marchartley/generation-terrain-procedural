@@ -12,6 +12,12 @@
 #include "Utils/Delaunay.h"
 #include "Utils/PSO.h"
 
+
+#include "EnvObjGUI/EnvMaterialViewer.h"
+#include "EnvObjGUI/FocusAreaViewer.h"
+
+
+
 EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     : ActionInterface("envobjects", "Environmental Objects", "model", "Management of environmental objects generation", "envobjs_button.png", parent)
 {
@@ -64,7 +70,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
 
     this->initialHeightmap = heightmap->heights;
     this->subsidedHeightmap = initialHeightmap;
-    this->focusedArea = GridF(initialHeightmap.getDimensions(), 1.f);
+    this->focusedArea = GridF(initialHeightmap.getDimensions(), .5f);
     this->userFlowField = GridV3(initialHeightmap.getDimensions());
     this->simulationFlowField = GridV3(initialHeightmap.getDimensions());
     this->scene->precomputeTerrainProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
@@ -73,19 +79,25 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->previewCurrentEnvObjectPlacement(clickPos);
     });
 
-    QObject::connect(ImageViewer::get("Material"), &ImageViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
+    /*QObject::connect(EnvMaterialViewer::get("Material"), &EnvMaterialViewer::movedOnImage, this, [&](const Vector3& clickPos, const Vector3& _prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
         this->previewMaterialEdition(clickPos, leftPressed);
+    });*/
+    QObject::connect(EnvMaterialViewer::get("Material"), &EnvMaterialViewer::imagePainted, this, [&](const GridF& newDistrib) {
+        this->scene->materials[this->currentMaterialEdited].currentState = newDistrib;
     });
 
-    QObject::connect(ImageViewer::get("Focus"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+    /*QObject::connect(FocusAreaViewer::get("Focus"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
 
         this->previewFocusAreaEdition(mousePos, leftPressed);
+    });*/
+    QObject::connect(FocusAreaViewer::get("Focus"), &FocusAreaViewer::imagePainted, this, [&](const GridF& newDistrib) {
+        this->focusedArea = newDistrib;
     });
 
     QObject::connect(ImageViewer::get("Flowfield"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
@@ -916,8 +928,9 @@ void EnvObjsInterface::manualModificationOfFocusArea()
     this->focusAreaEditing = true;
     this->flowfieldEditing = false;
     this->previewingObjectInPlotter = false;
-    ImageViewer::get("Focus")->addImage(this->renderFocusArea());
-    ImageViewer::get("Focus")->show();
+    // FocusAreaViewer::get("Focus")->addImage(this->renderFocusArea());
+    FocusAreaViewer::get("Focus")->addImage(this->focusedArea);
+    FocusAreaViewer::get("Focus")->show();
 }
 
 void EnvObjsInterface::manualModificationOfFlowfield()
@@ -1720,6 +1733,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
     ImageViewer::get("Object Preview")->show();
 }
 
+/*
 void EnvObjsInterface::previewFocusAreaEdition(const Vector3 &mousePos, bool addingFocus)
 {
     //        float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
@@ -1729,9 +1743,10 @@ void EnvObjsInterface::previewFocusAreaEdition(const Vector3 &mousePos, bool add
     focusedArea.iterateParallel([&](size_t i) {
         focusedArea[i] = std::clamp(focusedArea[i], 0.f, 30.f);
     });
-    ImageViewer::get("Focus")->addImage(renderFocusArea());
-    ImageViewer::get("Focus")->show();
+    FocusAreaViewer::get("Focus")->addImage(renderFocusArea());
+    FocusAreaViewer::get("Focus")->show();
 }
+*/
 
 void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3 &brushDir)
 {
@@ -1755,9 +1770,9 @@ void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3
 
 void EnvObjsInterface::previewMaterialEdition(const Vector3 &position, bool addingMaterial)
 {
-    if (EnvObject::materials.count(this->currentMaterialEdited) == 0) return;
+    /*if (this->scene->materials.count(this->currentMaterialEdited) == 0) return;
 
-    auto& materialContent = EnvObject::materials[this->currentMaterialEdited].currentState;
+    auto& materialContent = this->scene->materials[this->currentMaterialEdited].currentState;
 
     int radius = 10;
     float amount = 5.f;
@@ -1766,8 +1781,8 @@ void EnvObjsInterface::previewMaterialEdition(const Vector3 &position, bool addi
 
     materialContent.add(mask, position - mask.getDimensions().xy() * .5f);
 
-    ImageViewer::get("Material")->addImage(materialContent);
-    ImageViewer::get("Material")->show();
+    EnvMaterialViewer::get("Material")->addImage(materialContent);
+    EnvMaterialViewer::get("Material")->show();*/
 }
 
 void EnvObjsInterface::showAllElementsOnPlotter()

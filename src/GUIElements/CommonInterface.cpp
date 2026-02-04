@@ -141,7 +141,7 @@ QLabel *SliderElement::label()
     return this->_label;
 }
 
-void SliderElement::bindTo(float &value) {
+SliderElement* SliderElement::bindTo(float &value) {
     _slider->setfValue(value);
     boundVariable = value;
     setOnValueChanged([this](float newValue) {
@@ -149,11 +149,13 @@ void SliderElement::bindTo(float &value) {
             boundVariable->get() = newValue;
         }
     });
+    return this;
 }
 
 void SliderElement::update()
 {
-    slider()->setfValue(*this->boundVariable);
+    if (this->boundVariable.has_value())
+        slider()->setfValue(*this->boundVariable);
 }
 
 
@@ -180,7 +182,7 @@ QCheckBox *CheckboxElement::checkBox() {
     return qobject_cast<QCheckBox*>(getWidget());
 }
 
-void CheckboxElement::bindTo(bool &value)
+CheckboxElement* CheckboxElement::bindTo(bool &value)
 {
     checkBox()->setChecked(value);
     boundVariable = value;
@@ -189,11 +191,13 @@ void CheckboxElement::bindTo(bool &value)
             boundVariable->get() = newValue;
         }
     });
+    return this;
 }
 
 void CheckboxElement::update()
 {
-    checkBox()->setChecked(*this->boundVariable);
+    if (this->boundVariable.has_value())
+        checkBox()->setChecked(*this->boundVariable);
 }
 
 InterfaceUI::InterfaceUI(QLayout *layout, bool tight, std::string title)
@@ -203,11 +207,15 @@ InterfaceUI::InterfaceUI(QLayout *layout, bool tight, std::string title)
         layout->setSpacing(0);
         layout->setContentsMargins(0, 0, 0, 0);
     }
+    box()->setStyleSheet("QGroupBox { border: none; }");
     getWidget()->setLayout(layout);
 }
 
 InterfaceUI::~InterfaceUI()
 {
+    /*for (auto& child : elements) {
+        child->deleteLater();
+    }*/
     elements.clear();
 }
 
@@ -218,10 +226,10 @@ QGroupBox *InterfaceUI::box() const
 
 UIElement *InterfaceUI::add(UIElement *element, std::string name)
 {
+    box()->layout()->addWidget(element->get());
     element->setName(name);
     this->elements.push_back(element);
     this->names.push_back(name);
-    box()->layout()->addWidget(element->get());
     return element;
 }
 
@@ -294,7 +302,7 @@ QRadioButton *RadioButtonElement::radioButton()
     return qobject_cast<QRadioButton*>(getWidget());
 }
 
-void RadioButtonElement::bindTo(bool &value)
+RadioButtonElement* RadioButtonElement::bindTo(bool &value)
 {
     radioButton()->setChecked(value);
     boundVariable = value;
@@ -303,11 +311,13 @@ void RadioButtonElement::bindTo(bool &value)
             boundVariable->get() = newValue;
         }
     });
+    return this;
 }
 
 void RadioButtonElement::update()
 {
-    radioButton()->setChecked(*this->boundVariable);
+    if (this->boundVariable.has_value())
+        radioButton()->setChecked(*this->boundVariable);
 }
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
@@ -370,15 +380,16 @@ QLineEdit *TextEditElement::lineEdit()
     return dynamic_cast<QLineEdit*>(_lineEdit);
 }
 
-void TextEditElement::setOnTextChange(std::function<void (std::string)> func)
+TextEditElement* TextEditElement::setOnTextChange(std::function<void (std::string)> func)
 {
 //    this->addConnection()
     QObject::connect(_lineEdit, &QLineEdit::textChanged, this, [=](QString newText){ // /!\ Capture function by value
         func(newText.toStdString());
     });
+    return this;
 }
 
-void TextEditElement::bindTo(std::string &value)
+TextEditElement* TextEditElement::bindTo(std::string &value)
 {
     lineEdit()->setText(QString::fromStdString(value));
     boundVariable = value;
@@ -387,6 +398,7 @@ void TextEditElement::bindTo(std::string &value)
             boundVariable->get() = newValue;
         }
     });
+    return this;
 }
 
 void TextEditElement::update()
@@ -425,7 +437,7 @@ QLabel *RangeSliderElement::label()
     return _label;
 }
 
-void RangeSliderElement::bindTo(float &valueMin, float &valueMax)
+RangeSliderElement* RangeSliderElement::bindTo(float &valueMin, float &valueMax)
 {
     slider()->setMinValue(valueMin);
     slider()->setMaxValue(valueMax);
@@ -439,6 +451,7 @@ void RangeSliderElement::bindTo(float &valueMin, float &valueMax)
             boundVariableMax->get() = newMax;
         }
     });
+    return this;
 }
 
 void RangeSliderElement::update()
@@ -479,40 +492,29 @@ ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElem
 {
     this->bindTo(currentSelection);
 }
-/*
-ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex)
-    : ComboboxElement(label)
-{
-    bindTo(bindedTexts);
-    bindTo(bindedIndex);
-}
 
-ComboboxElement::ComboboxElement(std::string label, std::vector<std::string> &bindedTexts, int &bindedIndex, bool interpretAsImages)
-    : ComboboxElement(label, bindedTexts, bindedIndex), itemsAreImages(interpretAsImages)
-{
-
-}
-*/
 QComboBox *ComboboxElement::combobox() const
 {
     return _combobox;
 }
 
-void ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
+ComboboxElement *ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
 {
     QObject::connect(_combobox, &QComboBox::currentTextChanged, this, [=](QString text) {
         int index = _combobox->currentIndex();
         func(index);
     });
+    return this;
 }
 
-void ComboboxElement::bindTo(int &indexSelected)
+ComboboxElement* ComboboxElement::bindTo(int &indexSelected)
 {
     boundIndex = indexSelected;
     combobox()->setCurrentIndex(indexSelected);
     this->setOnSelectionChanged([&](int index) {
         this->boundIndex->get() = index;
     });
+    return this;
 }
 
 ComboboxLineElement ComboboxElement::getSelection() const
@@ -532,18 +534,71 @@ void ComboboxElement::update()
     }
     combobox()->setCurrentIndex(*this->boundIndex);
 }
-/*
-void ComboboxElement::bindTo(std::vector<std::string> &values)
+
+
+
+ColorPickerElement::ColorPickerElement(std::string label)
+    : UIElement(new QGroupBox)
 {
-    boundValues = values;
-    for (auto& text : boundValues) {
-        if (itemsAreImages) {
-            combobox()->addItem(QIcon(QString::fromStdString(text)));
-        } else {
-            combobox()->addItem(QString::fromStdString(text));
-        }
-    }
-}*/
+    this->_colorPicker = new QtColorPicker(this->get());
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_colorPicker);
+    getWidget()->setLayout(layout);
+}
+
+ColorPickerElement::ColorPickerElement(std::string label, Vector3 &currentSelection)
+    : ColorPickerElement(label)
+{
+    this->bindTo(currentSelection);
+}
+
+QtColorPicker *ColorPickerElement::colorPicker() const
+{
+    return _colorPicker;
+}
+
+ColorPickerElement *ColorPickerElement::setOnSelectionChanged(std::function<void (const Vector3&)> func)
+{
+    QObject::connect(_colorPicker, &QtColorPicker::colorChanged, this, [=](QColor color) {
+        func(ColorPickerElement::qColorToVec3(color));
+    });
+    return this;
+}
+
+ColorPickerElement* ColorPickerElement::bindTo(Vector3& colorSelected)
+{
+    boundColor = colorSelected;
+    colorPicker()->setCurrentColor(ColorPickerElement::vec3ToQColor(colorSelected));
+    this->setOnSelectionChanged([&](Vector3 color) {
+        this->boundColor->get() = color;
+    });
+    return this;
+}
+
+Vector3 ColorPickerElement::getSelection() const
+{
+    return ColorPickerElement::qColorToVec3(this->colorPicker()->currentColor());
+}
+
+void ColorPickerElement::update()
+{
+    colorPicker()->setCurrentColor(ColorPickerElement::vec3ToQColor(*this->boundColor));
+}
+
+Vector3 ColorPickerElement::qColorToVec3(const QColor &col)
+{
+    return Vector3(col.redF(), col.greenF(), col.blueF());
+}
+
+QColor ColorPickerElement::vec3ToQColor(const Vector3 &col)
+{
+    return QColor(col.r(), col.g(), col.b());
+}
 
 
 HierarchicalListUI::HierarchicalListUI()
