@@ -10,7 +10,7 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, ChartView* chartView, 
 {
     painterParams.additiveMode = true;
     painterParams.RGBimage = false;
-    painterParams.minColor = Vector3(0, 0, 0);
+    painterParams.minClampColor = Vector3(0, 0, 0);
 
     dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::red, Vector3::white, Vector3::green});
 

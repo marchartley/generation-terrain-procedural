@@ -58,7 +58,10 @@ ImageViewer *ImageViewer::updateViewOptionsInterface()
         this->viewOptionsInterface->clear();
     else
         this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
-    this->viewOptionsInterface->add(ImageViewerOptionsUI::createRGBImageViewerOptions(this->chartView, this->dataModel));
+    if (this->dataModel->imageData.image.isColor())
+        this->viewOptionsInterface->add(ImageViewerOptionsUI::createRGBImageViewerOptions(this->chartView, this->dataModel));
+    else
+        this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
     /*
     std::cout << "UPDATE VIEWOPTIONS" << std::endl;
     if (this->viewOptionsInterface != nullptr)

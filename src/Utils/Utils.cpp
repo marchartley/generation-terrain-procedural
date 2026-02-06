@@ -113,7 +113,7 @@ float sigmoid(float _x, float lambda, float offset, float _min, float _max) {
     return inv_linear(linear(1 / (1 + std::exp(-lambda * (x+offset))), s_0, s_1), _min, _max);
 }
 float smooth(float _x, float _min, float _max) {
-    float x = linear(_x, _min, _max);
+    float x = linear(clamp(_x, 0.f, 1.f), _min, _max);
     return inv_linear(3*x*x-2*x*x*x, _min, _max);
 }
 float quadratic(float _x, float _min, float _max) {

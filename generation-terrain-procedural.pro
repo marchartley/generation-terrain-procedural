@@ -116,6 +116,7 @@ SOURCES += \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
+    src/GUIElements/ImagePainter.cpp \
     src/GUIElements/ImageViewerOptionsUI.cpp \
     src/GUIElements/PainterToolsUI.cpp \
     src/GUIElements/qtcolorpicker.cpp \
@@ -286,6 +287,7 @@ HEADERS += \
     src/FluidSimulation/ShallowWaterSimulation.h \
     src/FluidSimulation/StableFluidsFluidSimulation.h \
     src/FluidSimulation/WarpedFluidSimulation.h \
+    src/GUIElements/ImagePainter.h \
     src/GUIElements/ImageViewerOptionsUI.h \
     src/GUIElements/PainterToolsUI.h \
     src/GUIElements/qtcolorpicker.h \
