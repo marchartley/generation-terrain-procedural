@@ -100,8 +100,8 @@ struct DisplayedImageParameters {
     BSpline colorRamp = BSpline({Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)});
 };
 
-class PlotImageData {
-public:
+struct PlotImageData {
+// public:
     PlotImageData();
     PlotImageData(const GridV3& img);
     PlotImageData(const GridF& img);
@@ -121,15 +121,21 @@ public:
 
 
 // protected:
-    /*bool normalized = false;
-    bool absolute = false;
-    bool clamped = true;
-    Vector3 colorRangeMin = Vector3::min();
-    Vector3 colorRangeMax = Vector3::max();
-    Vector3i displayedColors = Vector3i(1, 1, 1);*/
     DisplayedImageParameters displayParameters;
     // GridV3 image;
     Image image;
+};
+
+struct PlotVectorData {
+    PlotVectorData();
+    PlotVectorData(const GridV3& field);
+
+    PlotVectorData* setField(const GridV3 &field);
+
+    GridV3 getField() const { return this->field; }
+    GridV3 getFieldImage(Vector3i imgSize, float reductionFactor = .1f) const;
+
+    GridV3 field;
 };
 
 class PlotModel {
@@ -142,6 +148,8 @@ public:
 
     PlotModel* addImage(const GridV3& image);
     PlotModel* addImage(const GridF& image);
+
+    PlotModel* addVectorField(const GridV3& field);
 
     PlotModel* reset();
 
@@ -159,6 +167,7 @@ public:
     std::vector<std::pair<int, int>> selectedPlotData;
 
     PlotImageData imageData;
+    PlotVectorData vectorData;
 
     GridV3 getImage() const { return imageData.getImage(); }
     GridF getImageGrey() const { return imageData.getImageGrey(); }
@@ -197,12 +206,14 @@ public:
     AbstractPlotter* addImage(const Matrix3<double>& image);
     AbstractPlotter* addImage(const GridI& image);
 
+    AbstractPlotter* addVectorField(const GridV3& field);
+
     AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default");
     AbstractPlotter* showOverlay(const std::string& overlayName = "default");
     AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
 
     GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
-    AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
+    // AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
     GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
     AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
 
@@ -224,10 +235,13 @@ public:
     PlotModel* dataModel;
     QLabel* mouseInfoLabel = nullptr;
 
+    InterfaceUI* mainInterface;
     InterfaceUI* toolsInterface;
     InterfaceUI* viewOptionsInterface;
     InterfaceUI* saveCopyInterface;
     InterfaceUI* infosInterface;
+
+    InterfaceUI* viewAndCopyInterface;
 
     std::string name;
 

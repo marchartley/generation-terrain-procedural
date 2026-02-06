@@ -11,7 +11,7 @@ struct PainterToolParams {
 
     float opacity = 1.f;
     float minOpacity = 0.f;
-    float maxOpacity = 10.f;
+    float maxOpacity = 1.f;
 
     bool additiveMode = true;
 
@@ -19,8 +19,11 @@ struct PainterToolParams {
 
     Vector3 color = Vector3(1, 1, 1);
 
-    Vector3 minColor = Vector3::min();
-    Vector3 maxColor = Vector3::max();
+    Vector3 minColor = Vector3(0, 0, 0);
+    Vector3 maxColor = Vector3(1, 1, 1);
+
+    Vector3 minClampColor = Vector3::min();
+    Vector3 maxClampColor = Vector3::max();
 
     bool RGBimage = true;
 };

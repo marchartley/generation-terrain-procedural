@@ -10,7 +10,7 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartVi
 {
     painterParams.additiveMode = true;
     painterParams.RGBimage = false;
-    painterParams.minColor = Vector3(0, 0, 0);
+    painterParams.minClampColor = Vector3(0, 0, 0);
 
     dataModel->imageData.displayParameters.colorRamp = BSpline({Vector3::white, Vector3::green});
 

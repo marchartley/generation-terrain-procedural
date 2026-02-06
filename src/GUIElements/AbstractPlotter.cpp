@@ -25,20 +25,7 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
 {
     this->_dataModel = dataModel;
     this->chart()->removeAllSeries();
-    //    while (!this->chart()->axes().empty()) {
-    //        this->chart()->removeAxis(this->chart()->axes().front());
-    //    }
 
-    //    for (auto& labels : this->graphicLabels)
-    //        for (auto& lab : labels)
-    //            delete lab;
-    //    this->graphicLabels.clear();
-    //    QTransform prevState = this->transform();
-    //    auto prevState = this->chart()->transformations();
-    //    this->chart()->removeAllSeries();
-    //    while (!this->chart()->axes().empty()) {
-    //        this->chart()->removeAxis(this->chart()->axes().front());
-    //    }
     if (!title.empty())
         this->chart()->setTitle(QString::fromStdString(title));
 
@@ -47,61 +34,36 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
             delete lab;
     this->_dataModel->graphicLabels.clear();
 
+    int width = static_cast<int>(this->chart()->plotArea().width());
+    int height = static_cast<int>(this->chart()->plotArea().height());
+    int ViewW = static_cast<int>(this->width());
+    int ViewH = static_cast<int>(this->height());
+    QImage scaledImage = QImage(width, height, QImage::Format_ARGB32);
     if (!this->_dataModel->getImage().empty()) {
-        int width = static_cast<int>(this->chart()->plotArea().width());
-        int height = static_cast<int>(this->chart()->plotArea().height());
-        int ViewW = static_cast<int>(this->width());
-        int ViewH = static_cast<int>(this->height());
 
         //scale the image to fit plot area
-        QImage scaledImage;
         if (!this->overlayColors.empty())
             scaledImage = this->_dataModel->imageData.computeDisplayedImage(this->overlayColors, this->overlayAlpha, this->overlayDisplayed);
         else
             scaledImage = this->_dataModel->imageData.computeDisplayedImage();
+
         scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
-        //        *backImage = backImage->scaled(QSize(width, height));
-
-        //We have to translate the image because setPlotAreaBackGround
-        //starts the image in the top left corner of the view not the
-        //plot area. So, to offset we will make a new image the size of
-        //view and offset our image within that image with white
-        QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
-        translated.fill(Qt::white);
-        QPainter painter(&translated);
-        QPointF TopLeft = this->chart()->plotArea().topLeft();
-        painter.drawImage(TopLeft, scaledImage);
-
-        //Display image in background
-        //        this->chart()->setPlotAreaBackgroundBrush(scaledImage);
-        this->chart()->setPlotAreaBackgroundBrush(translated);
-        this->chart()->setPlotAreaBackgroundVisible(true);
     }
-    /*if (!this->_dataModel->displayedImage.empty() && this->_dataModel->backImage && !this->_dataModel->backImage->isNull()) {
-        int width = static_cast<int>(this->chart()->plotArea().width());
-        int height = static_cast<int>(this->chart()->plotArea().height());
-        int ViewW = static_cast<int>(this->width());
-        int ViewH = static_cast<int>(this->height());
+    //We have to translate the image because setPlotAreaBackGround
+    //starts the image in the top left corner of the view not the
+    //plot area. So, to offset we will make a new image the size of
+    //view and offset our image within that image with white
+    QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
+    translated.fill(Qt::white);
+    QPainter painter(&translated);
+    QPointF TopLeft = this->chart()->plotArea().topLeft();
+    painter.drawImage(TopLeft, scaledImage);
 
-        //scale the image to fit plot area
-        QImage scaledImage = this->_dataModel->backImage->scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
-        //        *backImage = backImage->scaled(QSize(width, height));
+    //Display image in background
+    //        this->chart()->setPlotAreaBackgroundBrush(scaledImage);
+    this->chart()->setPlotAreaBackgroundBrush(translated);
+    this->chart()->setPlotAreaBackgroundVisible(true);
 
-        //We have to translate the image because setPlotAreaBackGround
-        //starts the image in the top left corner of the view not the
-        //plot area. So, to offset we will make a new image the size of
-        //view and offset our image within that image with white
-        QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
-        translated.fill(Qt::white);
-        QPainter painter(&translated);
-        QPointF TopLeft = this->chart()->plotArea().topLeft();
-        painter.drawImage(TopLeft, scaledImage);
-
-        //Display image in background
-        //        this->chart()->setPlotAreaBackgroundBrush(scaledImage);
-        this->chart()->setPlotAreaBackgroundBrush(translated);
-        this->chart()->setPlotAreaBackgroundVisible(true);
-    }*/
     for (size_t i = 0; i < this->_dataModel->plot_data.size(); i++) {
         QLineSeries *series = new QLineSeries();
         if (this->_dataModel->plot_names.size() > 0 && this->_dataModel->plot_names.size() == this->_dataModel->plot_data.size())
@@ -137,15 +99,8 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
             this->_dataModel->graphicLabels[iScatter].push_back(itm);
         }
     }
-    //    this->setTransform(prevState);
-    //    this->chart()->setTransformations(prevState);
-    //    while (!this->chart()->axes().empty()) {
-    //        this->chart()->removeAxis(this->chart()->axes().front());
-    //    }
 
     this->chart()->createDefaultAxes();
-    //    this->chart()->zoomOut();
-    //    this->update();
     return this;
 }
 
@@ -368,6 +323,8 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
     auto mainLayout = new InterfaceUI(new QHBoxLayout());
 
     //    auto right = new QVBoxLayout();
+    mainInterface = new InterfaceUI(new QVBoxLayout(), "Main");
+    mainInterface->add(new UIElement(this->chartView));
     toolsInterface = new InterfaceUI(new QVBoxLayout(), "Tools");
     viewOptionsInterface = new InterfaceUI(new QVBoxLayout(), "View options");
     saveCopyInterface = new InterfaceUI(new QVBoxLayout(), "Save/Copy");
@@ -375,7 +332,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
 
     this->chartView->setRenderHint(QPainter::Antialiasing);
     this->chartView->chart()->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
-    auto viewAndCopyInterface = new InterfaceUI(new QVBoxLayout());
+    viewAndCopyInterface = new InterfaceUI(new QVBoxLayout());
     viewAndCopyInterface->add(std::vector<UIElement*>({viewOptionsInterface, saveCopyInterface}));
     //    this->chartView->setMaximumSize(10000, 10000);
     //    this->chartView->chart()->setMaximumSize(10000, 10000);
@@ -388,8 +345,14 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
 
     layout->add(std::vector<UIElement*>({mainLayout, infosInterface}));
 
-    mainLayout->add({toolsInterface, new UIElement(this->chartView), viewAndCopyInterface});
+    mainLayout->add({toolsInterface, mainInterface, viewAndCopyInterface});
 
+    this->viewAndCopyInterface->get()->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    this->toolsInterface->get()->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    this->mainInterface->get()->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    qobject_cast<QHBoxLayout*>(mainLayout->get()->layout())->setStretchFactor(this->viewAndCopyInterface->get(), 1);
+    qobject_cast<QHBoxLayout*>(mainLayout->get()->layout())->setStretchFactor(this->mainInterface->get(), 3);
+    qobject_cast<QHBoxLayout*>(mainLayout->get()->layout())->setStretchFactor(this->toolsInterface->get(), 1);
 
     this->mouseInfoLabel = new QLabel("");
     infosInterface->add(new UIElement(this->mouseInfoLabel));
@@ -408,7 +371,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
 
     this->setLayout(layout->get()->layout());
 
-    this->resize(800, 600);
+    this->resize(1100, 600);
     this->updateGeometry();
 
     this->setWindowTitle(QString::fromStdString(toCapitalize(this->name)));
@@ -470,12 +433,6 @@ AbstractPlotter* AbstractPlotter::addImage(const GridV3& image)
 
 AbstractPlotter* AbstractPlotter::addImage(const GridF &image)
 {
-    /*GridV3 copy(image.getDimensions());
-    for (size_t i = 0; i < copy.size(); i++) {
-        float val = image[i];
-        copy[i] = Vector3(val, val, val);
-    }
-    return this->addImage(copy);*/
     this->dataModel->addImage(image);
     return this;
 }
@@ -490,13 +447,15 @@ AbstractPlotter* AbstractPlotter::addImage(const GridI &image)
     return this->addImage((GridF)image);
 }
 
+AbstractPlotter *AbstractPlotter::addVectorField(const GridV3 &field)
+{
+    this->dataModel->addVectorField(field);
+    return this;
+}
+
 AbstractPlotter* AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName)
 {
     this->chartView->setOverlay(colors, overlayName, alpha);
-    /*
-    this->chartView->overlayColors[overlayName] = colors;
-    this->chartView->overlayAlpha[overlayName] = alpha;
-    this->chartView->overlayDisplayed[overlayName] = true;*/
     return this;
 }
 
@@ -554,15 +513,6 @@ GridV3 AbstractPlotter::computeVectorFieldRendering(const GridV3 &field, float r
         }
     });
     return img;
-}
-
-AbstractPlotter* AbstractPlotter::addVectorField(const GridV3 &field, float reductionFactor, Vector3 imgSize, float opacity)
-{
-    GridV3 img = this->computeVectorFieldRendering(field, reductionFactor, imgSize);
-    if (this->hasImage()) {
-        img = this->dataModel->getImage().resize(img.getDimensions()) + img * (opacity);
-    }
-    return this->addImage(img);
 }
 
 GridV3 AbstractPlotter::computeStreamLinesRendering(const GridV3 &field, Vector3 imgSize) const
@@ -629,11 +579,6 @@ AbstractPlotter* AbstractPlotter::updateUI(bool forceUpdate)
         this->updateViewOptionsInterface();
         this->updateSaveCopyInterface();
         this->updateInfosInterface();
-
-        // this->toolsInterface->update();
-        // this->viewOptionsInterface->update();
-        // this->saveCopyInterface->update();
-        // this->infosInterface->update();
         blockSignals(false);
     }
     return this;
@@ -717,99 +662,8 @@ AbstractPlotter* AbstractPlotter::reset()
 {
     this->dataModel->reset();
     this->chartView->setPlotModel(this->dataModel);
-    // this->chartView->reset();
-    /*
-    this->chartView->chart()->removeAllSeries();
-    while (!this->chartView->chart()->axes().empty()) {
-        this->chartView->chart()->removeAxis(this->chartView->chart()->axes().front());
-    }
-    if (!title.empty())
-        this->chartView->chart()->setTitle(QString::fromStdString(title));
-
-    for (auto& labels : this->graphicLabels)
-        for (auto& lab : labels)
-            delete lab;
-    this->graphicLabels.clear();
-
-//    QPushButton* saveButton;
-//    ChartView* chartView;
-    backImage = nullptr;
-    title = "";
-    plot_data.clear();
-    plot_names.clear();
-    plot_colors.clear();
-    scatter_data.clear();
-    scatter_labels.clear();
-    scatter_colors.clear();
-    scatter_names.clear();
-    graphicLabels.clear();
-
-    selectedScatterData.clear();
-    selectedPlotData.clear();
-    */
     return this;
 }
-/*
-AbstractPlotter* AbstractPlotter::updateLabelsPositions()
-{
-//    this->blockSignals(true);
-    if (!this->selectedPlotData.empty() || !this->selectedScatterData.empty()) {
-        QPointF qNewPoint = this->chartView->chart()->mapToValue(this->chartView->previousMousePos);
-        Vector3 newPoint = Vector3(qNewPoint.x()(), qNewPoint.y()());
-        for (auto& [iPlot, iPoint] : this->selectedPlotData)
-            this->plot_data[iPlot][iPoint] = newPoint;
-        for (auto& [iPlot, iPoint] : this->selectedScatterData)
-            this->scatter_data[iPlot][iPoint] = newPoint;
-    }
-
-    for (size_t iScatter = 0; iScatter < this->scatter_labels.size(); iScatter++) {
-        for (size_t iPoint = 0; iPoint < this->scatter_labels[iScatter].size(); iPoint++) {
-//                this->graphicLabels[iScatter][iPoint]->setPos(QPointF(this->scatter_data[iScatter][iPoint].first, this->scatter_data[iScatter][iPoint].second)); // this->chartView->chart()->mapToPosition(QPointF(this->scatter_data[iScatter][iPoint].first, this->scatter_data[iScatter][iPoint].second)));
-            this->graphicLabels[iScatter][iPoint]->setPos(this->chartView->chart()->mapToPosition(QPointF(this->scatter_data[iScatter][iPoint].x(), this->scatter_data[iScatter][iPoint].y())));
-        }
-    }
-    if (!this->selectedPlotData.empty() || !this->selectedScatterData.empty()) {
-        this->draw();
-    }
-//    this->blockSignals(false);
-    return this;
-}
-
-AbstractPlotter* AbstractPlotter::selectData(const Vector3& pos)
-{
-    if (!pos.isValid()) return this;
-
-    float minDist = 0.05f;
-    this->selectedScatterData.clear();
-    this->selectedPlotData.clear();
-
-    if (pos.isValid()) {
-        for (size_t i = 0; i < this->plot_data.size(); i++) {
-            for (size_t j = 0; j < this->plot_data[i].size(); j++) {
-                if ((plot_data[i][j] - pos).norm2() < minDist*minDist)
-                    this->selectedPlotData.push_back({i, j});
-            }
-        }
-        for (size_t i = 0; i < this->scatter_data.size(); i++) {
-            for (size_t j = 0; j < this->scatter_data[i].size(); j++) {
-                if ((scatter_data[i][j] - pos).norm2() < minDist*minDist)
-                    this->selectedScatterData.push_back({i, j});
-            }
-        }
-    }
-
-    if (!this->selectedPlotData.empty() || !this->selectedScatterData.empty()) {
-        this->chartView->lockView();
-    } else {
-        this->chartView->unlockView();
-    }
-
-    if (!this->displayedImage.empty()) {
-        Q_EMIT clickedOnImage(pos * displayedImage.getDimensions(), this->displayedImage(pos * displayedImage.getDimensions()));
-    }
-    return this;
-}
-*/
 
 AbstractPlotter* AbstractPlotter::displayInfoUnderMouse(const Vector3 &relativeMousePos)
 {
@@ -902,6 +756,12 @@ PlotModel *PlotModel::addImage(const GridF &image)
     return this;
 }
 
+PlotModel *PlotModel::addVectorField(const GridV3 &field)
+{
+    this->vectorData.setField(field);
+    return this;
+}
+
 PlotModel* PlotModel::reset()
 {
     // this->backImage = nullptr;
@@ -919,6 +779,7 @@ PlotModel* PlotModel::reset()
     this->selectedPlotData.clear();
 
     this->imageData = PlotImageData();
+    this->vectorData = PlotVectorData();
     return this;
 }
 
@@ -1082,5 +943,62 @@ QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> 
         painter.drawImage(0, 0, QImage(data, overlay.sizeX, overlay.sizeY, QImage::Format_ARGB32));
     }
     painter.end();
+    return img;
+}
+
+PlotVectorData::PlotVectorData() : PlotVectorData(GridV3())
+{}
+
+PlotVectorData::PlotVectorData(const GridV3 &field) : field(field)
+{}
+
+PlotVectorData *PlotVectorData::setField(const GridV3 &field)
+{
+    this->field = field;
+    return this;
+}
+
+GridV3 PlotVectorData::getFieldImage(Vector3i imgSize, float reductionFactor) const
+{
+    if (!imgSize.isValid())
+        imgSize = field.getDimensions();
+    imgSize.z() = 1;
+    GridV3 img(imgSize);
+    Vector3 reducedSize = (field.getDimensions() * reductionFactor).roundedUp(); //(30, 30, 1);
+    reducedSize.z() = 1;
+    Vector3 ratio = imgSize / reducedSize;
+    GridV3 reduced = field.resize(reducedSize);
+
+    float minMag = std::numeric_limits<float>::max();
+    float maxMag = std::numeric_limits<float>::lowest();
+    reduced.iterate([&] (size_t i) {
+        float mag = reduced[i].norm2();
+        minMag = std::min(minMag, mag);
+        maxMag = std::max(maxMag, mag);
+    });
+    minMag = std::sqrt(minMag);
+    maxMag = std::sqrt(maxMag);
+
+    // std::cout << minMag << " " << maxMag << std::endl;
+
+    reduced.iterateParallel([&] (const Vector3& p) {
+        AABBox cell(p - Vector3(.45, .45, 0) * ratio, p + Vector3(.45, .45, 0) * ratio);
+        float mag = reduced(p).norm();
+        if (mag < 1e-5) return;
+        Vector3 dir = reduced(p) / mag;
+        Vector3 color(1, 1, 1);
+        if (std::abs(minMag - maxMag) > 1e-5) {
+            float relativeMag = interpolation::linear(mag, minMag, maxMag);
+            color = colorPalette(relativeMag, {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)});
+        }
+        bool valid = true;
+        for (int i = 0; valid; i++) {
+            valid = false;
+            if (cell.containsXY(p + dir * i)) {
+                img((p + Vector3(.5, .5)) * ratio + dir * i) = color;
+                valid = true;
+            }
+        }
+    });
     return img;
 }
