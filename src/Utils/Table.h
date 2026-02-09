@@ -15,7 +15,7 @@ class Table {
 public:
     using DataVariant = std::variant<std::string, float>;
 
-    template<typename... Ts>
+    template <class... Ts>
     struct TableRow {
         std::tuple<Ts...> data;
         TableRow(Ts... values) : data(values...) {}
@@ -29,7 +29,7 @@ public:
           const std::vector<std::string>& colNames,
           const std::vector<std::string>& rowNames);
 
-    template<typename... Ts>
+    template <class... Ts>
     Table(const std::vector<TableRow<Ts...>>& tableRows,
           const std::vector<std::string>& colNames,
           const std::vector<std::string>& rowNames)
@@ -42,7 +42,7 @@ public:
 
     void addRow(const std::vector<DataVariant>& rowData, const std::string& rowName);
 
-    template<typename T>
+    template <class T>
     void addColumn(const std::vector<T>& newColumn, const std::string& colName) {
         if (newColumn.size() != rows.size()) {
             throw std::runtime_error("The new column size does not match the number of rows in the table.");

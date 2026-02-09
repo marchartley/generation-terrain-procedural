@@ -30,11 +30,11 @@ namespace interpolation {
 
 #define PI M_PI
 
-template<class T>
+template <class T>
 bool isIn(T elem, std::vector<T> arr) {
     return std::find(arr.begin(), arr.end(), elem) != arr.end();
 }
-template<class T>
+template <class T>
 bool isIn(T elem, std::set<T> arr) {
     return arr.find(elem) != arr.end();
 }
@@ -75,7 +75,7 @@ int runCommand(std::string command);
 float rad2deg(float rad);
 float deg2rad(float deg);
 
-template<class T>
+template <class T>
 float sign(T value) {
     return (value < T() ? -1.f : 1.f);
 }
@@ -150,7 +150,7 @@ float normalizedGaussian(float sigma, float sqrDist);
 float normalizedGaussian(const Vector3& size, const Vector3& position, float sigma);
 
 
-template<typename T>
+template <class T>
 std::vector<T> flattenArray(std::vector<std::vector<T>> arr) {
     std::vector<T> finalArray;
     for (const std::vector<T>& val : arr)
@@ -159,7 +159,7 @@ std::vector<T> flattenArray(std::vector<std::vector<T>> arr) {
 }
 
 // Completely stolen from : https://stackoverflow.com/a/54512651
-template <typename Iterator>
+template <class Iterator>
 std::string join(Iterator begin, Iterator end, std::string separator = "")
 {
     std::ostringstream o;
@@ -172,7 +172,7 @@ std::string join(Iterator begin, Iterator end, std::string separator = "")
     return o.str();
 }
 
-template <typename Container>
+template <class Container>
 std::string join(Container const& c, std::string separator = "")
 {
     using std::begin;
@@ -182,7 +182,7 @@ std::string join(Container const& c, std::string separator = "")
     // there might be a non-std overload that wouldn't be found if we did
 }
 
-template <typename T>
+template <class T>
 std::string to_string_with_precision(const T a_value, const int n = 6)
 {
     std::ostringstream out;
@@ -192,7 +192,7 @@ std::string to_string_with_precision(const T a_value, const int n = 6)
 }
 
 namespace stats {
-template<class T>
+template <class T>
 std::pair<T, T> getMuSigma(const std::vector<T>& data)
 {
     T mu;
@@ -215,7 +215,7 @@ std::vector<std::complex<float>> fft(const std::vector<std::complex<float>>& x, 
 std::vector<std::complex<float>> inverseFFT(const std::vector<std::complex<float>>& fft_result);
 bool isPowerOf2(int n);
 
-template<typename T>
+template <class T>
 T findNextPowerOfTwo(T n) { // Works for 32bits or 64bits machines
     size_t numBits = sizeof(T) * 8; // Get the number of bits in the integer type
 

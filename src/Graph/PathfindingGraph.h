@@ -9,7 +9,7 @@
 class Pathfinding
 {
 public:
-//    template<class T>
+//    template <class T>
 //    static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, std::vector<GraphNodeTemplate<T>*>& nodes, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, Graph& graph, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, Graph& graph);
@@ -18,7 +18,7 @@ public:
     static std::vector<int> getPath(int dest, std::vector<int> prec);
     static std::vector<int> getPath(int source, int dest, GridI prec);
 
-//    template<class T>
+//    template <class T>
 //    static std::pair<float, std::vector<int>> AStar(std::map<T, GraphNodeTemplate<T>*>& nodes, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
 //    static std::pair<float, std::vector<int>> AStar(GridF& adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<float, std::vector<int>> AStar(Graph& graph, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
@@ -32,7 +32,7 @@ public:
 
 };
 
-/*template<class T>
+/*template <class T>
 std::pair<float, std::vector<int> > Pathfinding::AStar(std::map<T, GraphNodeTemplate<T>*>& nodes, int source, int dest, std::function<float(int)> heuristicFunction)
 {
     int n = nodes.size();
@@ -83,7 +83,7 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(std::map<T, GraphNodeTemp
     return std::make_pair(std::numeric_limits<float>::max(), prec);
 }*/
 /*
-template<class T>
+template <class T>
 std::pair<float, std::vector<int>> Pathfinding::ShortestPathFrom(int source, int dest, std::vector<GraphNodeTemplate<T>*>& nodes, std::function<float(int)> heuristicFunction)
 {
     return Pathfinding::AStar(nodes, source, dest, heuristicFunction);

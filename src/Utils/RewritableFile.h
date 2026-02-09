@@ -27,7 +27,7 @@ protected:
     std::fstream stream;
 };
 
-//template <typename T>
+//template <class T>
 //RewritableFile& operator<<(RewritableFile& file, const T& text) {
 //    file.open(file.filename, std::ios_base::out | std::ios_base::ate);
 //    file << text;

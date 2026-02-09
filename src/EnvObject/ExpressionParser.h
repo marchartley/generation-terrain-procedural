@@ -67,7 +67,7 @@ protected:
     inline static const float errorFloat = 10000000.f;
 };
 
-template <typename T, typename U>
+template <class T, typename U>
 std::function<Variable(const VariableMap&)> getBinaryOperation(const std::string& tokenStr,
                                                    const std::function<Variable(const VariableMap&)>& leftLambda,
                                                    const std::function<Variable(const VariableMap&)>& rightLambda,
@@ -77,7 +77,7 @@ std::function<Variable(const VariableMap&)> getBinaryOperation(const std::string
         return operationFunc(std::get<T>(leftLambda(variables)), std::get<U>(rightLambda(variables)));
     };
 }
-template <typename T, typename U>
+template <class T, typename U>
 std::function<Variable(const VariableMap&)> getUnaryOperation(const std::string& tokenStr,
                                                    const std::function<Variable(const VariableMap&)>& lambda,
                                                    const std::map<std::string, std::function<Variable(U)>>& operationsMap) {

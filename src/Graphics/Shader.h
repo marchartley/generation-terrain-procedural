@@ -81,7 +81,7 @@ public:
         GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
                                            1, GL_FALSE, &values[0][0]);
     }
-    template<typename T>
+    template <class T>
     void setMatrix(std::string pname, std::vector<std::vector<T>> values)
     {
         int n = values.size(), m = values[0].size();
@@ -91,12 +91,12 @@ public:
                 vals[i + j*n] = values[i][j];
         this->setMatrix(pname, vals, n, m);
     }
-    template<typename T>
+    template <class T>
     void setMatrix(std::string pname, std::vector<T> values)
     {
         this->setMatrix(pname, &values.begin());
     }
-    template<typename T>
+    template <class T>
     void setMatrix(const char* pname, T& values)
     {
         int numberOfElements = sizeof(values)/sizeof(*values);
@@ -125,7 +125,7 @@ public:
         }
     }
 
-    template<typename T>
+    template <class T>
     void setMatrix(std::string pname, T values[], int n, int m)
     {
 //        if (this == nullptr) {

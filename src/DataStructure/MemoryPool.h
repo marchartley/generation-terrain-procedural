@@ -3,7 +3,7 @@
 
 #include <list>
 
-template <typename T>
+template <class T>
 class NodeBlock {
 public:
     NodeBlock();
@@ -14,17 +14,17 @@ public:
     size_t usedNodes = 0;
 };
 
-template <typename T>
+template <class T>
 NodeBlock<T>::NodeBlock() {
     this->nodes = new T[NodeBlock::BLOCK_SIZE];
 }
 
-template <typename T>
+template <class T>
 NodeBlock<T>::~NodeBlock() {
     delete[] nodes;
 }
 
-template <typename T>
+template <class T>
 class MemoryPool {
 private:
     std::list<NodeBlock<T>*> blocks;  // Change to a list of pointers
@@ -42,19 +42,19 @@ private:
     void parallelAllocateBlock();
 };
 
-template <typename T>
+template <class T>
 MemoryPool<T>::MemoryPool() {
     allocateBlock();
 }
 
-template <typename T>
+template <class T>
 MemoryPool<T>::~MemoryPool() {
     for (NodeBlock<T>* block : blocks) {
         delete block;  // Delete each allocated block
     }
 }
 
-template <typename T>
+template <class T>
 T* MemoryPool<T>::allocate() {
     if (currentBlock->usedNodes == NodeBlock<T>::BLOCK_SIZE) {
         allocateBlock();
@@ -62,7 +62,7 @@ T* MemoryPool<T>::allocate() {
     return &(currentBlock->nodes[currentBlock->usedNodes++]);
 }
 
-template <typename T>
+template <class T>
 T* MemoryPool<T>::parallelAllocate() {
     T* res;
     #pragma omp critical
@@ -75,13 +75,13 @@ T* MemoryPool<T>::parallelAllocate() {
     return res;
 }
 
-template <typename T>
+template <class T>
 void MemoryPool<T>::allocateBlock() {
     currentBlock = new NodeBlock<T>();  // Use new to allocate
     blocks.emplace_back(currentBlock);
 }
 
-template <typename T>
+template <class T>
 void MemoryPool<T>::parallelAllocateBlock() {
     #pragma omp critical
     {

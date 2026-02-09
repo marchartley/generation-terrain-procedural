@@ -4,7 +4,7 @@
 #include <queue>
 #include <sstream>
 
-template<>
+template <>
 Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
     Matrix3<Vector3> returningGrid(this->sizeX, this->sizeY, this->sizeZ);
 //    float radius = 1;
@@ -19,12 +19,12 @@ Matrix3<Vector3> Matrix3<Vector3>::curl(float radius) const {
     });
     return returningGrid;
 }
-template<>
+template <>
 Matrix3<Vector3> Matrix3<Vector3>::rot() const {
     return this->curl();
 }
 
-template<>
+template <>
 Matrix3<int> Matrix3<int>::skeletonize() const
 {
     Matrix3<int> self = ((Matrix3<float>)*this).binarize(0.5f);
@@ -74,7 +74,7 @@ Matrix3<int> Matrix3<int>::skeletonize() const
     return self;
 }
 
-template<>
+template <>
 std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
 {
     Matrix3<int> initial = ((Matrix3<float>)*this).binarize(0.5f);
@@ -168,7 +168,7 @@ std::vector<BSpline> Matrix3<int>::skeletonizeToBSplines() const
     }
     return splines;
 }
-template<>
+template <>
 Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<BSpline> splines) const {
     Matrix3<Vector3> newImage(this->getDimensions());
     newImage.raiseErrorOnBadCoord = false;
@@ -192,7 +192,7 @@ Matrix3<Vector3> Matrix3<float>::fillWithBSplines(std::vector<BSpline> splines) 
     return newImage;
 }
 
-template<>
+template <>
 Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
 {
     int currentLabel = 1;
@@ -301,14 +301,14 @@ Matrix3<int> Matrix3<int>::computeConnectedComponents(bool use4Connect) const
     return labelMap;
 }
 
-template<>
+template <>
 Matrix3<int> Matrix3<int>::findContour(bool use2D) const
 {
     auto eroded = this->erode(use2D);
     return *this - eroded;
 }
 
-template<>
+template <>
 std::vector<ShapeCurve> Matrix3<int>::findContoursAsCurves() const
 {
     std::vector<ShapeCurve> curves;
@@ -375,7 +375,7 @@ Matrix3<float> Matrix3<Vector3>::divergence() const
     return returningGrid;
 }
 
-template<>
+template <>
 Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
 {
     auto self = *this;
@@ -389,13 +389,13 @@ Vector3 Matrix3<Vector3>::gradient(const Vector3& position) const
                 );
 }
 
-template<>
+template <>
 Vector3 Matrix3<Vector3>::gradient(float posX, float posY, float posZ) const
 {
     return gradient(Vector3(posX, posY, posZ));
 }
 
-template<>
+template <>
 Matrix3<Vector3> Matrix3<Vector3>::gradient() const
 {
     auto self = *this;
@@ -410,7 +410,7 @@ Matrix3<Vector3> Matrix3<Vector3>::gradient() const
 }
 
 
-template<>
+template <>
 Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t sizeZ)
 {
     Matrix3<Vector3> mat(sizeX, sizeY, sizeZ);
@@ -420,7 +420,7 @@ Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t siz
     return mat;
 }
 
-template<>
+template <>
 Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
 {
     if (!checkPathExists(filename)) {
@@ -453,7 +453,7 @@ Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
     return map;
 }
 
-template<>
+template <>
 Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
 {
     if (!checkPathExists(filename)) {
@@ -483,7 +483,7 @@ Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
 
     return map;
 }
-//template<class T>
+//template <class T>
 Matrix3<float> operator-(const float a, const Matrix3<float>& b) {
     Matrix3<float> res = b;
     res.iterateParallel([&] (size_t i) {
@@ -493,7 +493,7 @@ Matrix3<float> operator-(const float a, const Matrix3<float>& b) {
         res[i] = a - res[i];*/
     return res;
 }
-//template<class T>
+//template <class T>
 Matrix3<float> operator+(const float a, const Matrix3<float>& b) {
     return b + a;
     /*Matrix3<float> res = b;
