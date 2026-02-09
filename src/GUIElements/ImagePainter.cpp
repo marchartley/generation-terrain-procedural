@@ -32,13 +32,12 @@ ImagePainter::ImagePainter(const std::string& name, ChartView* chartView, QWidge
         this->show();
     });
 }
-
+/*
 ImagePainter *ImagePainter::getInstance(std::string name)
 {
     if (name == "") name = ImagePainter::defaultName;
     if (ImagePainter::instances.count(name) == 0) {
-        //        std::cerr << "ImagePainter has not been initialized with function ImagePainter::init()" << std::endl;
-        ImagePainter::instances[name] = ImagePainter::init(name);
+        ImagePainter::init(name);
     }
     return dynamic_cast<ImagePainter*>(ImagePainter::instances[name]);
 }
@@ -50,7 +49,7 @@ ImagePainter *ImagePainter::init(const std::string& name, ChartView *chartView, 
     ImagePainter::instances[name] = new ImagePainter(name, chartView, parent);
     return ImagePainter::getInstance(name);
 }
-
+*/
 ImagePainter *ImagePainter::updateToolsInterface()
 {
     this->toolsInterface->clear();

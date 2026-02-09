@@ -12,12 +12,13 @@ protected: // Singleton
     EnvMaterialViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    static EnvMaterialViewer* getInstance(std::string name = "");
-    static EnvMaterialViewer* get(std::string name = "") { return EnvMaterialViewer::getInstance(toLower(name)); }
-    static EnvMaterialViewer* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    // static EnvMaterialViewer* getInstance(std::string name = "");
+    // static EnvMaterialViewer* get(std::string name = "") { return EnvMaterialViewer::getInstance(toLower(name)); }
+    // static EnvMaterialViewer* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    DECLARE_PLOTTER_GETTER(EnvMaterialViewer)
 
     virtual EnvMaterialViewer* updateToolsInterface();
-    virtual EnvMaterialViewer* updateViewOptionsInterface();
+    // virtual EnvMaterialViewer* updateViewOptionsInterface();
 
     // void paintImage(const Vector3 &pos);
 

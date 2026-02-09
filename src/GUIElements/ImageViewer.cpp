@@ -5,28 +5,26 @@ ImageViewer::ImageViewer(const std::string& name, QWidget *parent) : ImageViewer
 {
 }
 
-ImageViewer::ImageViewer(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
+ImageViewer::ImageViewer(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, name, parent)
 {
-    // this->updateViewOptionsInterface();
 }
-
+/*
 ImageViewer *ImageViewer::getInstance(std::string name)
 {
     if (name == "") name = ImageViewer::defaultName;
-    if (ImageViewer::instances.count(name) == 0) {
-        //        std::cerr << "ImageViewer has not been initialized with function ImageViewer::init()" << std::endl;
-        ImageViewer::instances[name] = ImageViewer::init(name);
+    if (ImageViewer::instances.count(ImageViewer::getIDname<ImageViewer>(name)) == 0) {
+        ImageViewer::init(name);
     }
-    return dynamic_cast<ImageViewer*>(ImageViewer::instances[name]);
+    return dynamic_cast<ImageViewer*>(ImageViewer::instances[ImageViewer::getIDname<ImageViewer>(name)]);
 }
 
-ImageViewer *ImageViewer::init(const std::string& name, ChartView *chartView, QWidget *parent)
+void ImageViewer::init(const std::string& name, ChartView *chartView, QWidget *parent)
 {
-    if (ImageViewer::instances.count(name))
-        delete ImageViewer::instances[name];
-    ImageViewer::instances[name] = new ImageViewer(name, chartView, parent);
-    return ImageViewer::getInstance(name);
+    if (ImageViewer::instances.count(ImageViewer::getIDname<ImageViewer>(name)))
+        delete ImageViewer::instances[ImageViewer::getIDname<ImageViewer>(name)];
+    ImageViewer::instances[ImageViewer::getIDname<ImageViewer>(name)] = new ImageViewer(name, chartView, parent);
 }
+*/
 
 ImageViewer* ImageViewer::updateUI()
 {
@@ -62,61 +60,33 @@ ImageViewer *ImageViewer::updateViewOptionsInterface()
         this->viewOptionsInterface->add(ImageViewerOptionsUI::createRGBImageViewerOptions(this->chartView, this->dataModel));
     else
         this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
-    /*
-    std::cout << "UPDATE VIEWOPTIONS" << std::endl;
-    if (this->viewOptionsInterface != nullptr)
-        this->viewOptionsInterface->clear();
-    auto normalizeModeButton = (new CheckboxElement("Normalize"))->setChecked(false);
-    auto absoluteModeButton = (new CheckboxElement("Absolute"))->setChecked(false);
-    // this->rangeValuesWidget = new RangeSliderElement("Values", -1000, 1000, 0.01f, -1000, 1000, Qt::Vertical);
-    this->rangeValuesWidget = (new RangeSliderElement("Values", -1000, 1000, 0.01f, Qt::Vertical))->setMinMaxValues(-1000, 1000);
-    // auto rangeActiveCheckbox = (new CheckboxElement("Filter"))->setChecked(false);
+    return this;
+}
 
-    absoluteModeButton->setOnChecked([&](bool toggled) {
-        this->dataModel->imageData.setAbsolute(toggled);
-        this->draw();
-    });
-    normalizeModeButton->setOnChecked([&](bool toggled) {
-        this->dataModel->imageData.setNormalized(toggled);
-        this->draw();
-    });
 
-    CheckboxElement* displayRButton = (new CheckboxElement(""))->setChecked(this->dataModel->imageData.displayedColors.x());
-    CheckboxElement* displayGButton = (new CheckboxElement(""))->setChecked(this->dataModel->imageData.displayedColors.y());
-    CheckboxElement* displayBButton = (new CheckboxElement(""))->setChecked(this->dataModel->imageData.displayedColors.z());
-
-    displayRButton->setOnChecked([&](bool toggled) { this->dataModel->imageData.displayedColors.x() = (toggled ? 1 : 0); this->draw(); });
-    displayGButton->setOnChecked([&](bool toggled) { this->dataModel->imageData.displayedColors.y() = (toggled ? 1 : 0); this->draw(); });
-    displayBButton->setOnChecked([&](bool toggled) { this->dataModel->imageData.displayedColors.z() = (toggled ? 1 : 0); this->draw(); });
-
-    RangeSliderElement* rangeR = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
-    RangeSliderElement* rangeG = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
-    RangeSliderElement* rangeB = (new RangeSliderElement("", 0, 1, 0.01f, Qt::Vertical))->setMinMaxValues(0, 1);
-
-    rangeR->setOnValueChanged([&](float newMin, float newMax) { this->dataModel->imageData.colorRangeMin.x() = newMin; this->dataModel->imageData.colorRangeMax.x() = newMax; this->draw(); });
-    rangeG->setOnValueChanged([&](float newMin, float newMax) { this->dataModel->imageData.colorRangeMin.y() = newMin; this->dataModel->imageData.colorRangeMax.y() = newMax; this->draw(); });
-    rangeB->setOnValueChanged([&](float newMin, float newMax) { this->dataModel->imageData.colorRangeMin.z() = newMin; this->dataModel->imageData.colorRangeMax.z() = newMax; this->draw(); });
-
-    std::vector<UIElement*> overlayCheckboxes;
-    for (auto& [name, over] : this->chartView->overlayColors) {
-        CheckboxElement* checkOverlay = new CheckboxElement(name, [=](bool checked) { this->chartView->overlayDisplayed[name] = checked; this->draw(); });
-        checkOverlay->setChecked(this->chartView->overlayDisplayed[name]);
-        overlayCheckboxes.push_back(checkOverlay);
+ImageViewer* ImageViewer::displayInfoUnderMouse(const Vector3 &relativeMousePos)
+{
+    if (relativeMousePos.minComp() < 0.f || relativeMousePos.maxComp() > 1.f)
+        return this;
+    std::ostringstream oss;
+    if (this->hasImage()) {
+        Vector3 size = this->dataModel->getImage().getDimensions();
+        Vector3 position = relativeMousePos * size;
+        Vector3 value = this->dataModel->getImage()[position];
+        oss << "Image (" << int(position.x()) << ", " << int(position.y()) << ") = ";
+        if (this->dataModel->imageData.image.isColor())
+            oss << "(" << value.x() << ", " << value.y() << ", " << value.z() << ") ";
+        else
+            oss << value.x();
     }
-
-    this->viewOptionsInterface->add(std::vector<UIElement*>{
-        normalizeModeButton,
-        absoluteModeButton,
-        createHorizontalGroupUI(std::vector<UIElement*>{
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("R"), displayRButton, rangeR})),
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("G"), displayGButton, rangeG})),
-            createVerticalGroupUI(std::vector<UIElement*>({new LabelElement("B"), displayBButton, rangeB}))
-        }),
-        createHorizontalGroupUI(std::vector<UIElement*>({
-                                                          displayRButton,
-                                                          displayGButton,
-                                                          displayBButton})),
-        createVerticalGroupUI(overlayCheckboxes)
-    });*/
+    if (this->hasImage() && this->hasVectorField())
+        oss << " -- ";
+    if (this->hasVectorField()) {
+        Vector3 size = this->dataModel->vectorData.field.getDimensions();
+        Vector3 position = relativeMousePos * size;
+        Vector3 value = this->dataModel->vectorData.getField()[position];
+        oss << "Vector (" << int(position.x()) << ", " << int(position.y()) << ") = (" << value.x() << ", " << value.y() << ", " << value.z() << ") ";
+    }
+    this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
     return this;
 }

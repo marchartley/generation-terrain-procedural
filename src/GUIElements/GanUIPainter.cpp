@@ -4,7 +4,7 @@ GanUIPainter::GanUIPainter(const std::string& name, QWidget *parent) : GanUIPain
 {
 }
 
-GanUIPainter::GanUIPainter(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, parent)
+GanUIPainter::GanUIPainter(const std::string& name, ChartView *chartView, QWidget *parent) : AbstractPlotter(name, chartView, name, parent)
 {
     auto brushSizeSlider = new SliderElement("Brush size", 1, 50, 1, this->brushSize);
     // auto colorSlider = new SliderElement("Biome", .2f, 1.f, 0.01f, this->colorIndex); // Ignore the 0-0.2 range as it is a transition from abyss to island center.
@@ -47,8 +47,7 @@ GanUIPainter *GanUIPainter::getInstance(std::string name)
 {
     if (name == "") name = GanUIPainter::defaultName;
     if (GanUIPainter::instances.count(name) == 0) {
-        //        std::cerr << "GanUIPainter has not been initialized with function GanUIPainter::init()" << std::endl;
-        GanUIPainter::instances[name] = GanUIPainter::init(name);
+        GanUIPainter::init(name);
     }
     return dynamic_cast<GanUIPainter*>(GanUIPainter::instances[name]);
 }

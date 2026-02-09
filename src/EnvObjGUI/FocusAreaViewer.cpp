@@ -25,13 +25,12 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, ChartView* chartView, 
         this->show();
     });
 }
-
+/*
 FocusAreaViewer *FocusAreaViewer::getInstance(std::string name)
 {
     if (name == "") name = FocusAreaViewer::defaultName;
     if (FocusAreaViewer::instances.count(name) == 0) {
-        //        std::cerr << "FocusAreaViewer has not been initialized with function FocusAreaViewer::init()" << std::endl;
-        FocusAreaViewer::instances[name] = FocusAreaViewer::init(name);
+        FocusAreaViewer::init(name);
     }
     return dynamic_cast<FocusAreaViewer*>(FocusAreaViewer::instances[name]);
 }
@@ -43,7 +42,7 @@ FocusAreaViewer *FocusAreaViewer::init(const std::string& name, ChartView *chart
     FocusAreaViewer::instances[name] = new FocusAreaViewer(name, chartView, parent);
     return FocusAreaViewer::getInstance(name);
 }
-
+*/
 FocusAreaViewer *FocusAreaViewer::updateToolsInterface()
 {
     this->toolsInterface->clear();
@@ -52,6 +51,7 @@ FocusAreaViewer *FocusAreaViewer::updateToolsInterface()
     return this;
 }
 
+/*
 FocusAreaViewer *FocusAreaViewer::updateViewOptionsInterface()
 {
     if (this->viewOptionsInterface != nullptr)
@@ -61,3 +61,4 @@ FocusAreaViewer *FocusAreaViewer::updateViewOptionsInterface()
     this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
     return this;
 }
+*/
