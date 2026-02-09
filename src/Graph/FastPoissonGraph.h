@@ -1,7 +1,7 @@
 #ifndef FASTPOISSONGRAPH_H
 #define FASTPOISSONGRAPH_H
 
-template<class T>
+template <class T>
 class FastPoissonGraph;
 
 #include "DataStructure/Matrix3.h"
@@ -11,13 +11,13 @@ class FastPoissonGraph;
 #include "Graph/Pathfinding.h"
 #include "Graph/Graph.h"
 
-template<class T>
+template <class T>
 class FastPoissonGraph : public GraphTemplate<T>
 {
 public:
     FastPoissonGraph();
     FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float radius = 1.f, int max_tries = 30);
-    template<class U>
+    template <class U>
     FastPoissonGraph(Matrix3<U>& available_space_matrix, float radius = 1.f, int max_tries = 30);
 
     void cleanIndices();
@@ -26,7 +26,7 @@ public:
     void createEdges(int maxNumberNeighbors, float maxDistanceToNeighbor, bool justUpdateConnectionMatrix = false);
 
 //protected:
-    template<class U>
+    template <class U>
     void initNodes(Matrix3<U>& available_space_matrix, float radius, int max_tries);
 
     int sizeX, sizeY, sizeZ;
@@ -40,13 +40,13 @@ public:
 };
 
 
-template<class T>
+template <class T>
 FastPoissonGraph<T>::FastPoissonGraph()
     : GraphTemplate<T>(true)
 {
 }
 
-template<class T>
+template <class T>
 FastPoissonGraph<T>::FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float radius, int max_tries)
     : FastPoissonGraph()
 {
@@ -54,7 +54,7 @@ FastPoissonGraph<T>::FastPoissonGraph(int sizeX, int sizeY, int sizeZ, float rad
     initNodes(available_space_matrix, radius, max_tries);
 }
 
-template<class T>
+template <class T>
 void FastPoissonGraph<T>::cleanIndices()
 {
     int i = 0;
@@ -65,7 +65,7 @@ void FastPoissonGraph<T>::cleanIndices()
     }
 }
 
-template<class T>
+template <class T>
 std::map<int, GraphNodeTemplate<T> *> FastPoissonGraph<T>::addNodes(std::vector<GraphNodeTemplate<T> *> newNodes)
 {
     auto returnValues = GraphTemplate<T>::addNodes(newNodes);
@@ -79,14 +79,14 @@ std::map<int, GraphNodeTemplate<T> *> FastPoissonGraph<T>::addNodes(std::vector<
 }
 
 
-template<class T> template<class U>
+template <class T> template <class U>
 FastPoissonGraph<T>::FastPoissonGraph(Matrix3<U> &available_space_matrix, float radius, int max_tries)
     : FastPoissonGraph()
 {
     initNodes(available_space_matrix, radius, max_tries);
 }
 
-template<class T> template<class U>
+template <class T> template <class U>
 void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float radius, [[maybe_unused]] int max_tries)
 {
     if (_available_space_matrix.getDimensions().minComp() <= radius)
@@ -201,7 +201,7 @@ void FastPoissonGraph<T>::initNodes(Matrix3<U> &_available_space_matrix, float r
     cleanIndices();
 }
 
-template<class T>
+template <class T>
 void FastPoissonGraph<T>::createEdges(int maxNumberNeighbors, float maxDistanceToNeighbor, bool justUpdateConnectionMatrix)
 {
     cleanIndices();

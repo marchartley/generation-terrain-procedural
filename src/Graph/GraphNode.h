@@ -31,36 +31,36 @@ public:
     std::vector<std::pair<GraphNodeTemplate<T>*, float>> neighbors;
 };
 
-template<class T>
+template <class T>
 GraphNodeTemplate<T>::GraphNodeTemplate() : GraphNodeTemplate(T(), Vector3(), 0)
 {
 
 }
-template<class T>
+template <class T>
 GraphNodeTemplate<T>::GraphNodeTemplate(T value) : GraphNodeTemplate(value, Vector3(), 0)
 {
 
 }
-template<class T>
+template <class T>
 GraphNodeTemplate<T>::GraphNodeTemplate(T value, const Vector3& pos, int index)
-    : pos(pos), value(value), index(index), privateVector(Vector3(false)), privateIndex(-1)
+    : pos(pos), value(value), index(index), privateVector(Vector3::invalid()), privateIndex(-1)
 {
 
 }
 
-template<class T>
+template <class T>
 void GraphNodeTemplate<T>::addNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     this->neighbors.push_back(std::make_pair(neighbor, (this->pos - neighbor->pos).norm()));
 }
 
-template<class T>
+template <class T>
 void GraphNodeTemplate<T>::addNeighbor(GraphNodeTemplate<T>* neighbor, float distance)
 {
     this->neighbors.push_back(std::make_pair(neighbor, distance));
 }
 
-template<class T>
+template <class T>
 void GraphNodeTemplate<T>::removeNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     for (int i = this->neighbors.size() - 1; i >= 0; i--)
@@ -69,7 +69,7 @@ void GraphNodeTemplate<T>::removeNeighbor(GraphNodeTemplate<T>* neighbor)
 //    this->neighbors.erase(std::find(this->neighbors.begin(), this->neighbors.end(), neighbor));
 }
 
-template<class T>
+template <class T>
 bool GraphNodeTemplate<T>::hasNeighbor(GraphNodeTemplate<T>* neighbor)
 {
     for (auto& [n, w] : this->neighbors)
@@ -78,7 +78,7 @@ bool GraphNodeTemplate<T>::hasNeighbor(GraphNodeTemplate<T>* neighbor)
     return false;
 }
 
-template<class T>
+template <class T>
 float GraphNodeTemplate<T>::getNeighborDistanceByIndex(int index)
 {
     float distance = 0.f;
@@ -94,7 +94,7 @@ float GraphNodeTemplate<T>::getNeighborDistanceByIndex(int index)
     return std::numeric_limits<float>::max();
 }
 
-template<class T>
+template <class T>
 void GraphNodeTemplate<T>::cleanNeighborhood()
 {
     std::vector<GraphNodeTemplate<T>*> nodes;

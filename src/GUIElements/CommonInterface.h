@@ -16,12 +16,14 @@
 #include <optional>
 #include <variant>
 
+#include <iostream>
+
 class UIElement;
 
 
 
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
-    template <typename Callable, typename... Args> \
+    template <class Callable, typename... Args> \
     auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
         return this; \
@@ -33,14 +35,14 @@ public:
     UIElement(QWidget* widget);
     virtual ~UIElement();
 
-    template <typename WidgetType, typename SignalType, typename Functor>
+    template <class WidgetType, typename SignalType, typename Functor>
     void addConnection(SignalType signal, Functor&& functor) {
         auto* w = qobject_cast<WidgetType*>(element);
         if (!w) throw std::logic_error("Wrong widget type");
         connections.push_back(QObject::connect(w, signal, this, std::forward<Functor>(functor)));
     }
     /*
-    template <typename WidgetType, typename SignalType, typename Callable, typename... Args>
+    template <class WidgetType, typename SignalType, typename Callable, typename... Args>
     void addConnection(SignalType signal, Callable&& slotFunction, Args&&... args) {
         WidgetType* castedWidget = dynamic_cast<WidgetType*>(element);
         if (castedWidget) {
@@ -110,7 +112,7 @@ public:
     FancySlider* slider();
     QLabel* label();
 
-    template <typename Callable, typename... Args>
+    template <class Callable, typename... Args>
     SliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &FancySlider::floatValueChanged,
                                                               std::forward<Callable>(callback),
@@ -144,7 +146,7 @@ public:
     RangeSlider* slider();
     QLabel* label();
 
-    template <typename Callable, typename... Args>
+    template <class Callable, typename... Args>
     RangeSliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &RangeSlider::alt_valueChanged,
                                                               std::forward<Callable>(callback),
@@ -164,6 +166,17 @@ protected:
     std::optional<std::reference_wrapper<float>> boundVariableMin;
     std::optional<std::reference_wrapper<float>> boundVariableMax;
 };
+
+/*
+class FloatInputElement : public UIElement {
+    Q_OBJECT
+public:
+    FloatInputElement(std::string label);
+    FloatInputElement(std::string label, float& binded);
+    FloatInputElement(std::string label, std::function<void(float)> onChange);
+
+
+};*/
 
 class CheckboxElement : public UIElement {
     Q_OBJECT
@@ -192,6 +205,7 @@ class RadioButtonElement : public UIElement {
 public:
     RadioButtonElement(std::string label);
     RadioButtonElement(std::string label, bool& binded);
+    RadioButtonElement(std::string label, const std::function<void(bool)>& onCheck);
 
     QRadioButton* radioButton();
 
@@ -219,7 +233,7 @@ public:
 
 //    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
 
-    template <typename Callable, typename... Args>
+    template <class Callable, typename... Args>
     TextEditElement* setOnReturnPressed(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
                                                               std::forward<Callable>(callback),
@@ -324,9 +338,16 @@ public:
     DEFINE_SET_ON_FUNCTION(setOnItemSelectionChanged, HierarchicalListWidget, itemSelectionChanged);
 
     HierarchicalListUI* clear();
-    HierarchicalListUI* addItem(HierarchicalListWidgetItem* item);
+    HierarchicalListUI* addItem(HierarchicalListWidgetItemBase* item);
     HierarchicalListUI* setCurrentItems(std::vector<int> selectedIDs);
-    QList<QListWidgetItem *> selectedItems();
+    std::vector<HierarchicalListWidgetItemBase*> selectedItems();
+
+    template <class T>
+    HierarchicalListUI* removeItem(const T& itemToRemove)
+    {
+        this->hierarchicalList()->removeItem(itemToRemove);
+        return this;
+    }
 };
 
 class InterfaceUI : public UIElement {
@@ -358,5 +379,6 @@ InterfaceUI* createVerticalGroupUI(std::vector<UIElement*> widgets);
 InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbColumns = 2);
 
 #undef DEFINE_SET_ON_FUNCTION
+
 
 #endif // COMMONINTERFACE_H

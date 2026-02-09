@@ -11,10 +11,10 @@
 #include <cmath>
 
 class AABBox;
-template<typename T>
+template <class T>
 class Vec3;
 
-template<class T>
+template <class T>
 class Vec3 {
 public:
     Vec3();
@@ -23,7 +23,7 @@ public:
 //    Vec3(Vec3* copy);
     Vec3(qglviewer::Vec other);
     explicit Vec3(bool valid);
-    explicit Vec3(const T* coords, bool valid = true);
+    // explicit Vec3(const T* coords, bool valid = true);
 
     ~Vec3() = default;
 
@@ -137,7 +137,7 @@ public:
     }
 
 
-    template<typename U>
+    template <class U>
     operator Vec3<U>() const {
         return Vec3<U>(this->x(), this->y(), this->z());
     }
@@ -153,15 +153,15 @@ public:
     T minComp() const { return std::min(x(), std::min(y(), z())); }
 
 
-    template<typename U, typename V>
+    template <class U, typename V>
     static bool isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<V>& maxPos);
-    template<typename U>
+    template <class U>
     static float signedManhattanDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension = false);
-    template<typename U>
+    template <class U>
     static float manhattanDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension = false);
-    template<typename U>
+    template <class U>
     static float signedDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension = false);
-    template<typename U>
+    template <class U>
     static float distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension = false);
 
     bool isValid() const { return this->valid && std::isfinite(x()) && std::isfinite(y()) && std::isfinite(z()); }
@@ -173,31 +173,31 @@ public:
     const T* data() const { return v; }
 //    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
 //    friend Vec3 operator+(const Vec3<T>& a, Vec3& b);
-    template<typename U>
+    template <class U>
     Vec3& operator+=(const Vec3<U>& o);
-    template<typename U>
+    template <class U>
     Vec3& operator-=(const Vec3<U>& o);
-    template<typename U>
+    template <class U>
     Vec3& operator*=(const Vec3<U>& o);
-    // template<typename U>
+    // template <class U>
 //    Vec3 operator/(const Vec3<U>& o);
-    template<typename U>
+    template <class U>
     Vec3& operator/=(const Vec3<U>& o);
-    // template<typename U>
+    // template <class U>
 //    Vec3 operator*(U o) const;
-    template<typename U>
+    template <class U>
     Vec3& operator*=(U o);
-    // template<typename U>
+    // template <class U>
 //    Vec3 operator/(U o);
-    template<typename U>
+    template <class U>
     Vec3& operator/=(U o);
-    // template<typename U>
+    // template <class U>
 //    Vec3 operator+(U o);
-    template<typename U>
+    template <class U>
     Vec3& operator+=(U o);
-    // template<typename U>
+    // template <class U>
 //    Vec3 operator-(U o);
-    template<typename U>
+    template <class U>
     Vec3& operator-=(U o);
     // Friend functions
     /*friend Vec3 operator+(const Vec3<T>& a, const Vec3<T>& b);
@@ -273,32 +273,32 @@ public:
     bool valid = true;
 
 };
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator+(const Vec3<T>& a, const Vec3<U>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator-(const Vec3<T>& a, const Vec3<U>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b);
 
 
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator+(U a, const Vec3<T>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator-(U a, const Vec3<T>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(U a, const Vec3<T>& b);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(U a, const Vec3<T>& b);
 
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator+(const Vec3<T>& b, U a);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator-(const Vec3<T>& b, U a);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(const Vec3<T>& b, U a);
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(const Vec3<T>& b, U a);
 
 using Vector3 = Vec3<float>;
@@ -342,7 +342,7 @@ inline void hash_combine(std::size_t& seed, T const& v)
     seed ^= std::hash<T>()(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
 namespace std {
-template<class T>
+template <class T>
 Vec3<T> abs(const Vec3<T>& o);
     /*template <> struct hash<Vec3>
     {
@@ -365,56 +365,56 @@ Vec3<T> abs(const Vec3<T>& o);
 
 
 
-template<class T>
+template <class T>
 constexpr Vec3<T>::Vec3(T x, T y, T z, bool valid) : v{x, y, z}, valid(valid) {
 
 }
-template<class T>
+template <class T>
 Vec3<T>::Vec3() : Vec3(0.f, 0.f, 0.f) {
 
 }/*
-template<class T>
+template <class T>
 Vec3<T>::Vec3(const Vec3& copy) : Vec3(copy.x, copy.y, copy.z, copy.valid) {
 
 }
-template<class T>
+template <class T>
 Vec3<T>::Vec3(Vec3* copy) : Vec3(copy->x, copy->y, copy->z, copy->valid) {
 
 }*/
 
-template<class T>
+template <class T>
 Vec3<T>::Vec3(qglviewer::Vec other)
     : Vec3(other.x, other.y, other.z)
 {
 
 }
 
-template<class T>
+template <class T>
 Vec3<T>::Vec3(bool valid) : Vec3()
 {
     this->valid = valid;
 }
-
-template<class T>
+/*
+template <class T>
 Vec3<T>::Vec3(const T *coords, bool valid)
     : Vec3(coords[0], coords[1], coords[2], valid)
 {
 
 }
-
-template<class T>
+*/
+template <class T>
 float Vec3<T>::norm() const {
     // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return sqrt(this->x() * this->x() + this->y() * this->y() + this->z() * this->z());
 }
-template<class T>
+template <class T>
 float Vec3<T>::norm2() const {
     // if(this->x == 0 && this->y == 0 && this->z == 0) return 0;
     return this->x() * this->x() + this->y() * this->y() + this->z() * this->z();
 }
 
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::normalize() {
     float n2 = x()*x() + y()*y() + z()*z();
     if (n2 < 1e-10f) return *this;   // (1e-5)^2
@@ -422,13 +422,13 @@ Vec3<T>& Vec3<T>::normalize() {
     x() *= inv; y() *= inv; z() *= inv;
     return *this;
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::normalized() const {
     Vec3 a = *this;
     return a.normalize();
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::abs() const
 {
     Vec3 a = *this;
@@ -438,14 +438,14 @@ Vec3<T> Vec3<T>::abs() const
     return a;
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::setMag(float newMag)
 {
     this->normalize() *= newMag;
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::maxMagnitude(float maxMag)
 {
     if (this->norm2() > maxMag*maxMag)
@@ -453,7 +453,7 @@ Vec3<T>& Vec3<T>::maxMagnitude(float maxMag)
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::minMagnitude(float minMag)
 {
     if (this->norm2() < minMag*minMag)
@@ -461,7 +461,7 @@ Vec3<T>& Vec3<T>::minMagnitude(float minMag)
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::clamp(float minMag, float maxMag)
 {
     float mag2 = this->norm2();
@@ -472,14 +472,14 @@ Vec3<T>& Vec3<T>::clamp(float minMag, float maxMag)
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::clamped(float minMag, float maxMag) const
 {
     Vec3 v = *this;
     return v.clamp(minMag, maxMag);
 }
 
-template<class T>
+template <class T>
 Vec3<T> &Vec3<T>::clamp(const Vec3 &minBound, const Vec3 &maxBound)
 {
     this->x() = (this->x() < minBound.x() ? minBound.x() : this->x() > maxBound.x() ? maxBound.x() : this->x());
@@ -488,27 +488,27 @@ Vec3<T> &Vec3<T>::clamp(const Vec3 &minBound, const Vec3 &maxBound)
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::clamped(const Vec3 &minBound, const Vec3 &maxBound) const
 {
     Vec3 v = *this;
     return v.clamp(minBound, maxBound);
 }
 
-template<class T>
+template <class T>
 bool Vec3<T>::isAlmostVertical()
 {
     static const Vec3 up(0, 0, 1);
     return std::abs(this->dot(up)) > 0.999;
 }
 
-template<class T>
+template <class T>
 Matrix Vec3<T>::toMatrix() const
 {
     return Matrix(3, 1, this->data());
 }
 
-template<class T>
+template <class T>
 Matrix Vec3<T>::toRotationMatrix() const
 {
     Matrix Rx (3, 3, std::vector<float>({
@@ -529,7 +529,7 @@ Matrix Vec3<T>::toRotationMatrix() const
     return Rx.product(Ry).product(Rz);
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::toEulerAngles()
 {
     Vec3 self = this->normalized();
@@ -540,7 +540,7 @@ Vec3<T> Vec3<T>::toEulerAngles()
         );
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::eulerAnglesWith(const Vec3& other)
 {
     return Vec3(false);
@@ -559,7 +559,7 @@ Vec3<T> Vec3<T>::eulerAnglesWith(const Vec3& other)
     return result;*/
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::getAllAnglesWith(const Vec3 &otherVector) const
 {
     if (*this == otherVector)
@@ -570,7 +570,7 @@ Vec3<T> Vec3<T>::getAllAnglesWith(const Vec3 &otherVector) const
     return Vec3(onX, onY, onZ);
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::getAngleWith(const Vec3& otherVector) const
 {
     float denom = std::sqrt(this->norm2() * otherVector.norm2());
@@ -581,13 +581,13 @@ float Vec3<T>::getAngleWith(const Vec3& otherVector) const
 
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::getSignedAngleWith(const Vec3 &otherVector) const
 {
     return this->getAngleWith(otherVector) * sign(this->cross(otherVector).z());
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::getSignedAngleAroundAxisWith(const Vec3 &otherVector, const Vec3 &axis) const
 {
     Vec3 normalizedAxis = axis.normalized();
@@ -605,13 +605,13 @@ float Vec3<T>::getSignedAngleAroundAxisWith(const Vec3 &otherVector, const Vec3 
     return angle;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::quaternionToEuler(qglviewer::Quaternion quaternion)
 {
     return Vec3::quaternionToEuler(quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::quaternionToEuler(float x, float y, float z, float w)
 {
     Vec3 angles;
@@ -634,7 +634,7 @@ Vec3<T> Vec3<T>::quaternionToEuler(float x, float y, float z, float w)
     return angles;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::slerp(float t, const Vec3 &A, const Vec3 &B) {
     float lengthA = A.norm();
     float lengthB = B.norm();
@@ -650,18 +650,18 @@ Vec3<T> Vec3<T>::slerp(float t, const Vec3 &A, const Vec3 &B) {
     return ((start * std::cos(theta)) + (relativeVec * std::sin(theta))) * interpolation::inv_linear(t, lengthA, lengthB);
 }
 
-template<class T>
+template <class T>
 T Vec3<T>::dot(const Vec3& o) const {
     return (this->x() * o.x()) + (this->y() * o.y()) + (this->z() * o.z());
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::cross(const Vec3& o) const {
     Vec3 v(this->y() * o.z() - this->z() * o.y(),
            this->z() * o.x() - this->x() * o.z(),
            this->x() * o.y() - this->y() * o.x());
     return v;
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rounded(int precision) const
 {
     return this->roundedDown(precision);
@@ -672,20 +672,20 @@ Vec3<T> Vec3<T>::rounded(int precision) const
     return v;*/
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::roundedUp(int precision) const
 {
     float power = std::pow(10, precision);
     return ((*this) * power).ceil() / power;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::roundedDown(int precision) const
 {
     float power = std::pow(10, precision);
     return ((*this) * power).floor() / power;
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::floor() const
 {
     Vec3 v = *this;
@@ -694,7 +694,7 @@ Vec3<T> Vec3<T>::floor() const
     v.z() = std::floor(v.z());
     return v;
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::ceil() const
 {
     Vec3 v = *this;
@@ -704,7 +704,7 @@ Vec3<T> Vec3<T>::ceil() const
     return v;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::wrap(const Vec3& p, const Vec3& mini, const Vec3& maxi)
 {
     Vec3 newMaxi = maxi - mini;
@@ -722,50 +722,50 @@ Vec3<T> Vec3<T>::wrap(const Vec3& p, const Vec3& mini, const Vec3& maxi)
     return Vec3(fmod(newP.x(), newMaxi.x()) + mini.x(), fmod(newP.y(), newMaxi.y()) + mini.y(), fmod(newP.z(), newMaxi.z()) + mini.z());
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::magnitude() const
 {
     return this->norm();
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::length() const
 {
     return this->norm();
 }
 
-template<class T>
+template <class T>
 float Vec3<T>::lengthSquared() const
 {
     return this->norm2();
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random() {
     Vec3 v(random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0), random_gen::generate(-1.0, 1.0));
     v.normalize();
     return v;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random(float norm)
 {
     return Vec3::random() * norm;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random(float minNorm, float maxNorm)
 {
     return Vec3::random() * random_gen::generate(minNorm, maxNorm);
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random(const Vec3& maxValues)
 {
     return Vec3::random(Vec3(), maxValues);
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random(const Vec3& minValues, const Vec3& maxValues)
 {
     return Vec3(random_gen::generate(minValues.x(), maxValues.x()),
@@ -773,18 +773,18 @@ Vec3<T> Vec3<T>::random(const Vec3& minValues, const Vec3& maxValues)
                 random_gen::generate(minValues.z(), maxValues.z()));
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::random(const AABBox &bounds)
 {
     return Vec3::random(bounds.min(), bounds.max());
 }
 
-template<class T>
+template <class T>
 std::vector<T> Vec3<T>::toArray(const Vec3& v)
 {
     return {v.x(), v.y(), v.z()};
 }
-template<class T>
+template <class T>
 std::vector<T> Vec3<T>::toArray(const std::vector<Vec3>& vs)
 {
     std::vector<T> arr;
@@ -793,7 +793,7 @@ std::vector<T> Vec3<T>::toArray(const std::vector<Vec3>& vs)
     return arr;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::min()
 {
     return Vec3(std::numeric_limits<T>::lowest(),
@@ -801,7 +801,7 @@ Vec3<T> Vec3<T>::min()
                 std::numeric_limits<T>::lowest());
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::max()
 {
     return Vec3(std::numeric_limits<T>::max(),
@@ -809,7 +809,7 @@ Vec3<T> Vec3<T>::max()
                 std::numeric_limits<T>::max());
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::min(const Vec3<T>& a, const Vec3<T>& b)
 {
     if (!a.isValid()) return b;
@@ -817,7 +817,7 @@ Vec3<T> Vec3<T>::min(const Vec3<T>& a, const Vec3<T>& b)
     return Vec3(std::min(a.x(), b.x()), std::min(a.y(), b.y()), std::min(a.z(), b.z()));
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::max(const Vec3<T>& a, const Vec3<T>& b)
 {
     if (!a.isValid()) return b;
@@ -825,7 +825,7 @@ Vec3<T> Vec3<T>::max(const Vec3<T>& a, const Vec3<T>& b)
     return Vec3(std::max(a.x(), b.x()), std::max(a.y(), b.y()), std::max(a.z(), b.z()));
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::min(const std::vector<Vec3>& allVectors)
 {
     if (allVectors.empty())
@@ -836,7 +836,7 @@ Vec3<T> Vec3<T>::min(const std::vector<Vec3>& allVectors)
     return res;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::max(const std::vector<Vec3>& allVectors)
 {
     if (allVectors.empty())
@@ -847,7 +847,7 @@ Vec3<T> Vec3<T>::max(const std::vector<Vec3>& allVectors)
     return res;
 }
 
-template<class T>
+template <class T>
 std::vector<Vec3<T>> Vec3<T>::getAABBoxVertices(const Vec3& mini, const Vec3& maxi)
 {
     T minX = mini.x(), maxX = maxi.x(),
@@ -866,11 +866,11 @@ std::vector<Vec3<T>> Vec3<T>::getAABBoxVertices(const Vec3& mini, const Vec3& ma
 }
 
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::rotate(float angle_x, float angle_y, float angle_z) {
     return this->rotate(Vec3(angle_x, angle_y, angle_z));
 }
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::rotate(const Vec3& eulerAngles) {
     return this->applyTransform(eulerAngles.toRotationMatrix());
     /*Matrix newCoords = R.product(this->toMatrix());
@@ -879,20 +879,20 @@ Vec3<T>& Vec3<T>::rotate(const Vec3& eulerAngles) {
     this->z = newCoords[2][0];
     return *this;*/
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rotated(float angle_x, float angle_y, float angle_z) const {
     return this->rotated(Vec3(angle_x, angle_y, angle_z));
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rotated(const Vec3& eulerAngles) const {
     Vec3 v = *this;
     return v.rotate(eulerAngles);
 }
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::rotate(float angle, float dir_x, float dir_y, float dir_z) {
     return this->rotate(angle, Vec3(dir_x, dir_y, dir_z));
 }
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::rotate(float angle, const Vec3& direction) {
     float c = cos(angle), s = sin(angle);
     Vec3 v = direction.normalized(); // alias
@@ -908,34 +908,34 @@ Vec3<T>& Vec3<T>::rotate(float angle, const Vec3& direction) {
     this->z = newCoords[2][0];
     return *this;*/
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rotated(float angle, float dir_x, float dir_y, float dir_z) const {
     return this->rotated(angle, Vec3(dir_x, dir_y, dir_z));
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rotated(float angle, const Vec3& direction) const {
     Vec3 v = *this;
     return v.rotate(angle, direction);
 }
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::translate(T move_x, T move_y, T move_z) {
     return this->translate(Vec3(move_x, move_y, move_z));
 }
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::translate(const Vec3& move) {
     return (*this += move);
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::translated(T move_x, T move_y, T move_z) {
     return this->translated(Vec3(move_x, move_y, move_z));
 }
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::translated(const Vec3& move) {
     Vec3 v = *this;
     return v.translate(move);
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::applyTransform(Matrix transformMatrix)
 {
     // Matrix newCoords = transformMatrix.product(this->toMatrix());
@@ -952,13 +952,13 @@ Vec3<T>& Vec3<T>::applyTransform(Matrix transformMatrix)
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::rotated90XY() const
 {
     return Vec3(y(), -x());
 }
 
-template<class T>
+template <class T>
 Vec3<T>& Vec3<T>::changeBasis(const Vec3& newX, const Vec3& newY, const Vec3& newZ)
 {
     Vec3 newVec = this->changedBasis(newX, newY, newZ);
@@ -968,7 +968,7 @@ Vec3<T>& Vec3<T>::changeBasis(const Vec3& newX, const Vec3& newY, const Vec3& ne
     return *this;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::changedBasis(const Vec3& newX, const Vec3& newY, const Vec3& newZ)
 {
     Vec3 newVec;
@@ -976,7 +976,7 @@ Vec3<T> Vec3<T>::changedBasis(const Vec3& newX, const Vec3& newY, const Vec3& ne
     return newVec;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::reflexion(const Vec3& normal)
 {
     T dot = normal.dot(*this);
@@ -984,20 +984,20 @@ Vec3<T> Vec3<T>::reflexion(const Vec3& normal)
     return *this - n2d;
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::toPolar()
 {
     static const Vec3 right(1, 0);
     return Vec3(this->getAngleWith(right) / (2.f * M_PI), this->norm());
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::fromPolar()
 {
     return Vec3(1, 0).rotate(0, 0, this->x() * (2.f * M_PI)) * this->y();
 }
 
-template<class T>
+template <class T>
 Vec3<T> Vec3<T>::fromMatrix(Matrix mat)
 {
     if (mat.size() == 1) {
@@ -1009,13 +1009,13 @@ Vec3<T> Vec3<T>::fromMatrix(Matrix mat)
     }
 }
 
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator+(const Vec3<T>& a, const Vec3<U>& b) {
     Vec3 res = a;
     res += b;
     return res;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
     this->x() += o.x();
     this->y() += o.y();
@@ -1023,13 +1023,13 @@ Vec3<T>& Vec3<T>::operator+=(const Vec3<U>& o) {
     this->valid &= o.valid;
     return *this;
 }
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator-(const Vec3<T>& a, const Vec3<U>& b) {
     Vec3 res = a;
     res -= b;
     return res;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
     this->x() -= o.x();
     this->y() -= o.y();
@@ -1038,17 +1038,17 @@ Vec3<T>& Vec3<T>::operator-=(const Vec3<U>& o) {
     return *this;
 }
 
-template<class T>
+template <class T>
 T &Vec3<T>::operator[](size_t i)
 {
     return ((T*)(this))[i];
 }
-template<class T>
+template <class T>
 const T &Vec3<T>::operator[](size_t i) const
 {
     return ((T*)(this))[i];
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
     this->x() *= o.x();
     this->y() *= o.y();
@@ -1056,7 +1056,7 @@ Vec3<T>& Vec3<T>::operator*=(const Vec3<U>& o) {
     this->valid &= o.valid;
     return *this;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
     this->x() /= o.x();
     this->y() /= o.y();
@@ -1064,129 +1064,129 @@ Vec3<T>& Vec3<T>::operator/=(const Vec3<U>& o) {
     this->valid &= o.valid;
     return *this;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator*=(U o) {
     this->x() *= o;
     this->y() *= o;
     this->z() *= o;
     return *this;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator/=(U o) {
     this->x() /= o;
     this->y() /= o;
     this->z() /= o;
     return *this;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator+=(U o) {
     this->x() += o;
     this->y() += o;
     this->z() += o;
     return *this;
 }
-template<class T> template<typename U>
+template <class T> template <class U>
 Vec3<T>& Vec3<T>::operator-=(U o) {
     this->x() -= o;
     this->y() -= o;
     this->z() -= o;
     return *this;
 }
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(const Vec3<T>& a, const Vec3<U>& b) {
     Vec3 res = a;
     res /= b;
     return res;
 }
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(const Vec3<T>& a, const Vec3<U>& b) {
     Vec3 res = a;
     res *= b;
     return res;
 }
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(U a, const Vec3<T>& b) {
     Vec3 res = b;
     res *= a;
     return res;
 }
 
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(U a, const Vec3<T>& b) {
     return Vec3(a / b.x(), a / b.y(), a / b.z());
 }
 
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator*(const Vec3<T>& b, U a) {
     Vec3 res = b;
     res *= a;
     return res;
 }
-template<class T, class U>
+template <class T, class U>
 Vec3<T> operator/(const Vec3<T>& b, U a) {
     Vec3 res = b;
     res /= a;
     return res;
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator==(const Vec3<T>& a, const Vec3<U>& b)
 {
     float epsilon = 1e-8;
     return std::abs(a.x() - b.x()) < epsilon && std::abs(a.y() - b.y()) < epsilon && std::abs(a.z() - b.z()) < epsilon; //int(a.x() * 1e8) == int(b.x() * 1e8) && int(a.y() * 1e8) == int(b.y() * 1e8) && int(a.z() * 1e8) == int(b.z() * 1e8);
 }
 
-template<class T>
+template <class T>
 Vec3<T> operator-(const Vec3<T>& v) {
     return Vec3<T>() - v;
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator!=(const Vec3<T>& a, const Vec3<U>& b)
 {
     return !(a == b);
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator<(const Vec3<T>& a, const Vec3<U>& b)
 {
     return a.norm2() < b.norm2();
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator<=(const Vec3<T>& a, const Vec3<U>& b)
 {
     return !(a > b);
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator>(const Vec3<T>& a, const Vec3<U>& b)
 {
     return a.norm2() > b.norm2();
 }
 
-template<class T, class U>
+template <class T, class U>
 bool operator>=(const Vec3<T>& a, const Vec3<U>& b)
 {
     return !(a < b);
 }
 
-template<class T>
+template <class T>
 std::ostream& operator<<(std::ostream& io, const Vec3<T>& v) {
     io << v.toString();
     return io;
 }
 
-template<class T>
+template <class T>
 std::ostream& operator<<(std::ostream& io, std::shared_ptr<Vec3<T>> v) {
     io << v->toString();
     return io;
 }
 
-template<class T>
+template <class T>
 Vec3<T> std::abs(const Vec3<T>& o) { return o.abs(); }
 
-template<class T> template<class U, class V>
+template <class T> template <class U, class V>
 bool Vec3<T>::isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<V> &maxPos) {
     return (minPos.x() <= pos.x() && pos.x() <= maxPos.x()) && (minPos.y() <= pos.y() && pos.y() <= maxPos.y()) && (minPos.z() <= pos.z() && pos.z() <= maxPos.z());
     //    return (pos - minPos).minComp() >= 0.f && (pos - (minPos + maxPos)).maxComp() <= 0.f;
@@ -1194,7 +1194,7 @@ bool Vec3<T>::isInBox(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<V> &
 
 // Inside : positive
 // Outside: negative
-template<class T> template<class U>
+template <class T> template <class U>
 float Vec3<T>::signedManhattanDistanceToBoundaries(const Vec3& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension)
 {
     Vec3<T> newPos = pos - minPos;
@@ -1219,13 +1219,13 @@ float Vec3<T>::signedManhattanDistanceToBoundaries(const Vec3& pos, const Vec3<U
     }
 }
 
-template<class T> template<class U>
+template <class T> template <class U>
 float Vec3<T>::manhattanDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension)
 {
     return std::abs(Vec3::signedManhattanDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
 }
 
-template<class T> template<class U>
+template <class T> template <class U>
 float Vec3<T>::signedDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension)
 {
     Vec3 boxDim = maxPos - minPos;
@@ -1242,7 +1242,7 @@ float Vec3<T>::signedDistanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& min
 
 }
 
-template<class T> template<class U>
+template <class T> template <class U>
 float Vec3<T>::distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, const Vec3<U>& maxPos, bool ignoreZdimension)
 {
     return std::abs(Vec3::signedDistanceToBoundaries(pos, minPos, maxPos, ignoreZdimension));
@@ -1250,9 +1250,9 @@ float Vec3<T>::distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, c
 
 
 
-template<class T>
+template <class T>
 nlohmann::json vec3_to_json(const Vec3<T>& vec);
-template<class T>
+template <class T>
 Vec3<T> json_to_vec3(nlohmann::json json);
 
 std::vector<float> json_to_color(nlohmann::json json);
@@ -1264,11 +1264,11 @@ nlohmann::json color_to_json(const Vector3& color);
 
 
 
-template<class T>
+template <class T>
 nlohmann::json vec3_to_json(const Vec3<T>& vec) {
     return nlohmann::json({{"x", vec.x()}, {"y", vec.y()}, {"z", vec.z()}});
 }
-template<class T>
+template <class T>
 Vec3<T> json_to_vec3(nlohmann::json json)
 {
     return Vec3<T>(json.at("x").get<T>(), json.at("y").get<T>(), json.at("z").get<T>());

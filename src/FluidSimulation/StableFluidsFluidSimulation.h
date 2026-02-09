@@ -96,7 +96,7 @@ public:
     Vector3 meanVel;
 
 
-    template<typename T>
+    template <class T>
     void swapArrays(Matrix3<T>& arr, Matrix3<T>& arr2)
     {
         Matrix3<T> tmpArray = arr;
@@ -104,14 +104,14 @@ public:
         arr2 = tmpArray;
     }
 
-    template<typename T>
+    template <class T>
     void diffuse(Matrix3<T>& arr, Matrix3<T>& arr2, float diff, bool inverseOnBounds = false)
     {
         // TODO : check "a"
         float a = dt * diff * (arr.sizeX - 2) * (arr.sizeY - 2) * (arr.sizeZ - 2);
         this->solve_linear(arr, arr2, a, inverseOnBounds);
     }
-    template<typename T>
+    template <class T>
     void set_bounds(Matrix3<T>& arr, bool inverseOnBounds = false, bool nullifyOnBounds = true)
     {
         nullifyOnBounds = true;
@@ -191,7 +191,7 @@ public:
                             arr(X2, Y1, Z1)) * (1/3.f);
     }
 
-    template<typename T>
+    template <class T>
     void solve_linear(Matrix3<T>& arr1, Matrix3<T>& arr0, float a, bool inverseOnBounds = false)
     {
         for (int k = 0; k < this->iterations; k++) {
@@ -213,7 +213,7 @@ public:
         }
     }
 
-    template<typename T>
+    template <class T>
     void advect(Matrix3<T>& arr, Matrix3<T>& old_array,
                 GridV3& velocity_array, bool inverseOnBounds = false)
     {
