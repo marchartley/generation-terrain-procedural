@@ -416,7 +416,7 @@ void EnvObjsInterface::mouseClickedOnMapEvent(const Vector3 &mouseWorldPosition,
 
             KelvinletPoint* _k;
             if (this->KelvinletChoice == "grab") {
-                _k = new TranslateKelvinlet();
+                _k = new GrabKelvinlet();
             } else if (this->KelvinletChoice == "scale") {
                 _k = new ScaleKelvinlet();
                 _k->v = 0.1; // Don't keep the default value of 0.5 here!
@@ -448,7 +448,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
 
         if (_k != nullptr) {
             if (this->KelvinletChoice == "grab") {
-                TranslateKelvinlet* k = dynamic_cast<TranslateKelvinlet*>(_k);
+                GrabKelvinlet* k = dynamic_cast<GrabKelvinlet*>(_k);
                 k->force = delta;
             } else if (this->KelvinletChoice == "scale") {
                 ScaleKelvinlet* k = dynamic_cast<ScaleKelvinlet*>(_k);
@@ -463,7 +463,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                 // k->radialScale = delta.norm();
             }
 
-            this->scene->updateFlowfield(userFlowField + simulationFlowField + this->scene->scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
+            this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
             this->updateVectorFieldVisu();
             // Q_EMIT this->updated();
         }
@@ -949,7 +949,7 @@ void EnvObjsInterface::resetFlowfield()
         delete this->userKelvinlets[i];
     this->userKelvinlets.resize(0);
 
-    this->scene->updateFlowfield(simulationFlowField + this->scene->scenario.computeStorm(userFlowField.getDimensions()));
+    this->scene->updateFlowfield(GridV3(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
@@ -976,7 +976,7 @@ void EnvObjsInterface::updateObjectsList()
             text += " [*]";
         else
             text += " (" + std::to_string(int(obj->computeGrowingState() * 100.f)) + "% -- " + std::to_string(int(100.f * obj->computeGrowingState2())) + "% -- " + std::to_string(obj->evaluate()) + "/" + std::to_string(obj->fitnessScoreAtCreation) + ")";
-        objectsListWidget->addItem(new HierarchicalListWidgetItem(text, obj->ID, 0));
+        objectsListWidget->addItem(new HierarchicalListWidgetItemBase(text, obj->ID, 0));
         if (isIn(obj->ID, currentSelectionsIDs))
             currentSelections.push_back(obj);
     }
@@ -988,7 +988,7 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *__newSelectio
     currentSelections.clear();
 
     for (auto newSelectionItem : objectsListWidget->selectedItems()) {
-        auto newSelection = dynamic_cast<HierarchicalListWidgetItem*>(newSelectionItem);
+        auto newSelection = dynamic_cast<HierarchicalListWidgetItemBase*>(newSelectionItem);
         if (!newSelection) {
             continue; // Does it happen?
         }
@@ -1623,7 +1623,7 @@ void EnvObjsInterface::saveScene(std::string filename)
 
 GridV3 EnvObjsInterface::renderFlowfield() const
 {
-    this->scene->updateFlowfield(userFlowField + simulationFlowField + this->scene->scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
+    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
     GridV3& flow = this->scene->flowfield;
     // return ImageViewer::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
     return ImageViewer::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
@@ -1757,8 +1757,8 @@ void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3
         brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
     });
     // this->scene->initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    this->userFlowField.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    this->scene->updateFlowfield(userFlowField + simulationFlowField + this->scene->scenario.computeStorm(userFlowField.getDimensions()) + this->computeUserKelvinletField());
+    this->userFlowField.add(brush, mousePos - brush.getDimensions().xy() * .5f);
+    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
     this->updateVectorFieldVisu();
 
     this->addObjectsHeightmaps();
@@ -2460,8 +2460,8 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
                                                                 terrain,
                                                                 boundariesTree,
                                                                 particleSimulationTime, terrainModifTime,
-                                                                Vector3(false),
-                                                                Vector3(false),
+                                                                Vector3::invalid(),
+                                                                Vector3::invalid(),
                                                                 0.f,
                                                                 true,
                                                                 gravity,

@@ -11,6 +11,9 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const = 0;
 
+    virtual Kelvinlet* clone() const = 0;
+    virtual std::string getShortName() const = 0;
+
 //    inline float strength(const Vector3& p) const { return densityFunction((p - pos).norm()); }
     inline float regularDistance(float r) const { return std::sqrt(r*r + radialScale*radialScale); }
     inline float densityFunction(float r) const { return (15 * std::pow(radialScale, 4)) / (8 * M_PI * std::pow(regularDistance(r), 7)); }
@@ -31,11 +34,14 @@ public:
     Vector3 pos;
 };
 
-class TranslateKelvinlet : public KelvinletPoint {
+class GrabKelvinlet : public KelvinletPoint {
 public:
-    TranslateKelvinlet();
+    GrabKelvinlet();
 
     virtual Vector3 evaluate(const Vector3& p) const;
+
+    virtual Kelvinlet* clone() const { return new GrabKelvinlet(*this); }
+    virtual std::string getShortName() const { return "Grab"; }
 
     Vector3 force;
 };
@@ -47,6 +53,9 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
+    virtual Kelvinlet* clone() const { return new TwistKelvinlet(*this); }
+    virtual std::string getShortName() const { return "Twist"; }
+
     Vector3 force;
 };
 
@@ -57,6 +66,9 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
+    virtual Kelvinlet* clone() const { return new ScaleKelvinlet(*this); }
+    virtual std::string getShortName() const { return "Scale"; }
+
     float scale;
 };
 
@@ -66,6 +78,9 @@ public:
     PinchKelvinlet();
 
     virtual Vector3 evaluate(const Vector3& p) const;
+
+    virtual Kelvinlet* clone() const { return new PinchKelvinlet(*this); }
+    virtual std::string getShortName() const { return "Pinch"; }
 
     Vector3 force;
 };
@@ -86,6 +101,9 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
+    virtual Kelvinlet* clone() const { return new TranslateKelvinletCurve(*this); }
+    virtual std::string getShortName() const { return "Translate Curve"; }
+
     float force;
 };
 
@@ -95,6 +113,9 @@ public:
     TwistKelvinletCurve();
 
     virtual Vector3 evaluate(const Vector3& p) const;
+
+    virtual Kelvinlet* clone() const { return new TwistKelvinletCurve(*this); }
+    virtual std::string getShortName() const { return "Twist Curve"; }
 
     float force;
 };
@@ -106,6 +127,9 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
+    virtual Kelvinlet* clone() const { return new ScaleKelvinletCurve(*this); }
+    virtual std::string getShortName() const { return "Scale Curve"; }
+
     float force;
 };
 
@@ -115,6 +139,9 @@ public:
     PinchKelvinletCurve();
 
     virtual Vector3 evaluate(const Vector3& p) const;
+
+    virtual Kelvinlet* clone() const { return new PinchKelvinletCurve(*this); }
+    virtual std::string getShortName() const { return "Pinch Curve"; }
 
     float force;
 };
