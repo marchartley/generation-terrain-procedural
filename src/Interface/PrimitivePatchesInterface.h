@@ -15,7 +15,7 @@ class PrimitivePatchesInterface : public ActionInterface
 public:
     PrimitivePatchesInterface(QWidget *parent = nullptr);
 
-    void display(const Vector3& camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3::invalid());
     void reloadShaders();
 
     void replay(nlohmann::json action);
@@ -131,7 +131,7 @@ protected:
     void updateFunctionSize();
 
 
-    HierarchicalListWidget* primitiveSelectionGui = nullptr;
+    HierarchicalListWidgetT<ImplicitPatch*>* primitiveSelectionGui = nullptr;
     void updatePrimitiveList();
     void cleanPatch(ImplicitPatch* patch);
 
