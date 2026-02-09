@@ -10,9 +10,10 @@ protected: // Singleton
     ImageViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    static ImageViewer* getInstance(std::string name = "");
-    static ImageViewer* get(std::string name = "") { return ImageViewer::getInstance(toLower(name)); }
-    static ImageViewer* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    // static ImageViewer* getInstance(std::string name = "");
+    // static ImageViewer* get(std::string name = "") { return ImageViewer::getInstance(toLower(name)); }
+    // static void init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    DECLARE_PLOTTER_GETTER(ImageViewer)
 
     // RangeSliderElement* rangeValuesWidget;
 
@@ -24,6 +25,8 @@ public Q_SLOTS:
     ImageViewer* setFilteredValuesImage(bool filtered);
 
     ImageViewer* updateViewOptionsInterface();
+
+    ImageViewer* displayInfoUnderMouse(const Vector3 &relativeMousePos);
 
 // Q_SIGNALS:
     // void clickedOnImage(const Vector3& pos, Vector3 value);

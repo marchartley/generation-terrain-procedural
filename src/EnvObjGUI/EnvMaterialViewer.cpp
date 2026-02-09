@@ -25,13 +25,12 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartVi
         this->show();
     });
 }
-
+/*
 EnvMaterialViewer *EnvMaterialViewer::getInstance(std::string name)
 {
     if (name == "") name = EnvMaterialViewer::defaultName;
     if (EnvMaterialViewer::instances.count(name) == 0) {
-        //        std::cerr << "EnvMaterialViewer has not been initialized with function EnvMaterialViewer::init()" << std::endl;
-        EnvMaterialViewer::instances[name] = EnvMaterialViewer::init(name);
+        EnvMaterialViewer::init(name);
     }
     return dynamic_cast<EnvMaterialViewer*>(EnvMaterialViewer::instances[name]);
 }
@@ -43,7 +42,7 @@ EnvMaterialViewer *EnvMaterialViewer::init(const std::string& name, ChartView *c
     EnvMaterialViewer::instances[name] = new EnvMaterialViewer(name, chartView, parent);
     return EnvMaterialViewer::getInstance(name);
 }
-
+*/
 EnvMaterialViewer *EnvMaterialViewer::updateToolsInterface()
 {
     this->toolsInterface->clear();
@@ -52,6 +51,7 @@ EnvMaterialViewer *EnvMaterialViewer::updateToolsInterface()
     return this;
 }
 
+/*
 EnvMaterialViewer *EnvMaterialViewer::updateViewOptionsInterface()
 {
     if (this->viewOptionsInterface != nullptr)
@@ -61,3 +61,4 @@ EnvMaterialViewer *EnvMaterialViewer::updateViewOptionsInterface()
     this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
     return this;
 }
+*/

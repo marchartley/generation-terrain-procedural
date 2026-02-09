@@ -39,16 +39,26 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
     int ViewW = static_cast<int>(this->width());
     int ViewH = static_cast<int>(this->height());
     QImage scaledImage = QImage(width, height, QImage::Format_ARGB32);
-    if (!this->_dataModel->getImage().empty()) {
+    scaledImage.fill(Qt::white);
 
+    Vector3i renderResolution = Vector3i(200, 200, 1); //Vector3i(clamp(width, 20, 400), clamp(height, 20, 400), 1);
+    // if (!this->_dataModel->getImage().empty()) {
+        auto overlays = this->overlayColors;
+        auto overlayAlphas = this->overlayAlpha;
+        auto overlayDisplays = this->overlayDisplayed;
+        if (!this->_dataModel->vectorData.field.empty()) {
+            auto [overlay, alpha] = this->_dataModel->vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1));
+            overlays["vector field"] = overlay;
+            overlayAlphas["vector field"] = alpha;
+            overlayDisplays["vector field"] = true;
+        }
         //scale the image to fit plot area
-        if (!this->overlayColors.empty())
-            scaledImage = this->_dataModel->imageData.computeDisplayedImage(this->overlayColors, this->overlayAlpha, this->overlayDisplayed);
-        else
-            scaledImage = this->_dataModel->imageData.computeDisplayedImage();
-
-        scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
-    }
+        // if (!overlays.empty())
+            scaledImage = this->_dataModel->imageData.computeDisplayedImage(overlays, overlayAlphas, overlayDisplays, renderResolution);
+        // else
+            // scaledImage = this->_dataModel->imageData.computeDisplayedImage();
+    // }
+    scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::FastTransformation); // SmoothTransformation);
     //We have to translate the image because setPlotAreaBackGround
     //starts the image in the top left corner of the view not the
     //plot area. So, to offset we will make a new image the size of
@@ -202,7 +212,7 @@ void ChartView::mousePressEvent(QMouseEvent *event)
 
     vecLocal = this->getRelativeMousePositionInImage(Vector3(event->pos().x(), event->pos().y()));
     this->selectData(vecLocal);
-    Q_EMIT this->clickedOnValue(vecLocal);
+    Q_EMIT this->clickedOnValue(vecLocal, event->button() == Qt::LeftButton, event->button() == Qt::RightButton);
 
     QChartView::mousePressEvent(event);
 }
@@ -226,7 +236,7 @@ void ChartView::mouseMoveEvent(QMouseEvent *event)
 void ChartView::mouseReleaseEvent(QMouseEvent *event)
 {
     this->selectData(Vector3::invalid());
-    Q_EMIT this->clickedOnValue(Vector3(false)); // "unclick"
+    Q_EMIT this->clickedOnValue(Vector3::invalid(), event->button() == Qt::LeftButton, event->button() == Qt::RightButton); // "unclick"
     return QChartView::mouseReleaseEvent(event);
 }
 void ChartView::keyPressEvent(QKeyEvent *event)
@@ -241,6 +251,7 @@ void ChartView::keyPressEvent(QKeyEvent *event)
         Q_EMIT this->updated();
         break;
     }
+    Q_EMIT this->keyPressed(event);
     return QChartView::keyPressEvent(event);
 }
 void ChartView::wheelEvent(QWheelEvent *event)
@@ -308,11 +319,11 @@ bool Chart::gestureEvent([[maybe_unused]] QGestureEvent *event)
 std::map<std::string, AbstractPlotter*> AbstractPlotter::instances = std::map<std::string, AbstractPlotter*>();
 std::string AbstractPlotter::defaultName = "default";
 
-AbstractPlotter::AbstractPlotter(const std::string& name, QWidget *parent) : AbstractPlotter(name, new ChartView(new Chart()), parent)
+AbstractPlotter::AbstractPlotter(const std::string& name, const std::string& title, QWidget *parent) : AbstractPlotter(name, new ChartView(new Chart()), title, parent)
 {
 }
 
-AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
+AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, const std::string &title, QWidget *parent) : QDialog(parent), chartView(chartView), name(name)
 {
     if (this->chartView == nullptr)
         this->chartView = new ChartView(new Chart());
@@ -374,7 +385,7 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
     this->resize(1100, 600);
     this->updateGeometry();
 
-    this->setWindowTitle(QString::fromStdString(toCapitalize(this->name)));
+    this->setWindowTitle(QString::fromStdString(toCapitalize(title)));
 
     // QObject::connect(this->chartView, &ChartView::clickedOnValue, this, &AbstractPlotter::selectData);
     QObject::connect(this->chartView, &ChartView::mouseMoved, this, [&](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e){
@@ -382,11 +393,17 @@ AbstractPlotter::AbstractPlotter(const std::string& name, ChartView *chartView, 
         if (this->hasImage()) {
             Q_EMIT this->movedOnImage(pos * dataModel->getImage().getDimensions(), prevPos * dataModel->getImage().getDimensions(), e);
         }
+        else if (this->hasVectorField()) {
+            Q_EMIT this->movedOnImage(pos * dataModel->vectorData.field.getDimensions(), prevPos * dataModel->vectorData.field.getDimensions(), e);
+        }
     });
     QObject::connect(this->chartView->chart(), &QChart::geometryChanged, this, &AbstractPlotter::draw);
-    QObject::connect(this->chartView, &ChartView::clickedOnValue, this, [&](const Vector3& pos) {
-        if (this->hasImage())
-            Q_EMIT this->clickedOnImage(pos, this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()));
+    QObject::connect(this->chartView, &ChartView::clickedOnValue, this, [&](const Vector3& pos, bool leftClick, bool rightClick) {
+        if (this->hasImage()) {
+            Q_EMIT this->clickedOnImage(pos, this->dataModel->getImage().at(pos * this->dataModel->getImage().getDimensions()), leftClick, rightClick);
+        } else if (this->hasVectorField()) {
+            Q_EMIT this->clickedOnImage(pos, Vector3::invalid(), leftClick, rightClick);
+        }
     });
 }
 
@@ -840,24 +857,25 @@ PlotImageData *PlotImageData::setClamped(bool clamp)
     return this;
 }
 
-QImage PlotImageData::computeDisplayedImage() const
+QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
 {
-    auto displayedImage = this->image.getColorImage();
-    if (displayedImage.empty()) return QImage();
-    // if (this->clamped) {
+    QImage emptyImg = QImage(imgSize.x(), imgSize.y(), QImage::Format_ARGB32); emptyImg.fill(Qt::white);
+    if (this->image.empty()) return emptyImg;
+    auto displayedImage = this->image.getColorImage(); //.resize(imgSize);
+    if (displayedImage.empty()) return emptyImg;
+
     if (this->displayParameters.clamped) {
         displayedImage.iterateParallel([&](size_t i) {
             for (int c = 0; c < 3; c++) {
-                // displayedImage[i][c] = std::clamp(displayedImage[i][c], this->colorRangeMin[c], this->colorRangeMax[c]);
                 displayedImage[i][c] = std::clamp(displayedImage[i][c], this->displayParameters.colorRangeMin[c], this->displayParameters.colorRangeMax[c]);
             }
         });
     }
-    // if (this->absolute) {
+
     if (this->displayParameters.absolute) {
         displayedImage = displayedImage.abs();
     }
-    // if (this->normalized) {
+
     if (this->displayParameters.normalized) {
         for (int c = 0; c < 3; c++) {
             float min = std::numeric_limits<float>::max();
@@ -877,16 +895,14 @@ QImage PlotImageData::computeDisplayedImage() const
                 });
             }
         }
-        //        displayedImage.normalize();
     }
+
     if (this->image.isColor()) {
         displayedImage.iterateParallel([&](size_t i) {
-            // displayedImage[i] *= this->displayedColors;
             displayedImage[i] *= this->displayParameters.displayedColors;
         });
     } else {
         displayedImage.iterateParallel([&](size_t i) {
-            // displayedImage[i] *= this->displayedColors;
             displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
         });
     }
@@ -900,7 +916,7 @@ QImage PlotImageData::computeDisplayedImage() const
         data[int(4 * i + 3)] = (unsigned char) 255;       // Alpha
     }
 
-    QImage result = QImage(data, displayedImage.sizeX, displayedImage.sizeY, QImage::Format_ARGB32);
+    QImage result = QImage(data, displayedImage.sizeX, displayedImage.sizeY, QImage::Format_ARGB32).scaled(imgSize.x(), imgSize.y());
     return result;
 }
 
@@ -920,18 +936,18 @@ QImage PlotImageData::computeDisplayedImage(const GridV3 &overlay, const GridF &
     painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
     painter.end();
     return img;*/
-    return this->computeDisplayedImage({{"", overlay}}, {{"", overlayAlpha}}, {{"", true}});
+    return this->computeDisplayedImage({{"", overlay}}, {{"", overlayAlpha}}, {{"", true}}, this->getImage().getDimensions());
 }
 
-QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> &overlays, const std::map<std::string, GridF> &overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const
+QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> &overlays, const std::map<std::string, GridF> &overlayAlphas, const std::map<std::string, bool>& displayedOverlays, const Vector3i &imgSize) const
 {
-    QImage img = this->computeDisplayedImage();
+    QImage img = this->computeDisplayedImage(imgSize);
     QPainter painter = QPainter(&img);
 
     for (auto& [name, over] : overlays) {
-        if (!displayedOverlays.at(name)) continue;
-        const auto& overlay = overlays.at(name);
-        const auto& overlayAlpha = overlayAlphas.at(name);
+        if (displayedOverlays.count(name) && displayedOverlays.at(name) == false) continue;
+        const auto& overlay = overlays.at(name); //.resize(imgSize, RESIZE_MODE::LINEAR);
+        const auto& overlayAlpha = overlayAlphas.at(name); //.resize(imgSize, RESIZE_MODE::NEAREST);
         unsigned char* data = new unsigned char[overlay.size() * 4];
 
         for (size_t i = 0; i < overlay.size(); ++i) {
@@ -940,7 +956,8 @@ QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> 
             data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
             data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
         }
-        painter.drawImage(0, 0, QImage(data, overlay.sizeX, overlay.sizeY, QImage::Format_ARGB32));
+        // std::cout << "Painting " << name << " at resolution " << overlay.sizeX << "x" << overlay.sizeY << " scaled to " << imgSize.x() << "x" << imgSize.y() << std::endl;
+        painter.drawImage(0, 0, QImage(data, overlay.sizeX, overlay.sizeY, QImage::Format_ARGB32).scaled(imgSize.x(), imgSize.y()));
     }
     painter.end();
     return img;
@@ -958,16 +975,16 @@ PlotVectorData *PlotVectorData::setField(const GridV3 &field)
     return this;
 }
 
-GridV3 PlotVectorData::getFieldImage(Vector3i imgSize, float reductionFactor) const
+std::pair<GridV3, GridF> PlotVectorData::getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i& numberOfCells) const
 {
-    if (!imgSize.isValid())
-        imgSize = field.getDimensions();
-    imgSize.z() = 1;
-    GridV3 img(imgSize);
-    Vector3 reducedSize = (field.getDimensions() * reductionFactor).roundedUp(); //(30, 30, 1);
-    reducedSize.z() = 1;
-    Vector3 ratio = imgSize / reducedSize;
-    GridV3 reduced = field.resize(reducedSize);
+    return PlotVectorData::createFieldImageAndAlpha(this->field, imgSize, numberOfCells);
+}
+
+std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &field, const Vector3i &imgSize, const Vector3i &numberOfCells)
+{
+    GridV3 img(imgSize.x(), imgSize.y(), 1);
+    GridF alpha(img.getDimensions());
+    GridV3 reduced = field.resize(numberOfCells);
 
     float minMag = std::numeric_limits<float>::max();
     float maxMag = std::numeric_limits<float>::lowest();
@@ -980,25 +997,64 @@ GridV3 PlotVectorData::getFieldImage(Vector3i imgSize, float reductionFactor) co
     maxMag = std::sqrt(maxMag);
 
     // std::cout << minMag << " " << maxMag << std::endl;
-
-    reduced.iterateParallel([&] (const Vector3& p) {
-        AABBox cell(p - Vector3(.45, .45, 0) * ratio, p + Vector3(.45, .45, 0) * ratio);
-        float mag = reduced(p).norm();
+    Vector3 reducedSize = reduced.getDimensions(); //imgSize / numberOfCells;
+    Vector3 ratio = Vector3((float)imgSize.x() / (float)reducedSize.x(), (float)imgSize.y() / (float)reducedSize.y(), 1.f);
+    reduced.iterateParallel([&] (const Vector3& _p) {
+        Vector3 p = _p + Vector3(.5f, .5f);
+        AABBox cell((p - Vector3(.5f, .5f, 1)) * ratio, (p + Vector3(.5f, .5f, 1)) * ratio); // Added an depth (z) to avoid issue on the intersection computation
+        Vector3 vec = reduced.interpolate(p);
+        float mag = vec.norm();
         if (mag < 1e-5) return;
-        Vector3 dir = reduced(p) / mag;
+        Vector3 dir = vec / mag;
         Vector3 color(1, 1, 1);
+        float relativeMag = 1.f;
         if (std::abs(minMag - maxMag) > 1e-5) {
-            float relativeMag = interpolation::linear(mag, minMag, maxMag);
-            color = colorPalette(relativeMag, {Vector3(0, 0, 1), Vector3(1, 1, 1), Vector3(1, 0, 0)});
+            relativeMag = interpolation::linear(mag, minMag, maxMag);
+            color = colorPalette(relativeMag, {Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
         }
-        bool valid = true;
+        bool valid = dir.xy().norm2() > 1e-5;
+        if (!valid) return;
+
+        // Vector3 startLine = Collision::intersectionRayAABBox(p * ratio, -dir, cell);
+        // Vector3 endLine = Collision::intersectionRayAABBox(p * ratio, dir, cell);
+        Vector3 startLine = (p - dir * interpolation::inv_linear(relativeMag, .5f, 1.f)) * ratio;
+        Vector3 endLine = (p + dir * interpolation::inv_linear(relativeMag, .5f, 1.f)) * ratio;
+        float halfLength = (endLine - startLine).norm() * .5f;
+        for (int i = 0; i < (int) halfLength; i++) {
+            const Vector3i coordA = p * ratio + dir * i;
+            const Vector3i coordB = p * ratio - dir * i;
+            img[coordA] = color;
+            img[coordB] = color;
+            alpha[coordA] = 1.f;
+            alpha[coordB] = 1.f;
+        }
+        /*int maxI = 0;
+        // Draw tail
         for (int i = 0; valid; i++) {
-            valid = false;
-            if (cell.containsXY(p + dir * i)) {
-                img((p + Vector3(.5, .5)) * ratio + dir * i) = color;
-                valid = true;
+            const Vector3 coord = p * ratio + dir * i;
+            if (cell.containsXY(coord)) {
+                img[coord] = color;
+                alpha[coord] = 1.f;
+
+                img[coord - dir * 2.f * i] = color;
+                alpha[coord - dir * 2.f * i] = 1.f;
+                maxI = i;
+            } else {
+                valid = false;
             }
         }
+        */
+        // Draw head
+        const Vector3 dirHeadA = -dir.rotated(deg2rad(20), Vector3(0, 0, 1));
+        const Vector3 dirHeadB = -dir.rotated(deg2rad(-20), Vector3(0, 0, 1));
+        for (int i = 0; i < (int) (halfLength * 2.f * .33f); i++) {
+            const Vector3i coord = endLine; //p * ratio + dir * maxI;
+            img[coord + dirHeadA * i] = color;
+            alpha[coord + dirHeadA * i] = 1.f;
+            img[coord + dirHeadB * i] = color;
+            alpha[coord + dirHeadB * i] = 1.f;
+        }
+
     });
-    return img;
+    return {img, alpha};
 }

@@ -12,9 +12,10 @@ protected: // Singleton
     ImagePainter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    static ImagePainter* getInstance(std::string name = "");
-    static ImagePainter* get(std::string name = "") { return ImagePainter::getInstance(toLower(name)); }
-    static ImagePainter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    // static ImagePainter* getInstance(std::string name = "");
+    // static ImagePainter* get(std::string name = "") { return ImagePainter::getInstance(toLower(name)); }
+    // static ImagePainter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
+    DECLARE_PLOTTER_GETTER(ImagePainter)
 
     virtual ImagePainter* updateToolsInterface();
     virtual ImagePainter* updateViewOptionsInterface();

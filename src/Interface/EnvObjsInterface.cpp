@@ -15,6 +15,7 @@
 
 #include "EnvObjGUI/EnvMaterialViewer.h"
 #include "EnvObjGUI/FocusAreaViewer.h"
+#include "EnvObjGUI/WaterFlowViewer.h"
 
 
 
@@ -100,7 +101,7 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->focusedArea = newDistrib;
     });
 
-    QObject::connect(ImageViewer::get("Flowfield"), &ImageViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
+    QObject::connect(WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
         bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
         bool rightPressed = event->buttons().testFlag(Qt::RightButton);
         if (!leftPressed && !rightPressed) return;
@@ -938,8 +939,10 @@ void EnvObjsInterface::manualModificationOfFlowfield()
     this->focusAreaEditing = false;
     this->flowfieldEditing = true;
     this->previewingObjectInPlotter = false;
-    ImageViewer::get("Flowfield")->addImage(this->renderFlowfield());
-    ImageViewer::get("Flowfield")->show();
+    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
+    // WaterFlowViewer::get("Flowfield")->addImage(this->renderFlowfield());
+    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
+    WaterFlowViewer::get("Flowfield")->show();
 }
 
 void EnvObjsInterface::resetFlowfield()
@@ -953,7 +956,8 @@ void EnvObjsInterface::resetFlowfield()
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
-    ImageViewer::get("Flowfield")->addImage(this->renderFlowfield());
+    // WaterFlowViewer::get("Flowfield")->addImage(this->renderFlowfield());
+    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
     Q_EMIT this->updated();
 }
 
@@ -1626,7 +1630,7 @@ GridV3 EnvObjsInterface::renderFlowfield() const
     this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
     GridV3& flow = this->scene->flowfield;
     // return ImageViewer::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
-    return ImageViewer::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
+    return WaterFlowViewer::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
 }
 
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
@@ -1764,8 +1768,9 @@ void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
 
-    ImageViewer::get("Flowfield")->addImage(renderFlowfield());
-    ImageViewer::get("Flowfield")->show();
+    // WaterFlowViewer::get("Flowfield")->addImage(renderFlowfield());
+    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
+    WaterFlowViewer::get("Flowfield")->show();
 }
 
 void EnvObjsInterface::previewMaterialEdition(const Vector3 &position, bool addingMaterial)

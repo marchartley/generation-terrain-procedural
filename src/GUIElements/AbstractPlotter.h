@@ -73,8 +73,9 @@ public:
 
 Q_SIGNALS:
     void updated();
-    void clickedOnValue(const Vector3& pos);
+    void clickedOnValue(const Vector3& pos, bool leftClick, bool rightClick);
     void mouseMoved(const Vector3& relativePos, const Vector3& previousMousePos, QMouseEvent* e);
+    void keyPressed(QKeyEvent* event);
 };
 
 class Chart : public QChart {
@@ -115,9 +116,9 @@ struct PlotImageData {
 
     GridV3 getImage() const { return this->image.getColorImage(); }
     GridF getImageGrey() const { return this->image.getBwImage(); }
-    QImage computeDisplayedImage() const;
+    QImage computeDisplayedImage(const Vector3i &imgSize = Vector3i::invalid()) const;
     QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
-    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays) const;
+    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays, const Vector3i& imgSize) const;
 
 
 // protected:
@@ -132,8 +133,10 @@ struct PlotVectorData {
 
     PlotVectorData* setField(const GridV3 &field);
 
-    GridV3 getField() const { return this->field; }
-    GridV3 getFieldImage(Vector3i imgSize, float reductionFactor = .1f) const;
+    const GridV3& getField() const { return this->field; }
+
+    std::pair<GridV3, GridF> getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i &numberOfCells) const;
+    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, const Vector3i &imgSize, const Vector3i &numberOfCells);
 
     GridV3 field;
 };
@@ -180,16 +183,35 @@ public:
 
 
 
-
+#define DECLARE_PLOTTER_GETTER(Type) \
+public: \
+static Type* get(const std::string& name = "") { return AbstractPlotter::getInstance<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); }
 
 
 class AbstractPlotter : public QDialog {
     Q_OBJECT
 protected: // Singleton
-    AbstractPlotter(const std::string& name, QWidget* parent = nullptr);
-    AbstractPlotter(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
+    AbstractPlotter(const std::string& name, const std::string& title = "", QWidget* parent = nullptr);
+    AbstractPlotter(const std::string& name, ChartView* chartView, const std::string& title = "", QWidget* parent = nullptr);
+
+    template <class Derive>
+    static std::string getIDname(const std::string& name) { return name + typeid(Derive).name(); }
 
 public:
+    template <class Derived, class Factory>
+    static Derived* getInstance(Factory&& factory, std::string name = "") {
+        if (name == "") name = Derived::defaultName;
+        if (Derived::instances.count(getIDname<Derived>(name)) == 0) {
+            init<Derived>(factory, name);
+        }
+        return dynamic_cast<Derived*>(Derived::instances[getIDname<Derived>(name)]);
+    }
+    template <class Derived, class Factory>
+    static void init(Factory&& factory, const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr) {
+        if (Derived::instances.count(getIDname<Derived>(name)))
+            delete Derived::instances[getIDname<Derived>(name)];
+        Derived::instances[getIDname<Derived>(name)] = factory(name, chartView, parent);
+    }
     // static AbstractPlotter* getInstance(std::string name = "");
     // static AbstractPlotter* get(std::string name = "") { return AbstractPlotter::getInstance(toLower(name)); }
     // static AbstractPlotter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
@@ -212,10 +234,10 @@ public:
     AbstractPlotter* showOverlay(const std::string& overlayName = "default");
     AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
 
-    GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false)) const;
-    // AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3(false), float opacity = .5f);
-    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3(false)) const;
-    AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3(false), float opacity = .5f);
+    GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3::invalid()) const;
+    // AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3::invalid(), float opacity = .5f);
+    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3::invalid()) const;
+    AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid(), float opacity = .5f);
 
     int exec();
     AbstractPlotter* saveFig(std::string filename);
@@ -230,6 +252,7 @@ public:
     bool hasPlotValues() const { return !this->dataModel->plot_data.empty(); }
     bool hasScatterValues() const { return !this->dataModel->scatter_data.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
+    bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
 
     ChartView* chartView;
     PlotModel* dataModel;
@@ -249,6 +272,7 @@ public:
 protected:
     static std::string defaultName;
     static std::map<std::string, AbstractPlotter*> instances;
+    static std::string id_name;
     //    QValueAxis* m_axisX;
     //    QValueAxis* m_axisY;
 public Q_SLOTS:
@@ -266,7 +290,7 @@ public Q_SLOTS:
     virtual AbstractPlotter* updateInfosInterface();
 
 Q_SIGNALS:
-    void clickedOnImage(const Vector3& pos, Vector3 value);
+    void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);
     void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
 };
 
