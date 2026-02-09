@@ -66,7 +66,7 @@ Vector3 WaveFunctionCollapse::getLowestEntropyCellIndex()
         }
     }
     if (minEntropyValue < 1)
-        return Vector3(false);
+        return Vector3::invalid();
 
     for (size_t i = 0; i < availablePatternsOnCell.size(); i++) {
         auto& patterns = availablePatternsOnCell.at(i);

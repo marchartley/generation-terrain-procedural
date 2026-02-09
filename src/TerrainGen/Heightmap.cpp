@@ -598,7 +598,7 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
     myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
 
     currPos = Collision::intersectionRayAABBox(origin, dir, myAABBox.min(), myAABBox.max());
-    if (!currPos.isValid()) return Vector3(false);
+    if (!currPos.isValid()) return Vector3::invalid();
 
     dir *= stepSize;
     myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * stepSize, myAABBox.max() + Vector3(1, 1, 1) * stepSize});
@@ -608,7 +608,7 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
             return currPos;
         currPos += dir;
     }
-    return Vector3(false);
+    return Vector3::invalid();
 /*
     float distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
     float distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
@@ -625,7 +625,7 @@ Vector3 Heightmap::getIntersection(const Vector3& origin, const Vector3& _dir, c
         distanceToGrid = Vector3::signedManhattanDistanceToBoundaries(currPos, myAABBox.min(), myAABBox.max());
         distanceToGridDT = Vector3::signedManhattanDistanceToBoundaries(currPos + dir, myAABBox.min(), myAABBox.max());
     }
-    return Vector3(false);
+    return Vector3::invalid();
     */
 }
 

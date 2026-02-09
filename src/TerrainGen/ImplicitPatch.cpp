@@ -332,7 +332,7 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
 
     if (currPos.z() <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3(false);*/
+    return Vector3::invalid();*/
 
 }
 

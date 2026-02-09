@@ -951,7 +951,7 @@ Mesh Mesh::applyMarchingCubes(const GridF& values)
     Mesh marched;
     marched.vertexArray.reserve(100000);
 
-//    std::vector<Vector3> triangles(values.size(), Vector3(false));
+//    std::vector<Vector3> triangles(values.size(), Vector3::invalid());
     #pragma omp parallel for
     for (int z = 0; z < values.sizeZ; z++) {
         for (int y = 0; y < values.sizeY; y++) {

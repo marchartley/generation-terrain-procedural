@@ -23,7 +23,7 @@ public:
     SpaceColonizationInterface(QWidget *parent = nullptr);
     ~SpaceColonizationInterface();
 
-    void display(const Vector3& camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3::invalid());
     void replay(nlohmann::json action);
 
 //    bool isHidden;

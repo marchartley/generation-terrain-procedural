@@ -20,8 +20,8 @@ public:
     // ApplyOn : 0 = density-voxels, 1 = heightmap, 2 = implicit, 3 = layers, 4 = binary-voxels
     std::tuple<std::vector<BSpline>, int, int, std::vector<std::vector<std::pair<float, Vector3> > > > Apply(EROSION_APPLIED applyOn, TerrainModel* terrain, SpacePartitioning &boundariesTree,
                                                     float& particleSimulationTime, float& terrainModifTime,
-                                                    Vector3 startingPoint = Vector3(false),
-                                                    Vector3 originalDirection = Vector3(false),
+                                                    Vector3 startingPoint = Vector3::invalid(),
+                                                    Vector3 originalDirection = Vector3::invalid(),
                                                     float randomnessFactor = 0.05,
                                                     bool fallFromSky = false,
                                                     float gravity = 1.f,

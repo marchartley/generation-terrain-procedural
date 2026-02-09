@@ -111,7 +111,7 @@ public:
 
     GridF _cachedAbsorptionDepositionField;
 
-    Vector3 storedOrientation = Vector3(false);
+    Vector3 storedOrientation = Vector3::invalid();
 
     EnvironmentalScene* scene;
 };

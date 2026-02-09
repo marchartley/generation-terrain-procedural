@@ -100,9 +100,9 @@ public:
 
     virtual void saveMap([[maybe_unused]] std::string filename) { }
     virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
-    virtual Mesh getGeometry(const Vector3& dimensions = Vector3(false));
+    virtual Mesh getGeometry(const Vector3& dimensions = Vector3::invalid());
 
-    virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3(false), const Vector3 &maxPos = Vector3(false));
+    virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3::invalid(), const Vector3 &maxPos = Vector3::invalid());
 
     virtual std::string toShortString() { return ""; }
 
@@ -124,7 +124,7 @@ public:
     virtual float getSizeY() const { return this->getBBox().max().y(); }
     virtual float getSizeZ() const { return this->getBBox().max().z(); }
 
-    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     int index = -1;
     std::string name;
@@ -202,9 +202,9 @@ public:
 
     virtual ImplicitPatch* copy() const;
 
-    Vector3 position = Vector3(false);
-    Vector3 dimensions = Vector3(false);
-    Vector3 supportDimensions = Vector3(false);
+    Vector3 position = Vector3::invalid();
+    Vector3 dimensions = Vector3::invalid();
+    Vector3 supportDimensions = Vector3::invalid();
     std::function<float(const Vector3&)> evalFunction;
     std::function<float(const Vector3&)> evalFunction2D;
     TerrainTypes material = WATER;
@@ -215,7 +215,7 @@ public:
     std::string heightmapFilename = "";
     GridF cachedHeightmap;
 
-    static ImplicitPrimitive* fromHeightmap(std::string filename, const Vector3& dimensions = Vector3(false), ImplicitPrimitive *prim = nullptr);
+    static ImplicitPrimitive* fromHeightmap(std::string filename, const Vector3& dimensions = Vector3::invalid(), ImplicitPrimitive *prim = nullptr);
     static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
 };
 
@@ -427,7 +427,7 @@ public:
     std::pair<float, std::map<TerrainTypes, float>> getMaterialsAndTotalEvaluation(const Vector3 &pos) const;
     float evaluate(const Vector3& pos) const; // In this case, returns the height
 
-    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     virtual bool contains(const Vector3& v);
 

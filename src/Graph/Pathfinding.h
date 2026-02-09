@@ -10,7 +10,7 @@
 class Pathfinding
 {
 public:
-    template<class T>
+    template <class T>
     static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<float, std::vector<int>> ShortestPathFrom(int source, int dest, GridF& adjencyMap, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<std::vector<float>, std::vector<int>> ShortestPathFrom(int source, GridF& adjencyMap);
@@ -18,7 +18,7 @@ public:
 
     static std::vector<int> getPath(int dest, std::vector<int> prec);
 
-    template<class T>
+    template <class T>
     static std::pair<float, std::vector<int>> AStar(std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<float, std::vector<int>> AStar(GridF& adjencyMap, int source, int dest, std::function<float(int)> heuristicFunction = [](int)-> float {return 0.f;});
     static std::pair<std::vector<float>, std::vector<int>> Djikstra(GridF& adjencyMap, int source);
@@ -31,7 +31,7 @@ public:
 
 };
 
-template<class T>
+template <class T>
 std::pair<float, std::vector<int> > Pathfinding::AStar(std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, int source, int dest, std::function<float(int)> heuristicFunction)
 {
     int n = nodes.size();
@@ -82,7 +82,7 @@ std::pair<float, std::vector<int> > Pathfinding::AStar(std::vector<std::shared_p
     return std::make_pair(std::numeric_limits<float>::max(), prec);
 }
 
-template<class T>
+template <class T>
 std::pair<float, std::vector<int>> Pathfinding::ShortestPathFrom(int source, int dest, std::vector<std::shared_ptr<GraphNodeTemplate<T>>>& nodes, std::function<float(int)> heuristicFunction)
 {
     return Pathfinding::AStar(nodes, source, dest, heuristicFunction);

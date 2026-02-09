@@ -13,14 +13,14 @@ class TerrainGenerationInterface : public ActionInterface
 public:
     TerrainGenerationInterface(QWidget *parent = nullptr);
 
-    void display(const Vector3& camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3::invalid());
     void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz, bool noise2D = false, float noiseStrength = 1.f, float frequency = 1.f, float lacunarity = 2.f, float noise_shifting = 0.0);
     void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void createTerrainFromImplicitPatches(nlohmann::json json_content);
-    void saveTerrain(std::string filename, Vector3 dimensions = Vector3(false));
+    void saveTerrain(std::string filename, Vector3 dimensions = Vector3::invalid());
 
     void reloadShaders();
 

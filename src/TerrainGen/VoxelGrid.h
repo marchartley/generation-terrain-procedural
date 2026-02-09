@@ -76,9 +76,9 @@ public:
 
     void computeVoxelGroups();
     GridF getVoxelValues();
-    GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
-    Mesh getGeometry(const Vector3& dimensions = Vector3(false));
+    Mesh getGeometry(const Vector3& dimensions = Vector3::invalid());
 
     float getVoxelValue(const Vector3& pos);
     float getVoxelValue(float x, float y, float z);
@@ -90,8 +90,8 @@ public:
     void saveMap(std::string filename);
     void retrieveMap(std::string filename);
 
-    Vector3 getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
-    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false));
+    Vector3 getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid());
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid());
 
     float getSizeX() const { return _cachedVoxelValues.sizeX; }
     float getSizeY() const { return _cachedVoxelValues.sizeY; }
