@@ -465,17 +465,22 @@ void EnvironmentalScene::applyMaterialsTransformations()
         }, false);
 }
 
-void EnvironmentalScene::updateFlowfield(const GridV3 &userFlow)
+const GridV3 &EnvironmentalScene::updateFlowfield(const GridV3 &userFlow, const GridV3& simulationFlow, const GridV3 &eventFlow)
 {
     this->flowfield = this->initialFlowfield;
     if (!userFlow.empty())
         this->flowfield += userFlow;
+    if (!simulationFlow.empty())
+        this->flowfield += simulationFlow;
+    if (!eventFlow.empty())
+        this->flowfield += eventFlow;
     for (int i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
         auto [flow, occupancy] = object->computeFlowModification();
         this->flowfield = flow;
     }
     this->flowfield = this->flowfield.meanSmooth(3, 3, 1, true);
+    return this->flowfield;
 }
 
 void EnvironmentalScene::beImpactedByEvents()
