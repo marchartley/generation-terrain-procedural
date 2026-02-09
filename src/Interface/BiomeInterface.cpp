@@ -436,7 +436,7 @@ void BiomeInterface::interchangeBiomes()
     for (auto& [id, biome] : BiomeInstance::instancedBiomes) {
         dialog.allAvailableBiomes->addItem(new HierarchicalListWidgetItem(biome->getInstanceName(), biome->instanceID, biome->getLevel(true)));
     }
-    int selectedIndex = dynamic_cast<HierarchicalListWidgetItem*>(this->biomeSelectionGui->item(this->biomeSelectionGui->currentRow()))->ID; //this->biomeSelectionGui->currentRow();
+    int selectedIndex = dynamic_cast<HierarchicalListWidgetItem<>*>(this->biomeSelectionGui->item(this->biomeSelectionGui->currentRow()))->ID; //this->biomeSelectionGui->currentRow();
     dialog.show();
     int replacementIndex = dialog.exec();
     replacementIndex = tempIndex;
@@ -634,7 +634,7 @@ QLayout* BiomeInterface::createGUI()
     QObject::connect(interchangeBiomeButton, &QPushButton::pressed, this, &BiomeInterface::interchangeBiomes);
     QObject::connect(biomeSelectionGui, &HierarchicalListWidget::itemDoubleClicked, this, [&](QListWidgetItem* item) -> void {
 //        int selectedIndex = this->biomeSelectionGui->currentRow();
-        auto selectedBiomeItem = dynamic_cast<HierarchicalListWidgetItem*>(item);
+        auto selectedBiomeItem = dynamic_cast<HierarchicalListWidgetItem<>*>(item);
         int selectedBiomeID = selectedBiomeItem->ID;
         auto biome = BiomeInstance::instancedBiomes[selectedBiomeID];
         std::cout << "Selected biome : " << biome->getInstanceName() << std::endl;
@@ -764,7 +764,7 @@ void BiomeInterface::updateBiomeSelectionGui()
 void BiomeInterface::deleteSelectedBiomes()
 {
     for(auto selection : this->biomeSelectionGui->selectedItems()) {
-        auto biomeSelection = dynamic_cast<HierarchicalListWidgetItem*>(selection);
+        auto biomeSelection = dynamic_cast<HierarchicalListWidgetItem<>*>(selection);
         if (biomeSelection != nullptr) {
             this->deleteBiomeFromID(biomeSelection->ID);
         }
@@ -825,7 +825,7 @@ void BiomeReplacementDialog::cancel()
 void BiomeReplacementDialog::confirm()
 {
     if (allAvailableBiomes->currentRow() >= 0) {
-        selectedBiomeIndex = dynamic_cast<HierarchicalListWidgetItem*>(allAvailableBiomes->item(allAvailableBiomes->currentRow()))->ID; //allAvailableBiomes->currentRow();
+        selectedBiomeIndex = dynamic_cast<HierarchicalListWidgetItem<>*>(allAvailableBiomes->item(allAvailableBiomes->currentRow()))->ID; //allAvailableBiomes->currentRow();
         setResult(selectedBiomeIndex);
         caller->tempIndex = selectedBiomeIndex;
         this->close();

@@ -4,7 +4,7 @@
 
 #include "Utils/Utils.h"
 
-HierarchicalListWidget::HierarchicalListWidget(QWidget *parent)
+HierarchicalListWidgetBase::HierarchicalListWidgetBase(QWidget *parent)
     : QListWidget(parent)
 {
 
@@ -13,11 +13,11 @@ HierarchicalListWidget::HierarchicalListWidget(QWidget *parent)
     this->setSelectionMode(QAbstractItemView::SingleSelection);
 }
 
-void HierarchicalListWidget::setCurrentItem(int indexToSelect)
+void HierarchicalListWidgetBase::setCurrentItem(int indexToSelect)
 {
     this->clearSelection();
     for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
-        HierarchicalListWidgetItem* item = dynamic_cast<HierarchicalListWidgetItem*>(_child);
+        HierarchicalListWidgetItemBase* item = dynamic_cast<HierarchicalListWidgetItemBase*>(_child);
         if (item != nullptr) {
             if (item->ID == indexToSelect) {
                 item->setSelected(true);
@@ -27,12 +27,12 @@ void HierarchicalListWidget::setCurrentItem(int indexToSelect)
     }
 }
 
-void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
+void HierarchicalListWidgetBase::setCurrentItems(std::vector<int> indicesToSelect)
 {
     QObject::blockSignals(true);
     this->clearSelection();
     for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
-        HierarchicalListWidgetItem* item = dynamic_cast<HierarchicalListWidgetItem*>(_child);
+        HierarchicalListWidgetItemBase* item = dynamic_cast<HierarchicalListWidgetItemBase*>(_child);
         if (item != nullptr) {
             if (isIn(item->ID, indicesToSelect)) {
                 item->setSelected(true);
@@ -42,12 +42,12 @@ void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
     QObject::blockSignals(false);
 }
 
-void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)
+void HierarchicalListWidgetBase::dragEnterEvent(QDragEnterEvent *event)
 {
 
     if (this->selectedItems().empty()) return;
 
-    this->movingItem = dynamic_cast<HierarchicalListWidgetItem*>(this->selectedItems()[0]);
+    this->movingItem = dynamic_cast<HierarchicalListWidgetItemBase*>(this->selectedItems()[0]);
     if (movingItem != nullptr) {
         std::cout << "Dragging item #" << this->movingItem->ID << std::endl;
     }
@@ -55,12 +55,12 @@ void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)
     QListWidget::dragEnterEvent(event);
 }
 
-void HierarchicalListWidget::dragLeaveEvent(QDragLeaveEvent *event)
+void HierarchicalListWidgetBase::dragLeaveEvent(QDragLeaveEvent *event)
 {
     QListWidget::dragLeaveEvent(event);
 }
 
-void HierarchicalListWidget::dropEvent(QDropEvent *event)
+void HierarchicalListWidgetBase::dropEvent(QDropEvent *event)
 {
     /*
     if (movingItem != nullptr) {
@@ -75,14 +75,14 @@ void HierarchicalListWidget::dropEvent(QDropEvent *event)
     if (movingItem != nullptr) {
         int droppedRow = this->indexAt(event->pos()).row();
         std::cout << "Dropped on row " << droppedRow << std::endl;
-        HierarchicalListWidgetItem* linkedItem = dynamic_cast<HierarchicalListWidgetItem*>(this->item(droppedRow));
+        HierarchicalListWidgetItemBase* linkedItem = dynamic_cast<HierarchicalListWidgetItemBase*>(this->item(droppedRow));
         if (droppedAbove) {
             QListWidget::dropEvent(event);
             Q_EMIT this->itemChangedHierarchy(movingItem->ID, linkedItem->ID, SIBLING, event);
 //            int previousLevel = movingItem->level;
 //            movingItem->setLevel(linkedItem->level);
             /*for (int i = this->currentRow(); i < this->model()->rowCount(); i++) {
-                auto child = dynamic_cast<HierarchicalListWidgetItem*>(this->item(i));
+                auto child = dynamic_cast<HierarchicalListWidgetItemBase*>(this->item(i));
                 if (child->level > previousLevel) {
                     child->
                 } else {
@@ -100,19 +100,19 @@ void HierarchicalListWidget::dropEvent(QDropEvent *event)
     }
 }
 
-HierarchicalListWidgetItem::HierarchicalListWidgetItem(std::string internal_text, QListWidget *parent)
-    : HierarchicalListWidgetItem(internal_text, -1, 0, parent)
+HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(std::string internal_text, QListWidget *parent)
+    : HierarchicalListWidgetItemBase(internal_text, -1, 0, parent)
 {
 
 }
 
-HierarchicalListWidgetItem::HierarchicalListWidgetItem(std::string internal_text, int ID, int level, QListWidget *parent)
+HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(std::string internal_text, int ID, int level, QListWidget *parent)
     : QListWidgetItem(parent), ID(ID), level(level), internalText(internal_text)
 {
     this->setLevel(level);
 }
 
-void HierarchicalListWidgetItem::setLevel(int newLevel)
+void HierarchicalListWidgetItemBase::setLevel(int newLevel)
 {
     this->level = std::max(newLevel, 0);
     this->setText(QString(level * 2, ' ') + QString::fromStdString(this->internalText));
