@@ -42,8 +42,8 @@ public:
     void displayStrips(std::vector<int> counts, float lineWeight = 1);
 
     void displayAsScalarField(GridF field, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f});
-    Mesh &fromVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMagnitude = -1, bool normalize = false, bool displayArrow = true);
-//    void displayAsVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), float maxMagnitude = -1, bool normalize = false);
+    Mesh &fromVectorField(GridV3 field, const Vector3& finalDimensions = Vector3::invalid(), float maxMagnitude = -1, bool normalize = false, bool displayArrow = true);
+//    void displayAsVectorField(GridV3 field, const Vector3& finalDimensions = Vector3::invalid(), float maxMagnitude = -1, bool normalize = false);
 
     void shareShader(std::shared_ptr<Shader> sharedShader) { this->shader = sharedShader; }
     void shareShader(const Mesh& otherMesh) { this->shader = otherMesh.shader; }
@@ -74,9 +74,9 @@ public:
 
 
     static std::vector<Vector3> getPointsForArrow(const Vector3& from, const Vector3& to);
-    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3(false), Mesh *mesh = nullptr, float maxMagnitude = -1, bool normalize = false, bool displayArrow = false);
+    static Mesh createVectorField(GridV3 field, const Vector3& finalDimensions = Vector3::invalid(), Mesh *mesh = nullptr, float maxMagnitude = -1, bool normalize = false, bool displayArrow = false);
 
-    static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f}, Vector3 desiredDimensions = Vector3(false));
+    static void displayScalarField(GridF field, Mesh& mesh, const Vector3& cameraPosition, std::vector<float> isoValues = {0.5f}, Vector3 desiredDimensions = Vector3::invalid());
 
 
     unsigned int bufferID;

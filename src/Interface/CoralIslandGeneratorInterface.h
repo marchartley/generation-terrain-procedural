@@ -14,7 +14,7 @@ class CoralIslandGeneratorInterface : public ActionInterface
 public:
     CoralIslandGeneratorInterface(QWidget *parent = nullptr);
 
-    void display(const Vector3& camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3::invalid());
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 

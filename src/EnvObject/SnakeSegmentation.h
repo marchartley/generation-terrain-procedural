@@ -31,7 +31,7 @@ public:
     // GridF image;         // Grayscale image grid
     // GridV3 gradientField; // Gradient field of the image
 
-    Vector3 position = Vector3(false); // Initial position, attracting the whole curve
+    Vector3 position = Vector3::invalid(); // Initial position, attracting the whole curve
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -64,7 +64,7 @@ public:
 
 
 /*
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 class SnakeSegmentationT {
 
 public:
@@ -90,7 +90,7 @@ public:
     // private:
     BSpline contour;     // BSpline representing the contour
 
-    Vector3 position = Vector3(false); // Initial position, attracting the whole curve
+    Vector3 position = Vector3::invalid(); // Initial position, attracting the whole curve
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -150,20 +150,20 @@ using SnakeImplicit = SnakeSegmentationT<ImplicitImage, ImplicitGrad>;
 
 
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 SnakeSegmentationT<ImageField, GradientField>::SnakeSegmentationT()
 {
 
 }
 
-// template<class ImageField, class GradientField>
+// template <class ImageField, class GradientField>
 // SnakeSegmentationT<ImageField, GradientField>::SnakeSegmentationT(const BSpline &initialContour, const GridF &inputImage, const GridV3 &inputGradient)
 // : SnakeSegmentationT() //, contour(initialContour), image(inputImage), gradientField(inputGradient)
 // {
 // gradientField = gradientField.gaussianSmooth(10.f, true, true);
 // }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 BSpline SnakeSegmentationT<ImageField, GradientField>::runSegmentation(int maxIterations) {
     // BSpline currentContour = contour;
 
@@ -195,7 +195,7 @@ BSpline SnakeSegmentationT<ImageField, GradientField>::runSegmentation(int maxIt
     return contour;
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 Vector3 SnakeSegmentationT<ImageField, GradientField>::computeEnergyGradient(const BSpline &contour, int index, bool usePreviousPointForInternal)
 {
     // Compute the gradient of the total energy with respect to the control point at 'index'
@@ -216,7 +216,7 @@ Vector3 SnakeSegmentationT<ImageField, GradientField>::computeEnergyGradient(con
     return gradient;
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 Vector3 SnakeSegmentationT<ImageField, GradientField>::computeInternalEnergyGradient(const BSpline &contour, int index, bool usePreviousPoint) const
 {
     // Compute the gradient of the internal energy with respect to the control point at 'index'
@@ -252,7 +252,7 @@ Vector3 SnakeSegmentationT<ImageField, GradientField>::computeInternalEnergyGrad
     return internalEnergyGradient;
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 Vector3 SnakeSegmentationT<ImageField, GradientField>::computeExternalEnergyGradient(const BSpline &contour, int index) const
 {
     if (imageCost == 0) return Vector3();
@@ -289,7 +289,7 @@ Vector3 SnakeSegmentationT<ImageField, GradientField>::computeExternalEnergyGrad
     }
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 Vector3 SnakeSegmentationT<ImageField, GradientField>::computeShapeEnergyGradient(const BSpline &contour, int index, bool usePreviousPoint) const
 {
     int i = index;
@@ -327,7 +327,7 @@ Vector3 SnakeSegmentationT<ImageField, GradientField>::computeShapeEnergyGradien
     return shapeEnergyGradient;
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 Vector3 SnakeSegmentationT<ImageField, GradientField>::computeGradientEnergyGradient(const BSpline &contour, int index) const
 {
     if (this->slopeCost != 0) {
@@ -344,7 +344,7 @@ Vector3 SnakeSegmentationT<ImageField, GradientField>::computeGradientEnergyGrad
     return Vector3();
 }
 
-template<class ImageField, class GradientField>
+template <class ImageField, class GradientField>
 BSpline SnakeSegmentationT<ImageField, GradientField>::updateContour(const BSpline &currentContour, float stepSize) {
 
     if (this->imageCost != 0 && this->imageInsideCoef != 0) {

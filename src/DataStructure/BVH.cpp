@@ -327,7 +327,7 @@ std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector
 
 std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, std::set<size_t> ignoredTriangles) const
 {
-    std::pair<Vector3, size_t> result = {Vector3(false), -1};
+    std::pair<Vector3, size_t> result = {Vector3::invalid(), -1};
     float closestDistance = std::numeric_limits<float>::max();
 
     if (!node->box.intersects(rayStart, rayEnd).isValid()) {
@@ -368,7 +368,7 @@ std::pair<Vector3, size_t> BVHTree::getIntersectionAndTriangleIndex(const Vector
 
 std::pair<Vector3, size_t> BVHTree::_getIntersectionAndTriangleIndex(BVHNode *node, const Vector3 &rayStart, const Vector3 &rayEnd, size_t ignoredTriangle) const
 {
-    std::pair<Vector3, size_t> result = {Vector3(false), -1};
+    std::pair<Vector3, size_t> result = {Vector3::invalid(), -1};
     float closestDistance = std::numeric_limits<float>::max();
 
     if (!node->box.intersects(rayStart, rayEnd).isValid()) {

@@ -167,7 +167,7 @@ Vector3 ControlPoint::intersectionWithTranslationWidget(const Vector3& rayOrigin
     Vector3 intersectY = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, Y);
     Vector3 intersectZ = this->getIntersectionWithTranslationAxis(rayOrigin, rayDir, Z);
     if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3(false);
+        return Vector3::invalid();
 
     float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
     float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
@@ -186,7 +186,7 @@ Vector3 ControlPoint::intersectionWithRotationWidget(const Vector3& rayOrigin, c
     Vector3 intersectY = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, Y);
     Vector3 intersectZ = this->getIntersectionWithRotationAxis(rayOrigin, rayDir, Z);
     if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3(false);
+        return Vector3::invalid();
 
     float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
     float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
@@ -205,7 +205,7 @@ Vector3 ControlPoint::intersectionWithScalingWidget(const Vector3& rayOrigin, co
     Vector3 intersectY = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, Y);
     Vector3 intersectZ = this->getIntersectionWithScalingAxis(rayOrigin, rayDir, Z);
     if (!intersectX.isValid() && !intersectY.isValid() && !intersectZ.isValid())
-        return Vector3(false);
+        return Vector3::invalid();
 
     float distX = (intersectX.isValid() ? (intersectX - rayOrigin).norm2() : std::numeric_limits<float>::max());
     float distY = (intersectY.isValid() ? (intersectY - rayOrigin).norm2() : std::numeric_limits<float>::max());
@@ -243,11 +243,11 @@ Vector3 ControlPoint::getIntersectionWithTranslationAxis(const Vector3& rayOrigi
     if (intersection.isValid()) {
         Vector3 projection = Collision::projectPointOnSegment(intersection, this->getPosition() - widgetAxis, this->getPosition() + widgetAxis);
         if ((projection - intersection).norm2() > tolerence * tolerence)
-            return Vector3(false);
+            return Vector3::invalid();
         else
             return projection;
     } else {
-        return Vector3(false);
+        return Vector3::invalid();
     }
 }
 
@@ -266,12 +266,12 @@ Vector3 ControlPoint::getIntersectionWithRotationAxis(const Vector3& rayOrigin, 
     if (intersection.isValid()) {
         Vector3 projection = Collision::projectPointOnSphere(intersection, this->getPosition(), circleSize);
         if ((projection - intersection).norm2() > tolerence * tolerence)
-            return Vector3(false);
+            return Vector3::invalid();
         else
             return projection;
 
     } else {
-        return Vector3(false);
+        return Vector3::invalid();
     }
 }
 
@@ -292,7 +292,7 @@ Vector3 ControlPoint::getIntersectionWithScalingAxis(const Vector3& rayOrigin, c
         return intersection;
 
     } else {
-        return Vector3(false);
+        return Vector3::invalid();
     }
 }
 

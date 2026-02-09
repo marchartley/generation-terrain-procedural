@@ -22,7 +22,7 @@ public:
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    void affectHeightmap(std::shared_ptr<Grid> heightmap);
 
-    void display(const Vector3& camPos = Vector3(false));
+    void display(const Vector3& camPos = Vector3::invalid());
 
     void replay(nlohmann::json action);
 

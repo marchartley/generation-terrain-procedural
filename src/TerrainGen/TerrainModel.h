@@ -20,9 +20,9 @@ public:
 
     virtual void saveMap(std::string filename) = 0;
     virtual void retrieveMap(std::string filename) = 0;
-    virtual Mesh getGeometry(const Vector3& dimensions = Vector3(false)) = 0;
+    virtual Mesh getGeometry(const Vector3& dimensions = Vector3::invalid()) = 0;
 
-    virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3(false), const Vector3& maxPos = Vector3(false)) = 0;
+    virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid()) = 0;
 
     virtual std::string toString() = 0;
     virtual std::string toShortString() = 0;
@@ -48,7 +48,7 @@ public:
 
     virtual bool checkIsInGround(const Vector3& position) = 0;
 
-    virtual GridF getVoxelized(const Vector3& dimensions = Vector3(false), const Vector3& scale = Vector3(1.f, 1.f, 1.f)) = 0;
+    virtual GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f)) = 0;
 
     void initFluidSim();
     void initEnvironmentalDensities();

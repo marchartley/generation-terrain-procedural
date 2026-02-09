@@ -1229,7 +1229,7 @@ Vector3 VoxelGrid::getFirstIntersectingVoxel(const Vector3& origin, const Vector
         currentPosition.z() = 0;
         return currentPosition;
     }
-    return Vector3(false);
+    return Vector3::invalid();
     */
 }
 

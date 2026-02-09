@@ -17,7 +17,7 @@ public:
 
     void resetParticles();
 
-    virtual void display(const Vector3 &camPos = Vector3(false));
+    virtual void display(const Vector3 &camPos = Vector3::invalid());
 
 public Q_SLOTS:
     void updateParticles();
