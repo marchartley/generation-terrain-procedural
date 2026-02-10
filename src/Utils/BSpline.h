@@ -111,9 +111,4 @@ public:
     std::tuple<Vector3, Vector3, Vector3> pointAndDerivativeAndSecondDerivative(float x, float alpha = 2.f) const;
 };
 
-
-#include "Utils/json.h"
-nlohmann::json bspline_to_json(const BSpline& spline);
-BSpline json_to_bspline(nlohmann::json json);
-
 #endif // BSPLINE_H

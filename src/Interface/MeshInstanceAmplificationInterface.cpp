@@ -324,9 +324,9 @@ void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string 
         std::vector<std::vector<float>> colors;
         auto jsonColors = instance["colors"];
         for (auto& col : jsonColors) {
-            colors.push_back(json_to_color(col));
+            colors.push_back(col);
         }
-        Vector3 translation = json_to_vec3<float>(instance["translation"]);
+        Vector3 translation = instance["translation"];
         int minInstances = instance["mininstances"];
         int maxInstances = instance["maxinstances"];
         float minSize = instance["minsize"];

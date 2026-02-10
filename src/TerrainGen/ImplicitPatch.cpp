@@ -7,6 +7,9 @@
 #include "TerrainGen/Heightmap.h"
 #include "TerrainGen/LayerBasedGrid.h"
 
+
+#include "serialization/Serializer.h"
+
 float ImplicitPatch::isovalue = .5f;
 const float ImplicitPatch::zResolution = .1f;
 int ImplicitPatch::currentMaxIndex = -1;
@@ -206,7 +209,7 @@ ImplicitPatch *ImplicitPatch::fromJson(nlohmann::json content)
             nlohmann::json newContent = nlohmann::json::parse(std::ifstream(filename));
             result = ImplicitPatch::fromJson(newContent[ImplicitPatch::json_identifier]);
         } else {
-            Vector3 dimensions = json_to_vec3<float>(content["dimensions"]);
+            Vector3 dimensions = content["dimensions"];
             TerrainTypes material = materialFromString(content["material"]);
             result = ImplicitPrimitive::fromHeightmap(filename, dimensions);
             dynamic_cast<ImplicitPrimitive*>(result)->material = material;
@@ -652,8 +655,8 @@ nlohmann::json ImplicitPrimitive::toJson()
     nlohmann::json content;
     if (!this->used_json_filename.empty()) {
         content["file"] = this->used_json_filename;
-        content["position"] = vec3_to_json(this->position);
-        content["dimensions"] = vec3_to_json(this->dimensions);
+        content["position"] = this->position;
+        content["dimensions"] = this->dimensions;
         content["material"] = stringFromMaterial(this->material);
         /*std::ifstream file(this->used_json_filename);
         nlohmann::json old_json_content = nlohmann::json::parse(file);
@@ -662,20 +665,20 @@ nlohmann::json ImplicitPrimitive::toJson()
         Vector3 patchOffset = this->position - oldValues->position;
         Vector3 patchRescale = this->getDimensions() / oldValues->getDimensions();
         content["path"] = this->used_json_filename;
-        content["offset"] = vec3_to_json(patchOffset);
-        content["scale"] = vec3_to_json(patchRescale);*/
+        content["offset"] = patchOffset;
+        content["scale"] = patchRescale); */
     } else {
         content["name"] = this->name;
         content["type"] = "primitive";
-        content["position"] = vec3_to_json(this->position);
-        content["dimensions"] = vec3_to_json(this->dimensions);
-        content["supportDimensions"] = vec3_to_json(this->supportDimensions);
+        content["position"] = this->position;
+        content["dimensions"] = this->dimensions;
+        content["supportDimensions"] = this->supportDimensions;
         content["densityValue"] = LayerBasedGrid::densityFromMaterial(this->material);
         content["material"] = stringFromMaterial(this->material);
         content["index"] = this->index;
         content["shape"] = stringFromPredefinedShape(this->predefinedShape);
         content["sigmaValue"] = this->parametersProvided[0];
-        content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["optionalCurve"] = this->optionalCurve;
         content["mirrored"] = this->mirrored;
         content["filename"] = this->heightmapFilename;
     }
@@ -687,14 +690,14 @@ ImplicitPatch *ImplicitPrimitive::fromJson(nlohmann::json content)
 {
     ImplicitPrimitive* patch = new ImplicitPrimitive;
     patch->name = content["name"];
-    patch->position = json_to_vec3<float>(content["position"]);
-    patch->setDimensions(json_to_vec3<float>(content["dimensions"]));
-    patch->supportDimensions = json_to_vec3<float>(content["supportDimensions"]);
+    patch->position = content["position"];
+    patch->setDimensions(content["dimensions"]);
+    patch->supportDimensions = content["supportDimensions"];
     patch->material = LayerBasedGrid::materialFromDensity(content["densityValue"]);
     if (content.contains("material"))
         patch->material = materialFromString(content["material"]);
     if (content.contains("optionalCurve"))
-        patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+        patch->optionalCurve = content["optionalCurve"];
     patch->index = content["index"];
     patch->predefinedShape = predefinedShapeFromString(content["shape"]);
     patch->parametersProvided = {content["sigmaValue"]};
@@ -1102,8 +1105,8 @@ nlohmann::json ImplicitBinaryOperator::toJson()
         Vector3 patchOffset = this->position - oldValues->position;
         Vector3 patchRescale = this->getDimensions() / oldValues->getDimensions();
         content["path"] = this->used_json_filename;
-        content["offset"] = vec3_to_json(patchOffset);
-        content["scale"] = vec3_to_json(patchRescale);*/
+        content["offset"] = patchOffset;
+        content["scale"] = patchRescale); */
     } else {
         content["type"] = "compose";
         content["name"] = this->name;
@@ -1116,7 +1119,7 @@ nlohmann::json ImplicitBinaryOperator::toJson()
             content["composableA"] = this->composableA()->toJson();
         if (this->composableB())
             content["composableB"] = this->composableB()->toJson();
-        content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["optionalCurve"] = this->optionalCurve;
         content["mirrored"] = this->mirrored;
     }
 
@@ -1126,8 +1129,8 @@ nlohmann::json ImplicitBinaryOperator::toJson()
 ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
 {
     ImplicitBinaryOperator* patch = new ImplicitBinaryOperator;
-    patch->addChild(ImplicitPatch::fromJson(content["composableA"]), 0);//patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
-    patch->addChild(ImplicitPatch::fromJson(content["composableB"]), 1);//patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
+    patch->addChild(ImplicitPatch::fromJson(content["composableA"]), 0); //patch->composableA() = ImplicitPatch::fromJson(content["composableA"]);
+    patch->addChild(ImplicitPatch::fromJson(content["composableB"]), 1); //patch->composableB() = ImplicitPatch::fromJson(content["composableB"]);
     patch->name = content["name"];
     patch->composeFunction = compositionOperationFromString(content["operator"]);
     patch->blendingFactor = content["blendingFactor"];
@@ -1136,7 +1139,7 @@ ImplicitPatch *ImplicitBinaryOperator::fromJson(nlohmann::json content)
     if (content.contains("useIntersection"))
         patch->withIntersectionOnB = content["useIntersection"];
     if (content.contains("optionalCurve"))
-        patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+        patch->optionalCurve = content["optionalCurve"];
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
@@ -1413,15 +1416,15 @@ nlohmann::json ImplicitUnaryOperator::toJson()
         Vector3 patchOffset = this->position - oldValues->position;
         Vector3 patchRescale = this->getDimensions() / oldValues->getDimensions();
         content["path"] = this->used_json_filename;
-        content["offset"] = vec3_to_json(patchOffset);
-        content["scale"] = vec3_to_json(patchRescale);*/
+        content["offset"] = patchOffset;
+        content["scale"] = patchRescale); */
     } else {
         content["type"] = "unary";
         content["name"] = this->name;
         content["index"] = this->index;
         if (this->composableA())
             content["composableA"] = this->composableA()->toJson();
-        content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["optionalCurve"] = this->optionalCurve;
         content["spreadFactor"] = this->_spreadingFactor;
         content["mirrored"] = this->mirrored;
     }
@@ -1437,23 +1440,23 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     Vector3 scale = Vector3(1, 1, 1);
     Vector3 noise = Vector3(0, 0, 0);
     Vector3 distortion = Vector3(0, 0, 0);
-    if (content.contains("translation") && json_to_vec3<float>(content["translation"]) != Vector3()) {
+    if (content.contains("translation") && content["translation"] != Vector3()) {
         patch = new ImplicitTranslation();
-        translation = json_to_vec3<float>(content["translation"]);
-    } else if (content.contains("scale") && json_to_vec3<float>(content["scale"]) != Vector3(1, 1, 1)) {
+        translation = content["translation"];
+    } else if (content.contains("scale") && content["scale"] != Vector3(1, 1, 1)) {
         patch =  new ImplicitScaling();
-        scale = json_to_vec3<float>(content["scale"]);
+        scale = content["scale"];
         if (scale == Vector3())
             scale = Vector3(1.f, 1.f, 1.f);
-    } else if (content.contains("rotation") && json_to_vec3<float>(content["rotation"]) != Vector3()) {
+    } else if (content.contains("rotation") && content["rotation"] != Vector3()) {
         patch =  new ImplicitRotation();
-        rotation = json_to_vec3<float>(content["rotation"]);
-    } else if (content.contains("noise") && json_to_vec3<float>(content["noise"]) != Vector3()) {
+        rotation = content["rotation"];
+    } else if (content.contains("noise") && content["noise"] != Vector3()) {
         patch = new ImplicitNoise();
-        noise = json_to_vec3<float>(content["noise"]);
-    } else if (content.contains("distortion") && json_to_vec3<float>(content["distortion"]) != Vector3()) {
+        noise = content["noise"];
+    } else if (content.contains("distortion") && content["distortion"] != Vector3()) {
         patch = new ImplicitWraping();
-        distortion = json_to_vec3<float>(content["distortion"]);
+        distortion = content["distortion"];
     } else if (content.contains("spreadFactor") && content["spreadFactor"] != 0) {
         patch = new ImplicitSpread();
         patch->spread(content["spreadFactor"]);
@@ -1478,7 +1481,7 @@ ImplicitPatch *ImplicitUnaryOperator::fromJson(nlohmann::json content)
     }
 
     if (content.contains("optionalCurve"))
-        patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+        patch->optionalCurve = content["optionalCurve"];
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
 
@@ -1842,7 +1845,7 @@ std::function<float (const Vector3&)> ImplicitPatch::createDistanceMapFunction(f
         p.z() = 0;
     AABBox bbox(polygon.AABBox());
     Vector3 size = bbox.dimensions();
-    polygon.translate(-bbox.min());//(-(bbox.min()));
+    polygon.translate(-bbox.min()); //(-(bbox.min()));
     // auto points = ShapeCurve(path).randomPointsInside(50);
     int maxTries = 1000 * nbPoints;
     std::vector<Vector3> points;
@@ -2518,7 +2521,7 @@ nlohmann::json ImplicitNaryOperator::toJson()
         content["type"] = "nary";
         content["name"] = this->name;
         content["index"] = this->index;
-        content["optionalCurve"] = bspline_to_json(this->optionalCurve);
+        content["optionalCurve"] = this->optionalCurve;
         content["mirrored"] = this->mirrored;
         std::vector<nlohmann::json> composableJson;
         for (auto& compo : this->composables)
@@ -2538,7 +2541,7 @@ ImplicitPatch *ImplicitNaryOperator::fromJson(nlohmann::json content)
     patch->name = content["name"];
     patch->index = content["index"];
     if (content.contains("optionalCurve"))
-        patch->optionalCurve = json_to_bspline(content["optionalCurve"]);
+        patch->optionalCurve = content["optionalCurve"];
     if (content.contains("mirrored"))
         patch->mirrored = content["mirrored"];
     patch->update();
@@ -2621,7 +2624,7 @@ void ImplicitNaryOperator::deleteAllChildren()
 nlohmann::json ImplicitTranslation::toJson()
 {
     nlohmann::json content = ImplicitUnaryOperator::toJson();
-    content["translation"] = vec3_to_json(this->_translation);
+    content["translation"] = this->_translation;
     return content;
 }
 
@@ -2633,7 +2636,7 @@ ImplicitPatch *ImplicitTranslation::fromJson(nlohmann::json content)
 nlohmann::json ImplicitRotation::toJson()
 {
     nlohmann::json content = ImplicitUnaryOperator::toJson();
-    content["rotation"] = vec3_to_json(this->_rotation);
+    content["rotation"] = this->_rotation;
     return content;
 }
 
@@ -2645,7 +2648,7 @@ ImplicitPatch *ImplicitRotation::fromJson(nlohmann::json content)
 nlohmann::json ImplicitScaling::toJson()
 {
     nlohmann::json content = ImplicitUnaryOperator::toJson();
-    content["scale"] = vec3_to_json(this->_scale);
+    content["scale"] = this->_scale;
     return content;
 }
 
@@ -2657,7 +2660,7 @@ ImplicitPatch *ImplicitScaling::fromJson(nlohmann::json content)
 nlohmann::json ImplicitWraping::toJson()
 {
     nlohmann::json content = ImplicitUnaryOperator::toJson();
-    content["distortion"] = vec3_to_json(this->_distortion);
+    content["distortion"] = this->_distortion;
     return content;
 }
 
@@ -2669,7 +2672,7 @@ ImplicitPatch *ImplicitWraping::fromJson(nlohmann::json content)
 nlohmann::json ImplicitNoise::toJson()
 {
     nlohmann::json content = ImplicitUnaryOperator::toJson();
-    content["noise"] = vec3_to_json(this->_noise);
+    content["noise"] = this->_noise;
     return content;
 }
 

@@ -225,7 +225,14 @@ SOURCES += \
     src/Utils/Table.cpp \
     src/Utils/Utils.cpp \
     src/Utils/Voronoi.cpp \
-    src/main.cpp
+    src/main.cpp \
+    src/serialization/BSplineSerializer.cpp \
+    src/serialization/EnvObjSerializer.cpp \
+    src/serialization/KelvinletSerializer.cpp \
+    src/serialization/Matrix3Serializer.cpp \
+    src/serialization/Serializer.cpp \
+    src/serialization/SnakeSerializer.cpp \
+    src/serialization/Vec3Serializer.cpp
 
 RESOURCES += qml.qrc \
     icons.qrc \
@@ -408,6 +415,13 @@ HEADERS += \
     src/Utils/stb_image_write.h \
     src/Utils/stb_image_resize.h \
     src/Utils/stl_reader.h \
+    src/serialization/BSplineSerializer.h \
+    src/serialization/EnvObjSerializer.h \
+    src/serialization/KelvinletSerializer.h \
+    src/serialization/Matrix3Serializer.h \
+    src/serialization/Serializer.h \
+    src/serialization/SnakeSerializer.h \
+    src/serialization/Vec3Serializer.h \
     src/sim-fluid-loganzartman/Box.hpp \
     src/sim-fluid-loganzartman/DebugLine.hpp \
     src/sim-fluid-loganzartman/Fluid.hpp \

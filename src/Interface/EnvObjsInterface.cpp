@@ -1518,10 +1518,10 @@ void EnvObjsInterface::loadScene(std::string filename)
     std::vector<nlohmann::json> allMaterials = json["materials"];
     if (json.contains("initialflow")) {
         std::string flowStr = json["initialflow"];
-        this->scene->initialFlowfield = loadGridV3(flowStr, false);
+        this->scene->initialFlowfield = json["initialflow"]; // loadGridV3(flowStr, false);
     }
     if (json.contains("userflow")) {
-        this->userFlowField = loadGridV3(json["userflow"], false);
+        this->userFlowField = json["userflow"]; //loadGridV3(json["userflow"], false);
     }
 
     if (json.contains("waterlevel")) {
@@ -1529,11 +1529,11 @@ void EnvObjsInterface::loadScene(std::string filename)
         dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get())->setWaterLevel(waterLevel);
     }
     if (json.contains("heightmap")) {
-        initialHeightmap = loadGridF(json["heightmap"], false);
+        initialHeightmap = json["heightmap"]; // loadGridF(json["heightmap"], false);
     }
 
     for (auto mat : allMaterials) {
-        this->scene->materials[mat["name"]].fromJSON(mat);
+        this->scene->materials[mat["name"]] = mat; //.fromJSON(mat);
     }
 
     for (auto obj : allObjects) {
@@ -1541,19 +1541,19 @@ void EnvObjsInterface::loadScene(std::string filename)
         EnvObject* newObject = this->scene->instantiate(objectName);
         newObject->age = obj["age"];
         newObject->fitnessScoreAtCreation = obj["fitnessScoreAtCreation"];
-        // newObject->evaluationPosition = json_to_vec3<float>(obj["evaluationPosition"]);
+        // newObject->evaluationPosition = obj["evaluationPosition"];
         /*std::vector<nlohmann::json> positions = obj["evaluationPositions"];
         for (auto position : positions) {
 
         }*/
 
         if (auto asPoint = dynamic_cast<EnvPoint*>(newObject)) {
-            asPoint->position = json_to_vec3<float>(obj["position"]);
+            asPoint->position = obj["position"];
         } else if (auto asCurve = dynamic_cast<EnvCurve*>(newObject)) {
-            asCurve->curve = json_to_bspline(obj["curve"]);
+            asCurve->curve = obj["curve"];
             newObject->createdManually = true;
         } else if (auto asArea = dynamic_cast<EnvArea*>(newObject)) {
-            asArea->curve = json_to_bspline(obj["curve"]);
+            asArea->curve = obj["curve"];
             newObject->createdManually = true;
         }
         newObject->recomputeEvaluationPoints();
@@ -1600,16 +1600,16 @@ void EnvObjsInterface::saveScene(std::string filename)
 
     size_t i = 0;
     for (auto& [matName, material] : this->scene->materials) {
-        allMaterials[i] = material.toJSON();
+        allMaterials[i] = material; // .toJSON();
         i++;
     }
 
     mainJson["objects"] = allObjects;
     mainJson["materials"] = allMaterials;
-    mainJson["initialflow"] = stringifyGridV3(this->scene->initialFlowfield, false);
-    mainJson["userflow"] = stringifyGridV3(this->userFlowField, false);
+    mainJson["initialflow"] = this->scene->initialFlowfield; // stringifyGridV3(this->scene->initialFlowfield, false);
+    mainJson["userflow"] = this->userFlowField; // stringifyGridV3(this->userFlowField, false);
     mainJson["waterlevel"] = heightmap->properties->waterLevel;
-    mainJson["heightmap"] = stringifyGridF(initialHeightmap, false);
+    mainJson["heightmap"] = initialHeightmap; //stringifyGridF(initialHeightmap, false);
     std::ofstream out(filename);
     out << mainJson.dump(1, '\t');
     out.close();

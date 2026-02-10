@@ -9,6 +9,8 @@ class ActionInterface;
 #include "TerrainGen/Heightmap.h"
 #include "Interface/Viewer.h"
 
+#include "serialization/Serializer.h"
+
 class ActionInterface : public CustomInteractiveObject
 {
     Q_OBJECT

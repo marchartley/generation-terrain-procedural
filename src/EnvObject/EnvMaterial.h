@@ -20,9 +20,6 @@ public:
 
     GridF currentState;
 
-    nlohmann::json toJSON() const;
-    bool fromJSON(nlohmann::json json);
-
     void update(const GridV3& waterCurrents, const GridV3& heightsGradients, float dt);
 };
 

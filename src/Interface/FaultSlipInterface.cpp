@@ -1,6 +1,7 @@
 #include "FaultSlipInterface.h"
 
 #include "Utils/Utils.h"
+// #include "serialization/Serializer.h"
 
 FaultSlipInterface::FaultSlipInterface(QWidget *parent)
     : ActionInterface("faultslips", "Fault slips generation", "digging", "Fault slips random generation", "fault-slip_button.png", parent)
@@ -61,10 +62,10 @@ void FaultSlipInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 slippingDirection = json_to_vec3<float>(parameters.at("slipping_direction")) + Vector3::random();
+        Vector3 slippingDirection = parameters.at("slipping_direction").get<Vector3>() + Vector3::random();
         float slippingDistance = parameters.at("slipping_distance").get<float>() * (1 + random_gen::generate(-1.f, 1.f));
-        Vector3 firstPointPos = json_to_vec3<float>(parameters.at("first_point_pos")) + Vector3::random(10.f);
-        Vector3 secondPointPos = json_to_vec3<float>(parameters.at("second_point_pos")) + Vector3::random(10.f);
+        Vector3 firstPointPos = parameters.at("first_point_pos").get<Vector3>() + Vector3::random(10.f);
+        Vector3 secondPointPos = parameters.at("second_point_pos").get<Vector3>() + Vector3::random(10.f);
         bool positiveSideFalling = parameters.at("positive_side").get<bool>();
 
         this->faultSlip.slippingDirection = slippingDirection;
@@ -104,10 +105,10 @@ void FaultSlipInterface::computeFaultSlip()
     {
         this->faultSlip.Apply(this->voxelGrid, true);
         this->addTerrainAction(nlohmann::json({
-                                               {"slipping_direction", vec3_to_json(slippingDirection)},
+                                               {"slipping_direction", slippingDirection},
                                                {"slipping_distance", slippingDistance},
-                                               {"first_point_pos", vec3_to_json(firstPointPos)},
-                                               {"second_point_pos", vec3_to_json(secondPointPos)},
+                                               {"first_point_pos", firstPointPos},
+                                               {"second_point_pos", secondPointPos},
                                                {"positive_side", positiveSideFalling}
                                               }));
 

@@ -1,6 +1,8 @@
 #include "GravityInterface.h"
 #include "GUIElements/InterfaceUtils.h"
 
+// #include "serialization/Serializer.h"
+
 GravityInterface::GravityInterface(QWidget *parent)
     : ActionInterface("gravity", "Gravity", "physics", "Gravity", "gravity_button.png", parent)
 {
@@ -24,7 +26,7 @@ void GravityInterface::replay(nlohmann::json action)
         bool applyGlobalGravity = parameters.at("global_gravity").get<bool>();
         bool applySandGravity = parameters.at("sand_gravity").get<bool>();
         float erosionStrength = parameters.at("erosion_strength").get<float>();
-        Vector3 currentDirection = json_to_vec3<float>(parameters.at("current_direction"));
+        Vector3 currentDirection = parameters.at("current_direction");
 
         if (applyGlobalGravity) {
             this->voxelGrid->makeItFall();
@@ -44,7 +46,7 @@ bool GravityInterface::createGlobalGravity()
                                                {"global_gravity", true},
                                                {"sand_gravity", false},
                                                {"erosion_strength", 0.f},
-                                               {"current_direction", vec3_to_json(Vector3(0, 0, 0))}
+                                               {"current_direction", Vector3(0, 0, 0)}
                                             }));
     Q_EMIT updated();
     return false;
@@ -69,7 +71,7 @@ bool GravityInterface::createSandGravity()
                                            {"global_gravity", false},
                                            {"sand_gravity", true},
                                            {"erosion_strength", 0.f},
-                                           {"current_direction", vec3_to_json(Vector3(0, 0, 0))}
+                                           {"current_direction", Vector3(0, 0, 0)}
                                           }));
     return false;
     /*

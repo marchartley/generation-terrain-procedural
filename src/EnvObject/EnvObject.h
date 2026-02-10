@@ -29,6 +29,17 @@ class EnvironmentalScene;
 // #include "EnvObject/EnvironmentalScene.h"
 
 
+struct DepositionRate {
+    float radius = 0;
+    float rate = 0;
+};
+
+struct AbsorptionRate {
+    float radius = 0;
+    float rate = 0;
+};
+
+
 class EnvObject
 {
 public:

@@ -1249,30 +1249,4 @@ float Vec3<T>::distanceToBoundaries(const Vec3<T>& pos, const Vec3<U>& minPos, c
 }
 
 
-
-template <class T>
-nlohmann::json vec3_to_json(const Vec3<T>& vec);
-template <class T>
-Vec3<T> json_to_vec3(nlohmann::json json);
-
-std::vector<float> json_to_color(nlohmann::json json);
-nlohmann::json color_to_json(const std::vector<float>& color);
-nlohmann::json color_to_json(const Vector3& color);
-
-
-
-
-
-
-template <class T>
-nlohmann::json vec3_to_json(const Vec3<T>& vec) {
-    return nlohmann::json({{"x", vec.x()}, {"y", vec.y()}, {"z", vec.z()}});
-}
-template <class T>
-Vec3<T> json_to_vec3(nlohmann::json json)
-{
-    return Vec3<T>(json.at("x").get<T>(), json.at("y").get<T>(), json.at("z").get<T>());
-}
-
-
 #endif // VECTOR3_H

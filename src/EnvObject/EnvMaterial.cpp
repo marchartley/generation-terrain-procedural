@@ -11,23 +11,6 @@ EnvMaterial::EnvMaterial(std::string name, float diffusionSpeed, float waterTran
 
 }
 
-nlohmann::json EnvMaterial::toJSON() const
-{
-    nlohmann::json json;
-    json["name"] = this->name;
-    json["data"] = stringifyGridF(this->currentState, false);
-    return json;
-}
-
-bool EnvMaterial::fromJSON(nlohmann::json json)
-{
-    if (json["name"] == this->name) {
-        this->currentState = loadGridF(json["data"], false);
-        return true;
-    }
-    return false;
-}
-
 void EnvMaterial::update(const GridV3 &waterCurrents, const GridV3 &heightsGradients, float dt)
 {
     // if (!this->isStable) {

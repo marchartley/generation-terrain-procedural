@@ -3,6 +3,8 @@
 #include "GUIElements/InterfaceUtils.h"
 #include "TerrainModification/RockErosion.h"
 
+// #include "serialization/Serializer.h"
+
 ManualEditionInterface::ManualEditionInterface(QWidget *parent)
     : ActionInterface("manualedit", "Manual edit", "digging", "Manual editing", "manual-edit_button.png", parent)
 {
@@ -33,7 +35,7 @@ void ManualEditionInterface::replay(nlohmann::json action)
 
         float size = parameters.at("size").get<float>() * random_gen::generate(0.f, 2.f);
         float strength = parameters.at("strength").get<float>() * random_gen::generate(0.f, 2.f);
-        Vector3 position = json_to_vec3<float>(parameters.at("position")) + Vector3::random(0.f, 20.f);
+        Vector3 position = parameters.at("position").get<Vector3>() + Vector3::random(0.f, 20.f);
         bool addingMode = parameters.at("addingMode").get<bool>();
 
         RockErosion rock(size, strength);
@@ -95,7 +97,7 @@ void ManualEditionInterface::applyModification()
     this->addTerrainAction(nlohmann::json({
                                            {"size", size},
                                            {"strength", strength},
-                                           {"position", vec3_to_json(position)},
+                                           {"position", position},
                                            {"addingMode", addingMode}
                                           }));
 

@@ -39,8 +39,8 @@ void HeightmapErosionInterface::replay(nlohmann::json action)
 {
 //    if (this->isConcerned(action)) {
 //        auto& parameters = action.at("parameters");
-//        Vector3 pos = json_to_vec3<float>(parameters.at("position"));
-//        Vector3 dir = json_to_vec3<float>(parameters.at("direction"));
+//        Vector3 pos = parameters.at("position");
+//        Vector3 dir = parameters.at("direction");
 //        float size = parameters.at("size").get<float>();
 //        int qtt = parameters.at("quantity").get<int>();
 //        float strength = parameters.at("strength").get<float>();

@@ -1035,23 +1035,3 @@ std::ostream& operator<<(std::ostream& io, std::shared_ptr<BSpline> s) {
     io << s->toString();
     return io;
 }
-
-
-nlohmann::json bspline_to_json(const BSpline& spline) {
-    std::vector<nlohmann::json> points;
-    for (const auto& p : spline) {
-        points.push_back(vec3_to_json(p));
-    }
-    return nlohmann::json({
-                              {"points", points},
-                              {"closed", spline.closed}
-                          });
-}
-BSpline json_to_bspline(nlohmann::json json) {
-    BSpline spline;
-    for (auto& point : json.at("points"))
-        spline.points.push_back(json_to_vec3<float>(point));
-    if (json.at("closed").get<bool>())
-        spline.close();
-    return spline;
-}
