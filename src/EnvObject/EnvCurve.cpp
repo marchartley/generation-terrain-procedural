@@ -185,7 +185,7 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         k2.v = 0;
         k2.curve = translatedCurve;
         */
-        TranslateKelvinletCurve k;
+        GrabKelvinletCurve k;
         k.radialScale = width * .05f;
         k.force = 10.f;
 
