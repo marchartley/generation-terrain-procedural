@@ -187,7 +187,7 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotMo
         } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(params->currentKelvinlet)) {
             asGrab->force = force;
         } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(params->currentKelvinlet)) {
-            asScale->scale = sign(force.x()) * force.norm();
+            asScale->force = sign(force.x()) * force.norm();
         }
     });
 

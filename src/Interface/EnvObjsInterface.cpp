@@ -454,7 +454,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
             } else if (this->KelvinletChoice == "scale") {
                 ScaleKelvinlet* k = dynamic_cast<ScaleKelvinlet*>(_k);
                 // k->radialScale = 5.f;
-                k->scale = delta.norm();
+                k->force = delta.norm();
             } else if (this->KelvinletChoice == "pinch") {
                 PinchKelvinlet* k = dynamic_cast<PinchKelvinlet*>(_k);
                 k->force = delta;

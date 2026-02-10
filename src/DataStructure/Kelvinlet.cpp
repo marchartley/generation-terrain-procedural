@@ -96,7 +96,7 @@ Vector3 ScaleKelvinlet::evaluate(const Vector3 &p) const
     float b = a / (4 * (1.f - v));
     float scale = 2 * b - a;
     float scaleFactor = 10.f;
-    Vector3 delta = rvector * (this->scale * -scaleFactor * scale * affineScalar);
+    Vector3 delta = rvector * (this->force * -scaleFactor * scale * affineScalar);
 
     return delta;
 }

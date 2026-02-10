@@ -127,7 +127,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         ScaleKelvinlet k;
         k.pos = this->position;
         k.radialScale = this->radius * .2f;
-        k.scale = 10.f * /*growingState * */this->flowEffect.x();
+        k.force = 10.f * /*growingState * */this->flowEffect.x();
         k.mu = .9f;
         k.v = 0.f;
 
