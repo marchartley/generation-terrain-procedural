@@ -222,13 +222,13 @@ KelvinletCurve::KelvinletCurve()
 
 }
 
-TranslateKelvinletCurve::TranslateKelvinletCurve()
+GrabKelvinletCurve::GrabKelvinletCurve()
     : KelvinletCurve()
 {
 
 }
 
-Vector3 TranslateKelvinletCurve::evaluate(const Vector3 &p) const
+Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 {
     if (this->curve.empty()) return Vector3::invalid();
     float closestTime = curve.estimateClosestTime(p);

@@ -95,13 +95,13 @@ public:
 };
 
 
-class TranslateKelvinletCurve : public KelvinletCurve {
+class GrabKelvinletCurve : public KelvinletCurve {
 public:
-    TranslateKelvinletCurve();
+    GrabKelvinletCurve();
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new TranslateKelvinletCurve(*this); }
+    virtual Kelvinlet* clone() const { return new GrabKelvinletCurve(*this); }
     virtual std::string getShortName() const { return "Translate Curve"; }
 
     float force;
