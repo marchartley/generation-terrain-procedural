@@ -201,6 +201,7 @@ SOURCES += \
     src/TerrainModification/CoralGrowth.cpp \
     src/TerrainModification/CoralIslandGenerator.cpp \
     src/TerrainModification/FaultSlip.cpp \
+    src/TerrainModification/OMP_algo.cpp \
     src/TerrainModification/ParticleErosion.cpp \
     src/TerrainModification/RockErosion.cpp \
     src/TerrainModification/SpheroidalWeathering.cpp \
@@ -372,6 +373,7 @@ HEADERS += \
     src/TerrainModification/CoralGrowth.h \
     src/TerrainModification/CoralIslandGenerator.h \
     src/TerrainModification/FaultSlip.h \
+    src/TerrainModification/OMP_algo.h \
     src/TerrainModification/ParticleErosion.h \
     src/TerrainModification/RockErosion.h \
     src/TerrainModification/SpheroidalWeathering.h \
