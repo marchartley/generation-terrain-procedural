@@ -1,6 +1,8 @@
 #include "EnvArea.h"
 #include "EnvObject/EnvironmentalScene.h"
 
+#include "serialization/Serializer.h"
+
 EnvArea::EnvArea()
     : EnvObject()
 {
@@ -278,6 +280,6 @@ void EnvArea::updateCurve(const BSpline &newCurve)
 nlohmann::json EnvArea::toJSON() const
 {
     auto json = EnvObject::toJSON();
-    json["curve"] = bspline_to_json(this->curve);
+    json["curve"] = this->curve;
     return json;
 }

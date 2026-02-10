@@ -1,6 +1,8 @@
 #include "EnvironmentalScene.h"
 
 
+#include "serialization/Serializer.h"
+
 
 EnvironmentalScene::EnvironmentalScene()
 {
@@ -189,17 +191,17 @@ void EnvironmentalScene::readScenarioFileContent(std::string content)
             float amount = event["amount"];
             scenario.waterLevelEvents.push_back(WaterLevelEvent(amount, startTime, endTime));
         } else if (type == "storm") {
-            Vector3 position = json_to_vec3<float>(event["position"]);
-            Vector3 direction = json_to_vec3<float>(event["direction"]);
+            Vector3 position = event["position"];
+            Vector3 direction = event["direction"];
             float sigma = event["sigma"];
             scenario.stormEvents.push_back(StormEvent(position, direction, sigma, startTime, endTime));
         } else if (type == "subsidence") {
-            Vector3 position = json_to_vec3<float>(event["position"]);
+            Vector3 position = event["position"];
             float amount = event["amount"];
             float sigma = event["sigma"];
             scenario.subsidenceEvents.push_back(SubsidenceEvent(position, amount, sigma, startTime, endTime));
         } else if (type == "tectonic") {
-            Vector3 direction = json_to_vec3<float>(event["direction"]);
+            Vector3 direction = event["direction"];
             float sigma = event["sigma"];
             scenario.tectonicEvents.push_back(TectonicEvent(direction, sigma, startTime, endTime));
         } else {

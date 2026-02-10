@@ -2,6 +2,8 @@
 #include "Utils/Collisions.h"
 #include "Utils/Utils.h"
 
+#include "serialization/Serializer.h"
+
 KarstHoleProfile::KarstHoleProfile()
 {
     this->vertices = KarstHoleProfile::createTubeProfile();
@@ -423,15 +425,3 @@ BSpline KarstHoleProfile::createStarProfile()
                    })/*.close()*/;
 }
 
-
-nlohmann::json karst_profile_to_json(KarstHoleProfile profile) {
-    return nlohmann::json({
-                              {"outlines", bspline_to_json(profile.vertices) },
-                              {"scaling", vec3_to_json(profile.scaling) }
-                          });
-}
-KarstHoleProfile json_to_karst_profile(nlohmann::json json) {
-    KarstHoleProfile profile(json_to_bspline(json.at("outlines")));
-    profile.scaling = json_to_vec3<float>(json.at("scaling"));
-    return profile;
-}

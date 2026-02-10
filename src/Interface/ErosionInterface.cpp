@@ -262,8 +262,8 @@ void ErosionInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 pos = json_to_vec3<float>(parameters.at("position")) + Vector3::random(0.f, 20.f);
-        Vector3 dir = json_to_vec3<float>(parameters.at("direction")) + Vector3::random();
+        Vector3 pos = parameters.at("position").get<Vector3>() + Vector3::random(0.f, 20.f);
+        Vector3 dir = parameters.at("direction").get<Vector3>() + Vector3::random();
         float size = parameters.at("size").get<float>() + random_gen::generate(0.f, 3.f);
         int qtt = parameters.at("quantity").get<int>() + random_gen::generate(0.f, 100.f);
         float strength = parameters.at("strength").get<float>() + random_gen::generate(0.f, 1.f);

@@ -1,6 +1,8 @@
 #include "EnvPoint.h"
 #include "EnvObject/EnvironmentalScene.h"
 
+#include "serialization/Serializer.h"
+
 EnvPoint::EnvPoint()
     : EnvObject()
 {
@@ -207,7 +209,7 @@ EnvPoint &EnvPoint::translate(const Vector3 &translation)
 nlohmann::json EnvPoint::toJSON() const
 {
     auto json = EnvObject::toJSON();
-    json["position"] = vec3_to_json(this->position);
+    json["position"] = this->position;
     return json;
 }
 

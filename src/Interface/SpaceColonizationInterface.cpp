@@ -50,10 +50,10 @@ void SpaceColonizationInterface::replay(nlohmann::json action)
 {
     if (this->isConcerned(action)) {
         auto& parameters = action.at("parameters");
-        Vector3 startingPoint = json_to_vec3<float>(parameters.at("starting_point")) + Vector3::random(0.f, 20.f);
+        Vector3 startingPoint = parameters.at("starting_point").get<Vector3>() + Vector3::random(0.f, 20.f);
         std::vector<Vector3> control_points;
         for (auto& ctrl_json : parameters.at("control_points"))
-            control_points.push_back(json_to_vec3<float>(ctrl_json) + Vector3::random(0.f, 20.f));
+            control_points.push_back(ctrl_json.get<Vector3>() + Vector3::random(0.f, 20.f));
         float width = parameters.at("width").get<float>();
         float randomness = parameters.at("randomness").get<float>();
         float segmentLength = parameters.at("segment_length").get<float>();
@@ -219,9 +219,9 @@ void SpaceColonizationInterface::createKarst(bool usingSpheres)
     linkFile.close();
 
     std::vector<nlohmann::json> controlPointsPos;
-    for (auto& ctrl : this->controlPoints) controlPointsPos.push_back(vec3_to_json(ctrl->getPosition()));
+    for (auto& ctrl : this->controlPoints) controlPointsPos.push_back(ctrl->getPosition());
     this->addTerrainAction(nlohmann::json({
-                                              {"starting_point", vec3_to_json(startingPoint->getPosition()) },
+                                              {"starting_point", startingPoint->getPosition() },
                                               {"control_points", controlPointsPos},
                                               {"width", karstWidth},
                                               {"randomness", colonizer->randomness},

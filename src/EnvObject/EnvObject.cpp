@@ -10,6 +10,8 @@
 
 #include "EnvObject/EnvironmentalScene.h"
 
+#include "serialization/Serializer.h"
+
 EnvObject::EnvObject()
 {
 
@@ -31,7 +33,7 @@ EnvObject* EnvObject::fromJSON(nlohmann::json content)
     std::map<std::string, float> materialDepositionOnDeath;
     TerrainTypes material = materialFromString(content["material"]);
     ImplicitPatch::PredefinedShapes shape = predefinedShapeFromString(content["geometry"]);
-    Vector3 dimensions = json_to_vec3<float>(content["dimensions"]);
+    Vector3 dimensions = content["dimensions"];
     HeightmapFrom heightFrom = (!content.contains("heightfrom") || content["heightfrom"] == "surface" ? SURFACE : (content["heightfrom"] == "water" ? WATER : GROUND));
     float minScore = (content.contains("minscore") ? content["minscore"].get<float>() : 0.f);
 
@@ -155,10 +157,10 @@ nlohmann::json EnvObject::toJSON() const
     json["ID"] = this->ID;
     json["age"] = this->age;
     json["needs"] = this->currentSatisfaction;
-    // json["evaluationPosition"] = vec3_to_json(this->evaluationPosition);
+    // json["evaluationPosition"] = this->evaluationPosition;
     /*std::vector<nlohmann::json> positions;
     for (auto& p : this->evaluationPositions)
-        positions.push_back(vec3_to_json(p));
+        positions.push_back(p);
     json["evaluationPositions"] = positions;*/
     json["fitnessScoreAtCreation"] = this->fitnessScoreAtCreation;
 
