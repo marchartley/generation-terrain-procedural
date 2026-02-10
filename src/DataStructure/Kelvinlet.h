@@ -69,7 +69,7 @@ public:
     virtual Kelvinlet* clone() const { return new ScaleKelvinlet(*this); }
     virtual std::string getShortName() const { return "Scale"; }
 
-    float scale;
+    float force;
 };
 
 class PinchKelvinlet : public KelvinletPoint
