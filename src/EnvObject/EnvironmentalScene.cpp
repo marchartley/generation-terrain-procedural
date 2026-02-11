@@ -48,13 +48,18 @@ void EnvironmentalScene::readEnvObjectsFileContent(std::string content)
             throw std::domain_error("No type given for Environmental Object defined as " + nlohmann::to_string(obj));
         }
 
-        if (obj["type"] == "point")
-            this->availableObjects[objName] = EnvPoint::fromJSON(obj);
-        else if (obj["type"] == "curve")
-            this->availableObjects[objName] = EnvCurve::fromJSON(obj);
-        else if (obj["type"] == "area")
-            this->availableObjects[objName] = EnvArea::fromJSON(obj);
-        else {
+        if (obj["type"] == "point") {
+            EnvPoint o = obj.get<EnvPoint>();
+            this->availableObjects[objName] = o.clone();
+            // this->availableObjects[objName] = new EnvPoint;
+            // *this->availableObjects[objName] = obj.get<EnvPoint>(); //EnvPoint::fromJSON(obj);
+        } else if (obj["type"] == "curve") {
+            EnvCurve o = obj.get<EnvCurve>();
+            this->availableObjects[objName] = o.clone(); // EnvCurve::fromJSON(obj);
+        } else if (obj["type"] == "area") {
+            EnvArea o = obj.get<EnvArea>();
+            this->availableObjects[objName] = o.clone(); //EnvArea::fromJSON(obj);
+        } else {
             throw std::domain_error("Unrecognized type for Environmental Object defined as " + nlohmann::to_string(obj));
         }
     }
@@ -70,7 +75,7 @@ void EnvironmentalScene::readEnvObjectsFileContent(std::string content)
 
     for (auto& obj : this->instantiatedObjects) {
         auto name = obj->name;
-        obj->flowEffect = this->availableObjects[name]->flowEffect;
+        // obj->flowEffect = this->availableObjects[name]->flowEffect;
         //        obj->sandEffect = this->availableObjects[name]->sandEffect;
         obj->materialAbsorptionRate = this->availableObjects[name]->materialAbsorptionRate;
         obj->materialDepositionRate = this->availableObjects[name]->materialDepositionRate;
@@ -220,6 +225,26 @@ void EnvironmentalScene::readScenarioFileContent(std::string content)
 
 }
 
+std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const
+{
+    std::vector<std::string> names;
+
+    for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
+        auto& object = this->instantiatedObjects[i];
+        for (auto& [materialName, absorb] : object->materialAbsorptionRate) {
+            if (absorb.rate > 0 && std::find(names.begin(), names.end(), materialName) == names.end()) {
+                names.push_back(materialName);
+            }
+        }
+        for (auto& [materialName, depos] : object->materialDepositionRate) {
+            if (depos.rate > 0 && std::find(names.begin(), names.end(), materialName) == names.end()) {
+                names.push_back(materialName);
+            }
+        }
+    }
+    return names;
+}
+
 
 EnvObject *EnvironmentalScene::findClosest(std::string objectName, const Vector3 &pos)
 {
@@ -266,6 +291,7 @@ void EnvironmentalScene::removeAllObjects()
     this->instantiatedObjects.clear();
 }
 
+/*
 bool EnvironmentalScene::applyEffects(const GridF& heights, const GridV3& userFlow)
 {
     this->updateFlowfield(userFlow);
@@ -280,21 +306,16 @@ bool EnvironmentalScene::updateSedimentation(const GridF& heights)
     auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
 
     std::vector<std::string> names;
-    /*for (auto& [name, material] : this->materials) {
-        // TODO : SELECT ONLY AFFECTED MATERIALS
-        // if (!material.isStable)
-        names.push_back(name);
-    }*/
 
     for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
-        for (auto& [materialName, rate] : object->materialAbsorptionRate) {
-            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
+        for (auto& [materialName, absorb] : object->materialAbsorptionRate) {
+            if (absorb.rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
                 names.push_back(materialName);
             }
         }
-        for (auto& [materialName, rate] : object->materialDepositionRate) {
-            if (rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
+        for (auto& [materialName, depos] : object->materialDepositionRate) {
+            if (depos.rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
                 names.push_back(materialName);
             }
         }
@@ -312,20 +333,20 @@ bool EnvironmentalScene::updateSedimentation(const GridF& heights)
         // bool needToBeUpdated = false;
         // float startingAmount = material.currentState.sum();
         auto startState = material.currentState;
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
-                // #pragma omp critical
-                object->applyAbsorption(material);
-                // needToBeUpdated = true;
-            }
-        }
 
         for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
             auto& object = this->instantiatedObjects[i];
-            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
+            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name].rate != 0) {
                 // #pragma omp critical
                 object->applyDeposition(material);
+                // needToBeUpdated = true;
+            }
+        }
+        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
+            auto& object = this->instantiatedObjects[i];
+            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name].rate != 0) {
+                // #pragma omp critical
+                object->applyAbsorption(material);
                 // needToBeUpdated = true;
             }
         }
@@ -357,6 +378,7 @@ bool EnvironmentalScene::updateSedimentation(const GridF& heights)
     }
     return bigChangesInAtLeastOneMaterialDistribution;
 }
+*/
 
 std::vector<std::string> EnvironmentalScene::updateSedimentationKnowingFluidsAndGradients([[maybe_unused]] const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials)
 {
@@ -364,26 +386,26 @@ std::vector<std::string> EnvironmentalScene::updateSedimentationKnowingFluidsAnd
     std::vector<std::string> stillUnstable;
     std::vector<std::string> names = unstableMaterials;
 
-#pragma omp parallel for
+    #pragma omp parallel for schedule(dynamic)
     for(int i = 0; i < names.size(); i++) {
         auto& material = materials[names[i]];
 
         bool needToBeUpdated = false;
         auto startState = material.currentState;
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name] != 0) {
-                object->applyAbsorption(material);
-                needToBeUpdated = true;
-            }
-        }
 
         for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
             auto& object = this->instantiatedObjects[i];
-            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name] != 0) {
+            // if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name].rate != 0) {
                 object->applyDeposition(material);
                 needToBeUpdated = true;
-            }
+            // }
+        }
+        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
+            auto& object = this->instantiatedObjects[i];
+            // if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name].rate != 0) {
+                object->applyAbsorption(material);
+                needToBeUpdated = true;
+            // }
         }
 
         // if (needToBeUpdated) {
@@ -404,10 +426,7 @@ void EnvironmentalScene::stabilizeMaterials(const GridF &heights, int maxIterati
 {
     GridV3 heightsGradients = heights.gradient();
     auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
-    std::vector<std::string> unstableMaterials;
-    for (auto& [name, material] : this->materials) {
-        unstableMaterials.push_back(name);
-    }
+    std::vector<std::string> unstableMaterials = this->getMaterialsToUpdate();
 
     for (int iteration = 0; iteration < maxIterations; iteration++) {
         unstableMaterials = this->updateSedimentationKnowingFluidsAndGradients(heights, heightsGradients, smoothFluids, unstableMaterials);
@@ -478,7 +497,7 @@ const GridV3 &EnvironmentalScene::updateFlowfield(const GridV3 &userFlow, const 
         this->flowfield += eventFlow;
     for (int i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
-        auto [flow, occupancy] = object->computeFlowModification();
+        auto flow = object->computeFlowModification();
         this->flowfield = flow;
     }
     this->flowfield = this->flowfield.meanSmooth(3, 3, 1, true);

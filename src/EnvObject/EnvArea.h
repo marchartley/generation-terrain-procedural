@@ -9,7 +9,7 @@ class EnvArea : public EnvObject {
 public:
     EnvArea();
 
-    static EnvArea* fromJSON(nlohmann::json content);
+    // static EnvArea* fromJSON(nlohmann::json content);
 
     ShapeCurve curve;
     float width;
@@ -33,14 +33,14 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual std::pair<GridV3, GridF> computeFlowModification();
+    virtual GridV3 computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
     virtual EnvArea& translate(const Vector3& translation);
     void updateCurve(const BSpline& newCurve);
 
-    virtual nlohmann::json toJSON() const;
+    // virtual nlohmann::json toJSON() const;
 };
 
 #endif // ENVAREA_H

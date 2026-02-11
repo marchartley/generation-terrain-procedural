@@ -9,11 +9,12 @@ EnvPoint::EnvPoint()
 
 }
 
+/*
 EnvPoint *EnvPoint::fromJSON(nlohmann::json content)
 {
     return dynamic_cast<EnvPoint*>(EnvObject::fromJSON(content));
 }
-
+*/
 float EnvPoint::getSqrDistance(const Vector3 &position)
 {
     return (position - this->position).norm2();
@@ -83,17 +84,51 @@ void EnvPoint::recomputeEvaluationPoints()
 
 void EnvPoint::applyDeposition(EnvMaterial& material)
 {
+    if (this->materialDepositionRate.count(material.name) == 0) return;
+    auto depositionProperties = this->materialDepositionRate[material.name];
+    if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
+
+    AABBox box = AABBox(this->position - Vector3(1, 1, 0) * depositionProperties.radius, this->position + Vector3(1, 1, 0) * depositionProperties.radius);
+    GridF deposition = GridF(box.dimensions().x(), box.dimensions().y());
+    Vector3i center = deposition.getDimensions() / 2;
+    deposition.iterateParallel([&] (const Vector3& pos) {
+        float distToCenter = (pos - center).norm2();
+        // float amount = normalizedGaussian(depositionProperties.radius * .25f, distToCurve);
+        float amount = (distToCenter < depositionProperties.radius * depositionProperties.radius ? 1.f : 0.f);
+
+        deposition.at(pos) = amount;
+    });
+    material.currentState.add(deposition * depositionProperties.rate, box.min().xy());
+
     // if (toLower(this->name) == "coralpolyp") std::cout << "Deposing " << material.name << "? " << (this->materialDepositionRate[material.name] == 0 ? "No" : "Yes") << std::endl;
-    if (this->materialDepositionRate[material.name] == 0) return;
+    /*if (this->materialDepositionRate[material.name].rate == 0) return;
     float growingState = this->computeGrowingState2();
     // float growingState = this->computeGrowingState();
-    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name] * growingState /** (this->scene->flowfield(this->position).norm() * 10.f)*/;
+    GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * this->materialDepositionRate[material.name].rate * growingState;
     material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
+    */
 }
 
 void EnvPoint::applyAbsorption(EnvMaterial& material)
 {
-    if (this->materialAbsorptionRate[material.name] == 0) return;
+    if (this->materialAbsorptionRate.count(material.name) == 0) return;
+    auto absorptionProperties = this->materialAbsorptionRate[material.name];
+    if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
+
+    AABBox box = AABBox(this->position - Vector3(1, 1, 0) * absorptionProperties.radius, this->position + Vector3(1, 1, 0) * absorptionProperties.radius);
+    GridF absorption = GridF(box.dimensions().x(), box.dimensions().y());
+    Vector3i center = absorption.getDimensions() / 2;
+    absorption.iterateParallel([&] (const Vector3& pos) {
+        float distToCenter = (pos - center).norm2();
+        // float amount = normalizedGaussian(absorptionProperties.radius * .25f, distToCurve);
+        float amount = (distToCenter < absorptionProperties.radius * absorptionProperties.radius ? 1.f : 0.f);
+
+        absorption.at(pos) = amount;
+    });
+    material.currentState.add(absorption * absorptionProperties.rate * -1.f, box.min().xy());
+    material.currentState.iterateParallel([&] (size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
+    /*
+    if (this->materialAbsorptionRate[material.name].rate == 0) return;
     if (this->needsForGrowth.count(material.name) == 0) return;
 
     float growingState = this->computeGrowingState2();
@@ -107,20 +142,22 @@ void EnvPoint::applyAbsorption(EnvMaterial& material)
     sandAbsorbed = sandAbsorbed.min(currentSand, 0, 0, 0);
     this->currentSatisfaction[material.name] += sandAbsorbed.sum();
     material.currentState.add(-sandAbsorbed, this->position - sandAbsorbed.getDimensions() * .5f);
+    */
 }
 
 void EnvPoint::applyDepositionOnDeath()
 {
-    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+    for (auto& [materialName, depos] : materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
-        if (amount == 0) return;
-        GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * amount;
+        if (depos.rate == 0) return;
+        GridF sand = GridF::normalizedGaussian(radius, radius, 1, radius * .25f) * depos.rate;
         material.currentState.add(sand, this->position - sand.getDimensions() * .5f);
     }
 }
 
-std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
+GridV3 EnvPoint::computeFlowModification()
 {
+    /*
     if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
     float growingState = this->computeGrowingState2();
     if (_cachedFlowModif.size() == 0) {
@@ -129,7 +166,7 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
         ScaleKelvinlet k;
         k.pos = this->position;
         k.radialScale = this->radius * .2f;
-        k.force = 10.f * /*growingState * */this->flowEffect.x();
+        k.force = 10.f * this->flowEffect.x();
         k.mu = .9f;
         k.v = 0.f;
 
@@ -140,25 +177,10 @@ std::pair<GridV3, GridF> EnvPoint::computeFlowModification()
             flow(p) += displacement;
         });
         _cachedFlowModif = flow;
-        // return {flow, GridF(flow.getDimensions(), 1.f)};
-        /*
-        GridV3 gradients(2.f*radius, 2.f*radius, 1);
-        Vector3 center = Vector3(radius, radius);
-        gradients.iterateParallel([&](const Vector3i& pos) {
-            Vector3 dir = pos - center;
-            float mag = std::max(0.f, 1.f - (dir.magnitude() / radius));
-            gradients(pos) = dir.setMag(mag * currentGrowth);
-        });
-
-        GridV3 flow = GridV3(this->scene->flowfield.getDimensions()).paste(gradients * 1.f, this->position - Vector3(radius, radius));
-    //    GridV3 flow = GridV3(this->scene->flowfield.getDimensions()).paste(GridV3(gauss.getDimensions(), Vector3(1, 0, 0) * this->flowEffect) * gauss, this->position - Vector3(radius, radius));
-        GridF occupancy(flow.getDimensions());
-        occupancy.iterateParallel([&] (const Vector3& pos) {
-            occupancy(pos) = ((pos - this->position).norm2() < radius * radius ? 1.f : 0.f);
-        });
-        return {flow, occupancy};*/
     }
     return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF(this->scene->flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
+    */
+    return this->scene->flowfield;
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
@@ -205,14 +227,14 @@ EnvPoint &EnvPoint::translate(const Vector3 &translation)
     this->geometryNeedsUpdate = true;
     return *this;
 }
-
+/*
 nlohmann::json EnvPoint::toJSON() const
 {
     auto json = EnvObject::toJSON();
     json["position"] = this->position;
     return json;
 }
-
+*/
 
 /*float EnvPoint::estimateShadowing(const GridV3& flow, const Vector3& pos) {
     Vector3 currents = flow.interpolate(this->position);
