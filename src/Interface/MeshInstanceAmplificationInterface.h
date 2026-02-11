@@ -6,10 +6,10 @@
 #include "EnvObject/EnvironmentalScene.h"
 
 struct InstantiationMeshOption {
-    InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+    InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
         : name(name), folderName(folderName), minMaxSizes(minMaxSizes), color(color), requiredTranslation(translation), minMaxInstances(minMaxInstances), radius(radius)
     {}
-    InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, std::vector<float> color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+    InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
         : InstantiationMeshOption(name, name, minMaxSizes, color, translation, minMaxInstances, radius)
     {}
     std::string name;
@@ -25,7 +25,7 @@ struct InstantiationMeshOption {
     std::vector<float> sizes;
     std::vector<Vector3> orientations;
     std::pair<float, float> minMaxSizes = {10.f, 15.f};
-    std::vector<float> color = {.0f, 1.f, .5f, 1.f};
+    Vector3 color = Vector3(.0f, 1.f, .5f);
     Vector3 requiredTranslation;
     std::pair<int, int> minMaxInstances = {1, 1};
     float radius = 0.f;
