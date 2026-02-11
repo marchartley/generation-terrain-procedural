@@ -321,10 +321,10 @@ void MeshInstanceAmplificationInterface::readMeshInstanceFile(const std::string 
 
         std::string folderName = instance["foldername"];
         if (folderName == "") folderName = name;
-        std::vector<std::vector<float>> colors;
+        std::vector<Vector3> colors;
         auto jsonColors = instance["colors"];
         for (auto& col : jsonColors) {
-            colors.push_back(col);
+            colors.push_back(col.get<Vector3>());
         }
         Vector3 translation = instance["translation"];
         int minInstances = instance["mininstances"];

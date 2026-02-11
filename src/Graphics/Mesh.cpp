@@ -107,7 +107,7 @@ Mesh &Mesh::fromStl(std::string filename)
         stl_reader::StlMesh <float, unsigned int> stl_model (filename);
         std::vector<Vector3> vertices;
         for (size_t ivert = 0; ivert < stl_model.num_vrts(); ivert++) {
-            Vector3 v(stl_model.vrt_coords(ivert));
+            Vector3 v(stl_model.vrt_coords(ivert)[0], stl_model.vrt_coords(ivert)[1], stl_model.vrt_coords(ivert)[2]);
             vertices.push_back(v);
         }
         std::vector<Vector3> trianglesVec3;

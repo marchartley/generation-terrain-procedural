@@ -6,7 +6,7 @@ uniform mat4 mv_matrix;
 uniform mat4 proj_matrix;
 uniform mat4 norm_matrix;
 
-uniform vec4 color = vec4(1.0, 1.0, 1.0, 1.0);
+uniform vec3 color = vec3(1.0, 1.0, 1.0);
 uniform bool cullFace = true;
 
 
@@ -41,7 +41,7 @@ void main(void)
     if (!gl_FrontFacing && cullFace)
         discard;
 
-
+    vec4 color4 = vec4(color, 1.0);
     vec3 N = normalize(varyingNormal);
     for (int iLight = 0; iLight < nbLights; iLight++) {
 
@@ -56,8 +56,8 @@ void main(void)
 
         float lumin = 1.0;
 
-        vec4 ambiant = ((globalAmbiant * color) + (lights[iLight].ambiant * color));
-        vec4 diffuse = lights[iLight].diffuse * color * max(cosTheta, 0.0);
+        vec4 ambiant = ((globalAmbiant * color4) + (lights[iLight].ambiant * color4));
+        vec4 diffuse = lights[iLight].diffuse * color4 * max(cosTheta, 0.0);
         vec4 specular = vec4(0.0, 0.0, 0.0, 1.0); //lights[iLight].specular * material_specular * pow(max(cosPhi, 0.0), material_shininness * 32.0);
         vec4 material_color = vec4((ambiant + diffuse + specular).xyz*2, 1.0);
         vec3 light_pos = vec4(mv_matrix * vec4(lights[iLight].position, 1.0)).xyz;
