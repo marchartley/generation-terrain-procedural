@@ -39,6 +39,10 @@ struct AbsorptionRate {
     float rate = 0;
 };
 
+struct FlowEffect {
+
+};
+
 
 class EnvObject
 {
@@ -46,9 +50,9 @@ public:
     EnvObject();
     virtual ~EnvObject();
 
-    static EnvObject* fromJSON(nlohmann::json content);
+    // static EnvObject* fromJSON(nlohmann::json content);
 
-    virtual nlohmann::json toJSON() const;
+    // virtual nlohmann::json toJSON() const;
 
     static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene *scene, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
@@ -60,11 +64,10 @@ public:
     std::function<float(const Vector3&)> fittingFunction;
     std::string s_FitnessFunction;
     std::function<float(const Vector3&)> fitnessFunction;
-    Vector3 flowEffect;
-    std::map<std::string, float> materialDepositionRate;
-    std::map<std::string, float> materialAbsorptionRate;
-    std::map<std::string, float> materialDepositionOnDeath;
-    Vector3 inputDimensions;
+    // Vector3 flowEffect;
+    std::map<std::string, DepositionRate> materialDepositionRate;
+    std::map<std::string, AbsorptionRate> materialAbsorptionRate;
+    std::map<std::string, DepositionRate> materialDepositionOnDeath;
     float age = 0.f;
     std::map<std::string, float> needsForGrowth;
     std::map<std::string, float> currentSatisfaction;
@@ -92,7 +95,7 @@ public:
     virtual void applyDeposition(EnvMaterial& material) = 0;
     virtual void applyAbsorption(EnvMaterial& material) = 0;
     virtual void applyDepositionOnDeath() = 0;
-    virtual std::pair<GridV3, GridF> computeFlowModification() = 0;
+    virtual GridV3 computeFlowModification() = 0;
     virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
     virtual GridF createHeightfield();
     virtual EnvObject& translate(const Vector3& translation) = 0;

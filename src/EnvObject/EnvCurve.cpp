@@ -8,11 +8,12 @@ EnvCurve::EnvCurve()
 {
 
 }
-
+/*
 EnvCurve *EnvCurve::fromJSON(nlohmann::json content)
 {
     return dynamic_cast<EnvCurve*>(EnvObject::fromJSON(content));
 }
+*/
 float EnvCurve::getSqrDistance(const Vector3 &position)
 {
     return (position - this->curve.estimateClosestPos(position)).norm2();
@@ -92,29 +93,63 @@ void EnvCurve::recomputeEvaluationPoints()
 
 void EnvCurve::applyDeposition(EnvMaterial& material)
 {
-    if (this->materialDepositionRate[material.name] == 0) return;
+    if (this->materialDepositionRate.count(material.name) == 0) return;
+    auto depositionProperties = this->materialDepositionRate[material.name];
+    if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
 
     AABBox box = AABBox(this->curve.points);
-    BSpline translatedCurve = BSpline(this->curve.getPath(100));
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
+    BSpline translatedCurve = this->curve; //.getPath(100);
+    translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
 
-    if (_cachedAbsorptionDepositionField.empty()) {
-        _cachedAbsorptionDepositionField = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
+    GridF deposition = GridF(box.dimensions().x() + depositionProperties.radius * 2.f, box.dimensions().y() + depositionProperties.radius * 2.f);
+
+    deposition.iterateParallel([&] (const Vector3& pos) {
+        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+        // float amount = normalizedGaussian(depositionProperties.radius * .25f, distToCurve);
+        float amount = (distToCurve < depositionProperties.radius * depositionProperties.radius ? 1.f : 0.f);
+
+        deposition.at(pos) = amount;
+    });
+    material.currentState.add(deposition * depositionProperties.rate, box.min().xy() - Vector3(depositionProperties.radius, depositionProperties.radius));
+
+    /*if (_cachedAbsorptionDepositionField.empty()) {
+        _cachedAbsorptionDepositionField = GridF(box.dimensions().x() + depositionProperties.radius * 2.f, box.dimensions().y() + depositionProperties.radius * 2.f);
 
         _cachedAbsorptionDepositionField.iterateParallel([&] (const Vector3& pos) {
             float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
-            float amount = normalizedGaussian(width * .25f, distToCurve);
+            // float amount = normalizedGaussian(depositionProperties.radius * .25f, distToCurve);
+            float amount = (distToCurve < depositionProperties.radius ? 1.f : 0.f);
 
             _cachedAbsorptionDepositionField.at(pos) = amount;
         });
     }
-    material.currentState.add(_cachedAbsorptionDepositionField * this->materialDepositionRate[material.name], box.min().xy() - Vector3(width, width));
+    material.currentState.add(_cachedAbsorptionDepositionField * this->materialDepositionRate[material.name].rate, box.min().xy() - Vector3(depositionProperties.radius, depositionProperties.radius));
+    */
 }
 
 void EnvCurve::applyAbsorption(EnvMaterial& material)
 {
-    if (this->materialAbsorptionRate[material.name] == 0) return;
+    if (this->materialAbsorptionRate.count(material.name) == 0) return;
+    auto absorptionProperties = this->materialAbsorptionRate[material.name];
+    if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
+
+    AABBox box = AABBox(this->curve.points);
+    BSpline translatedCurve = this->curve; //.getPath(100);
+    translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
+
+    GridF absorption = GridF(box.dimensions().x() + absorptionProperties.radius * 2.f, box.dimensions().y() + absorptionProperties.radius * 2.f);
+
+    absorption.iterateParallel([&] (const Vector3& pos) {
+        float distToCurve = translatedCurve.estimateSqrDistanceFrom(pos, true);
+        // float amount = normalizedGaussian(absorptionProperties.radius * .25f, distToCurve);
+        float amount = (distToCurve < absorptionProperties.radius * absorptionProperties.radius ? 1.f : 0.f);
+
+        absorption.at(pos) = amount;
+    });
+    material.currentState.add(absorption * absorptionProperties.rate * -1.f, box.min().xy() - Vector3(absorptionProperties.radius, absorptionProperties.radius));
+    material.currentState.iterateParallel([&] (size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
+    /*
+    if (this->materialAbsorptionRate[material.name].rate == 0) return;
     displayProcessTime("Absorption... ", [&]() {
         AABBox box = AABBox(this->curve.points);
         BSpline translatedCurve = BSpline(this->curve.getPath(100));
@@ -131,19 +166,20 @@ void EnvCurve::applyAbsorption(EnvMaterial& material)
                 _cachedAbsorptionDepositionField.at(pos) = amount;
             });
         }
-        material.currentState.add(_cachedAbsorptionDepositionField * this->materialAbsorptionRate[material.name], box.min().xy() - Vector3(width, width));
+        material.currentState.add(_cachedAbsorptionDepositionField * this->materialAbsorptionRate[material.name].rate, box.min().xy() - Vector3(width, width));
 
         material.currentState.iterateParallel([&] (size_t i) {
             material.currentState[i] = std::max(material.currentState[i], 0.f);
         });
     }, false);
+    */
 }
 
 void EnvCurve::applyDepositionOnDeath()
 {
-    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+    for (auto& [materialName, depos] : materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
-        if (amount == 0) return;
+        if (depos.rate == 0) return;
 
         AABBox box = AABBox(this->curve.points);
         BSpline translatedCurve = this->curve;
@@ -152,14 +188,15 @@ void EnvCurve::applyDepositionOnDeath()
         GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
 
         sand.iterateParallel([&] (const Vector3& pos) {
-            sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * amount;
+            sand.at(pos) = normalizedGaussian(width * .25f, translatedCurve.estimateSqrDistanceFrom(pos)) * depos.rate;
         });
         material.currentState.add(sand, box.min().xy() - Vector3(width, width));
     }
 }
 
-std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
+GridV3 EnvCurve::computeFlowModification()
 {
+    /*
     if (this->flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
 
     float growingState = computeGrowingState2();
@@ -173,29 +210,9 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         AABBox box = AABBox(translatedCurve.points);
         box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
-
-        /*
-        PinchKelvinletCurve k;
-        k.radialScale = width * .05f;
-        k.force = 10.f;
-        */
-        /*
-        ScaleKelvinletCurve k2;
-        k2.radialScale = width * .1f;
-        k2.force = -10.f;
-        k2.mu = .9f;
-        k2.v = 0;
-        k2.curve = translatedCurve;
-        */
         GrabKelvinletCurve k;
         k.radialScale = width * .05f;
         k.force = 10.f;
-
-        /*
-        TwistKelvinletCurve k;
-        k.radialScale = width * .05f;
-        k.force = 10.f;
-        */
 
         k.curve = translatedCurve;
 
@@ -207,6 +224,8 @@ std::pair<GridV3, GridF> EnvCurve::computeFlowModification()
         this->_cachedFlowModif = flow;
     }
     return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
+    */
+    return this->scene->flowfield;
 }
 
 
@@ -358,9 +377,11 @@ void EnvCurve::updateCurve(const BSpline &newCurve)
     this->_cachedAbsorptionDepositionField.clear();
 }
 
+/*
 nlohmann::json EnvCurve::toJSON() const
 {
     auto json = EnvObject::toJSON();
     json["curve"] = this->curve;
     return json;
 }
+*/

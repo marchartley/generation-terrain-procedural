@@ -83,19 +83,19 @@ void from_json(const nlohmann::json& json, EnvObject& obj)
 
 
     obj.name = toLower(json["name"]);
-    // obj.materialAbsorptionRate = materialAbsorptionRate;
-    // obj.materialDepositionRate = materialDepositionRate;
-    // obj.materialDepositionOnDeath = materialDepositionOnDeath;
+    obj.materialAbsorptionRate = materialAbsorptionRate;
+    obj.materialDepositionRate = materialDepositionRate;
+    obj.materialDepositionOnDeath = materialDepositionOnDeath;
     obj.s_FittingFunction = json["rule"];
     if (json.contains("fitness")) {
         obj.s_FitnessFunction = json["fitness"];
     } else {
         obj.s_FitnessFunction = obj.s_FittingFunction;
     }
-    obj.snake = json["snake"];
+    if (json.contains("snake"))
+        obj.snake = json["snake"];
     obj.material = materialFromString(json["material"]);
     obj.implicitShape = predefinedShapeFromString(json["geometry"]);
-    obj.inputDimensions = json["dimensions"];
     obj.heightFrom = (!json.contains("heightfrom") || json["heightfrom"] == "surface" ? EnvObject::SURFACE : (json["heightfrom"] == "water" ? EnvObject::WATER : EnvObject::GROUND));
     obj.minScore = (json.contains("minscore") ? json["minscore"].get<float>() : 0.f);
 }
@@ -105,7 +105,7 @@ void from_json(const nlohmann::json& json, EnvPoint& obj)
     from_json(json, static_cast<EnvObject&>(obj));
     obj.radius = json["radius"];
     obj.height = json["height"];
-    obj.flowEffect = json["flow"];
+    // obj.flowEffect = json["flow"];
     obj.recomputeEvaluationPoints();
 }
 
@@ -133,7 +133,7 @@ void from_json(const nlohmann::json& json, EnvCurve& obj)
             std::cerr << "Value for 'follow' in object " << obj.name << " not recognized. Should be 'isovalue', 'gradients' or 'skeleton'. Got " << json["follows"] << std::endl;
         }
     }
-    obj.flowEffect = json["flow"];
+    // obj.flowEffect = json["flow"];
     obj.recomputeEvaluationPoints();
 }
 
@@ -145,7 +145,7 @@ void from_json(const nlohmann::json& json, EnvArea& obj)
     obj.length = json["length"];
     obj.height = json["height"];
     obj.snake = ContinuousAreaOptimizer::getSnakeForAreaOptimizedShape(obj.fittingFunction, obj.width * obj.length);
-    obj.flowEffect = json["flow"];
+    // obj.flowEffect = json["flow"];
     obj.recomputeEvaluationPoints();
 }
 

@@ -34,6 +34,8 @@ public:
     void readScenarioFile(std::string filename);
     void readScenarioFileContent(std::string content);
 
+    std::vector<std::string> getMaterialsToUpdate() const;
+
 
     GridV3 flowfield;
     GridV3 initialFlowfield;
@@ -51,8 +53,8 @@ public:
     EnvObject* instantiate(std::string objectName);
     void removeObject(EnvObject* obj);
     void removeAllObjects();
-    bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
-    bool updateSedimentation(const GridF& heights);
+    // bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
+    // bool updateSedimentation(const GridF& heights);
     std::vector<std::string> updateSedimentationKnowingFluidsAndGradients(const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials);
     void stabilizeMaterials(const GridF& heights, int maxIterations = 40); // 40 is enough iterations to find a good stability usually, without taking too much time
     void applyMaterialsTransformations();

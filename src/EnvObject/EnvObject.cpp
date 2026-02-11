@@ -23,6 +23,7 @@ EnvObject::~EnvObject()
 }
 
 
+/*
 EnvObject* EnvObject::fromJSON(nlohmann::json content)
 {
     EnvObject* obj = nullptr;
@@ -157,15 +158,11 @@ nlohmann::json EnvObject::toJSON() const
     json["ID"] = this->ID;
     json["age"] = this->age;
     json["needs"] = this->currentSatisfaction;
-    // json["evaluationPosition"] = this->evaluationPosition;
-    /*std::vector<nlohmann::json> positions;
-    for (auto& p : this->evaluationPositions)
-        positions.push_back(p);
-    json["evaluationPositions"] = positions;*/
     json["fitnessScoreAtCreation"] = this->fitnessScoreAtCreation;
 
     return json;
 }
+*/
 
 float EnvObject::computeGrowingState()
 {

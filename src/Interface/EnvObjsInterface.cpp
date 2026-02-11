@@ -201,7 +201,7 @@ QLayout *EnvObjsInterface::createGUI()
     int selectionForCoral = 0;
     for (auto& [name, obj] : this->scene->availableObjects) {
         objectsChoices.push_back(ComboboxLineElement{name, 0});
-        if (toLower(name) == "river") {
+        if (toLower(name) == "coralpolyp") {
             selectionForCoral = objectsChoices.size() - 1;
         }
     }
@@ -772,11 +772,17 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
         this->scene->beImpactedByEvents();
     }, verbose);
 
+    displayProcessTime("Apply effect (stabilization)... ", [&]() {
+        this->scene->stabilizeMaterials(this->heightmap->getHeights());
+    });
+
     if (!this->materialSimulationStable) { // If the simulation is stable, don't do anything
+        /*
         displayProcessTime("Apply effects... ", [&]() {
                 bool bigChangesInMaterials = this->scene->applyEffects(subsidedHeightmap, userFlowField + simulationFlowField + this->computeUserKelvinletField());
             //this->materialSimulationStable = !bigChangesInMaterials;
         }, true);
+        */
         displayProcessTime("Recompute properties... ", [&]() {
             this->scene->recomputeFlowAndSandProperties(subsidedHeightmap, heightmap->properties->waterLevel, voxelGrid->getSizeZ());
         }, verbose);
@@ -1595,7 +1601,7 @@ void EnvObjsInterface::saveScene(std::string filename)
     std::vector<nlohmann::json> allMaterials(this->scene->materials.size());
 
     for (size_t i = 0; i < allObjects.size(); i++) {
-        allObjects[i] = this->scene->instantiatedObjects[i]->toJSON();
+        allObjects[i] = *this->scene->instantiatedObjects[i]; //->toJSON();
     }
 
     size_t i = 0;

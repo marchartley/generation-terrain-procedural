@@ -9,7 +9,7 @@ class EnvPoint : public EnvObject {
 public:
     EnvPoint();
 
-    static EnvPoint* fromJSON(nlohmann::json content);
+    // static EnvPoint* fromJSON(nlohmann::json content);
 
     Vector3 position;
     float radius;
@@ -31,13 +31,13 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual std::pair<GridV3, GridF> computeFlowModification();
+    virtual GridV3 computeFlowModification();
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
     virtual EnvPoint& translate(const Vector3& translation);
 
-    virtual nlohmann::json toJSON() const;
+    // virtual nlohmann::json toJSON() const;
 
 //    float estimateShadowing(const GridV3 &flow, const Vector3& pos);
 };

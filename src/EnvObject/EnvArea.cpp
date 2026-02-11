@@ -8,11 +8,12 @@ EnvArea::EnvArea()
 {
 
 }
-
+/*
 EnvArea *EnvArea::fromJSON(nlohmann::json content)
 {
     return dynamic_cast<EnvArea*>(EnvObject::fromJSON(content));
 }
+*/
 float EnvArea::getSqrDistance(const Vector3 &position)
 {
     return (position - this->curve.estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
@@ -91,31 +92,52 @@ void EnvArea::recomputeEvaluationPoints()
 
 void EnvArea::applyDeposition(EnvMaterial& material)
 {
-    if (this->materialDepositionRate[material.name] == 0) return;
-    AABBox box = AABBox(this->curve.points);
+    if (this->materialDepositionRate.count(material.name) == 0) return;
+    auto depositionProperties = this->materialDepositionRate[material.name];
+    if (depositionProperties.rate == 0 || depositionProperties.radius == 0) return;
     ShapeCurve translatedCurve = this->curve;
-    for (auto& p : translatedCurve)
-        p = p + Vector3(width, width, 0) - box.min();
-    GridF sand = GridF(box.dimensions().x() + width * 2.f, box.dimensions().y() + width * 2.f);
+    translatedCurve = translatedCurve.grow(depositionProperties.radius);
+    AABBox box = AABBox(translatedCurve.points);
+    translatedCurve.translate(Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min());
+    // for (auto& p : translatedCurve)
+        // p = p + Vector3(depositionProperties.radius, depositionProperties.radius, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x() + depositionProperties.radius * 2.f, box.dimensions().y() + depositionProperties.radius * 2.f);
 
     sand.iterateParallel([&] (const Vector3& pos) {
         bool inside = translatedCurve.contains(pos);
-        sand(pos) = (inside ? 1.f : 0.f) * this->materialDepositionRate[material.name]; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+        sand(pos) = (inside ? 1.f : 0.f) * depositionProperties.rate; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
     });
-    material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
+    material.currentState.add(sand, box.min() - Vector3(depositionProperties.radius, depositionProperties.radius));
+    // material.currentState.add(sand.meanSmooth(depositionProperties.radius, depositionProperties.radius, 1), box.min() - Vector3(depositionProperties.radius, depositionProperties.radius));
 }
 
 void EnvArea::applyAbsorption(EnvMaterial& material)
 {
-    if (this->materialAbsorptionRate[material.name] == 0) return;
-    return;
+    if (this->materialAbsorptionRate.count(material.name) == 0) return;
+    auto absorptionProperties = this->materialAbsorptionRate[material.name];
+    if (absorptionProperties.rate == 0 || absorptionProperties.radius == 0) return;
+    ShapeCurve translatedCurve = this->curve;
+    translatedCurve = translatedCurve.grow(absorptionProperties.radius);
+    AABBox box = AABBox(translatedCurve.points);
+    translatedCurve.translate(Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min());
+    // for (auto& p : translatedCurve)
+    // p = p + Vector3(absorptionProperties.radius, absorptionProperties.radius, 0) - box.min();
+    GridF sand = GridF(box.dimensions().x() + absorptionProperties.radius * 2.f, box.dimensions().y() + absorptionProperties.radius * 2.f);
+
+    sand.iterateParallel([&] (const Vector3& pos) {
+        bool inside = translatedCurve.contains(pos);
+        sand(pos) = -1.f * (inside ? 1.f : 0.f) * absorptionProperties.rate; //gaussian(width, translatedCurve.estimateSqrDistanceFrom(Vector3(x, y, 0)));
+    });
+    material.currentState.add(sand, box.min() - Vector3(absorptionProperties.radius, absorptionProperties.radius));
+    // material.currentState.add(sand.meanSmooth(absorptionProperties.radius, absorptionProperties.radius, 1), box.min() - Vector3(absorptionProperties.radius, absorptionProperties.radius));
+    material.currentState.iterateParallel([&](size_t i) { material.currentState[i] = std::max(material.currentState[i], 0.f); });
 }
 
 void EnvArea::applyDepositionOnDeath()
 {
-    for (auto& [materialName, amount] : materialDepositionOnDeath) {
+    for (auto& [materialName, depos] : materialDepositionOnDeath) {
         auto& material = this->scene->materials[materialName];
-        if (amount == 0) return;
+        if (depos.rate == 0) return;
         AABBox box = AABBox(this->curve.points);
         ShapeCurve translatedCurve = this->curve;
         for (auto& p : translatedCurve)
@@ -124,14 +146,15 @@ void EnvArea::applyDepositionOnDeath()
 
         sand.iterateParallel([&] (const Vector3& pos) {
             bool inside = translatedCurve.contains(pos);
-            sand(pos) = (inside ? 1.f : 0.f) * amount;
+            sand(pos) = (inside ? 1.f : 0.f) * depos.rate;
         });
         material.currentState.add(sand.meanSmooth(width, width, 1), box.min() - Vector3(width, width));
     }
 }
 
-std::pair<GridV3, GridF> EnvArea::computeFlowModification()
+GridV3 EnvArea::computeFlowModification()
 {
+    /*
     if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
 
     float growingState = computeGrowingState2();
@@ -164,7 +187,7 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         float timeApply = 0.f;
 
         flow.iterateParallel([&] (const Vector3& pos) {
-            if (!box.contains(pos) /*|| !translatedCurve.contains(pos, true) */)
+            if (!box.contains(pos))
                 return;
 
             Vector3 impact, direction, normal, binormal;
@@ -196,6 +219,8 @@ std::pair<GridV3, GridF> EnvArea::computeFlowModification()
         this->_cachedFlowModif = flow;
     }
     return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()};
+    */
+    return this->scene->flowfield;
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)
@@ -276,10 +301,11 @@ void EnvArea::updateCurve(const BSpline &newCurve)
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
 }
-
+/*
 nlohmann::json EnvArea::toJSON() const
 {
     auto json = EnvObject::toJSON();
     json["curve"] = this->curve;
     return json;
 }
+*/
