@@ -236,37 +236,37 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
 
     std::map<std::string, Variable> variables;
     for (auto& [name, obj] : scene->availableObjects) {
-        variables[name] = Vector3::invalid();
-        variables[name + ".center"] = Vector3::invalid();
-        variables[name + ".start"] = Vector3::invalid();
-        variables[name + ".end"] = Vector3::invalid();
-        variables[name + ".normal"] = Vector3::invalid();
-        variables[name + ".dir"] = Vector3::invalid();
+        variables[name] = Vector3::invalid;
+        variables[name + ".center"] = Vector3::invalid;
+        variables[name + ".start"] = Vector3::invalid;
+        variables[name + ".end"] = Vector3::invalid;
+        variables[name + ".normal"] = Vector3::invalid;
+        variables[name + ".dir"] = Vector3::invalid;
         variables[name + ".inside"] = float();
         variables[name + ".curvature"] = float();
     }
 
-    variables["current"] = Vector3::invalid();
-    variables["current.center"] = Vector3::invalid();
-    variables["current.start"] = Vector3::invalid();
-    variables["current.end"] = Vector3::invalid();
-    variables["current.normal"] = Vector3::invalid();
-    variables["current.dir"] = Vector3::invalid();
+    variables["current"] = Vector3::invalid;
+    variables["current.center"] = Vector3::invalid;
+    variables["current.start"] = Vector3::invalid;
+    variables["current.end"] = Vector3::invalid;
+    variables["current.normal"] = Vector3::invalid;
+    variables["current.dir"] = Vector3::invalid;
     variables["current.vel"] = float();
-    variables["current.gradient"] = Vector3::invalid();
+    variables["current.gradient"] = Vector3::invalid;
     variables["depth"] = float();
-    variables["depth.gradient"] = Vector3::invalid();
+    variables["depth.gradient"] = Vector3::invalid;
     variables["fracture"] = float();
-    variables["fracture.gradient"] = Vector3::invalid();
+    variables["fracture.gradient"] = Vector3::invalid;
     for (auto& [matName, material] : scene->materials) {
         variables[matName] = float();
-        variables[matName + ".gradient"] = Vector3::invalid();
+        variables[matName + ".gradient"] = Vector3::invalid;
     }
 
     ExpressionParser parser;
     variables["currenttime"] = float();
     variables["spawntime"] = float();
-    variables["pos"] = Vector3::invalid();
+    variables["pos"] = Vector3::invalid;
     if (!parser.validate(formula, variables, false)) {
         throw std::runtime_error("The formula " + formula + " is not valid for object '" + currentObject + "'");
     }
@@ -283,7 +283,7 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
         for (auto& [prop, map] : scene->allVectorProperties) {
                 if (!isIn(prop, neededVariables)) continue;
             if (removeSelfInstances && (startsWith(prop, currentObject + ".") || startsWith(prop, currentObject))) {
-                vars[prop] = Vector3::invalid();
+                vars[prop] = Vector3::invalid;
             } else {
                 vars[prop] = map(pos);
             }

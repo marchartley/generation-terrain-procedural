@@ -21,7 +21,7 @@ GrabKelvinlet::GrabKelvinlet()
 
 Vector3 GrabKelvinlet::evaluate(const Vector3 &p) const
 {
-    if (!this->pos.isValid()) return Vector3::invalid();
+    if (!this->valid()) return Vector3::origin;
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
@@ -54,7 +54,7 @@ TwistKelvinlet::TwistKelvinlet()
 
 Vector3 TwistKelvinlet::evaluate(const Vector3 &p) const
 {
-    if (!this->pos.isValid()) return Vector3::invalid();
+    if (!this->valid()) return Vector3::origin;
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
@@ -82,7 +82,7 @@ ScaleKelvinlet::ScaleKelvinlet()
 
 Vector3 ScaleKelvinlet::evaluate(const Vector3 &p) const
 {
-    if (!this->pos.isValid()) return Vector3::invalid();
+    if (!this->valid()) return Vector3::origin;
     Vector3 rvector =  p - pos;
     const float radius = rvector.norm();
     const float repsilon = regularDistance(radius);
@@ -109,7 +109,7 @@ PinchKelvinlet::PinchKelvinlet()
 
 Vector3 PinchKelvinlet::evaluate(const Vector3 &p) const
 {
-    if (!this->pos.isValid()) return Vector3::invalid();
+    if (!this->valid()) return Vector3::origin;
     // r = p - x0
     const Vector3 r = p - pos;
     const float r2 = r.dot(r);
@@ -230,7 +230,7 @@ GrabKelvinletCurve::GrabKelvinletCurve()
 
 Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->curve.empty()) return Vector3::invalid();
+    if (this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getDirection(closestTime);
@@ -267,7 +267,7 @@ TwistKelvinletCurve::TwistKelvinletCurve()
 
 Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->curve.empty()) return Vector3::invalid();
+    if (this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getBinormal(closestTime); //curve.getDirection(closestTime);
@@ -299,7 +299,7 @@ ScaleKelvinletCurve::ScaleKelvinletCurve()
 
 Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->curve.empty()) return Vector3::invalid();
+    if (this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
 //    Vector3 dir = curve.getDirection(closestTime);
@@ -330,7 +330,7 @@ PinchKelvinletCurve::PinchKelvinletCurve()
 
 Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->curve.empty()) return Vector3::invalid();
+    if (this->valid()) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getDirection(closestTime) * this->force;

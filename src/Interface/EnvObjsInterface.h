@@ -19,7 +19,7 @@ public:
 
     void affectTerrains(std::shared_ptr<Heightmap> heightmap, std::shared_ptr<VoxelGrid> voxelGrid, std::shared_ptr<LayerBasedGrid> layerGrid, std::shared_ptr<ImplicitNaryOperator> implicitPatch = nullptr);
 
-    void display(const Vector3& camPos = Vector3::invalid());
+    void display(const Vector3& camPos = Vector3::invalid);
 
     void replay(nlohmann::json action);
 
@@ -49,7 +49,7 @@ public Q_SLOTS:
     virtual void keyPressEvent(QKeyEvent* event);
 
 public:
-    EnvObject* instantiateSpecific(std::string objectName, const Vector3& targetPosition = Vector3::invalid(), const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
+    EnvObject* instantiateSpecific(std::string objectName, const Vector3& targetPosition = Vector3::invalid, const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
     EnvObject* fakeInstantiate(std::string objectName, const GridF& score = GridF());
 
     bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
@@ -145,14 +145,14 @@ public:
 
     HierarchicalListUI* objectsListWidget = nullptr;
 
-    Vector3 draggingPoint = Vector3::invalid();
-    Vector3 draggingFullObject = Vector3::invalid();
-    Vector3 draggingHasBeenApplied = Vector3::invalid();
+    Vector3 draggingPoint = Vector3::invalid;
+    Vector3 draggingFullObject = Vector3::invalid;
+    Vector3 draggingHasBeenApplied = Vector3::invalid;
 
 
-    Vector3 kelvinletDraggingPoint = Vector3::invalid();
-    Vector3 kelvinletDraggingFullObject = Vector3::invalid();
-    Vector3 kelvinletDraggingHasBeenApplied = Vector3::invalid();
+    Vector3 kelvinletDraggingPoint = Vector3::invalid;
+    Vector3 kelvinletDraggingFullObject = Vector3::invalid;
+    Vector3 kelvinletDraggingHasBeenApplied = Vector3::invalid;
 
     bool displayVelocities = true;
     bool displayHighErosions = true;

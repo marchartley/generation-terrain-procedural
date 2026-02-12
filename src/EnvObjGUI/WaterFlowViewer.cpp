@@ -18,17 +18,17 @@ WaterFlowViewer::WaterFlowViewer(const std::string& name, ChartView* chartView, 
         // Q_EMIT this->imagePainted(img);
         // this->addImage(img);
 
-        if (kelvinletParams.currentKelvinlet && kelvinletParams.kelvinletPosition.isValid()) {
+        /*if (kelvinletParams.currentKelvinlet && kelvinletParams.kelvinletPosition.isValid()) {
             GridV3 newFlow = this->dataModel->vectorData.field;
             PainterToolsUI::paintKelvinlet(newFlow, clickPos, &this->kelvinletParams);
             auto [overlay, alpha] = PlotVectorData::createFieldImageAndAlpha(newFlow, Vector3i(200, 200, 1), Vector3i(20, 20, 1));
             this->setOverlay(overlay, alpha, "kelvinlet preview");
-        }
+        }*/
         this->show();
     });
     QObject::connect(this, &WaterFlowViewer::clickedOnImage, this, [&](const Vector3& pos, const Vector3& value, bool leftClick, bool rightClick) {
-        if (pos.isValid() && rightClick) { // Cancelled
-            kelvinletParams.kelvinletPosition = Vector3::invalid();
+        /*if (pos.isValid() && rightClick) { // Cancelled
+            kelvinletParams.kelvinletPosition = Vector3::invalid;
             return;
         }
         if (!pos.isValid() && leftClick) { // Mouse released
@@ -36,7 +36,7 @@ WaterFlowViewer::WaterFlowViewer(const std::string& name, ChartView* chartView, 
             PainterToolsUI::paintKelvinlet(newFlow, pos, &this->kelvinletParams);
             this->hideOverlay("kelvinlet preview");
             this->show();
-        }
+        }*/
     });
 }
 

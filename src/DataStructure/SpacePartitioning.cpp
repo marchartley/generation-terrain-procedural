@@ -14,11 +14,11 @@ Vector3 SpacePartitioning::getIntersection(const Vector3 &rayStart, const Vector
 
 std::pair<Vector3, Vector3> SpacePartitioning::getIntersectionAndNormal(const Vector3 &rayStart, const Vector3 &rayEnd) const
 {
-    if (this->triangles.empty()) return {Vector3::invalid(), Vector3::invalid()};
+    if (this->triangles.empty()) return {Vector3::invalid, Vector3::invalid};
     auto [position, index] = this->getIntersectionAndTriangleIndex(rayStart, rayEnd);
     if (position.isValid())
         return {position, triangles[index].normal};
-    return {Vector3::invalid(), Vector3::invalid()};
+    return {Vector3::invalid, Vector3::invalid};
 }
 
 std::vector<Vector3> SpacePartitioning::getAllIntersections(const Vector3 &rayStart, const Vector3 &rayEnd) const

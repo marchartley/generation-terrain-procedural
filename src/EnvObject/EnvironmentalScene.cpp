@@ -518,7 +518,7 @@ void EnvironmentalScene::precomputeTerrainProperties(const GridF& heightmap, flo
     displayProcessTime("Computing terrain properties... ", [&]() {
         Vector3 terrainDimensions = heightmap.getDimensions();
         GridF initialScalarPropertyMap(terrainDimensions, 0.f);
-        GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid());
+        GridV3 initialVectorPropertyMap(terrainDimensions, Vector3::invalid);
 
         // Initialize the maps
         for (auto& [name, obj] : this->availableObjects) {
@@ -565,13 +565,13 @@ void EnvironmentalScene::recomputeTerrainPropertiesForObject(std::string objectN
         //        auto [distance, object] = this->getSqrDistanceTo(name, pos);
         EnvObject* object = this->findClosest(objectName, pos);
         if (object == nullptr) {
-            this->allVectorProperties[name](pos) = Vector3::invalid();
-            this->allVectorProperties[name + ".center"](pos) = Vector3::invalid();
-            this->allVectorProperties[name + ".start"](pos) = Vector3::invalid();
-            this->allVectorProperties[name + ".end"](pos) = Vector3::invalid();
+            this->allVectorProperties[name](pos) = Vector3::invalid;
+            this->allVectorProperties[name + ".center"](pos) = Vector3::invalid;
+            this->allVectorProperties[name + ".start"](pos) = Vector3::invalid;
+            this->allVectorProperties[name + ".end"](pos) = Vector3::invalid;
             this->allScalarProperties[name + ".inside"](pos) = 0.f;
-            this->allVectorProperties[name + ".normal"](pos) = Vector3::invalid();
-            this->allVectorProperties[name + ".dir"](pos) = Vector3::invalid();
+            this->allVectorProperties[name + ".normal"](pos) = Vector3::invalid;
+            this->allVectorProperties[name + ".dir"](pos) = Vector3::invalid;
             this->allScalarProperties[name + ".curvature"](pos) = 0.f;
         } else {
             auto allProperties = object->getAllProperties(pos);

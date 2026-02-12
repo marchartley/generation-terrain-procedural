@@ -71,7 +71,7 @@ Vector3 AABBox::intersects(const Vector3& rayStart, const Vector3& rayEnd) {
     float tFar = std::min({tMax.x(), tMax.y(), tMax.z()});
 
     if (tNear > tFar || tFar < 0) {
-        return Vector3::invalid();  // return invalid Vector3 if no intersection
+        return Vector3::invalid;  // return invalid Vector3 if no intersection
     }
 
     Vector3 intersectionPoint = rayStart + direction * tNear; // calculate intersection point
