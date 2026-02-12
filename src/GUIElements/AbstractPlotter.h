@@ -116,7 +116,7 @@ struct PlotImageData {
 
     GridV3 getImage() const { return this->image.getColorImage(); }
     GridF getImageGrey() const { return this->image.getBwImage(); }
-    QImage computeDisplayedImage(const Vector3i &imgSize = Vector3i::invalid()) const;
+    QImage computeDisplayedImage(const Vector3i &imgSize = Vector3i::invalid) const;
     QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
     QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays, const Vector3i& imgSize) const;
 
@@ -136,7 +136,10 @@ struct PlotVectorData {
     const GridV3& getField() const { return this->field; }
 
     std::pair<GridV3, GridF> getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i &numberOfCells) const;
-    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, const Vector3i &imgSize, const Vector3i &numberOfCells);
+    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, Vector3i imgSize, const Vector3i &numberOfCells, const Vector3& backgroundColor = Vector3::white);
+
+    template <class T>
+    static Matrix3<T>& drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end);
 
     GridV3 field;
 };
@@ -234,10 +237,8 @@ public:
     AbstractPlotter* showOverlay(const std::string& overlayName = "default");
     AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
 
-    GridV3 computeVectorFieldRendering(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3::invalid()) const;
-    // AbstractPlotter* addVectorField(const GridV3& field, float reductionFactor = .1f, Vector3 imgSize = Vector3::invalid(), float opacity = .5f);
-    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3::invalid()) const;
-    AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid(), float opacity = .5f);
+    GridV3 computeStreamLinesRendering(const GridV3& field, Vector3 imgSize = Vector3::invalid) const;
+    AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid, float opacity = .5f);
 
     int exec();
     AbstractPlotter* saveFig(std::string filename);
@@ -310,5 +311,37 @@ private:
     QRectF _textRect;
     QPointF _anchor;
 };
+
+
+
+
+
+
+
+
+
+template <class T>
+Matrix3<T>& PlotVectorData::drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end) {
+    auto line = (end - start);
+    int dx = line.x();
+    int dy = line.y();
+
+    // calculate steps required for generating pixels
+    int steps = abs(dx) > abs(dy) ? abs(dx) : abs(dy);
+
+    // calculate increment in x & y for each steps
+    float Xinc = dx / (float)steps;
+    float Yinc = dy / (float)steps;
+
+    // Put pixel for each step
+    auto p = start;
+    for (int i = 0; i <= steps; i++) {
+        img[p] = color;
+        p.x() += Xinc;
+        p.y() += Yinc;
+    }
+
+    return img;
+}
 
 #endif // ABSTRACTPLOTTER_H

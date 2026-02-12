@@ -26,11 +26,11 @@ std::map<std::string, Vector3> EnvArea::getAllProperties(const Vector3 &position
     return {
         {"default", closestPos},
         {"center", this->curve.center()},
-        {"start", Vector3::invalid()},
-        {"end", Vector3::invalid()},
+        {"start", Vector3::invalid},
+        {"end", Vector3::invalid},
         {"inside", (this->curve.containsXY(position, false) ? Vector3(true) : Vector3(false))},
         {"normal", this->curve.getNormal(closestTime)},
-        {"dir", Vector3::invalid()},
+        {"dir", Vector3::invalid},
         {"curvature", Vector3(this->curve.getCurvature(closestTime), 0, 0)}
     };
 }

@@ -43,7 +43,7 @@ GraphNodeTemplate<T>::GraphNodeTemplate(T value) : GraphNodeTemplate(value, Vect
 }
 template <class T>
 GraphNodeTemplate<T>::GraphNodeTemplate(T value, const Vector3& pos, int index)
-    : pos(pos), value(value), index(index), privateVector(Vector3::invalid()), privateIndex(-1)
+    : pos(pos), value(value), index(index), privateVector(Vector3::invalid), privateIndex(-1)
 {
 
 }

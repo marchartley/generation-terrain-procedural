@@ -16,12 +16,12 @@ Vector3 Collision::intersectionBetweenTwoSegments(const Vector3& p1, const Vecto
     float d2121 = l21.dot(l21);
     float d2143 = l21.normalized().dot(l43.normalized());
 
-    if (std::abs(std::abs(d2143) - 1) < epsilon || std::abs((d2121*d4343 - d4321*d4321)) < epsilon) return Vector3::invalid(); // Parallel lines?
+    if (std::abs(std::abs(d2143) - 1) < epsilon || std::abs((d2121*d4343 - d4321*d4321)) < epsilon) return Vector3::invalid; // Parallel lines?
     float mu_a = (d1343*d4321 - d1321*d4343) / (d2121*d4343 - d4321*d4321);
     float mu_b = (d1343 + mu_a*d4321) / d4343;
 
     if (mu_a < 0.0 || 1.0 < mu_a || mu_b < 0.0 || 1.0 < mu_b)
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     return p1 + (p2 - p1) * mu_a;
 }
@@ -77,21 +77,21 @@ Vector3 Collision::segmentToTriangleCollision(const Vector3& s1, const Vector3& 
     Vector3 h = rayDir.cross(triEdge2);
     float dot = triEdge1.dot(h);
     if (std::abs(dot) <  1.e-8)
-        return Vector3::invalid(); // Ray parallel to the triangle
+        return Vector3::invalid; // Ray parallel to the triangle
     float f = 1.f/dot;
     Vector3 s = (rayOrigin - t1);
     float u = f * s.dot(h);
     if (u < 0.f || 1.f < u)
-        return Vector3::invalid(); // Ray did not reach the triangle
+        return Vector3::invalid; // Ray did not reach the triangle
     Vector3 q = s.cross(triEdge1);
     float v = f * rayDir.dot(q);
     if (v < 0.f || 1.f < (u + v))
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     float t = f * triEdge2.dot(q);
 
     if (t < 0.f || 1.f < t)
-        return Vector3::invalid(); // Intersection before or after the ray
+        return Vector3::invalid; // Intersection before or after the ray
 
     float distToEdge1 = h.norm2();
     float distToEdge2 = (rayDir.cross(triEdge1)).norm2();
@@ -99,9 +99,9 @@ Vector3 Collision::segmentToTriangleCollision(const Vector3& s1, const Vector3& 
 
     Vector3 intersectionPoint = rayOrigin + rayDir * t;
     if (!strict && ((intersectionPoint - t1).norm2() < sqrEps || (intersectionPoint - t2).norm2() < sqrEps || (intersectionPoint - t3).norm2() < sqrEps)) // Edge case of collision exactly on the corner
-        return Vector3::invalid(); // Intersection too close to a triangle vertex
+        return Vector3::invalid; // Intersection too close to a triangle vertex
     if (!strict && (distToEdge1 < sqrEps || distToEdge2 < sqrEps || distToEdge3 < sqrEps))
-        return Vector3::invalid(); // Segment hits exactly on an edge
+        return Vector3::invalid; // Segment hits exactly on an edge
 
     return intersectionPoint;
 }
@@ -113,15 +113,15 @@ Vector3 Collision::intersectionRayPlane(const Vector3& rayOrigin, const Vector3&
     if (std::abs(denom) > 1e-6) {
         Vector3 planeToRay = rayOrigin - planeCenter;
         if (planeToRay.dot(rayDir) > 0) {
-            return Vector3::invalid(); // Direction pointing the wrong side = no intersection
+            return Vector3::invalid; // Direction pointing the wrong side = no intersection
         }
         float t = std::abs(planeToRay.dot(planeNormal) / denom);
         if (limitRayLength && (t < 0 || 1 < t))
-            return Vector3::invalid();
+            return Vector3::invalid;
         return rayOrigin + rayDir * t;
     }
 
-    return Vector3::invalid();
+    return Vector3::invalid;
 }
 
 Vector3 Collision::intersectionRaySphere(const Vector3& rayOrigin, const Vector3& _rayDir, const Vector3& sphereCenter, float sphereRadius, bool returnClosestPoint)
@@ -144,7 +144,7 @@ Vector3 Collision::intersectionRaySphere(const Vector3& rayOrigin, const Vector3
     float d2 = -(rayDir.dot(centerToRay));
     if (root < 0) {
         // No solution
-        return Vector3::invalid();
+        return Vector3::invalid;
     } else if (root == 0) {
         // One unique solution
         // Use d1
@@ -159,7 +159,7 @@ Vector3 Collision::intersectionRaySphere(const Vector3& rayOrigin, const Vector3
     if (d1 >= 0 && d2 < 0) // d2 is behind
         return rayOrigin + rayDir * d1;
     if (d1 < 0 && d2 < 0) // All behind
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     if (returnClosestPoint) {
         // The closest must be d1
@@ -252,7 +252,7 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
     if (tymin > tymax) std::swap(tymin, tymax);
 
     if ((tmin > tymax) || (tymin > tmax))
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     if (tymin > tmin)
         tmin = tymin;
@@ -266,7 +266,7 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
     if (tzmin > tzmax) std::swap(tzmin, tzmax);
 
     if ((tmin > tzmax) || (tzmin > tmax))
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     if (tzmin > tmin)
         tmin = tzmin;
@@ -276,7 +276,7 @@ Vector3 Collision::intersectionRayAABBox(const Vector3& orig, const Vector3& dir
 
     if (tmin < 0) {
         if (tmax < 0) {
-            return Vector3::invalid();
+            return Vector3::invalid;
         } else {
             return orig + dir * tmax;
         }

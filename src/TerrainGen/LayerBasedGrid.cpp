@@ -403,7 +403,7 @@ Vector3 LayerBasedGrid::getFirstIntersectingStack(const Vector3& origin, const V
     }
     if (currPos.z() <= 0 && Vector3::isInBox(currPos.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currPos.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3::invalid();
+    return Vector3::invalid;
 }
 
 Vector3 LayerBasedGrid::getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos, const Vector3& maxPos)

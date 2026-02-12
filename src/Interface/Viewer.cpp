@@ -527,7 +527,7 @@ void Viewer::mouseMoveEvent(QMouseEvent* e)
         }  catch (std::exception) {
             std::cout << "Catched this f***ing exception!" << std::endl;
         }
-        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3::invalid()), this->getCurrentTerrainModel());
+        Q_EMIT this->mouseMovedOnMap((this->mouseInWorld ? this->mousePosWorld : Vector3::invalid), this->getCurrentTerrainModel());
 
         update();
     });

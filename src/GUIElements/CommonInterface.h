@@ -41,6 +41,17 @@ public:
         if (!w) throw std::logic_error("Wrong widget type");
         connections.push_back(QObject::connect(w, signal, this, std::forward<Functor>(functor)));
     }
+
+    UIElement* block() {
+        this->blockSignals(true);
+        this->element->blockSignals(true);
+        return this;
+    }
+    UIElement* unblock() {
+        this->blockSignals(false);
+        this->element->blockSignals(false);
+        return this;
+    }
     /*
     template <class WidgetType, typename SignalType, typename Callable, typename... Args>
     void addConnection(SignalType signal, Callable&& slotFunction, Args&&... args) {
@@ -207,13 +218,15 @@ public:
     RadioButtonElement(std::string label, bool& binded);
     RadioButtonElement(std::string label, const std::function<void(bool)>& onCheck);
 
-    QRadioButton* radioButton();
+    QRadioButton* radioButton() const;
 
     RadioButtonElement* setChecked(bool checked) { radioButton()->setChecked(checked); return this; }
 
     DEFINE_SET_ON_FUNCTION(setOnChecked, QRadioButton, toggled)
 
     RadioButtonElement* bindTo(bool& value);
+
+    bool checked() const { return radioButton()->isChecked(); }
 
 public Q_SLOTS:
     void update();

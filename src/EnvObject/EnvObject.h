@@ -44,6 +44,21 @@ struct FlowEffect {
 };
 
 
+struct EnvPointKelvinletAttachment {
+    float relativeDistanceToCenter;
+    float angleFromCurrents;
+    KelvinletPoint* kelvinlet;
+};
+
+struct EnvObjectKelvinletAttachment {
+    enum AnchorPoint { START, END, CURVE };
+
+    AnchorPoint anchor;
+    EnvPointKelvinletAttachment* kelvinletFromPoint;
+    KelvinletCurve* kelvinletFromCurve;
+};
+
+
 class EnvObject
 {
 public:
@@ -125,7 +140,7 @@ public:
 
     GridF _cachedAbsorptionDepositionField;
 
-    Vector3 storedOrientation = Vector3::invalid();
+    Vector3 storedOrientation = Vector3::invalid;
 
     EnvironmentalScene* scene;
 };

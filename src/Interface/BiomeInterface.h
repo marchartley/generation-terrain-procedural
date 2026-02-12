@@ -21,7 +21,7 @@ class BiomeInterface : public ActionInterface
 public:
     BiomeInterface(QWidget *parent = nullptr);
 
-    void display(const Vector3& camPos = Vector3::invalid());
+    void display(const Vector3& camPos = Vector3::invalid);
 
 //    void affectVoxelGrid(std::shared_ptr<VoxelGrid> voxelGrid);
 //    void affectHeightmap(std::shared_ptr<Grid> heightmap);

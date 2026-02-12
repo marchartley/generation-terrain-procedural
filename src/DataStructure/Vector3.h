@@ -166,68 +166,25 @@ public:
 
     bool isValid() const { return this->valid && std::isfinite(x()) && std::isfinite(y()) && std::isfinite(z()); }
     void setValid(bool newValidValue) { this->valid = newValidValue; }
-    static Vec3 invalid() { return Vec3(false); }
-    static Vec3 origin() { return Vec3(); }
     operator qglviewer::Vec() const { return qglviewer::Vec(this->x(), this->y(), this->z()); }
     T* data() { return v; }
     const T* data() const { return v; }
-//    operator glm::vec3() const { return glm::vec3(this->x, this->y, this->z); }
-//    friend Vec3 operator+(const Vec3<T>& a, Vec3& b);
     template <class U>
     Vec3& operator+=(const Vec3<U>& o);
     template <class U>
     Vec3& operator-=(const Vec3<U>& o);
     template <class U>
     Vec3& operator*=(const Vec3<U>& o);
-    // template <class U>
-//    Vec3 operator/(const Vec3<U>& o);
     template <class U>
     Vec3& operator/=(const Vec3<U>& o);
-    // template <class U>
-//    Vec3 operator*(U o) const;
     template <class U>
     Vec3& operator*=(U o);
-    // template <class U>
-//    Vec3 operator/(U o);
     template <class U>
     Vec3& operator/=(U o);
-    // template <class U>
-//    Vec3 operator+(U o);
     template <class U>
     Vec3& operator+=(U o);
-    // template <class U>
-//    Vec3 operator-(U o);
     template <class U>
     Vec3& operator-=(U o);
-    // Friend functions
-    /*friend Vec3 operator+(const Vec3<T>& a, const Vec3<T>& b);
-    friend Vec3 operator-(const Vec3<T>& a, const Vec3<T>& b);
-    friend Vec3 operator*(const Vec3<T>& a, const Vec3& o);
-    friend Vec3 operator/(const Vec3<T>& a, const Vec3& o);
-
-//    friend Vec3 operator+(T a, const Vec3<T>& b);
-//    friend Vec3 operator-(T a, const Vec3<T>& b);
-    friend Vec3 operator*(T a, const Vec3<T>& b);
-    friend Vec3 operator/(T a, const Vec3<T>& b);
-
-//    friend Vec3 operator+(const Vec3& b, T a);
-//    friend Vec3 operator-(const Vec3& b, T a);
-    friend Vec3 operator*(const Vec3& b, T a);
-    friend Vec3 operator/(const Vec3& b, T a);
-
-    friend Vec3 operator-(const Vec3& v);
-
-//    Vec3& operator=(const Vec3& o);
-    friend bool operator==(const Vec3<T>& a, const Vec3<T>& b);
-    friend bool operator!=(const Vec3<T>& a, const Vec3<T>& b);
-    friend bool operator<(const Vec3<T>& a, const Vec3<T>& b);
-    friend bool operator<=(const Vec3<T>& a, const Vec3<T>& b);
-    friend bool operator>(const Vec3<T>& a, const Vec3<T>& b);
-    friend bool operator>=(const Vec3<T>& a, const Vec3<T>& b);
-//    using std::abs;
-//    friend Vec3 abs(const Vec3& o) { return o.abs(); }
-    */
-    // End friend functions
 
     T& operator[](size_t i);
     const T& operator[](size_t i) const;
@@ -267,6 +224,9 @@ public:
     inline static constexpr Vec3 red   { T(1), T(0), T(0) };
     inline static constexpr Vec3 green { T(0), T(1), T(0) };
     inline static constexpr Vec3 blue  { T(0), T(0), T(1) };
+
+    inline static constexpr Vec3 invalid { T(0), T(0), T(0), false };
+    inline static constexpr Vec3 origin { T(0), T(0), T(0) };
 
 // protected:
     T v[3];

@@ -30,7 +30,7 @@ std::map<std::string, Vector3> EnvPoint::getAllProperties(const Vector3 &positio
         {"end", this->position},
         {"inside", (diff.norm2() < this->radius * this->radius ? Vector3(true) : Vector3(false))},
         {"normal", diff.normalized()},
-        {"dir", Vector3::invalid()},
+        {"dir", Vector3::invalid},
         {"curvature", Vector3(this->radius, 0, 0)}
     };
 }

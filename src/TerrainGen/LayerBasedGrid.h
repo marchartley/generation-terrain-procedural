@@ -42,12 +42,12 @@ public:
 
     VoxelGrid toVoxelGrid();
     GridF voxelize(int fixedHeight = -1, float kernelSize = 1.f);
-    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
     std::map<TerrainTypes, float> getKernel(const Vector3& pos, float kernelSize);
     std::pair<TerrainTypes, float> getMaterialAndHeight(const Vector3& pos);
 
-    Vector3 getFirstIntersectingStack(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid());
-    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid());
+    Vector3 getFirstIntersectingStack(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
 
     std::pair<GridI, GridF> getMaterialAndHeightsGrid();
 
@@ -62,7 +62,7 @@ public:
 
     void add(ImplicitPatch* patch);
 
-    Mesh getGeometry(const Vector3& dimensions = Vector3::invalid());
+    Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);
 
     static std::map<TerrainTypes, std::pair<float, float>> materialLimits;
     static TerrainTypes materialFromDensity(float density);

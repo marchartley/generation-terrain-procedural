@@ -304,7 +304,7 @@ RadioButtonElement::RadioButtonElement(std::string label, const std::function<vo
 }
 
 
-QRadioButton* RadioButtonElement::radioButton()
+QRadioButton* RadioButtonElement::radioButton() const
 {
     return qobject_cast<QRadioButton*>(getWidget());
 }

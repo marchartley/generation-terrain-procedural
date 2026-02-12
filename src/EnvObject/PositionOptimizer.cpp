@@ -127,7 +127,7 @@ BSpline CurveOptimizer::followIsolevel(const Vector3 &seedPosition, const GridF 
     Vector3 pos0 = seedPosition;
     // Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
     Vector3 gradient;
-    std::tie(pos0, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid(), gradients, 100, 5.f);
+    std::tie(pos0, gradient) = PathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid, gradients, 100, 5.f);
     if (!gradient.isValid())
         return BSpline();
 
@@ -274,7 +274,7 @@ std::pair<Vector3, Vector3> PathOptimizer::jitterToFindPointAndGradient(const Ve
             return {testPos, gradient};
         }
     }
-    return {Vector3::invalid(), Vector3::invalid()};
+    return {Vector3::invalid, Vector3::invalid};
 }
 
 Vector3 PathOptimizer::attractToIsovalue(const Vector3 &pos, const GridF& score, const GridV3 &gradients, float currentIsovalue, float targetIsovalue, float maxRectificationDistance, int nbEvaluations)
@@ -347,7 +347,7 @@ BSpline ContinuousCurveOptimizer::followIsolevel(const Vector3 &seedPosition, co
     // Vector3 dir0 = gradients.interpolate(pos0).normalized().cross(Vector3(0, 0, 1));
     auto gradients = gradientFromFieldFunction(func);
     Vector3 gradient;
-    std::tie(pos0, gradient) = ContinuousPathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid(), gradients, 100, 5.f);
+    std::tie(pos0, gradient) = ContinuousPathOptimizer::jitterToFindPointAndGradient(pos0, Vector3::invalid, gradients, 100, 5.f);
     if (!gradient.isValid())
         return BSpline();
 
@@ -562,7 +562,7 @@ std::pair<Vector3, Vector3> ContinuousPathOptimizer::jitterToFindPointAndGradien
             return {testPos, gradient};
         }
     }
-    return {Vector3::invalid(), Vector3::invalid()};
+    return {Vector3::invalid, Vector3::invalid};
 }
 
 Vector3 ContinuousPathOptimizer::attractToIsovalue(const Vector3 &pos, const std::function<float (const Vector3 &)>& func, float currentIsovalue, float targetIsovalue, float maxRectificationDistance, int nbEvaluations)

@@ -209,11 +209,13 @@ QLayout *EnvObjsInterface::createGUI()
         this->displayProbas(getCurrentObjectName());
     });
     ButtonElement* forceButton = new ButtonElement("Force", [&](){
-        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid(), GridF(), false, false); //true, true);
+        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
+        updateObjectsList();
         Q_EMIT this->updated();
     });
     forceButton->setOnRepeat([&](){
-        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid(), GridF(), false, false); //true, true);
+        this->instantiateSpecific(getCurrentObjectName(), Vector3::invalid, GridF(), false, false); //true, true);
+        updateObjectsList();
         Q_EMIT this->updated();
     });
     objectCombobox = new ComboboxElement("Objects", objectsChoices);
@@ -480,7 +482,7 @@ void EnvObjsInterface::mouseReleasedOnMapEvent(const Vector3& mouseWorldPosition
     this->endDraggingObject(destroyObjects);
 
     if (this->kelvinletDraggingPoint.isValid()) {
-        this->kelvinletDraggingPoint = Vector3::invalid();
+        this->kelvinletDraggingPoint = Vector3::invalid;
 
         this->updateVectorFieldVisu();
         Q_EMIT this->updated();
@@ -516,7 +518,7 @@ GridF computeScoreMap(std::shared_ptr<EnvironmentalScene> scene, std::string obj
 }
 
 
-Vector3 bestPositionForInstantiationUniform(std::shared_ptr<EnvironmentalScene> scene, std::string objectName, const AABBox& bounds, const GridF& focusArea, const Vector3& focusedPosition = Vector3::invalid(), int nbSamples = 20) {
+Vector3 bestPositionForInstantiationUniform(std::shared_ptr<EnvironmentalScene> scene, std::string objectName, const AABBox& bounds, const GridF& focusArea, const Vector3& focusedPosition = Vector3::invalid, int nbSamples = 20) {
     auto& func = scene->availableObjects[objectName]->fitnessFunction;
     std::vector<std::pair<Vector3, float>> evaluations(nbSamples);
     float minScoreThreshold = scene->availableObjects[objectName]->minScore;
@@ -544,7 +546,7 @@ Vector3 bestPositionForInstantiationUniform(std::shared_ptr<EnvironmentalScene> 
         cummul += evaluations[iSample].second;
         if (cummul > target) return evaluations[iSample].first;
     }
-    return Vector3::invalid();
+    return Vector3::invalid;
 }
 
 EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std::string objectName, Vector3 position, const Vector3& maxPos)
@@ -592,7 +594,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, const V
         return result;
     }
     bool verbose = true;
-    Vector3 position = bestPositionForInstantiationUniform(this->scene, objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, targetPosition, 1000);
+    Vector3 position = bestPositionForInstantiationUniform(this->scene, objectName, AABBox(Vector3i::origin, this->heightmap->getDimensions()), this->focusedArea, targetPosition, 1000);
 
     if (position.isValid()) {
         EnvObject* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
@@ -643,7 +645,7 @@ EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, const GridF
         std::cerr << "No object '" << objectName << "' in database!" << std::endl;
         return nullptr;
     }
-    Vector3 position = bestPositionForInstantiationUniform(this->scene, objectName, AABBox(Vector3i::origin(), this->heightmap->getDimensions()), this->focusedArea, Vector3::invalid(), 1000);
+    Vector3 position = bestPositionForInstantiationUniform(this->scene, objectName, AABBox(Vector3i::origin, this->heightmap->getDimensions()), this->focusedArea, Vector3::invalid, 1000);
     if (!position.isValid()) {
         return nullptr;
     }
@@ -696,7 +698,7 @@ void EnvObjsInterface::runNextStep()
             // });
             if (possible) {
                 // displayProcessTime("Instantiation ", [&]() {
-                    createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid(), score, false);
+                    createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid, score, false);
                 // });
             }
         }
@@ -1100,6 +1102,8 @@ void EnvObjsInterface::updateSelectionMesh()
     }
     selectedObjectsMesh.colorsArray = colors;
     selectedObjectsMesh.fromArray(lines);
+
+    Q_EMIT this->updated();
 }
 
 void EnvObjsInterface::updateNewObjectMesh()
@@ -2471,8 +2475,8 @@ std::tuple<GridF, GridV3> EnvObjsInterface::extractErosionDataOnTerrain()
                                                                 terrain,
                                                                 boundariesTree,
                                                                 particleSimulationTime, terrainModifTime,
-                                                                Vector3::invalid(),
-                                                                Vector3::invalid(),
+                                                                Vector3::invalid,
+                                                                Vector3::invalid,
                                                                 0.f,
                                                                 true,
                                                                 gravity,

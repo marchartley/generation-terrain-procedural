@@ -271,7 +271,7 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
         currentPosition = Collision::intersectionRayAABBox(origin, dir, myAABBox);
     myAABBox.expand({myAABBox.min() - Vector3(1, 1, 1) * .01f, myAABBox.max() + Vector3(1, 1, 1) * .01f});
     if (!currentPosition.isValid())
-        return Vector3::invalid();
+        return Vector3::invalid;
 
     Vector3 normalizedDir = dir.normalized();
 
@@ -309,7 +309,7 @@ Vector3 ImplicitPatch::getIntersection(const Vector3& origin, const Vector3& dir
     }
     if (currentPosition.z() <= 0 && Vector3::isInBox(currentPosition.xy(), myAABBox.min().xy(), myAABBox.max().xy()))
         return currentPosition.xy(); // There is no ground here, still want to detect the collision... I guess...
-    return Vector3::invalid();
+    return Vector3::invalid;
     /*auto myAABBox = this->getBBox();
     myAABBox.mini = Vector3::max(myAABBox.mini, minPos);
     myAABBox.maxi = Vector3::min(myAABBox.maxi, maxPos);

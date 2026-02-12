@@ -57,19 +57,19 @@ public:
     Heightmap& fromVoxelGrid(VoxelGrid& voxelGrid);
     Heightmap& fromLayerGrid(LayerBasedGrid& layerGrid);
     Heightmap& fromImplicit(ImplicitPatch *implicitTerrain);
-    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid(), const Vector3& scale = Vector3(1.f, 1.f, 1.f));
+    GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
     void saveMap(std::string filename) { return this->saveHeightmap(filename); }
     void retrieveMap(std::string filename) { this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
     Heightmap& loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
-    void saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions = Vector3::invalid(), bool useRelativeHeight = false);
+    void saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions = Vector3::invalid, bool useRelativeHeight = false);
 
-    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid(), const Vector3& maxPos = Vector3::invalid());
+    Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
     Vector3 findSurfaceBetween(const Vector3& start, const Vector3& end);
 
-    Mesh getGeometry(const Vector3& dimensions = Vector3::invalid());
+    Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);
 
     void initMap() {};
 
