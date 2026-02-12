@@ -97,7 +97,18 @@ GridF& PainterToolsUI::paintImage(GridF &src, const Vector3 &pos, PainterToolPar
 }
 
 
-
+void updateKelvinletList(HierarchicalListUI* listWidget, KelvinletToolParams* params) {
+    listWidget->get()->blockSignals(true);
+    auto currentSelection = listWidget->hierarchicalList()->currentRow();
+    listWidget->clear();
+    for (size_t i = 0; i < params->kelvinlets.size(); i++) {
+        const auto& k = params->kelvinlets[i];
+        listWidget->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(k->getShortName(), k));
+    }
+    listWidget->hierarchicalList()->setCurrentRow(currentSelection);
+    listWidget->get()->blockSignals(false);
+    listWidget->update();
+}
 InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotModel *dataModel, KelvinletToolParams *params)
 {
     params->temporaryVectorData = dataModel->vectorData;
@@ -107,23 +118,82 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotMo
     auto radialScaleSlider = new SliderElement("Radial Scale", params->minRadialScale, params->maxRadialScale, 1.f, params->radialScale);
     auto muSlider = new SliderElement("Mu", params->minMu, params->maxMu, 0.01f, params->mu);
     auto poissonSlider = new SliderElement("Poisson ratio", params->minPoisson, params->maxPoisson, 0.01f, params->poisson);
-    auto scaleSlider = new SliderElement("Scale", params->minScale, params->maxScale, 0.01f, params->scale);
 
-    if (!params->currentKelvinlet)
+    radialScaleSlider->setOnValueChanged([=](float) { PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(chartView, dataModel, params, Vector3::invalid, true); });
+    muSlider->setOnValueChanged([=](float) { PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(chartView, dataModel, params, Vector3::invalid, true); });
+    poissonSlider->setOnValueChanged([=](float) { PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(chartView, dataModel, params, Vector3::invalid, true); });
+
+    if (!params->currentKelvinlet) {
         params->currentKelvinlet = new PinchKelvinlet();
-    auto pinchRadio = (new RadioButtonElement("Pinch", [=](bool checked) { if (params->currentKelvinlet) delete params->currentKelvinlet; params->currentKelvinlet = new PinchKelvinlet(); }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(PinchKelvinlet));
-    auto twistRadio = (new RadioButtonElement("Twist", [=](bool checked) { if (params->currentKelvinlet) delete params->currentKelvinlet; params->currentKelvinlet = new TwistKelvinlet(); }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(TwistKelvinlet));
-    auto translateRadio = (new RadioButtonElement("Grab", [=](bool checked) { if (params->currentKelvinlet) delete params->currentKelvinlet; params->currentKelvinlet = new GrabKelvinlet(); }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(GrabKelvinlet));
-    auto scaleRadio = (new RadioButtonElement("Scale", [=](bool checked) { if (params->currentKelvinlet) delete params->currentKelvinlet; params->currentKelvinlet = new ScaleKelvinlet(); }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(ScaleKelvinlet));
+    }
+    auto pinchRadio = (new RadioButtonElement("Pinch", [=](bool checked) {
+                          if (!checked) return;
+                        if (params->currentKelvinlet)
+                            delete params->currentKelvinlet;
+                        params->currentKelvinlet = new PinchKelvinlet();
+                        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+                      }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(PinchKelvinlet));
+    auto twistRadio = (new RadioButtonElement("Twist", [=](bool checked) {
+                          if (!checked) return;
+                        if (params->currentKelvinlet)
+                            delete params->currentKelvinlet;
+                        params->currentKelvinlet = new TwistKelvinlet();
+                        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+                      }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(TwistKelvinlet));
+    auto grabRadio = (new RadioButtonElement("Grab", [=](bool checked) {
+                         if (!checked) return;
+                        if (params->currentKelvinlet)
+                            delete params->currentKelvinlet;
+                        params->currentKelvinlet = new GrabKelvinlet();
+                        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+                     }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(GrabKelvinlet));
+    auto scaleRadio = (new RadioButtonElement("Scale", [=](bool checked) {
+                          if (!checked) return;
+                        if (params->currentKelvinlet)
+                            delete params->currentKelvinlet;
+                        params->currentKelvinlet = new ScaleKelvinlet();
+                        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+                      }))->setChecked(typeid(*(params->currentKelvinlet)) == typeid(ScaleKelvinlet));
 
     auto kelvinletsHistory = new HierarchicalListUI();
     // kelvinletsHistory->hierarchicalList()->setSelectionMode();
-    for (size_t i = 0; i < params->kelvinlets.size(); i++) {
-        const auto& k = params->kelvinlets[i];
-        kelvinletsHistory->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(k->getShortName(), k));
-    }
+    updateKelvinletList(kelvinletsHistory, params);
 
-    auto editKelvinletCheck = (new CheckboxElement("Edit this Kelvinlet?"))->setChecked(false);
+    kelvinletsHistory->setOnItemSelectionChanged([=]() {
+        if (kelvinletsHistory->selectedItems().empty()) {
+            if (pinchRadio->checked()) params->currentKelvinlet = new PinchKelvinlet();
+            else if (twistRadio->checked()) params->currentKelvinlet = new TwistKelvinlet();
+            else if (scaleRadio->checked()) params->currentKelvinlet = new ScaleKelvinlet();
+            else if (grabRadio->checked()) params->currentKelvinlet = new GrabKelvinlet();
+            else std::cerr << "Error: no state for new Kelvinlet" << std::endl;
+        }
+        else {
+            auto item = dynamic_cast<HierarchicalListWidgetItem<Kelvinlet*>*>(kelvinletsHistory->selectedItems()[0]);
+
+            if (auto asKelvinletPoint = dynamic_cast<KelvinletPoint*>(item->getItem())) {
+                const auto& k = asKelvinletPoint;
+                params->currentKelvinlet = k;
+
+                radialScaleSlider->setValue(k->radialScale);
+                muSlider->setValue(k->mu);
+                poissonSlider->setValue(k->v);
+
+                if (auto asPinch = dynamic_cast<PinchKelvinlet*>(k)) {
+                    pinchRadio->block(); pinchRadio->setChecked(true); pinchRadio->unblock();
+                } else if (auto asTwist = dynamic_cast<TwistKelvinlet*>(k)) {
+                    twistRadio->block(); twistRadio->setChecked(true); twistRadio->unblock();
+                } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(k)) {
+                    grabRadio->block(); grabRadio->setChecked(true); grabRadio->unblock();
+                } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) {
+                    scaleRadio->block(); scaleRadio->setChecked(true); scaleRadio->unblock();
+                }
+
+            }
+            updateKelvinletList(kelvinletsHistory, params);
+        }
+    });
+
+    // auto editKelvinletCheck = (new CheckboxElement("Edit this Kelvinlet?"))->setChecked(false);
     auto deleteKelvinletButton = new ButtonElement("Delete", [=]() {
         auto items = kelvinletsHistory->selectedItems();
         for (auto& _selection : items) {
@@ -132,10 +202,12 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotMo
             if (found != params->kelvinlets.end()) {
                 params->kelvinlets.erase(found);
             }
-            kelvinletsHistory->removeItem(selection->itemValue);
-            kelvinletsHistory->update();
+            updateKelvinletList(kelvinletsHistory, params);
+            PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(chartView, dataModel, params, Vector3::invalid);
+
         }
     });
+    /*
     auto validationButton = new ButtonElement("Validate", [=]() {
         GridV3& resultingVectorField = dataModel->vectorData.field;
         resultingVectorField.iterateParallel([&](const Vector3i& p) {
@@ -145,22 +217,23 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotMo
         params->kelvinlets.clear();
         kelvinletsHistory->clear();
     });
+    */
 
     UI->add(std::vector<UIElement*>{
         radialScaleSlider,
         muSlider,
         poissonSlider,
-        scaleSlider,
-        createHorizontalGroupUI(std::vector<UIElement*>{pinchRadio, twistRadio, translateRadio, scaleRadio}),
+        createHorizontalGroupUI(std::vector<UIElement*>{pinchRadio, twistRadio, grabRadio, scaleRadio}),
         kelvinletsHistory,
-        createHorizontalGroupUI(std::vector<UIElement*>{editKelvinletCheck, deleteKelvinletButton}),
-        validationButton
+        deleteKelvinletButton
+        // createHorizontalGroupUI(std::vector<UIElement*>{editKelvinletCheck, deleteKelvinletButton}),
+        // validationButton
     });
 
     QObject::connect(chartView, &ChartView::clickedOnValue, chartView, [=](const Vector3& pos, bool leftClick, bool rightClick) {
         if (pos.isValid()) {
             if (rightClick) {
-                params->kelvinletPosition = Vector3::invalid();
+                params->kelvinletPosition = Vector3::invalid;
             } else {
                 params->kelvinletPosition = pos * dataModel->vectorData.getField().getDimensions();
             }
@@ -170,25 +243,16 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(ChartView *chartView, PlotMo
             params->currentKelvinlet->radialScale = params->radialScale;
         }
 
-        if (!pos.isValid() && params->currentKelvinlet->pos.isValid()) {
+        if (!pos.isValid() && params->currentKelvinlet->pos.isValid() && !isIn(static_cast<Kelvinlet*>(params->currentKelvinlet), params->kelvinlets)) {
             const auto& k = params->currentKelvinlet;
             auto clone = k->clone();
             params->kelvinlets.push_back(clone);
             kelvinletsHistory->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(clone->getShortName(), clone));
+            params->currentKelvinlet->pos = Vector3::invalid;
         }
     });
-    QObject::connect(chartView, &ChartView::mouseMoved, chartView, [=](const Vector3& _pos, const Vector3& prevPos) {
-        auto pos = _pos * dataModel->vectorData.getField().getDimensions();
-        Vector3 force = pos - params->currentKelvinlet->pos;
-        if (auto asPinch = dynamic_cast<PinchKelvinlet*>(params->currentKelvinlet)) {
-            asPinch->force = force;
-        } else if (auto asTwist = dynamic_cast<TwistKelvinlet*>(params->currentKelvinlet)) {
-            asTwist->force = Vector3(0, 0, sign(force.x()) * force.norm());
-        } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(params->currentKelvinlet)) {
-            asGrab->force = force;
-        } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(params->currentKelvinlet)) {
-            asScale->force = sign(force.x()) * force.norm();
-        }
+    QObject::connect(chartView, &ChartView::mouseMoved, chartView, [=](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e) {
+        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(chartView, dataModel, params, pos, e->buttons().testFlag(Qt::LeftButton));
     });
 
     return UI;
@@ -202,4 +266,95 @@ GridV3& PainterToolsUI::paintKelvinlet(GridV3 &src, const Vector3 &pos, Kelvinle
         });
     }
     return src;
+}
+
+
+GridV3& getKelvinletParametersImage(GridV3& img, const Vector3& imgScale, KelvinletPoint* k, const Vector3& pos) {
+    Vector3 kCenter = pos.xy();
+    img.iterateParallel([&](const Vector3& _p) {
+        Vector3 p = _p / imgScale;
+        float d = (p - kCenter).norm2();
+        if (std::abs(d - (k->radialScale * k->radialScale)) <= (4.f)) {
+            img[_p] = Vector3(1, 0, 0);
+            // alpha[p] = 1.f;
+        } else if (d - (4.f) <= 0) {
+            img[_p] = Vector3(1, 0, 0);
+        }
+    });
+
+    Vector3 force;
+    if (auto asPinch = dynamic_cast<PinchKelvinlet*>(k)) force = asPinch->force;
+    else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(k)) force = asGrab->force;
+    else if (auto asTwist= dynamic_cast<TwistKelvinlet*>(k)) force = Vector3(asTwist->force.z(), asTwist->force.z(), 0);
+    else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) force = Vector3(asScale->force, asScale->force, 0);
+    /*float forceLength = force.length();
+    force.normalize();
+    for (int i = 0; i < (int) forceLength * imgScale; i++) {
+        img.at(kCenter * imgScale + force * i) = Vector3(0, 0, 1);
+    }*/
+    img = PlotVectorData::drawLine(img, Vector3(0, 0, 1), kCenter.xy() * imgScale, (kCenter + force).xy() * imgScale);
+    return img;
+}
+
+void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet)
+{
+    if (updateCurrentKelvinlet)
+        PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
+    Vector3i imgSize = Vector3i(300, 300, 1); // HERE
+    GridV3 img(imgSize);
+    // GridF alpha(img.getDimensions(), 1.f);
+    img = PlotVectorData::createFieldImageAndAlpha(params->getVectorField(true), img.getDimensions(), Vector3i(20, 20, 1)).first;
+
+    if (mouseRelPos.isValid()) {
+        Vector3 pos = mouseRelPos * dataModel->vectorData.getField().getDimensions();
+        if (updateCurrentKelvinlet)
+            PainterToolsUI::updateCurrentKelvinlet(params, pos);
+    }
+
+    img = getKelvinletParametersImage(img, (Vector3)imgSize / (Vector3)dataModel->vectorData.field.getDimensions(), params->currentKelvinlet, (params->currentKelvinlet->pos.isValid() ? params->currentKelvinlet->pos : mouseRelPos * dataModel->vectorData.getField().getDimensions()));
+
+    chartView->setOverlay(img, "Kelvinlet placement"); //, alpha);
+    const GridV3 initial = dataModel->vectorData.field;
+    dataModel->vectorData.field = GridV3();
+    chartView->setPlotModel(dataModel);
+    dataModel->vectorData.field = initial;
+}
+
+Kelvinlet *PainterToolsUI::updateCurrentKelvinlet(KelvinletToolParams *params, const Vector3 &mousePos)
+{
+    auto& k = params->currentKelvinlet;
+    if (mousePos.isValid()) {
+        Vector3 force = mousePos - k->pos;
+        if (auto asPinch = dynamic_cast<PinchKelvinlet*>(k)) {
+            asPinch->force = force;
+        } else if (auto asTwist = dynamic_cast<TwistKelvinlet*>(k)) {
+            asTwist->force = Vector3(0, 0, sign(force.x()) * force.norm());
+        } else if (auto asGrab = dynamic_cast<GrabKelvinlet*>(k)) {
+            asGrab->force = force;
+        } else if (auto asScale = dynamic_cast<ScaleKelvinlet*>(k)) {
+            asScale->force = sign(force.x()) * force.norm();
+        }
+    }
+
+    k->mu = params->mu;
+    k->radialScale = params->radialScale;
+    k->v = params->poisson;
+}
+
+GridV3 KelvinletToolParams::getVectorField(bool takeIntoAccountCurrentKelvinlet) const
+{
+    GridV3 resultingVectorField = this->getInitialVectorField();
+    auto evaluatingKelvinlets = std::vector<Kelvinlet*>();
+    for (const auto& k : this->kelvinlets) {
+        if (k && k->valid())
+            evaluatingKelvinlets.push_back(k);
+    }
+    if (takeIntoAccountCurrentKelvinlet && this->currentKelvinlet->pos.isValid() && !isIn(static_cast<Kelvinlet*>(this->currentKelvinlet), evaluatingKelvinlets))
+        evaluatingKelvinlets.push_back(this->currentKelvinlet->clone());
+
+    resultingVectorField.iterateParallel([&](const Vector3i& p) {
+        for (const auto& k : evaluatingKelvinlets)
+            resultingVectorField[p] += k->evaluate(p);
+    });
+    return resultingVectorField;
 }
