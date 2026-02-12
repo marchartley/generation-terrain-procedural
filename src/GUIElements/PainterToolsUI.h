@@ -50,9 +50,13 @@ struct KelvinletToolParams {
     float minScale = 0.f;
     float maxScale = 100.f;
 
-    Vector3 kelvinletPosition = Vector3::invalid();
+    Vector3 kelvinletPosition = Vector3::invalid;
 
     PlotVectorData temporaryVectorData;
+
+    std::vector<Kelvinlet*> getKelvinlets() const { return this->kelvinlets; }
+    GridV3 getInitialVectorField() const { return this->temporaryVectorData.field; }
+    GridV3 getVectorField(bool takeIntoAccountCurrentKelvinlet = false) const;
 };
 
 class PainterToolsUI
@@ -66,6 +70,10 @@ public:
 
     static InterfaceUI* createKelvinletToolsUI(ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params);
     static GridV3& paintKelvinlet(GridV3& src, const Vector3& pos, KelvinletToolParams* params);
+
+protected:
+    static void updateCurrentChartViewWithCurrentKelvinlets(ChartView *chartView, PlotModel *dataModel, KelvinletToolParams *params, const Vector3 &mouseRelPos, bool updateCurrentKelvinlet = true);
+    static Kelvinlet* updateCurrentKelvinlet(KelvinletToolParams* params, const Vector3& mousePos);
 };
 
 
