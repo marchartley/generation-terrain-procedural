@@ -230,7 +230,7 @@ GrabKelvinletCurve::GrabKelvinletCurve()
 
 Vector3 GrabKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->valid()) return Vector3::origin;
+    if (!this->valid() || this->force == 0.f) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getDirection(closestTime);
@@ -267,7 +267,7 @@ TwistKelvinletCurve::TwistKelvinletCurve()
 
 Vector3 TwistKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->valid()) return Vector3::origin;
+    if (!this->valid() || this->force == 0.f) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getBinormal(closestTime); //curve.getDirection(closestTime);
@@ -299,7 +299,7 @@ ScaleKelvinletCurve::ScaleKelvinletCurve()
 
 Vector3 ScaleKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->valid()) return Vector3::origin;
+    if (!this->valid() || this->force == 0.f) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
 //    Vector3 dir = curve.getDirection(closestTime);
@@ -330,7 +330,7 @@ PinchKelvinletCurve::PinchKelvinletCurve()
 
 Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 {
-    if (this->valid()) return Vector3::origin;
+    if (!this->valid() || this->force == 0.f) return Vector3::origin;
     float closestTime = curve.estimateClosestTime(p);
     Vector3 pos = curve.getPoint(closestTime);
     Vector3 dir = curve.getDirection(closestTime) * this->force;
@@ -369,5 +369,15 @@ Vector3 PinchKelvinletCurve::evaluate(const Vector3 &p) const
 
     const auto force = first - second;
 
-    return Vector3::fromMatrix(force);
+    return Vector3::fromMatrix(force) * sign(this->force);
+}
+
+RelativeKelvinlet::RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3 &anchorPoint)
+    : kelvinlet(kelvinlet), anchorPoint(anchorPoint)
+{}
+
+Vector3 RelativeKelvinlet::evaluate(const Vector3& p, float angle, float scaleFactor, bool KelvinletPositionIsRelativeToAnchor) const
+{
+    Vector3 evaluationPoint = (p - anchorPoint).rotate(Vector3(0, 0, -angle)) + (KelvinletPositionIsRelativeToAnchor ? Vector3() : anchorPoint);
+    return kelvinlet->evaluate(evaluationPoint).rotate(Vector3(0, 0, angle)) * scaleFactor;
 }
