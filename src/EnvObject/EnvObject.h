@@ -64,11 +64,6 @@ class EnvObject
 public:
     EnvObject();
     virtual ~EnvObject();
-
-    // static EnvObject* fromJSON(nlohmann::json content);
-
-    // virtual nlohmann::json toJSON() const;
-
     static std::function<float(const Vector3&)> parseFittingFunction(std::string formula, std::string currentObject, EnvironmentalScene *scene, bool removeSelfInstances = false, EnvObject* myObject = nullptr);
 
     float height;
@@ -90,6 +85,8 @@ public:
     std::vector<Vector3> evaluationPositions;
     float minScore = 0.f;
     // Vector3 evaluationPosition;
+    // std::vector<RelativeKelvinlet> relativeKelvinlets;
+    // std::vector<KelvinletCurve*> curveKelvinlets;
 
     TerrainTypes material;
     ImplicitPatch::PredefinedShapes implicitShape;
@@ -110,7 +107,7 @@ public:
     virtual void applyDeposition(EnvMaterial& material) = 0;
     virtual void applyAbsorption(EnvMaterial& material) = 0;
     virtual void applyDepositionOnDeath() = 0;
-    virtual GridV3 computeFlowModification() = 0;
+    virtual GridV3& computeFlowModification(GridV3& waterFlow) = 0;
     virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
     virtual GridF createHeightfield();
     virtual EnvObject& translate(const Vector3& translation) = 0;
@@ -143,6 +140,12 @@ public:
     Vector3 storedOrientation = Vector3::invalid;
 
     EnvironmentalScene* scene;
+
+
+
+    virtual bool isPoint() const { return false; }
+    virtual bool isCurve() const { return false; }
+    virtual bool isArea() const { return false; }
 };
 
 #endif // ENVOBJECT_H

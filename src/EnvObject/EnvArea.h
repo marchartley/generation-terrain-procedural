@@ -15,6 +15,8 @@ public:
     float width;
     float length;
 
+    std::vector<Kelvinlet*> curveKelvinlets;
+
     bool evaluateInside = false; // Ture = evaluation points inside, false = evaluation points on borders
 
     virtual float getSqrDistance(const Vector3& position);
@@ -33,14 +35,14 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual GridV3 computeFlowModification();
+    virtual GridV3& computeFlowModification(GridV3& waterFlow);
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
     virtual EnvArea& translate(const Vector3& translation);
     void updateCurve(const BSpline& newCurve);
 
-    // virtual nlohmann::json toJSON() const;
+    virtual bool isArea() const { return true; }
 };
 
 #endif // ENVAREA_H

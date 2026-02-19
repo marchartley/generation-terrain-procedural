@@ -15,6 +15,8 @@ public:
     float radius;
     float height = 10.f;
 
+    std::vector<Kelvinlet*> mainKelvinlets;
+
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvPoint* clone();
@@ -31,15 +33,13 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual GridV3 computeFlowModification();
+    virtual GridV3& computeFlowModification(GridV3& waterFlow);
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
     virtual EnvPoint& translate(const Vector3& translation);
 
-    // virtual nlohmann::json toJSON() const;
-
-//    float estimateShadowing(const GridV3 &flow, const Vector3& pos);
+    virtual bool isPoint() const { return true; }
 };
 
 #endif // ENVPOINT_H

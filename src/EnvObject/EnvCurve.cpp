@@ -5,15 +5,8 @@
 
 EnvCurve::EnvCurve()
     : EnvObject()
-{
+{}
 
-}
-/*
-EnvCurve *EnvCurve::fromJSON(nlohmann::json content)
-{
-    return dynamic_cast<EnvCurve*>(EnvObject::fromJSON(content));
-}
-*/
 float EnvCurve::getSqrDistance(const Vector3 &position)
 {
     return (position - this->curve.estimateClosestPos(position)).norm2();
@@ -41,11 +34,6 @@ EnvCurve *EnvCurve::clone()
     *self = *this;
     return self;
 }
-
-/*EnvCurve *EnvCurve::instantiate(std::string objectName)
-{
-    return dynamic_cast<EnvCurve*>(this->scene->instantiate(objectName));
-}*/
 
 bool EnvCurve::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -194,10 +182,45 @@ void EnvCurve::applyDepositionOnDeath()
     }
 }
 
-GridV3 EnvCurve::computeFlowModification()
+GridV3& EnvCurve::computeFlowModification(GridV3& waterFlow)
 {
+    std::vector<RelativeKelvinlet> relativeFlowsStarting;
+    std::vector<RelativeKelvinlet> relativeFlowsEnding;
+    std::vector<RelativeKelvinlet> relativeCurveFlow;
+    for (size_t i = 0; i < startingPointKelvinlets.size(); i++) {
+        if (startingPointKelvinlets[i]->valid())
+            relativeFlowsStarting.push_back(RelativeKelvinlet(startingPointKelvinlets[i], this->curve.points.front()));
+    }
+    for (size_t i = 0; i < endingPointKelvinlets.size(); i++) {
+        if (endingPointKelvinlets[i]->valid())
+            relativeFlowsEnding.push_back(RelativeKelvinlet(endingPointKelvinlets[i], this->curve.points.back()));
+    }
+    for (size_t i = 0; i < curveKelvinlets.size(); i++) {
+        if (curveKelvinlets[i]->valid())
+            relativeCurveFlow.push_back(RelativeKelvinlet(curveKelvinlets[i], Vector3()));
+    }
+
+    const Vector3 initialFlowStarting = waterFlow.interpolate(this->curve.points.front());
+    float flowAngleStarting = initialFlowStarting.getSignedAngleWith(Vector3(1, 0, 0));
+    float flowStrengthStarting = initialFlowStarting.length();
+
+    const Vector3 initialFlowEnding = waterFlow.interpolate(this->curve.points.back());
+    float flowAngleEnding = initialFlowEnding.getSignedAngleWith(Vector3(1, 0, 0));
+    float flowStrengthEnding = initialFlowEnding.length();
+
+    waterFlow.iterateParallel([&](const Vector3& p) {
+        for (const auto& relativeK : relativeFlowsStarting) {
+            waterFlow[p] += relativeK.evaluate(p, flowAngleStarting, flowStrengthStarting, true);
+        }
+        for (const auto& relativeK : relativeFlowsEnding) {
+            waterFlow[p] += relativeK.evaluate(p, flowAngleEnding, flowStrengthEnding, true);
+        }
+        for (const auto& k : relativeCurveFlow) {
+            waterFlow[p] += k.evaluate(p, 0.f, waterFlow[p].norm());
+        }
+    });
     /*
-    if (this->flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
+    if (this->flowEffect == Vector3()) return {waterFlow, GridF()};
 
     float growingState = computeGrowingState2();
 
@@ -216,16 +239,16 @@ GridV3 EnvCurve::computeFlowModification()
 
         k.curve = translatedCurve;
 
-        GridV3 flow = this->scene->flowfield;
+        GridV3 flow = waterFlow;
         flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement.xy();
         });
         this->_cachedFlowModif = flow;
     }
-    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
+    return {waterFlow.add(_cachedFlowModif * growingState, Vector3()), GridF()}; //{flow, GridF(flow.getDimensions(), 1.f)};
     */
-    return this->scene->flowfield;
+    return waterFlow;
 }
 
 

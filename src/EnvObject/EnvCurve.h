@@ -15,6 +15,10 @@ public:
     float width;
     float length;
 
+    std::vector<Kelvinlet*> startingPointKelvinlets;
+    std::vector<Kelvinlet*> endingPointKelvinlets;
+    std::vector<Kelvinlet*> curveKelvinlets;
+
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
@@ -31,7 +35,7 @@ public:
     virtual void applyAbsorption(EnvMaterial& material);
     virtual void applyDepositionOnDeath();
 
-    virtual GridV3 computeFlowModification();
+    virtual GridV3& computeFlowModification(GridV3& waterFlow);
     virtual ImplicitPatch* createImplicitPatch(const GridF& heights, ImplicitPrimitive *previousPrimitive = nullptr);
     // virtual GridF createHeightfield();
 
@@ -43,6 +47,9 @@ public:
     enum CURVE_FOLLOW { GRADIENTS, ISOVALUE, SKELETON };
 
     CURVE_FOLLOW curveFollow = CURVE_FOLLOW::GRADIENTS;
+
+
+    virtual bool isCurve() const { return true; }
 };
 
 #endif // ENVCURVE_H
