@@ -23,9 +23,11 @@ public:
 
 Q_SIGNALS:
     void floatValueChanged(float value);
+    void doubleClicked();
 
 public Q_SLOTS:
     void notifyValueChanged(int value);
+    void mouseDoubleClickEvent(QMouseEvent *event) { Q_EMIT this->doubleClicked(); }
 protected:
     virtual void sliderChange(SliderChange change);
 };
