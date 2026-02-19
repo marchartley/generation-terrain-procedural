@@ -42,24 +42,20 @@ ChartView* ChartView::setPlotModel(PlotModel *dataModel, std::string title)
     scaledImage.fill(Qt::white);
 
     Vector3i renderResolution = Vector3i::invalid; // Vector3i(100, 100, 1); //Vector3i(clamp(width, 20, 400), clamp(height, 20, 400), 1);
-    // if (!this->_dataModel->getImage().empty()) {
-        auto overlays = this->overlayColors;
-        auto overlayAlphas = this->overlayAlpha;
-        auto overlayDisplays = this->overlayDisplayed;
-        if (!this->_dataModel->vectorData.field.empty()) {
-            auto [overlay, alpha] = this->_dataModel->vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1));
-            overlays["vector field"] = overlay;
-            overlayAlphas["vector field"] = alpha;
-            overlayDisplays["vector field"] = true;
-        }
-        //scale the image to fit plot area
-        // if (!overlays.empty())
-            scaledImage = this->_dataModel->imageData.computeDisplayedImage(overlays, overlayAlphas, overlayDisplays, renderResolution);
-        // else
-        // this->_dataModel->imageData.image.setImage(this->_dataModel->vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1)).first);
-            // scaledImage = this->_dataModel->imageData.computeDisplayedImage(renderResolution);
-    // }
-            scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation); // FastTransformation); // SmoothTransformation);
+
+    auto overlays = this->overlayColors;
+    auto overlayAlphas = this->overlayAlpha;
+    auto overlayDisplays = this->overlayDisplayed;
+    auto overlayLayers = this->overlayLayer;
+    if (!this->_dataModel->vectorData.field.empty()) {
+        auto [overlay, alpha] = this->_dataModel->vectorData.getFieldImageAndAlpha(renderResolution, Vector3i(20, 20, 1));
+        overlays["vector field"] = overlay;
+        overlayAlphas["vector field"] = alpha;
+        overlayDisplays["vector field"] = true;
+        overlayLayers["vector field"] = 10000;
+    }
+    scaledImage = this->_dataModel->imageData.computeDisplayedImage(overlays, overlayAlphas, overlayDisplays, overlayLayers, renderResolution);
+    scaledImage = scaledImage.scaled(QSize(width, height), Qt::IgnoreAspectRatio, Qt::TransformationMode::SmoothTransformation); // FastTransformation); // SmoothTransformation);
 
     QImage translated(ViewW, ViewH, QImage::Format_ARGB32);
     translated.fill(Qt::white);
@@ -188,11 +184,12 @@ Vector3 ChartView::getRelativeMousePositionInImage(const Vector3 &pos)
     return mousePos;
 }
 
-ChartView *ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha)
+ChartView *ChartView::setOverlay(const GridV3 &image, std::string layerName, const GridF &alpha, int overlayLayer)
 {
     this->overlayColors[layerName] = image;
     this->overlayAlpha[layerName] = alpha;
     this->overlayDisplayed[layerName] = true;
+    this->overlayLayer[layerName] = overlayLayer;
     return this;
 }
 
@@ -468,10 +465,25 @@ AbstractPlotter *AbstractPlotter::addVectorField(const GridV3 &field)
     return this;
 }
 
-AbstractPlotter* AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName)
+AbstractPlotter* AbstractPlotter::setOverlay(const GridV3 &colors, const GridF &alpha, const std::string &overlayName, int layer)
 {
-    this->chartView->setOverlay(colors, overlayName, alpha);
+    this->chartView->setOverlay(colors, overlayName, alpha, layer);
     return this;
+}
+
+AbstractPlotter *AbstractPlotter::setOverlay(const std::pair<GridV3, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
+{
+    return this->setOverlay(colorAndAlpha.first, colorAndAlpha.second, overlayName, layer);
+}
+
+AbstractPlotter* AbstractPlotter::setOverlay(const GridF& colors, const GridF &alpha, const std::string &overlayName, int layer)
+{
+    return this->setOverlay(this->dataModel->imageData.prepareImageForDisplay(Image(colors)), alpha, overlayName, layer);
+}
+
+AbstractPlotter *AbstractPlotter::setOverlay(const std::pair<GridF, GridF> &colorAndAlpha, const std::string &overlayName, int layer)
+{
+    return this->setOverlay(colorAndAlpha.first, colorAndAlpha.second, overlayName, layer);
 }
 
 AbstractPlotter *AbstractPlotter::showOverlay(const std::string &overlayName)
@@ -810,13 +822,63 @@ PlotImageData *PlotImageData::setClamped(bool clamp)
     return this;
 }
 
+GridV3 PlotImageData::prepareImageForDisplay(const Image& img) const
+{    if (img.empty()) return GridV3();
+    auto displayedImage = img.getColorImage(); //.resize(imgSize);
+    if (displayedImage.empty()) return GridV3();
+
+    if (this->displayParameters.clamped) {
+        displayedImage.iterateParallel([&](size_t i) {
+            for (int c = 0; c < 3; c++) {
+                displayedImage[i][c] = std::clamp(displayedImage[i][c], this->displayParameters.colorRangeMin[c], this->displayParameters.colorRangeMax[c]);
+            }
+        });
+    }
+
+    if (this->displayParameters.absolute) {
+        displayedImage = displayedImage.abs();
+    }
+
+    if (this->displayParameters.normalized) {
+        for (int c = 0; c < 3; c++) {
+            float min = std::numeric_limits<float>::max();
+            float max = std::numeric_limits<float>::lowest();
+            displayedImage.iterate([&](size_t i) {
+                min = std::min(displayedImage[i][c], min);
+                max = std::max(displayedImage[i][c], max);
+            });
+            float d = max - min;
+            if (d == 0) {
+                displayedImage.iterateParallel([&](size_t i) {
+                    displayedImage[i][c] = 0.f;
+                });
+            } else {
+                displayedImage.iterateParallel([&](size_t i) {
+                    displayedImage[i][c] = (displayedImage[i][c] - min) / d;
+                });
+            }
+        }
+    }
+
+    if (img.isColor()) {
+        displayedImage.iterateParallel([&](size_t i) {
+            displayedImage[i] *= this->displayParameters.displayedColors;
+        });
+    } else {
+        displayedImage.iterateParallel([&](size_t i) {
+            displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
+        });
+    }
+    return displayedImage;
+}
+
 QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
 {
     QImage emptyImg = QImage(imgSize.x(), imgSize.y(), QImage::Format_ARGB32); emptyImg.fill(Qt::white);
     if (this->image.empty()) return emptyImg;
     auto displayedImage = this->image.getColorImage(); //.resize(imgSize);
     if (displayedImage.empty()) return emptyImg;
-
+/*
     if (this->displayParameters.clamped) {
         displayedImage.iterateParallel([&](size_t i) {
             for (int c = 0; c < 3; c++) {
@@ -859,7 +921,8 @@ QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
             displayedImage[i] = colorPalette(displayedImage[i].x(), this->displayParameters.colorRamp.points);
         });
     }
-
+*/
+    displayedImage = this->prepareImageForDisplay(this->image);
     unsigned char* data = new unsigned char[displayedImage.size() * 4];
 
     for (size_t i = 0; i < displayedImage.size(); ++i) {
@@ -876,34 +939,38 @@ QImage PlotImageData::computeDisplayedImage(const Vector3i& imgSize) const
 
 QImage PlotImageData::computeDisplayedImage(const GridV3 &overlay, const GridF &overlayAlpha) const
 {
-    /*QImage img = this->computeDisplayedImage();
-    QPainter painter = QPainter(&img);
-
-    unsigned char* data = new unsigned char[overlay.size() * 4];
-
-    for (size_t i = 0; i < overlay.size(); ++i) {
-        data[int(4 * i + 2)] = (unsigned char)(std::clamp(overlay[i].x(), 0.f, 1.f) * 255);
-        data[int(4 * i + 1)] = (unsigned char)(std::clamp(overlay[i].y(), 0.f, 1.f) * 255);
-        data[int(4 * i + 0)] = (unsigned char)(std::clamp(overlay[i].z(), 0.f, 1.f) * 255);
-        data[int(4 * i + 3)] = (unsigned char) int((overlayAlpha.size() == overlay.size() ? overlayAlpha[i] : 1.f) * 255.f);       // Alpha
-    }
-    painter.drawImage(0, 0, QImage(data, image.sizeX, image.sizeY, QImage::Format_ARGB32));
-    painter.end();
-    return img;*/
-    return this->computeDisplayedImage({{"", overlay}}, {{"", overlayAlpha}}, {{"", true}}, this->getImage().getDimensions());
+    return this->computeDisplayedImage({{"", overlay}}, {{"", overlayAlpha}}, {{"", true}}, {{"", 0.f}}, this->getImage().getDimensions());
 }
 
-QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> &overlays, const std::map<std::string, GridF> &overlayAlphas, const std::map<std::string, bool>& displayedOverlays, const Vector3i &imgSize) const
+QImage PlotImageData::computeDisplayedImage(const std::map<std::string, GridV3> &overlays,
+                                            const std::map<std::string, GridF> &overlayAlphas,
+                                            const std::map<std::string, bool>& displayedOverlays,
+                                            const std::map<std::string, int>& overlayLayers,
+                                            const Vector3i &imgSize) const
 {
     Vector3i largestDimensions = imgSize;
     for (auto& [name, over] : overlays) {
         largestDimensions.x() = std::max(largestDimensions.x(), (int)over.sizeX);
         largestDimensions.y() = std::max(largestDimensions.y(), (int)over.sizeY);
     }
+    largestDimensions = Vector3i(largestDimensions.x(), largestDimensions.y(), 1);
     QImage img = this->computeDisplayedImage(largestDimensions);
     QPainter painter = QPainter(&img);
 
-    for (auto& [name, over] : overlays) {
+    auto sort = [=](std::map<std::string, int> M) -> std::vector<std::pair<std::string, int>> {
+
+        // Declare vector of pairs
+        std::vector<std::pair<std::string, int> > A;
+        for (auto& it : M) {
+            A.push_back(it);
+        }
+        std::sort(A.begin(), A.end(), [=](std::pair<std::string, int>& a, std::pair<std::string, int>& b){ return a.second < b.second; });
+        return A;
+    };
+
+    auto overlayOrder = sort(overlayLayers);
+
+    for (auto& [name, layerPriority] : overlayOrder) {
         if (displayedOverlays.count(name) && displayedOverlays.at(name) == false) continue;
         const auto& overlay = overlays.at(name); //.resize(imgSize, RESIZE_MODE::LINEAR);
         const auto& overlayAlpha = overlayAlphas.at(name); //.resize(imgSize, RESIZE_MODE::NEAREST);
@@ -937,11 +1004,12 @@ PlotVectorData *PlotVectorData::setField(const GridV3 &field)
 
 std::pair<GridV3, GridF> PlotVectorData::getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i& numberOfCells) const
 {
-    return PlotVectorData::createFieldImageAndAlpha(this->field, imgSize, numberOfCells);
+    return PlotVectorData::createFieldImageAndAlpha(this->field, imgSize, numberOfCells, this->displayParameters);
 }
 
-std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &field, Vector3i imgSize, const Vector3i &numberOfCells, const Vector3 &backgroundColor)
+std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &field, Vector3i imgSize, const Vector3i &numberOfCells, DisplayedVectorFieldParameters displayParameters)
 {
+    const Vector3& backgroundColor = displayParameters.backgroundColor;
     if (!imgSize.isValid()) imgSize = field.getDimensions();
     GridV3 img(imgSize.x(), imgSize.y(), 1, backgroundColor);
     GridF alpha(img.getDimensions());
@@ -958,60 +1026,69 @@ std::pair<GridV3, GridF> PlotVectorData::createFieldImageAndAlpha(const GridV3 &
     });
     minMag = std::sqrt(minMag);
     maxMag = std::sqrt(maxMag);
-
     // std::cout << minMag << " " << maxMag << std::endl;
     Vector3 reducedSize = reduced.getDimensions(); //imgSize / numberOfCells;
-    Vector3 ratio = Vector3((float)imgSize.x() / (float)reducedSize.x(), (float)imgSize.y() / (float)reducedSize.y(), 1.f);
-    reduced.iterateParallel([&] (const Vector3& _p) {
-        Vector3 p = _p + Vector3(.5f, .5f);
-        // AABBox cell((p - Vector3(.5f, .5f, 1)) * ratio, (p + Vector3(.5f, .5f, 1)) * ratio); // Added an depth (z) to avoid issue on the intersection computation
-        Vector3 vec = reduced.interpolate(p);
-        if (!vec.isValid()) return;
-        float mag = vec.norm();
-        if (mag < 1e-5) return;
-        Vector3 dir = vec / mag;
-        Vector3 color(1, 1, 1);
-        float relativeMag = 1.f;
-        if (std::abs(minMag - maxMag) > 1e-5) {
-            relativeMag = interpolation::linear(mag, minMag, maxMag);
-            color = colorPalette(relativeMag, {Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
+    Vector3 imageToReducedRatio = Vector3((float)imgSize.x() / (float)reducedSize.x(), (float)imgSize.y() / (float)reducedSize.y(), 1.f);
+    Vector3 fieldToReducedRatio = Vector3((float)field.sizeX / (float)reducedSize.x(), (float)field.sizeY / (float)reducedSize.y(), 1.f);
+    Vector3 fieldToImageRatio = Vector3((float)field.sizeX / (float)imgSize.x(), (float)field.sizeY / (float)imgSize.y(), 1.f);
+
+    if (displayParameters.displayMode == DisplayedVectorFieldParameters::ARROWS) {
+        reduced.iterateParallel([&] (const Vector3& _p) {
+            Vector3 p = _p + Vector3(.5f, .5f);
+            // AABBox cell((p - Vector3(.5f, .5f, 1)) * ratio, (p + Vector3(.5f, .5f, 1)) * ratio); // Added an depth (z) to avoid issue on the intersection computation
+            Vector3 vec = reduced.interpolate(p);
+            if (!vec.isValid()) return;
+            float mag = vec.norm();
+            if (mag < 1e-5) return;
+            Vector3 dir = vec / mag;
+            Vector3 color = displayParameters.colorRamp.getPoint(0.f);
+            float relativeMag = 1.f;
+            if (std::abs(minMag - maxMag) > 1e-5) {
+                relativeMag = interpolation::linear(mag, minMag, maxMag);
+                color = colorPalette(relativeMag, displayParameters.colorRamp.points);
+            }
+            bool valid = dir.xy().norm2() > 1e-5;
+            if (!valid) return;
+
+            Vector3 startLine = (p - dir * interpolation::inv_linear(relativeMag, .5f, 1.f)) * imageToReducedRatio;
+            Vector3 endLine = (p + dir * interpolation::inv_linear(relativeMag, .5f, 1.f))  * imageToReducedRatio;
+            float length = (endLine - startLine).norm();
+
+            img = PlotVectorData::drawLine(img, color, startLine, endLine);
+            alpha = PlotVectorData::drawLine(alpha, 1.f, startLine, endLine);
+
+            img = PlotVectorData::drawLine(img, color, endLine, endLine - dir.rotated(deg2rad(20), Vector3(0, 0, 1)) * length * .3f);
+            alpha = PlotVectorData::drawLine(alpha, 1.f, endLine, endLine - dir.rotated(deg2rad(20), Vector3(0, 0, 1)) * length * .3f);
+
+            img = PlotVectorData::drawLine(img, color, endLine, endLine - dir.rotated(deg2rad(-20), Vector3(0, 0, 1)) * length * .3f);
+            alpha = PlotVectorData::drawLine(alpha, 1.f, endLine, endLine - dir.rotated(deg2rad(-20), Vector3(0, 0, 1)) * length * .3f);
+        });
+    }
+    else if (displayParameters.displayMode == DisplayedVectorFieldParameters::FLOWLINES) {
+        int trailLength = 100;
+        float stepLength = .1f;
+
+        for (int x = 0; x < numberOfCells.x() - 1; x++) {
+            for (int y = 0; y < numberOfCells.y() - 1; y++) {
+                Vector3 p = Vector3(x + .5f, y + .5f) * fieldToReducedRatio;
+                for (int i = 0; i < trailLength; i++) {
+                    Vector3 dir = field.interpolate(p);
+                    if (!dir.isValid()) break;
+                    float mag = dir.norm();
+                    if (mag < 1e-5) break;
+                    auto color = colorPalette(interpolation::inv_linear(mag, minMag, maxMag), displayParameters.colorRamp.points);
+
+                    dir = (dir.maxMagnitude(1.f)) * fieldToReducedRatio * stepLength;
+                    Vector3 end = p + dir;
+
+                    img = PlotVectorData::drawLine(img, color, p / fieldToImageRatio, end / fieldToImageRatio);
+                    alpha = PlotVectorData::drawLine(alpha, 1.f, p / fieldToImageRatio, end / fieldToImageRatio);
+
+                    p = end;
+                }
+            }
         }
-        bool valid = dir.xy().norm2() > 1e-5;
-        if (!valid) return;
-
-        Vector3 startLine = (p - dir * interpolation::inv_linear(relativeMag, .5f, 1.f)) * ratio;
-        Vector3 endLine = (p + dir * interpolation::inv_linear(relativeMag, .5f, 1.f))  * ratio;
-        float length = (endLine - startLine).norm();
-
-        img = PlotVectorData::drawLine(img, color, startLine, endLine);
-        alpha = PlotVectorData::drawLine(alpha, 1.f, startLine, endLine);
-
-        img = PlotVectorData::drawLine(img, color, endLine, endLine - dir.rotated(deg2rad(20), Vector3(0, 0, 1)) * length * .3f);
-        alpha = PlotVectorData::drawLine(alpha, 1.f, endLine, endLine - dir.rotated(deg2rad(20), Vector3(0, 0, 1)) * length * .3f);
-
-        img = PlotVectorData::drawLine(img, color, endLine, endLine - dir.rotated(deg2rad(-20), Vector3(0, 0, 1)) * length * .3f);
-        alpha = PlotVectorData::drawLine(alpha, 1.f, endLine, endLine - dir.rotated(deg2rad(-20), Vector3(0, 0, 1)) * length * .3f);
-        /*float halfLength = (endLine - startLine).norm() * .5f;
-        for (int i = 0; i < (int) (halfLength); i++) {
-            const Vector3i coordA = p * ratio + dir * i;
-            const Vector3i coordB = p * ratio - dir * i;
-            img[coordA] = color;
-            img[coordB] = color;
-            alpha[coordA] = 1.f;
-            alpha[coordB] = 1.f;
-        }*/
-        /*
-        // Draw head
-        const Vector3 dirHeadA = -dir.rotated(deg2rad(20), Vector3(0, 0, 1));
-        const Vector3 dirHeadB = -dir.rotated(deg2rad(-20), Vector3(0, 0, 1));
-        for (int i = 0; i < (int) (halfLength * 2.f * .33f); i++) {
-            const Vector3i coord = endLine; //p * ratio + dir * maxI;
-            img[coord + dirHeadA * i] = color;
-            alpha[coord + dirHeadA * i] = 1.f;
-            img[coord + dirHeadB * i] = color;
-            alpha[coord + dirHeadB * i] = 1.f;
-        }*/
-
-    });
+    }
     return {img, alpha};
 }
+
