@@ -95,6 +95,7 @@ SOURCES += \
     src/DataStructure/Vertex.cpp \
     src/DataStructure/Voxel.cpp \
     src/EnvObjGUI/EnvMaterialViewer.cpp \
+    src/EnvObjGUI/EnvObjectEditor.cpp \
     src/EnvObjGUI/FocusAreaViewer.cpp \
     src/EnvObjGUI/WaterFlowViewer.cpp \
     src/EnvObject/EnvArea.cpp \
@@ -275,6 +276,7 @@ HEADERS += \
     src/DataStructure/Vertex.h \
     src/DataStructure/Voxel.h \
     src/EnvObjGUI/EnvMaterialViewer.h \
+    src/EnvObjGUI/EnvObjectEditor.h \
     src/EnvObjGUI/FocusAreaViewer.h \
     src/EnvObjGUI/WaterFlowViewer.h \
     src/EnvObject/EnvArea.h \
