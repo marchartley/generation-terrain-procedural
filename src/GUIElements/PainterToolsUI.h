@@ -32,7 +32,8 @@ struct PainterToolParams {
 
 struct KelvinletToolParams {
     std::vector<Kelvinlet*> kelvinlets;
-    KelvinletPoint* currentKelvinlet = nullptr;
+    std::vector<Kelvinlet*> additional_kelvinlets;
+    Kelvinlet* currentKelvinlet = nullptr;
 
     float radialScale = 15.f; // epsilon
     float minRadialScale = 1.f;
@@ -46,17 +47,17 @@ struct KelvinletToolParams {
     float minPoisson = 0.f;
     float maxPoisson = 1.5f;
 
-    float scale = 5.f; // For Scale Kelvinlet
-    float minScale = 0.f;
-    float maxScale = 100.f;
 
-    Vector3 kelvinletPosition = Vector3::invalid;
-
-    PlotVectorData temporaryVectorData;
 
     std::vector<Kelvinlet*> getKelvinlets() const { return this->kelvinlets; }
     GridV3 getInitialVectorField() const { return this->temporaryVectorData.field; }
     GridV3 getVectorField(bool takeIntoAccountCurrentKelvinlet = false) const;
+
+// protected:
+    Vector3 kelvinletPosition = Vector3::invalid;
+    PlotVectorData temporaryVectorData;
+
+    bool displayResultingField = true;
 };
 
 class PainterToolsUI
@@ -68,12 +69,15 @@ public:
     static GridF& paintImage(GridF& src, const Vector3& pos, PainterToolParams params, bool removeAmount = false);
 
 
-    static InterfaceUI* createKelvinletToolsUI(ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params);
+    static InterfaceUI* createKelvinletToolsUI(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params);
     static GridV3& paintKelvinlet(GridV3& src, const Vector3& pos, KelvinletToolParams* params);
 
-protected:
-    static void updateCurrentChartViewWithCurrentKelvinlets(ChartView *chartView, PlotModel *dataModel, KelvinletToolParams *params, const Vector3 &mouseRelPos, bool updateCurrentKelvinlet = true);
+// protected:
+    static void updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, ChartView *chartView, PlotModel *dataModel, KelvinletToolParams *params, const Vector3 &mouseRelPos, bool updateCurrentKelvinlet = true);
     static Kelvinlet* updateCurrentKelvinlet(KelvinletToolParams* params, const Vector3& mousePos);
+    // static Kelvinlet* updateSelectedKelvinlet(KelvinletToolParams* params, Kelvinlet* k, const Vector3& mousePos);
+
+    static std::pair<GridV3, GridF> getKelvinletParametersImage(GridV3& img, GridF& alpha, const Vector3& imgScale, Kelvinlet* kelvinlet, const Vector3& pos);
 };
 
 
