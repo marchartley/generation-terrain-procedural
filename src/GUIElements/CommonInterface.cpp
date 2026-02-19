@@ -124,19 +124,24 @@ SliderElement::SliderElement(std::string label, float valMin, float valMax, floa
         layout->addWidget(_label);
     layout->addWidget(_slider);
     getWidget()->setLayout(layout);
+
+    defaultValue = valMin;
+
+    QObject::connect(this->slider(), &FancySlider::doubleClicked, this, [=]() { this->setValue(defaultValue); });
 }
 
 SliderElement::SliderElement(std::string label, float valMin, float valMax, float multiplier, float &binded, Qt::Orientation orientation)
     : SliderElement(label, valMin, valMax, multiplier, orientation)
 {
     bindTo(binded);
+    this->defaultValue = binded;
 }
 
-FancySlider* SliderElement::slider() {
+FancySlider* SliderElement::slider() const {
     return this->_slider;
 }
 
-QLabel* SliderElement::label()
+QLabel* SliderElement::label() const
 {
     return this->_label;
 }
@@ -206,8 +211,9 @@ InterfaceUI::InterfaceUI(QLayout* layout, bool tight, std::string title)
     if (tight) {
         layout->setSpacing(0);
         layout->setContentsMargins(0, 0, 0, 0);
+        get()->setProperty("class", "tight");
     }
-    box()->setStyleSheet("QGroupBox { border: none; }");
+    box()->setStyleSheet("QGroupBox.tight{ border: none; }");
     getWidget()->setLayout(layout);
 }
 
@@ -412,6 +418,51 @@ void TextEditElement::update()
 {
     lineEdit()->setText(QString::fromStdString(*this->boundVariable));
 }
+
+
+AngleElement::AngleElement(std::string label)
+    : UIElement(new QGroupBox)
+{
+    this->_dial = new QDial();
+    this->_dial->setWrapping(true); this->_dial->setMinimum(0); this->_dial->setMaximum(360);
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_dial);
+    getWidget()->setLayout(layout);
+}
+
+AngleElement::AngleElement(std::string label, float &binded)
+    : AngleElement(label)
+{
+    this->bindTo(binded);
+}
+
+QDial *AngleElement::dial() const
+{
+    return this->_dial;
+}
+
+AngleElement *AngleElement::bindTo(float &value)
+{
+    dial()->setValue((int)value);
+    boundVariable = value;
+    setOnValueChanged([this](float newValue) {
+        if (boundVariable) {
+            boundVariable->get() = newValue;
+        }
+    });
+    return this;
+}
+
+void AngleElement::update()
+{
+    this->dial()->setValue(*boundVariable);
+}
+
 
 RangeSliderElement::RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
     : UIElement(new QGroupBox)
@@ -652,4 +703,3 @@ std::vector<HierarchicalListWidgetItemBase *> HierarchicalListUI::selectedItems(
     }
     return items;
 }
-

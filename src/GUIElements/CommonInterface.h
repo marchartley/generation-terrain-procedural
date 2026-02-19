@@ -12,6 +12,7 @@
 #include <QRadioButton>
 #include <QLineEdit>
 #include <QComboBox>
+#include <QDial>
 #include <QTimer>
 #include <optional>
 #include <variant>
@@ -21,11 +22,20 @@
 class UIElement;
 
 
-
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
     template <class Callable, typename... Args> \
     auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
+        return this; \
+    }
+
+#define DEFINE_SET_ON_SUBWIDGET_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SUBWIDGET_NAME, SIGNAL_NAME) \
+    template <class Callable, typename... Args> \
+    auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
+        QMetaObject::Connection connection = QObject::connect(SUBWIDGET_NAME, &WIDGET_TYPE::SIGNAL_NAME, \
+                                                              std::forward<Callable>(callback), \
+                                                              std::forward<Args>(args)...); \
+        connections.push_back(connection); \
         return this; \
     }
 
@@ -84,6 +94,30 @@ protected:
     std::string name;
 };
 
+
+class InterfaceUI : public UIElement {
+    Q_OBJECT
+public:
+    InterfaceUI(QLayout* layout, bool tight = true, std::string title = "");
+    ~InterfaceUI();
+
+    QGroupBox* box() const;
+
+    UIElement* add(UIElement* element, std::string name = "");
+    std::vector<UIElement*> add(std::vector<UIElement*> elements);
+    std::vector<UIElement*> add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
+    UIElement* add(QLayout* layout, std::string name = "");
+    UIElement* find(std::string name);
+    InterfaceUI *clear();
+
+    std::vector<UIElement*> elements;
+    std::vector<std::string> names;
+    std::string title;
+
+public Q_SLOTS:
+    void update();
+};
+
 class LabelElement : public UIElement {
 public:
     LabelElement(std::string text);
@@ -119,10 +153,13 @@ public:
     SliderElement(std::string label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
 
     SliderElement* setValue(float newValue) { slider()->setfValue(newValue); return this; }
+    float value() const { return slider()->getfValue(); }
 
-    FancySlider* slider();
-    QLabel* label();
+    FancySlider* slider() const;
+    QLabel* label() const;
 
+    DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, FancySlider, _slider, floatValueChanged)
+    /*
     template <class Callable, typename... Args>
     SliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &FancySlider::floatValueChanged,
@@ -131,6 +168,7 @@ public:
         connections.push_back(connection);
         return this;
     }
+    */
 
     SliderElement* bindTo(float& value);
 
@@ -141,6 +179,8 @@ protected:
     QLabel* _label = nullptr;
     FancySlider* _slider = nullptr;
     std::optional<std::reference_wrapper<float>> boundVariable;
+
+    float defaultValue = 0.f;
 };
 
 
@@ -157,6 +197,8 @@ public:
     RangeSlider* slider();
     QLabel* label();
 
+    DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, RangeSlider, _slider, alt_valueChanged)
+    /*
     template <class Callable, typename... Args>
     RangeSliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_slider, &RangeSlider::alt_valueChanged,
@@ -165,6 +207,7 @@ public:
         connections.push_back(connection);
         return this;
     }
+    */
 
     RangeSliderElement* bindTo(float& valueMin, float& valueMax);
 
@@ -244,8 +287,10 @@ public:
     QLineEdit* lineEdit();
     std::string getText() { return lineEdit()->text().toStdString(); }
 
-//    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
+    //    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
 
+    DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnReturnPressed, QLineEdit, _lineEdit, returnPressed)
+    /*
     template <class Callable, typename... Args>
     TextEditElement* setOnReturnPressed(Callable&& callback, Args&&... args) {
         QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
@@ -254,6 +299,7 @@ public:
         connections.push_back(connection);
         return this;
     }
+    */
     TextEditElement* setOnTextChange(std::function<void(std::string)> func);
 
     TextEditElement* bindTo(std::string& value);
@@ -265,6 +311,30 @@ protected:
     QLabel* _label = nullptr;
     QLineEdit* _lineEdit = nullptr;
     std::optional<std::reference_wrapper<std::string>> boundVariable;
+};
+
+
+class AngleElement : public UIElement {
+    Q_OBJECT
+public:
+    AngleElement(std::string label = "");
+    AngleElement(std::string label, float &binded);
+
+    QDial* dial() const;
+    float getAngle() const { return this->value(); }
+    float value() const { return (float) dial()->value(); }
+
+    DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, QDial, _dial, valueChanged)
+
+    AngleElement* bindTo(float& value);
+
+public Q_SLOTS:
+    void update();
+
+protected:
+    QLabel* _label = nullptr;
+    QDial* _dial = nullptr;
+    std::optional<std::reference_wrapper<float>> boundVariable;
 };
 
 
@@ -361,29 +431,6 @@ public:
         this->hierarchicalList()->removeItem(itemToRemove);
         return this;
     }
-};
-
-class InterfaceUI : public UIElement {
-    Q_OBJECT
-public:
-    InterfaceUI(QLayout* layout, bool tight = true, std::string title = "");
-    ~InterfaceUI();
-
-    QGroupBox* box() const;
-
-    UIElement* add(UIElement* element, std::string name = "");
-    std::vector<UIElement*> add(std::vector<UIElement*> elements);
-    std::vector<UIElement*> add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
-    UIElement* add(QLayout* layout, std::string name = "");
-    UIElement* find(std::string name);
-    InterfaceUI *clear();
-
-    std::vector<UIElement*> elements;
-    std::vector<std::string> names;
-    std::string title;
-
-public Q_SLOTS:
-    void update();
 };
 
 
