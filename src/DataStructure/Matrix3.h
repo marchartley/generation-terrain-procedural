@@ -2948,9 +2948,14 @@ Matrix3<T> Matrix3<T>::warpWith(const Matrix3<Vector3>& warper, int precision) c
     // self.returned_value_on_outside = RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE;
     // result.raiseErrorOnBadCoord = false;
 
-    auto valOrDefault = [&](const Vector3& q) -> T {
-        return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord;
-    };
+    // auto valOrDefault = (this->returned_value_on_outside == RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE ?
+    //                      [&](const Vector3& q) -> T { return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord; } :
+    //                      [&](const Vector3& q) -> T { return this->unsafe(this->getMirrorPosition(q)); });
+
+
+    auto valOrDefault = (this->returned_value_on_outside == RETURN_VALUE_ON_OUTSIDE::DEFAULT_VALUE ?
+                         std::function<T(const Vector3&)>([&](const Vector3& q) -> T { return this->checkCoord(q) ? this->unsafe(q) : this->defaultValueOnBadCoord; }) :
+                         std::function<T(const Vector3&)>([&](const Vector3& q) -> T { return this->unsafe(this->getMirrorPosition(q)); }));
 
     if (precision > 1) {
         Matrix3<Vector3> displacements(warper.getDimensions());
