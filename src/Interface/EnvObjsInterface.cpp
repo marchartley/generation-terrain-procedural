@@ -101,14 +101,9 @@ void EnvObjsInterface::affectTerrains(std::shared_ptr<Heightmap> heightmap, std:
         this->focusedArea = newDistrib;
     });
 
-    QObject::connect(WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::movedOnImage, this, [&](const Vector3& mousePos, const Vector3& prevPos, QMouseEvent* event) {
-        bool leftPressed = event->buttons().testFlag(Qt::LeftButton);
-        bool rightPressed = event->buttons().testFlag(Qt::RightButton);
-        if (!leftPressed && !rightPressed) return;
-
-        Vector3 brushDir = (mousePos - prevPos).normalize() * .2f;
-        this->previewFlowEdition(mousePos, brushDir);
-
+    QObject::connect(WaterFlowViewer::get("Flowfield"), &WaterFlowViewer::updated, this, [&]() {
+        this->userKelvinlets = WaterFlowViewer::get("Flowfield")->kelvinletParams.kelvinlets;
+        this->previewFlowEdition(Vector3::invalid, Vector3::invalid);
         Q_EMIT this->updated();
     });
 }
@@ -466,7 +461,7 @@ void EnvObjsInterface::mouseMovedOnMapEvent(const Vector3& mouseWorldPosition, T
                 // k->radialScale = delta.norm();
             }
 
-            this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
+            this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
             this->updateVectorFieldVisu();
             // Q_EMIT this->updated();
         }
@@ -944,10 +939,10 @@ void EnvObjsInterface::manualModificationOfFocusArea()
 
 void EnvObjsInterface::manualModificationOfFlowfield()
 {
-    this->focusAreaEditing = false;
-    this->flowfieldEditing = true;
-    this->previewingObjectInPlotter = false;
-    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
+    // this->focusAreaEditing = false;
+    // this->flowfieldEditing = true;
+    // this->previewingObjectInPlotter = false;
+    // this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
     // WaterFlowViewer::get("Flowfield")->addImage(this->renderFlowfield());
     WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
     WaterFlowViewer::get("Flowfield")->show();
@@ -960,11 +955,11 @@ void EnvObjsInterface::resetFlowfield()
         delete this->userKelvinlets[i];
     this->userKelvinlets.resize(0);
 
-    this->scene->updateFlowfield(GridV3(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
+    this->scene->updateFlowfield(GridV3(), simulationFlowField);
     this->addObjectsHeightmaps();
     this->flowErosionSimulation();
     this->updateVectorFieldVisu();
-    // WaterFlowViewer::get("Flowfield")->addImage(this->renderFlowfield());
+
     WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
     Q_EMIT this->updated();
 }
@@ -1625,24 +1620,6 @@ void EnvObjsInterface::saveScene(std::string filename)
     out.close();
 }
 
-/*GridV3 EnvObjsInterface::renderFocusArea() const
-{
-    GridV3 coloredFocus(this->focusedArea.getDimensions());
-    this->focusedArea.iterateParallel([&](size_t i) {
-        float value = focusedArea[i];
-        coloredFocus[i] = colorPalette(value, {Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)}, {0.f, 1.f, 3.f});
-    });
-    return coloredFocus;
-}*/
-
-GridV3 EnvObjsInterface::renderFlowfield() const
-{
-    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
-    GridV3& flow = this->scene->flowfield;
-    // return ImageViewer::get()->computeVectorFieldRendering(flow, 1/10.f, flow.getDimensions()  * 2.f).resize(flow.getDimensions());
-    return WaterFlowViewer::get("Flowfield")->computeStreamLinesRendering(flow, flow.getDimensions()  * 3.f);
-}
-
 void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
 {
     GridV3 dataV3 = ImageViewer::get("Object Preview")->dataModel->getImage();
@@ -1764,23 +1741,19 @@ void EnvObjsInterface::previewFocusAreaEdition(const Vector3 &mousePos, bool add
 
 void EnvObjsInterface::previewFlowEdition(const Vector3 &mousePos, const Vector3 &brushDir)
 {
-
-    // float velocity = (prevPos - mousePos).norm(); // Typically between 0.1 to 1.0
-    GridV3 brush = GridV3(30, 30, 1, brushDir);
-    brush.iterateParallel([&](const Vector3i& p) {
-        brush(p) *= normalizedGaussian(Vector3(30, 30, 1), p, 8.f);
+    displayProcessTime("updateFlowfield", [&]() {
+        this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField);
     });
-    // this->scene->initialFlowfield.add(brush, (mousePos / 3.f) - brush.getDimensions().xy() * .5f);
-    this->userFlowField.add(brush, mousePos - brush.getDimensions().xy() * .5f);
-    this->scene->updateFlowfield(userFlowField + this->computeUserKelvinletField(), simulationFlowField, this->scene->scenario.computeStorm(userFlowField.getDimensions()));
-    this->updateVectorFieldVisu();
+    displayProcessTime("updateVectorFieldVisu", [&]() {
+        this->updateVectorFieldVisu();
+    });
 
-    this->addObjectsHeightmaps();
-    this->flowErosionSimulation();
-
-    // WaterFlowViewer::get("Flowfield")->addImage(renderFlowfield());
-    WaterFlowViewer::get("Flowfield")->addVectorField(this->scene->flowfield);
-    WaterFlowViewer::get("Flowfield")->show();
+    displayProcessTime("addObjectsHeightmaps", [&]() {
+        this->addObjectsHeightmaps();
+    });
+    displayProcessTime("flowErosionSimulation", [&]() {
+        this->flowErosionSimulation();
+    });
 }
 
 void EnvObjsInterface::previewMaterialEdition(const Vector3 &position, bool addingMaterial)
@@ -1948,7 +1921,7 @@ void EnvObjsInterface::addPointOnNewObjectCreation(const Vector3 &position, bool
     if (addPoint) {
         auto objectModel = this->scene->availableObjects[getCurrentObjectName()];
         this->objectSkeletonCreation.points.push_back(position.xy());
-        if (auto asPoint = dynamic_cast<EnvPoint*>(objectModel)) {
+        if (objectModel->isPoint()) {
             this->endNewObjectCreation();
         } else {
             // Nothing to do
@@ -1968,7 +1941,7 @@ void EnvObjsInterface::endNewObjectCreation()
     // Creation of an object
     auto objectModel = this->scene->availableObjects[getCurrentObjectName()];
 
-    if ((dynamic_cast<EnvCurve*>(objectModel) || dynamic_cast<EnvArea*>(objectModel)) && this->objectSkeletonCreation.empty())
+    if ((objectModel->isCurve() || objectModel->isArea()) && this->objectSkeletonCreation.empty())
         return;
 
     auto newObject = this->instantiateObjectUsingSpline(objectModel->name, this->objectSkeletonCreation);
@@ -2028,8 +2001,8 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
         float maxDistToPointSqr = 20.f * 20.f;
 
         for (auto currentSelection : currentSelections) {
-            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->translate(translation);
+            if (currentSelection->isPoint()) {
+                currentSelection->translate(translation);
             } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
                 auto newCurve = curve->curve;
                 int pointIndexToMove = -1;
@@ -2093,13 +2066,7 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
         draggingHasBeenApplied = position.xy();
 
         for (auto currentSelection : currentSelections) {
-            if (EnvPoint* point = dynamic_cast<EnvPoint*>(currentSelection)) {
-                point->translate(translation);
-            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
-                curve->translate(translation);
-            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
-                area->translate(translation);
-            }
+            currentSelection->translate(translation);
         }
 
         // Also do it for the creation curve
