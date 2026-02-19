@@ -10,6 +10,7 @@
 #include <QSizePolicy>
 #include <iostream>
 //#include <QButton>
+#include <vector>
 
 #include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
@@ -52,10 +53,12 @@ public:
     QPoint previousMousePos;
 
 
-    ChartView* setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
+    ChartView* setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f), int overlayLayer = 0);
+    // ChartView* setOverlay(const GridF& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
     std::map<std::string, GridV3> overlayColors;
     std::map<std::string, GridF>  overlayAlpha;
     std::map<std::string, bool>  overlayDisplayed;
+    std::map<std::string, int>  overlayLayer;
 
 protected:
     bool viewportEvent(QEvent *event);
@@ -116,15 +119,28 @@ struct PlotImageData {
 
     GridV3 getImage() const { return this->image.getColorImage(); }
     GridF getImageGrey() const { return this->image.getBwImage(); }
+    GridV3 prepareImageForDisplay(const Image &img) const;
     QImage computeDisplayedImage(const Vector3i &imgSize = Vector3i::invalid) const;
     QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
-    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays, const std::map<std::string, GridF>& overlayAlphas, const std::map<std::string, bool>& displayedOverlays, const Vector3i& imgSize) const;
+    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays,
+                                 const std::map<std::string, GridF>& overlayAlphas,
+                                 const std::map<std::string, bool>& displayedOverlays,
+                                 const std::map<std::string, int>& overlayLayers,
+                                 const Vector3i& imgSize) const;
 
 
 // protected:
     DisplayedImageParameters displayParameters;
     // GridV3 image;
     Image image;
+};
+
+struct DisplayedVectorFieldParameters {
+    enum VECTOR_DISPLAY { ARROWS, FLOWLINES, NONE };
+
+    VECTOR_DISPLAY displayMode = ARROWS;
+    Vector3 backgroundColor = Vector3::white;
+    BSpline colorRamp = BSpline({Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
 };
 
 struct PlotVectorData {
@@ -136,12 +152,16 @@ struct PlotVectorData {
     const GridV3& getField() const { return this->field; }
 
     std::pair<GridV3, GridF> getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i &numberOfCells) const;
-    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, Vector3i imgSize, const Vector3i &numberOfCells, const Vector3& backgroundColor = Vector3::white);
+    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, Vector3i imgSize, const Vector3i &numberOfCells, DisplayedVectorFieldParameters displayParameters = DisplayedVectorFieldParameters());
 
     template <class T>
     static Matrix3<T>& drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end);
+    template <class T>
+    static Matrix3<T>& drawCircle(Matrix3<T>& img, const T& color, const Vector3& center, float radius);
 
     GridV3 field;
+
+    DisplayedVectorFieldParameters displayParameters;
 };
 
 class PlotModel {
@@ -233,7 +253,10 @@ public:
 
     AbstractPlotter* addVectorField(const GridV3& field);
 
-    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default");
+    AbstractPlotter* setOverlay(const GridV3& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter* setOverlay(const std::pair<GridV3, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter* setOverlay(const GridF& colors, const GridF& alpha, const std::string& overlayName = "default", int layer = 0);
+    AbstractPlotter* setOverlay(const std::pair<GridF, GridF>& colorAndAlpha, const std::string& overlayName = "default", int layer = 0);
     AbstractPlotter* showOverlay(const std::string& overlayName = "default");
     AbstractPlotter* hideOverlay(const std::string& overlayName = "default");
 
@@ -293,6 +316,7 @@ public Q_SLOTS:
 Q_SIGNALS:
     void clickedOnImage(const Vector3& pos, Vector3 value, bool leftClick, bool rightClick);
     void movedOnImage(const Vector3& pos, const Vector3& previousPos, QMouseEvent* event);
+    void updated();
 };
 
 
@@ -341,6 +365,53 @@ Matrix3<T>& PlotVectorData::drawLine(Matrix3<T>& img, const T& color, const Vect
         p.y() += Yinc;
     }
 
+    return img;
+}
+
+
+
+template<class T>
+Matrix3<T> &PlotVectorData::drawCircle(Matrix3<T> &img, const T &color, const Vector3 &center, float radius)
+{
+    // Function to put pixels
+    // at subsequence points
+    auto drawCircle = [&](int xc, int yc, int x, int y){
+        img(Vector3i(xc+x, yc+y)) = color;
+        img(Vector3i(xc-x, yc+y)) = color;
+        img(Vector3i(xc+x, yc-y)) = color;
+        img(Vector3i(xc-x, yc-y)) = color;
+        img(Vector3i(xc+y, yc+x)) = color;
+        img(Vector3i(xc-y, yc+x)) = color;
+        img(Vector3i(xc+y, yc-x)) = color;
+        img(Vector3i(xc-y, yc-x)) = color;
+    };
+
+    int xc = center.x();
+    int yc = center.y();
+    int r = radius;
+    // Function for circle-generation
+    // using Bresenham's algorithm
+    int x = 0, y = r;
+    int d = 3 - 2 * r;
+    drawCircle(xc, yc, x, y);
+    while (y >= x){
+
+        // check for decision parameter
+        // and correspondingly
+        // update d, y
+        if (d > 0) {
+            y--;
+            d = d + 4 * (x - y) + 10;
+        }
+        else
+            d = d + 4 * x + 6;
+
+        // Increment x after updating decision parameter
+        x++;
+
+        // Draw the circle using the new coordinates
+        drawCircle(xc, yc, x, y);
+    }
     return img;
 }
 
