@@ -8,12 +8,6 @@ EnvArea::EnvArea()
 {
 
 }
-/*
-EnvArea *EnvArea::fromJSON(nlohmann::json content)
-{
-    return dynamic_cast<EnvArea*>(EnvObject::fromJSON(content));
-}
-*/
 float EnvArea::getSqrDistance(const Vector3 &position)
 {
     return (position - this->curve.estimateClosestPos(position)).norm2() * (this->curve.containsXY(position, false) ? -1.f : 1.f);
@@ -41,11 +35,6 @@ EnvArea *EnvArea::clone()
     *self = *this;
     return self;
 }
-
-/*EnvArea *EnvArea::instantiate(std::string objectName)
-{
-    return dynamic_cast<EnvArea*>(this->scene->instantiate(objectName));
-}*/
 
 bool EnvArea::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -152,10 +141,20 @@ void EnvArea::applyDepositionOnDeath()
     }
 }
 
-GridV3 EnvArea::computeFlowModification()
+GridV3& EnvArea::computeFlowModification(GridV3& waterFlow)
 {
+    std::vector<RelativeKelvinlet> evaluatedCurveKelvinlets;
+    for (size_t i = 0; i < curveKelvinlets.size(); i++) {
+        if (curveKelvinlets[i]->valid())
+            evaluatedCurveKelvinlets.push_back(RelativeKelvinlet(curveKelvinlets[i], Vector3()));
+    }
+    this->scene->flowfield.iterateParallel([&](const Vector3& p) {
+        for (const auto& k : evaluatedCurveKelvinlets) {
+            waterFlow[p] += k.evaluate(p, 0.f, waterFlow[p].norm());
+        }
+    });
     /*
-    if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
+    if (flowEffect == Vector3()) return {waterFlow, GridF()};
 
     float growingState = computeGrowingState2();
 
@@ -169,7 +168,7 @@ GridV3 EnvArea::computeFlowModification()
         box.expand({box.min() - halfWidth, box.max() + halfWidth});
 
 
-        GridV3 flow = GridV3(this->scene->flowfield.getDimensions());
+        GridV3 flow = GridV3(waterFlow.getDimensions());
 
         GridF dist(flow.getDimensions(), 1.f);
         // flow.iterateParallel([&] (const Vector3& pos) {
@@ -198,7 +197,7 @@ GridV3 EnvArea::computeFlowModification()
 
                 float distanceToBorder = (pos - closestPos).norm();
                 float distFactor = 1.f - clamp(distanceToBorder / (width * .5f), 0.f, 1.f); // On border = 1, at w/2 = 0, more inside = 0
-                Vector3 previousFlow = this->scene->flowfield(pos);
+                Vector3 previousFlow = waterFlow(pos);
                 // Change the order of the Frenet Frame to get the direction in the direction of the "outside" and the normal is along the borders
         //            auto [normal, direction, binormal] = translatedCurve.getFrenetFrame(closestTime);
                 // We will use the distance map to get the direction, then we know (0, 0, 1) is the binormal (2D shape), so normal is cross product.
@@ -218,9 +217,9 @@ GridV3 EnvArea::computeFlowModification()
         // return {flow, occupancy};
         this->_cachedFlowModif = flow;
     }
-    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF()};
+    return {waterFlow.add(_cachedFlowModif * growingState, Vector3()), GridF()};
     */
-    return this->scene->flowfield;
+    return waterFlow;
 }
 
 ImplicitPatch* EnvArea::createImplicitPatch(const GridF &heights, ImplicitPrimitive* previousPrimitive)

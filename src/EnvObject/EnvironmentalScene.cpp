@@ -486,21 +486,20 @@ void EnvironmentalScene::applyMaterialsTransformations()
         }, false);
 }
 
-const GridV3 &EnvironmentalScene::updateFlowfield(const GridV3 &userFlow, const GridV3& simulationFlow, const GridV3 &eventFlow)
+const GridV3 &EnvironmentalScene::updateFlowfield(const GridV3 &userFlow, const GridV3& simulationFlow)
 {
-    this->flowfield = this->initialFlowfield;
+    this->flowfield = this->scenario.computeStorm(initialFlowfield.getDimensions());
     if (!userFlow.empty())
         this->flowfield += userFlow;
     if (!simulationFlow.empty())
         this->flowfield += simulationFlow;
-    if (!eventFlow.empty())
-        this->flowfield += eventFlow;
     for (int i = 0; i < this->instantiatedObjects.size(); i++) {
         auto& object = this->instantiatedObjects[i];
-        auto flow = object->computeFlowModification();
-        this->flowfield = flow;
+        // auto flow = object->computeFlowModification(this->flowfield);
+        // this->flowfield = flow;
+        object->computeFlowModification(this->flowfield);
     }
-    this->flowfield = this->flowfield.meanSmooth(3, 3, 1, true);
+    // this->flowfield = this->flowfield.meanSmooth(3, 3, 1, true);
     return this->flowfield;
 }
 

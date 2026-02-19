@@ -6,15 +6,8 @@
 EnvPoint::EnvPoint()
     : EnvObject()
 {
-
 }
 
-/*
-EnvPoint *EnvPoint::fromJSON(nlohmann::json content)
-{
-    return dynamic_cast<EnvPoint*>(EnvObject::fromJSON(content));
-}
-*/
 float EnvPoint::getSqrDistance(const Vector3 &position)
 {
     return (position - this->position).norm2();
@@ -41,11 +34,6 @@ EnvPoint *EnvPoint::clone()
     *self = *this;
     return self;
 }
-
-/*EnvPoint *EnvPoint::instantiate(std::string objectName)
-{
-    return dynamic_cast<EnvPoint*>(this->scene->instantiate(objectName));
-}*/
 
 bool EnvPoint::placeInTerrain(const Vector3 &seedPosition)
 {
@@ -155,10 +143,24 @@ void EnvPoint::applyDepositionOnDeath()
     }
 }
 
-GridV3 EnvPoint::computeFlowModification()
+GridV3& EnvPoint::computeFlowModification(GridV3& waterFlow)
 {
+    std::vector<RelativeKelvinlet> relativeFlows;
+    for (size_t i = 0; i < mainKelvinlets.size(); i++) {
+        if (mainKelvinlets[i]->valid())
+            relativeFlows.push_back(RelativeKelvinlet(mainKelvinlets[i], this->position));
+    }
+
+    const Vector3 initialFlow = waterFlow.interpolate(this->position);
+    float flowAngle = initialFlow.getSignedAngleWith(Vector3(1, 0, 0));
+    float flowStrength = initialFlow.length();
+    waterFlow.iterateParallel([&](const Vector3& p) {
+        for (const auto& relativeK : relativeFlows) {
+            waterFlow[p] += relativeK.evaluate(p, flowAngle, flowStrength, true);
+        }
+    });
     /*
-    if (flowEffect == Vector3()) return {this->scene->flowfield, GridF()};
+    if (flowEffect == Vector3()) return {waterFlow, GridF()};
     float growingState = this->computeGrowingState2();
     if (_cachedFlowModif.size() == 0) {
         // float growingState = this->computeGrowingState();
@@ -170,17 +172,17 @@ GridV3 EnvPoint::computeFlowModification()
         k.mu = .9f;
         k.v = 0.f;
 
-        // GridV3 flow = this->scene->flowfield;
-        GridV3 flow(this->scene->flowfield.getDimensions());
+        // GridV3 flow = waterFlow;
+        GridV3 flow(waterFlow.getDimensions());
         flow.iterateParallel([&](const Vector3i& p) {
             Vector3 displacement = k.evaluate(p);
             flow(p) += displacement;
         });
         _cachedFlowModif = flow;
     }
-    return {this->scene->flowfield.add(_cachedFlowModif * growingState, Vector3()), GridF(this->scene->flowfield.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
+    return {waterFlow.add(_cachedFlowModif * growingState, Vector3()), GridF(waterFlow.getDimensions())}; // , this->position - _cachedFlowModif.getDimensions().xy() * .5f);
     */
-    return this->scene->flowfield;
+    return waterFlow;
 }
 
 ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimitive *previousPrimitive)
@@ -212,11 +214,6 @@ ImplicitPatch* EnvPoint::createImplicitPatch(const GridF &heights, ImplicitPrimi
     return patch;
 }
 
-/*GridF EnvPoint::createHeightfield()
-{
-    return GridF();
-}*/
-
 EnvPoint &EnvPoint::translate(const Vector3 &translation)
 {
     this->position.translate(translation);
@@ -227,18 +224,3 @@ EnvPoint &EnvPoint::translate(const Vector3 &translation)
     this->geometryNeedsUpdate = true;
     return *this;
 }
-/*
-nlohmann::json EnvPoint::toJSON() const
-{
-    auto json = EnvObject::toJSON();
-    json["position"] = this->position;
-    return json;
-}
-*/
-
-/*float EnvPoint::estimateShadowing(const GridV3& flow, const Vector3& pos) {
-    Vector3 currents = flow.interpolate(this->position);
-    Vector3 toPos = (pos - this->position);
-
-    return (std::max(0.f, std::abs(std::pow(currents.normalized().dot(toPos.normalized()), 5.f)) * sign(currents.dot(toPos)) - (toPos.norm() / 100.f))); // > 0.5f ? 1.f : 0.f);
-}*/
