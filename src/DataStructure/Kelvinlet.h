@@ -13,17 +13,20 @@ public:
     virtual bool valid() const = 0;
 
     virtual Kelvinlet* clone() const = 0;
+    virtual Kelvinlet* reset() = 0;
     virtual std::string getShortName() const = 0;
+
+    virtual Kelvinlet* translate(const Vector3& translation) = 0;
 
 //    inline float strength(const Vector3& p) const { return densityFunction((p - pos).norm()); }
     inline float regularDistance(float r) const { return std::sqrt(r*r + radialScale*radialScale); }
     inline float densityFunction(float r) const { return (15 * std::pow(radialScale, 4)) / (8 * M_PI * std::pow(regularDistance(r), 7)); }
 
-    float radialScale; // epsilon
+    float radialScale = 1; // epsilon
     float mu = .5f; // 1.f; // Elastic shear modulus
     float v = 0.5f; //.0f; // Poisson ratio (v = 1/2 is special case of Stokeslets [incompressible])
 
-    float epsLimit = 10000.f; // 100.f;
+    float epsLimit = 1000.f; // 100.f;
 };
 
 class KelvinletPoint : public Kelvinlet {
@@ -32,6 +35,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const = 0;
     virtual bool valid() const { return pos.isValid(); }
+
+    virtual KelvinletPoint* clone() const = 0;
+    virtual KelvinletPoint* reset() { pos = Vector3::invalid; return this; }
+    virtual KelvinletPoint* translate(const Vector3& translation) { this->pos += translation; return this; }
 
     Vector3 pos = Vector3::invalid;
 };
@@ -42,9 +49,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new GrabKelvinlet(*this); }
+    virtual GrabKelvinlet* clone() const { return new GrabKelvinlet(*this); }
     virtual std::string getShortName() const { return "Grab"; }
-    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid(); }
+    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid() && force.norm2() > 0; }
+    virtual GrabKelvinlet* reset() { KelvinletPoint::reset(); force = Vector3::invalid; return this; }
 
     Vector3 force = Vector3::invalid;
 };
@@ -56,9 +64,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new TwistKelvinlet(*this); }
+    virtual TwistKelvinlet* clone() const { return new TwistKelvinlet(*this); }
     virtual std::string getShortName() const { return "Twist"; }
-    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid(); }
+    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid() && force.norm2() > 0; }
+    virtual TwistKelvinlet* reset() { KelvinletPoint::reset(); force = Vector3::invalid; return this; }
 
     Vector3 force = Vector3::invalid;
 };
@@ -70,8 +79,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new ScaleKelvinlet(*this); }
+    virtual ScaleKelvinlet* clone() const { return new ScaleKelvinlet(*this); }
     virtual std::string getShortName() const { return "Scale"; }
+    virtual ScaleKelvinlet* reset() { KelvinletPoint::reset(); force = 0; return this; }
+    virtual bool valid() const { return KelvinletPoint::valid() && force != 0; }
 
     float force = 0;
 };
@@ -83,9 +94,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new PinchKelvinlet(*this); }
+    virtual PinchKelvinlet* clone() const { return new PinchKelvinlet(*this); }
     virtual std::string getShortName() const { return "Pinch"; }
-    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid(); }
+    virtual bool valid() const { return KelvinletPoint::valid() && force.isValid() && force.norm2() > 0; }
+    virtual PinchKelvinlet* reset() { KelvinletPoint::reset(); force = Vector3::invalid; return this; }
 
     Vector3 force = Vector3::invalid;
 };
@@ -97,6 +109,10 @@ public:
     virtual Vector3 evaluate(const Vector3& p) const = 0;
     virtual bool valid() const { return !curve.empty(); }
 
+    virtual KelvinletCurve* clone() const = 0;
+    virtual KelvinletCurve* reset() { curve = BSpline(); return this; }
+    virtual KelvinletCurve* translate(const Vector3& translation) { this->curve.translate(translation); return this; }
+
     BSpline curve;
 };
 
@@ -107,8 +123,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new GrabKelvinletCurve(*this); }
-    virtual std::string getShortName() const { return "Translate Curve"; }
+    virtual GrabKelvinletCurve* clone() const { return new GrabKelvinletCurve(*this); }
+    virtual std::string getShortName() const { return "Grab Curve"; }
+    virtual GrabKelvinletCurve* reset() { KelvinletCurve::reset(); force = 0; return this; }
+    virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
 
     float force = 0;
 };
@@ -120,8 +138,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new TwistKelvinletCurve(*this); }
+    virtual TwistKelvinletCurve* clone() const { return new TwistKelvinletCurve(*this); }
     virtual std::string getShortName() const { return "Twist Curve"; }
+    virtual TwistKelvinletCurve* reset() { KelvinletCurve::reset(); force = 0; return this; }
+    virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
 
     float force = 0;
 };
@@ -133,8 +153,10 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new ScaleKelvinletCurve(*this); }
+    virtual ScaleKelvinletCurve* clone() const { return new ScaleKelvinletCurve(*this); }
     virtual std::string getShortName() const { return "Scale Curve"; }
+    virtual ScaleKelvinletCurve* reset() { KelvinletCurve::reset(); force = 0; return this; }
+    virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
 
     float force = 0;
 };
@@ -146,10 +168,24 @@ public:
 
     virtual Vector3 evaluate(const Vector3& p) const;
 
-    virtual Kelvinlet* clone() const { return new PinchKelvinletCurve(*this); }
+    virtual PinchKelvinletCurve* clone() const { return new PinchKelvinletCurve(*this); }
     virtual std::string getShortName() const { return "Pinch Curve"; }
+    virtual PinchKelvinletCurve* reset() { KelvinletCurve::reset(); force = 0; return this; }
+    virtual bool valid() const { return KelvinletCurve::valid() && force != 0; }
 
     float force = 0;
+};
+
+
+struct RelativeKelvinlet {
+    RelativeKelvinlet() {}
+    RelativeKelvinlet(Kelvinlet* kelvinlet, const Vector3& anchorPoint);
+
+    Kelvinlet* kelvinlet = nullptr;
+    Vector3 anchorPoint = Vector3::invalid;
+
+
+    Vector3 evaluate(const Vector3& p, float angle = 0, float scaleFactor = 1.f, bool KelvinletPositionIsRelativeToAnchor = false) const;
 };
 
 #endif // KELVINLET_H
