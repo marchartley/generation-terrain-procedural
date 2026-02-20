@@ -38,6 +38,21 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 
     auto simulationModeCheckbox = new CheckboxElement("Simulation", depositionSimulationDisplay);
 
+    auto anchorSelectionCombobox = new ComboboxElement("Anchor");
+    if (this->currentObject) {
+        if (this->currentObject->isPoint()) {
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Center", MAIN), true);
+        }
+        else if (this->currentObject->isCurve()) {
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("Start", START), true);
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("End", END));
+        } else {
+            anchorSelectionCombobox->addChoice(new ComboboxLineElement<KELVINLET_ANCHOR_POINT>("---", UNDEFINED), true);
+        }
+    }
+    this->currentAnchorPoint = anchorSelectionCombobox->getSelection<KELVINLET_ANCHOR_POINT>()->value;
+    this->kelvinletAnchors[kelvinletParams.currentKelvinlet] = currentAnchorPoint;
+
     auto angleInitialFlow = new AngleElement("Flow angle");
     auto strengthInitialFlow = (new SliderElement("Flow strength", 0.f, 3.f, .01f))->setValue(1.f);
 
@@ -52,10 +67,11 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         });
     }
     bodyKelvinletUI->add(std::vector<UIElement*>{
+        anchorSelectionCombobox,
         simulationModeCheckbox,
         angleInitialFlow,
         strengthInitialFlow,
-        validationButton
+        validationButton,
     });
 
     this->toolsInterface->add(bodyKelvinletUI);
@@ -100,7 +116,7 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
     });
 
     validationButton->setOnPressed([=]() {
-        validateEnvObject();
+        validateEnvObject(false);
     });
 
 
@@ -108,6 +124,13 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         this->updateCurrentChartViewWithCurrentKelvinlets(pos, e->buttons().testFlag(Qt::LeftButton));
     });
 
+    kelvinletParams.setOnNewKelvinlet([=](Kelvinlet* k) {
+        this->kelvinletAnchors[k] = currentAnchorPoint;
+    });
+
+    anchorSelectionCombobox->setOnSelectionChanged([=] (int) {
+        this->currentAnchorPoint = anchorSelectionCombobox->getSelection<KELVINLET_ANCHOR_POINT>()->value;
+    });
 
 
     return this;
@@ -226,47 +249,6 @@ GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool takeIntoAccountCurrentKe
     return resultingVectorField;
 }
 
-GridV3 EnvObjectEditor::getVectorFieldWithRotationForEnvPoint(bool takeIntoAccountCurrentKelvinlet) const
-{
-    GridV3 resultingVectorField = this->kelvinletParams.getInitialVectorField();
-    auto evaluatingRelativeKelvinlets = std::vector<RelativeKelvinlet>();
-    auto evaluatingKelvinlets = std::set<Kelvinlet*>();
-    for (const auto& k : this->kelvinletParams.kelvinlets) {
-        if (k && k->valid()) {
-            evaluatingRelativeKelvinlets.push_back(RelativeKelvinlet(k, dynamic_cast<EnvPoint*>(currentObject)->position));
-            evaluatingKelvinlets.insert(k);
-        }
-    }
-    for (const auto& k : this->kelvinletParams.additional_kelvinlets) {
-        if (k && k->valid()) {
-            evaluatingRelativeKelvinlets.push_back(RelativeKelvinlet(k, dynamic_cast<EnvPoint*>(currentObject)->position));
-            evaluatingKelvinlets.insert(k);
-        }
-    }
-    if (takeIntoAccountCurrentKelvinlet && this->kelvinletParams.currentKelvinlet->valid() && !isIn(this->kelvinletParams.currentKelvinlet, evaluatingKelvinlets))
-        evaluatingRelativeKelvinlets.push_back(RelativeKelvinlet(this->kelvinletParams.currentKelvinlet->clone(), dynamic_cast<EnvPoint*>(currentObject)->position));
-
-    float flowAngle = resultingVectorField.at(dynamic_cast<EnvPoint*>(currentObject)->position).getSignedAngleWith(Vector3(1, 0, 0));
-    float flowStrength = resultingVectorField.at(dynamic_cast<EnvPoint*>(currentObject)->position).norm();
-    resultingVectorField.iterateParallel([&](const Vector3i& p) {
-        for (const auto& k : evaluatingRelativeKelvinlets)
-            resultingVectorField[p] += k.evaluate(p, flowAngle, flowStrength);
-    });
-    return resultingVectorField;
-}
-
-GridV3 EnvObjectEditor::getVectorFieldWithRotationForEnvCurve(bool takeIntoAccountCurrentKelvinlet) const
-{
-    GridV3 resultingVectorField = this->kelvinletParams.getInitialVectorField();
-    return resultingVectorField;
-}
-
-GridV3 EnvObjectEditor::getVectorFieldWithRotationForEnvArea(bool takeIntoAccountCurrentKelvinlet) const
-{
-    GridV3 resultingVectorField = this->kelvinletParams.getInitialVectorField();
-    return resultingVectorField;
-}
-
 void EnvObjectEditor::updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet)
 {
     if (updateCurrentKelvinlet)
@@ -294,7 +276,7 @@ void EnvObjectEditor::updateCurrentChartViewWithCurrentKelvinlets(const Vector3&
     Q_EMIT this->updated();
 }
 
-EnvObject *EnvObjectEditor::validateEnvObject() const
+EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinlet) const
 {
     if (auto asPoint = dynamic_cast<EnvPoint*>(currentObject)) {
         // asPoint->mainKelvinlets = this->kelvinletParams.kelvinlets;
@@ -302,9 +284,19 @@ EnvObject *EnvObjectEditor::validateEnvObject() const
         for (auto& k : kelvinletParams.kelvinlets) {
             asPoint->mainKelvinlets.push_back(k->clone()->translate(-asPoint->position));
         }
+        if (takeIntoAccountCurrentKelvinlet && this->kelvinletParams.currentKelvinlet->valid() && !isIn(kelvinletParams.currentKelvinlet, kelvinletParams.kelvinlets))
+            asPoint->mainKelvinlets.push_back(kelvinletParams.currentKelvinlet->clone()->translate(-asPoint->position));
     }
     else if (auto asCurve = dynamic_cast<EnvCurve*>(currentObject)) {
-        // asCurve->startingPointKelvinlets = ...;
+        asCurve->startingPointKelvinlets.clear();
+        asCurve->endingPointKelvinlets.clear();
+        asCurve->curveKelvinlets.clear();
+        for (auto& k : kelvinletParams.kelvinlets) {
+            if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k) == START)
+                asCurve->startingPointKelvinlets.push_back(k->clone()->translate(-asCurve->curve.points.front()));
+            else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k) == END)
+                asCurve->endingPointKelvinlets.push_back(k->clone()->translate(-asCurve->curve.points.back()));
+        }
         // asCurve->endingPointKelvinlets = ...;
         asCurve->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
     }
@@ -312,8 +304,8 @@ EnvObject *EnvObjectEditor::validateEnvObject() const
         asArea->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
     }
 
-    // nlohmann::json json = currentObject;
-    // std::cout << "My object in JSON form: \n" << json.dump(1) << std::endl;
+    nlohmann::json json = currentObject;
+    std::cout << "My object in JSON form: \n" << json["flow-effect"].dump(1) << std::endl;
 
     return currentObject;
 }

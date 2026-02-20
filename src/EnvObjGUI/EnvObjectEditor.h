@@ -47,13 +47,9 @@ public:
 
     GridV3 getVectorFieldWithRotation(bool takeIntoAccountCurrentKelvinlet) const;
 
-    GridV3 getVectorFieldWithRotationForEnvPoint(bool takeIntoAccountCurrentKelvinlet) const;
-    GridV3 getVectorFieldWithRotationForEnvCurve(bool takeIntoAccountCurrentKelvinlet) const;
-    GridV3 getVectorFieldWithRotationForEnvArea(bool takeIntoAccountCurrentKelvinlet) const;
-
     void updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet);
 
-    EnvObject* validateEnvObject() const;
+    EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true) const;
 
     // PainterToolParams painterParams;
     KelvinletToolParams kelvinletParams;
@@ -63,6 +59,12 @@ public:
     EnvObject* currentObject;
     GridF depositionGrid;
     bool depositionSimulationDisplay = false;
+
+    enum KELVINLET_ANCHOR_POINT {
+        MAIN, START, END, UNDEFINED
+    };
+    KELVINLET_ANCHOR_POINT currentAnchorPoint = UNDEFINED;
+    std::map<Kelvinlet*, KELVINLET_ANCHOR_POINT> kelvinletAnchors;
 
 Q_SIGNALS:
            // void imagePainted(const GridF& newImage);

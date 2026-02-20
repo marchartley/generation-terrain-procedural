@@ -53,11 +53,15 @@ struct KelvinletToolParams {
     GridV3 getInitialVectorField() const { return this->temporaryVectorData.field; }
     GridV3 getVectorField(bool takeIntoAccountCurrentKelvinlet = false) const;
 
+    void setOnNewKelvinlet(std::function<void(Kelvinlet*)> func);
+
 // protected:
     Vector3 kelvinletPosition = Vector3::invalid;
     PlotVectorData temporaryVectorData;
 
     bool displayResultingField = true;
+
+    std::vector<std::function<void(Kelvinlet*)>> onNewKelvinletCallbacks;
 };
 
 class PainterToolsUI
