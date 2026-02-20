@@ -62,7 +62,7 @@ protected:
     std::vector<std::unique_ptr<ControlPoint>> controlPoints;
     Mesh tunnelPreview;
 
-    std::vector<ComboboxLineElement> shapes;
+    std::vector<ComboboxLineElement<KarstHolePredefinedShapes>*> shapes;
     int startingShapeIndex;
     int endingShapeIndex;
 //    QHBoxLayout* tunnelLayout;

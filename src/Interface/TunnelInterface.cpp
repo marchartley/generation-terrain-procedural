@@ -95,15 +95,14 @@ QLayout* TunnelInterface::createGUI()
 //    CheckboxElement* tunnelDisplayButton = new CheckboxElement("Afficher");
 
     this->shapes = {
-        {"Tube", TUBE, ":/tunnels/src/assets/tunnels_icons/tunnel_type_tube.png"},
-        {"Soluble bed", SOLUBLE_BED, ":/tunnels/src/assets/tunnels_icons/tunnel_type_soluble_bed.png"},
-        {"Keyhole", KEYHOLE, ":/tunnels/src/assets/tunnels_icons/tunnel_type_keyhole.png"},
-        {"Canyon", CANYON, ":/tunnels/src/assets/tunnels_icons/tunnel_type_canyon.png"},
-        {"Crack", CRACK, ":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture.png"},
-        {"Flat", STAR, ":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture_flat.png"}
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Tube", ":/tunnels/src/assets/tunnels_icons/tunnel_type_tube.png", TUBE),
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Soluble bed", ":/tunnels/src/assets/tunnels_icons/tunnel_type_soluble_bed.png", SOLUBLE_BED),
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Keyhole", ":/tunnels/src/assets/tunnels_icons/tunnel_type_keyhole.png", KEYHOLE),
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Canyon", ":/tunnels/src/assets/tunnels_icons/tunnel_type_canyon.png", CANYON),
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Crack", ":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture.png", CRACK),
+        new ComboboxLineElement<KarstHolePredefinedShapes>("Flat", ":/tunnels/src/assets/tunnels_icons/tunnel_type_fracture_flat.png", STAR)
     };
 
-    std::cout << startingShapeIndex << std::endl;
     ComboboxElement* startingShapeCombobox = new ComboboxElement("Inlet", shapes, startingShapeIndex);
     ComboboxElement* endingShapeCombobox = new ComboboxElement("Outlet", shapes, endingShapeIndex);
 /*
@@ -215,13 +214,13 @@ void TunnelInterface::addCurvesControlPoint(const Vector3& pos, bool justUpdateP
 
 void TunnelInterface::updateStartingShape()
 {
-    startingShape = static_cast<KarstHolePredefinedShapes>(shapes[startingShapeIndex].value); //(this->startingShapeCombobox->currentData().toInt());
+    startingShape = shapes[startingShapeIndex]->value; //(this->startingShapeCombobox->currentData().toInt());
     this->computeTunnelPreview();
 }
 
 void TunnelInterface::updateEndingShape()
 {
-    endingShape = static_cast<KarstHolePredefinedShapes>(shapes[endingShapeIndex].value); //(this->endingShapeCombobox->currentData().toInt());
+    endingShape = shapes[endingShapeIndex]->value; //(this->endingShapeCombobox->currentData().toInt());
     this->computeTunnelPreview();
 }
 

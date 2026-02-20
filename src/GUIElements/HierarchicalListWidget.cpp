@@ -4,7 +4,7 @@
 
 #include "Utils/Utils.h"
 
-HierarchicalListWidgetBase::HierarchicalListWidgetBase(QWidget *parent)
+HierarchicalListWidget::HierarchicalListWidget(QWidget *parent)
     : QListWidget(parent)
 {
 
@@ -13,7 +13,7 @@ HierarchicalListWidgetBase::HierarchicalListWidgetBase(QWidget *parent)
     this->setSelectionMode(QAbstractItemView::SingleSelection);
 }
 
-void HierarchicalListWidgetBase::setCurrentItem(int indexToSelect)
+void HierarchicalListWidget::setCurrentItem(int indexToSelect)
 {
     this->clearSelection();
     for (auto& _child : this->findItems("*", Qt::MatchWildcard)) {
@@ -27,7 +27,7 @@ void HierarchicalListWidgetBase::setCurrentItem(int indexToSelect)
     }
 }
 
-void HierarchicalListWidgetBase::setCurrentItems(std::vector<int> indicesToSelect)
+void HierarchicalListWidget::setCurrentItems(std::vector<int> indicesToSelect)
 {
     QObject::blockSignals(true);
     this->clearSelection();
@@ -42,7 +42,7 @@ void HierarchicalListWidgetBase::setCurrentItems(std::vector<int> indicesToSelec
     QObject::blockSignals(false);
 }
 
-void HierarchicalListWidgetBase::dragEnterEvent(QDragEnterEvent *event)
+void HierarchicalListWidget::dragEnterEvent(QDragEnterEvent *event)
 {
 
     if (this->selectedItems().empty()) return;
@@ -55,12 +55,12 @@ void HierarchicalListWidgetBase::dragEnterEvent(QDragEnterEvent *event)
     QListWidget::dragEnterEvent(event);
 }
 
-void HierarchicalListWidgetBase::dragLeaveEvent(QDragLeaveEvent *event)
+void HierarchicalListWidget::dragLeaveEvent(QDragLeaveEvent *event)
 {
     QListWidget::dragLeaveEvent(event);
 }
 
-void HierarchicalListWidgetBase::dropEvent(QDropEvent *event)
+void HierarchicalListWidget::dropEvent(QDropEvent *event)
 {
     /*
     if (movingItem != nullptr) {

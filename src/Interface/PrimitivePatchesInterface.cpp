@@ -163,7 +163,7 @@ QLayout *PrimitivePatchesInterface::createGUI()
 
 //    if (primitiveSelectionGui != nullptr)
 //        delete primitiveSelectionGui;
-    primitiveSelectionGui = new HierarchicalListWidgetT<ImplicitPatch*>(this);
+    primitiveSelectionGui = new HierarchicalListWidget(this);
 
     layout->addWidget(constructionModeButton);
     layout->addWidget(createMultiColumnGroup({
@@ -351,8 +351,8 @@ QLayout *PrimitivePatchesInterface::createGUI()
     this->updatePrimitiveList();
 
 //    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::currentItemChanged, this, &PrimitivePatchesInterface::updateSelectedPrimitiveItem);
-    QObject::connect(primitiveSelectionGui, &HierarchicalListWidgetT<ImplicitPatch*>::itemClicked, this, [=](QListWidgetItem* item) { updateSelectedPrimitiveItem(item); });
-    QObject::connect(primitiveSelectionGui, &HierarchicalListWidgetT<ImplicitPatch*>::itemDoubleClicked, this, &PrimitivePatchesInterface::openPrimitiveModificationDialog);
+    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemClicked, this, [=](QListWidgetItem* item) { updateSelectedPrimitiveItem(item); });
+    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemDoubleClicked, this, &PrimitivePatchesInterface::openPrimitiveModificationDialog);
 //    QObject::connect(primitiveSelectionGui, &HierarchicalListWidget::itemChangedHierarchy, this, &PrimitivePatchesInterface::modifyPrimitiveHierarchy);
 
 
