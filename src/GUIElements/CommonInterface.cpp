@@ -65,7 +65,7 @@ std::string LabelElement::getText()
 
 
 
-ButtonElement::ButtonElement(std::string label)
+ButtonElement::ButtonElement(const std::string& label)
     : UIElement(new QPushButton(QString::fromStdString(label))) {
 
     QObject::connect(this->button(), &QObject::destroyed, this, [this](){
@@ -73,7 +73,7 @@ ButtonElement::ButtonElement(std::string label)
     });
 }
 
-ButtonElement::ButtonElement(std::string label, std::function<void ()> onClick)
+ButtonElement::ButtonElement(const std::string& label, std::function<void ()> onClick)
     : UIElement(new QPushButton(QString::fromStdString(label)))
 {
     this->setOnClick(onClick);
@@ -112,7 +112,7 @@ ButtonElement* ButtonElement::setOnRepeat(std::function<void ()> onRepeatFunctio
 
 
 
-SliderElement::SliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
+SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
     : UIElement(new QGroupBox)
 {
     this->_slider = new FancySlider(orientation, valMin, valMax, multiplier);
@@ -130,7 +130,7 @@ SliderElement::SliderElement(std::string label, float valMin, float valMax, floa
     QObject::connect(this->slider(), &FancySlider::doubleClicked, this, [=]() { this->setValue(defaultValue); });
 }
 
-SliderElement::SliderElement(std::string label, float valMin, float valMax, float multiplier, float &binded, Qt::Orientation orientation)
+SliderElement::SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &binded, Qt::Orientation orientation)
     : SliderElement(label, valMin, valMax, multiplier, orientation)
 {
     bindTo(binded);
@@ -165,19 +165,19 @@ void SliderElement::update()
 
 
 
-CheckboxElement::CheckboxElement(std::string label)
+CheckboxElement::CheckboxElement(const std::string& label)
     : UIElement(new QCheckBox(QString::fromStdString(label)))
 {
 
 }
 
-CheckboxElement::CheckboxElement(std::string label, bool &binded)
+CheckboxElement::CheckboxElement(const std::string& label, bool &binded)
     : CheckboxElement(label)
 {
     bindTo(binded);
 }
 
-CheckboxElement::CheckboxElement(std::string label, std::function<void (bool)> onCheck)
+CheckboxElement::CheckboxElement(const std::string& label, std::function<void (bool)> onCheck)
     : CheckboxElement(label)
 {
     this->setOnChecked(onCheck);
@@ -291,19 +291,19 @@ void InterfaceUI::update()
     }
 }
 
-RadioButtonElement::RadioButtonElement(std::string label)
+RadioButtonElement::RadioButtonElement(const std::string& label)
     : UIElement(new QRadioButton(QString::fromStdString(label)))
 {
 
 }
 
-RadioButtonElement::RadioButtonElement(std::string label, bool &binded)
+RadioButtonElement::RadioButtonElement(const std::string& label, bool &binded)
     : RadioButtonElement(label)
 {
     bindTo(binded);
 }
 
-RadioButtonElement::RadioButtonElement(std::string label, const std::function<void (bool)> &onCheck)
+RadioButtonElement::RadioButtonElement(const std::string& label, const std::function<void (bool)> &onCheck)
     : RadioButtonElement(label)
 {
     this->setOnChecked(onCheck);
@@ -420,7 +420,7 @@ void TextEditElement::update()
 }
 
 
-AngleElement::AngleElement(std::string label)
+AngleElement::AngleElement(const std::string& label)
     : UIElement(new QGroupBox)
 {
     this->_dial = new QDial();
@@ -435,7 +435,7 @@ AngleElement::AngleElement(std::string label)
     getWidget()->setLayout(layout);
 }
 
-AngleElement::AngleElement(std::string label, float &binded)
+AngleElement::AngleElement(const std::string& label, float &binded)
     : AngleElement(label)
 {
     this->bindTo(binded);
@@ -464,7 +464,7 @@ void AngleElement::update()
 }
 
 
-RangeSliderElement::RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation)
     : UIElement(new QGroupBox)
 {
     this->_slider = new RangeSlider(orientation, valMin, valMax, multiplier);
@@ -479,7 +479,7 @@ RangeSliderElement::RangeSliderElement(std::string label, float valMin, float va
     getWidget()->setLayout(layout);
 }
 
-RangeSliderElement::RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, Qt::Orientation orientation)
+RangeSliderElement::RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float &bindedMin, float &bindedMax, Qt::Orientation orientation)
     : RangeSliderElement(label, valMin, valMax, multiplier, orientation)
 {
     this->bindTo(bindedMin, bindedMax);
@@ -518,84 +518,9 @@ void RangeSliderElement::update()
     slider()->setMaxValue(*this->boundVariableMax);
 }
 
-ComboboxElement::ComboboxElement(std::string label)
-    : UIElement(new QGroupBox)
-{
-    this->_combobox = new QComboBox();
-    this->_label = new QLabel(QString::fromStdString(label));
-
-    QBoxLayout* layout = new QHBoxLayout;
-    layout->setMargin(0);
-    if (!label.empty())
-        layout->addWidget(_label);
-    layout->addWidget(_combobox);
-    getWidget()->setLayout(layout);
-}
-
-ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices)
-    : ComboboxElement(label)
-{
-    this->choices = choices;
-    for (auto& c : choices) {
-        if (c.iconPath != "") {
-            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
-        } else {
-            combobox()->addItem(QString::fromStdString(c.label), c.value);
-        }
-    }
-}
-
-ComboboxElement::ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int &currentSelection)
-    : ComboboxElement(label, choices)
-{
-    this->bindTo(currentSelection);
-}
-
-QComboBox* ComboboxElement::combobox() const
-{
-    return _combobox;
-}
-
-ComboboxElement* ComboboxElement::setOnSelectionChanged(std::function<void (int)> func)
-{
-    QObject::connect(_combobox, &QComboBox::currentTextChanged, this, [=](QString text) {
-        int index = _combobox->currentIndex();
-        func(index);
-    });
-    return this;
-}
-
-ComboboxElement* ComboboxElement::bindTo(int &indexSelected)
-{
-    boundIndex = indexSelected;
-    combobox()->setCurrentIndex(indexSelected);
-    this->setOnSelectionChanged([&](int index) {
-        this->boundIndex->get() = index;
-    });
-    return this;
-}
-
-ComboboxLineElement ComboboxElement::getSelection() const
-{
-    return this->choices.at(combobox()->currentIndex());
-}
-
-void ComboboxElement::update()
-{
-    combobox()->clear();
-    for (auto& c : choices) {
-        if (c.iconPath != "") {
-            combobox()->addItem(QIcon(QString::fromStdString(c.iconPath)), QString::fromStdString(c.label), c.value);
-        } else {
-            combobox()->addItem(QString::fromStdString(c.label), c.value);
-        }
-    }
-    combobox()->setCurrentIndex(*this->boundIndex);
-}
 
 
-
-ColorPickerElement::ColorPickerElement(std::string label)
+ColorPickerElement::ColorPickerElement(const std::string& label)
     : UIElement(new QGroupBox)
 {
     this->_colorPicker = new QtColorPicker(this->get());
@@ -609,7 +534,7 @@ ColorPickerElement::ColorPickerElement(std::string label)
     getWidget()->setLayout(layout);
 }
 
-ColorPickerElement::ColorPickerElement(std::string label, Vector3 &currentSelection)
+ColorPickerElement::ColorPickerElement(const std::string& label, Vector3 &currentSelection)
     : ColorPickerElement(label)
 {
     this->bindTo(currentSelection);

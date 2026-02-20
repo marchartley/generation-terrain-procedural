@@ -8,7 +8,7 @@
 #include <functional>
 #include "GUIElements/RangeSlider.h"
 
-QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall = false);
+QGroupBox* createSliderGroup(const std::string& label, QSlider* slider, bool makeItSmall = false);
 QGroupBox* createMultipleSliderGroup(std::vector<std::pair<std::string, QSlider *> > labelsAndSliders);
 QGroupBox* createMultipleSliderGroupWithCheckbox(std::vector<std::tuple<std::string, QSlider*, QCheckBox*>> labelsAndSlidersAndActivables);
 QGroupBox* createVerticalGroup(std::vector<QWidget*> widgets);

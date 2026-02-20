@@ -1,12 +1,11 @@
 #ifndef COMMONINTERFACE_H
 #define COMMONINTERFACE_H
 
+
 #include <QWidget>
 #include <QMetaObject>
 #include <vector>
 #include "GUIElements/InterfaceUtils.h"
-#include "GUIElements/FancySlider.h"
-#include "GUIElements/HierarchicalListWidget.h"
 #include <QPushButton>
 #include <QCheckBox>
 #include <QRadioButton>
@@ -19,25 +18,22 @@
 
 #include <iostream>
 
-class UIElement;
-
-
 #define DEFINE_SET_ON_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SIGNAL_NAME) \
-    template <class Callable, typename... Args> \
+template <class Callable, typename... Args> \
     auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         addConnection<WIDGET_TYPE>(&WIDGET_TYPE::SIGNAL_NAME, std::forward<Callable>(callback), std::forward<Args>(args)...); \
         return this; \
-    }
+}
 
 #define DEFINE_SET_ON_SUBWIDGET_FUNCTION(FUNCTION_NAME, WIDGET_TYPE, SUBWIDGET_NAME, SIGNAL_NAME) \
-    template <class Callable, typename... Args> \
+template <class Callable, typename... Args> \
     auto FUNCTION_NAME(Callable&& callback, Args&&... args) { \
         QMetaObject::Connection connection = QObject::connect(SUBWIDGET_NAME, &WIDGET_TYPE::SIGNAL_NAME, \
-                                                              std::forward<Callable>(callback), \
-                                                              std::forward<Args>(args)...); \
+                           std::forward<Callable>(callback), \
+                           std::forward<Args>(args)...); \
         connections.push_back(connection); \
         return this; \
-    }
+}
 
 class UIElement : public QObject {
     Q_OBJECT
@@ -118,6 +114,12 @@ public Q_SLOTS:
     void update();
 };
 
+
+#include "GUIElements/FancySlider.h"
+#include "GUIElements/HierarchicalListWidget.h"
+#include "GUIElements/ComboboxElement.h"
+
+
 class LabelElement : public UIElement {
 public:
     LabelElement(std::string text);
@@ -130,8 +132,8 @@ public:
 
 class ButtonElement : public UIElement {
 public:
-    ButtonElement(std::string label);
-    ButtonElement(std::string label, std::function<void(void)> onClick);
+    ButtonElement(const std::string& label);
+    ButtonElement(const std::string& label, std::function<void(void)> onClick);
 
     QPushButton* button();
 
@@ -149,8 +151,8 @@ protected:
 class SliderElement : public UIElement {
     Q_OBJECT
 public:
-    SliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
-    SliderElement(std::string label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
+    SliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& binded, Qt::Orientation orientation = Qt::Horizontal);
 
     SliderElement* setValue(float newValue) { slider()->setfValue(newValue); return this; }
     float value() const { return slider()->getfValue(); }
@@ -187,8 +189,8 @@ protected:
 class RangeSliderElement : public UIElement {
     Q_OBJECT
 public:
-    RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
-    RangeSliderElement(std::string label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, Qt::Orientation orientation = Qt::Horizontal);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, Qt::Orientation orientation = Qt::Horizontal);
+    RangeSliderElement(const std::string& label, float valMin, float valMax, float multiplier, float& bindedMin, float& bindedMax, Qt::Orientation orientation = Qt::Horizontal);
 
     RangeSliderElement* setMinValue(float valueMin) { slider()->setMinValue(valueMin); return this; }
     RangeSliderElement* setMaxValue(float valueMax) { slider()->setMaxValue(valueMax); return this; }
@@ -225,9 +227,9 @@ protected:
 class FloatInputElement : public UIElement {
     Q_OBJECT
 public:
-    FloatInputElement(std::string label);
-    FloatInputElement(std::string label, float& binded);
-    FloatInputElement(std::string label, std::function<void(float)> onChange);
+    FloatInputElement(const std::string& label);
+    FloatInputElement(const std::string& label, float& binded);
+    FloatInputElement(const std::string& label, std::function<void(float)> onChange);
 
 
 };*/
@@ -235,9 +237,9 @@ public:
 class CheckboxElement : public UIElement {
     Q_OBJECT
 public:
-    CheckboxElement(std::string label);
-    CheckboxElement(std::string label, bool& binded);
-    CheckboxElement(std::string label, std::function<void(bool)> onCheck);
+    CheckboxElement(const std::string& label);
+    CheckboxElement(const std::string& label, bool& binded);
+    CheckboxElement(const std::string& label, std::function<void(bool)> onCheck);
 
     QCheckBox* checkBox();
 
@@ -257,9 +259,9 @@ protected:
 class RadioButtonElement : public UIElement {
     Q_OBJECT
 public:
-    RadioButtonElement(std::string label);
-    RadioButtonElement(std::string label, bool& binded);
-    RadioButtonElement(std::string label, const std::function<void(bool)>& onCheck);
+    RadioButtonElement(const std::string& label);
+    RadioButtonElement(const std::string& label, bool& binded);
+    RadioButtonElement(const std::string& label, const std::function<void(bool)>& onCheck);
 
     QRadioButton* radioButton() const;
 
@@ -317,8 +319,8 @@ protected:
 class AngleElement : public UIElement {
     Q_OBJECT
 public:
-    AngleElement(std::string label = "");
-    AngleElement(std::string label, float &binded);
+    AngleElement(const std::string& label = "");
+    AngleElement(const std::string& label, float &binded);
 
     QDial* dial() const;
     float getAngle() const { return this->value(); }
@@ -338,54 +340,13 @@ protected:
 };
 
 
-struct ComboboxLineElement {
-//    ComboboxLineElement(std::string label) : label(label) {}
-//    ComboboxLineElement(std::string label, int value) : label(label), value(value) {}
-//    ComboboxLineElement(std::string label) : label(label) {}
-    std::string label;
-    int value;
-    std::string iconPath;
-    std::string otherParameters;
-};
-
-class ComboboxElement : public UIElement {
-    Q_OBJECT
-public:
-    ComboboxElement(std::string label);
-    ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices);
-    ComboboxElement(std::string label, std::vector<ComboboxLineElement> choices, int& currentSelection);
-
-    QComboBox* combobox() const;
-
-    ComboboxElement* setOnSelectionChanged(std::function<void(int)> func);
-
-    ComboboxElement* bindTo(int& indexSelected);
-
-    ComboboxLineElement getSelection() const;
-
-public Q_SLOTS:
-    void update();
-
-//protected:
-public:
-    std::vector<ComboboxLineElement> choices;
-    std::optional<std::reference_wrapper<int>> boundIndex;
-//    std::optional<std::reference_wrapper<std::vector<std::string>>> boundValues;
-
-    QLabel* _label;
-    QComboBox* _combobox;
-
-//    bool itemsAreImages = false;
-};
-
-
 #include "GUIElements/qtcolorpicker.h"
 #include "DataStructure/Vector3.h"
 class ColorPickerElement : public UIElement {
     Q_OBJECT
 public:
-    ColorPickerElement(std::string label);
-    ColorPickerElement(std::string label, Vector3& currentSelection);
+    ColorPickerElement(const std::string& label);
+    ColorPickerElement(const std::string& label, Vector3& currentSelection);
 
     QtColorPicker* colorPicker() const;
 

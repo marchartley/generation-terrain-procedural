@@ -7,7 +7,7 @@
 
 #include <unordered_map>
 
-QGroupBox* createSliderGroup(std::string label, QSlider* slider, bool makeItSmall)
+QGroupBox* createSliderGroup(const std::string& label, QSlider* slider, bool makeItSmall)
 {
     QLabel* lab = new QLabel(QString::fromStdString(label));
     QBoxLayout* layout;
