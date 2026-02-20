@@ -277,6 +277,9 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
                 params->kelvinlets.push_back(clone);
                 kelvinletsHistory->addItem(new HierarchicalListWidgetItem<Kelvinlet*>(clone->getShortName(), clone));
                 k->reset();
+                for (auto func : params->onNewKelvinletCallbacks) {
+                    func(clone);
+                }
             }
         }
     });
@@ -425,4 +428,9 @@ GridV3 KelvinletToolParams::getVectorField(bool takeIntoAccountCurrentKelvinlet)
             resultingVectorField[p] += k->evaluate(p);
     });
     return resultingVectorField;
+}
+
+void KelvinletToolParams::setOnNewKelvinlet(std::function<void (Kelvinlet *)> func)
+{
+    this->onNewKelvinletCallbacks.push_back(func);
 }

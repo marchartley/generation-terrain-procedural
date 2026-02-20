@@ -192,10 +192,10 @@ QLayout *EnvObjsInterface::createGUI()
     objectsListWidget->setOnItemSelectionChanged([&]() { this->updateObjectsListSelection(); });
 
 
-    std::vector<ComboboxLineElement> objectsChoices;
+    std::vector<ComboboxLineElement<EnvObject*>*> objectsChoices;
     int selectionForCoral = 0;
     for (auto& [name, obj] : this->scene->availableObjects) {
-        objectsChoices.push_back(ComboboxLineElement{name, 0});
+        objectsChoices.push_back(new ComboboxLineElement<EnvObject*>(name, obj));
         if (toLower(name) == "coralpolyp") {
             selectionForCoral = objectsChoices.size() - 1;
         }
@@ -2117,7 +2117,7 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
 
 std::string EnvObjsInterface::getCurrentObjectName() const
 {
-    return objectCombobox->choices[objectCombobox->combobox()->currentIndex()].label;
+    return objectCombobox->choices[objectCombobox->combobox()->currentIndex()]->label;
 }
 
 void EnvObjsInterface::updateVectorFieldVisu()
