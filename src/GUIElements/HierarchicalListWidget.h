@@ -14,11 +14,11 @@ enum HIERARCHY_TYPE {
     PARENT =2
 };
 
-class HierarchicalListWidgetBase : public QListWidget
+class HierarchicalListWidget : public QListWidget
 {
     Q_OBJECT
 public:
-    HierarchicalListWidgetBase(QWidget* parent = nullptr);
+    HierarchicalListWidget(QWidget* parent = nullptr);
 
     void setCurrentItem(int indexToSelect);
     void setCurrentItems(std::vector<int> indicesToSelect);
@@ -46,21 +46,6 @@ public Q_SLOTS:
 public:
     HierarchicalListWidgetItemBase* movingItem = nullptr;
 };
-
-using HierarchicalListWidget = HierarchicalListWidgetBase;
-
-template <class T = int>
-class HierarchicalListWidgetT : public HierarchicalListWidgetBase
-{
-public:
-    HierarchicalListWidgetT<T>(QWidget* parent = nullptr)
-        : HierarchicalListWidgetBase(parent)
-    {}
-
-public:
-    // HierarchicalListWidgetItem<T>* movingItem = nullptr;
-};
-
 
 class HierarchicalListWidgetItemBase : public QListWidgetItem
 {
