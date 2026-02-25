@@ -295,147 +295,86 @@ void EnvironmentalScene::removeAllObjects()
 }
 
 /*
-bool EnvironmentalScene::applyEffects(const GridF& heights, const GridV3& userFlow)
+std::vector<std::string> EnvironmentalScene::updateAllMaterialsOnce(const GridV3& heightsGradients, const GridV3& smoothFluids, const std::vector<std::string>& unstableMaterials)
 {
-    this->updateFlowfield(userFlow);
-    return this->updateSedimentation(heights);
-}
-
-bool EnvironmentalScene::updateSedimentation(const GridF& heights)
-{
-    std::cout << "SEDIMENTATION" << std::endl;
-    bool bigChangesInAtLeastOneMaterialDistribution = false;
-    GridV3 heightsGradients = heights.gradient();
-    auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
-
-    std::vector<std::string> names;
-
-    for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-        auto& object = this->instantiatedObjects[i];
-        for (auto& [materialName, absorb] : object->materialAbsorptionRate) {
-            if (absorb.rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
-                names.push_back(materialName);
-            }
-        }
-        for (auto& [materialName, depos] : object->materialDepositionRate) {
-            if (depos.rate > 0 && std::find(names.begin(), names.end(), materialName) != names.end()) {
-                names.push_back(materialName);
-            }
-        }
-    }
-#pragma omp parallel for
-    for(int i = 0; i < names.size(); i++) {
-        auto& material = materials[names[i]];
-        // if (material.isStable) {
-        // std::cout << material.name << " is stable" << std::endl;
-        // continue;
-        // } else {
-        // std::cout << material.name << " NOT stable" << std::endl;
-        // }
-
-        // bool needToBeUpdated = false;
-        // float startingAmount = material.currentState.sum();
-        auto startState = material.currentState;
-
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name].rate != 0) {
-                // #pragma omp critical
-                object->applyDeposition(material);
-                // needToBeUpdated = true;
-            }
-        }
-        for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
-            auto& object = this->instantiatedObjects[i];
-            if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name].rate != 0) {
-                // #pragma omp critical
-                object->applyAbsorption(material);
-                // needToBeUpdated = true;
-            }
-        }
-
-        // if (needToBeUpdated) {
-        material.update(smoothFluids, heightsGradients, this->scenario.dt);
-        // material.currentState *= material.decay;
-
-        // float endingAmount = material.currentState.sum();
-        // float diff = (material.currentState - startState).abs().sum();
-
-        // #pragma omp critical
-        // {
-        //     std::cout << material.name << ": " << diff << std::endl;
-        // }
-
-        // if (diff > 1e-3) {
-        // #pragma omp critical
-        // {
-        // bigChangesInAtLeastOneMaterialDistribution = true;
-        // }
-        // } else {
-        // std::cout << material.name << " diff : " << std::abs(endingAmount - startingAmount) << std::endl;
-        // material.isStable = true;
-        // }
-        // } else {
-        material.isStable = true;
-        // }
-    }
-    return bigChangesInAtLeastOneMaterialDistribution;
-}
-*/
-
-std::vector<std::string> EnvironmentalScene::updateSedimentationKnowingFluidsAndGradients([[maybe_unused]] const GridF& heights, const GridV3& heightsGradients, const GridV3& smoothFluids, std::vector<std::string> unstableMaterials)
-{
-    std::cout << "SED_FLUID" << std::endl;
-    std::vector<std::string> stillUnstable;
-    std::vector<std::string> materialNames = unstableMaterials;
+    std::vector<short int> stillUnstable(unstableMaterials.size(), 0);
 
     #pragma omp parallel for schedule(dynamic)
-    for(int i = 0; i < materialNames.size(); i++) {
-        auto& material = materials[materialNames[i]];
+    for(size_t iMaterial = 0; iMaterial < unstableMaterials.size(); iMaterial++) {
+        auto& material = materials[unstableMaterials[iMaterial]];
 
         bool needToBeUpdated = false;
         auto startState = material.currentState;
 
         for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
             auto& object = this->instantiatedObjects[i];
-            // if (object->materialDepositionRate.count(material.name) != 0 && object->materialDepositionRate[material.name].rate != 0) {
-                object->applyDeposition(material);
-                needToBeUpdated = true;
-            // }
+            object->applyDeposition(material);
+            needToBeUpdated = true;
         }
         for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
             auto& object = this->instantiatedObjects[i];
-            // if (object->materialAbsorptionRate.count(material.name) != 0 && object->materialAbsorptionRate[material.name].rate != 0) {
-                object->applyAbsorption(material);
-                needToBeUpdated = true;
-            // }
+            object->applyAbsorption(material);
+            needToBeUpdated = true;
         }
 
-        // if (needToBeUpdated) {
-        material.update(smoothFluids, heightsGradients, this->scenario.dt);
-        float diff = (material.currentState - startState).abs().sum();
-        if (diff > 1e-3) {
-            #pragma omp critical
-            {
-                stillUnstable.push_back(material.name);
+        if (needToBeUpdated) {
+            material.update(smoothFluids, heightsGradients, this->scenario.dt);
+            float diff = (material.currentState - startState).abs().sum() / float(startState.size() / 100); // Scaling difference by 100 otherwise it is very small...
+            if (diff > 1e-3) {
+                stillUnstable[iMaterial] = 1;
             }
         }
-        // }
     }
-    return stillUnstable;
+    return where_masked(unstableMaterials, stillUnstable);
+}
+*/
+
+EnvMaterial& EnvironmentalScene::stabilizeOneMaterial(const GridV3& heightsGradients, const GridV3& smoothFluids, EnvMaterial& material, int maxIterations)
+{
+    bool needToBeUpdated = false;
+    auto startState = material.currentState;
+
+    for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
+        auto& object = this->instantiatedObjects[i];
+        object->applyDeposition(material);
+        needToBeUpdated = true;
+    }
+    for (size_t i = 0; i < this->instantiatedObjects.size(); i++) {
+        auto& object = this->instantiatedObjects[i];
+        object->applyAbsorption(material);
+        needToBeUpdated = true;
+    }
+
+    GridF mask = material.currentState - startState;
+
+    for (int i = 0; i < maxIterations - 1; i++) {
+        startState = material.currentState;
+        material.currentState += mask;
+        material.update(smoothFluids, heightsGradients, this->scenario.dt);
+        float diff = (material.currentState - startState).abs().sum() / float(startState.size() / 100); // Scaling difference by 100 otherwise it is very small...
+        if (diff < 1e-3) {
+            break;
+        }
+    }
+    return material;
 }
 
 void EnvironmentalScene::stabilizeMaterials(const GridF &heights, int maxIterations)
 {
     GridV3 heightsGradients = heights.gradient();
-    auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
+    // auto smoothFluids = this->flowfield.meanSmooth(3, 3, 1, true);
     std::vector<std::string> unstableMaterials = this->getMaterialsToUpdate();
 
-    for (int iteration = 0; iteration < maxIterations; iteration++) {
-        unstableMaterials = this->updateSedimentationKnowingFluidsAndGradients(heights, heightsGradients, smoothFluids, unstableMaterials);
+    /*for (int iteration = 0; iteration < maxIterations; iteration++) {
+        unstableMaterials = this->updateAllMaterialsOnce(heightsGradients, this->flowfield, unstableMaterials);
         if (unstableMaterials.empty()) {
             break;
         }
+    }
+    */
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < unstableMaterials.size(); i++) {
+        this->stabilizeOneMaterial(heightsGradients, this->flowfield, this->materials[unstableMaterials[i]], maxIterations);
     }
 }
 
