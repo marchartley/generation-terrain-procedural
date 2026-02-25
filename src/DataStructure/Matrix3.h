@@ -250,7 +250,7 @@ public:
     operator Matrix3<U>() const {
         Matrix3<U> returned(this->getDimensions());
         for (size_t i = 0; i < this->size(); i++)
-            returned[i] = (U)((*this)[i]);
+            returned[i] = (U)(this->data[i]);
         return returned;
     }
 
@@ -1219,7 +1219,7 @@ template <class T>
 Matrix3<T>& Matrix3<T>::min(const T &minVal)
 {
     this->iterateParallel([&](size_t i) {
-        (*this)[i] = std::min((*this)[i], minVal);
+        this->data[i] = std::min(this->data[i], minVal);
     });
     return *this;
 }
@@ -1228,7 +1228,7 @@ template <class T>
 Matrix3<T>& Matrix3<T>::max(const T &maxVal)
 {
     this->iterateParallel([&](size_t i) {
-        (*this)[i] = std::max((*this)[i], maxVal);
+        this->data[i] = std::max(this->data[i], maxVal);
     });
     return *this;
 }
