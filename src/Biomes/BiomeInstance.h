@@ -12,7 +12,7 @@ class BiomeInstance : public std::enable_shared_from_this<BiomeInstance>
 public:
     BiomeInstance();
 
-    static BiomeInstance fromClass(std::string className);
+    static BiomeInstance fromClass(const std::string& className);
     int getLevel(bool ignorePriorityOffset = false);
     void completeIfNeeded();
 

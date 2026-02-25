@@ -1,673 +1,1455 @@
 [
-  {
-    "name": "Passe",
-    "type": "curve",
-    "rule": "((5 - d(greatreef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(greatreef - pos) < 5) max 0",
-    "flow": {
-      "direction": 10.0,
-      "normal": 0.1,
-      "binormal": 0.0
-    },
-    "deposition-rate" : {
-    },
-    "absorption-rate" : {
-    },
-    "width": 1,
-    "length": 30,
-    "height": 2,
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "ParametricTunnel",
-    "material": "water"
-  },
-  {
-    "name": "Reef",
-    "type": "curve",
-    "rule": "normal(d(lagoon - pos)) * (depth > 0)  * (d((reef - pos) ? {10 0 0}) > 5)",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "deposition-rate" : {
-    	"polyp": { "radius": 2.0, "rate": 0.0 },
-    	"pebbles": { "radius": 2.0, "rate": 0.1 },
-    	"deadcoral": { "radius": 2.0, "rate": 0.005 },
-    	"sand": { "radius": 2.0, "rate": 0.10 }
-    },
-    "absorption-rate" : {
-    	"polyp": { "radius": 2.0, "rate": 0.0 },
-    	"deadcoral": { "radius": 2.0, "rate": 0.01 },
-    	"sand": { "radius": 2.0, "rate": 0.10 }
-    },
-    "width": 10,
-    "length": 30,
-    "height": 2,
-    "min-score": 0,
-    "height-from": "surface",
-    "follows": "skeleton",
-    "geometry": "ParametricTunnel",
-    "material": "sand"
-  },
-  {
-    "name": "GreatReef",
-    "type": "curve",
-    "rule": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1))) * ((currenttime - spawntime) < 50)",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "deposition-rate" : {
-    	"sand": { "radius": 2.0, "rate": 0.01 }
-    },
-    "absorption-rate" : {
-    },
-    "width": 6,
-    "length": 30,
-    "height": 6,
-    "min-score": 0.02,
-    "height-from": "water",
-    "follows": "skeleton",
-    "geometry": "ParametricTunnel",
-    "material": "sand"
-  },
-  {
-    "name": "CoralPolyp",
-    "type": "point",
-    "-rule": "(depth < 0) * (d(coralpolyp - pos) > 3) / freshwater",
-    "rule": "(normal(current.vel * 5.0))  * (polyp * 10000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0))",
-    "--rule": "(normal(current.vel * 5.0)) * (1 - smalllagoon.inside) * (1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0)) * ((currenttime - spawntime) < 30000)",
-    "---rule": "(depth > 0) * (depth < 2) * normal((depth - 1) * 5.0) * ((lagoon.inside * (d(lagoon - pos) < 8)) + (1 - lagoon.inside)) * d(pos - coralpolyp)",
-    "flow": 0.10,
-    "radius": 10.0,
-    "height": 10.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-      "polyp": { "radius": 2.0, "rate": 0.01 },
-    	"deadCoral": { "radius": 2.0, "rate": 0.5 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 1.0, "rate": 0.1 },
-    	"polyp": { "radius": 1.0, "rate": 0.01 }
-    },
-    "min-score": 1.0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral",
-    "onDeath": {
-    }
-  },
-  {
-    "name": "CoralPolypStrong",
-    "type": "point",
-    "rule": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 3) / 1.0) * (depth > 0)) * (current.vel * 100 + 1.0)",
-    "flow": 0.10,
-    "radius": 10.0,
-    "height": 10.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 0.01 },
-    	"deadCoral": { "radius": 2.0, "rate": 0.1 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0.1,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral",
-    "onDeath": {
-    }
-  },
-  
-  {
-    "name": "CoralPolypFoliose",
-    "type": "point",
-    "rule": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypfoliose - pos))",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1}
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypTable",
-    "type": "point",
-    "rule": "normal((depth - 3.0) * 0.5) * ( 1 / sand) * ((currenttime - spawntime) < 3000) * (d(coralpolyptable - pos))",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypEncrust",
-    "type": "point",
-    "rule": "d(depth.gradient) * (depth > 0) * ((currenttime - spawntime) < 3000) * (d(coralpolypencrust - pos)) * (polyp + 0.1)",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypBranches",
-    "type": "point",
-    "rule": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypbranches - pos))",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypBoulder",
-    "type": "point",
-    "rule": "normal(d(greatreef - pos)*0.2) * (d(greatreef - pos) > 1)  * ((currenttime - spawntime) < 3000) * (d(coralpolypboulder - pos))",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypFlat",
-    "type": "point",
-    "--rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (abs(currenttime - spawntime) < 20) * (d2(coralpolypflat - pos) > 2) * (depth > 0)",
-    "---rule": "(10 * polyp + abs(random(pos * {100 100 0}) * 0.1)) * (1 - (normal(d(coralpolypflat - pos) - 2)/4)) * (depth > 0) * d(depth.gradient)",
-    "rule": "(3 - normal(d((coralpolypflat - pos) ? {0, 0, 0}))) * (1 - current.vel * 2)",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 },
-    	"polyp": { "radius": 2.0, "rate": 100.0 }
-    },
-    "absorption-rate": {
-    	"sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "Island",
-    "type": "area",
-    "-rule": "(((random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime)) - (d(island - pos)) * 0.01 * (island.inside)) * (1 - island.inside))) max 0",
-    "rule": "random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime))",
-    "flow": {
-      "direction": 0.3,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "deposition-rate" : {
-    	"sand": { "radius": 20.0, "rate": 0.01 }
-    },
-    "absorption-rate" : {
-      "sand": { "radius": 1.0, "rate": 0.005 }
-    },
-    "width": 20,
-    "length": 90,
-    "height": 20,
-    "snake": {
-      "connectivity": 0.0,
-      "curvature": 0.0,
-      "length": 0.0,
-      "area": 200.0,
-      "image": 0.00001,
-      "imageinside": 1.0,
-      "imageborders": 0.0,
-      "catapillars": 0
-    },
-    "min-score": 0.10,
-    "height-from": "ground",
-    "evaluation": "borders",
-    "geometry": "DistanceMap",
-    "material": "SAND"
-  },
-  {
-    "name": "Motu",
-    "type": "area",
-    "rule": "lagoon.curvature * normal(d(lagoon - pos)) * normal(depth - 3)",
-    "--rule": "((d((Passe - pos) ? {5 0 0}) - 5)  + (sand * 10000)) + 1000 * (10 - d((reef - pos) ? {10 0 0}))",
-    "flow": {
-      "direction": 0.10,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "width": 20.0,
-    "length": 20.0,
-    "height": 10,
-    "deposition-rate" : {
-    	"sand": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate" : {
-    	"sand": { "radius": 2.0, "rate": 1.50 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "DistanceMap",
-    "material": "Sand"
-  },
-  {
-    "name": "Fault",
-    "type": "curve",
-    "rule": "(fracture * (depth > 5)) max 0",
-    "---rule": "fracture * ((random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * 0.5) * (depth max 0)^0.5) max 0",
-    "--rule": "(random(pos * {2, 2, 0}) * (1/2) + random(pos * {4, 4, 0}) * (1/4) + (1/2) + d(pos - {50 50 0}) * (-1/100)) max 0",
-    "flow": {
-      "direction": 10.0,
-      "normal": 0.1,
-      "binormal": 0.0
-    },
-    "deposition-rate" : {
-    },
-    "absorption-rate" : {
-    },
-    "width": 5,
-    "length": 70,
-    "height": 3,
-    "min-score": 0,
-    "height-from": "surface",
-    "follows": "skeleton",
-    "geometry": "ParametricTunnel",
-    "material": "water"
-  },
-  {
-    "name": "Arch",
-    "type": "point",
-    "rule": "z((depth.gradient + {0 0 1}) / d(depth.gradient + {0 0 1})) * depth^3",
-    "-rule": "(5 - d((fault - pos) ? {5 0 0})) max 0",
-    "--rule": "(10 - (d(fault.center - pos) - abs(d(fault.start - pos) - d(fault.end - pos))^2)) max 0 * (5 - d(fault - pos)) max 0",
-    "flow": 1.0,
-    "deposition-rate" : {
-    	"pebbles": { "radius": 2.0, "rate": 0.1 },
-    	"boulders": { "radius": 2.0, "rate": 0.5 },
-    	"shade": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate" : {
-    },
-    "radius": 10,
-    "height": 1,
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "Sand"
-  },
-  {
-    "name": "River",
-    "type": "curve",
-    "rule": "(depth) * (1 - (normal((d(river - pos))/2) min 1))",
-    "--rule": "(20 - abs(depth)) * (depth < 0)",
-    "fitness": "normal((depth + 20)/20) * (depth < 0) * (1 - (normal((d(river.start - pos))/2) min 1)) * (1 - (normal((d(river - pos))/2) min 1))",
-    "flow": {
-      "direction": 1.0,
-      "normal": 0.1,
-      "binormal": 0.0
-    },
-    "width": 2,
-    "length": 40,
-    "height": 4,
-    "deposition-rate" : {
-	    "freshwater": { "radius": 2.0, "rate": 10.0 }
-    },
-    "absorption-rate" : {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "ParametricTunnel",
-    "material": "water",
-    "follows": "gradients"
-  },
-  {
-    "name": "Canyon",
-    "type": "curve",
-    "rule": "fracture * ((depth max 0)^0.5) max 0",
-    "flow": {
-      "direction": 1.0,
-      "normal": 0.1,
-      "binormal": 0.0
-    },
-    "sand": 0.0,
-    "width": 15,
-    "length": 200,
-    "height": 5,
-    "min-score": 0,
-    "height-from": "surface",
-    "follows": "skeleton",
-    "geometry": "ParametricTunnel",
-    "material": "water"
-  },
-  {
-    "name": "BigRock",
-    "type": "point",
-    "rule": "pebbles * (1 - (normal(d(bigrock - pos) - 1) min 1))",
-    "flow": 0.00,
-    "radius": 10,
-    "height": 1,
-    "deposition-rate" : {
-	    "pebbles": { "radius": 2.0, "rate": 10.0 }
-    },
-    "absorption-rate" : {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "Sand"
-  },
-  {
-    "name": "SmallRock",
-    "type": "point",
-    "---rule": "((10 - d(bigRock - pos)) / (current.vel + 1))",
-    "--rule": "((20 - d(bigRock - (pos + current * {5 5 0})) max 0) * ((5 - d(canyon - pos)) max 0)) max 0",
-    "rule": "pebbles * (1 - (normal(d(smallrock - pos) - 1) min 1))",
-    "flow": 0.0,
-    "radius": 10,
-    "height": 1,
-    "deposition-rate" : {
-	    "sand": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate" : {
-	    "pebbles": { "radius": 2.0, "rate": 2.0 }
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "Sand"
-  },
-  
-  {
-    "name": "CoralPolypFlatA",
-    "type": "point",
-    "rule": "(10 * (2 * polypA - polyp) * (d((CoralPolypFlatA - pos) ? {1 0 0}) + (1 * d((CoralPolypFlatA - pos) ? {1 0 0}) < 0.01)) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
-    "flow": 1.0,
-    "radius": 3.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"polyp": { "radius": 2.0, "rate": 1.0 },
-    	"polypA": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypFlatB",
-    "type": "point",
-    "rule": "(10 * (2 * polypB - polyp) * (d((CoralPolypFlatB - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
-    "flow": 1.0,
-    "radius": 3.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"polyp": { "radius": 2.0, "rate": 1.0 },
-    	"polypB": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "CoralPolypFlatC",
-    "type": "point",
-    "rule": "(10 * (2 * polypC - polyp) * (d((CoralPolypFlatC - pos) ? {1 0 0})) + (((d(((Fault - pos) ? (Canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
-    "flow": 1.0,
-    "radius": 3.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"polyp": { "radius": 2.0, "rate": 1.0 },
-    	"polypC": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "coral"
-  },
-  {
-    "name": "Lagoon",
-    "type": "area",
-    "rule": "(polyp) max (sand) * (1 - lagoon.inside)",
-    "-rule": "(10 - d(greatreef - pos)) min 10",
-    "---rule": "((20 - d(island - pos)) * (1 - island.inside)) max 0",
-    "----rule": "sand",
-    "--rule": "(normal((depth - 10)/0.5)) *  (d(lagoon - pos) > 5) + (d(lagoon.center - pos) < 10)",
-    "flow": {
-      "direction": 0.10,
-      "normal": 0.0,
-      "binormal": 0.0
-     },
-    "width": 60.0,
-    "length": 60.0,
-    "height": 2.0,
-    "deposition-rate": {
-      "sand": { "radius": 2.0, "rate": 0.1 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0.0,
-    "height-from": "water",
-    "evaluation": "inside",
-    "geometry": "Polygon",
-    "material": "sand"
-     
-   },
-  {
-    "name": "SmallLagoon",
-    "type": "area",
-    "rule": "normal(depth - 2) * (depth > -1) * (d(pos - (smalllagoon ? {1000 0 0})) > 3) * (1 - smalllagoon.inside)",
-    "----rule": "sand * (1 - island.inside)",
-    "-rule": "50 - d(reef - pos)",
-    "--rule": "island.curvature * (1 - island.inside) * ((10 - d(island - pos)))",
-    "flow": {
-      "direction": 0.10,
-      "normal": 0.0,
-      "binormal": 0.0
-     },
-    "width": 60.0,
-    "length": 60.0,
-    "height": 2.0,
-    "deposition-rate": {
-    },
-    "absorption-rate": {
-      "sand": { "radius": 2.0, "rate": 100.0 }
-    },
-    "min-score": 0,
-    "height-from": "water",
-    "evaluation": "borders",
-    "geometry": "Polygon",
-    "material": "sand"
-     
-   },
-  {
-    "name": "Beach",
-    "type": "area",
-    "rule": "(sand + 1) * (1 - beach.inside) * normal(d(depth.gradient) / 10) * normal(depth / 1.5) * (depth > -2) / (current.vel + 1)",
-    "--rule": "sand * (depth > 0) * (1 - beach.inside) / (current.vel + 1)",
-    "flow": {
-      "direction": 0.10,
-      "normal": 0.0,
-      "binormal": 0.0
-     },
-    "width": 10.0,
-    "length": 40.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate": {
-      "sand": { "radius": 2.0, "rate": 0.5 }
-    },
-    "min-score": 0.5,
-    "height-from": "ground",
-    "evaluation": "borders",
-    "geometry": "none",
-    "material": "sand"
-     
-   },
-  {
-    "name": "Tree",
-    "type": "point",
-    "rule": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10000)",
-    "flow": 0.0,
-    "radius": 1.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"shade": { "radius": 2.0, "rate": 1.0 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0.01,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "sand"
-  },
-  {
-    "name": "Algae",
-    "type": "point",
-    "rule": "(freshwater + sand) * smalllagoon.inside * (random(pos * 100))",
-    "flow": 0.0,
-    "radius": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    	"sand": { "radius": 2.0, "rate": 1000.0 }
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "sand"
-  },
-  {
-    "name": "Ripple",
-    "type": "curve",
-    "--rule": "(sand > 0.2) * sand * (d((smallrock - current * 0) - pos) > 4) * (d(ripple - pos) > 2)",
-    "rule": "(current.vel + 1) * (canyon.inside + fault.inside) * d(smallrock - pos - current * -2) / (d(canyon - pos) max 1.0)",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "width": 1.0,
-    "length": 10.0,
-    "height": 1.0,
-    "deposition-rate": {
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "follows": "isovalue",
-    "height-from": "surface",
-    "geometry": "parametrictunnel",
-    "material": "sand"
-  },
-  {
-    "name": "Lake shore",
-    "type": "curve",
-    "rule": "depth",
-    "flow": {
-      "direction": 0.0,
-      "normal": 0.0,
-      "binormal": 0.0
-    },
-    "width": 1.0,
-    "length": 100.0,
-    "height": 1.0,
-    "deposition-rate": {
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0,
-    "follows": "isovalue",
-    "height-from": "surface",
-    "geometry": "parametrictunnel",
-    "material": "water"
-  },
-  {
-    "name": "Palm",
-    "type": "point",
-    "rule": "sand * (depth < 1) * normal((depth + 0.5) * 2) * (1 - (normal(d(palm - pos)/4) min 1))",
-    "flow": 0.0,
-    "radius": 1.0,
-    "height": 1.0,
-    "deposition-rate": {
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0.1,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "sand"
-  },
-  {
-    "name": "Bush",
-    "type": "point",
-    "rule": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 1000)",
-    "flow": 0.0,
-    "radius": 5.0,
-    "height": 1.0,
-    "deposition-rate": {
-    },
-    "absorption-rate": {
-    },
-    "min-score": 0.5,
-    "height-from": "surface",
-    "geometry": "None",
-    "material": "rock"
-  }
+	{
+		"name": "algae",
+		"fitness": "(freshwater + sand) * smalllagoon.inside * (random(pos * 100))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 1000.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "arch",
+		"fitness": "z((depth.gradient + {0 0 1}) / d(depth.gradient + {0 0 1})) * depth^3",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"boulders": {
+				"radius": 2.0,
+				"rate": 0.5
+			},
+			"pebbles": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			},
+			"shade": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "beach",
+		"fitness": "(sand + 1) * (1 - beach.inside) * normal(d(depth.gradient) / 10) * normal(depth / 1.5) * (depth > -2) / (current.vel + 1)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.5,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.5
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"flow-attenuation": 0.0
+		},
+		"length": 40.0,
+		"width": 10.0,
+		"type": "Area"
+	},
+	{
+		"name": "bigrock",
+		"fitness": "pebbles * (1 - (normal(d(bigrock - pos) - 1) min 1))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"pebbles": {
+				"radius": 2.0,
+				"rate": 10.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "bush",
+		"fitness": "shade * (1 - (normal(d(bush - pos)) min 1)) * ((currenttime - spawntime) < 1000)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "ROCK",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.5,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 5.0,
+		"type": "Point"
+	},
+	{
+		"name": "canyon",
+		"fitness": "fracture * ((depth max 0)^0.5) max 0",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 5.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 200.0,
+		"width": 15.0,
+		"type": "Curve"
+	},
+	{
+		"name": "coralpolyp",
+		"fitness": "(normal(current.vel * 5.0))  * (polyp * 10000 + 1) / (sand + 1) * (normal((depth - 2) / 1.0) * (depth > 0))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 1.0,
+		"deposition-rate": {
+			"deadcoral": {
+				"radius": 2.0,
+				"rate": 0.5
+			},
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.009999999776482582
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"polyp": {
+				"radius": 1.0,
+				"rate": 0.009999999776482582
+			},
+			"sand": {
+				"radius": 1.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 10.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypboulder",
+		"fitness": "normal(d(greatreef - pos)*0.2) * (d(greatreef - pos) > 1)  * ((currenttime - spawntime) < 3000) * (d(coralpolypboulder - pos))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypbranches",
+		"fitness": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypbranches - pos))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypencrust",
+		"fitness": "d(depth.gradient) * (depth > 0) * ((currenttime - spawntime) < 3000) * (d(coralpolypencrust - pos)) * (polyp + 0.1)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypflat",
+		"fitness": "(3 - normal(d((coralpolypflat - pos) ? {0, 0, 0}))) * (1 - current.vel * 2)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypflata",
+		"fitness": "(10 * (2 * polypa - polyp) * (d((coralpolypflata - pos) ? {1 0 0}) + (1 * d((coralpolypflata - pos) ? {1 0 0}) < 0.01)) + (((d(((fault - pos) ? (canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 1.0
+			},
+			"polypa": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 3.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypflatb",
+		"fitness": "(10 * (2 * polypb - polyp) * (d((coralpolypflatb - pos) ? {1 0 0})) + (((d(((fault - pos) ? (canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 1.0
+			},
+			"polypb": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 3.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypflatc",
+		"fitness": "(10 * (2 * polypc - polyp) * (d((coralpolypflatc - pos) ? {1 0 0})) + (((d(((fault - pos) ? (canyon - pos)) ?{0 0 0})) min 4 max 2) - 2) + random(pos * {100 100 0}) * 0.1)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 1.0
+			},
+			"polypc": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 3.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypfoliose",
+		"fitness": "normal(depth - 3.0) * (depth > 0)  * ((currenttime - spawntime) < 3000) * (d(coralpolypfoliose - pos))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolypstrong",
+		"fitness": "(1 - normal(d(pos - (coralpolyp ? {1000 0 0})))) * (polyp * 1000 + 1) / (sand + 1) * (normal((depth - 3) / 1.0) * (depth > 0)) * (current.vel * 100 + 1.0)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.10000000149011612,
+		"deposition-rate": {
+			"deadcoral": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			},
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.009999999776482582
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 10.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "coralpolyptable",
+		"fitness": "normal((depth - 3.0) * 0.5) * ( 1 / sand) * ((currenttime - spawntime) < 3000) * (d(coralpolyptable - pos))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "CORAL",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"polyp": {
+				"radius": 2.0,
+				"rate": 100.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "fault",
+		"fitness": "(fracture * (depth > 5)) max 0",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 3.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 70.0,
+		"width": 5.0,
+		"type": "Curve"
+	},
+	{
+		"name": "greatreef",
+		"fitness": "(deadcoral * ((depth > 0) * (1 - (normal(d(greatreef - pos)/4))min 1))) * ((currenttime - spawntime) < 50)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.019999999552965164,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.009999999776482582
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 6.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 30.0,
+		"width": 6.0,
+		"type": "Curve"
+	},
+	{
+		"name": "island",
+		"fitness": "random((pos * 3 + {100 0 0}) + ({0.05 0 0} * currenttime))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "DistanceMap",
+		"height-from": "Surface",
+		"min-score": 0.10000000149011612,
+		"deposition-rate": {
+			"sand": {
+				"radius": 20.0,
+				"rate": 0.009999999776482582
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 1.0,
+				"rate": 0.004999999888241291
+			}
+		},
+		"on-death-deposition": {},
+		"height": 20.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"flow-attenuation": 0.0
+		},
+		"length": 90.0,
+		"width": 20.0,
+		"type": "Area"
+	},
+	{
+		"name": "lagoon",
+		"fitness": "(polyp) max (sand) * (1 - lagoon.inside)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "Polygon",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 2.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"flow-attenuation": 0.0
+		},
+		"length": 60.0,
+		"width": 60.0,
+		"type": "Area"
+	},
+	{
+		"name": "lake shore",
+		"fitness": "depth",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 100.0,
+		"width": 1.0,
+		"type": "Curve"
+	},
+	{
+		"name": "motu",
+		"fitness": "lagoon.curvature * normal(d(lagoon - pos)) * normal(depth - 3)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "DistanceMap",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 1.5
+			}
+		},
+		"on-death-deposition": {},
+		"height": 10.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"flow-attenuation": 0.0
+		},
+		"length": 20.0,
+		"width": 20.0,
+		"type": "Area"
+	},
+	{
+		"name": "palm",
+		"fitness": "sand * (depth < 1) * normal((depth + 0.5) * 2) * (1 - (normal(d(palm - pos)/4) min 1))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.10000000149011612,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 1.0,
+		"type": "Point"
+	},
+	{
+		"name": "passe",
+		"fitness": "((5 - d(greatreef - pos) + d(coralpolyp - pos) ) * (d(coralpolyp - pos) > 5) * d(greatreef - pos) < 5) max 0",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 2.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 30.0,
+		"width": 1.0,
+		"type": "Curve"
+	},
+	{
+		"name": "reef",
+		"fitness": "normal(d(lagoon - pos)) * (depth > 0)  * (d((reef - pos) ? {10 0 0}) > 5)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"deadcoral": {
+				"radius": 2.0,
+				"rate": 0.004999999888241291
+			},
+			"pebbles": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			},
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"absorption-rate": {
+			"deadcoral": {
+				"radius": 2.0,
+				"rate": 0.009999999776482582
+			},
+			"polyp": {
+				"radius": 2.0,
+				"rate": 0.0
+			},
+			"sand": {
+				"radius": 2.0,
+				"rate": 0.10000000149011612
+			}
+		},
+		"on-death-deposition": {},
+		"height": 2.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 30.0,
+		"width": 10.0,
+		"type": "Curve"
+	},
+	{
+		"name": "ripple",
+		"fitness": "(current.vel + 1) * (canyon.inside + fault.inside) * d(smallrock - pos - current * -2) / (d(canyon - pos) max 1.0)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 10.0,
+		"width": 1.0,
+		"type": "Curve"
+	},
+	{
+		"name": "river",
+		"fitness": "(depth) * (1 - (normal((d(river - pos))/2) min 1))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "WATER",
+		"geometry": "Parametric_Tunnel",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"freshwater": {
+				"radius": 2.0,
+				"rate": 10.0
+			}
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 4.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"ending-effect": [],
+			"starting-effect": []
+		},
+		"length": 40.0,
+		"width": 5.0,
+		"type": "Curve"
+	},
+	{
+		"name": "smalllagoon",
+		"fitness": "normal(depth - 2) * (depth > -1) * (d(pos - (smalllagoon ? {1000 0 0})) > 3) * (1 - smalllagoon.inside)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "Polygon",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {},
+		"absorption-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 100.0
+			}
+		},
+		"on-death-deposition": {},
+		"height": 2.0,
+		"flow-effect": {
+			"curve-effect": [],
+			"flow-attenuation": 0.0
+		},
+		"length": 60.0,
+		"width": 60.0,
+		"type": "Area"
+	},
+	{
+		"name": "smallrock",
+		"fitness": "pebbles * (1 - (normal(d(smallrock - pos) - 1) min 1))",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.0,
+		"deposition-rate": {
+			"sand": {
+				"radius": 2.0,
+				"rate": 1.0
+			}
+		},
+		"absorption-rate": {
+			"pebbles": {
+				"radius": 2.0,
+				"rate": 2.0
+			}
+		},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 10.0,
+		"type": "Point"
+	},
+	{
+		"name": "tree",
+		"fitness": "normal((depth+3)/3) * (depth < -3) * (1 + random(pos * 100)) * ((currenttime - spawntime) < 10000)",
+		"fitting": "",
+		"snake": {
+			"connectivity-cost": 0.0,
+			"curvature-cost": 0.0,
+			"length-cost": 0.0,
+			"area-cost": 0.0,
+			"image-cost": 0.0,
+			"image-inside-cost": 0.0,
+			"image-borders-cost": 1.0,
+			"catapillars": 0,
+			"target-length": 0.0,
+			"target-area": 0.0,
+			"position-cost": 0.0,
+			"closed": false,
+			"position": {
+				"x": 0.0,
+				"y": 0.0,
+				"z": 0.0
+			},
+			"slope-cost": 0.0
+		},
+		"material": "SAND",
+		"geometry": "None",
+		"height-from": "Surface",
+		"min-score": 0.009999999776482582,
+		"deposition-rate": {
+			"shade": {
+				"radius": 2.0,
+				"rate": 1.0
+			},
+      "freshwater": {
+        "radius": 5.0,
+        "rate" : 0.1
+      }
+		},
+		"absorption-rate": {},
+		"on-death-deposition": {},
+		"height": 1.0,
+		"flow-effect": [],
+		"radius": 1.0,
+		"type": "Point"
+	}
 ]

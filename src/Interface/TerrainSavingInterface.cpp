@@ -65,8 +65,9 @@ QLayout *TerrainSavingInterface::createGUI()
     return layout;
 }
 
-std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(std::string filename)
+std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(const std::string& _filename)
 {
+    std::string filename = _filename;
     bool verbose = true;
     if (filename == "")
         filename = this->mainFilename;
@@ -109,7 +110,7 @@ std::vector<std::string> TerrainSavingInterface::saveTerrainGeometry(std::string
     return filenames;
 }
 
-void TerrainSavingInterface::quickSaveAt(std::string folderName, std::string filePrefix, bool heightmap, bool voxels, bool layers)
+void TerrainSavingInterface::quickSaveAt(const std::string& folderName, std::string filePrefix, bool heightmap, bool voxels, bool layers)
 {
     std::ofstream file;
     Mesh m;

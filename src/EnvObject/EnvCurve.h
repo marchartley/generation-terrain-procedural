@@ -22,7 +22,7 @@ public:
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvCurve* clone();
-    // static EnvCurve* instantiate(std::string objectName);
+    // static EnvCurve* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);

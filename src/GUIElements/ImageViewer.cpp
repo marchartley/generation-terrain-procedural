@@ -9,7 +9,7 @@ ImageViewer::ImageViewer(const std::string& name, ChartView *chartView, QWidget 
 {
 }
 /*
-ImageViewer *ImageViewer::getInstance(std::string name)
+ImageViewer *ImageViewer::getInstance(const std::string& name)
 {
     if (name == "") name = ImageViewer::defaultName;
     if (ImageViewer::instances.count(ImageViewer::getIDname<ImageViewer>(name)) == 0) {
@@ -75,7 +75,7 @@ ImageViewer* ImageViewer::displayInfoUnderMouse(const Vector3 &relativeMousePos)
         Vector3 value = this->dataModel->getImage()[position];
         oss << "Image (" << int(position.x()) << ", " << int(position.y()) << ") = ";
         if (this->dataModel->imageData.image.isColor())
-            oss << "(" << value.x() << ", " << value.y() << ", " << value.z() << ") ";
+            oss << "(" << value.x() << ", " << value.y() << ", " << value.z() << ")  [norm: " << value.norm() << "]";
         else
             oss << value.x();
     }
@@ -85,7 +85,7 @@ ImageViewer* ImageViewer::displayInfoUnderMouse(const Vector3 &relativeMousePos)
         Vector3 size = this->dataModel->vectorData.field.getDimensions();
         Vector3 position = relativeMousePos * size;
         Vector3 value = this->dataModel->vectorData.getField()[position];
-        oss << "Vector (" << int(position.x()) << ", " << int(position.y()) << ") = (" << value.x() << ", " << value.y() << ", " << value.z() << ") ";
+        oss << "Vector (" << int(position.x()) << ", " << int(position.y()) << ") = (" << value.x() << ", " << value.y() << ", " << value.z() << ")  [norm: " << value.norm() << "]";
     }
     this->mouseInfoLabel->setText(QString::fromStdString(oss.str()));
     return this;

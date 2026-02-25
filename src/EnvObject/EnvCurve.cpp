@@ -201,11 +201,11 @@ GridV3& EnvCurve::computeFlowModification(GridV3& waterFlow)
     }
 
     const Vector3 initialFlowStarting = waterFlow.interpolate(this->curve.points.front());
-    float flowAngleStarting = initialFlowStarting.getSignedAngleWith(Vector3(1, 0, 0));
+    float flowAngleStarting = curve.getDerivative(0).getSignedAngleWith(Vector3(1, 0, 0)); //initialFlowStarting.getSignedAngleWith(Vector3(1, 0, 0));
     float flowStrengthStarting = initialFlowStarting.length();
 
     const Vector3 initialFlowEnding = waterFlow.interpolate(this->curve.points.back());
-    float flowAngleEnding = initialFlowEnding.getSignedAngleWith(Vector3(1, 0, 0));
+    float flowAngleEnding = curve.getDerivative(1).getSignedAngleWith(Vector3(1, 0, 0)); // initialFlowEnding.getSignedAngleWith(Vector3(1, 0, 0));
     float flowStrengthEnding = initialFlowEnding.length();
 
     waterFlow.iterateParallel([&](const Vector3& p) {
@@ -394,6 +394,11 @@ void EnvCurve::updateCurve(const BSpline &newCurve)
     Vector3 relativeDisplacementFromEvaluationToCurve = (this->evaluationPosition - this->curve.getPoint(evaluationPointClosestTime));
     this->evaluationPosition = newCurve.getPoint(evaluationPointClosestTime) + relativeDisplacementFromEvaluationToCurve;*/
     this->evaluationPositions = newCurve.points;
+    for (auto& k : this->curveKelvinlets) {
+        if (auto asKelvinletCurve = dynamic_cast<KelvinletCurve*>(k)) {
+            asKelvinletCurve->curve = newCurve;
+        }
+    }
     this->curve = newCurve;
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();

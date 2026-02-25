@@ -3,212 +3,25 @@
 
 #include "DataStructure/Matrix3.h"
 #include "DataStructure/Vector3.h"
-#include<QtCharts>
-#include<QChartView>
-#include<QLineSeries>
-#include <QPixmap>
-#include <QSizePolicy>
-#include <iostream>
+// #include<QtCharts>
+// #include<QChartView>
+// #include<QLineSeries>
+// #include <QPixmap>
+// #include <QSizePolicy>
+// #include <iostream>
 //#include <QButton>
 #include <vector>
 
 #include "GUIElements/CommonInterface.h"
 #include "Utils/Utils.h"
 #include "DataStructure/Image.h"
-
-enum PlotColor {
-    WHITE, GRAY, BLACK, RED, GREEN, BLUE, RANDOM
-};
-
-inline std::map<PlotColor, QColor> PlotColorToQColor = {
-    {WHITE, Qt::white},
-    {GRAY, Qt::gray},
-    {BLACK, Qt::black},
-    {RED, Qt::red},
-    {GREEN, Qt::green},
-    {BLUE, Qt::blue}
-};
-
-class Chart;
-class PlotModel;
-
-
-class ChartView : public QChartView {
-    Q_OBJECT
-public:
-    ChartView(QWidget *parent = nullptr);
-    ChartView(QChart *chart, QWidget *parent = nullptr);
-    ChartView(Chart *chart, QWidget *parent = nullptr);
-
-    void lockView() { this->locked = true; }
-    void unlockView() { this->locked = false; }
-
-    ChartView* setPlotModel(PlotModel* dataModel, std::string title = "");
-    ChartView* updateLabelsPositions();
-
-    bool selectData(const Vector3& pos);
-
-    Vector3 getRelativeMousePositionInImage(const Vector3& pos);
-
-    QPoint previousMousePos;
-
-
-    ChartView* setOverlay(const GridV3& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f), int overlayLayer = 0);
-    // ChartView* setOverlay(const GridF& image, std::string layerName = "default", const GridF& alpha = GridF(1, 1, 1, 1.f));
-    std::map<std::string, GridV3> overlayColors;
-    std::map<std::string, GridF>  overlayAlpha;
-    std::map<std::string, bool>  overlayDisplayed;
-    std::map<std::string, int>  overlayLayer;
-
-protected:
-    bool viewportEvent(QEvent *event);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseMoveEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
-    void keyPressEvent(QKeyEvent *event);
-    void wheelEvent(QWheelEvent *event);
-
-    bool locked = false;
-
-public:
-    Chart* _chart = nullptr;
-    PlotModel* _dataModel = nullptr;
-
-Q_SIGNALS:
-    void updated();
-    void clickedOnValue(const Vector3& pos, bool leftClick, bool rightClick);
-    void mouseMoved(const Vector3& relativePos, const Vector3& previousMousePos, QMouseEvent* e);
-    void keyPressed(QKeyEvent* event);
-};
-
-class Chart : public QChart {
-    Q_OBJECT
-public:
-    Chart();
-
-protected:
-    bool sceneEvent(QEvent *event);
-    bool gestureEvent(QGestureEvent *event);
-    //    virtual void wheelEvent(QWheelEvent* event) override;
-};
-
-
-struct DisplayedImageParameters {
-    bool normalized = false;
-    bool absolute = false;
-    bool clamped = true;
-    Vector3 colorRangeMin = Vector3::min();
-    Vector3 colorRangeMax = Vector3::max();
-    Vector3i displayedColors = Vector3i(1, 1, 1);
-
-    BSpline colorRamp = BSpline({Vector3(1, 0, 0), Vector3(1, 1, 1), Vector3(0, 1, 0)});
-};
-
-struct PlotImageData {
-// public:
-    PlotImageData();
-    PlotImageData(const GridV3& img);
-    PlotImageData(const GridF& img);
-
-    PlotImageData* setImage(const GridV3& img);
-    PlotImageData* setImage(const GridF& img);
-    PlotImageData* setNormalized(bool normalize);
-    PlotImageData* setColorRanges(const Vector3& minRange, const Vector3& maxRange);
-    PlotImageData* setAbsolute(bool absolute);
-    PlotImageData* setClamped(bool clamp);
-
-    GridV3 getImage() const { return this->image.getColorImage(); }
-    GridF getImageGrey() const { return this->image.getBwImage(); }
-    GridV3 prepareImageForDisplay(const Image &img) const;
-    QImage computeDisplayedImage(const Vector3i &imgSize = Vector3i::invalid) const;
-    QImage computeDisplayedImage(const GridV3& overlay, const GridF& overlayAlpha) const;
-    QImage computeDisplayedImage(const std::map<std::string, GridV3>& overlays,
-                                 const std::map<std::string, GridF>& overlayAlphas,
-                                 const std::map<std::string, bool>& displayedOverlays,
-                                 const std::map<std::string, int>& overlayLayers,
-                                 const Vector3i& imgSize) const;
-
-
-// protected:
-    DisplayedImageParameters displayParameters;
-    // GridV3 image;
-    Image image;
-};
-
-struct DisplayedVectorFieldParameters {
-    enum VECTOR_DISPLAY { ARROWS, FLOWLINES, NONE };
-
-    VECTOR_DISPLAY displayMode = ARROWS;
-    Vector3 backgroundColor = Vector3::white;
-    BSpline colorRamp = BSpline({Vector3(70.f, 0.f, 100.f) / 255.f, Vector3(30.f, 160.f, 130.f) / 255.f, Vector3(255.f, 250.f, 0.f)/255.f});
-};
-
-struct PlotVectorData {
-    PlotVectorData();
-    PlotVectorData(const GridV3& field);
-
-    PlotVectorData* setField(const GridV3 &field);
-
-    const GridV3& getField() const { return this->field; }
-
-    std::pair<GridV3, GridF> getFieldImageAndAlpha(const Vector3i &imgSize, const Vector3i &numberOfCells) const;
-    static std::pair<GridV3, GridF> createFieldImageAndAlpha(const GridV3& field, Vector3i imgSize, const Vector3i &numberOfCells, DisplayedVectorFieldParameters displayParameters = DisplayedVectorFieldParameters());
-
-    template <class T>
-    static Matrix3<T>& drawLine(Matrix3<T>& img, const T& color, const Vector3& start, const Vector3& end);
-    template <class T>
-    static Matrix3<T>& drawCircle(Matrix3<T>& img, const T& color, const Vector3& center, float radius);
-
-    GridV3 field;
-
-    DisplayedVectorFieldParameters displayParameters;
-};
-
-class PlotModel {
-public:
-    PlotModel();
-
-    PlotModel* addPlot(const std::vector<Vector3>& data, const std::string& name = "", const QColor& color = Qt::gray);
-
-    PlotModel* addScatter(const std::vector<Vector3>& data, const std::string& name = "", const std::vector<std::string>& labels = std::vector<std::string>(), std::vector<QColor> colors = std::vector<QColor>());
-
-    PlotModel* addImage(const GridV3& image);
-    PlotModel* addImage(const GridF& image);
-
-    PlotModel* addVectorField(const GridV3& field);
-
-    PlotModel* reset();
-
-    std::vector<std::vector<Vector3>> plot_data;
-    std::vector<std::string> plot_names;
-    std::vector<QColor> plot_colors;
-    std::vector<std::vector<Vector3>> scatter_data;
-    std::vector<std::vector<std::string>> scatter_labels;
-    std::vector<std::vector<QColor>> scatter_colors;
-    std::vector<std::string> scatter_names;
-
-    std::vector<std::vector<QGraphicsTextItem*>> graphicLabels;
-
-    std::vector<std::pair<int, int>> selectedScatterData;
-    std::vector<std::pair<int, int>> selectedPlotData;
-
-    PlotImageData imageData;
-    PlotVectorData vectorData;
-
-    GridV3 getImage() const { return imageData.getImage(); }
-    GridF getImageGrey() const { return imageData.getImageGrey(); }
-    // GridV3 displayedImage;
-    // QImage* backImage = nullptr;
-
-    std::string title;
-};
-
-
+#include "ChartView.h"
 
 
 #define DECLARE_PLOTTER_GETTER(Type) \
 public: \
-static Type* get(const std::string& name = "") { return AbstractPlotter::getInstance<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); }
+static Type* get(const std::string& name = "") { return AbstractPlotter::getInstance<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); } \
+static Type* reset(const std::string& name = "") { AbstractPlotter::init<Type>([](const std::string& name, ChartView* cv, QWidget* p){ return new Type(name, cv, p); }, toLower(name)); return Type::get(name);}
 
 
 class AbstractPlotter : public QDialog {
@@ -232,11 +45,19 @@ public:
     template <class Derived, class Factory>
     static void init(Factory&& factory, const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr) {
         if (Derived::instances.count(getIDname<Derived>(name)))
-            delete Derived::instances[getIDname<Derived>(name)];
+            // delete Derived::instances[getIDname<Derived>(name)];
+            Derived::instances[getIDname<Derived>(name)]->deleteLater();
+        // AbstractPlotter::erase<Derived>(getIDname<Derived>(name));
+        Derived::instances.erase(getIDname<Derived>(name));
         Derived::instances[getIDname<Derived>(name)] = factory(name, chartView, parent);
     }
-    // static AbstractPlotter* getInstance(std::string name = "");
-    // static AbstractPlotter* get(std::string name = "") { return AbstractPlotter::getInstance(toLower(name)); }
+
+    template <class Derived>
+    static void erase(const std::string& name) {
+        if (Derived::instances.count(getIDname<Derived>(name)) > 0) delete Derived::instances[getIDname<Derived>(name)];
+    }
+    // static AbstractPlotter* getInstance(const std::string& name = "");
+    // static AbstractPlotter* get(const std::string& name = "") { return AbstractPlotter::getInstance(toLower(name)); }
     // static AbstractPlotter* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
 
     AbstractPlotter* addPlot(std::vector<float> data, std::string name = "", QColor color = Qt::gray);
@@ -264,31 +85,32 @@ public:
     AbstractPlotter* addStreamLines(const GridV3& field, Vector3 imgSize = Vector3::invalid, float opacity = .5f);
 
     int exec();
-    AbstractPlotter* saveFig(std::string filename);
+    AbstractPlotter* saveFig(const std::string& filename);
     AbstractPlotter* copyToClipboard();
     void resizeEvent(QResizeEvent* event);
     void showEvent(QShowEvent* event);
+    void hideEvent(QHideEvent *event);
 
     QTimer *animate(std::function<void()> callback, int interval_ms = 30);
 
-    AbstractPlotter* reset();
+    // AbstractPlotter* reset();
 
     bool hasPlotValues() const { return !this->dataModel->plot_data.empty(); }
     bool hasScatterValues() const { return !this->dataModel->scatter_data.empty(); }
     bool hasImage() const { return !this->dataModel->getImage().empty(); }
     bool hasVectorField() const { return !this->dataModel->vectorData.field.empty(); }
 
-    ChartView* chartView;
-    PlotModel* dataModel;
+    ChartView* chartView = nullptr;
+    PlotModel* dataModel = nullptr;
     QLabel* mouseInfoLabel = nullptr;
 
-    InterfaceUI* mainInterface;
-    InterfaceUI* toolsInterface;
-    InterfaceUI* viewOptionsInterface;
-    InterfaceUI* saveCopyInterface;
-    InterfaceUI* infosInterface;
+    InterfaceUI* mainInterface = nullptr;
+    InterfaceUI* toolsInterface = nullptr;
+    InterfaceUI* viewOptionsInterface = nullptr;
+    InterfaceUI* saveCopyInterface = nullptr;
+    InterfaceUI* infosInterface = nullptr;
 
-    InterfaceUI* viewAndCopyInterface;
+    InterfaceUI* viewAndCopyInterface = nullptr;
 
     std::string name;
 

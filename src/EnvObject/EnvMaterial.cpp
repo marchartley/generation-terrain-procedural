@@ -5,7 +5,7 @@ EnvMaterial::EnvMaterial()
 
 }
 
-EnvMaterial::EnvMaterial(std::string name, float diffusionSpeed, float waterTransport, float mass, float decay, float virtualHeight, const Vector3 &gridSize)
+EnvMaterial::EnvMaterial(const std::string& name, float diffusionSpeed, float waterTransport, float mass, float decay, float virtualHeight, const Vector3 &gridSize)
     : name(name), diffusionSpeed(diffusionSpeed), waterTransport(waterTransport), mass(mass), decay(decay), virtualHeight(virtualHeight), currentState(GridF(gridSize))
 {
 

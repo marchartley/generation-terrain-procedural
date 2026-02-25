@@ -72,7 +72,7 @@ public:
         }
     }*/
 
-    void setName(std::string name);
+    void setName(const std::string& name);
     const std::string& getName() const;
 
 
@@ -103,7 +103,7 @@ public:
     std::vector<UIElement*> add(std::vector<UIElement*> elements);
     std::vector<UIElement*> add(std::vector<std::pair<UIElement*, std::string>> elementsAndNames);
     UIElement* add(QLayout* layout, std::string name = "");
-    UIElement* find(std::string name);
+    UIElement* find(const std::string& name);
     InterfaceUI *clear();
 
     std::vector<UIElement*> elements;
@@ -122,11 +122,11 @@ public Q_SLOTS:
 
 class LabelElement : public UIElement {
 public:
-    LabelElement(std::string text);
+    LabelElement(const std::string& text);
 
     QLabel* label();
 
-    LabelElement* setText(std::string newText);
+    LabelElement* setText(const std::string& newText);
     std::string getText();
 };
 
@@ -283,8 +283,8 @@ protected:
 class TextEditElement : public UIElement {
     Q_OBJECT
 public:
-    TextEditElement(std::string text, std::string label = "");
-    TextEditElement(std::string text, std::string label, std::string &binded);
+    TextEditElement(const std::string& text, std::string label = "");
+    TextEditElement(const std::string& text, std::string label, std::string &binded);
 
     QLineEdit* lineEdit();
     std::string getText() { return lineEdit()->text().toStdString(); }
@@ -302,9 +302,9 @@ public:
         return this;
     }
     */
-    TextEditElement* setOnTextChange(std::function<void(std::string)> func);
+    TextEditElement* setOnTextChange(std::function<void(const std::string&)> func);
 
-    TextEditElement* bindTo(std::string& value);
+    TextEditElement* bindTo(std::string &value);
 
 public Q_SLOTS:
     void update();

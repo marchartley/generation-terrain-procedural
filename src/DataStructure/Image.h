@@ -17,14 +17,14 @@ private:
     void writeColor(/*png_structp png, png_infop info,*/ png_bytep* row_pointers);
     void writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_pointers);
 
-    void writeOtherThanPNG(std::string filename, std::string ext = "");
+    void writeOtherThanPNG(const std::string& filename, std::string ext = "");
 
 public:
     Image();
     Image(const GridF& image);
     Image(const GridV3& image);
-    static Image readFromFile(std::string filename);
-    void writeToFile(std::string filename, int bit_depth = 16);
+    static Image readFromFile(const std::string& filename);
+    void writeToFile(const std::string& filename, int bit_depth = 16);
 
     Image& setImage(const GridF& img);
     Image& setImage(const GridV3 &img);

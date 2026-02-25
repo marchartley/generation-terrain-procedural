@@ -10,7 +10,7 @@ Scenario::Scenario(EnvironmentalScene *scene)
     : scene(scene)
 {}
 
-void Scenario::addObject(std::string name, float proba, int amount)
+void Scenario::addObject(const std::string& name, float proba, int amount)
 {
     for (int i = objects.size() - 1; i >= 0; i--) {
         if (objects[i].objectName == name)

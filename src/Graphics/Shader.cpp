@@ -11,17 +11,17 @@ Shader::Shader()
 {
 
 }
-Shader::Shader(std::string vertexShaderFilename)
+Shader::Shader(const std::string& vertexShaderFilename)
     : Shader(vertexShaderFilename, "", "")
 {
 
 }
-Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename)
+Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename)
     : Shader(vertexShaderFilename, fragmentShaderFilename, "")
 {
 
 }
-Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename,
+Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename,
        std::string geometryShaderFilename)
     : vertexShaderFilename(vertexShaderFilename), fragmentShaderFilename(fragmentShaderFilename),
       geometryShaderFilename(geometryShaderFilename)
@@ -58,19 +58,19 @@ Shader::Shader(const char* vertexShaderFilename, const char* fragmentShaderFilen
     this->compileShadersFromSource();
 }
 
-Shader::Shader(std::string vertexShaderFilename)
+Shader::Shader(const std::string& vertexShaderFilename)
     : Shader(vertexShaderFilename.c_str())
 {
 
 }
 
-Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename)
+Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename)
     : Shader(vertexShaderFilename.c_str(), fragmentShaderFilename.c_str())
 {
 
 }
 
-Shader::Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename, std::string geometryShaderFilename)
+Shader::Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename, std::string geometryShaderFilename)
     : Shader(vertexShaderFilename.c_str(), fragmentShaderFilename.c_str(), geometryShaderFilename.c_str())
 {
 
@@ -167,53 +167,53 @@ bool Shader::use(bool update_source_file)
     return programID > 0;
 }
 
-void Shader::setBool(std::string pname, bool value)
+void Shader::setBool(const std::string& pname, bool value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), (int)value);
 }
-void Shader::setInt(std::string pname, int value)
+void Shader::setInt(const std::string& pname, int value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1i(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
-void Shader::setFloat(std::string pname, float value)
+void Shader::setFloat(const std::string& pname, float value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform1f(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), value);
 }
 
-void Shader::setVector(std::string pname, const Vector3& value)
+void Shader::setVector(const std::string& pname, const Vector3& value)
 {
     if (!this->use()) return;
     this->setVector(pname, value.data(), 3);
 }
 
-void Shader::setVector(std::string pname, const Vector4 &value)
+void Shader::setVector(const std::string& pname, const Vector4 &value)
 {
     if (!this->use()) return;
     this->setVector(pname, (float*)value, 4);
 }
 
-void Shader::setVector(std::string pname, glm::vec2 value)
+void Shader::setVector(const std::string& pname, glm::vec2 value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform2fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }
 
-//void Shader::setVector(std::string pname, glm::vec3 value)
+//void Shader::setVector(const std::string& pname, glm::vec3 value)
 //{
 //    if (!this->use()) return;
 //    GlobalsGL::f()->glUniform3fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 //}
 
-/*void Shader::setVector(std::string pname, glm::vec4 value)
+/*void Shader::setVector(const std::string& pname, glm::vec4 value)
 {
     if (!this->use()) return;
     GlobalsGL::f()->glUniform4fv(GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str()), 1, &value[0]);
 }*/
-void Shader::setVector(std::string pname, const float* value, int n)
+void Shader::setVector(const std::string& pname, const float* value, int n)
 {
     if (!this->use()) return;
     GLuint loc = GlobalsGL::f()->glGetUniformLocation(this->programID, pname.c_str());
@@ -232,33 +232,33 @@ void Shader::setVector(std::string pname, const float* value, int n)
         break;
     }
 }
-void Shader::setLightSource(std::string pname, LightSource &value)
+void Shader::setLightSource(const std::string& pname, LightSource &value)
 {
     this->setVector((pname + ".ambiant").c_str(), value.ambiant);
     this->setVector((pname + ".diffuse").c_str(), value.diffuse);
     this->setVector((pname + ".specular").c_str(), value.specular);
 }
 
-void Shader::addLightSource(std::string pname, LightSource &value)
+void Shader::addLightSource(const std::string& pname, LightSource &value)
 {
     this->setLightSource(pname + "[" + std::to_string(lightCount) +"]", value);
     lightCount ++;
     this->setInt(pname + "_count", this->lightCount);
 }
 
-void Shader::clearLightSources(std::string pname)
+void Shader::clearLightSources(const std::string& pname)
 {
     this->lightCount = 0;
     this->setInt(pname + "_count", 0);
 }
 
-void Shader::setPositionalLight(std::string pname, PositionalLight &value)
+void Shader::setPositionalLight(const std::string& pname, PositionalLight &value)
 {
     this->setLightSource(pname, value);
     this->setVector((pname + ".position").c_str(), value.position);
 }
 
-void Shader::setMaterial(std::string pname, Material &value)
+void Shader::setMaterial(const std::string& pname, Material &value)
 {
     this->setVector((pname + ".ambiant").c_str(), value.ambiant);
     this->setVector((pname + ".diffuse").c_str(), value.diffuse);
@@ -267,7 +267,7 @@ void Shader::setMaterial(std::string pname, Material &value)
 }
 
 // Todo : change the integer type to a template (or select int or float)
-void Shader::setTexture2D(std::string pname, int index, GridI texture)
+void Shader::setTexture2D(const std::string& pname, int index, GridI texture)
 {
     int **data = new int*[texture.sizeY];
     for (int i = 0; i < texture.sizeY; i++) {
@@ -310,7 +310,7 @@ void Shader::setTexture2D(std::string pname, int index, GridI texture)
     delete[] data;
 }
 
-void Shader::setTexture2D(std::string pname, int index, int width, int height, int *data)
+void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int *data)
 {
     int textureSlot = GL_TEXTURE0 + index;
 
@@ -341,7 +341,7 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
     this->setInt(pname, index);
 }
 
-void Shader::setTexture2D(std::string pname, int index, int width, int height, int **data)
+void Shader::setTexture2D(const std::string& pname, int index, int width, int height, int **data)
 {
     int textureSlot = GL_TEXTURE0 + index;
 
@@ -373,7 +373,7 @@ void Shader::setTexture2D(std::string pname, int index, int width, int height, i
 }
 
 // Todo : change the integer type to a template (or select int or float)
-void Shader::setTexture3D(std::string pname, int index, GridF texture)
+void Shader::setTexture3D(const std::string& pname, int index, GridF texture)
 {
     if (!this->use()) return;
     for (auto& val : texture)
@@ -410,7 +410,7 @@ void Shader::setTexture3D(std::string pname, int index, GridF texture)
     this->setInt(pname, index);
 }
 
-//void Shader::setMatrix(std::string pname, Matrix value)
+//void Shader::setMatrix(const std::string& pname, Matrix value)
 //{
 //    this->setMatrix(pname, value.)
 //}
@@ -427,7 +427,7 @@ void Shader::applyToAllShaders(std::function<void (std::shared_ptr<Shader>)> fun
 }
 
 
-std::string Shader::readShaderSource(std::string filename)
+std::string Shader::readShaderSource(const std::string& filename)
 {
     std::string content = "";
     QString qFilename = QString::fromStdString(filename);

@@ -290,40 +290,57 @@ float BSpline::estimateClosestTime(const Vector3& pos, float initialEpsilon, flo
         return time;
     }
 
+    int numberOfChecks = std::max(8, int(points.size() * nbChecksFactor));
+    float step0 = 2.0f / numberOfChecks;
+
     float closestTime = 0.0f;
-    float minDistance = std::numeric_limits<float>::max();
-    int numberOfChecks = int(this->points.size() * nbChecksFactor);
-    float precisionFactor = 1.0f / numberOfChecks;
-    float precision = precisionFactor;
-    float searchRangeMin = 0.0f;
 
-    float epsilon = initialEpsilon;
+    float step = step0;
+    float center = 0.5f;
 
+    while (step > initialEpsilon) {
+        float minD2 = std::numeric_limits<float>::max();
+        float halfSpan = 0.5f * numberOfChecks * step;
+        float tMin = std::max(0.0f, center - halfSpan);
+        float tMax = std::min(1.0f, center + halfSpan);
 
-    while (precision > epsilon) {
-        for (int i = 0; i < numberOfChecks + 1; i++) {
-            float time = searchRangeMin + (i * precision); // std::clamp(searchRangeMin + (i * precision), 0.f, 1.f);
-            float distance = (getPoint(time) - pos).norm2();
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestTime = time;
+        Vector3 previousPoint = getPoint(tMin);
+        // Vector3 nextPoint;
+
+        // sample across [tMin, tMax]
+        for (int i = 0; i <= numberOfChecks; ++i) {
+            float a = float(i) / float(numberOfChecks);
+            float t = tMin + a * (tMax - tMin);
+            float a1 = float(i-1) / float(numberOfChecks);
+            float t1 = tMin + a1 * (tMax - tMin);
+            float a2 = float(i+1) / float(numberOfChecks);
+            float t2 = tMin + a2 * (tMax - tMin);
+
+            const Vector3 nextPoint = getPoint(t2);
+            auto projection = Collision::projectPointOnSegment(pos, previousPoint, nextPoint);
+            // auto projection = getPoint(t);
+            float d2 = (projection - pos).norm2();
+            if (d2 < minD2) {
+                minD2 = d2;
+                closestTime = t;
             }
+
+            previousPoint = nextPoint;
         }
-//        if (minDistance < earlyExitThreshold)
-//            return closestTime;
-        searchRangeMin = closestTime - precision/2.f; //clamp(closestTime - precision/2.f, 0.f, 1.f);
-        precision *= precisionFactor;
+
+        center = closestTime;
+        step *= step0; //step0; // or step *= 0.5f; (often more stable)
     }
 
     // Second method: get distance to bspline points directly, return closest
     // This works only because the BSpline go through all the points.
-    for (int i = 0; i < this->size(); i++) {
+    /*for (int i = 0; i < this->size(); i++) {
         float dist = (this->points[i] - pos).norm2();
-        if (dist < minDistance) {
-            minDistance = dist;
+        if (dist < minD2) {
+            minD2 = dist;
             closestTime = float(i) / float(this->size() - 1);
         }
-    }
+    }*/
     return closestTime;
 }
 

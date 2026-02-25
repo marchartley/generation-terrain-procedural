@@ -41,28 +41,28 @@ bool isIn(T elem, std::set<T> arr) {
 
 void displayProgress(float percent, bool displayPercent = true, int consoleWidth = 20, std::string progressSign = "=");
 
-std::string replaceInString(std::string initial, std::string toReplace, std::string replacing);
-std::string trim(std::string initial, std::string ws = " ");
+std::string replaceInString(const std::string& initial, std::string toReplace, std::string replacing);
+std::string trim(const std::string& initial, std::string ws = " ");
 
-bool startsWith(std::string text, std::string needle);
-bool endsWith(std::string text, std::string needle);
-std::vector<std::string> split(std::string str, std::string c);
-std::vector<std::string> split(std::string str);
-bool makedir(std::string path);
-bool checkPathExists(std::string path);
+bool startsWith(const std::string& text, std::string needle);
+bool endsWith(const std::string& text, std::string needle);
+std::vector<std::string> split(const std::string& str, std::string c);
+std::vector<std::string> split(const std::string& str);
+bool makedir(const std::string& path);
+bool checkPathExists(const std::string& path);
 Vector3 HSVtoRGB(float H, float S,float V);
 Vector3 colorPalette(float t, const std::vector<Vector3>& colors);
 Vector3 colorPalette(float t, const std::vector<Vector3>& colors, const std::vector<float>& keypoints);
 Vector3 colorPalette(float t, const Vector3& startColor = Vector3(1, 0, 0), const Vector3& endColor = Vector3(0, 1, 0));
 
-std::string toUpper(std::string s);
-std::string toLower(std::string s);
-std::string toCapitalize(std::string s);
-std::string getExtension(std::string file);
-std::string getFilename(std::string path);
-std::string simplify(std::string s);
+std::string toUpper(const std::string& s);
+std::string toLower(const std::string& s);
+std::string toCapitalize(const std::string& s);
+std::string getExtension(const std::string& file);
+std::string getFilename(const std::string& path);
+std::string simplify(const std::string& s);
 
-std::vector<std::string> getAllFiles(std::string folderName);
+std::vector<std::string> getAllFiles(const std::string& folderName);
 
 
 struct StatsValues {
@@ -70,7 +70,7 @@ struct StatsValues {
 };
 StatsValues getStats(std::vector<float> values);
 
-int runCommand(std::string command);
+int runCommand(const std::string& command);
 
 float rad2deg(float rad);
 float deg2rad(float deg);
@@ -84,7 +84,7 @@ void sleep(int milliseconds);
 
 double timeIt(std::function<void()> func, int repetitions = 1);
 std::string showTime(double nanoseconds);
-float displayProcessTime(std::string textToDisplay, std::function<void()> func, bool print = true);
+float displayProcessTime(const std::string& textToDisplay, std::function<void()> func, bool print = true);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

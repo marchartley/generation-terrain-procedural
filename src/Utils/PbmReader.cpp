@@ -12,7 +12,7 @@ std::string readLineAndIgnoreComments(std::ifstream& file) {
     return "";
 }
 
-std::vector<float> extractAllValuesFromLine(std::string line, bool isBinary) {
+std::vector<float> extractAllValuesFromLine(const std::string& line, bool isBinary) {
     std::vector<float> values;
     if (isBinary) {
 //        std::vector<std::string> items = split(line);
@@ -39,7 +39,7 @@ std::vector<float> extractAllValuesFromFile(std::ifstream& file, bool isBinary) 
     return values;
 }
 
-GridF PbmReader::readGrayscale(std::string path)
+GridF PbmReader::readGrayscale(const std::string& path)
 {
     std::ifstream file(path);
     int magicNumber, nW, nH, maxValue;
@@ -54,7 +54,7 @@ GridF PbmReader::readGrayscale(std::string path)
     }
 }
 
-GridV3 PbmReader::readColor(std::string path)
+GridV3 PbmReader::readColor(const std::string& path)
 {
     std::ifstream file(path);
     int magicNumber, nW, nH, maxValue;

@@ -1074,7 +1074,7 @@ void VoxelGrid::saveState()
 
 }
 
-void VoxelGrid::saveMap(std::string filename)
+void VoxelGrid::saveMap(const std::string& filename)
 {
     /*
     GridF voxels = this->getVoxelValues();
@@ -1091,7 +1091,7 @@ void VoxelGrid::saveMap(std::string filename)
     out.close();
 }
 
-void VoxelGrid::retrieveMap(std::string filename)
+void VoxelGrid::retrieveMap(const std::string& filename)
 {
     VoxelDataFile data;
     data.load(filename);
@@ -1244,7 +1244,7 @@ float VoxelGrid::getNoiseValue(int x, int y, int z, float noise_shift)
 }
 
 #include <sstream>
-std::string VoxelGrid::toString()
+std::string VoxelGrid::toString() const
 {
     /*
     std::ostringstream ret;
@@ -1256,7 +1256,7 @@ std::string VoxelGrid::toString()
     return ret.str();*/
     return "";
 }
-std::string VoxelGrid::toShortString()
+std::string VoxelGrid::toShortString() const
 {
     /*
     std::ostringstream ret;
@@ -1284,7 +1284,7 @@ GridV3 VoxelGrid::getNormals()
     return normals;
 }
 
-void VoxelGrid::saveHeightmap(std::string heightmap_filename)
+void VoxelGrid::saveHeightmap(const std::string& heightmap_filename)
 {
     std::string ext = toUpper(getExtension(heightmap_filename));
     int width = this->getSizeX();

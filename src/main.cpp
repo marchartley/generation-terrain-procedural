@@ -22,8 +22,12 @@
 #include <unistd.h>
 
 #include "Interface/Interface.h"
-#include "EnvObject/EnvObject.h"
-#include "DataStructure/Image.h"
+
+#include "EnvObjGUI/WaterFlowViewer.h"
+#include "EnvObjGUI/EnvMaterialViewer.h"
+#include "EnvObjGUI/EnvObjectEditor.h"
+
+#include "EnvObject/EnvironmentalScene.h"
 
 using namespace std;
 
@@ -58,252 +62,172 @@ std::map<std::string, std::string> getAllEnvironmentVariables() {
     return results;
 }
 
-typedef Matrix MatrixXd;
-typedef Matrix VectorXd;
-
-// Orthogonal Matching Pursuit (OMP) function
-MatrixXd omp(const MatrixXd& D, const MatrixXd& X, const int sparsity) {
-    size_t numAtoms = D.cols();
-    size_t numSignals = X.cols();
-    Matrix coefficients(numAtoms, numSignals);
-
-    for (size_t k = 0; k < numSignals; ++k) {
-        vector<float> x(X.rows());
-        for (size_t i = 0; i < X.rows(); ++i) {
-            x[i] = X[i][k];
-        }
-
-        vector<float> residual = x;
-        vector<int> selectedAtoms;
-        Matrix A(X.rows(), sparsity);
-
-        vector<float> subCoefficients(sparsity, 0);
-        for (int j = 0; j < sparsity; ++j) {
-            // Compute correlations
-            vector<float> correlations(numAtoms, 0);
-            #pragma omp parallel for
-            for (size_t i = 0; i < numAtoms; ++i) {
-                if (isIn(int(i), selectedAtoms)) continue;
-                #pragma omp parallel for
-                for (size_t r = 0; r < residual.size(); ++r) {
-                    correlations[i] += D[r][i] * residual[r];
-                }
-            }
-
-            // Find the index of the atom with the maximum correlation
-            int maxIndex = distance(correlations.begin(), max_element(correlations.begin(), correlations.end()));
-            if (std::abs(correlations[maxIndex]) < 1e-5) break;
-            selectedAtoms.push_back(maxIndex);
-
-            // Update the matrix A with the selected atom
-            for (size_t i = 0; i < A.rows(); ++i) {
-                A[i][j] = D[i][maxIndex];
-            }
-
-            // Solve for the coefficients
-            subCoefficients = Matrix::solve(A.leftCols(j + 1), x);
-
-            // Update the residual
-            residual = x;
-            float sum = 0;
-            #pragma omp parallel for collapse(2)
-            for (size_t i = 0; i < A.rows(); ++i) {
-                for (int l = 0; l <= j; ++l) {
-                    residual[i] -= A[i][l] * subCoefficients[l];
-                    sum += residual[i];
-                }
-            }
-            // x = residual;
-            // if (std::abs(sum/float(residual.size())) < 1e-5) break;
-        }
-
-        // Fill the coefficients matrix
-        for (size_t i = 0; i < selectedAtoms.size(); ++i) {
-            coefficients[selectedAtoms[i]][k] = subCoefficients[i];
-        }
-    }
-
-    return coefficients;
-}
-
-std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionary(int nbSamples, int highResSize, int lowResSize) {
-    std::vector<GridF> images(nbSamples);
-
-    for (int i = 0; i < nbSamples; i++) {
-        float angle = 2.f * PI / float(nbSamples);
-        float size = highResSize;
-        GridF img(size, size);
-        Vector3 start = Vector3(-cos(angle), -sin(angle)) * size * .5f + Vector3(size, size) * .5f;
-        Vector3 end = Vector3(cos(angle), sin(angle)) * size * .5f + Vector3(size, size) * .5f;
-        img.iterateParallel([&] (const Vector3& p) {
-            Vector3 startToPoint = p - start;
-            Vector3 segment = end - start;
-            img(p) = 1.f - startToPoint.dot(segment) / segment.norm2();
-        });
-        images[i] = img;
-    }
-    images.push_back(GridF(1, 1, 1, 1.f));
-
-    std::vector<Matrix> bigDico(images.size());
-    std::vector<Matrix> smallDico(images.size());
-    #pragma omp parallel for
-    for (int i = 0; i < images.size(); i++) {
-        bigDico[i] = Matrix(highResSize, highResSize);
-        images[i].iterateParallel([&](int x, int y, int z) {
-            bigDico[i][y][x] = images[i](x, y);
-        });
-        smallDico[i] = Matrix(lowResSize, lowResSize);
-        images[i] = images[i].resize(lowResSize, lowResSize, 1);
-        images[i].iterateParallel([&](int x, int y, int z) {
-            smallDico[i][y][x] = images[i](x, y);
-        });
-    }
-
-    return {smallDico, bigDico};
-}
-
-std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(std::string filename, int highResSize, int lowResSize) {
-    Image initialImage;
-    displayProcessTime("Reading... ", [&]() {
-        initialImage = Image::readFromFile(filename);
-    });
-    GridF data(initialImage.colorImage.getDimensions());
-    data.iterateParallel([&](size_t i) {
-        data[i] = initialImage.colorImage[i].x();
-    });
-    std::vector<GridF> images;
-    // int nbX = 200;
-    // int nbY = 100;
-
-    // int w = data.sizeX / nbX;
-    // int h = data.sizeY / nbY;
-
-    int w = highResSize, h = highResSize;
-    int nbX = data.sizeX / w, nbY = data.sizeY / h;
-
-    displayProcessTime("Splitting... ", [&]() {
-        #pragma omp parallel for collapse(2)
-        for (int i = 0; i < nbX; i++) {
-            for (int j = 0; j < nbY; j++) {
-                if (random_gen::generate() < .5f) continue;
-
-                GridF img = data.subset(i * w, (i+1) * w, j * h, (j+1) * h).resize(highResSize, highResSize, 1).normalized();
-                // if (img.sum() / float(highResSize * highResSize) < 0.5f) continue;
-                // ImageViewer::get()->addImage(img)->exec();
-
-                #pragma omp critical
-                images.push_back(img);
-            }
-        }
-    });
-
-    std::vector<Matrix> bigDico(images.size());
-    std::vector<Matrix> smallDico(images.size());
-    displayProcessTime("To dictionary (" + std::to_string(images.size()) + "... ", [&]() {
-        #pragma omp parallel for
-        for (int i = 0; i < images.size(); i++) {
-            bigDico[i] = Matrix(highResSize, highResSize);
-            images[i].iterateParallel([&](int x, int y, int z) {
-                bigDico[i][y][x] = images[i](x, y);
-            });
-            smallDico[i] = Matrix(lowResSize, lowResSize);
-            images[i] = images[i].resize(lowResSize, lowResSize, 1);
-            images[i].iterateParallel([&](int x, int y, int z) {
-                smallDico[i][y][x] = images[i](x, y);
-            });
-        }
-    });
-    return {bigDico, smallDico};
-}
-
-
-Matrix flattenDictionary(const std::vector<Matrix>& dictionaries) {
-    Matrix res = Matrix(dictionaries.size(), dictionaries[0].rows() * dictionaries[0].cols());
-
-    for (int i = 0; i < dictionaries.size(); i++) {
-        std::vector<float> flat = dictionaries[i].toStdVector();
-        res[i] = flat;
-    }
-    return res;
-}
-
-Matrix reconstructImage(const Matrix& coefficients, const Matrix& D, size_t imageHeight, size_t imageWidth, size_t patchSize) {
-    Matrix reconstructed(imageHeight, imageWidth);
-
-    auto prod = Matrix::matprod(D, coefficients).toStdVector();
-    for (int i = 0; i < reconstructed.size(); i++) {
-        for (int j = 0; j < reconstructed[i].size(); j++) {
-            reconstructed[j][i] = prod[j * imageHeight + i];
-        }
-    }
-    return reconstructed;
-}
-
-
-void testingSmoothmaxInCPP() {
-    #define FLOAT_TYPE float
-    int nbTrials = 10000;
-
-    auto LSE = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
-        return (1.f/k) * log(exp(k * a) + exp(k * b));
-    };
-    auto AbsMax = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
-        return ((a + b)/2.f) + log(1.f + exp(k * abs(a - b)))/(2.f * k);
-    };
-    auto smaxLong = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
-        return (a != b ? a + ((b - a)/2.f) * (1.f/(1 + exp(-k * (b - a))) + 1.f/(1 - exp(-k * (b - a)))) : a + 1.f/(2.f * k));
-    };
-    auto smaxMini = [](FLOAT_TYPE a, FLOAT_TYPE b, FLOAT_TYPE k) {
-        return (a != b ? a + (b - a)/(1.f-exp(-2.f * k * (b - a))) : a + 1.f/(2.f * k));
-    };
-
-    FLOAT_TYPE a = 256.f;
-    FLOAT_TYPE b = 0.f;
-    FLOAT_TYPE k = 2.f;
-
-    FLOAT_TYPE trueVal = max(a, b);
-    std::setprecision(10);
-    std::cout << "LSE         ... " << timeIt([=](){ FLOAT_TYPE z = LSE(a, b, k); }, nbTrials) << " -- Error: " << (LSE(a, b, k) - trueVal) << " (found " << LSE(a, b, k) << ")" <<  std::endl;
-    std::cout << "AbsMax      ... " << timeIt([=](){ FLOAT_TYPE z = AbsMax(a, b, k); }, nbTrials) << " -- Error: " << (AbsMax(a, b, k) - trueVal) << " (found " << AbsMax(a, b, k) << ")" << std::endl;
-    std::cout << "smaxLong    ... " << timeIt([=](){ FLOAT_TYPE z = smaxLong(a, b, k); }, nbTrials) << " -- Error: " << (smaxLong(a, b, k) - trueVal) << " (found " << smaxLong(a, b, k) << ")" << std::endl;
-    std::cout << "smaxMini    ... " << timeIt([=](){ FLOAT_TYPE z = smaxMini(a, b, k); }, nbTrials) << " -- Error: " << (smaxMini(a, b, k) - trueVal) << " (found " << smaxMini(a, b, k) << ")" << std::endl;
-
-    FLOAT_TYPE minBreakLSE = -1.f;
-    FLOAT_TYPE minBreakAbsMax = -1.f;
-    FLOAT_TYPE minBreaksmaxLong = -1.f;
-    FLOAT_TYPE minBreaksmaxMini = -1.f;
-    b = 0.0;
-    for (int i = 0; i < 100000; i++) {
-        a = FLOAT_TYPE(i);
-        if (!((abs(LSE(a, b, k) - max(a, b) > 10.f) || isnan(LSE(a, b, k)) || isinf(LSE(a, b, k))))) minBreakLSE = max(a, b);
-        if (!((abs(AbsMax(a, b, k) - max(a, b) > 10.f) || isnan(AbsMax(a, b, k)) || isinf(AbsMax(a, b, k))))) minBreakAbsMax = max(a, b);
-        if (!((abs(smaxLong(a, b, k) - max(a, b) > 10.f) || isnan(smaxLong(a, b, k)) || isinf(smaxLong(a, b, k))))) minBreaksmaxLong = max(a, b);
-        if (!((abs(smaxMini(a, b, k) - max(a, b) > 10.f) || isnan(smaxMini(a, b, k)) || isinf(smaxMini(a, b, k))))) minBreaksmaxMini = max(a, b);
-    }
-    std::cout << "Min break LSE: " << minBreakLSE << std::endl;
-    std::cout << "Min break AbsMax: " << minBreakAbsMax << std::endl;
-    std::cout << "Min break smaxLong: " << minBreaksmaxLong << std::endl;
-    std::cout << "Min break smaxMini: " << minBreaksmaxMini << std::endl;
-
-    std::cout << sizeof(float) << " " << sizeof(double) << std::endl;
-}
-
 int main(int argc, char *argv[])
 {
+    /*
+    EnvironmentalScene scene;
+    auto initialMaterial = scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    auto initialObjects = scene.readEnvObjectsFile("EnvObjects/primitives.json");
+
+    std::vector<EnvObject*> allObjects;
+    std::vector<EnvMaterial> allMaterials;
+    for (const auto [name, obj] : scene.availableObjects)
+        allObjects.push_back(obj);
+
+    for (const auto [name, mat] : scene.materials)
+        allMaterials.push_back(mat);
+
+    nlohmann::ordered_json materialsJSON = allMaterials;
+    nlohmann::ordered_json envObjectsJSON = allObjects;
+
+    initialMaterial = scene.readEnvMaterialsFileContent(materialsJSON.dump(1));
+    initialObjects = scene.readEnvObjectsFileContent(envObjectsJSON.dump(1));
+
+    allMaterials.clear();
+    allObjects.clear();
+
+    for (const auto [name, obj] : scene.availableObjects)
+        allObjects.push_back(obj);
+
+    for (const auto [name, mat] : scene.materials)
+        allMaterials.push_back(mat);
+
+    materialsJSON = allMaterials;
+    envObjectsJSON = allObjects;
+
+    std::ofstream out = std::ofstream("EnvObjects/envMaterials.json", std::ios_base::out | std::ios_base::trunc);
+    out << materialsJSON.dump(1, '\t');
+    out.close();
+
+    std::ofstream outObjs = std::ofstream("EnvObjects/primitives.json", std::ios_base::out | std::ios_base::trunc);
+    outObjs << envObjectsJSON.dump(1, '\t');
+    outObjs.close();
+
+    std::cout << "Done." << std::endl;
+    return 0;
+
+    */
+
+
     auto allVars = getAllEnvironmentVariables();
     for (auto& [key, val] : allVars) {
-        // auto lowerKey = toLower(key);
-        //        if (lowerKey == "path" || lowerKey == "ld_library_path" || lowerKey.find("foam") != lowerKey.npos) {
-        // std::string s_cmd = key + "=" + val;
-        // auto cmd = const_cast<char*>(s_cmd.c_str());
         setenv(key.c_str(), val.c_str(), 1);
-        //        }
     }
+
+    #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
+    #endif
+    QApplication app(argc, argv);
+
+    QGLFormat glFormat;
+    glFormat.setVersion(4, 5);
+    glFormat.setProfile(QGLFormat::CompatibilityProfile);
+    glFormat.setSampleBuffers(true);
+    glFormat.setDefaultFormat(glFormat);
+    glFormat.setSwapInterval(1);
+    QGLWidget widget(glFormat);
+    widget.makeCurrent();
+
+    const QOpenGLContext *context = GlobalsGL::context();
+
+    qDebug() << "Context valid: " << context->isValid();
+    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
+    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
+    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
+    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
+    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
+
+    /*
+    BSpline s;
+    for (int i = 0; i < 10; i++) {
+        s.points.push_back(Vector3::random(Vector3::origin, Vector3(100, 100)));
+    }
+
+    GridF d(100, 100);
+
+    displayProcessTime("Time: ", [&]() {
+        d.iterateParallel([&](const Vector3& p) {
+            d[p] = s.estimateDistanceFrom(p);
+        });
+    });
+
+    return ImageViewer::get()->addImage(d)->exec();
+    */
+    /*
+    EnvironmentalScene scene;
+    scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    scene.readEnvObjectsFile("EnvObjects/primitives.json");
+
+    // EnvObject* envObj = scene.instantiate("coralpolyp");
+    EnvObject* envObj = scene.instantiate("river");
+    // EnvObject* envObj = scene.instantiate("island");
+
+    auto viewer = EnvObjectEditor::get("Object edition");
+    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer->addEnvObject(envObj);
+
+    viewer->exec();
+
+    viewer = EnvObjectEditor::reset("Object edition");
+    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer->addEnvObject(scene.instantiate("coralpolyp"));
+
+    viewer->exec();
+
+    viewer = EnvObjectEditor::reset("Object edition");
+    viewer->addVectorField(GridV3(100, 100, 1, Vector3(1, 0, 0)));
+    viewer->addEnvObject(scene.instantiate("island"));
+    return viewer->exec();
+    */
+    /*
+    GrabKelvinlet* k;
+
+    k = new GrabKelvinlet();
+    k->mu = 1.1111f;
+    k->force = Vector3(1, 2, 3);
+
+    nlohmann::json j = k;
+
+    std::cout << j << std::endl;
+
+    // auto k2 = j.get<std::unique_ptr<Kelvinlet>>();
+    Kelvinlet* k3 = j.get<Kelvinlet*>();
+    // k3 = j.get<Kelvinlet*>();
+
+    // k2.reset();
+
+    std::cout << j << "\n" << " -> " << k3->mu << std::endl;
+    return 0;
+    */
+
+    /*
+    GridF perlin = GridF::perlin({200, 200, 1});
+    GridV3 currentFlow = perlin.grad();
+
+    auto viewer = WaterFlowViewer::get("Flow")->addImage(perlin)->addVectorField(currentFlow);
+    WaterFlowViewer::get("Flow")->dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::FLOWLINES;
+
+    viewer->exec();
+
+    GridV3 newGrid = WaterFlowViewer::get("Flow")->kelvinletParams.getVectorField();
+
+    ImageViewer::get("Flow")->addVectorField(currentFlow)->show();
+    return ImageViewer::get("Initial")->addVectorField(newGrid)->exec();
+    */
+
+
+    /*GridF img = GridF(100, 100, 1); img.iterateParallel([&](const Vector3i& p) { img[p] = (std::cos(p.x() / 20.f) + std::sin(p.y() / 20.f)) * 100.f; });
+    // GridF img = GridF(100, 100, 1); img.iterateParallel([&](int x, int y, int z) { img(x, y, z) = x + y * 0.5f; });
+    GridV3 img3(img.getDimensions()); img3.iterateParallel([&](size_t i){ img3[i] = Vector3(1, 1, 1) * img[i]; });
+
+    return ImageViewer::get()->setNormalizedModeImage(true)->addImage(img)->addVectorField(img.gradient())->exec();*/
+    // return ImagePainter::get()->addImage(img3)->exec();
 
     /*
     QProcess ganProc;
     ganProc.setWorkingDirectory("/home/marc");
-    ganProc.start("/home/marc/code/miniconda3/envs/venv310/bin/python", QStringList() << "/home/marc/generation-terrain-procedural/Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py" << "--fromCpp" << "--input" << "/media/marc/Data/NN Datasets/1/input_label.png" << "--output" << "/media/marc/Data/NN Datasets/1/result_height.png" << "--name" << "labels_to_terrain_pacific_graphics_2025_larger_reefs" << "--model" << "pix2pix" << "--direction" << "AtoB");
+    ganProc.start("/home/marc/code/miniconda3/envs/venv310/bin/python", QStringList() << "Python_tests/pytorch-CycleGAN-and-pix2pix/testSingleLabelsToHeightmaps.py" << "--fromCpp" << "--input" << "/media/marc/Data/NN Datasets/1/input_label.png" << "--output" << "/media/marc/Data/NN Datasets/1/result_height.png" << "--name" << "labels_to_terrain_pacific_graphics_2025_larger_reefs" << "--model" << "pix2pix" << "--direction" << "AtoB");
 
     if (!ganProc.waitForStarted(-1)) {
         std::cout << "Could not start" << std::endl;
@@ -329,44 +253,6 @@ int main(int argc, char *argv[])
 
     return 0;
     */
-
-    /*float a = 1.f;
-    float b = 200000.f;
-    float c = -30.f;
-
-
-    float delta = b*b - 4 * a * c;
-    float x1 = (-b + sqrt(delta)) / (2.f * a);
-    float x2 = (2.f * c) / (-b - sqrt(delta));
-
-    std::cout << x1 << "\n" << x2 << std::endl;
-
-    return 0;*/
-
-
-    #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-        QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-        QApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
-    #endif
-    QApplication app(argc, argv);
-
-    QGLFormat glFormat;
-    glFormat.setVersion(4, 5);
-    glFormat.setProfile(QGLFormat::CompatibilityProfile);
-    glFormat.setSampleBuffers(true);
-    glFormat.setDefaultFormat(glFormat);
-    glFormat.setSwapInterval(1);
-    QGLWidget widget(glFormat);
-    widget.makeCurrent();
-
-    const QOpenGLContext *context = GlobalsGL::context();
-
-    qDebug() << "Context valid: " << context->isValid();
-    qDebug() << "Really used OpenGl: " << context->format().majorVersion() << "." << context->format().minorVersion();
-    qDebug() << "OpenGl information: VENDOR:       " << (const char*)glGetString(GL_VENDOR);
-    qDebug() << "                    RENDERDER:    " << (const char*)glGetString(GL_RENDERER);
-    qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
-    qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
 
     /*int W = 1000, H = 1000, D = 100;
@@ -921,7 +807,7 @@ int main(int argc, char *argv[])
     Matrix bigD, smallD;
     displayProcessTime("Preparation... ", [&]() {
         auto [bigDico, smallDico] = createDictionary(500, bigSize, smallSize);
-        // auto [bigDico, smallDico] = createDictionaryFromFile("/home/marc/generation-terrain-procedural/Python_tests/sketch-to-terrain/ImagesAsPNG/gebco_08_rev_elev_C1_grey_geo.png", bigSize, smallSize);
+        // auto [bigDico, smallDico] = createDictionaryFromFile("Python_tests/sketch-to-terrain/ImagesAsPNG/gebco_08_rev_elev_C1_grey_geo.png", bigSize, smallSize);
         bigD = flattenDictionary(bigDico).transpose();
         smallD = flattenDictionary(smallDico).transpose();
     });
@@ -929,7 +815,7 @@ int main(int argc, char *argv[])
     Vector3 fullDim = Vector3(bigSize, bigSize, 1);
     // Vector3 dim = fullDim * Vector3(0.5, 1, 1);
     // GridF input(fullDim);
-    GridF input = (Image::readFromFile("/home/marc/generation-terrain-procedural/saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png").getBwImage().normalized()).resize(fullDim);
+    GridF input = (Image::readFromFile("saved_maps/heightmaps/Mt_Ruapehu_Mt_Ngauruhoe.png").getBwImage().normalized()).resize(fullDim);
     input.raiseErrorOnBadCoord = false;
     input.returned_value_on_outside = DEFAULT_VALUE;
 
@@ -2270,9 +2156,9 @@ int main(int argc, char *argv[])
     return 0;*/
 
     /*
-    HotreloadFile file("/home/marc/generation-terrain-procedural/EnvObjects/envMaterials.json");
+    HotreloadFile file("EnvObjects/envMaterials.json");
 
-    file.onChange([&](std::string content) {
+    file.onChange([&](const std::string& content) {
         std::cout << content << std::endl;
     });
     while (true) {

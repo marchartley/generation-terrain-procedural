@@ -148,7 +148,7 @@ void Viewer::draw() {
     this->window()->setWindowTitle("Simulation - " + QString::number(this->currentFPS()) + "FPS");
 }
 
-void Viewer::saveScreenshotPNG(std::string filename)
+void Viewer::saveScreenshotPNG(const std::string& filename)
 {
     QImage img = this->grabFrameBuffer();
     img.save(QString::fromStdString(filename));
@@ -194,7 +194,7 @@ void Viewer::saveScreenshotPNG(std::string filename)
     stbi_write_png(filename.c_str(), newWidth, newHeight, nbComp, flipped, newWidth * nbComp);
 }
 
-void Viewer::copyLastScreenshotTo(std::string filename)
+void Viewer::copyLastScreenshotTo(const std::string& filename)
 {
     std::ifstream  src(".tmp/screenshots/screen.png", std::ios::binary);
     std::ofstream  dst(filename,   std::ios::binary);
@@ -351,7 +351,7 @@ void Viewer::reloadAllShaders()
 //    }
 }
 
-void Viewer::setupViewFromFile(std::string filename)
+void Viewer::setupViewFromFile(const std::string& filename)
 {
     try {
        std::cout << "Using view from file " << filename << std::endl;
@@ -420,7 +420,7 @@ bool Viewer::correctedFunctionForCameraRepositioning()
     return true;
 }
 
-void Viewer::saveViewToFile(std::string filename)
+void Viewer::saveViewToFile(const std::string& filename)
 {
     this->setStateFileName(QString::fromStdString(filename));
     this->saveStateToFile();
@@ -639,7 +639,7 @@ void Viewer::closeEvent(QCloseEvent *e) {
 }
 
 
-bool Viewer::startRecording(std::string folderUsed)
+bool Viewer::startRecording(const std::string& folderUsed)
 {
     if (folderUsed != "")
         this->screenshotFolder = folderUsed;

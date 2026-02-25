@@ -421,7 +421,7 @@ Matrix3<Vector3> Matrix3<Vector3>::random(size_t sizeX, size_t sizeY, size_t siz
 }
 
 template <>
-Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
+Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(const std::string& filename)
 {
     if (!checkPathExists(filename)) {
         throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
@@ -454,7 +454,7 @@ Matrix3<Vector3> Matrix3<Vector3>::fromImageRGB(std::string filename)
 }
 
 template <>
-Matrix3<float> Matrix3<float>::fromImageBW(std::string filename)
+Matrix3<float> Matrix3<float>::fromImageBW(const std::string& filename)
 {
     if (!checkPathExists(filename)) {
         throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");

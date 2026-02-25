@@ -118,6 +118,7 @@ SOURCES += \
     src/FluidSimulation/ShallowWaterSimulation.cpp \
     src/FluidSimulation/StableFluidsFluidSimulation.cpp \
     src/FluidSimulation/WarpedFluidSimulation.cpp \
+    src/GUIElements/ChartView.cpp \
     src/GUIElements/ComboboxElement.cpp \
     src/GUIElements/ImagePainter.cpp \
     src/GUIElements/ImageViewerOptionsUI.cpp \
@@ -300,6 +301,7 @@ HEADERS += \
     src/FluidSimulation/ShallowWaterSimulation.h \
     src/FluidSimulation/StableFluidsFluidSimulation.h \
     src/FluidSimulation/WarpedFluidSimulation.h \
+    src/GUIElements/ChartView.h \
     src/GUIElements/ComboboxElement.h \
     src/GUIElements/ImagePainter.h \
     src/GUIElements/ImageViewerOptionsUI.h \

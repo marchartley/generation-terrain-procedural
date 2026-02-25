@@ -63,7 +63,7 @@ Q_SIGNALS:
     void mouseReleasedOnMap(const Vector3& mouseWorldPosition, bool mouseInMap, QMouseEvent* event, TerrainModel* model);
 
 public Q_SLOTS:
-    bool startRecording(std::string folderUsed = "");
+    bool startRecording(const std::string& folderUsed = "");
     bool stopRecording();
     bool startStopRecording();
 
@@ -81,9 +81,9 @@ public Q_SLOTS:
     void drawingProcess();
     void reloadAllShaders();
 
-    void setupViewFromFile(std::string filename);
+    void setupViewFromFile(const std::string& filename);
     bool correctedFunctionForCameraRepositioning();
-    void saveViewToFile(std::string filename);
+    void saveViewToFile(const std::string& filename);
 
     void screenshot();
 
@@ -94,8 +94,8 @@ public:
     virtual void init();
     virtual void draw();
 
-    void saveScreenshotPNG(std::string filename);
-    void copyLastScreenshotTo(std::string filename);
+    void saveScreenshotPNG(const std::string& filename);
+    void copyLastScreenshotTo(const std::string& filename);
 
     TerrainModel* getCurrentTerrainModel();
 

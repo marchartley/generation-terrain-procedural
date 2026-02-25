@@ -642,12 +642,13 @@ void ImplicitPrimitive::update()
     }
 }
 
-std::string ImplicitPrimitive::toString()
+std::string ImplicitPrimitive::toString() const
 {
-    if (this->name == "") {
-        this->name = stringFromPredefinedShape(this->predefinedShape);
+    std::string name = this->name;
+    if (name == "") {
+        name = stringFromPredefinedShape(this->predefinedShape);
     }
-    return this->name + ": Primitive " + this->name + " #" + std::to_string(this->index);
+    return name + ": Primitive " + name + " #" + std::to_string(this->index);
 }
 
 nlohmann::json ImplicitPrimitive::toJson()
@@ -735,7 +736,7 @@ ImplicitPatch *ImplicitPrimitive::copy() const
     return copy;
 }
 
-ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(std::string filename, const Vector3& dimensions, ImplicitPrimitive *prim)
+ImplicitPrimitive *ImplicitPrimitive::fromHeightmap(const std::string& filename, const Vector3& dimensions, ImplicitPrimitive *prim)
 {
     if (!checkPathExists(filename)) {
         throw std::runtime_error("Error: Impossible to load '" + filename + "', file not found");
@@ -1088,7 +1089,7 @@ void ImplicitBinaryOperator::update()
     // Guess we have nothing to do...
 }
 
-std::string ImplicitBinaryOperator::toString()
+std::string ImplicitBinaryOperator::toString() const
 {
     return this->name + ": Operation between " + (composableA() ? "#" + std::to_string(composableA()->index) : "undefined") + " and " + (composableB() ? "#" + std::to_string(composableB()->index) : "undefined");
 }
@@ -1399,7 +1400,7 @@ AABBox ImplicitUnaryOperator::getBBox()
     return {Vector3::min(vertices), Vector3::max(vertices)}; // Get minimal and maximal
 }*/
 
-std::string ImplicitUnaryOperator::toString()
+std::string ImplicitUnaryOperator::toString() const
 {
     return this->name + ": Unary operation on " + (composableA() ? "#" + std::to_string(composableA()->index) : "undefined");
 }
@@ -2195,9 +2196,9 @@ UnaryOpSpread::UnaryOpSpread(AABBox BBox, float spreadFactor)
 }
 
 
-ImplicitPatch::CompositionFunction compositionOperationFromString(std::string name)
+ImplicitPatch::CompositionFunction compositionOperationFromString(const std::string& _name)
 {
-    name = toUpper(name);
+    std::string name = toUpper(_name);
     if (name == "NONE")
         return ImplicitPatch::CompositionFunction::NONE;
     else if (name == "STACK")
@@ -2232,9 +2233,9 @@ std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction op
     return "";
 }
 
-ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name)
+ImplicitPatch::PredefinedShapes predefinedShapeFromString(const std::string& _name)
 {
-    name = simplify(name);
+    std::string name = simplify(_name);
     if (name == "sphere")
         return ImplicitPatch::PredefinedShapes::Sphere;
     else if (name == "block")
@@ -2321,9 +2322,9 @@ std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape)
     return "";
 }
 
-ImplicitPatch::PositionalLabel positionalLabelFromString(std::string name)
+ImplicitPatch::PositionalLabel positionalLabelFromString(const std::string& _name)
 {
-    name = toUpper(name);
+    std::string name = toUpper(_name);
 
     if (name == "ABOVE")
         return ImplicitPatch::PositionalLabel::ABOVE;
@@ -2359,9 +2360,9 @@ std::string stringFromPositionalLabel(ImplicitPatch::PositionalLabel label)
     return "";
 }
 
-TerrainTypes materialFromString(std::string name)
+TerrainTypes materialFromString(const std::string& _name)
 {
-    name = toUpper(name);
+    std::string name = toUpper(_name);
 
     if (name == "AIR")
         return AIR;
@@ -2504,7 +2505,7 @@ void ImplicitNaryOperator::update()
     // Nothing to do...
 }
 
-std::string ImplicitNaryOperator::toString()
+std::string ImplicitNaryOperator::toString() const
 {
     std::vector<std::string> compoNames;
     for (auto& compo : this->composables)

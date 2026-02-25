@@ -15,7 +15,7 @@ class ActionInterface : public CustomInteractiveObject
 {
     Q_OBJECT
 public:
-    ActionInterface(std::string actionTypeName,
+    ActionInterface(const std::string& actionTypeName,
                     std::string interfaceName,
                     std::string interfaceType,
                     std::string mainActionDescription,
@@ -38,7 +38,7 @@ public:
 
     void affectSavingFile(std::shared_ptr<std::vector<nlohmann::json>> history, std::shared_ptr<std::fstream> file, std::string filename);
 
-    void saveAllActions(std::string filename = "");
+    void saveAllActions(const std::string& filename = "");
 
     bool isConcerned(nlohmann::json& action);
 
@@ -65,7 +65,7 @@ public:
 
     Viewer* viewer = nullptr;
 
-    std::shared_ptr<ActionInterface> findOtherInterface(std::string name) const;
+    std::shared_ptr<ActionInterface> findOtherInterface(const std::string& name) const;
 
 Q_SIGNALS:
     void updated();

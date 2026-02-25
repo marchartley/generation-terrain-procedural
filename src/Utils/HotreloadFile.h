@@ -11,16 +11,16 @@ class HotreloadFile
 {
 public:
     HotreloadFile();
-    HotreloadFile(std::string path);
-    HotreloadFile(std::string path, const std::function<void(std::string)>& onChangeFunc);
+    HotreloadFile(const std::string& path);
+    HotreloadFile(const std::string& path, const std::function<void(const std::string&)>& onChangeFunc);
 
     std::string path;
 
     bool check(bool verbose = true);
-    void onChange(const std::function<void(std::string)>& func);
+    void onChange(const std::function<void(const std::string&)>& func);
     std::string read();
 
-    std::vector<std::function<void(std::string)>> onChangeCallbacks;
+    std::vector<std::function<void(const std::string&)>> onChangeCallbacks;
     std::filesystem::file_time_type lastChange;
 };
 

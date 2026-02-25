@@ -7,7 +7,7 @@ class EnvMaterial
 {
 public:
     EnvMaterial();
-    EnvMaterial(std::string name, float diffusionSpeed, float waterTransport, float mass, float decay, float virtualHeight, const Vector3& gridSize);
+    EnvMaterial(const std::string& name, float diffusionSpeed, float waterTransport, float mass, float decay, float virtualHeight, const Vector3& gridSize);
 
     std::string name;
     float diffusionSpeed;

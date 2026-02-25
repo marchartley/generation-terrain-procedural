@@ -99,10 +99,10 @@ public:
 
     static GLuint currentBufferId;
 
-    static std::string readShaderSource(std::string filename);
+    static std::string readShaderSource(const std::string& filename);
 
 
-    static GLuint createShaderProgram(std::string vertexShaderFile = "", std::string fragmentShaderFile = "");
+    static GLuint createShaderProgram(const std::string& vertexShaderFile = "", std::string fragmentShaderFile = "");
 
     static GLuint newBufferId();
 

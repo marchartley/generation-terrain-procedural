@@ -17,10 +17,10 @@ public:
     void displayWaterLevel();
 
     void createTerrainFromNoise(int nx, int ny, int nz, bool noise2D = false, float noiseStrength = 1.f, float frequency = 1.f, float lacunarity = 2.f, float noise_shifting = 0.0);
-    void createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
+    void createTerrainFromFile(const std::string& filename, std::map<std::string, std::shared_ptr<ActionInterface>> actionInterfaces = std::map<std::string, std::shared_ptr<ActionInterface>>());
     void createTerrainFromBiomes(nlohmann::json json_content);
     void createTerrainFromImplicitPatches(nlohmann::json json_content);
-    void saveTerrain(std::string filename, Vector3 dimensions = Vector3::invalid);
+    void saveTerrain(const std::string& filename, Vector3 dimensions = Vector3::invalid);
 
     void reloadShaders();
 
@@ -67,7 +67,7 @@ public Q_SLOTS:
 
     void reinforceVoxels();
 
-    void saveErosionDepositionTextureMasks(std::string savingFolder, std::string savingName);
+    void saveErosionDepositionTextureMasks(const std::string& savingFolder, std::string savingName);
     void saveErosionDepositionTextureMasksOnMultiple();
 
     void changeDisplayToComparativeMode(bool toComparative);

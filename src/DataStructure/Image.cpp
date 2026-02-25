@@ -167,7 +167,7 @@ void Image::writeBlackWhite(/*png_structp png, png_infop info,*/ png_bytep* row_
     }
 }
 
-void Image::writeOtherThanPNG(std::string filename, std::string ext)
+void Image::writeOtherThanPNG(const std::string& filename, std::string ext)
 {
     GridV3 img;
     if (this->_isColor) {
@@ -221,7 +221,7 @@ void Image::writeOtherThanPNG(std::string filename, std::string ext)
 }
 
 
-Image Image::readFromFile(std::string filename) {
+Image Image::readFromFile(const std::string& filename) {
     Image img;
 
     FILE *fp = fopen(filename.c_str(), "rb");
@@ -304,7 +304,7 @@ Image Image::readFromFile(std::string filename) {
     return img;
 }
 
-void Image::writeToFile(std::string filename, int desiredBitDepth) {
+void Image::writeToFile(const std::string& filename, int desiredBitDepth) {
     std::string extension = toUpper(getExtension(filename));
     if (extension != "PNG")
         return this->writeOtherThanPNG(filename, extension);

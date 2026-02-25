@@ -244,7 +244,7 @@ std::vector<std::string> ExpressionParser::tokenizeExpression(const std::string 
 }
 
 
-Token ExpressionParser::groupTokensHierarchically(const std::vector<std::string> &tokens, const VariableMap& variables) {
+Token ExpressionParser::groupTokensHierarchically(const std::vector<std::string>& tokens, const VariableMap& variables) {
     TokenList groupedTokens;
     std::string currentToken;
 

@@ -145,8 +145,11 @@ GridV3& EnvArea::computeFlowModification(GridV3& waterFlow)
 {
     std::vector<RelativeKelvinlet> evaluatedCurveKelvinlets;
     for (size_t i = 0; i < curveKelvinlets.size(); i++) {
-        if (curveKelvinlets[i]->valid())
+        if (curveKelvinlets[i]->valid()) {
+            if (auto asCurveKelvinlet = dynamic_cast<KelvinletCurve*>(curveKelvinlets[i]))
+                asCurveKelvinlet->curve = this->curve;
             evaluatedCurveKelvinlets.push_back(RelativeKelvinlet(curveKelvinlets[i], Vector3()));
+        }
     }
     this->scene->flowfield.iterateParallel([&](const Vector3& p) {
         for (const auto& k : evaluatedCurveKelvinlets) {
@@ -300,11 +303,3 @@ void EnvArea::updateCurve(const BSpline &newCurve)
     this->_cachedFlowModif.clear();
     this->_cachedHeightfield.clear();
 }
-/*
-nlohmann::json EnvArea::toJSON() const
-{
-    auto json = EnvObject::toJSON();
-    json["curve"] = this->curve;
-    return json;
-}
-*/

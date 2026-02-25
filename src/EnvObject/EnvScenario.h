@@ -15,7 +15,7 @@ class EnvironmentalScene;
 class Scenario;
 
 struct ScenariosObject {
-    ScenariosObject(std::string objectName, float proba, int amount = -1) : objectName(objectName), probabilityPerStep(proba), amountRequired(amount)
+    ScenariosObject(const std::string& objectName, float proba, int amount = -1) : objectName(objectName), probabilityPerStep(proba), amountRequired(amount)
     {}
     std::string objectName;
     float probabilityPerStep;
@@ -106,7 +106,7 @@ public:
     Scenario();
     Scenario(EnvironmentalScene* scene);
 
-    void addObject(std::string name, float proba, int amount = -1);
+    void addObject(const std::string& name, float proba, int amount = -1);
 
     std::vector<ScenariosObject> objects;
 

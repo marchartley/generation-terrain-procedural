@@ -107,7 +107,7 @@ std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionary(int nbSampl
     return {smallDico, bigDico};
 }
 
-std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(std::string filename, int highResSize, int lowResSize) {
+std::pair<std::vector<Matrix>, std::vector<Matrix>> createDictionaryFromFile(const std::string& filename, int highResSize, int lowResSize) {
     Image initialImage;
     displayProcessTime("Reading... ", [&]() {
         initialImage = Image::readFromFile(filename);

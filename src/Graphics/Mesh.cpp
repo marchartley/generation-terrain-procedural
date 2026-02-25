@@ -101,7 +101,7 @@ Mesh& Mesh::fromArray(std::vector<float> vertices, std::vector<int> indices)
     return this->fromArray(vecVertices, indices);
 }
 
-Mesh &Mesh::fromStl(std::string filename)
+Mesh &Mesh::fromStl(const std::string& filename)
 {
     try {
         stl_reader::StlMesh <float, unsigned int> stl_model (filename);
@@ -135,7 +135,7 @@ Mesh &Mesh::fromStl(std::string filename)
     return *this;
 }
 
-Mesh &Mesh::fromFBX(std::string filename)
+Mesh &Mesh::fromFBX(const std::string& filename)
 {
     this->clear();
 

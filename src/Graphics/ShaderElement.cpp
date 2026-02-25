@@ -5,7 +5,7 @@ ShaderElement::ShaderElement()
 
 }
 
-ShaderElement::ShaderElement(std::string name, std::shared_ptr<Shader> shader)
+ShaderElement::ShaderElement(const std::string& name, std::shared_ptr<Shader> shader)
     : name(name)
 {
     this->affectShader(shader);
@@ -29,7 +29,7 @@ ShaderUBO::ShaderUBO()
 
 }
 
-ShaderUBO::ShaderUBO(std::string name, int binding, size_t size)
+ShaderUBO::ShaderUBO(const std::string& name, int binding, size_t size)
     : binding(binding), name(name), data_size(size)
 {
 }
@@ -144,7 +144,7 @@ void Material::update()
 
 rt_material::rt_material() : ShaderElement()
 {}
-rt_material::rt_material(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_material::rt_material(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 
 void rt_material::update()
@@ -163,7 +163,7 @@ void rt_material::update()
 
 rt_sphere::rt_sphere() : ShaderElement()
 {}
-rt_sphere::rt_sphere(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_sphere::rt_sphere(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_sphere::update()
 {
@@ -180,7 +180,7 @@ void rt_sphere::update()
 
 rt_plane::rt_plane() : ShaderElement()
 {}
-rt_plane::rt_plane(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_plane::rt_plane(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_plane::update()
 {
@@ -195,7 +195,7 @@ void rt_plane::update()
 
 rt_box::rt_box() : ShaderElement()
 {}
-rt_box::rt_box(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_box::rt_box(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_box::update()
 {
@@ -212,7 +212,7 @@ void rt_box::update()
 
 rt_ring::rt_ring() : ShaderElement()
 {}
-rt_ring::rt_ring(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_ring::rt_ring(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_ring::update()
 {
@@ -230,7 +230,7 @@ void rt_ring::update()
 
 rt_surface::rt_surface() : ShaderElement()
 {}
-rt_surface::rt_surface(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_surface::rt_surface(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_surface::update()
 {
@@ -253,7 +253,7 @@ void rt_surface::update()
 
 rt_torus::rt_torus() : ShaderElement()
 {}
-rt_torus::rt_torus(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_torus::rt_torus(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_torus::update()
 {
@@ -269,7 +269,7 @@ void rt_torus::update()
 
 rt_light_direct::rt_light_direct() : ShaderElement()
 {}
-rt_light_direct::rt_light_direct(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_light_direct::rt_light_direct(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_light_direct::update()
 {
@@ -282,7 +282,7 @@ void rt_light_direct::update()
 
 rt_light_point::rt_light_point() : ShaderElement()
 {}
-rt_light_point::rt_light_point(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_light_point::rt_light_point(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_light_point::update()
 {
@@ -296,7 +296,7 @@ void rt_light_point::update()
 
 rt_scene::rt_scene() : ShaderElement()
 {}
-rt_scene::rt_scene(std::string name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
+rt_scene::rt_scene(const std::string& name, std::shared_ptr<Shader> shader) : ShaderElement(name, shader)
 {}
 void rt_scene::update()
 {

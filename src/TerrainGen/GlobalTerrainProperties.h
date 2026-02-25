@@ -62,6 +62,6 @@ public:
 
 std::string stringFromFluidSimType(FluidSimType type);
 
-FluidSimType FluidSimTypeFromString(std::string type);
+FluidSimType FluidSimTypeFromString(const std::string& type);
 
 #endif // GLOBALTERRAINPROPERTIES_H
