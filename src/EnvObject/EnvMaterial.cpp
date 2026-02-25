@@ -21,6 +21,6 @@ void EnvMaterial::update(const GridV3 &waterCurrents, const GridV3 &heightsGradi
         } else {
             this->currentState = this->currentState.meanSmooth(this->diffusionSpeed * 2 + 1, this->diffusionSpeed * 2 + 1, 1, false); // Diffuse
         }
-        this->currentState = (this->currentState.warpWith((waterCurrents * this->waterTransport) - (heightsGradients * this->mass))) * std::pow(this->decay, dt);
+        this->currentState = this->currentState.warpWith((waterCurrents * this->waterTransport) - (heightsGradients * this->mass)).max(0.f) * std::pow(this->decay, dt);
     // }
 }
