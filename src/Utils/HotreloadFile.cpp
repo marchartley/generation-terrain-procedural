@@ -8,13 +8,13 @@ HotreloadFile::HotreloadFile()
 
 }
 
-HotreloadFile::HotreloadFile(std::string path)
+HotreloadFile::HotreloadFile(const std::string& path)
     : path(path)
 {
 
 }
 
-HotreloadFile::HotreloadFile(std::string path, const std::function<void (std::string)> &onChangeFunc)
+HotreloadFile::HotreloadFile(const std::string& path, const std::function<void (const std::string&)> &onChangeFunc)
     : HotreloadFile(path)
 {
     onChange(onChangeFunc);
@@ -45,7 +45,7 @@ bool HotreloadFile::check(bool verbose)
     return difference;
 }
 
-void HotreloadFile::onChange(const std::function<void(std::string)> &func)
+void HotreloadFile::onChange(const std::function<void(const std::string&)> &func)
 {
     onChangeCallbacks.push_back(func);
 }

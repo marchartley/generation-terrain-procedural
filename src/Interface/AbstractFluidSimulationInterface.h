@@ -10,7 +10,7 @@ class AbstractFluidSimulationInterface : public ActionInterface
 {
     Q_OBJECT
 public:
-    AbstractFluidSimulationInterface(std::string actionTypeName,
+    AbstractFluidSimulationInterface(const std::string& actionTypeName,
                                      std::string interfaceName,
                                      std::string interfaceType,
                                      std::string mainActionDescription,

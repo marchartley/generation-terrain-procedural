@@ -28,14 +28,14 @@ public:
     std::tuple<GridF, GridV3> extractErosionDataOnTerrain();
 
     void createEnvObjectsFromImplicitTerrain();
-    void setMaterialsDefinitionFile(std::string filename);
-    void setDefinitionFile(std::string filename);
-    void setTransformationsFile(std::string filename);
-    void setScenarioFile(std::string filename);
+    void setMaterialsDefinitionFile(const std::string& filename);
+    void setDefinitionFile(const std::string& filename);
+    void setTransformationsFile(const std::string& filename);
+    void setScenarioFile(const std::string& filename);
 
-    EnvObject* instantiateObjectAtBestPosition(std::string objectName, Vector3 position, const GridF& score);
-    EnvObject* instantiateObjectAtBestPositionWithoutScoreMap(std::string objectName, Vector3 position, const Vector3 &maxPos);
-    EnvObject* instantiateObjectUsingSpline(std::string objectName, const BSpline& spline);
+    EnvObject* instantiateObjectAtBestPosition(const std::string& objectName, Vector3 position, const GridF& score);
+    EnvObject* instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3 &maxPos);
+    EnvObject* instantiateObjectUsingSpline(const std::string& objectName, const BSpline& spline);
 
 public Q_SLOTS:
     void show();
@@ -49,8 +49,8 @@ public Q_SLOTS:
     virtual void keyPressEvent(QKeyEvent* event);
 
 public:
-    EnvObject* instantiateSpecific(std::string objectName, const Vector3& targetPosition = Vector3::invalid, const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false);
-    EnvObject* fakeInstantiate(std::string objectName, const GridF& score = GridF());
+    EnvObject* instantiateSpecific(const std::string& objectName, const Vector3& targetPosition = Vector3::invalid, const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false, bool updateEnvironmentDirectly = true);
+    EnvObject* fakeInstantiate(const std::string& objectName, const GridF& score = GridF());
 
     bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
 
@@ -65,8 +65,8 @@ public:
     void updateUntilStabilization();
     void destroyEnvObject(EnvObject* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
 
-    void displayProbas(std::string objectName);
-    void displayMaterialDistrib(std::string materialName);
+    void displayProbas(const std::string& objectName);
+    void displayMaterialDistrib(const std::string& materialName);
 
     void manualModificationOfFocusArea();
     void manualModificationOfFlowfield();
@@ -83,9 +83,9 @@ public:
     void updateMaterialsTransformationsDefinitions(const std::string& newDefinition);
     void updateScenarioDefinition(const std::string& newDefinition);
 
-    void evaluateAndDisplayCustomFitnessFormula(std::string formula);
-    void evaluateAndDisplayCustomFittingFormula(std::string formula);
-    void evaluateAndDisplayCustomFitnessAndFittingFormula(std::string fitnessFuncFormula, std::string fittingFuncFormula);
+    void evaluateAndDisplayCustomFitnessFormula(const std::string& formula);
+    void evaluateAndDisplayCustomFittingFormula(const std::string& formula);
+    void evaluateAndDisplayCustomFitnessAndFittingFormula(const std::string& fitnessFuncFormula, std::string fittingFuncFormula);
 
     BSpline computeNewObjectsCurveAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength, float widthMaxLength, bool followIsolevel = false);
     ShapeCurve computeNewObjectsShapeAtPosition(const Vector3& seedPosition, const GridV3 &gradients, const GridF &score, float directionLength);
@@ -96,8 +96,8 @@ public:
 
     void resetScene();
 
-    void loadScene(std::string filename);
-    void saveScene(std::string filename);
+    void loadScene(const std::string& filename);
+    void saveScene(const std::string& filename);
 
     void previewCurrentEnvObjectPlacement(const Vector3& position);
     void previewFlowEdition(const Vector3& mousePos, const Vector3& brushDir);
@@ -122,7 +122,7 @@ public:
 
     void saveForRenders();
 
-    StatsValues displayStatsForObjectCreation(std::string objectName, int nbSamples = 10);
+    StatsValues displayStatsForObjectCreation(const std::string& objectName, int nbSamples = 10);
 
     GridV3 computeUserKelvinletField() const;
 

@@ -51,6 +51,8 @@ public:
 
     EnvObject* validateEnvObject(bool takeIntoAccountCurrentKelvinlet = true) const;
 
+    void animateEnvObject(bool animate);
+
     // PainterToolParams painterParams;
     KelvinletToolParams kelvinletParams;
 
@@ -65,6 +67,12 @@ public:
     };
     KELVINLET_ANCHOR_POINT currentAnchorPoint = UNDEFINED;
     std::map<Kelvinlet*, KELVINLET_ANCHOR_POINT> kelvinletAnchors;
+
+    bool animating = false;
+    std::vector<Vector3> verticesTargets;
+    int animationFrame = 0;
+
+    float objectScale = 1.f;
 
 Q_SIGNALS:
            // void imagePainted(const GridF& newImage);

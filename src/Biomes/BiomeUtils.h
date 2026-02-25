@@ -48,7 +48,7 @@ inline std::vector<std::string> biomesNames =
     "corail-boule"
 };
 
-int biomeID(std::string biomeName);
+int biomeID(const std::string& biomeName);
 std::string biomeName(int ID);
 FastPoissonGraph<int> generateHugeBiomesGraphe(std::vector<int> desiredBiomes, Graph adjencyGraph);
 Graph subsetToFitMostBiomes(Graph graph, std::vector<std::string> biomesNames);

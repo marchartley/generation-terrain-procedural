@@ -1,6 +1,6 @@
 #include "TerrainAction.h"
 
-TerrainAction::TerrainAction(std::string actionType, std::map<std::string, std::string> parameters, GridF exactEffect)
+TerrainAction::TerrainAction(const std::string& actionType, std::map<std::string, std::string> parameters, GridF exactEffect)
     : actionType(actionType), parameters(parameters), exactEffect(exactEffect)
 {
 

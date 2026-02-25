@@ -1,6 +1,6 @@
 #include "BiomeUtils.h"
 
-int biomeID(std::string biomeName) {
+int biomeID(const std::string& biomeName) {
     auto find = std::find(biomesNames.begin(), biomesNames.end(), toLower(biomeName));
     if (find != biomesNames.end())
         return std::distance(biomesNames.begin(), find);

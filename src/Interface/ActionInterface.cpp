@@ -1,6 +1,6 @@
 #include "ActionInterface.h"
 
-ActionInterface::ActionInterface(std::string actionTypeName,
+ActionInterface::ActionInterface(const std::string& actionTypeName,
                                  std::string interfaceName,
                                  std::string interfaceType,
                                  std::string mainActionDescription,
@@ -65,7 +65,7 @@ void ActionInterface::affectSavingFile(std::shared_ptr<std::vector<nlohmann::jso
     this->savingFilename = filename;
 }
 
-void ActionInterface::saveAllActions(std::string filename) {
+void ActionInterface::saveAllActions(const std::string& filename) {
     savingFile->close();
     savingFile->open((filename.empty() ? savingFilename : filename), std::fstream::in | std::fstream::out | std::fstream::trunc);
     *savingFile << nlohmann::json({{"actions", *jsonActionsHistory}}).dump(1, '\t');
@@ -88,7 +88,7 @@ void ActionInterface::error(const std::string &message, bool verbose) {
     }
 }
 
-std::shared_ptr<ActionInterface> ActionInterface::findOtherInterface(std::string name) const
+std::shared_ptr<ActionInterface> ActionInterface::findOtherInterface(const std::string& name) const
 {
     if (!viewer) {
         std::cerr << "The viewer from this interface (" << this->interfaceName << ") is not defined, cannot fetch interface '" << name << "'..." << std::endl;

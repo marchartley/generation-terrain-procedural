@@ -60,8 +60,9 @@ ComboboxElement::ComboboxElement(const std::string &label, std::vector<ComboboxL
     : ComboboxElement(label)
 {
     auto newChoices = std::vector<ComboboxLineElementBase*>(choices.size());
-    for (auto& choice : choices) {
-        newChoices.push_back(dynamic_cast<ComboboxLineElementBase*>(choice));
+    for (size_t i = 0; i < choices.size(); i++) {
+        auto& choice = choices[i];
+        newChoices[i] = dynamic_cast<ComboboxLineElementBase*>(choice);
     }
     this->choices = newChoices;
     for (auto& c : newChoices) {

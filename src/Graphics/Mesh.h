@@ -18,8 +18,8 @@ public:
     Mesh& fromArray(std::vector<Vector3> vertices, std::vector<int> indices = std::vector<int>());
     Mesh& fromArray(std::vector<float> vertices, std::vector<int> indices = std::vector<int>());
 
-    Mesh& fromStl(std::string filename);
-    Mesh& fromFBX(std::string filename);
+    Mesh& fromStl(const std::string& filename);
+    Mesh& fromFBX(const std::string& filename);
 
     Mesh& normalize();
     Mesh& scale(float factor);

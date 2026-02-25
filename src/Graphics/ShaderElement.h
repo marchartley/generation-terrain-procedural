@@ -27,7 +27,7 @@ class ShaderElement
 {
 public:
     ShaderElement();
-    ShaderElement(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    ShaderElement(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
     ~ShaderElement();
 
     virtual void update();
@@ -42,7 +42,7 @@ class ShaderUBO
 {
 public:
     ShaderUBO();
-    ShaderUBO(std::string name, int binding, size_t size);
+    ShaderUBO(const std::string& name, int binding, size_t size);
     ~ShaderUBO();
 
     void initBuffer(size_t size, void* data);
@@ -104,7 +104,7 @@ using glm::vec4, glm::mat4, glm::vec3;
 class rt_material : public ShaderElement {
 public:
     rt_material();
-    rt_material(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_material(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
     vec4 color;
     vec4 absorb;
 
@@ -121,7 +121,7 @@ public:
 class rt_sphere : public ShaderElement {
 public:
     rt_sphere();
-    rt_sphere(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_sphere(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
     rt_material mat;
     vec4 obj;
     vec4 quat_rotation; // rotate normal
@@ -134,7 +134,7 @@ public:
 class rt_plane : public ShaderElement {
 public:
     rt_plane();
-    rt_plane(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_plane(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     rt_material mat;
     vec4 pos;
@@ -146,7 +146,7 @@ public:
 class rt_box : public ShaderElement {
 public:
     rt_box();
-    rt_box(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_box(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     rt_material mat;
     vec4 quat_rotation;
@@ -160,7 +160,7 @@ public:
 class rt_ring : public ShaderElement {
 public:
     rt_ring();
-    rt_ring(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_ring(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     rt_material mat;
     vec4 quat_rotation;
@@ -175,7 +175,7 @@ public:
 class rt_surface : public ShaderElement {
 public:
     rt_surface();
-    rt_surface(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_surface(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     rt_material mat;
     vec4 quat_rotation;
@@ -195,7 +195,7 @@ public:
 class rt_torus : public ShaderElement {
 public:
     rt_torus();
-    rt_torus(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_torus(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     rt_material mat;
     vec4 quat_rotation;
@@ -208,7 +208,7 @@ public:
 class rt_light_direct : public ShaderElement {
 public:
     rt_light_direct();
-    rt_light_direct(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_light_direct(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     vec4 direction;
     vec4 color;
@@ -221,7 +221,7 @@ public:
 class rt_light_point : public ShaderElement {
 public:
     rt_light_point();
-    rt_light_point(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_light_point(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
 
     vec4 pos; //pos + radius
     vec4 color;
@@ -236,7 +236,7 @@ public:
 class rt_scene : public ShaderElement {
 public:
     rt_scene();
-    rt_scene(std::string name, std::shared_ptr<Shader> shader = nullptr);
+    rt_scene(const std::string& name, std::shared_ptr<Shader> shader = nullptr);
     vec4 camera_pos;
     mat4 proj_matrix;
     mat4 mv_matrix;

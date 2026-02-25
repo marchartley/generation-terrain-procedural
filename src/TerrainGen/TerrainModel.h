@@ -18,14 +18,14 @@ public:
     virtual bool undo() = 0;
     virtual bool redo() = 0;
 
-    virtual void saveMap(std::string filename) = 0;
-    virtual void retrieveMap(std::string filename) = 0;
+    virtual void saveMap(const std::string& filename) = 0;
+    virtual void retrieveMap(const std::string& filename) = 0;
     virtual Mesh getGeometry(const Vector3& dimensions = Vector3::invalid) = 0;
 
     virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid) = 0;
 
-    virtual std::string toString() = 0;
-    virtual std::string toShortString() = 0;
+    virtual std::string toString() const = 0;
+    virtual std::string toShortString() const = 0;
 
     virtual float getHeight(float x, float y) = 0;
     virtual float getHeight(const Vector3& pos);
@@ -40,8 +40,8 @@ public:
     virtual float getSizeZ() const = 0;
     virtual Vector3 getDimensions() const { return Vector3(getSizeX(), getSizeY(), getSizeZ()); }
 
-    Vector3 getTerrainPos(const Vector3& pos) { return (pos * scaling) - translation; }
-    Vector3 getWorldPos(const Vector3& pos) { return (pos + translation) / scaling; }
+    Vector3 getTerrainPos(const Vector3& pos) const { return (pos * scaling) - translation; }
+    Vector3 getWorldPos(const Vector3& pos) const { return (pos + translation) / scaling; }
     void setScaling(const Vector3& newScale) { this->scaling = newScale; }
     void setScaling(float newScale) { this->scaling = Vector3(newScale, newScale, newScale); }
     void setTranslation(const Vector3& newTranslation) { this->translation = newTranslation; }

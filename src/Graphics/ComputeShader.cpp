@@ -6,7 +6,7 @@ ComputeShader::ComputeShader()
 
 }
 
-ComputeShader::ComputeShader(std::string shaderPath)
+ComputeShader::ComputeShader(const std::string& shaderPath)
     : Shader("", "", ""), computeShaderFilename(shaderPath)
 {
 

@@ -6,8 +6,9 @@
 
 #include "Utils/BSpline.h"
 
-std::vector<std::string> split(std::string str, std::string c)
+std::vector<std::string> split(const std::string& _str, std::string c)
 {
+    std::string str = _str;
     std::vector<std::string> result;
     size_t pos = str.npos;
     do {
@@ -23,7 +24,7 @@ std::vector<std::string> split(std::string str, std::string c)
     return result;
 }
 
-std::vector<std::string> split(std::string str)
+std::vector<std::string> split(const std::string& str)
 {
     std::vector<std::string> result;
     for (char c : str) {
@@ -32,7 +33,7 @@ std::vector<std::string> split(std::string str)
     return result;
 }
 
-bool checkPathExists(std::string path)
+bool checkPathExists(const std::string& path)
 {
     struct stat info;
     if (stat(path.c_str(), &info) != 0) {
@@ -41,7 +42,7 @@ bool checkPathExists(std::string path)
     return true;
 }
 
-bool makedir(std::string path)
+bool makedir(const std::string& path)
 {
     std::vector<std::string> splitted = split(path, "/");
     int result = 0;
@@ -156,7 +157,7 @@ float fault_distance(float distance, float impactRadius)
 
 }
 
-std::string toUpper(std::string s)
+std::string toUpper(const std::string& s)
 {
     std::string res = s;
     for (auto& c : res) {
@@ -165,7 +166,7 @@ std::string toUpper(std::string s)
     return res;
 }
 
-std::string toLower(std::string s)
+std::string toLower(const std::string& s)
 {
     std::string res = s;
     for (auto& c : res) {
@@ -174,7 +175,7 @@ std::string toLower(std::string s)
     return res;
 }
 
-std::string toCapitalize(std::string s)
+std::string toCapitalize(const std::string& s)
 {
     std::string res = s;
     bool needCapital = true;
@@ -191,7 +192,7 @@ std::string toCapitalize(std::string s)
     return res;
 }
 
-std::string getExtension(std::string file)
+std::string getExtension(const std::string& file)
 {
     std::string ext = file.substr(file.find_last_of('.') + 1);
     return ext;
@@ -255,12 +256,12 @@ float normalizedNormalDistribution(const Vector3& size, const Vector3& position,
     return 0.f;
 }
 
-bool startsWith(std::string text, std::string needle)
+bool startsWith(const std::string& text, std::string needle)
 {
     return text.substr(0, needle.size()) == needle;
 }
 
-bool endsWith(std::string text, std::string needle)
+bool endsWith(const std::string& text, std::string needle)
 {
     return text.substr(text.size() - needle.size()) == needle;
 }
@@ -287,7 +288,7 @@ void displayProgress(float percent, bool displayPercent, int consoleWidth, std::
     std::cout << "]" << std::flush;
 }
 
-std::string replaceInString(std::string initial, std::string toReplace, std::string replacing)
+std::string replaceInString(const std::string& initial, std::string toReplace, std::string replacing)
 {
     std::string replaced = initial;
     while (replaced.find(toReplace.c_str()) != replaced.npos) {
@@ -297,14 +298,14 @@ std::string replaceInString(std::string initial, std::string toReplace, std::str
     return replaced;
 }
 
-std::string getFilename(std::string path)
+std::string getFilename(const std::string& path)
 {
     std::vector<std::string> fullPath = split(path, "/");
     fullPath = split(fullPath.back(), "\\");
     return fullPath.back();
 }
 
-std::string simplify(std::string s)
+std::string simplify(const std::string& s)
 {
     return toLower(replaceInString(replaceInString(s, "_", ""), "-", ""));
 }
@@ -424,7 +425,7 @@ std::string variantToStr(const DataVariant &var) {
 }
 */
 
-std::vector<std::string> getAllFiles(std::string folderName)
+std::vector<std::string> getAllFiles(const std::string& folderName)
 {
     std::vector<std::string> filenames;
     QDirIterator it(QString::fromStdString(folderName), QDir::Files, QDirIterator::Subdirectories);
@@ -513,9 +514,9 @@ bool isPowerOf2(int n)
     return n > 0 &&  (n & (n-1)) == 0;
 }
 
-int runCommand(std::string command)
+int runCommand(const std::string& _command)
 {
-    command = "/bin/bash -c 'source ~/.bashrc && " + command + "'";
+    std::string command = "/bin/bash -c 'source ~/.bashrc && " + _command + "'";
     return std::system(command.c_str());
 }
 
@@ -524,7 +525,7 @@ Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor
     return Vector3::slerp(t, startColor, endColor);
 }
 
-float displayProcessTime(std::string textToDisplay, std::function<void ()> func, bool print)
+float displayProcessTime(const std::string& textToDisplay, std::function<void ()> func, bool print)
 {
     if (print) std::cout << textToDisplay << std::flush;
     float time = timeIt(func);
@@ -574,7 +575,7 @@ StatsValues getStats(std::vector<float> values)
     return stats;
 }
 
-std::string trim(std::string initial, std::string ws)
+std::string trim(const std::string& initial, std::string ws)
 {
     std::string str = initial;
     size_t found;

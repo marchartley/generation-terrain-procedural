@@ -82,7 +82,7 @@ public:
 
     virtual void update() = 0;
 
-    virtual std::string toString() = 0;
+    virtual std::string toString() const = 0;
 
     virtual nlohmann::json toJson() = 0;
     static ImplicitPatch* fromJson(nlohmann::json content);
@@ -98,13 +98,13 @@ public:
     virtual bool undo() { return false; }
     virtual bool redo() { return false; }
 
-    virtual void saveMap([[maybe_unused]] std::string filename) { }
-    virtual void retrieveMap(std::string filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
+    virtual void saveMap([[maybe_unused]] const std::string& filename) { }
+    virtual void retrieveMap(const std::string& filename) { this->fromJson(nlohmann::json::parse(std::ifstream(filename))); }
     virtual Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);
 
     virtual Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3 &minPos = Vector3::invalid, const Vector3 &maxPos = Vector3::invalid);
 
-    virtual std::string toShortString() { return ""; }
+    virtual std::string toShortString() const { return ""; }
 
     virtual float getHeight(float x, float y);
     virtual float getHeight(const Vector3& pos);
@@ -190,7 +190,7 @@ public:
     AABBox getSupportBBox() const;
     AABBox getBBox() const;
     void update();
-    std::string toString();
+    std::string toString() const;
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
 
@@ -215,7 +215,7 @@ public:
     std::string heightmapFilename = "";
     GridF cachedHeightmap;
 
-    static ImplicitPrimitive* fromHeightmap(std::string filename, const Vector3& dimensions = Vector3::invalid, ImplicitPrimitive *prim = nullptr);
+    static ImplicitPrimitive* fromHeightmap(const std::string& filename, const Vector3& dimensions = Vector3::invalid, ImplicitPrimitive *prim = nullptr);
     static ImplicitPrimitive* fromHeightmap(GridF heightmap, std::string filename = "", ImplicitPrimitive *prim = nullptr);
 };
 
@@ -228,7 +228,7 @@ public:
     AABBox getSupportBBox() const;
     AABBox getBBox() const;
     void update();
-    std::string toString();
+    std::string toString() const;
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
 
@@ -271,7 +271,7 @@ public:
     AABBox getSupportBBox() const;
     AABBox getBBox() const;
     void update();
-    std::string toString();
+    std::string toString() const;
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
 
@@ -329,7 +329,7 @@ public:
 
     AABBox getSupportBBox() const;
     AABBox getBBox() const;
-    std::string toString();
+    std::string toString() const;
     nlohmann::json toJson();
     static ImplicitPatch* fromJson(nlohmann::json content);
 
@@ -506,13 +506,13 @@ public:
 };
 */
 
-ImplicitPatch::CompositionFunction compositionOperationFromString(std::string name);
+ImplicitPatch::CompositionFunction compositionOperationFromString(const std::string& name);
 std::string stringFromCompositionOperation(ImplicitPatch::CompositionFunction operation);
-ImplicitPatch::PositionalLabel positionalLabelFromString(std::string name);
+ImplicitPatch::PositionalLabel positionalLabelFromString(const std::string& name);
 std::string stringFromPositionalLabel(ImplicitPatch::PositionalLabel label);
-ImplicitPatch::PredefinedShapes predefinedShapeFromString(std::string name);
+ImplicitPatch::PredefinedShapes predefinedShapeFromString(const std::string& name);
 std::string stringFromPredefinedShape(ImplicitPatch::PredefinedShapes shape);
-TerrainTypes materialFromString(std::string name);
+TerrainTypes materialFromString(const std::string& name);
 std::string stringFromMaterial(TerrainTypes material);
 
 

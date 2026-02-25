@@ -1,0 +1,91 @@
+[
+	{
+		"name": "sand",
+		"diffusion-speed": 2.0,
+		"water-transport": 1.0,
+		"mass": 0.010,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "polyp",
+		"diffusion-speed": 5.0,
+		"water-transport": 1.0,
+		"mass": 0.5,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "pebbles",
+		"diffusion-speed": 2,
+		"water-transport":  1,
+		"mass": 1.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "boulders",
+		"diffusion-speed": 1,
+		"water-transport":  0.5,
+		"mass": 3.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	
+	{
+		"name": "polypA",
+		"diffusion-speed": 2.0,
+		"water-transport": 1.0,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "polypB",
+		"diffusion-speed": 2.0,
+		"water-transport": 1.0,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "polypC",
+		"diffusion-speed": 2.0,
+		"water-transport": 1.0,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "deadCoral",
+		"diffusion-speed": 0.0,
+		"water-transport": 0.0,
+		"mass": 0.0,
+		"decay": 0.8,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "freshWater",
+		"diffusion-speed": 1.0,
+		"water-transport": 0.1,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "shade",
+		"diffusion-speed": 1.0,
+		"water-transport": 0.0,
+		"mass": 0.0,
+		"decay": 0.9,
+		"virtual-height": 0.0
+	},
+	{
+		"name": "test",
+		"diffusion-speed": 1.0,
+		"water-transport": 2.0,
+		"mass": 3.0,
+		"decay": 4.9,
+		"virtual-height": 5.0
+	}
+]

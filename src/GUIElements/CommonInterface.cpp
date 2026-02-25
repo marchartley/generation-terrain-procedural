@@ -33,7 +33,7 @@ UIElement::~UIElement() {
     element->deleteLater();
 }
 
-void UIElement::setName(std::string name)
+void UIElement::setName(const std::string& name)
 {
     this->name = name;
 }
@@ -43,7 +43,7 @@ const std::string &UIElement::getName() const
 }
 
 
-LabelElement::LabelElement(std::string text)
+LabelElement::LabelElement(const std::string& text)
     : UIElement(new QLabel(QString::fromStdString(text)))
 {}
 
@@ -52,7 +52,7 @@ QLabel* LabelElement::label()
     return qobject_cast<QLabel*>(getWidget());
 }
 
-LabelElement* LabelElement::setText(std::string newText)
+LabelElement* LabelElement::setText(const std::string& newText)
 {
     this->label()->setText(QString::fromStdString(newText));
     return this;
@@ -264,7 +264,7 @@ UIElement* InterfaceUI::add(QLayout* layout, std::string name)
     return this->add(interface, name);
 }
 
-UIElement* InterfaceUI::find(std::string name)
+UIElement* InterfaceUI::find(const std::string& name)
 {
     for (size_t i = 0; i < names.size(); i++)
         if (names[i] == name)
@@ -275,7 +275,10 @@ UIElement* InterfaceUI::find(std::string name)
 InterfaceUI* InterfaceUI::clear()
 {
     for (auto& child : this->elements) {// box()->children()) {
+        child->cleanupConnections();
         child->deleteLater();
+        if (auto interfaceChild = dynamic_cast<InterfaceUI*>(child))
+            interfaceChild->clear();
     }
     this->elements.clear();
     this->names.clear();
@@ -368,7 +371,7 @@ InterfaceUI* createMultiColumnGroupUI(std::vector<UIElement*> widgets, int nbCol
     return new InterfaceUI(layout); // group;
 }
 
-TextEditElement::TextEditElement(std::string text, std::string label)
+TextEditElement::TextEditElement(const std::string& text, std::string label)
     : UIElement(new QGroupBox)
 {
     this->_lineEdit = new QLineEdit(QString::fromStdString(text));
@@ -382,7 +385,7 @@ TextEditElement::TextEditElement(std::string text, std::string label)
     getWidget()->setLayout(layout);
 }
 
-TextEditElement::TextEditElement(std::string text, std::string label, std::string &binded)
+TextEditElement::TextEditElement(const std::string& text, std::string label, std::string& binded)
     : TextEditElement(text, label)
 {
     this->bindTo(binded);
@@ -393,7 +396,7 @@ QLineEdit* TextEditElement::lineEdit()
     return dynamic_cast<QLineEdit*>(_lineEdit);
 }
 
-TextEditElement* TextEditElement::setOnTextChange(std::function<void (std::string)> func)
+TextEditElement* TextEditElement::setOnTextChange(std::function<void (const std::string&)> func)
 {
 //    this->addConnection()
     QObject::connect(_lineEdit, &QLineEdit::textChanged, this, [=](QString newText){ // /!\ Capture function by value
@@ -402,11 +405,11 @@ TextEditElement* TextEditElement::setOnTextChange(std::function<void (std::strin
     return this;
 }
 
-TextEditElement* TextEditElement::bindTo(std::string &value)
+TextEditElement* TextEditElement::bindTo(std::string& value)
 {
     lineEdit()->setText(QString::fromStdString(value));
     boundVariable = value;
-    setOnTextChange([this](std::string newValue) {
+    setOnTextChange([this](const std::string& newValue) {
         if (boundVariable) {
             boundVariable->get() = newValue;
         }

@@ -67,8 +67,8 @@ public:
 
     void limitVoxelValues(float limitedValue, bool increaseHeightIfNeeded = true);
 
-    std::string toString();
-    std::string toShortString();
+    std::string toString() const;
+    std::string toShortString() const;
 
     void smoothVoxels();
 
@@ -87,8 +87,8 @@ public:
 
     void saveState();
 
-    void saveMap(std::string filename);
-    void retrieveMap(std::string filename);
+    void saveMap(const std::string& filename);
+    void retrieveMap(const std::string& filename);
 
     Vector3 getFirstIntersectingVoxel(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
     Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
@@ -101,7 +101,7 @@ public:
 
 //    int getChunkSize() const { return this->chunkSize; }
 
-    void saveHeightmap(std::string heightmap_filename);
+    void saveHeightmap(const std::string& heightmap_filename);
 
 //protected:
 //    std::vector<std::shared_ptr<VoxelChunk>> chunks;

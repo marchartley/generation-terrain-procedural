@@ -14,6 +14,7 @@ public:
     ShapeCurve curve;
     float width;
     float length;
+    float flowAttenuation;
 
     std::vector<Kelvinlet*> curveKelvinlets;
 
@@ -22,7 +23,7 @@ public:
     virtual float getSqrDistance(const Vector3& position);
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const;
     virtual EnvArea* clone();
-    // static EnvArea* instantiate(std::string objectName);
+    // static EnvArea* instantiate(const std::string& objectName);
 
     virtual bool placeInTerrain(const Vector3& seedPosition);
     virtual bool placeInTerrain(const BSpline& seedCurve);

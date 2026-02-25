@@ -9,10 +9,10 @@ class RewritableFile
 {
 public:
     RewritableFile();
-    RewritableFile(std::string filename);
+    RewritableFile(const std::string& filename);
 
     void clearFile();
-    std::ostream& operator<<(std::string text) {
+    std::ostream& operator<<(const std::string& text) {
         stream.open(filename, std::fstream::in | std::fstream::out | std::fstream::app);
         stream.seekg(0);
         stream << text;

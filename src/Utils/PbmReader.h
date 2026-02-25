@@ -4,8 +4,8 @@
 #include "DataStructure/Matrix3.h"
 
 namespace PbmReader {
-GridF readGrayscale(std::string path);
-GridV3 readColor(std::string path);
+GridF readGrayscale(const std::string& path);
+GridV3 readColor(const std::string& path);
 
 int getMagicNumberAndSizes(std::ifstream &file, int& imgW, int& imgH, int &maxValue);
 

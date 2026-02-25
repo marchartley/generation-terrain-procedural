@@ -6,10 +6,10 @@
 #include "EnvObject/EnvironmentalScene.h"
 
 struct InstantiationMeshOption {
-    InstantiationMeshOption(std::string name, std::string folderName, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+    InstantiationMeshOption(const std::string& name, std::string folderName, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
         : name(name), folderName(folderName), minMaxSizes(minMaxSizes), color(color), requiredTranslation(translation), minMaxInstances(minMaxInstances), radius(radius)
     {}
-    InstantiationMeshOption(std::string name, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
+    InstantiationMeshOption(const std::string& name, std::pair<float, float> minMaxSizes, const Vector3& color, const Vector3& translation = Vector3(), std::pair<int, int> minMaxInstances = {1, 1}, float radius = 0.f)
         : InstantiationMeshOption(name, name, minMaxSizes, color, translation, minMaxInstances, radius)
     {}
     std::string name;
@@ -53,7 +53,7 @@ public:
     std::vector<AABBox> getAvailablePositionsForMaterial(TerrainTypes target);
     std::vector<AABBox> getCoralAvailablePositions();
     std::vector<AABBox> getRocksAvailablePositions();
-    std::vector<std::tuple<Vector3, float, int> > getPositionsFor(std::string type, std::shared_ptr<EnvironmentalScene> scene);
+    std::vector<std::tuple<Vector3, float, int> > getPositionsFor(const std::string& type, std::shared_ptr<EnvironmentalScene> scene);
 
     void readMeshInstanceFile(const std::string& fileContent);
 
@@ -66,7 +66,7 @@ public Q_SLOTS:
     void regenerateRocksPositions();
     void regenerateAllTypePositions();
 
-    void exportJSONFile(std::string filename);
+    void exportJSONFile(const std::string& filename);
 
 public:
     std::vector<InstantiationMeshOption> meshesOptions;

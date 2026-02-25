@@ -12,8 +12,8 @@ protected: // Singleton
     EnvMaterialViewer(const std::string& name, ChartView* chartView, QWidget* parent = nullptr);
 
 public:
-    // static EnvMaterialViewer* getInstance(std::string name = "");
-    // static EnvMaterialViewer* get(std::string name = "") { return EnvMaterialViewer::getInstance(toLower(name)); }
+    // static EnvMaterialViewer* getInstance(const std::string& name = "");
+    // static EnvMaterialViewer* get(const std::string& name = "") { return EnvMaterialViewer::getInstance(toLower(name)); }
     // static EnvMaterialViewer* init(const std::string& name, ChartView* chartView = nullptr, QWidget* parent = nullptr);
     DECLARE_PLOTTER_GETTER(EnvMaterialViewer)
 

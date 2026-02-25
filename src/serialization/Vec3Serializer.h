@@ -4,16 +4,16 @@
 #include "DataStructure/Vector3.h"
 #include "Utils/json.h"
 
-template <class T>
-void to_json(nlohmann::json& json, const Vec3<T>& vec) {
-    json = nlohmann::json({{"x", vec.x()}, {"y", vec.y()}, {"z", vec.z()}});
+template <class Json, class T>
+void to_json(Json& json, const Vec3<T>& vec) {
+    json = Json({{"x", vec.x()}, {"y", vec.y()}, {"z", vec.z()}});
 }
-template <class T>
-void from_json(const nlohmann::json& json, Vec3<T>& vec) {
+template <class Json, class T>
+void from_json(const Json& json, Vec3<T>& vec) {
     if (json.contains("x")) {
-        vec = Vec3<T>(json.at("x").get<T>(), json.at("y").get<T>(), (json.contains("z") ? json.at("z").get<T>() : 0));
+        vec = Vec3<T>(json.at("x").template get<T>(), json.at("y").template get<T>(), (json.contains("z") ? json.at("z").template get<T>() : 0));
     } else if (json.contains("r")) {
-        vec = Vec3<T>(json.at("r").get<T>(), json.at("g").get<T>(), json.at("b").get<T>());
+        vec = Vec3<T>(json.at("r").template get<T>(), json.at("g").template get<T>(), json.at("b").template get<T>());
     }
 }
 

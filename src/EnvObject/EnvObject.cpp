@@ -314,7 +314,7 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
                 vars["spawntime"] = float(scene->currentTime);
         }
         /*
-        for (std::string neededVar : neededVariables) {
+        for (const std::string& neededVar : neededVariables) {
             if (std::holds_alternative<float>(vars[neededVar])) {
                 std::cout << neededVar << ": " << std::get<float>(vars[neededVar]) << std::endl;
             } else if (std::holds_alternative<Vector3>(vars[neededVar])) {
@@ -342,7 +342,7 @@ std::function<float (const Vector3&)> EnvObject::parseFittingFunction(std::strin
 }
 
 /*
-std::pair<std::string, std::string> EnvObject::extractNameAndComplement(std::string variable)
+std::pair<std::string, std::string> EnvObject::extractNameAndComplement(const std::string& variable)
 {
     auto splitted = split(variable, ".");
     if (splitted.size() == 0) splitted = {"", ""};
@@ -350,7 +350,7 @@ std::pair<std::string, std::string> EnvObject::extractNameAndComplement(std::str
     return {splitted[0], splitted[1]};
 }
 
-std::pair<float, EnvObject *> EnvObject::getSqrDistanceTo(std::string objectName, const Vector3 &position)
+std::pair<float, EnvObject *> EnvObject::getSqrDistanceTo(const std::string& objectName, const Vector3 &position)
 {
     auto [name, complement] = EnvObject::extractNameAndComplement(objectName);
     float minDist = std::numeric_limits<float>::max();
@@ -366,7 +366,7 @@ std::pair<float, EnvObject *> EnvObject::getSqrDistanceTo(std::string objectName
     return {minDist, bestElem};
 }
 
-std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(std::string objectName, const Vector3 &position)
+std::pair<Vector3, EnvObject *> EnvObject::getVectorOf(const std::string& objectName, const Vector3 &position)
 {
     auto [name, complement] = EnvObject::extractNameAndComplement(objectName);
     if (name == "current") {

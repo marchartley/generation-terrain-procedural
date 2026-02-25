@@ -874,7 +874,7 @@ void PrimitivePatchesInterface::deformationFromFlow()
     this->updatePrimitiveList();
 }
 
-void PrimitivePatchesInterface::savePatchesAsFile(std::string filename)
+void PrimitivePatchesInterface::savePatchesAsFile(const std::string& filename)
 {
     this->lastTimeFileHasBeenModified = QDateTime::currentDateTime().addDays(1); // Just to avoid the reloading during the save
     nlohmann::json content = this->implicitTerrain->toJson();
@@ -884,7 +884,7 @@ void PrimitivePatchesInterface::savePatchesAsFile(std::string filename)
     this->lastTimeFileHasBeenModified = QDateTime::currentDateTime();
 }
 
-void PrimitivePatchesInterface::loadPatchesFromFile(std::string filename)
+void PrimitivePatchesInterface::loadPatchesFromFile(const std::string& filename)
 {
     this->loadTransformationRules();
     std::ifstream file(filename);
@@ -1445,7 +1445,7 @@ void PrimitivePatchesInterface::openFileForNewPatch()
     this->desiredPatchFromFile = nullptr;
 }
 
-void PrimitivePatchesInterface::setMainFilename(std::string newMainFilename)
+void PrimitivePatchesInterface::setMainFilename(const std::string& newMainFilename)
 {
     this->mainFilename = newMainFilename;
 }

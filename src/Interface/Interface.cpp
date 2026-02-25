@@ -33,7 +33,7 @@
 
 #include "FluidSimulation/OpenFoamParser.h"
 
-ViewerInterface::ViewerInterface(std::string preloaded_heightmap, MapMode displayMode) {
+ViewerInterface::ViewerInterface(const std::string& preloaded_heightmap, MapMode displayMode) {
     // ImageViewer::init(nullptr, nullptr);
     this->setWindowFlag(Qt::WindowType::WindowMaximizeButtonHint);
     this->setWindowFlag(Qt::WindowType::WindowMinimizeButtonHint);

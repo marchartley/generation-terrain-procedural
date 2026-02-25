@@ -7,11 +7,9 @@
 EnvironmentalScene::EnvironmentalScene()
 {
     initFlow();
-    this->terrainNormals = GridV3();
     this->materials = std::map<std::string, EnvMaterial>();
     this->availableObjects = std::map<std::string, EnvObject*>();
     this->instantiatedObjects = std::vector<EnvObject*>();
-    this->flowImpactFactor = .9f;
     this->currentMaxID = -1;
     this->transformationRules = std::vector<MaterialsTransformation>();
     this->currentTime = 0;
@@ -21,7 +19,7 @@ EnvironmentalScene::EnvironmentalScene()
     this->allScalarProperties = std::map<std::string, GridF>();
 }
 
-GridV3 EnvironmentalScene::initFlow(bool force) {
+GridV3& EnvironmentalScene::initFlow(bool force) {
     if (force || this->flowfield.empty()) {
         this->initialFlowfield = GridV3(100, 100, 1, Vector3(0, 0, 0));
         this->initialFlowfield.raiseErrorOnBadCoord = false;
@@ -31,16 +29,16 @@ GridV3 EnvironmentalScene::initFlow(bool force) {
     return this->flowfield;
 }
 
-void EnvironmentalScene::readEnvObjectsFile(std::string filename)
+nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFile(const std::string& filename)
 {
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    this->readEnvObjectsFileContent(content);
+    return this->readEnvObjectsFileContent(content);
 }
 
-void EnvironmentalScene::readEnvObjectsFileContent(std::string content)
+nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::string& content)
 {
-    auto json = nlohmann::json::parse(toLower(content));
+    auto json = nlohmann::ordered_json::parse(toLower(content));
     for (auto& obj : json) {
         std::string objName = obj["name"];
         if (startsWith(objName, "--")) continue; // Ignore some objects if the name starts with "--"
@@ -81,22 +79,23 @@ void EnvironmentalScene::readEnvObjectsFileContent(std::string content)
         obj->materialDepositionRate = this->availableObjects[name]->materialDepositionRate;
     }
     //    precomputeTerrainProperties(Heightmap());
+    return json;
 }
 
-void EnvironmentalScene::readEnvMaterialsFile(std::string filename)
+nlohmann::ordered_json EnvironmentalScene::readEnvMaterialsFile(const std::string& filename)
 {
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    this->readEnvMaterialsFileContent(content);
+    return this->readEnvMaterialsFileContent(content);
 }
 
-void EnvironmentalScene::readEnvMaterialsFileContent(std::string content)
+nlohmann::ordered_json EnvironmentalScene::readEnvMaterialsFileContent(const std::string& content)
 {
-    auto json = nlohmann::json::parse(toLower(content));
+    auto json = nlohmann::ordered_json::parse(toLower(content));
     for (auto& mat : json) {
         std::string matName = mat["name"];
         if (startsWith(matName, "--")) continue; // Ignore some materials if the name starts with "--"
-
+        /*
         float diffusionSpeed = mat["diffusionspeed"];
         float waterTransport = mat["watertransport"];
         float mass = mat["mass"];
@@ -109,7 +108,8 @@ void EnvironmentalScene::readEnvMaterialsFileContent(std::string content)
         material.waterTransport = waterTransport;
         material.mass = mass;
         material.decay = decay;
-        material.virtualHeight = virtualHeight;
+        material.virtualHeight = virtualHeight;*/
+        EnvMaterial material = mat;
 
         if (this->materials.count(matName) != 0) {
             material.currentState = this->materials[matName].currentState;
@@ -119,22 +119,23 @@ void EnvironmentalScene::readEnvMaterialsFileContent(std::string content)
 
         this->materials[matName] = material;
     }
+    return json;
 }
 
-void EnvironmentalScene::readEnvMaterialsTransformationsFile(std::string filename)
+void EnvironmentalScene::readEnvMaterialsTransformationsFile(const std::string& filename)
 {
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     this->readEnvMaterialsTransformationsFileContent(content);
 }
 
-void EnvironmentalScene::readEnvMaterialsTransformationsFileContent(std::string content)
+void EnvironmentalScene::readEnvMaterialsTransformationsFileContent(const std::string& content)
 {
     std::vector<MaterialsTransformation> rules;
     //    std::string sline;
     auto lines = split(content, "\n");
     //    while (std::getline(content, sline)) {
-    for (std::string sline : lines) {
+    for (const std::string& sline : lines) {
         if (sline.empty() || sline[0] == '#') continue; // Comments with "#"
         std::istringstream line(sline);
         std::map<std::string, float> inputs, outputs;
@@ -165,21 +166,22 @@ void EnvironmentalScene::readEnvMaterialsTransformationsFileContent(std::string 
     this->transformationRules = rules;
 }
 
-void EnvironmentalScene::readScenarioFile(std::string filename)
+nlohmann::ordered_json EnvironmentalScene::readScenarioFile(const std::string& filename)
 {
     std::ifstream file(filename);
     std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-    this->readScenarioFileContent(content);
+    return this->readScenarioFileContent(content);
 }
 
-void EnvironmentalScene::readScenarioFileContent(std::string content)
+nlohmann::ordered_json EnvironmentalScene::readScenarioFileContent(const std::string& content)
 {
-    auto json = nlohmann::json::parse(toLower(content));
+    auto json = nlohmann::ordered_json::parse(toLower(content));
 
     scenario = Scenario(this);
 
-    auto objects = json["objects"].get<std::map<std::string, nlohmann::json>>();
-    for (auto [name, obj] : objects) {
+    auto objects = json.at("objects");
+    // auto objects = objects_json.get<std::map<std::string, nlohmann::json>>();
+    for (auto [name, obj] : objects.items()) {
         float proba = obj["proba"];
         int amount = (obj.contains("amount") ? obj["amount"].get<int>() : -1);
 
@@ -223,6 +225,7 @@ void EnvironmentalScene::readScenarioFileContent(std::string content)
     scenario.dt = dt;
     scenario.waterLevel = waterLevel;
 
+    return json;
 }
 
 std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const
@@ -246,7 +249,7 @@ std::vector<std::string> EnvironmentalScene::getMaterialsToUpdate() const
 }
 
 
-EnvObject *EnvironmentalScene::findClosest(std::string objectName, const Vector3 &pos)
+EnvObject *EnvironmentalScene::findClosest(const std::string& objectName, const Vector3 &pos)
 {
     float minDist = std::numeric_limits<float>::max();
     EnvObject* bestElem = nullptr;
@@ -262,7 +265,7 @@ EnvObject *EnvironmentalScene::findClosest(std::string objectName, const Vector3
 }
 
 
-EnvObject *EnvironmentalScene::instantiate(std::string objectName)
+EnvObject *EnvironmentalScene::instantiate(const std::string& objectName)
 {
     if (this->availableObjects.count(objectName) == 0) {
         return nullptr;
@@ -384,11 +387,11 @@ std::vector<std::string> EnvironmentalScene::updateSedimentationKnowingFluidsAnd
 {
     std::cout << "SED_FLUID" << std::endl;
     std::vector<std::string> stillUnstable;
-    std::vector<std::string> names = unstableMaterials;
+    std::vector<std::string> materialNames = unstableMaterials;
 
     #pragma omp parallel for schedule(dynamic)
-    for(int i = 0; i < names.size(); i++) {
-        auto& material = materials[names[i]];
+    for(int i = 0; i < materialNames.size(); i++) {
+        auto& material = materials[materialNames[i]];
 
         bool needToBeUpdated = false;
         auto startState = material.currentState;
@@ -412,7 +415,7 @@ std::vector<std::string> EnvironmentalScene::updateSedimentationKnowingFluidsAnd
         material.update(smoothFluids, heightsGradients, this->scenario.dt);
         float diff = (material.currentState - startState).abs().sum();
         if (diff > 1e-3) {
-#pragma omp critical
+            #pragma omp critical
             {
                 stillUnstable.push_back(material.name);
             }
@@ -557,7 +560,7 @@ void EnvironmentalScene::precomputeTerrainProperties(const GridF& heightmap, flo
     });
 }
 
-void EnvironmentalScene::recomputeTerrainPropertiesForObject(std::string objectName)
+void EnvironmentalScene::recomputeTerrainPropertiesForObject(const std::string& objectName)
 {
     auto name = objectName;
     this->flowfield.iterateParallel([&](const Vector3i& pos) {

@@ -27,10 +27,10 @@ EnvObjsInterface::EnvObjsInterface(QWidget *parent)
     this->scene->readEnvMaterialsFile("EnvObjects/envMaterials.json");
     this->scene->readEnvObjectsFile("EnvObjects/primitives.json");
 
-    primitiveDefinitionFile.onChange([&](std::string newDefinitions) { updateObjectsDefinitions(newDefinitions); });
-    materialsDefinitionFile.onChange([&](std::string newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
-    transformationsFile.onChange([&](std::string newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
-    scenarioFile.onChange([&](std::string newDefinitions) { updateScenarioDefinition(newDefinitions); });
+    primitiveDefinitionFile.onChange([&](const std::string& newDefinitions) { updateObjectsDefinitions(newDefinitions); });
+    materialsDefinitionFile.onChange([&](const std::string& newDefinitions) { updateMaterialsDefinitions(newDefinitions); });
+    transformationsFile.onChange([&](const std::string& newDefinitions) { updateMaterialsTransformationsDefinitions(newDefinitions); });
+    scenarioFile.onChange([&](const std::string& newDefinitions) { updateScenarioDefinition(newDefinitions); });
 
     QTimer* hotreloadTimer = new QTimer(this);
     hotreloadTimer->setInterval(500);
@@ -174,11 +174,11 @@ QLayout *EnvObjsInterface::createGUI()
 //    ButtonElement* createFromGAN = new ButtonElement("From GAN", [&]() { this->fromGanUI(); });
     ButtonElement* createFromFile = new ButtonElement("From file", [&]() { this->loadScene("EnvObjects/testEnvObjects.json"); });
     TextEditElement* testingFittingFormula = new TextEditElement("", "Fitting func: ");
-    // testingFittingFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
+    // testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFittingFormula(expression); });
     TextEditElement* testingFitnessFormula = new TextEditElement("", "Fitness func: ");
-    // testingFitnessFormula->setOnTextChange([&](std::string expression) { this->evaluateAndDisplayCustomFitnessFormula(expression); });
-    testingFitnessFormula->setOnTextChange([&](std::string expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
-    testingFittingFormula->setOnTextChange([&](std::string expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
+    // testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->evaluateAndDisplayCustomFitnessFormula(expression); });
+    testingFitnessFormula->setOnTextChange([&](const std::string& expression) { this->testedFitnessFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
+    testingFittingFormula->setOnTextChange([&](const std::string& expression) { this->testedFittingFunction = expression; this->evaluateAndDisplayCustomFitnessAndFittingFormula(this->testedFitnessFunction, this->testedFittingFunction); });
     // ButtonElement* testPerformancesButton = new ButtonElement("Run test", [&]() { this->runPerformanceTest(); });
     ButtonElement* resetButton = new ButtonElement("Reset scene", [&]() { this->resetScene(); });
     CheckboxElement* addGroovesButton = new CheckboxElement("Spurs and grooves", displayGrooves);
@@ -338,25 +338,25 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
         updateObjectsList();
 }
 
-void EnvObjsInterface::setMaterialsDefinitionFile(std::string filename)
+void EnvObjsInterface::setMaterialsDefinitionFile(const std::string& filename)
 {
     this->materialsDefinitionFile.path = filename;
     this->scene->readEnvMaterialsFile(filename);
 }
 
-void EnvObjsInterface::setDefinitionFile(std::string filename)
+void EnvObjsInterface::setDefinitionFile(const std::string& filename)
 {
     this->primitiveDefinitionFile.path = filename;
     this->scene->readEnvObjectsFile(filename);
 }
 
-void EnvObjsInterface::setTransformationsFile(std::string filename)
+void EnvObjsInterface::setTransformationsFile(const std::string& filename)
 {
     this->transformationsFile.path = filename;
     this->scene->readEnvMaterialsTransformationsFile(filename);
 }
 
-void EnvObjsInterface::setScenarioFile(std::string filename)
+void EnvObjsInterface::setScenarioFile(const std::string& filename)
 {
     this->scenarioFile.path = filename;
     this->scene->readScenarioFile(filename);
@@ -544,7 +544,7 @@ Vector3 bestPositionForInstantiationUniform(std::shared_ptr<EnvironmentalScene> 
     return Vector3::invalid;
 }
 
-EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std::string objectName, Vector3 position, const Vector3& maxPos)
+EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3& maxPos)
 {
     bool verbose = false;
     Vector3 initialPosition = position;
@@ -571,7 +571,7 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(std:
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName, const BSpline &spline)
+EnvObject* EnvObjsInterface::instantiateObjectUsingSpline(const std::string& objectName, const BSpline &spline)
 {
     EnvObject* newObject = this->scene->instantiate(objectName);
     newObject->snake.position = spline.getPoint(.5f);
@@ -580,9 +580,10 @@ EnvObject* EnvObjsInterface::instantiateObjectUsingSpline(std::string objectName
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, const Vector3 &targetPosition, const GridF &score, bool waitForFullyGrown, bool updateScreen)
+EnvObject* EnvObjsInterface::instantiateSpecific(const std::string& _objectName, const Vector3 &targetPosition, const GridF &score, bool waitForFullyGrown, bool updateScreen, bool updateEnvironmentDirectly)
 {
     EnvObject* result = nullptr;
+    std::string objectName = _objectName;
     objectName = toLower(objectName);
     if (this->scene->availableObjects.count(objectName) == 0) {
         std::cerr << "No object '" << objectName << "' in database!" << std::endl;
@@ -618,14 +619,14 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, const V
             }
         }
         this->currentSelections = {newObject};
-        this->scene->recomputeTerrainPropertiesForObject(objectName);
-        this->updateEnvironmentFromEnvObjects(implicit != nullptr, updateScreen); // If implicit is null, don't update the map
+        if (updateEnvironmentDirectly) {
+            this->scene->recomputeTerrainPropertiesForObject(objectName);
+            this->updateEnvironmentFromEnvObjects(implicit != nullptr, updateScreen); // If implicit is null, don't update the map
+        }
         result = newObject;
         this->materialSimulationStable = false; // We have to compute the simulation again
-        return nullptr;
     } else {
         // std::cout << "Nope, impossible to instantiate..." << std::endl;
-        return nullptr;
     }
 
     if (updateScreen)
@@ -633,8 +634,9 @@ EnvObject* EnvObjsInterface::instantiateSpecific(std::string objectName, const V
     return result;
 }
 
-EnvObject *EnvObjsInterface::fakeInstantiate(std::string objectName, const GridF &score)
+EnvObject *EnvObjsInterface::fakeInstantiate(const std::string& _objectName, const GridF &score)
 {
+    std::string objectName = _objectName;
     objectName = toLower(objectName);
     if (this->scene->availableObjects.count(objectName) == 0) {
         std::cerr << "No object '" << objectName << "' in database!" << std::endl;
@@ -682,25 +684,28 @@ void EnvObjsInterface::runNextStep()
     EnvObject* createdObject = nullptr;
     Scenario& scenario = this->scene->scenario;
 
-    int nbObjects = 0;
+    int nbObjectsCreated = 0;
     float t1 = timeIt([&]() {
         for (auto& nextObject : scenario.nextObjects()) {
-            nbObjects ++;
-            bool possible;
-            GridF score;
+            // bool possible;
+            // GridF score;
             // displayProcessTime("Score map for " + nextObject.objectName + ": ", [&]() {
-            score = computeScoreMap(this->scene, nextObject.objectName, subsidedHeightmap.getDimensions(), possible) * focusedArea;
+            // score = computeScoreMap(this->scene, nextObject.objectName, subsidedHeightmap.getDimensions(), possible) * focusedArea;
             // });
-            if (possible) {
+            // if (possible) {
                 // displayProcessTime("Instantiation ", [&]() {
-                    createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid, score, false);
+                    // createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid, score, false, false, false);
                 // });
-            }
+            // }
+            createdObject = this->instantiateSpecific(nextObject.objectName, Vector3::invalid, GridF(), false, false, false);
+            if (createdObject != nullptr)
+                nbObjectsCreated++;
         }
+        // this->updateEnvironmentFromEnvObjects(true, true, true);
     });
-    float t2 = timeIt([&](){ updateEnvironmentFromEnvObjects(false, false, false); });
+    float t2 = timeIt([&](){ updateEnvironmentFromEnvObjects(false, false, true); });
     this->scene->currentTime += scenario.dt;
-    this->log("Step: " + std::to_string(this->scene->scenario.currentTime()) + " -- instantiation (" + std::to_string(nbObjects) + ") : " + showTime(t1) + " -- update : " + showTime(t2));
+    this->log("Step: " + std::to_string(this->scene->scenario.currentTime()) + " -- instantiation (" + std::to_string(nbObjectsCreated) + ") : " + showTime(t1) + " -- update : " + showTime(t2));
 }
 
 void EnvObjsInterface::runScenario()
@@ -718,7 +723,6 @@ void EnvObjsInterface::runScenario()
         float time = scenario.currentTime();
         float waterLevel = scenario.computeWaterLevel();
         (dynamic_cast<TerrainGenerationInterface*>(viewer->interfaces["terraingeneration"].get()))->setWaterLevel(waterLevel);
-        // this->log("Step: " + std::to_string(time) + (scenario.duration > 0 ? " / " + std::to_string(scenario.duration) : ""));
         runNextStep();
     }
     this->forceScenarioInterruption = true;
@@ -731,19 +735,19 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
     GridF subsidenceFactor = this->scene->scenario.computeSubsidence(initialHeightmap.getDimensions());
     subsidedHeightmap = initialHeightmap * subsidenceFactor;
 
-    std::vector<EnvObject*> immatureObjects;
+    // std::vector<EnvObject*> immatureObjects;
     if (killObjectsIfPossible) {
-        for (auto& obj : this->scene->instantiatedObjects) {
+        /*for (auto& obj : this->scene->instantiatedObjects) {
             if (obj->computeGrowingState() < 1.f) {
                 materialSimulationStable = false;
                 immatureObjects.push_back(obj);
             }
-        }
+        }*/
 
         bool atLeastOneDeath = false;
         std::set<std::string> deadObjects;
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (isIn(obj, immatureObjects)) continue;
+            // if (isIn(obj, immatureObjects)) continue;
             bool shouldDie = this->checkIfObjectShouldDie(obj, .1f);
             atLeastOneDeath |= shouldDie;
             if (shouldDie) {
@@ -754,7 +758,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
                 this->destroyEnvObject(obj);
                 deadObjects.insert(obj->name);
                 if (random_gen::generate() < .9)
-                    this->instantiateSpecific(obj->name, obj->evaluationPositions[0], GridF(), false, false);
+                    this->instantiateSpecific(obj->name, obj->evaluationPositions[0], GridF(), false, false, false);
             }
         }
         if (atLeastOneDeath) {
@@ -762,6 +766,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             for (auto death : deadObjects) {
                 this->scene->recomputeTerrainPropertiesForObject(death);
             }
+            //updateEnvironmentFromEnvObjects(false, false, false);
         }
     }
 
@@ -844,6 +849,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             }, verbose);
     }
 
+    /*
     for (auto& obj : immatureObjects) {
         if (obj->computeGrowingState() >= 1.f) {
             // Got mature during this process -> now let's save the fitting score
@@ -851,6 +857,7 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
             obj->fitnessScoreAtCreation = obj->evaluate();
         }
     }
+    */
 
     if (emitUpdateSignal) {
         Q_EMIT this->updated();
@@ -889,7 +896,7 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying, bool
         this->scene->recomputeTerrainPropertiesForObject(object->name);
 }
 
-void EnvObjsInterface::displayProbas(std::string objectName)
+void EnvObjsInterface::displayProbas(const std::string& objectName)
 {
     focusAreaEditing = false;
     flowfieldEditing = false;
@@ -917,7 +924,7 @@ void EnvObjsInterface::displayProbas(std::string objectName)
     Q_EMIT updated();
 }
 
-void EnvObjsInterface::displayMaterialDistrib(std::string materialName)
+void EnvObjsInterface::displayMaterialDistrib(const std::string& materialName)
 {
     this->currentMaterialEdited = materialName;
     GridF distribution = this->scene->materials[materialName].currentState;
@@ -1183,7 +1190,7 @@ void EnvObjsInterface::updateScenarioDefinition(const std::string &newDefinition
     }
 }
 
-void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formula)
+void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(const std::string& formula)
 {
     EnvPoint fake;
     // fake.s_FittingFunction = formula;
@@ -1205,7 +1212,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFitnessFormula(std::string formul
     }
 }
 
-void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formula)
+void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(const std::string& formula)
 {
     this->focusAreaEditing = false;
     this->flowfieldEditing = false;
@@ -1231,7 +1238,7 @@ void EnvObjsInterface::evaluateAndDisplayCustomFittingFormula(std::string formul
     }
 }
 
-void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(std::string fitnessFuncFormula, std::string fittingFuncFormula)
+void EnvObjsInterface::evaluateAndDisplayCustomFitnessAndFittingFormula(const std::string& fitnessFuncFormula, std::string fittingFuncFormula)
 {
     this->focusAreaEditing = false;
     this->flowfieldEditing = false;
@@ -1514,7 +1521,7 @@ void EnvObjsInterface::resetScene()
     Q_EMIT this->updated();
 }
 
-void EnvObjsInterface::loadScene(std::string filename)
+void EnvObjsInterface::loadScene(const std::string& filename)
 {
     this->resetScene();
     nlohmann::json json = nlohmann::json::parse(std::ifstream(filename));
@@ -1593,7 +1600,7 @@ void EnvObjsInterface::loadScene(std::string filename)
     Q_EMIT this->updated();
 }
 
-void EnvObjsInterface::saveScene(std::string filename)
+void EnvObjsInterface::saveScene(const std::string& filename)
 {
     nlohmann::json mainJson;
     std::vector<nlohmann::json> allObjects(this->scene->instantiatedObjects.size());
@@ -2243,7 +2250,7 @@ void EnvObjsInterface::saveForRenders()
         g.normalize();
     }
 
-    auto saveEnvObjsToJSON = [&](std::string filename) {
+    auto saveEnvObjsToJSON = [&](const std::string& filename) {
         auto meshInterface = std::static_pointer_cast<MeshInstanceAmplificationInterface>(this->findOtherInterface("meshinstance"));
         nlohmann::json json;
         for (auto& meshType : meshInterface->meshesOptions) {
@@ -2297,7 +2304,7 @@ void EnvObjsInterface::saveForRenders()
 
 
 /*
-StatsValues EnvObjsInterface::displayStatsForObjectCreation(std::string objectName, int nbSamples)
+StatsValues EnvObjsInterface::displayStatsForObjectCreation(const std::string& objectName, int nbSamples)
 {
     std::vector<float> values(nbSamples);
     bool isPossible;

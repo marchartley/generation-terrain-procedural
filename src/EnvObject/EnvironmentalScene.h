@@ -20,37 +20,34 @@ class EnvironmentalScene
 public:
     EnvironmentalScene();
 
-    GridV3 initFlow(bool force = false);
+    GridV3 &initFlow(bool force = false);
 
-    void readEnvObjectsFile(std::string filename);
-    void readEnvObjectsFileContent(std::string content);
+    nlohmann::ordered_json readEnvObjectsFile(const std::string& filename);
+    nlohmann::ordered_json readEnvObjectsFileContent(const std::string& content);
 
-    void readEnvMaterialsFile(std::string filename);
-    void readEnvMaterialsFileContent(std::string content);
+    nlohmann::ordered_json readEnvMaterialsFile(const std::string& filename);
+    nlohmann::ordered_json readEnvMaterialsFileContent(const std::string& content);
 
-    void readEnvMaterialsTransformationsFile(std::string filename);
-    void readEnvMaterialsTransformationsFileContent(std::string content);
+    void readEnvMaterialsTransformationsFile(const std::string& filename);
+    void readEnvMaterialsTransformationsFileContent(const std::string& content);
 
-    void readScenarioFile(std::string filename);
-    void readScenarioFileContent(std::string content);
+    nlohmann::ordered_json readScenarioFile(const std::string& filename);
+    nlohmann::ordered_json readScenarioFileContent(const std::string& content);
 
     std::vector<std::string> getMaterialsToUpdate() const;
 
 
     GridV3 flowfield;
     GridV3 initialFlowfield;
-    GridV3 terrainNormals;
 
     std::map<std::string, EnvMaterial> materials;
-
-    float flowImpactFactor;
 
     std::map<std::string, EnvObject*> availableObjects;
     std::vector<EnvObject*> instantiatedObjects;
 
-    EnvObject* findClosest(std::string objectName, const Vector3& pos);
+    EnvObject* findClosest(const std::string& objectName, const Vector3& pos);
 
-    EnvObject* instantiate(std::string objectName);
+    EnvObject* instantiate(const std::string& objectName);
     void removeObject(EnvObject* obj);
     void removeAllObjects();
     // bool applyEffects(const GridF& heights, const GridV3 &userFlow = GridV3());
@@ -66,7 +63,7 @@ public:
     std::map<std::string, GridV3> allVectorProperties;
     std::map<std::string, GridF> allScalarProperties;
     void precomputeTerrainProperties(const GridF &heightmap, float waterLevel, float maxHeight);
-    void recomputeTerrainPropertiesForObject(std::string objectName);
+    void recomputeTerrainPropertiesForObject(const std::string& objectName);
     void recomputeFlowAndSandProperties(const GridF &heightmap, float waterLevel, float maxHeight);
     void recomputeFlow();
 

@@ -269,7 +269,7 @@ void TerrainGenerationInterface::reloadTerrain(std::map<std::string, std::shared
     this->setWaterLevel(this->waterLevel);
 }
 
-void TerrainGenerationInterface::createTerrainFromFile(std::string filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
+void TerrainGenerationInterface::createTerrainFromFile(const std::string& filename, std::map<std::string, std::shared_ptr<ActionInterface> > actionInterfaces)
 {    
     this->lastLoadedMap = filename;
     std::string ext = toUpper(getExtension(filename));
@@ -436,7 +436,7 @@ void TerrainGenerationInterface::createTerrainFromImplicitPatches(nlohmann::json
 
 }
 
-void TerrainGenerationInterface::saveTerrain(std::string filename, Vector3 dimensions)
+void TerrainGenerationInterface::saveTerrain(const std::string& filename, Vector3 dimensions)
 {
     std::string ext = toUpper(getExtension(filename));
     if (ext == "PNG" || ext == "JPG" || ext == "TGA" || ext == "BMP" || ext == "HDR") {
@@ -1240,7 +1240,7 @@ void TerrainGenerationInterface::reinforceVoxels()
     this->voxelGrid->setVoxelValues(voxelGrid->getVoxelValues() * distances);
 }
 
-void TerrainGenerationInterface::saveErosionDepositionTextureMasks(std::string savingFolder, std::string savingName)
+void TerrainGenerationInterface::saveErosionDepositionTextureMasks(const std::string& savingFolder, std::string savingName)
 {
     std::string terrainFilename = savingFolder + "/" + savingName + "_height.png";
     std::string erosionFilename = savingFolder + "/" + savingName + "_erod.png";

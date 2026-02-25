@@ -13,7 +13,7 @@
 
 class ViewerInterface : public QMainWindow{
 public:
-    ViewerInterface(std::string preloaded_heightmap = "", MapMode displayMode = MapMode::GRID_MODE);
+    ViewerInterface(const std::string& preloaded_heightmap = "", MapMode displayMode = MapMode::GRID_MODE);
     virtual ~ViewerInterface();
 
     void setupUi();
@@ -31,7 +31,7 @@ public:
     void focusOutEvent(QFocusEvent* e);
 
 public Q_SLOTS:
-//    void openInterface(std::string interfaceName, std::shared_ptr<ActionInterface> object);
+//    void openInterface(const std::string& interfaceName, std::shared_ptr<ActionInterface> object);
     void openInterface(std::shared_ptr<ActionInterface> object);
 
     void hideAllInteractiveParts();

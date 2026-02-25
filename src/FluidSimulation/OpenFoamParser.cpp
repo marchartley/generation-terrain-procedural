@@ -263,7 +263,7 @@ GridV3 transformToGrid(std::map<int, Cell>& cells, std::vector<Face>& faces, std
 
 
 
-GridV3 OpenFoamParser::parseSimulation(std::string foldername)
+GridV3 OpenFoamParser::parseSimulation(const std::string& foldername)
 {
     // bool regularGrid = true;
     int highestIteration = -1;
@@ -340,7 +340,7 @@ GridV3 OpenFoamParser::parseSimulation(std::string foldername)
 
 
 
-std::string OpenFoamParser::createSimulationFile(std::string foldername, const GridF& _boundaries)
+std::string OpenFoamParser::createSimulationFile(const std::string& foldername, const GridF& _boundaries)
 {
     float scaleFactor = 100.f;
     Mesh m = Mesh::applyMarchingCubes(_boundaries);

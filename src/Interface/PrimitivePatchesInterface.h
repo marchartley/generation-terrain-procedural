@@ -58,8 +58,8 @@ public Q_SLOTS:
     void rippleScene();
     void deformationFromFlow();
 
-    void savePatchesAsFile(std::string filename);
-    void loadPatchesFromFile(std::string filename);
+    void savePatchesAsFile(const std::string& filename);
+    void loadPatchesFromFile(const std::string& filename);
     void hotReloadFile();
 
     void autoGeneratePasse(const GridF& terrainSurface, const GridV3& waterFlow, const GridV3& surfaceNormals, const std::vector<Vector3>& availablePositions);
@@ -75,7 +75,7 @@ public Q_SLOTS:
 
     void openFileForNewPatch();
 
-    void setMainFilename(std::string newMainFilename);
+    void setMainFilename(const std::string& newMainFilename);
     void findAllSubfiles();
 
     void loadTransformationRules();

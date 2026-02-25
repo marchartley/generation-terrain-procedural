@@ -51,8 +51,8 @@ class HierarchicalListWidgetItemBase : public QListWidgetItem
 {
     //    Q_OBJECT
 public:
-    HierarchicalListWidgetItemBase(std::string internal_text = "", QListWidget* parent = nullptr);
-    HierarchicalListWidgetItemBase(std::string internal_text, int ID, int level = 0, QListWidget* parent = nullptr);
+    HierarchicalListWidgetItemBase(const std::string& internal_text = "", QListWidget* parent = nullptr);
+    HierarchicalListWidgetItemBase(const std::string& internal_text, int ID, int level = 0, QListWidget* parent = nullptr);
 
     void setLevel(int newLevel);
 
@@ -66,7 +66,7 @@ class HierarchicalListWidgetItem : public HierarchicalListWidgetItemBase
 {
 //    Q_OBJECT
 public:
-    HierarchicalListWidgetItem(std::string internal_text, T itemValue = T(), int ID = 0, int level = 0, QListWidget* parent = nullptr)
+    HierarchicalListWidgetItem(const std::string& internal_text, T itemValue = T(), int ID = 0, int level = 0, QListWidget* parent = nullptr)
         : HierarchicalListWidgetItemBase(internal_text, ID, level, parent), itemValue(itemValue)
     {}
 

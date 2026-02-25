@@ -23,9 +23,9 @@ public:
     static std::set<std::shared_ptr<Shader>> allShaders;
     Shader();
     Shader(Shader& copy);
-    Shader(std::string vertexShaderFilename);
-    Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename);
-    Shader(std::string vertexShaderFilename, std::string fragmentShaderFilename,
+    Shader(const std::string& vertexShaderFilename);
+    Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename);
+    Shader(const std::string& vertexShaderFilename, std::string fragmentShaderFilename,
            std::string geometryShaderFilename);
 //    Shader(const char* vertexShaderFilename);
 //    Shader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
@@ -35,29 +35,29 @@ public:
 
     bool use(bool update_source_files = false);
 
-    void setBool(std::string pname, bool value);
-    void setInt(std::string pname, int value);
-    void setFloat(std::string pname, float value);
-    void setVector(std::string pname, const Vector3& value);
-    void setVector(std::string pname, const Vector4& value);
-    void setVector(std::string pname, glm::vec2 value);
-//    void setVector(std::string pname, glm::vec3 value);
-//    void setVector(std::string pname, glm::vec4 value);
-    void setVector(std::string pname, const float* value, int n);
-    void setLightSource(std::string pname, LightSource& value);
-    void addLightSource(std::string pname, LightSource& value);
-    void clearLightSources(std::string pname);
-    void setPositionalLight(std::string pname, PositionalLight& value);
-    void setMaterial(std::string pname, Material& value);
-    void setTexture2D(std::string pname, int index, GridI texture);
-    void setTexture2D(std::string pname, int index, int width, int height, int* data);
-    void setTexture2D(std::string pname, int index, int width, int height, int** data);
-    void setTexture3D(std::string pname, int index, GridF texture);
-//    void setMatrix(std::string pname, Matrix value);
+    void setBool(const std::string& pname, bool value);
+    void setInt(const std::string& pname, int value);
+    void setFloat(const std::string& pname, float value);
+    void setVector(const std::string& pname, const Vector3& value);
+    void setVector(const std::string& pname, const Vector4& value);
+    void setVector(const std::string& pname, glm::vec2 value);
+//    void setVector(const std::string& pname, glm::vec3 value);
+//    void setVector(const std::string& pname, glm::vec4 value);
+    void setVector(const std::string& pname, const float* value, int n);
+    void setLightSource(const std::string& pname, LightSource& value);
+    void addLightSource(const std::string& pname, LightSource& value);
+    void clearLightSources(const std::string& pname);
+    void setPositionalLight(const std::string& pname, PositionalLight& value);
+    void setMaterial(const std::string& pname, Material& value);
+    void setTexture2D(const std::string& pname, int index, GridI texture);
+    void setTexture2D(const std::string& pname, int index, int width, int height, int* data);
+    void setTexture2D(const std::string& pname, int index, int width, int height, int** data);
+    void setTexture3D(const std::string& pname, int index, GridF texture);
+//    void setMatrix(const std::string& pname, Matrix value);
 
     static void applyToAllShaders(std::function<void(std::shared_ptr<Shader>)> func);
 
-    static std::string readShaderSource(std::string filename);
+    static std::string readShaderSource(const std::string& filename);
     static std::string addDefinitionsToSource(std::string src, std::map<std::string, std::string> newDefinitions);
 
     std::map<int, GLuint> textureSlotIndices;
@@ -76,13 +76,13 @@ public:
     int gShader = -1;
 
 
-    void setMat4(std::string pname, glm::mat4& values)
+    void setMat4(const std::string& pname, glm::mat4& values)
     {
         GlobalsGL::f()->glUniformMatrix4fv(GlobalsGL::f()->glGetUniformLocation(programID, pname.c_str()),
                                            1, GL_FALSE, &values[0][0]);
     }
     template <class T>
-    void setMatrix(std::string pname, std::vector<std::vector<T>> values)
+    void setMatrix(const std::string& pname, std::vector<std::vector<T>> values)
     {
         int n = values.size(), m = values[0].size();
         T* vals = new T[n * m];
@@ -92,7 +92,7 @@ public:
         this->setMatrix(pname, vals, n, m);
     }
     template <class T>
-    void setMatrix(std::string pname, std::vector<T> values)
+    void setMatrix(const std::string& pname, std::vector<T> values)
     {
         this->setMatrix(pname, &values.begin());
     }
@@ -126,7 +126,7 @@ public:
     }
 
     template <class T>
-    void setMatrix(std::string pname, T values[], int n, int m)
+    void setMatrix(const std::string& pname, T values[], int n, int m)
     {
 //        if (this == nullptr) {
 //            std::cerr << "No shader defined" << std::endl;
@@ -165,7 +165,7 @@ public:
             throw std::invalid_argument("The size of the matrix to send to the shader is unusual");
     }
     template <class T>
-    void setVector(std::string pname, std::vector<T> values)
+    void setVector(const std::string& pname, std::vector<T> values)
     {
         return this->setVector(pname, values.data(), values.size());
     }

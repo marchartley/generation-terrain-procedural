@@ -100,13 +100,13 @@ void HierarchicalListWidget::dropEvent(QDropEvent *event)
     }
 }
 
-HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(std::string internal_text, QListWidget *parent)
+HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(const std::string& internal_text, QListWidget *parent)
     : HierarchicalListWidgetItemBase(internal_text, -1, 0, parent)
 {
 
 }
 
-HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(std::string internal_text, int ID, int level, QListWidget *parent)
+HierarchicalListWidgetItemBase::HierarchicalListWidgetItemBase(const std::string& internal_text, int ID, int level, QListWidget *parent)
     : QListWidgetItem(parent), ID(ID), level(level), internalText(internal_text)
 {
     this->setLevel(level);

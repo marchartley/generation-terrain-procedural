@@ -262,8 +262,8 @@ public:
     // static Matrix3<T> perlin(const Vector3& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
     static Matrix3<T> perlin(const Vector3i& dimensions, const Vector3 &scale = Vector3(1, 1, 1), int seed = 0);
 
-    static Matrix3<Vector3> fromImageRGB(std::string filename);
-    static Matrix3<float> fromImageBW(std::string filename);
+    static Matrix3<Vector3> fromImageRGB(const std::string& filename);
+    static Matrix3<float> fromImageBW(const std::string& filename);
 
     Matrix3<T> operator-() const;
     template <class U>

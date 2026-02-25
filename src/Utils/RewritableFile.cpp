@@ -4,7 +4,7 @@ RewritableFile::RewritableFile()
 {
 }
 
-RewritableFile::RewritableFile(std::string filename)
+RewritableFile::RewritableFile(const std::string& filename)
     : filename(filename)
 {
 }

@@ -7,7 +7,7 @@ class ComputeShader : public Shader
 {
 public:
     ComputeShader();
-    ComputeShader(std::string shaderPath);
+    ComputeShader(const std::string& shaderPath);
 
     void apply(int nbWorkersX = -1, int nbWorkersY = -1, int nbWorkersZ = -1);
 

@@ -33,7 +33,7 @@ ImagePainter::ImagePainter(const std::string& name, ChartView* chartView, QWidge
     });
 }
 /*
-ImagePainter *ImagePainter::getInstance(std::string name)
+ImagePainter *ImagePainter::getInstance(const std::string& name)
 {
     if (name == "") name = ImagePainter::defaultName;
     if (ImagePainter::instances.count(name) == 0) {

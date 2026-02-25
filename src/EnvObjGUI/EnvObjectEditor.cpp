@@ -13,30 +13,27 @@ EnvObjectEditor::EnvObjectEditor(const std::string& name, ChartView* chartView, 
 
     kelvinletParams.displayResultingField = false;
 
-    bodyParameters.pinchK = new PinchKelvinletCurve();
-    bodyParameters.twistK = new TwistKelvinletCurve();
-    bodyParameters.grabK = new GrabKelvinletCurve();
-    bodyParameters.scaleK = new ScaleKelvinletCurve();
-
-    kelvinletParams.additional_kelvinlets.push_back(bodyParameters.pinchK);
-    kelvinletParams.additional_kelvinlets.push_back(bodyParameters.twistK);
-    kelvinletParams.additional_kelvinlets.push_back(bodyParameters.grabK);
-    kelvinletParams.additional_kelvinlets.push_back(bodyParameters.scaleK);
+    QTimer* animationTimer = new QTimer();
+    animationTimer->connect(animationTimer, &QTimer::timeout, this, [=]() {
+        if (this->animating) {
+            updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        }
+    });
+    animationTimer->setInterval(20);
+    animationTimer->start();
 }
 
 EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 {
     this->toolsInterface->clear();
-    this->toolsInterface->add(PainterToolsUI::createKelvinletToolsUI(this, this->chartView, this->dataModel, &this->kelvinletParams));
+    this->toolsInterface->add(PainterToolsUI::createKelvinletToolsUI(this, this->chartView, this->dataModel, &this->kelvinletParams,
+        [=](const Vector3& mousePos, bool updateCurrentKelvinlet) { this->updateCurrentChartViewWithCurrentKelvinlets(mousePos, updateCurrentKelvinlet); },
+        [=](bool useCurrentKelvinlet) { validateEnvObject(useCurrentKelvinlet); return this->getVectorFieldWithRotation(useCurrentKelvinlet); }));
 
     InterfaceUI* bodyKelvinletUI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet body editor");
 
-    auto pinchForceSlider = new SliderElement("Pinch force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.pinchK->force);
-    auto twistForceSlider = new SliderElement("Twist force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.twistK->force);
-    auto grabForceSlider = new SliderElement("Grab force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.grabK->force);
-    auto scaleForceSlider = new SliderElement("Scale force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.scaleK->force);
-
     auto simulationModeCheckbox = new CheckboxElement("Simulation", depositionSimulationDisplay);
+    auto animatedModeCheckbox = new CheckboxElement("Animate", animating);
 
     auto anchorSelectionCombobox = new ComboboxElement("Anchor");
     if (this->currentObject) {
@@ -59,16 +56,39 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
     auto validationButton = new ButtonElement("Validate");
 
     if (this->currentObject->isCurve() || this->currentObject->isArea()) {
+
+        auto pinchForceSlider = new SliderElement("Pinch force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.pinchK->force);
+        auto twistForceSlider = new SliderElement("Twist force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.twistK->force);
+        auto grabForceSlider = new SliderElement("Grab force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.grabK->force);
+        auto scaleForceSlider = new SliderElement("Scale force", bodyParameters.minForce, bodyParameters.maxForce, .01f, bodyParameters.scaleK->force);
+
         bodyKelvinletUI->add(std::vector<UIElement*>{
             pinchForceSlider,
             twistForceSlider,
             grabForceSlider,
             scaleForceSlider
         });
+
+        pinchForceSlider->setOnValueChanged([=](float newValue) {
+            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        });
+
+        twistForceSlider->setOnValueChanged([=](float newValue) {
+            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        });
+
+        grabForceSlider->setOnValueChanged([=](float newValue) {
+            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        });
+
+        scaleForceSlider->setOnValueChanged([=](float newValue) {
+            this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
+        });
+
     }
     bodyKelvinletUI->add(std::vector<UIElement*>{
         anchorSelectionCombobox,
-        simulationModeCheckbox,
+        createHorizontalGroupUI(std::vector<UIElement*>{simulationModeCheckbox, animatedModeCheckbox}),
         angleInitialFlow,
         strengthInitialFlow,
         validationButton,
@@ -78,22 +98,6 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
 
 
 
-
-    pinchForceSlider->setOnValueChanged([=](float newValue) {
-        this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-    });
-
-    twistForceSlider->setOnValueChanged([=](float newValue) {
-        this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-    });
-
-    grabForceSlider->setOnValueChanged([=](float newValue) {
-        this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-    });
-
-    scaleForceSlider->setOnValueChanged([=](float newValue) {
-        this->updateCurrentChartViewWithCurrentKelvinlets(Vector3::invalid, false);
-    });
 
     QObject::connect(this, &AbstractPlotter::updated, this, [=]() {
         if (this->depositionSimulationDisplay) {
@@ -119,13 +123,17 @@ EnvObjectEditor *EnvObjectEditor::updateToolsInterface()
         validateEnvObject(false);
     });
 
-
-    QObject::connect(chartView, &ChartView::mouseMoved, chartView, [=](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e) {
-        this->updateCurrentChartViewWithCurrentKelvinlets(pos, e->buttons().testFlag(Qt::LeftButton));
-    });
-
     kelvinletParams.setOnNewKelvinlet([=](Kelvinlet* k) {
         this->kelvinletAnchors[k] = currentAnchorPoint;
+        if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::MAIN) {
+            k->translate(-(dynamic_cast<EnvPoint*>(currentObject))->position);
+        }
+        else if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::START) {
+            k->translate(-(dynamic_cast<EnvCurve*>(currentObject))->curve.points.front());
+        }
+        else if (kelvinletAnchors[k] == KELVINLET_ANCHOR_POINT::END) {
+            k->translate(-(dynamic_cast<EnvCurve*>(currentObject))->curve.points.back());
+        }
     });
 
     anchorSelectionCombobox->setOnSelectionChanged([=] (int) {
@@ -140,10 +148,25 @@ EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
 {
     this->currentObject = envObj->clone();
 
+    if (currentObject->isCurve() || currentObject->isArea()) {
+        bodyParameters.pinchK = new PinchKelvinletCurve();
+        bodyParameters.twistK = new TwistKelvinletCurve();
+        bodyParameters.grabK = new GrabKelvinletCurve();
+        bodyParameters.scaleK = new ScaleKelvinletCurve();
+
+        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.pinchK);
+        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.twistK);
+        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.grabK);
+        kelvinletParams.additional_kelvinlets.push_back(bodyParameters.scaleK);
+    }
+
     if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
         asPoint->position = Vector3(50, 50, 0);
+        this->objectScale = 1.f;
+
     } else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
         asCurve->curve = BSpline({Vector3(10, 10), Vector3(60, 30), Vector3(30, 60), Vector3(90, 90)});
+        this->objectScale = asCurve->curve.length() / asCurve->length;
 
         bodyParameters.pinchK->curve = asCurve->curve;
         bodyParameters.twistK->curve = asCurve->curve;
@@ -154,8 +177,10 @@ EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
         bodyParameters.twistK->radialScale = asCurve->width;
         bodyParameters.grabK->radialScale = asCurve->width;
         bodyParameters.scaleK->radialScale = asCurve->width;
+
     } else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
         asArea->curve = ShapeCurve({Vector3(30, 30), Vector3(30, 70), Vector3(70, 70), Vector3(60, 40)});
+        this->objectScale = asArea->curve.computeArea() / (asArea->width * asArea->length);
 
         bodyParameters.pinchK->curve = asArea->curve;
         bodyParameters.twistK->curve = asArea->curve;
@@ -166,6 +191,7 @@ EnvObjectEditor *EnvObjectEditor::addEnvObject(EnvObject *envObj)
         bodyParameters.twistK->radialScale = asArea->width;
         bodyParameters.grabK->radialScale = asArea->width;
         bodyParameters.scaleK->radialScale = asArea->width;
+
     }
 
 
@@ -251,6 +277,8 @@ GridV3 EnvObjectEditor::getVectorFieldWithRotation(bool takeIntoAccountCurrentKe
 
 void EnvObjectEditor::updateCurrentChartViewWithCurrentKelvinlets(const Vector3& mouseRelPos, bool updateCurrentKelvinlet)
 {
+    this->animateEnvObject(animating);
+
     if (updateCurrentKelvinlet)
         PainterToolsUI::updateCurrentKelvinlet(&this->kelvinletParams, Vector3::invalid);
     Vector3i imgSize = Vector3i(300, 300, 1);
@@ -278,24 +306,26 @@ void EnvObjectEditor::updateCurrentChartViewWithCurrentKelvinlets(const Vector3&
 
 EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinlet) const
 {
+    std::vector<Kelvinlet*> evaluatedKelvinlets = kelvinletParams.kelvinlets;
+    if (takeIntoAccountCurrentKelvinlet && this->kelvinletParams.currentKelvinlet->valid() && !isIn(kelvinletParams.currentKelvinlet, kelvinletParams.kelvinlets))
+        evaluatedKelvinlets.push_back(this->kelvinletParams.currentKelvinlet);
+
     if (auto asPoint = dynamic_cast<EnvPoint*>(currentObject)) {
         // asPoint->mainKelvinlets = this->kelvinletParams.kelvinlets;
         asPoint->mainKelvinlets.clear();
-        for (auto& k : kelvinletParams.kelvinlets) {
-            asPoint->mainKelvinlets.push_back(k->clone()->translate(-asPoint->position));
+        for (auto& k : evaluatedKelvinlets) {
+            asPoint->mainKelvinlets.push_back(k);
         }
-        if (takeIntoAccountCurrentKelvinlet && this->kelvinletParams.currentKelvinlet->valid() && !isIn(kelvinletParams.currentKelvinlet, kelvinletParams.kelvinlets))
-            asPoint->mainKelvinlets.push_back(kelvinletParams.currentKelvinlet->clone()->translate(-asPoint->position));
     }
     else if (auto asCurve = dynamic_cast<EnvCurve*>(currentObject)) {
         asCurve->startingPointKelvinlets.clear();
         asCurve->endingPointKelvinlets.clear();
         asCurve->curveKelvinlets.clear();
-        for (auto& k : kelvinletParams.kelvinlets) {
+        for (auto& k : evaluatedKelvinlets) {
             if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k) == START)
-                asCurve->startingPointKelvinlets.push_back(k->clone()->translate(-asCurve->curve.points.front()));
+                asCurve->startingPointKelvinlets.push_back(k);
             else if (kelvinletAnchors.count(k) > 0 && kelvinletAnchors.at(k) == END)
-                asCurve->endingPointKelvinlets.push_back(k->clone()->translate(-asCurve->curve.points.back()));
+                asCurve->endingPointKelvinlets.push_back(k);
         }
         // asCurve->endingPointKelvinlets = ...;
         asCurve->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
@@ -304,8 +334,53 @@ EnvObject *EnvObjectEditor::validateEnvObject(bool takeIntoAccountCurrentKelvinl
         asArea->curveKelvinlets = this->kelvinletParams.additional_kelvinlets;
     }
 
-    nlohmann::json json = currentObject;
-    std::cout << "My object in JSON form: \n" << json["flow-effect"].dump(1) << std::endl;
+    // nlohmann::json json = currentObject;
+    // std::cout << "My object in JSON form: \n" << json["flow-effect"].dump(1) << std::endl;
 
     return currentObject;
+}
+
+void EnvObjectEditor::animateEnvObject(bool animate)
+{
+    if (animate) {
+        if (animationFrame == 0) {
+            AABBox bounds(Vector3::origin, dataModel->vectorData.field.getDimensions().xy());
+            if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+                verticesTargets = {Vector3::random(bounds)};
+            }
+            else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+                verticesTargets.resize(asCurve->curve.size());
+                for (auto& p : verticesTargets)
+                    p = Vector3::random(bounds);
+            }
+            else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+                verticesTargets.resize(asArea->curve.size());
+                for (auto& p : verticesTargets)
+                    p = Vector3::random(bounds);
+            }
+        }
+        float remainingFrames = 50 - animationFrame;
+        if (auto asPoint = dynamic_cast<EnvPoint*>(this->currentObject)) {
+            auto& p = asPoint->position;
+            p += (verticesTargets[0] - p) * (interpolation::smooth(remainingFrames / 50.f)) / remainingFrames;
+        }
+        else if (auto asCurve = dynamic_cast<EnvCurve*>(this->currentObject)) {
+            auto newCurve = asCurve->curve;
+            for (size_t i = 0; i < newCurve.size(); i++) {
+                auto& p = newCurve[i];
+                p += (verticesTargets[i] - p) * (interpolation::smooth(remainingFrames / 50.f)) / remainingFrames;
+            }
+            asCurve->updateCurve(newCurve);
+        }
+        else if (auto asArea = dynamic_cast<EnvArea*>(this->currentObject)) {
+            auto newCurve = asArea->curve;
+            for (size_t i = 0; i < newCurve.size(); i++) {
+                auto& p = newCurve[i];
+                p += (verticesTargets[i] - p) * (interpolation::smooth(remainingFrames / 50.f)) / remainingFrames;
+            }
+            asArea->updateCurve(newCurve);
+        }
+        animationFrame = (animationFrame + 1) % 50;
+    }
+    this->addImage(displayEnvObject().first);
 }

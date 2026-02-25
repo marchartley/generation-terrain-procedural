@@ -10,7 +10,7 @@ BiomeInstance::BiomeInstance()
         ID = std::max(ID, inst.first + 1);
 }
 
-BiomeInstance BiomeInstance::fromClass(std::string className)
+BiomeInstance BiomeInstance::fromClass(const std::string& className)
 {
     BiomeInstance biome;
     biome.classname = className;

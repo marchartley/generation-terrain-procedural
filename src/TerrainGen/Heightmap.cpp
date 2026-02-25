@@ -32,7 +32,7 @@ Heightmap::Heightmap(int nx, int ny, float heightFactor) {
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
 }
 
-Heightmap::Heightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
+Heightmap::Heightmap(const std::string& heightmap_filename, int nx, int ny, float heightFactor)
 {
     this->loadFromHeightmap(heightmap_filename, nx, ny, heightFactor);
     this->biomeIndices = Matrix3<std::vector<int>>(this->heights.getDimensions());
@@ -482,7 +482,7 @@ GridF Heightmap::getVoxelized(const Vector3& dimensions, const Vector3& scale)
     return v.getVoxelValues();
 }
 
-Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, int ny, float heightFactor)
+Heightmap& Heightmap::loadFromHeightmap(const std::string& heightmap_filename, int nx, int ny, float heightFactor)
 {
     if (!checkPathExists(heightmap_filename)) {
         throw std::runtime_error("Error: Impossible to load '" + heightmap_filename + "', file not found");
@@ -544,7 +544,7 @@ Heightmap& Heightmap::loadFromHeightmap(std::string heightmap_filename, int nx, 
     return *this;
 }
 
-void Heightmap::saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions, bool useRelativeHeight)
+void Heightmap::saveHeightmap(const std::string& heightmap_filename, Vector3 imageDimensions, bool useRelativeHeight) const
 {
     if (!imageDimensions.isValid())
         imageDimensions = this->heights.getDimensions();

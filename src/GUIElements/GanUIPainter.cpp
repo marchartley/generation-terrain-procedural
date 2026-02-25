@@ -43,13 +43,14 @@ GanUIPainter::GanUIPainter(const std::string& name, ChartView *chartView, QWidge
     });
 }
 
-GanUIPainter *GanUIPainter::getInstance(std::string name)
+GanUIPainter *GanUIPainter::getInstance(const std::string& name)
 {
-    if (name == "") name = GanUIPainter::defaultName;
-    if (GanUIPainter::instances.count(name) == 0) {
-        GanUIPainter::init(name);
+    std::string usedName = name;
+    if (usedName == "") usedName = GanUIPainter::defaultName;
+    if (GanUIPainter::instances.count(usedName) == 0) {
+        GanUIPainter::init(usedName);
     }
-    return dynamic_cast<GanUIPainter*>(GanUIPainter::instances[name]);
+    return dynamic_cast<GanUIPainter*>(GanUIPainter::instances[usedName]);
 }
 
 GanUIPainter *GanUIPainter::init(const std::string& name, ChartView *chartView, QWidget *parent)

@@ -113,8 +113,14 @@ void updateKelvinletList(HierarchicalListUI* listWidget, KelvinletToolParams* pa
     listWidget->get()->blockSignals(false);
     listWidget->update();
 }
-InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params)
+InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, std::function<void (const Vector3 &, bool)> onUpdateCallback, std::function<GridV3 (bool)> vectorFieldFunction)
 {
+    if (!vectorFieldFunction) {
+        vectorFieldFunction = [=](bool useCurrentKelvinlet) { return params->getVectorField(useCurrentKelvinlet); };
+    }
+    if (!onUpdateCallback) {
+        onUpdateCallback = [=](const Vector3& mousePos, bool updateCurrentKelvinlet){ PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, mousePos, updateCurrentKelvinlet, vectorFieldFunction); };
+    }
     params->temporaryVectorData = dataModel->vectorData;
 
     InterfaceUI* UI = new InterfaceUI(new QVBoxLayout(), false, "Kelvinlet tool editor");
@@ -153,13 +159,13 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
     });
 
     radialScaleSlider->setOnValueChanged([=](float) {
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid, true);
+        onUpdateCallback(Vector3::invalid, true);
     });
     muSlider->setOnValueChanged([=](float) {
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid, true);
+        onUpdateCallback(Vector3::invalid, true);
     });
     poissonSlider->setOnValueChanged([=](float) {
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid, true);
+        onUpdateCallback(Vector3::invalid, true);
     });
 
     pinchRadio->setOnChecked([=](bool checked) {
@@ -194,17 +200,17 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
     displayAsArrowsCheckbox->setOnChecked([=](bool checked) {
         if (!checked) return;
         dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::ARROWS;
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid);
+        onUpdateCallback(Vector3::invalid, false);
     });
     displayAsFlowLinesCheckbox->setOnChecked([=](bool checked) {
         if (!checked) return;
         dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::FLOWLINES;
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid);
+        onUpdateCallback(Vector3::invalid, false);
     });
     displayNoDisplayCheckbox->setOnChecked([=](bool checked) {
         if (!checked) return;
         dataModel->vectorData.displayParameters.displayMode = DisplayedVectorFieldParameters::NONE;
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid);
+        onUpdateCallback(Vector3::invalid, false);
     });
 
 
@@ -255,10 +261,10 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
             }
             updateKelvinletList(kelvinletsHistory, params);            
         }
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, Vector3::invalid);
+        onUpdateCallback(Vector3::invalid, true);
     });
 
-    QObject::connect(chartView, &ChartView::clickedOnValue, chartView, [=](const Vector3& pos, bool leftClick, bool rightClick) {
+    QObject::connect(chartView, &ChartView::clickedOnValue, kelvinletsHistory, [=](const Vector3& pos, bool leftClick, bool rightClick) {
         if (auto k = dynamic_cast<KelvinletPoint*>(params->currentKelvinlet)) {
             if (pos.isValid()) {
                 if (rightClick) {
@@ -284,8 +290,8 @@ InterfaceUI *PainterToolsUI::createKelvinletToolsUI(AbstractPlotter* plotter, Ch
         }
     });
 
-    QObject::connect(chartView, &ChartView::mouseMoved, chartView, [=](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e) {
-        PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(plotter, chartView, dataModel, params, pos, e->buttons().testFlag(Qt::LeftButton));
+    QObject::connect(chartView, &ChartView::mouseMoved, [=](const Vector3& pos, const Vector3& prevPos, QMouseEvent* e) {
+        onUpdateCallback(pos, e->buttons().testFlag(Qt::LeftButton));
     });
 
     return UI;
@@ -331,15 +337,18 @@ std::pair<GridV3, GridF> PainterToolsUI::getKelvinletParametersImage(GridV3& img
     return {img, alpha};
 }
 
-void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet)
+void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter* plotter, ChartView* chartView, PlotModel* dataModel, KelvinletToolParams* params, const Vector3& mouseRelPos, bool updateCurrentKelvinlet, std::function<GridV3 (bool)> vectorFieldFunction)
 {
+    if (!vectorFieldFunction) {
+        vectorFieldFunction = [=](bool useCurrentKelvinlet) { return params->getVectorField(useCurrentKelvinlet); };
+    }
     if (updateCurrentKelvinlet)
         PainterToolsUI::updateCurrentKelvinlet(params, Vector3::invalid);
     if (!params->displayResultingField) return;
     Vector3i imgSize = Vector3i(300, 300, 1);
     GridV3 img(imgSize);
     GridF alpha(img.getDimensions(), 1.f);
-    std::tie(img, alpha) = PlotVectorData::createFieldImageAndAlpha(params->getVectorField(true), img.getDimensions(), Vector3i(20, 20, 1), dataModel->vectorData.displayParameters);
+    std::tie(img, alpha) = PlotVectorData::createFieldImageAndAlpha(vectorFieldFunction(true), img.getDimensions(), Vector3i(20, 20, 1), dataModel->vectorData.displayParameters);
 
     if (mouseRelPos.isValid()) {
         Vector3 pos = mouseRelPos * dataModel->vectorData.getField().getDimensions();
@@ -355,7 +364,7 @@ void PainterToolsUI::updateCurrentChartViewWithCurrentKelvinlets(AbstractPlotter
     dataModel->vectorData.field = GridV3();
     chartView->setPlotModel(dataModel);
     chartView->update();
-    dataModel->vectorData.field = params->getVectorField(true);
+    dataModel->vectorData.field = vectorFieldFunction(true);
     Q_EMIT plotter->updated();
 }
 

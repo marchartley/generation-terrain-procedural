@@ -26,7 +26,7 @@ FocusAreaViewer::FocusAreaViewer(const std::string& name, ChartView* chartView, 
     });
 }
 /*
-FocusAreaViewer *FocusAreaViewer::getInstance(std::string name)
+FocusAreaViewer *FocusAreaViewer::getInstance(const std::string& name)
 {
     if (name == "") name = FocusAreaViewer::defaultName;
     if (FocusAreaViewer::instances.count(name) == 0) {

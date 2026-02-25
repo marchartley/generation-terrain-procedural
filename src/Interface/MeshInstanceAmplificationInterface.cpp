@@ -11,7 +11,7 @@ MeshInstanceAmplificationInterface::MeshInstanceAmplificationInterface(QWidget* 
     : ActionInterface("meshinstance", "Mesh Instance Amplification", "view", "Amplify the terrain with meshes", "amplification_instances.png", parent)
 {
     meshInstancesFile.path = "EnvObjects/meshInstances.json";
-    meshInstancesFile.onChange([&](std::string content) {
+    meshInstancesFile.onChange([&](const std::string& content) {
         this->readMeshInstanceFile(content);
     });
 
@@ -273,7 +273,7 @@ std::vector<AABBox> MeshInstanceAmplificationInterface::getRocksAvailablePositio
     return extendedPositions;
 }
 
-std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface::getPositionsFor(std::string type, std::shared_ptr<EnvironmentalScene> scene)
+std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface::getPositionsFor(const std::string& type, std::shared_ptr<EnvironmentalScene> scene)
 {
     std::vector<std::tuple<Vector3, float, int>> positionsAndGrowthFactor;
     for (auto& obj : scene->instantiatedObjects) {
@@ -476,7 +476,7 @@ void MeshInstanceAmplificationInterface::regenerateAllTypePositions()
     }*/
 }
 
-void MeshInstanceAmplificationInterface::exportJSONFile(std::string filename)
+void MeshInstanceAmplificationInterface::exportJSONFile(const std::string& filename)
 {
     auto scene = dynamic_cast<EnvObjsInterface*>(this->findOtherInterface("envobjects").get())->scene;
     nlohmann::json json;

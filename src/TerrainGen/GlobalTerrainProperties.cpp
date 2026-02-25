@@ -62,9 +62,9 @@ std::string stringFromFluidSimType(FluidSimType type)
    return "";
 }
 
-FluidSimType FluidSimTypeFromString(std::string type)
+FluidSimType FluidSimTypeFromString(const std::string& _type)
 {
-    type = toUpper(type);
+    std::string type = toUpper(_type);
     if (type == "FLIP") return FluidSimType::FLIP;
     if (type == "LBM") return FluidSimType::LBM;
     if (type == "SHALLOW") return FluidSimType::SHALLOW;

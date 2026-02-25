@@ -26,7 +26,7 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartVi
     });
 }
 /*
-EnvMaterialViewer *EnvMaterialViewer::getInstance(std::string name)
+EnvMaterialViewer *EnvMaterialViewer::getInstance(const std::string& name)
 {
     if (name == "") name = EnvMaterialViewer::defaultName;
     if (EnvMaterialViewer::instances.count(name) == 0) {

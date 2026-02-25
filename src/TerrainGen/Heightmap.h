@@ -16,9 +16,9 @@ class Heightmap : public TerrainModel {
 public:
     Heightmap();
     Heightmap(int nx, int ny, float heightFactor);
-    Heightmap(std::string heightmap_filename, int nx = 30, int ny = 30, float heightFactor = 10);
+    Heightmap(const std::string& heightmap_filename, int nx = 30, int ny = 30, float heightFactor = 10);
 
-    GridF getHeights() const { return this->heights; }
+    const GridF& getHeights() const { return this->heights; }
     float getHeight(float x, float y) { return this->heights.interpolate(x, y); }
     float getHeight(const Vector3& pos) { return this->getHeight(pos.x(), pos.y()); }
 
@@ -54,30 +54,30 @@ public:
 
     void raise(GridF elevation);
 
-    Heightmap& fromVoxelGrid(VoxelGrid& voxelGrid);
+    Heightmap& fromVoxelGrid(VoxelGrid &voxelGrid);
     Heightmap& fromLayerGrid(LayerBasedGrid& layerGrid);
     Heightmap& fromImplicit(ImplicitPatch *implicitTerrain);
     GridF getVoxelized(const Vector3& dimensions = Vector3::invalid, const Vector3& scale = Vector3(1.f, 1.f, 1.f));
 
     void randomFaultTerrainGeneration(int numberOfFaults = 50, int maxNumberOfSubpointsInFaults = 2, float faultHeight = 1.f);
 
-    void saveMap(std::string filename) { return this->saveHeightmap(filename); }
-    void retrieveMap(std::string filename) { this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
-    Heightmap& loadFromHeightmap(std::string heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
-    void saveHeightmap(std::string heightmap_filename, Vector3 imageDimensions = Vector3::invalid, bool useRelativeHeight = false);
+    void saveMap(const std::string& filename) { return this->saveHeightmap(filename); }
+    void retrieveMap(const std::string& filename) { this->loadFromHeightmap(filename, getSizeX(), getSizeY(), heightFactor); }
+    Heightmap& loadFromHeightmap(const std::string& heightmap_filename, int nx = -1, int ny = -1, float heightFactor = -1);
+    void saveHeightmap(const std::string& heightmap_filename, Vector3 imageDimensions = Vector3::invalid, bool useRelativeHeight = false) const;
 
     Vector3 getIntersection(const Vector3& origin, const Vector3& dir, const Vector3& minPos = Vector3::invalid, const Vector3& maxPos = Vector3::invalid);
     Vector3 findSurfaceBetween(const Vector3& start, const Vector3& end);
 
     Mesh getGeometry(const Vector3& dimensions = Vector3::invalid);
 
-    void initMap() {};
+    void initMap() {}
 
-    bool undo() { return false; };
-    bool redo() { return false; };
+    bool undo() { return false; }
+    bool redo() { return false; }
 
-    std::string toString() { return this->toShortString(); };
-    std::string toShortString() { return "Grid: " + std::to_string(getDimensions().x()) + "x" + std::to_string(getDimensions().y()); };
+    std::string toString() const { return this->toShortString(); }
+    std::string toShortString() const { return "Grid: " + std::to_string(getDimensions().x()) + "x" + std::to_string(getDimensions().y()); }
 
     Matrix3<std::vector<int>>& getBiomeIndices() { return this->biomeIndices; }
 
