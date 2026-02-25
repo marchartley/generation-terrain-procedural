@@ -226,4 +226,21 @@ T findNextPowerOfTwo(T n) { // Works for 32bits or 64bits machines
     return n + 1;
 }
 
+template <class T, class U>
+std::vector<T> where_masked(const std::vector<T>& values, const std::vector<U>& isReturned)
+{
+    std::vector<T> result;
+    result.reserve(values.size()); // avoids repeated reallocs (upper bound)
+
+    const size_t n = values.size();
+    for (size_t i = 0; i < n; ++i) {
+        if (isReturned[i]) {                 // true => keep
+            result.push_back(values[i]);   // copies the value
+        }
+    }
+
+    result.shrink_to_fit();
+    return result;
+}
+
 #endif // UTILS_H
