@@ -70,7 +70,7 @@ std::vector<ScenariosObject> Scenario::nextObjects()
         float proba = possibleObj.probabilityPerStep;
         int objCount = 0;
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (obj->name == possibleObj.objectName)
+            if (obj->getDefinition()->name == possibleObj.objectName)
                 objCount ++;
         }
         // if (possibleObj.amountRequired >= 0) {
@@ -168,7 +168,7 @@ bool Scenario::finished() const
         if (requiredObjects.amountRequired < 0) continue;
         int objCount = 0;
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (obj->name == requiredObjects.objectName)
+            if (obj->getDefinition()->name == requiredObjects.objectName)
                 objCount ++;
         }
         if (objCount < requiredObjects.amountRequired) {

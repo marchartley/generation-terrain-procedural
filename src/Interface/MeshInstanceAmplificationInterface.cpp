@@ -277,17 +277,17 @@ std::vector<std::tuple<Vector3, float, int> > MeshInstanceAmplificationInterface
 {
     std::vector<std::tuple<Vector3, float, int>> positionsAndGrowthFactor;
     for (auto& obj : scene->instantiatedObjects) {
-        if (toUpper(obj->name) != toUpper(type)) continue;
+        if (toUpper(obj->getDefinition()->name) != toUpper(type)) continue;
         float growthFactor = obj->computeGrowingState();
-        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(obj)) {
             positionsAndGrowthFactor.push_back({Vector3(asPoint->position.x(), asPoint->position.y(), heightmap->getHeight(asPoint->position)), growthFactor, asPoint->ID});
-        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+        } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
             auto path = asCurve->curve.getPath(60);
             for (auto p : path) {
-                p = p + Vector3::random(asCurve->width * .5f);
+                p = p + Vector3::random(asCurve->getDefinition()->width * .5f);
                 positionsAndGrowthFactor.push_back({Vector3(p.x(), p.y(), heightmap->getHeight(p)), growthFactor, asCurve->ID});
             }
-        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+        } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(obj)) {
 //            float totalArea = asArea->area.computeArea();
             std::vector<Vector3> randomPoints;
             AABBox box = AABBox(asArea->curve.AABBox());
@@ -512,12 +512,16 @@ void InstantiationMeshOption::add(int index, const Vector3 &position, float size
 nlohmann::json InstantiationMeshOption::currentInstancesToJSON(std::shared_ptr<EnvironmentalScene> scene, const GridF& scoreMap)
 {
     auto newObject = scene->availableObjects[this->name];
-    auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, scene.get(), true, newObject);
+    auto fakeInstance = newObject->instantiate();
+    auto fitFunc = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, scene.get(), true, fakeInstance);
+    delete fakeInstance;
+    /*
     GridF scores(Vector3(100, 100, 1));
     scores.iterateParallel([&](const Vector3i& p) {
         scores[p] = fitFunc(p);
     });
     scores.normalize();
+    */
 
     nlohmann::json main;
     for (int i = 0; i < this->positions.size(); i++) {
@@ -535,7 +539,7 @@ nlohmann::json InstantiationMeshOption::currentInstancesToJSON(std::shared_ptr<E
         json["rotation"] = std::vector<float>({angle.x(), angle.y(), angle.z()});
 
         if (!scoreMap.empty())
-            json["score"] = scores.interpolate(pos.xy());
+            json["score"] = fitFunc(pos.xy()); //scores.interpolate(pos.xy());
 
         main.push_back(json);
     }

@@ -58,7 +58,7 @@ public:
 
     BodyKelvinletParameters bodyParameters;
 
-    EnvObject* currentObject;
+    EnvObjectInstance* currentObject;
     GridF depositionGrid;
     bool depositionSimulationDisplay = false;
 

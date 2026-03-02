@@ -6,16 +6,21 @@
 
 
 class SnakeSegmentationParameters;
-class SnakeSegmentationImplicitParameters;
-class SnakeSegmentationExplicitParameters;
+// class SnakeSegmentationImplicitParameters;
+// class SnakeSegmentationExplicitParameters;
 
+class SnakeImageField;
+
+
+
+std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func);
 
 class SnakeSegmentation {
 
 public:
     SnakeSegmentation();
     SnakeSegmentation(const BSpline& curve);
-    SnakeSegmentation(SnakeSegmentationParameters* params, const BSpline& curve = BSpline());
+    SnakeSegmentation(SnakeSegmentationParameters* params, SnakeImageField* fields, const BSpline& curve = BSpline());
     // virtual ~SnakeSegmentation() {}
     // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
                       // const GridV3& inputGradient);
@@ -47,6 +52,7 @@ public:
     Vector3 position = Vector3::invalid; // Initial position, attracting the whole curve
 
     SnakeSegmentationParameters* params;
+    SnakeImageField* field;
 /*
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -83,7 +89,7 @@ public:
 class SnakeSegmentationParameters {
 public:
     SnakeSegmentationParameters() {}
-    virtual ~SnakeSegmentationParameters() = default;
+    ~SnakeSegmentationParameters() = default;
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -104,31 +110,43 @@ public:
     bool collapseFirstAndLastPoint = false;
 
 
-    virtual float getImageAt(const Vector3& p) const = 0;
-    virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
+    // virtual float getImageAt(const Vector3& p) const = 0;
+    // virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
 };
 
-
-class SnakeSegmentationExplicitParameters : public SnakeSegmentationParameters {
+class SnakeImageField {
 public:
-    SnakeSegmentationExplicitParameters() : SnakeSegmentationParameters() {}
+    SnakeImageField() {}
+    virtual ~SnakeImageField() = default;
+
+    virtual float getImage(const Vector3& p) const = 0;
+    virtual Vector3 getGradient(const Vector3& p) const = 0;
+};
+
+class SnakeImageFieldExplicit : public SnakeImageField {
+public:
+    SnakeImageFieldExplicit() : SnakeImageFieldExplicit(GridF(),GridV3()) {}
+    SnakeImageFieldExplicit(const GridF& image) : SnakeImageFieldExplicit(image, image.gradient()) {}
+    SnakeImageFieldExplicit(const GridF& image, const GridV3& gradients) : SnakeImageField(), image(image), gradientField(gradients) {}
 
     GridF image;         // Grayscale image grid
     GridV3 gradientField; // Gradient field of the image
 
-    virtual float getImageAt(const Vector3 &p) const { return image.interpolate(p); }
-    virtual Vector3 getGradientImageAt(const Vector3 &p) const { return gradientField.interpolate(p); }
+    virtual float getImage(const Vector3 &p) const { return image.interpolate(p); }
+    virtual Vector3 getGradient(const Vector3 &p) const { return gradientField.interpolate(p); }
 };
 
-class SnakeSegmentationImplicitParameters : public SnakeSegmentationParameters {
+class SnakeImageFieldImplicit : public SnakeImageField {
 public:
-    SnakeSegmentationImplicitParameters() : SnakeSegmentationParameters() {}
+    SnakeImageFieldImplicit() : SnakeImageFieldImplicit({}, {}) {}
+    SnakeImageFieldImplicit(std::function<float(const Vector3&)> imageField) : SnakeImageFieldImplicit(imageField, gradientFromFieldFunction(imageField)) {}
+    SnakeImageFieldImplicit(std::function<float(const Vector3&)> imageField, std::function<Vector3(const Vector3&)> gradientField) : SnakeImageField(), imageField(imageField), gradientField(gradientField) {}
 
     std::function<float(const Vector3 &)> imageField; // Grayscale image grid
     std::function<Vector3(const Vector3 &)> gradientField; // Gradient field of the image
 
-    virtual float getImageAt(const Vector3 &p) const { return imageField(p); }
-    virtual Vector3 getGradientImageAt(const Vector3 &p) const { return gradientField(p); }
+    virtual float getImage(const Vector3 &p) const { return imageField(p); }
+    virtual Vector3 getGradient(const Vector3 &p) const { return gradientField(p); }
 };
 
 

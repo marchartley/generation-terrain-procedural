@@ -11,6 +11,7 @@
 struct SnakeEditionParameters {
     SnakeSegmentation snake;
     SnakeSegmentationParameters*& params = snake.params;
+    SnakeImageField*& field = snake.field;
 
     /*
     float minConnectivityCost = 0.0f;

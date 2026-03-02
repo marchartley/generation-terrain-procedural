@@ -33,9 +33,9 @@ public:
     void setTransformationsFile(const std::string& filename);
     void setScenarioFile(const std::string& filename);
 
-    EnvObject* instantiateObjectAtBestPosition(const std::string& objectName, Vector3 position, const GridF& score);
-    EnvObject* instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3 &maxPos);
-    EnvObject* instantiateObjectUsingSpline(const std::string& objectName, const BSpline& spline);
+    EnvObjectInstance* instantiateObjectAtBestPosition(const std::string& objectName, Vector3 position, const GridF& score);
+    EnvObjectInstance* instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3 &maxPos);
+    EnvObjectInstance* instantiateObjectUsingSpline(const std::string& objectName, const BSpline& spline);
 
 public Q_SLOTS:
     void show();
@@ -49,10 +49,10 @@ public Q_SLOTS:
     virtual void keyPressEvent(QKeyEvent* event);
 
 public:
-    EnvObject* instantiateSpecific(const std::string& objectName, const Vector3& targetPosition = Vector3::invalid, const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false, bool updateEnvironmentDirectly = true);
-    EnvObject* fakeInstantiate(const std::string& objectName, const GridF& score = GridF());
+    EnvObjectInstance* instantiateSpecific(const std::string& objectName, const Vector3& targetPosition = Vector3::invalid, const GridF& score = GridF(), bool waitForFullyGrown = true, bool updateScreen = false, bool updateEnvironmentDirectly = true);
+    EnvObjectInstance* fakeInstantiate(const std::string& objectName, const GridF& score = GridF());
 
-    bool checkIfObjectShouldDie(EnvObject* obj, float limitFactorForDying = .2f);
+    bool checkIfObjectShouldDie(EnvObjectInstance* obj, float limitFactorForDying = .2f);
 
     void fromGanUI();
 
@@ -63,7 +63,7 @@ public:
 
     void updateEnvironmentFromEnvObjects(bool updateImplicitTerrain = false, bool emitUpdateSignal = true, bool killObjectsIfPossible = true);
     void updateUntilStabilization();
-    void destroyEnvObject(EnvObject* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
+    void destroyEnvObject(EnvObjectInstance* object, bool applyDying = true, bool recomputeTerrainPropertiesForObject = true);
 
     void displayProbas(const std::string& objectName);
     void displayMaterialDistrib(const std::string& materialName);
@@ -174,11 +174,11 @@ public:
     HotreloadFile transformationsFile;
     HotreloadFile scenarioFile;
 
-    std::map<EnvObject*, ImplicitPatch*> implicitPatchesFromObjects;
+    std::map<EnvObjectInstance*, ImplicitPatch*> implicitPatchesFromObjects;
     ImplicitNaryOperator* rootPatch;
     // Implicit2DNary* rootPatch;
 
-    std::vector<EnvObject*> currentSelections;
+    std::vector<EnvObjectInstance*> currentSelections;
 
     std::string previousFileContent = "";
     std::string previousMaterialsFileContent = "";

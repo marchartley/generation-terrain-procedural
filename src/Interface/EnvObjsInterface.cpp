@@ -303,7 +303,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
-            EnvCurve* passe = dynamic_cast<EnvCurve*>(this->scene->instantiate("passe"));
+            EnvCurveInstance* passe = dynamic_cast<EnvCurveInstance*>(this->scene->instantiate("passe"));
             passe->curve = curve;
         }
     }
@@ -329,7 +329,7 @@ void EnvObjsInterface::createEnvObjectsFromImplicitTerrain()
             for (auto& p : curve) {
                 p = asPrimitive->getGlobalPositionOf(p);
             }
-            EnvArea* lagoon = dynamic_cast<EnvArea*>(this->scene->instantiate("lagoon"));
+            EnvAreaInstance* lagoon = dynamic_cast<EnvAreaInstance*>(this->scene->instantiate("lagoon"));
             lagoon->curve = curve;
         }
     }
@@ -496,7 +496,7 @@ void EnvObjsInterface::keyPressEvent(QKeyEvent *event)
 }
 
 GridF computeScoreMap(std::shared_ptr<EnvironmentalScene> scene, std::string objectName, const Vector3& dimensions, bool& possible, bool applyNormalization = false) {
-    auto obj = scene->availableObjects[objectName];
+    auto obj = scene->availableObjects[objectName]->instantiate();
     scene->recomputeFlow();
     GridF score = GridF(dimensions);
     score.iterateParallel([&](const Vector3i& pos) {
@@ -544,11 +544,11 @@ Vector3 bestPositionForInstantiationUniform(std::shared_ptr<EnvironmentalScene> 
     return Vector3::invalid;
 }
 
-EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3& maxPos)
+EnvObjectInstance* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(const std::string& objectName, Vector3 position, const Vector3& maxPos)
 {
     bool verbose = false;
     Vector3 initialPosition = position;
-    EnvObject* newObject = this->scene->instantiate(objectName);
+    EnvObjectInstance* newObject = this->scene->instantiate(objectName);
     // std::cout << "Placing '" << newObject->name << "' at " << initialPosition << std::endl;
 
     if (!newObject->placeInTerrain(initialPosition)) {
@@ -571,18 +571,18 @@ EnvObject* EnvObjsInterface::instantiateObjectAtBestPositionWithoutScoreMap(cons
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateObjectUsingSpline(const std::string& objectName, const BSpline &spline)
+EnvObjectInstance* EnvObjsInterface::instantiateObjectUsingSpline(const std::string& objectName, const BSpline &spline)
 {
-    EnvObject* newObject = this->scene->instantiate(objectName);
+    EnvObjectInstance* newObject = this->scene->instantiate(objectName);
     newObject->snake.position = spline.getPoint(.5f);
     newObject->placeInTerrain(spline);
     this->log("Manual creation of obj at score = " + std::to_string(newObject->fitnessScoreAtCreation));
     return newObject;
 }
 
-EnvObject* EnvObjsInterface::instantiateSpecific(const std::string& _objectName, const Vector3 &targetPosition, const GridF &score, bool waitForFullyGrown, bool updateScreen, bool updateEnvironmentDirectly)
+EnvObjectInstance* EnvObjsInterface::instantiateSpecific(const std::string& _objectName, const Vector3 &targetPosition, const GridF &score, bool waitForFullyGrown, bool updateScreen, bool updateEnvironmentDirectly)
 {
-    EnvObject* result = nullptr;
+    EnvObjectInstance* result = nullptr;
     std::string objectName = _objectName;
     objectName = toLower(objectName);
     if (this->scene->availableObjects.count(objectName) == 0) {
@@ -593,14 +593,14 @@ EnvObject* EnvObjsInterface::instantiateSpecific(const std::string& _objectName,
     Vector3 position = bestPositionForInstantiationUniform(this->scene, objectName, AABBox(Vector3i::origin, this->heightmap->getDimensions()), this->focusedArea, targetPosition, 1000);
 
     if (position.isValid()) {
-        EnvObject* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
+        EnvObjectInstance* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
         if (!newObject) {
             this->log("Object not created", verbose);
             return nullptr;
         }
         ImplicitPatch* implicit = newObject->createImplicitPatch(subsidedHeightmap);
-        newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, this->scene.get(), true, newObject);
-        newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, this->scene.get(), true, newObject);
+        // newObject->getDefinition()->fittingFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FittingFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
+        // newObject->getDefinition()->fitnessFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FitnessFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
         this->implicitPatchesFromObjects[newObject] = implicit;
         if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
             this->implicitTerrain->addChild(this->rootPatch);
@@ -634,7 +634,7 @@ EnvObject* EnvObjsInterface::instantiateSpecific(const std::string& _objectName,
     return result;
 }
 
-EnvObject *EnvObjsInterface::fakeInstantiate(const std::string& _objectName, const GridF &score)
+EnvObjectInstance* EnvObjsInterface::fakeInstantiate(const std::string& _objectName, const GridF &score)
 {
     std::string objectName = _objectName;
     objectName = toLower(objectName);
@@ -646,20 +646,20 @@ EnvObject *EnvObjsInterface::fakeInstantiate(const std::string& _objectName, con
     if (!position.isValid()) {
         return nullptr;
     }
-    EnvObject* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
+    EnvObjectInstance* newObject = instantiateObjectAtBestPositionWithoutScoreMap(objectName, position, this->heightmap->getDimensions());
     if (!newObject) {
         return nullptr;
     }
-    newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, this->scene.get(), true, newObject);
-    newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, this->scene.get(), true, newObject);
+    // newObject->getDefinition()->fittingFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FittingFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
+    // newObject->getDefinition()->fitnessFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FitnessFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
     this->destroyEnvObject(newObject, false, false);
     return newObject;
 }
 
-bool EnvObjsInterface::checkIfObjectShouldDie(EnvObject *obj, float limitFactorForDying)
+bool EnvObjsInterface::checkIfObjectShouldDie(EnvObjectInstance* obj, float limitFactorForDying)
 {
     if (obj->createdManually) return false;
-    return (obj->computeGrowingState2() <= obj->minScore * limitFactorForDying);
+    return (obj->computeGrowingState2() <= obj->getDefinition()->minScore * limitFactorForDying);
 }
 
 void EnvObjsInterface::recomputeErosionValues()
@@ -681,7 +681,7 @@ void EnvObjsInterface::recomputeErosionValues()
 void EnvObjsInterface::runNextStep()
 {
     bool verbose = false;
-    EnvObject* createdObject = nullptr;
+    EnvObjectInstance* createdObject = nullptr;
     Scenario& scenario = this->scene->scenario;
 
     int nbObjectsCreated = 0;
@@ -754,11 +754,11 @@ void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrai
                 float startingScore = obj->fitnessScoreAtCreation;
                 // float endingScore = obj->evaluate(obj->evaluationPosition);
                 float endingScore = obj->evaluate();
-                this->log(obj->name + " went from " + std::to_string(startingScore) + " to " + std::to_string(endingScore) + " -> " + std::to_string(std::round(100.f * endingScore / startingScore)) + "%");
+                this->log(obj->getDefinition()->name + " went from " + std::to_string(startingScore) + " to " + std::to_string(endingScore) + " -> " + std::to_string(std::round(100.f * endingScore / startingScore)) + "%");
                 this->destroyEnvObject(obj);
-                deadObjects.insert(obj->name);
+                deadObjects.insert(obj->getDefinition()->name);
                 if (random_gen::generate() < .9)
-                    this->instantiateSpecific(obj->name, obj->evaluationPositions[0], GridF(), false, false, false);
+                    this->instantiateSpecific(obj->getDefinition()->name, obj->evaluationPositions[0], GridF(), false, false, false);
             }
         }
         if (atLeastOneDeath) {
@@ -873,7 +873,7 @@ void EnvObjsInterface::updateUntilStabilization()
     });
 }
 
-void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying, bool recomputeTerrainPropertiesForObject)
+void EnvObjsInterface::destroyEnvObject(EnvObjectInstance* object, bool applyDying, bool recomputeTerrainPropertiesForObject)
 {
     if (!object) return;
 
@@ -893,7 +893,7 @@ void EnvObjsInterface::destroyEnvObject(EnvObject *object, bool applyDying, bool
         this->implicitPatchesFromObjects.erase(object);
     }
     if (recomputeTerrainPropertiesForObject)
-        this->scene->recomputeTerrainPropertiesForObject(object->name);
+        this->scene->recomputeTerrainPropertiesForObject(object->getDefinition()->name);
 }
 
 void EnvObjsInterface::displayProbas(const std::string& objectName)
@@ -985,7 +985,7 @@ void EnvObjsInterface::updateObjectsList()
         // float startingScore = obj->fitnessScoreAtCreation;
         // float endingScore = obj->evaluate(obj->evaluationPosition);
 
-        std::string text = obj->name;
+        std::string text = obj->getDefinition()->name;
         if (obj->createdManually)
             text += " [*]";
         else
@@ -1007,7 +1007,7 @@ void EnvObjsInterface::updateObjectsListSelection(QListWidgetItem *__newSelectio
             continue; // Does it happen?
         }
         int objID = newSelection->ID;
-        EnvObject* selection = nullptr;
+        EnvObjectInstance* selection = nullptr;
         for (auto& obj : this->scene->instantiatedObjects) {
             if (obj->ID == objID) {
                 selection = obj;
@@ -1044,7 +1044,7 @@ void EnvObjsInterface::updateSelectionMesh()
             colors.insert(colors.end(), evalColors.begin(), evalColors.end());
         }
 
-        if (auto asPoint = dynamic_cast<EnvPoint*>(currentSelection)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(currentSelection)) {
             continue; // Do not display the points!!
             selectionPos = asPoint->position;
             selectionPos.z() = subsidedHeightmap.interpolate(selectionPos.x(), selectionPos.y()) + offsetAbove;
@@ -1052,7 +1052,7 @@ void EnvObjsInterface::updateSelectionMesh()
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
             colors.insert(colors.end(), meshColors.begin(), meshColors.end());
-        } else if (auto asCurve = dynamic_cast<EnvCurve*>(currentSelection)) {
+        } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(currentSelection)) {
             selectionPos = asCurve->curve.center();
             std::vector<Vector3> meshPoints;
             auto path = asCurve->curve.getPath(50);
@@ -1075,7 +1075,7 @@ void EnvObjsInterface::updateSelectionMesh()
             lines.insert(lines.end(), meshPoints.begin(), meshPoints.end());
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
             colors.insert(colors.end(), meshColors.begin(), meshColors.end());
-        } else if (auto asArea = dynamic_cast<EnvArea*>(currentSelection)) {
+        } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(currentSelection)) {
             selectionPos = asArea->curve.center();
             std::vector<Vector3> meshPoints;
             auto path = asArea->curve.getPath(20);
@@ -1097,7 +1097,7 @@ void EnvObjsInterface::updateSelectionMesh()
             std::vector<Vector3> meshColors = std::vector<Vector3>(meshPoints.size(), Vector3(1, 0.5, 1));
             colors.insert(colors.end(), meshColors.begin(), meshColors.end());
         } else {
-            std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->name << ") could not be casted to Point, Curve or Area..." << std::endl;
+            std::cerr << "Object #" << currentSelection->ID << " (" << currentSelection->getDefinition()->name << ") could not be casted to Point, Curve or Area..." << std::endl;
 //            return;
             continue;
         }
@@ -1550,7 +1550,7 @@ void EnvObjsInterface::loadScene(const std::string& filename)
 
     for (auto obj : allObjects) {
         std::string objectName = obj["name"];
-        EnvObject* newObject = this->scene->instantiate(objectName);
+        EnvObjectInstance* newObject = this->scene->instantiate(objectName);
         newObject->age = obj["age"];
         newObject->fitnessScoreAtCreation = obj["fitnessScoreAtCreation"];
         // newObject->evaluationPosition = obj["evaluationPosition"];
@@ -1559,12 +1559,12 @@ void EnvObjsInterface::loadScene(const std::string& filename)
 
         }*/
 
-        if (auto asPoint = dynamic_cast<EnvPoint*>(newObject)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(newObject)) {
             asPoint->position = obj["position"];
-        } else if (auto asCurve = dynamic_cast<EnvCurve*>(newObject)) {
+        } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(newObject)) {
             asCurve->curve = obj["curve"];
             newObject->createdManually = true;
-        } else if (auto asArea = dynamic_cast<EnvArea*>(newObject)) {
+        } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(newObject)) {
             asArea->curve = obj["curve"];
             newObject->createdManually = true;
         }
@@ -1637,26 +1637,26 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         fittingScoreGrid[i] = dataV3[i].y();
     });
 
-    auto obj = this->scene->availableObjects[getCurrentObjectName()];
+    auto obj = this->scene->availableObjects[getCurrentObjectName()]->instantiate();
     auto score = fittingScoreGrid;
 
     GridV3 result = GridV3(score.getDimensions());
     GridF resultAlpha = GridF(score.getDimensions(), 0.f);
     ShapeCurve isoline;
-    if (auto objAsPoint = dynamic_cast<EnvPoint*>(obj)) {
-        isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
-    } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
+    if (auto objAsPoint = dynamic_cast<EnvPointInstance*>(obj)) {
+        isoline = ShapeCurve::circle(objAsPoint->getDefinition()->radius, position, 20);
+    } else if (auto objAsCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
         BSpline initialCurve;
         SnakeSegmentation& s = obj->snake;
-        float targetLength = objAsCurve->length;
-        if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
-            Vector3 dir = gradientFromFieldFunction(obj->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
+        float targetLength = objAsCurve->getDefinition()->length;
+        if (objAsCurve->getDefinition()->curveFollow == EnvCurve::SKELETON) {
+            Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
             initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
-        } else if (objAsCurve->curveFollow == EnvCurve::ISOVALUE) {
-            Vector3 dir = gradientFromFieldFunction(obj->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
+        } else if (objAsCurve->getDefinition()->curveFollow == EnvCurve::ISOVALUE) {
+            Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
             initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
-        } else if (objAsCurve->curveFollow == EnvCurve::GRADIENTS) {
-            Vector3 dir = gradientFromFieldFunction(obj->fitnessFunction)(position).normalize() * targetLength * .1f;
+        } else if (objAsCurve->getDefinition()->curveFollow == EnvCurve::GRADIENTS) {
+            Vector3 dir = gradientFromFieldFunction(obj->getDefinition()->fitnessFunction)(position).normalize() * targetLength * .1f;
             initialCurve = BSpline({position - dir, position + dir}).resamplePoints(20);
         }
         objAsCurve->updateCurve(initialCurve);
@@ -1677,7 +1677,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         }
         isoline = initialCurve;
         isoline.closed = false;
-    } else if (auto objAsArea = dynamic_cast<EnvArea*>(obj)) {
+    } else if (auto objAsArea = dynamic_cast<EnvAreaInstance*>(obj)) {
         ShapeCurve initialCurve;
         SnakeSegmentation& s = obj->snake;
         s.position = position;
@@ -1797,20 +1797,20 @@ void EnvObjsInterface::showAllElementsOnPlotter()
     GridV3 img(100, 100, 1);
 
     for (auto& obj : this->scene->instantiatedObjects) {
-        TerrainTypes material = obj->material;
+        TerrainTypes material = obj->getDefinition()->material;
         Vector3 col = materialToColor[material];
-        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(obj)) {
             Vector3 pos = asPoint->position;
             for (int dx = -1; dx <= 2; dx++) {
                 for (int dy = -1; dy <= 2; dy++) {
                     img(pos + Vector3(dx, dy)) = col;
                 }
             }
-        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+        } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
             for (const auto& p : asCurve->curve.getPath(200)) {
                 img(p) = col;
             }
-        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+        } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(obj)) {
             for (const auto& p : asArea->curve.getPath(200)) {
                 img(p) = col;
             }
@@ -1961,8 +1961,8 @@ void EnvObjsInterface::endNewObjectCreation()
         return;
     }
     newObject->recomputeEvaluationPoints();
-    newObject->fittingFunction = EnvObject::parseFittingFunction(newObject->s_FittingFunction, newObject->name, this->scene.get(), true, newObject);
-    newObject->fitnessFunction = EnvObject::parseFittingFunction(newObject->s_FitnessFunction, newObject->name, this->scene.get(), true, newObject);
+    // newObject->getDefinition()->fittingFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FittingFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
+    // newObject->getDefinition()->fitnessFunction = EnvObject::parseFittingFunction(newObject->getDefinition()->s_FitnessFunction, newObject->getDefinition()->name, this->scene.get(), true, newObject);
     auto implicit = newObject->createImplicitPatch(subsidedHeightmap);
     this->implicitPatchesFromObjects[newObject] = implicit;
     if (!isIn((ImplicitPatch*)this->rootPatch, this->implicitTerrain->composables))
@@ -1979,7 +1979,7 @@ void EnvObjsInterface::endNewObjectCreation()
         if (maxIterations < 0) break;
     }
     this->currentSelections = {newObject};
-    this->scene->recomputeTerrainPropertiesForObject(newObject->name);
+    this->scene->recomputeTerrainPropertiesForObject(newObject->getDefinition()->name);
     this->updateEnvironmentFromEnvObjects(implicit != nullptr); // If implicit is null, don't update the map
 
     this->updateNewObjectMesh();
@@ -2008,9 +2008,9 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
         float maxDistToPointSqr = 20.f * 20.f;
 
         for (auto currentSelection : currentSelections) {
-            if (currentSelection->isPoint()) {
+            if (currentSelection->getDefinition()->isPoint()) {
                 currentSelection->translate(translation);
-            } else if (EnvCurve* curve = dynamic_cast<EnvCurve*>(currentSelection)) {
+            } else if (EnvCurveInstance* curve = dynamic_cast<EnvCurveInstance*>(currentSelection)) {
                 auto newCurve = curve->curve;
                 int pointIndexToMove = -1;
                 float closestDistToPoint = std::numeric_limits<float>::max();
@@ -2027,7 +2027,7 @@ void EnvObjsInterface::moveDraggedObject(const Vector3 &position)
                     newCurve[pointIndexToMove].translate(translation);
                 }
                 curve->updateCurve(newCurve);
-            } else if (EnvArea* area = dynamic_cast<EnvArea*>(currentSelection)) {
+            } else if (EnvAreaInstance* area = dynamic_cast<EnvAreaInstance*>(currentSelection)) {
                 auto newCurve = area->curve;
                 int pointIndexToMove = -1;
                 float closestDistToPoint = std::numeric_limits<float>::max();
@@ -2107,7 +2107,7 @@ void EnvObjsInterface::endDraggingObject(bool destroyObjects)
                         // delete newPatch;
                     }
                 }
-                this->scene->recomputeTerrainPropertiesForObject(currentSelection->name);
+                this->scene->recomputeTerrainPropertiesForObject(currentSelection->getDefinition()->name);
             }
         }
         this->materialSimulationStable = false;
@@ -2158,8 +2158,8 @@ void EnvObjsInterface::saveForRenders()
 
         // Add colors for lagoons
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (toLower(obj->name) != "lagoon" && toLower(obj->name) != "smalllagoon") continue;
-            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (toLower(obj->getDefinition()->name) != "lagoon" && toLower(obj->getDefinition()->name) != "smalllagoon") continue;
+            EnvAreaInstance* asArea = dynamic_cast<EnvAreaInstance*>(obj);
             if (asArea->curve.containsXY(p, false)) {
                 labels(_p) = featuresToColors["lagoon"];
             }
@@ -2167,8 +2167,8 @@ void EnvObjsInterface::saveForRenders()
 
         // Add colors for beaches
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (toLower(obj->name) != "beach") continue;
-            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (toLower(obj->getDefinition()->name) != "beach") continue;
+            EnvAreaInstance* asArea = dynamic_cast<EnvAreaInstance*>(obj);
             if (asArea->curve.containsXY(p, false)) {
                 labels(_p) = featuresToColors["coast"];
             }
@@ -2177,17 +2177,17 @@ void EnvObjsInterface::saveForRenders()
 
         // Add colors for reefs
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (toLower(obj->name) != "reef" && toLower(obj->name) != "greatreef") continue;
-            EnvCurve* asCurve= dynamic_cast<EnvCurve*>(obj);
-            if (asCurve->curve.estimateDistanceFrom(p) < asCurve->width * .5f) {
+            if (toLower(obj->getDefinition()->name) != "reef" && toLower(obj->getDefinition()->name) != "greatreef") continue;
+            EnvCurveInstance* asCurve= dynamic_cast<EnvCurveInstance*>(obj);
+            if (asCurve->curve.estimateDistanceFrom(p) < asCurve->getDefinition()->width * .5f) {
                 labels(_p) = featuresToColors["reef"];
             }
         }
 
         // Add colors for islands
         for (auto& obj : this->scene->instantiatedObjects) {
-            if (toLower(obj->name) != "island") continue;
-            EnvArea* asArea = dynamic_cast<EnvArea*>(obj);
+            if (toLower(obj->getDefinition()->name) != "island") continue;
+            EnvAreaInstance* asArea = dynamic_cast<EnvAreaInstance*>(obj);
             if (asArea->curve.containsXY(p, false)) {
                 if (depth > 10)
                     labels(_p) = featuresToColors["lagoon"];
@@ -2223,15 +2223,15 @@ void EnvObjsInterface::saveForRenders()
     }
     // Fill each maps
     for (auto& obj : this->scene->instantiatedObjects) {
-        auto& grid = objectsScores[obj->name];
+        auto& grid = objectsScores[obj->getDefinition()->name];
         float evaluationScore = obj->evaluate();
-        if (auto asPoint = dynamic_cast<EnvPoint*>(obj)) {
+        if (auto asPoint = dynamic_cast<EnvPointInstance*>(obj)) {
             grid(asPoint->position) = std::max(grid(asPoint->position), evaluationScore);
-        } else if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
+        } else if (auto asCurve = dynamic_cast<EnvCurveInstance*>(obj)) {
             for (auto& p : asCurve->curve.getPath(500)){
                 grid(p) = std::max(grid(p), evaluationScore);
             }
-        } else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
+        } else if (auto asArea = dynamic_cast<EnvAreaInstance*>(obj)) {
             grid.iterateParallel([&](const Vector3i& p) {
                 if (asArea->curve.containsXY(p)) {
                     grid(p) = std::max(grid(p), evaluationScore);

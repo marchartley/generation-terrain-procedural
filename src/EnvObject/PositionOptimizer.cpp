@@ -54,10 +54,11 @@ Vector3 PositionOptimizer::followGradient(const Vector3& seedPosition, const Gri
 BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float minLength)
 {
     const Vector3 p = seedPosition;
-    SnakeSegmentationExplicitParameters parameters;
+    SnakeSegmentationParameters parameters;
     parameters.targetLength = minLength;
-    parameters.gradientField = gradients;
-    parameters.image = score;
+    SnakeImageFieldExplicit imageField;
+    imageField.image = score;
+    imageField.gradientField = gradients;
 
     parameters.areaCost = 0;
     parameters.collapseFirstAndLastPoint = false;
@@ -66,16 +67,17 @@ BSpline CurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPo
     parameters.lengthCost = 1.f;
     parameters.slopeCost = 0.f; // Don't follow the slope
 
-    return SnakeSegmentation(&parameters, BSpline({p - gradients(p).rotated90XY() * minLength * .5f, p + gradients(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, BSpline({p - gradients(p).rotated90XY() * minLength * .5f, p + gradients(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
 BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
 {
     const Vector3 p = seedPosition;
-    SnakeSegmentationExplicitParameters parameters;
+    SnakeSegmentationParameters parameters;
     parameters.targetLength = targetLength;
-    parameters.gradientField = gradients;
-    parameters.image = score;
+    SnakeImageFieldExplicit imageField;
+    imageField.image = score;
+    imageField.gradientField = gradients;
 
     parameters.areaCost = 0;
     parameters.collapseFirstAndLastPoint = false;
@@ -84,7 +86,7 @@ BSpline CurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& see
     parameters.lengthCost = 10.f;
     parameters.slopeCost = 10.f; // Follow the slope
 
-    return SnakeSegmentation(&parameters, BSpline({p - gradients(p).rotated90XY() * targetLength * .5f, p + gradients(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, BSpline({p - gradients(p).rotated90XY() * targetLength * .5f, p + gradients(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
 BSpline CurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const GridF& score, const GridV3& gradients, float targetLength)
@@ -95,16 +97,17 @@ BSpline CurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const Grid
     Vector3 dir = gradientsSmoothed(pos).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
     BSpline initialCurve = BSpline({pos - dir, pos + dir}).getPath(3);
 
-    SnakeSegmentationExplicitParameters parameters; // = SnakeSegmentationExplicitParameters(initialCurve, score, gradients);
-    parameters.image = score;
-    parameters.gradientField = gradients;
+    SnakeSegmentationParameters parameters; // = SnakeSegmentationParameters(initialCurve, score, gradients);
+    SnakeImageFieldExplicit imageField;
+    imageField.image = score;
+    imageField.gradientField = gradients;
     // s.convergenceThreshold = 1e-3;
     parameters.curvatureCost = 0.0f;
     parameters.lengthCost = 1.0f;
     parameters.imageCost = 1.f;
     parameters.targetLength = targetLength;
 
-    SnakeSegmentation s = SnakeSegmentation(&parameters, initialCurve);
+    SnakeSegmentation s = SnakeSegmentation(&parameters, &imageField, initialCurve);
     int nbIterations = 10;
     for (int i = 0; i < nbIterations; i++) {
         int nbCatapillars = 3;
@@ -233,9 +236,10 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3& seedPosition, con
     float fakeArea = PI * fakeRadius * fakeRadius;
 
     ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, seedPosition, 20);
-    SnakeSegmentationExplicitParameters parameters; // = SnakeSegmentationExplicitParameters(curve, score, gradients);
-    parameters.image = score;
-    parameters.gradientField = gradients;
+    SnakeSegmentationParameters parameters; // = SnakeSegmentationParameters(curve, score, gradients);
+    SnakeImageFieldExplicit imageField;
+    imageField.image = score;
+    imageField.gradientField = gradients;
     // s.convergenceThreshold = 1e-3;
 
     parameters.connectivityCost = 0.01f;
@@ -249,7 +253,7 @@ ShapeCurve AreaOptimizer::getAreaOptimizedShape(const Vector3& seedPosition, con
     parameters.imageInsideCoef = 1.f;
     parameters.imageBordersCoef = 0.f;
 
-    BSpline result = SnakeSegmentation(&parameters, curve).runSegmentation(200);
+    BSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(200);
     std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << parameters.targetArea << std::endl;
     return result;
 }
@@ -296,31 +300,31 @@ Vector3 PathOptimizer::attractToIsovalue(const Vector3& pos, const GridF& score,
     return pos;
 }
 
-std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func) {
-    return [=](const Vector3& pos) { float f00 = func(pos); return Vector3(func(pos + Vector3(1.f, 0.f, 0.f)) - f00, func(pos + Vector3(0.f, 1.f, 0.f)) - f00); };
-}
 BSpline ContinuousCurveOptimizer::getMinLengthCurveFollowingIsolevel(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float minLength)
 {
     const Vector3 p = seedPosition;
-    SnakeSegmentationImplicitParameters parameters = getSnakeForMinLengthCurveFollowingIsolevel(func, minLength);
+    SnakeSegmentationParameters parameters = getSnakeForMinLengthCurveFollowingIsolevel(func, minLength);
+    SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
 
-    return SnakeSegmentation(&parameters, BSpline({p - parameters.gradientField(p).rotated90XY() * minLength * .5f, p + parameters.gradientField(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
+    return SnakeSegmentation(&parameters, &imageField, BSpline({p - imageField.gradientField(p).rotated90XY() * minLength * .5f, p + imageField.gradientField(p).rotated90XY() * minLength * .5f}).resamplePoints(20)).runSegmentation(1000);
 }
 
 BSpline ContinuousCurveOptimizer::getExactLengthCurveFollowingGradients(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
 {
     const Vector3 p = seedPosition;
-    SnakeSegmentationImplicitParameters parameters = getSnakeForExactLengthCurveFollowingGradients(func, targetLength);
-    return SnakeSegmentation(&parameters, BSpline({p - parameters.gradientField(p).rotated90XY() * targetLength * .5f, p + parameters.gradientField(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(100);
+    SnakeSegmentationParameters parameters = getSnakeForExactLengthCurveFollowingGradients(func, targetLength);
+    SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
+    return SnakeSegmentation(&parameters, &imageField, BSpline({p - imageField.gradientField(p).rotated90XY() * targetLength * .5f, p + imageField.gradientField(p).rotated90XY() * targetLength * .5f}).resamplePoints(20)).runSegmentation(100);
 }
 
 BSpline ContinuousCurveOptimizer::getSkeletonCurve(const Vector3& seedPosition, const std::function<float (const Vector3& )>& func, float targetLength)
 {
     const Vector3 p = seedPosition;
-    SnakeSegmentationImplicitParameters parameters = getSnakeForSkeletonCurve(func, targetLength);
-    Vector3 dir = parameters.gradientField(p).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
+    SnakeSegmentationParameters parameters = getSnakeForSkeletonCurve(func, targetLength);
+    SnakeImageFieldImplicit imageField(func, gradientFromFieldFunction(func));
+    Vector3 dir = imageField.gradientField(p).normalized().rotate(PI * .5f, 0, 0, 1) * targetLength * .5f;
     BSpline initialCurve = BSpline({p - dir, p + dir}).getPath(3);
-    SnakeSegmentation s = SnakeSegmentation(&parameters, initialCurve);
+    SnakeSegmentation s = SnakeSegmentation(&parameters, &imageField, initialCurve);
     int nbIterations = 10;
     for (int i = 0; i < nbIterations; i++) {
         int nbCatapillars = 3;
@@ -429,12 +433,10 @@ BSpline ContinuousCurveOptimizer::followGradient(const Vector3& seedPosition, co
     return track;
 }
 
-SnakeSegmentationImplicitParameters ContinuousCurveOptimizer::getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float (const Vector3& )> &func, float minLength)
+SnakeSegmentationParameters ContinuousCurveOptimizer::getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float (const Vector3& )> &func, float minLength)
 {
-    SnakeSegmentationImplicitParameters s;
+    SnakeSegmentationParameters s;
     s.targetLength = minLength;
-    s.imageField = func;
-    s.gradientField = gradientFromFieldFunction(func);
 
     s.areaCost = 0;
     s.collapseFirstAndLastPoint = false;
@@ -445,12 +447,10 @@ SnakeSegmentationImplicitParameters ContinuousCurveOptimizer::getSnakeForMinLeng
     return s;
 }
 
-SnakeSegmentationImplicitParameters ContinuousCurveOptimizer::getSnakeForExactLengthCurveFollowingGradients(const std::function<float (const Vector3& )> &func, float targetLength)
+SnakeSegmentationParameters ContinuousCurveOptimizer::getSnakeForExactLengthCurveFollowingGradients(const std::function<float (const Vector3& )> &func, float targetLength)
 {
-    SnakeSegmentationImplicitParameters s;
+    SnakeSegmentationParameters s;
     s.targetLength = targetLength;
-    s.imageField = func;
-    s.gradientField = gradientFromFieldFunction(func);
 
     s.areaCost = 0;
     s.collapseFirstAndLastPoint = false;
@@ -461,11 +461,9 @@ SnakeSegmentationImplicitParameters ContinuousCurveOptimizer::getSnakeForExactLe
     return s;
 }
 
-SnakeSegmentationImplicitParameters ContinuousCurveOptimizer::getSnakeForSkeletonCurve(const std::function<float (const Vector3& )> &func, float targetLength)
+SnakeSegmentationParameters ContinuousCurveOptimizer::getSnakeForSkeletonCurve(const std::function<float (const Vector3& )> &func, float targetLength)
 {
-    SnakeSegmentationImplicitParameters s;
-    s.imageField = func;
-    s.gradientField = gradientFromFieldFunction(func);
+    SnakeSegmentationParameters s;
     // s.convergenceThreshold = 1e-3;
     s.curvatureCost = 0.0f;
     s.lengthCost = 1.0f;
@@ -617,17 +615,16 @@ ShapeCurve ContinuousAreaOptimizer::getAreaOptimizedShape(const Vector3& seedPos
     float fakeRadius = std::sqrt(targetArea) * .5f;
 
     ShapeCurve curve = ShapeCurve::circle(fakeRadius * .5f, seedPosition, 20);
-    SnakeSegmentationImplicitParameters parameters = getSnakeForAreaOptimizedShape(func, targetArea);
-    BSpline result = SnakeSegmentation(&parameters, curve).runSegmentation(20);
+    SnakeSegmentationParameters parameters = getSnakeForAreaOptimizedShape(func, targetArea);
+    SnakeImageFieldImplicit imageField(func);
+    BSpline result = SnakeSegmentation(&parameters, &imageField, curve).runSegmentation(20);
     std::cout << result.length() << " " << ShapeCurve(result).computeArea() << " / " << parameters.targetArea << std::endl;
     return result;
 }
 
-SnakeSegmentationImplicitParameters ContinuousAreaOptimizer::getSnakeForAreaOptimizedShape(const std::function<float (const Vector3& )> &func, float targetArea)
+SnakeSegmentationParameters ContinuousAreaOptimizer::getSnakeForAreaOptimizedShape(const std::function<float (const Vector3& )> &func, float targetArea)
 {
-    SnakeSegmentationImplicitParameters s;
-    s.imageField = func;
-    s.gradientField = gradientFromFieldFunction(func);
+    SnakeSegmentationParameters s;
     // s.convergenceThreshold = 1e-3;
 
     s.connectivityCost = 0.01f;
@@ -648,7 +645,7 @@ ShapeCurve ContinuousAreaOptimizer::getPerimeterOptimizedShape(const Vector3& se
     return ShapeCurve();
 }
 
-SnakeSegmentationImplicitParameters ContinuousAreaOptimizer::getSnakeForPerimeterOptimizedShape(const std::function<float (const Vector3& )> &func, float optmizedPerimeter)
+SnakeSegmentationParameters ContinuousAreaOptimizer::getSnakeForPerimeterOptimizedShape(const std::function<float (const Vector3& )> &func, float optmizedPerimeter)
 {
-    return SnakeSegmentationImplicitParameters();
+    return SnakeSegmentationParameters();
 }

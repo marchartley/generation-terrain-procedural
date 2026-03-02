@@ -14,15 +14,18 @@ SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, QWidge
 SnakeSegmentationEditor::SnakeSegmentationEditor(const std::string& name, ChartView* chartView, QWidget* parent)
     : ImageViewer(name, chartView, parent)
 {
-    this->snakeParameters.params = new SnakeSegmentationImplicitParameters();
     this->painterParameters.RGBimage = false;
 
     this->currentField = GridF::perlin(Vector3i(100, 100, 1), Vector3(5.f, 5.f, 1));
     this->currentGradientField = currentField.gradient();
 
-    auto asImplicitParameters = dynamic_cast<SnakeSegmentationImplicitParameters*>(snakeParameters.params);
-    asImplicitParameters->imageField = [=](const Vector3& p) { return currentField.interpolate(p); };
-    asImplicitParameters->gradientField = [=](const Vector3& p) { return currentGradientField.interpolate(p); };
+    this->snakeParameters.snake = SnakeSegmentation();
+    this->snakeParameters.params = new SnakeSegmentationParameters();
+    this->snakeParameters.field = new SnakeImageFieldImplicit();
+
+    auto snakeField = dynamic_cast<SnakeImageFieldImplicit*>(snakeParameters.field);
+    snakeField->imageField = [=](const Vector3& p) { return currentField.interpolate(p); };
+    snakeField->gradientField = [=](const Vector3& p) { return currentGradientField.interpolate(p); };
 
     this->addImage(currentField);
 
@@ -90,15 +93,9 @@ void SnakeSegmentationEditor::showSnakePath() {
 SnakeSegmentationEditor* SnakeSegmentationEditor::associateEnvObject(EnvObject* obj)
 {
     this->associatedObject = obj;
-
-    snakeParameters.params->collapseFirstAndLastPoint = false;
-    if (auto asCurve = dynamic_cast<EnvCurve*>(obj)) {
-        snakeParameters.params->targetLength = asCurve->length;
-    }
-    else if (auto asArea = dynamic_cast<EnvArea*>(obj)) {
-        snakeParameters.params->collapseFirstAndLastPoint = true;
-        snakeParameters.params->targetArea = asArea->length * asArea->width;
-    }
+    // obj->updateFittingFunction();
+    *(obj->snakeField) = SnakeImageFieldImplicit([=](const Vector3& p) { return this->currentField.interpolate(p); });
+    this->snakeParameters.snake = obj->instantiate()->snake;
     return this;
 }
 
