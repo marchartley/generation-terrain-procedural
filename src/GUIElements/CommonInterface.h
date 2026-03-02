@@ -13,6 +13,7 @@
 #include <QComboBox>
 #include <QDial>
 #include <QTimer>
+#include <QDoubleSpinBox>
 #include <optional>
 #include <variant>
 
@@ -58,19 +59,6 @@ public:
         this->element->blockSignals(false);
         return this;
     }
-    /*
-    template <class WidgetType, typename SignalType, typename Callable, typename... Args>
-    void addConnection(SignalType signal, Callable&& slotFunction, Args&&... args) {
-        WidgetType* castedWidget = dynamic_cast<WidgetType*>(element);
-        if (castedWidget) {
-            QMetaObject::Connection connection = QObject::connect(castedWidget, signal,
-                                                                  std::forward<Callable>(slotFunction),
-                                                                  std::forward<Args>(args)...);
-            connections.push_back(connection);
-        } else {
-            throw std::out_of_range("There was a problem with a UIElement. It appears that an event has a connection with a wrong QWidget type...");
-        }
-    }*/
 
     void setName(const std::string& name);
     const std::string& getName() const;
@@ -161,16 +149,6 @@ public:
     QLabel* label() const;
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, FancySlider, _slider, floatValueChanged)
-    /*
-    template <class Callable, typename... Args>
-    SliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
-        QMetaObject::Connection connection = QObject::connect(_slider, &FancySlider::floatValueChanged,
-                                                              std::forward<Callable>(callback),
-                                                              std::forward<Args>(args)...);
-        connections.push_back(connection);
-        return this;
-    }
-    */
 
     SliderElement* bindTo(float& value);
 
@@ -200,16 +178,6 @@ public:
     QLabel* label();
 
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, RangeSlider, _slider, alt_valueChanged)
-    /*
-    template <class Callable, typename... Args>
-    RangeSliderElement* setOnValueChanged(Callable&& callback, Args&&... args) {
-        QMetaObject::Connection connection = QObject::connect(_slider, &RangeSlider::alt_valueChanged,
-                                                              std::forward<Callable>(callback),
-                                                              std::forward<Args>(args)...);
-        connections.push_back(connection);
-        return this;
-    }
-    */
 
     RangeSliderElement* bindTo(float& valueMin, float& valueMax);
 
@@ -223,16 +191,6 @@ protected:
     std::optional<std::reference_wrapper<float>> boundVariableMax;
 };
 
-/*
-class FloatInputElement : public UIElement {
-    Q_OBJECT
-public:
-    FloatInputElement(const std::string& label);
-    FloatInputElement(const std::string& label, float& binded);
-    FloatInputElement(const std::string& label, std::function<void(float)> onChange);
-
-
-};*/
 
 class CheckboxElement : public UIElement {
     Q_OBJECT
@@ -289,19 +247,7 @@ public:
     QLineEdit* lineEdit();
     std::string getText() { return lineEdit()->text().toStdString(); }
 
-    //    DEFINE_SET_ON_FUNCTION(setOnReturnPressed, QLineEdit, returnPressed);
-
     DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnReturnPressed, QLineEdit, _lineEdit, returnPressed)
-    /*
-    template <class Callable, typename... Args>
-    TextEditElement* setOnReturnPressed(Callable&& callback, Args&&... args) {
-        QMetaObject::Connection connection = QObject::connect(_lineEdit, &QLineEdit::returnPressed,
-                                                              std::forward<Callable>(callback),
-                                                              std::forward<Args>(args)...);
-        connections.push_back(connection);
-        return this;
-    }
-    */
     TextEditElement* setOnTextChange(std::function<void(const std::string&)> func);
 
     TextEditElement* bindTo(std::string &value);
@@ -313,6 +259,41 @@ protected:
     QLabel* _label = nullptr;
     QLineEdit* _lineEdit = nullptr;
     std::optional<std::reference_wrapper<std::string>> boundVariable;
+};
+
+
+class FloatInputElement : public UIElement {
+    Q_OBJECT
+public:
+    FloatInputElement(const std::string& label);
+    FloatInputElement(const std::string& label, float& binded);
+    FloatInputElement(const std::string& label, std::function<void(float)> onChange);
+
+    QDoubleSpinBox* spinbox() const { return this->_spinbox; }
+    float getValue() const { return spinbox()->value(); }
+
+    // DEFINE_SET_ON_SUBWIDGET_FUNCTION(setOnValueChanged, QDoubleSpinBox, _spinbox, valueChanged)
+    // FloatInputElement* setOnValueChange(std::function<void(const float&)> func); // QOverload<double>::of(&QDoubleSpinBox::valueChanged)
+    template <class Callable, typename... Args> \
+    FloatInputElement* setOnValueChange(Callable&& callback, Args&&... args) {
+        QMetaObject::Connection connection = QObject::connect(_spinbox, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
+                           std::forward<Callable>(callback),
+                           std::forward<Args>(args)...);
+        connections.push_back(connection);
+        return this;
+    }
+
+    FloatInputElement* bindTo(float& value);
+
+public Q_SLOTS:
+    void update();
+
+protected:
+    QLabel* _label = nullptr;
+    QDoubleSpinBox* _spinbox = nullptr;
+    std::optional<std::reference_wrapper<float>> boundVariable;
+
+
 };
 
 

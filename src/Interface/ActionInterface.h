@@ -42,8 +42,10 @@ public:
 
     bool isConcerned(nlohmann::json& action);
 
-    void log(const std::string& message, bool verbose = true);
-    void error(const std::string& message, bool verbose = true);
+    void log(const std::string& message, bool verbose = true) const;
+    void error(const std::string& message, bool verbose = true) const;
+
+    void displayProcessTime(const std::string &textToDisplay, const std::function<void ()> &func, bool verbose = true);
 
     virtual void replay(nlohmann::json action) = 0;
 

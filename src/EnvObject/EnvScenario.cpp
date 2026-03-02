@@ -10,24 +10,28 @@ Scenario::Scenario(EnvironmentalScene *scene)
     : scene(scene)
 {}
 
-void Scenario::addObject(const std::string& name, float proba, int amount)
+void Scenario::addObject(const std::string& _name, float proba, int amount)
 {
+    std::string name = toLower(_name);
     for (int i = objects.size() - 1; i >= 0; i--) {
         if (objects[i].objectName == name)
             objects.erase(objects.begin() + i);
     }
-    objects.push_back(ScenariosObject(name, proba, amount));
+    if (this->scene->availableObjects.count(name)) {
+        objects.push_back(ScenariosObject(name, proba, amount));
 
-    // Recompute the normalized probability
-    float sumProbas = 0;
-    for (auto& object : objects) {
-        sumProbas += object.probabilityPerStep;
-    }
-    for (auto& object : objects) {
-        object.normalizedProba = object.probabilityPerStep / sumProbas;
+        // Recompute the normalized probability
+        float sumProbas = 0;
+        for (auto& object : objects) {
+            sumProbas += object.probabilityPerStep;
+        }
+        for (auto& object : objects) {
+            object.normalizedProba = object.probabilityPerStep / sumProbas;
+        }
     }
 }
 
+/*
 ScenariosObject Scenario::nextObject()
 {
     float sumProbas = 0;
@@ -57,6 +61,7 @@ ScenariosObject Scenario::nextObject()
     std::cerr << "WTF, should not be here..." << std::endl;
     return objects[int(random_gen::generate(objects.size()))];
 }
+*/
 
 std::vector<ScenariosObject> Scenario::nextObjects()
 {

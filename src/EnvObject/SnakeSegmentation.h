@@ -4,15 +4,24 @@
 #include "Utils/BSpline.h"
 #include "DataStructure/Matrix3.h"
 
+
+class SnakeSegmentationParameters;
+class SnakeSegmentationImplicitParameters;
+class SnakeSegmentationExplicitParameters;
+
+
 class SnakeSegmentation {
 
 public:
     SnakeSegmentation();
-    virtual ~SnakeSegmentation() {}
+    SnakeSegmentation(const BSpline& curve);
+    SnakeSegmentation(SnakeSegmentationParameters* params, const BSpline& curve = BSpline());
+    // virtual ~SnakeSegmentation() {}
     // SnakeSegmentation(const BSpline& initialContour, const GridF& inputImage,
                       // const GridV3& inputGradient);
 
     BSpline runSegmentation(int maxIterations = 100);
+    BSpline runSegmentation(const BSpline& curve, int maxIterations = 100);
 
     Vector3 computeEnergyGradient(const BSpline& contour, int index, bool usePreviousPointForInternal = true);
 
@@ -23,8 +32,12 @@ public:
 
     BSpline updateContour(const BSpline& currentContour, float stepSize = 0.1f);
 
-    virtual float getImageAt(const Vector3& p) const = 0;
-    virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
+    float getImageAt(const Vector3& p) const;
+    Vector3 getGradientImageAt(const Vector3& p) const;
+
+
+
+    // virtual SnakeSegmentationParameters* getParameters() = 0;
 
 // private:
     BSpline contour;     // BSpline representing the contour
@@ -32,6 +45,45 @@ public:
     // GridV3 gradientField; // Gradient field of the image
 
     Vector3 position = Vector3::invalid; // Initial position, attracting the whole curve
+
+    SnakeSegmentationParameters* params;
+/*
+    float connectivityCost = 0.0f;
+    float curvatureCost = 0.0f;
+    float imageCost = 0.0f;
+    float areaCost = 0.f;
+    float lengthCost = 0.0f;
+    float slopeCost = 0.f;
+
+    float positionCost = 0.f;
+    int nbCatapillars = 0;
+
+    float imageBordersCoef = 1.f;
+    float imageInsideCoef = 0.f;
+
+    float targetLength = 0.f;
+    float targetArea = 0.f;
+
+    bool collapseFirstAndLastPoint = false;
+*/
+    float stepSize = .1f;
+    float currentDomainArea = 0;
+    float currentIntegralOverArea = 0;
+    std::vector<std::vector<float>> randomGreenCoords;
+
+    // float internalCoefficient = 1.f;  // Coefficient for internal energy
+    // float externalCoefficient = 1.f;  // Coefficient for external energy
+
+    // float convergenceThreshold = 1e-2; // Threshold for convergence
+};
+
+
+
+
+class SnakeSegmentationParameters {
+public:
+    SnakeSegmentationParameters() {}
+    virtual ~SnakeSegmentationParameters() = default;
 
     float connectivityCost = 0.0f;
     float curvatureCost = 0.0f;
@@ -51,15 +103,44 @@ public:
 
     bool collapseFirstAndLastPoint = false;
 
-    float currentDomainArea = 0;
-    float currentIntegralOverArea = 0;
-    std::vector<std::vector<float>> randomGreenCoords;
 
-    // float internalCoefficient = 1.f;  // Coefficient for internal energy
-    // float externalCoefficient = 1.f;  // Coefficient for external energy
-
-    // float convergenceThreshold = 1e-2; // Threshold for convergence
+    virtual float getImageAt(const Vector3& p) const = 0;
+    virtual Vector3 getGradientImageAt(const Vector3& p) const = 0;
 };
+
+
+class SnakeSegmentationExplicitParameters : public SnakeSegmentationParameters {
+public:
+    SnakeSegmentationExplicitParameters() : SnakeSegmentationParameters() {}
+
+    GridF image;         // Grayscale image grid
+    GridV3 gradientField; // Gradient field of the image
+
+    virtual float getImageAt(const Vector3 &p) const { return image.interpolate(p); }
+    virtual Vector3 getGradientImageAt(const Vector3 &p) const { return gradientField.interpolate(p); }
+};
+
+class SnakeSegmentationImplicitParameters : public SnakeSegmentationParameters {
+public:
+    SnakeSegmentationImplicitParameters() : SnakeSegmentationParameters() {}
+
+    std::function<float(const Vector3 &)> imageField; // Grayscale image grid
+    std::function<Vector3(const Vector3 &)> gradientField; // Gradient field of the image
+
+    virtual float getImageAt(const Vector3 &p) const { return imageField(p); }
+    virtual Vector3 getGradientImageAt(const Vector3 &p) const { return gradientField(p); }
+};
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -730,7 +730,7 @@ void EnvObjsInterface::runScenario()
 
 void EnvObjsInterface::updateEnvironmentFromEnvObjects(bool updateImplicitTerrain, bool emitUpdateSignal, bool killObjectsIfPossible)
 {
-    bool verbose = false;
+    bool verbose = true;
 
     GridF subsidenceFactor = this->scene->scenario.computeSubsidence(initialHeightmap.getDimensions());
     subsidedHeightmap = initialHeightmap * subsidenceFactor;
@@ -1647,7 +1647,7 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         isoline = ShapeCurve::circle(objAsPoint->radius, position, 20);
     } else if (auto objAsCurve = dynamic_cast<EnvCurve*>(obj)) {
         BSpline initialCurve;
-        SnakeSegmentationImplicit& s = obj->snake;
+        SnakeSegmentation& s = obj->snake;
         float targetLength = objAsCurve->length;
         if (objAsCurve->curveFollow == EnvCurve::SKELETON) {
             Vector3 dir = gradientFromFieldFunction(obj->fitnessFunction)(position).rotated90XY().normalize() * targetLength * .1f;
@@ -1679,9 +1679,9 @@ void EnvObjsInterface::previewCurrentEnvObjectPlacement(const Vector3 &position)
         isoline.closed = false;
     } else if (auto objAsArea = dynamic_cast<EnvArea*>(obj)) {
         ShapeCurve initialCurve;
-        SnakeSegmentationImplicit& s = obj->snake;
+        SnakeSegmentation& s = obj->snake;
         s.position = position;
-        float fakeRadius = std::sqrt(s.targetArea * .5f / PI);
+        float fakeRadius = std::sqrt(s.params->targetArea * .5f / PI);
 
         ShapeCurve curve = ShapeCurve::circle(fakeRadius, position, 20);
         objAsArea->updateCurve(curve);

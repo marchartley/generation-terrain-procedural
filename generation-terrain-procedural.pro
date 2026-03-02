@@ -97,6 +97,7 @@ SOURCES += \
     src/EnvObjGUI/EnvMaterialViewer.cpp \
     src/EnvObjGUI/EnvObjectEditor.cpp \
     src/EnvObjGUI/FocusAreaViewer.cpp \
+    src/EnvObjGUI/SnakeSegmentationEditor.cpp \
     src/EnvObjGUI/WaterFlowViewer.cpp \
     src/EnvObject/EnvArea.cpp \
     src/EnvObject/EnvCurve.cpp \
@@ -280,6 +281,7 @@ HEADERS += \
     src/EnvObjGUI/EnvMaterialViewer.h \
     src/EnvObjGUI/EnvObjectEditor.h \
     src/EnvObjGUI/FocusAreaViewer.h \
+    src/EnvObjGUI/SnakeSegmentationEditor.h \
     src/EnvObjGUI/WaterFlowViewer.h \
     src/EnvObject/EnvArea.h \
     src/EnvObject/EnvCurve.h \

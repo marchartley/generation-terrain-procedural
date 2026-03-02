@@ -67,8 +67,8 @@ nlohmann::ordered_json EnvironmentalScene::readEnvObjectsFileContent(const std::
         obj->fittingFunction = EnvObject::parseFittingFunction(obj->s_FittingFunction, obj->name, this);
         obj->fitnessFunction = EnvObject::parseFittingFunction(obj->s_FitnessFunction, obj->name, this);
 
-        obj->snake.imageField = obj->fittingFunction;
-        obj->snake.gradientField = gradientFromFieldFunction(obj->snake.imageField);
+        dynamic_cast<SnakeSegmentationImplicitParameters*>(obj->snake.params)->imageField = obj->fittingFunction;
+        dynamic_cast<SnakeSegmentationImplicitParameters*>(obj->snake.params)->gradientField = gradientFromFieldFunction(obj->fittingFunction);
     }
 
     for (auto& obj : this->instantiatedObjects) {
@@ -629,8 +629,10 @@ GridF EnvironmentalScene::getHeightmap(const GridF& initialHeightmap, float abso
         // surfaceHeights = surfaceHeights.gaussianSmooth(1.f, true, true);
     }
 
-    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).meanSmooth(5, 5, 1);
-    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
+    subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights);
+    subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).max(-15.f);
+    // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).meanSmooth(5, 5, 1);
+    // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).meanSmooth(3, 3, 1).max(-15.f);
     // subsidedHeightmap = GridF::max(GridF::max(subsidedHeightmap, groundConstraintedHeights), waterConstraintedHeights).gaussianSmooth(2.f, true, true);
     // subsidedHeightmap = (subsidedHeightmap.max(-15.f) + surfaceHeights).gaussianSmooth(1.f, true, true).max(-15.f);
     return subsidedHeightmap;
