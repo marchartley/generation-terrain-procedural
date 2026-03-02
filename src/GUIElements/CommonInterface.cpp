@@ -24,7 +24,7 @@ void UIElement::cleanupConnections() {
 
 void UIElement::update()
 {
-    return;
+    return this->get()->update();
 }
 
 
@@ -161,6 +161,7 @@ void SliderElement::update()
 {
     if (this->boundVariable.has_value())
         slider()->setfValue(*this->boundVariable);
+    return UIElement::update();
 }
 
 
@@ -203,6 +204,7 @@ void CheckboxElement::update()
 {
     if (this->boundVariable.has_value())
         checkBox()->setChecked(*this->boundVariable);
+    return UIElement::update();
 }
 
 InterfaceUI::InterfaceUI(QLayout* layout, bool tight, std::string title)
@@ -292,6 +294,7 @@ void InterfaceUI::update()
             asUIElement->update();
         }
     }
+    return UIElement::update();
 }
 
 RadioButtonElement::RadioButtonElement(const std::string& label)
@@ -334,6 +337,7 @@ void RadioButtonElement::update()
 {
     if (this->boundVariable.has_value())
         radioButton()->setChecked(*this->boundVariable);
+    return UIElement::update();
 }
 
 InterfaceUI* createHorizontalGroupUI(std::vector<UIElement*> widgets)
@@ -420,6 +424,7 @@ TextEditElement* TextEditElement::bindTo(std::string& value)
 void TextEditElement::update()
 {
     lineEdit()->setText(QString::fromStdString(*this->boundVariable));
+    return UIElement::update();
 }
 
 
@@ -464,6 +469,7 @@ AngleElement *AngleElement::bindTo(float &value)
 void AngleElement::update()
 {
     this->dial()->setValue(*boundVariable);
+    return UIElement::update();
 }
 
 
@@ -519,6 +525,7 @@ void RangeSliderElement::update()
 {
     slider()->setMinValue(*this->boundVariableMin);
     slider()->setMaxValue(*this->boundVariableMax);
+    return UIElement::update();
 }
 
 
@@ -574,6 +581,7 @@ Vector3 ColorPickerElement::getSelection() const
 void ColorPickerElement::update()
 {
     colorPicker()->setCurrentColor(ColorPickerElement::vec3ToQColor(*this->boundColor));
+    return UIElement::update();
 }
 
 Vector3 ColorPickerElement::qColorToVec3(const QColor &col)
@@ -630,4 +638,50 @@ std::vector<HierarchicalListWidgetItemBase *> HierarchicalListUI::selectedItems(
         items.push_back(dynamic_cast<HierarchicalListWidgetItemBase*>(qItems[i]));
     }
     return items;
+}
+
+FloatInputElement::FloatInputElement(const std::string &label)
+    : UIElement(new QGroupBox)
+{
+    this->_spinbox = new QDoubleSpinBox(this->get());
+    this->_label = new QLabel(QString::fromStdString(label));
+
+    QBoxLayout* layout = new QHBoxLayout;
+    layout->setMargin(0);
+    if (!label.empty())
+        layout->addWidget(_label);
+    layout->addWidget(_spinbox);
+    getWidget()->setLayout(layout);
+    _spinbox->setDecimals(5);
+    _spinbox->setMaximum(100000);
+    _spinbox->setMinimum(-100000);
+}
+
+FloatInputElement::FloatInputElement(const std::string &label, float &binded)
+    : FloatInputElement(label)
+{
+    this->bindTo(binded);
+}
+
+FloatInputElement::FloatInputElement(const std::string& label, std::function<void (float)> onChange)
+    : FloatInputElement(label)
+{
+    QObject::connect(_spinbox, QOverload<double>::of(&QDoubleSpinBox::valueChanged), this, [=](double newValue){ onChange(newValue); });
+}
+
+FloatInputElement *FloatInputElement::bindTo(float& value)
+{
+    boundVariable = value;
+    spinbox()->setValue(value);
+    this->setOnValueChange([&](float newValue) {
+        this->boundVariable->get() = newValue;
+    });
+    return this;
+}
+
+void FloatInputElement::update()
+{
+    if (this->boundVariable)
+        this->spinbox()->setValue(*boundVariable);
+    return UIElement::update();
 }

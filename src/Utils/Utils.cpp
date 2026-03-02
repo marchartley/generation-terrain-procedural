@@ -525,11 +525,11 @@ Vector3 colorPalette(float t, const Vector3 &startColor, const Vector3 &endColor
     return Vector3::slerp(t, startColor, endColor);
 }
 
-float displayProcessTime(const std::string& textToDisplay, std::function<void ()> func, bool print)
+float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose)
 {
-    if (print) std::cout << textToDisplay << std::flush;
+    if (verbose) std::cout << textToDisplay << std::flush;
     float time = timeIt(func);
-    if (print) std::cout << " " << showTime(time) << std::endl;
+    if (verbose) std::cout << " " << showTime(time) << std::endl;
     return time;
 }
 

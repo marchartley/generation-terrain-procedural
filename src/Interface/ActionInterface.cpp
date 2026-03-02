@@ -74,18 +74,24 @@ void ActionInterface::saveAllActions(const std::string& filename) {
 
 bool ActionInterface::isConcerned(nlohmann::json &action) { return action.contains("type") && action.at("type").get<std::string>() == this->actionType; }
 
-void ActionInterface::log(const std::string &message, bool verbose) {
-    if (verbose && this->viewer) {
+void ActionInterface::log(const std::string& message, bool verbose) const {
+    if (verbose) {
         std::cout << "[INFO " << this->interfaceName << "]  " << message << std::endl;
-//        this->viewer->displayMessage(QString::fromStdString("[INFO]  " + message));
     }
 }
 
-void ActionInterface::error(const std::string &message, bool verbose) {
-    if (verbose && this->viewer) {
+void ActionInterface::error(const std::string& message, bool verbose) const {
+    if (verbose) {
         std::cerr << "[ERROR " << this->interfaceName << "]  " << message << std::endl;
-//        this->viewer->displayMessage(QString::fromStdString("[ERROR] " + message));
     }
+}
+
+void ActionInterface::displayProcessTime(const std::string& textToDisplay, const std::function<void()>& func, bool verbose)
+{
+    if (verbose) {
+        std::cout << "[TIMING " << this->interfaceName << "]  ";
+    }
+    ::displayProcessTime(textToDisplay, func, verbose);
 }
 
 std::shared_ptr<ActionInterface> ActionInterface::findOtherInterface(const std::string& name) const

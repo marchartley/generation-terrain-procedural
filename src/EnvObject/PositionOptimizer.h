@@ -4,8 +4,7 @@
 #include "DataStructure/Vector3.h"
 #include "DataStructure/Matrix3.h"
 #include "Utils/ShapeCurve.h"
-#include "EnvObject/SnakeSegmentationExplicit.h"
-#include "EnvObject/SnakeSegmentationImplicit.h"
+#include "EnvObject/SnakeSegmentation.h"
 
 class PathOptimizer {
 public:
@@ -72,9 +71,9 @@ public:
     static BSpline followIsolevel(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float minLength);
     static BSpline followGradient(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, int maxTries, bool goUp);
 
-    static SnakeSegmentationImplicit getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
-    static SnakeSegmentationImplicit getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
-    static SnakeSegmentationImplicit getSnakeForSkeletonCurve(const std::function<float(const Vector3&)>& func, float targetLength);
+    static SnakeSegmentationImplicitParameters getSnakeForMinLengthCurveFollowingIsolevel(const std::function<float(const Vector3&)>& func, float minLength);
+    static SnakeSegmentationImplicitParameters getSnakeForExactLengthCurveFollowingGradients(const std::function<float(const Vector3&)>& func, float targetLength);
+    static SnakeSegmentationImplicitParameters getSnakeForSkeletonCurve(const std::function<float(const Vector3&)>& func, float targetLength);
 };
 
 
@@ -86,8 +85,8 @@ public:
     static ShapeCurve getAreaOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float targetArea);
     static ShapeCurve getPerimeterOptimizedShape(const Vector3& seedPosition, const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 
-    static SnakeSegmentationImplicit getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
-    static SnakeSegmentationImplicit getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
+    static SnakeSegmentationImplicitParameters getSnakeForAreaOptimizedShape(const std::function<float(const Vector3&)>& func, float targetArea);
+    static SnakeSegmentationImplicitParameters getSnakeForPerimeterOptimizedShape(const std::function<float(const Vector3&)>& func, float optmizedPerimeter);
 };
 
 std::function<Vector3 (const Vector3&)> gradientFromFieldFunction(const std::function<float (const Vector3&)>& func);

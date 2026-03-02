@@ -116,7 +116,7 @@ public:
     std::vector<TectonicEvent> tectonicEvents;
     std::vector<WarmingEvent> warmingEvents;
 
-    ScenariosObject nextObject();
+    // ScenariosObject nextObject();
     std::vector<ScenariosObject> nextObjects();
 
     float computeWaterLevel(const Vector3 &dimensions = Vector3());

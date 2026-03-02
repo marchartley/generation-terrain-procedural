@@ -25,24 +25,7 @@ EnvMaterialViewer::EnvMaterialViewer(const std::string& name, ChartView* chartVi
         this->show();
     });
 }
-/*
-EnvMaterialViewer *EnvMaterialViewer::getInstance(const std::string& name)
-{
-    if (name == "") name = EnvMaterialViewer::defaultName;
-    if (EnvMaterialViewer::instances.count(name) == 0) {
-        EnvMaterialViewer::init(name);
-    }
-    return dynamic_cast<EnvMaterialViewer*>(EnvMaterialViewer::instances[name]);
-}
 
-EnvMaterialViewer *EnvMaterialViewer::init(const std::string& name, ChartView *chartView, QWidget *parent)
-{
-    if (EnvMaterialViewer::instances.count(name))
-        delete EnvMaterialViewer::instances[name];
-    EnvMaterialViewer::instances[name] = new EnvMaterialViewer(name, chartView, parent);
-    return EnvMaterialViewer::getInstance(name);
-}
-*/
 EnvMaterialViewer *EnvMaterialViewer::updateToolsInterface()
 {
     this->toolsInterface->clear();
@@ -50,15 +33,3 @@ EnvMaterialViewer *EnvMaterialViewer::updateToolsInterface()
     ImageViewer::updateToolsInterface();
     return this;
 }
-
-/*
-EnvMaterialViewer *EnvMaterialViewer::updateViewOptionsInterface()
-{
-    if (this->viewOptionsInterface != nullptr)
-        this->viewOptionsInterface->clear();
-    else
-        this->viewOptionsInterface = new InterfaceUI(new QVBoxLayout());
-    this->viewOptionsInterface->add(ImageViewerOptionsUI::createGreyImageViewerOptions(this->chartView, this->dataModel));
-    return this;
-}
-*/

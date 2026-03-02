@@ -18,7 +18,7 @@ void from_json(const Json& json, SnakeSegmentation& snake);
 #include "Serializer.h"
 
 template <class Json>
-void to_json(Json &json, const SnakeSegmentation& snake)
+void to_json(Json &json, const SnakeSegmentationParameters& snake)
 {
     json["connectivity-cost"] = snake.connectivityCost;
     json["curvature-cost"] = snake.curvatureCost;
@@ -32,12 +32,11 @@ void to_json(Json &json, const SnakeSegmentation& snake)
     json["target-area"] = snake.targetArea;
     json["position-cost"] = snake.positionCost;
     json["closed"] = snake.collapseFirstAndLastPoint;
-    json["position"] = snake.position;
     json["slope-cost"] = snake.slopeCost;
 }
 
 template <class Json>
-void from_json(const Json &json, SnakeSegmentation& snake)
+void from_json(const Json &json, SnakeSegmentationParameters& snake)
 {
     if (json.contains("connectivity-cost"))
         snake.connectivityCost = json["connectivity-cost"];
@@ -63,10 +62,40 @@ void from_json(const Json &json, SnakeSegmentation& snake)
         snake.positionCost = json["position-cost"];
     if (json.contains("closed"))
         snake.collapseFirstAndLastPoint = json["closed"];
-    if (json.contains("position"))
-        snake.position = json["position"];
     if (json.contains("slope-cost"))
         snake.slopeCost = json["slope-cost"];
+}
+
+
+template <class Json>
+void to_json(Json& json, const SnakeSegmentation& snake) {
+    json["parameters"] = snake.params;
+    if (dynamic_cast<SnakeSegmentationImplicitParameters*>(snake.params)) {
+        json["type"] = "implicit";
+    } else if (dynamic_cast<SnakeSegmentationExplicitParameters*>(snake.params)) {
+        json["type"] = "explicit";
+    } else {
+        json["type"] = "undefined";
+    }
+    json["type"] = "implicit";
+}
+
+template <class Json>
+void from_json(const Json& json, SnakeSegmentation& snake) {
+    if (json.contains("type")) {
+        std::string type = json.at("type");
+        if (type == "implicit") {
+            snake.params = new SnakeSegmentationImplicitParameters;
+        } else if (type == "explicit") {
+            snake.params = new SnakeSegmentationExplicitParameters;
+        } else {
+            throw std::invalid_argument("Snake parameter type unknown: '" + type + "'");
+        }
+        from_json(json["parameters"], *snake.params);
+    } else {
+        snake.params = new SnakeSegmentationImplicitParameters;
+        from_json(json, *snake.params);
+    }
 }
 
 #endif // SNAKESERIALIZER_H

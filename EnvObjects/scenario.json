@@ -1,26 +1,26 @@
 {
 "objects": {
 		"island": {
+			"proba": 1.0,
+			"amount": 1
+		},
+		"--greatreef": {
 			"proba": 0.1,
 			"amount": 0
 		},
-		"greatreef": {
-			"proba": 0.1,
-			"amount": 0
-		},
-		"coralpolyp": {
+		"--coralpolyp": {
 			"proba": 10.0,
 			"amount": 100
 		},
-		"tree": {
+		"--tree": {
 			"proba": 5.0,
 			"amount": 50
 		},
-		"bush": {
+		"--bush": {
 			"proba": 2.0,
 			"amount": 50
 		},
-		"smalllagoon": {
+		"--smalllagoon": {
 			"proba": 0.05,
 			"amount": 0
 		},

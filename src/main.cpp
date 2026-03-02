@@ -26,6 +26,7 @@
 #include "EnvObjGUI/WaterFlowViewer.h"
 #include "EnvObjGUI/EnvMaterialViewer.h"
 #include "EnvObjGUI/EnvObjectEditor.h"
+#include "EnvObjGUI/SnakeSegmentationEditor.h"
 
 #include "EnvObject/EnvironmentalScene.h"
 
@@ -138,6 +139,18 @@ int main(int argc, char *argv[])
     qDebug() << "                    VERSION:      " << (const char*)glGetString(GL_VERSION);
     qDebug() << "                    GLSL VERSION: " << (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
 
+    EnvironmentalScene scene;
+    scene.readEnvMaterialsFile("EnvObjects/envMaterials.json");
+    scene.readEnvObjectsFile("EnvObjects/primitives.json");
+
+    // EnvObject* envObj = scene.instantiate("coralpolyp");
+    EnvObject* envObj = scene.instantiate("river");
+    // EnvObject* envObj = scene.instantiate("island");
+
+    SnakeSegmentationEditor* viewer = SnakeSegmentationEditor::get()->associateEnvObject(envObj);
+
+
+    return viewer->exec();
     /*
     BSpline s;
     for (int i = 0; i < 10; i++) {

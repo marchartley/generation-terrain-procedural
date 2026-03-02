@@ -84,7 +84,7 @@ void sleep(int milliseconds);
 
 double timeIt(std::function<void()> func, int repetitions = 1);
 std::string showTime(double nanoseconds);
-float displayProcessTime(const std::string& textToDisplay, std::function<void()> func, bool print = true);
+float displayProcessTime(const std::string& textToDisplay, const std::function<void ()>& func, bool verbose = true);
 
 
 /// Careful, the order of the vectors are not preserved in these functions

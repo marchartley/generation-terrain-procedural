@@ -25,6 +25,13 @@ class EnvArea;
 
 class EnvObject;
 
+
+class EnvPointInstance;
+class EnvCurveInstance;
+class EnvAreaInstance;
+
+class EnvObjectInstance;
+
 class EnvironmentalScene;
 // #include "EnvObject/EnvironmentalScene.h"
 
@@ -93,8 +100,77 @@ public:
     int ID = -1;
     int spawnTime = 0;
 
-    SnakeSegmentationImplicit snake;
+    SnakeSegmentation snake;
     // bool snakeDefined = false;
+
+    virtual float getSqrDistance(const Vector3& position) = 0;
+    virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
+
+    virtual void recomputeEvaluationPoints() = 0;
+
+    virtual EnvObject* clone() = 0;
+    virtual float computeGrowingState();
+    virtual float computeGrowingState2();
+    virtual void applyDeposition(EnvMaterial& material) = 0;
+    virtual void applyAbsorption(EnvMaterial& material) = 0;
+    virtual void applyDepositionOnDeath() = 0;
+    virtual GridV3& computeFlowModification(GridV3& waterFlow) = 0;
+    virtual ImplicitPatch* createImplicitPatch(const GridF& height, ImplicitPrimitive *previousPrimitive = nullptr) = 0;
+    virtual GridF createHeightfield();
+    virtual EnvObject& translate(const Vector3& translation) = 0;
+    float evaluate(const Vector3& position);
+    float evaluate();
+
+    virtual bool placeInTerrain(const Vector3& seedPosition) = 0;
+    virtual bool placeInTerrain(const BSpline& seedCurve) = 0;
+
+    virtual void improvePositionning(float stepsOrDistance) = 0;
+
+    void die();
+
+    bool premature = false;
+
+    bool createdManually = false;
+    bool geometryNeedsUpdate = true;
+
+    enum HeightmapFrom {
+        SURFACE, GROUND, WATER
+    };
+    HeightmapFrom heightFrom = SURFACE;
+
+    GridV3 _cachedFlowModif;
+    ImplicitPatch* _patch = nullptr;
+    GridF _cachedHeightfield;
+
+    GridF _cachedAbsorptionDepositionField;
+
+    Vector3 storedOrientation = Vector3::invalid;
+
+    EnvironmentalScene* scene;
+
+
+
+    virtual bool isPoint() const { return false; }
+    virtual bool isCurve() const { return false; }
+    virtual bool isArea() const { return false; }
+};
+
+
+
+
+class EnvObjectInstance
+{
+public:
+    EnvObjectInstance();
+    virtual ~EnvObjectInstance();
+
+    float age = 0.f;
+    float fitnessScoreAtCreation = -1.f;
+    std::vector<Vector3> evaluationPositions;
+    int ID = -1;
+    int spawnTime = 0;
+
+    SnakeSegmentation snake; //
 
     virtual float getSqrDistance(const Vector3& position) = 0;
     virtual std::map<std::string, Vector3> getAllProperties(const Vector3& position) const = 0;
